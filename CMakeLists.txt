@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.19)
+cmake_minimum_required (VERSION 3.18)
 
 project(coincenter VERSION 1.0
                    DESCRIPTION "Connects to coin exchanges one one unique entry point"
