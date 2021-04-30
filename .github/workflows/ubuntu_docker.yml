@@ -1,0 +1,19 @@
+name: CMake
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v2
+
+    - name: Docker build
+      working-directory: ${{github.workspace}}
+      run: docker build -t coincenter .
