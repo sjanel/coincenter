@@ -13,7 +13,10 @@ Supported exchanges are:
  *Table of Contents*
 - [coincenter](#coincenter)
     - [Pre-requisites](#pre-requisites)
-    - [Build](#build)
+    - [Install](#install)
+      - [As a main project](#as-a-main-project)
+      - [As a static library](#as-a-static-library)
+      - [Build](#build)
     - [Tests](#tests)
     - [Usage](#usage)
       - [Simple Trade](#simple-trade)
@@ -37,29 +40,60 @@ sudo apt-get update
 sudo apt-get install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
 ```
 
-### Build
+### Install
+
+#### As a main project
+
+**coincenter** can be used as a stand-alone project which provides an executable able to perform most common exchange operations on supported exchanges:
+ - Balance
+ - Orderbook
+ - Trade
+ - Withdraw
+
+Simply launch
+```
+./coincenter --help
+```
+to see available commands.
+
+#### As a static library
+
+**coincenter** can also be used in a sub project, such as a trading bot for instance. It is the case by default if built as a sub-module in `cmake`.
+
+To build your `cmake` project with **coincenter** library, you can do it with `FetchContent`:
+```
+include(FetchContent)
+
+FetchContent_Declare(
+  coincenter
+  GIT_REPOSITORY https://github.com/sjanel/coincenter.git
+  GIT_TAG        origin/master
+)
+
+FetchContent_MakeAvailable(coincenter)
+```
+Then, a static library named `coincenter` is defined and you can link it as usual:
+```
+target_link_libraries(<MyProgram> PRIVATE coincenter)
+```
+#### Build
 
 This is a C++20 project. Today, it is only partially supported by the main compilers.
 
-Does not (yet) compile with clang 11 (does not support lambdas in unevaluated context), but it has been tested with GCC 10.1 and GCC 10.2.
+Does not (yet) compile with clang (does not support lambdas in unevaluated context), but it has been tested with GCC 10.1 and GCC 10.2.
 
-Other compilers have not been tested yet.
+Other compilers have not been tested yet. If you successfully compiled it on Windows or Mac for instance, please open a PR and update the CI!
 
-With CMake and your favorite generator (ninja in the example):
+`coincenter` uses `cmake`.
 
+Example: to compile it in `Release` mode and `ninja` generator
 ```
-BUILD_MODE=Release; mkdir -p build/${BUILD_MODE} && cd build/${BUILD_MODE} && cmake -GNinja -DCMAKE_BUILD_TYPE=${BUILD_MODE} ../.. && ninja
+BUILD_MODE=Release; mkdir -p build/${BUILD_MODE} && cd build/${BUILD_MODE} && cmake -GNinja -DCMAKE_BUILD_TYPE=${BUILD_MODE} ../.. && ninja -j 8
 ```
 
 ### Tests
 
-Once code is built, simply launch
-
-```
-ctest
-```
-
-in a build directory.
+Tests are compiled only if `coincenter` is built as a main project by default. You can set `cmake` flag `CCT_ENABLE_TESTS` to 1 or 0 to change this behavior.
 
 Note that exchanges API are also unit tested. If no private key is found, only public exchanges will be tested, private exchanges will be skipped and unit test will not fail.
 
@@ -121,7 +155,7 @@ You can exclude currencies in the exchange configuration file (for instance: som
 
 #### Get an overview of your portfolio in Euros
 ```
-./coincenter --balance kraken --balance-cur eur
+./coincenter --balance all --balance-cur eur
 ```
 
 #### Trade 1000 euros to XRP on kraken with a maker strategy
