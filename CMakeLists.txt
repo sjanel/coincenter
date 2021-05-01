@@ -1,7 +1,7 @@
-cmake_minimum_required (VERSION 3.18)
+cmake_minimum_required (VERSION 3.16)
 
 project(coincenter VERSION 1.0
-                   DESCRIPTION "Connects to coin exchanges one one unique entry point"
+                   DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
                    LANGUAGES CXX)
 
 # Use ccache if available
