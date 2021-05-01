@@ -8,8 +8,9 @@ WORKDIR /service
 RUN rm -Rf /service/build || true
 # Clean secret data & caches (Warning : deploying secret keys could be dangerous !)
 RUN rm -f /service/data/\.*cache.json
-RUN if [[ -z "$keepsecrets" ]]; then rm -f /service/data/\.depositaddresses.json &&\
-    rm -f /service/data/secret.json \
+ARG keepsecrets
+RUN if [[ -z "$keepsecrets" ]]; then rm -f /service/data/.depositaddresses.json ;\
+    rm -f /service/data/secret.json ;\
     else echo "Keeping secrets: warning do not deploy this docker image on a public space.";\
     fi
 
