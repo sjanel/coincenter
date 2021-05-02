@@ -1,5 +1,5 @@
 [![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
-[![ubuntu_docker](https://github.com/sjanel/coincenter/actions/workflows/ubuntu_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu_docker.yml)
+[![alpine_docker](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml)
 
 coincenter
 ==========
@@ -77,6 +77,7 @@ Then, a static library named `coincenter` is defined and you can link it as usua
 ```
 target_link_libraries(<MyProgram> PRIVATE coincenter)
 ```
+
 ## Build
 
 ### From source 
@@ -98,7 +99,7 @@ BUILD_MODE=Release; mkdir -p build/${BUILD_MODE} && cd build/${BUILD_MODE} && cm
 
 Build
 ```
-docker build --build-arg notest=1 -t coincenter .
+docker build --build-arg test=1 --build-arg mode=Release -t coincenter .
 ```
 Run
 ```

@@ -1,4 +1,4 @@
-name: ubuntu_docker
+name: alpine_docker
 
 on:
   push:

@@ -16,11 +16,13 @@ RUN if [[ -z "$keepsecrets" ]]; then rm -f /service/data/.depositaddresses.json 
 
 WORKDIR /service/build
 
-RUN BUILD_MODE=Release && cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} ..
+ARG mode=Release
+ARG test=0
+
+RUN BUILD_MODE=${mode} && cmake -DCMAKE_BUILD_TYPE=${mode} -DCCT_ENABLE_TESTS=${test} -DCCT_ENABLE_ASAN=0 ..
 RUN make -j 4
 
-ARG notest
 # Check if tests should be run: 
-RUN if [[ -z "$notest" ]]; then ctest; else echo "No tests."; fi
+RUN if [[ "$test" == "1" ]]; then ctest; else echo "No tests."; fi
 
 ENTRYPOINT [ "/service/build/coincenter" ]
