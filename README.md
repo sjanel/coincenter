@@ -1,4 +1,5 @@
 [![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
+[![ubuntu_docker](https://github.com/sjanel/coincenter/actions/workflows/ubuntu_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu_docker.yml)
 
 coincenter
 ==========
