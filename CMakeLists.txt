@@ -19,9 +19,16 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(MAIN_PROJECT ON)
 endif()
 
+set(CCT_ASAN_BUILD OFF)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # In Debug, activate asan by default
+  set(CCT_ASAN_BUILD ON)
+endif()
+
 option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC_INSTEAD_OF_LIB "Build an executable instead of a static library" ${MAIN_PROJECT})
 option(CCT_OVERRIDE_DATA_DIR "Override Data directory from CCT_DATA_DIR (./data by default)" OFF)
+option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 
 if (NOT CCT_OVERRIDE_DATA_DIR)
   set(CCT_DATA_DIR "${CMAKE_SOURCE_DIR}/data")
@@ -152,13 +159,12 @@ else()
   add_compile_options(-Wall -Wextra -pedantic)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # In Debug, activate asan by default
+if(CCT_ENABLE_ASAN)
   if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover")
+    message(STATUS "Activate asan")
   endif()
-  message(STATUS "Activate asan")
-endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+endif(CCT_ENABLE_ASAN)
 
 message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 
