@@ -26,7 +26,7 @@
 namespace cct {
 namespace {
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   MonetaryAmount startTradeAmount;
   CurrencyCode toTradeCurrency;
   PrivateExchangeName tradePrivateExchangeName;
@@ -44,10 +44,11 @@ int main(int argc, char* argv[]) {
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
 
   try {
-    CoincenterCmdLineOptions cmdLineOptions =
-        ParseCoincenterCmdLineOptions(vector<std::string_view>(argv, argv + argc));
+    CommandLineOptionsParser<CoincenterCmdLineOptions> coincenterCommandLineOptionsParser =
+        CreateCoincenterCommandLineOptionsParser<CoincenterCmdLineOptions>();
+    CoincenterCmdLineOptions cmdLineOptions = coincenterCommandLineOptionsParser.parse(argc, argv);
     if (cmdLineOptions.help) {
-      CoincenterCmdLineOptions::PrintUsage(argv[0]);
+      coincenterCommandLineOptionsParser.displayHelp(argv[0], std::cout);
       return EXIT_SUCCESS;
     }
     if (cmdLineOptions.version) {
@@ -93,7 +94,7 @@ int main(int argc, char* argv[]) {
     }
 
   } catch (const InvalidArgumentException& e) {
-    CoincenterCmdLineOptions::PrintUsage(argv[0], e.what());
+    std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -210,4 +211,4 @@ int main(int argc, char* argv[]) {
 }  // namespace
 }  // namespace cct
 
-int main(int argc, char* argv[]) { return cct::main(argc, argv); }
+int main(int argc, const char* argv[]) { return cct::main(argc, argv); }

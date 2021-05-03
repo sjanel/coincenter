@@ -22,7 +22,7 @@ enum class VariadicTableColumnFormat { AUTO, SCIENTIFIC, FIXED, PERCENT };
 /**
  * A class for "pretty printing" a table of data.
  *
- * Requries C++11 (and nothing more)
+ * Requires C++11 (and nothing more)
  *
  * It's templated on the types that will be in each column
  * (all values in a column must have the same type)
@@ -60,6 +60,9 @@ class VariadicTable {
     assert(headers.size() == _num_columns);
   }
 
+  VariadicTable(std::initializer_list<std::string> init)
+      : VariadicTable(std::span<const std::string>(init.begin(), init.end())) {}
+
   /**
    * Add a row of data
    *
@@ -70,11 +73,13 @@ class VariadicTable {
    */
   void addRow(Ts... entries) { _data.emplace_back(std::make_tuple(entries...)); }
 
+  void print() { print(std::cout); }
+
   /**
    * Pretty print the table of data
    */
   template <typename StreamType>
-  void print(StreamType &stream) {
+  void print(StreamType &stream, char colSep = '|', char headerLineSep = '-', bool printHeaders = true) {
     size_columns();
 
     // Start computing the total width
@@ -82,36 +87,42 @@ class VariadicTable {
     unsigned int total_width = _num_columns + 1;
 
     // Now add in the size of each colum
-    for (auto &col_size : _column_sizes) total_width += col_size + (2 * _cell_padding);
-
-    // Print out the top line
-    stream << std::string(total_width, '-') << "\n";
-
-    // Print out the headers
-    stream << "|";
-    for (unsigned int i = 0; i < _num_columns; i++) {
-      // Must find the center of the column
-      auto half = _column_sizes[i] / 2;
-      half -= _headers[i].size() / 2;
-
-      stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[i]) << std::left
-             << std::string(half, ' ') + _headers[i] << std::string(_cell_padding, ' ') << "|";
+    for (const auto &col_size : _column_sizes) {
+      total_width += col_size + (2 * _cell_padding);
     }
 
-    stream << "\n";
+    if (printHeaders) {
+      // Print out the top line
+      stream << std::string(total_width, headerLineSep) << std::endl;
 
-    // Print out the line below the header
-    stream << std::string(total_width, '-') << "\n";
+      // Print out the headers
+      stream << colSep;
+      for (unsigned int i = 0; i < _num_columns; i++) {
+        // Must find the center of the column
+        auto half = _column_sizes[i] / 2;
+        half -= _headers[i].size() / 2;
+
+        stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[i]) << std::left
+               << std::string(half, ' ') + _headers[i] << std::string(_cell_padding, ' ') << colSep;
+      }
+
+      stream << std::endl;
+
+      // Print out the line below the header
+      stream << std::string(total_width, headerLineSep) << std::endl;
+    }
 
     // Now print the rows of the table
     for (auto &row : _data) {
-      stream << "|";
-      print_each(row, stream);
-      stream << "\n";
+      stream << colSep;
+      print_each(row, stream, colSep);
+      stream << std::endl;
     }
 
-    // Print out the line below the header
-    stream << std::string(total_width, '-') << "\n";
+    if (printHeaders) {
+      // Print out the line below the header
+      stream << std::string(total_width, headerLineSep) << std::endl;
+    }
   }
 
   /**
@@ -173,7 +184,7 @@ class VariadicTable {
    */
   template <typename TupleType, typename StreamType>
   void print_each(
-      TupleType &&, StreamType & /*stream*/,
+      TupleType &&, StreamType & /*stream*/, char,
       std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
 
   /**
@@ -182,7 +193,7 @@ class VariadicTable {
   template <std::size_t I, typename TupleType, typename StreamType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void print_each(TupleType &&t, StreamType &stream, std::integral_constant<size_t, I>) {
+  void print_each(TupleType &&t, StreamType &stream, char colSep, std::integral_constant<size_t, I>) {
     auto &val = std::get<I>(t);
 
     // Set the precision
@@ -204,7 +215,7 @@ class VariadicTable {
     }
 
     stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[I]) << justify<decltype(val)>(0) << val
-           << std::string(_cell_padding, ' ') << "|";
+           << std::string(_cell_padding, ' ') << colSep;
 
     // Unset the format
     if (!_column_format.empty()) {
@@ -213,15 +224,15 @@ class VariadicTable {
     }
 
     // Recursive call to print the next item
-    print_each(std::forward<TupleType>(t), stream, std::integral_constant<size_t, I + 1>());
+    print_each(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, I + 1>());
   }
 
   /**
    * his is what gets called first
    */
   template <typename TupleType, typename StreamType>
-  void print_each(TupleType &&t, StreamType &stream) {
-    print_each(std::forward<TupleType>(t), stream, std::integral_constant<size_t, 0>());
+  void print_each(TupleType &&t, StreamType &stream, char colSep) {
+    print_each(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, 0>());
   }
 
   /**
