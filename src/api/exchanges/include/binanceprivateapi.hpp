@@ -19,6 +19,8 @@ class BinancePrivate : public ExchangePrivate {
  public:
   BinancePrivate(CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey);
 
+  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }

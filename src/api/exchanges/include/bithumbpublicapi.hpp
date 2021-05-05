@@ -17,10 +17,10 @@ class BithumbPublic : public ExchangePublic {
  public:
   BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _currenciesCache.get(); }
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) override {
-    return _currenciesCache.get().getOrThrow(currencyCode);
+    return _tradableCurrenciesCache.get().getOrThrow(currencyCode);
   }
 
   MarketSet queryTradableMarkets() override;
@@ -43,8 +43,8 @@ class BithumbPublic : public ExchangePublic {
  private:
   friend class BithumbPrivate;
 
-  struct CurrenciesFunc {
-    CurrenciesFunc(CoincenterInfo& config, CurlHandle& curlHandle) : _config(config), _curlHandle(curlHandle) {}
+  struct TradableCurrenciesFunc {
+    TradableCurrenciesFunc(CoincenterInfo& config, CurlHandle& curlHandle) : _config(config), _curlHandle(curlHandle) {}
 
     CurrencyExchangeFlatSet operator()();
 
@@ -81,7 +81,7 @@ class BithumbPublic : public ExchangePublic {
   };
 
   CurlHandle _curlHandle;
-  CachedResult<CurrenciesFunc> _currenciesCache;
+  CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;

@@ -17,10 +17,10 @@ class UpbitPublic : public ExchangePublic {
  public:
   UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _currenciesCache.get(); }
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) override {
-    return _currenciesCache.get().getOrThrow(currencyCode);
+    return _tradableCurrenciesCache.get().getOrThrow(currencyCode);
   }
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get(); }
@@ -53,8 +53,8 @@ class UpbitPublic : public ExchangePublic {
     const ExchangeInfo& _exchangeInfo;
   };
 
-  struct CurrenciesFunc {
-    CurrenciesFunc(CurlHandle& curlHandle, CachedResult<MarketsFunc>& marketsCache)
+  struct TradableCurrenciesFunc {
+    TradableCurrenciesFunc(CurlHandle& curlHandle, CachedResult<MarketsFunc>& marketsCache)
         : _curlHandle(curlHandle), _marketsCache(marketsCache) {}
 
     CurrencyExchangeFlatSet operator()();
@@ -95,7 +95,7 @@ class UpbitPublic : public ExchangePublic {
 
   CurlHandle _curlHandle;
   CachedResult<MarketsFunc> _marketsCache;
-  CachedResult<CurrenciesFunc> _currenciesCache;
+  CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;

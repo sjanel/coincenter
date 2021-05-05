@@ -28,6 +28,8 @@ class Exchange {
 
   bool hasPrivateAPI() const;
 
+  CurrencyExchangeFlatSet queryTradableCurrencies();
+
   bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 
   bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;

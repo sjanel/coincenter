@@ -42,18 +42,16 @@ void PublicTest(UpbitPublic &upbitPublic) {
   EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
   EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
 
-  // ExchangePublic::WithdrawalFeeMap withdrawalFees = upbitPublic.queryWithdrawalFees();
-  // EXPECT_GT(withdrawalFees.size(), 10);
-  // EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
-  // EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  // const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
-  // for (CurrencyCode code : kCurrencyCodesToTest) {
-  //   if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
-  //     EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
-  //   }
-  // }
-
-  log::set_level(log::level::trace);
+  ExchangePublic::WithdrawalFeeMap withdrawalFees = upbitPublic.queryWithdrawalFees();
+  EXPECT_GT(withdrawalFees.size(), 10);
+  EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
+  EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
+  const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
+  for (CurrencyCode code : kCurrencyCodesToTest) {
+    if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
+      EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
+    }
+  }
 
   MarketOrderBook marketOrderBook = upbitPublic.queryOrderBook(*std::next(markets.begin(), 2));
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
@@ -63,6 +61,7 @@ void PrivateTest(UpbitPrivate &upbitPrivate) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
   EXPECT_NO_THROW(upbitPrivate.queryAccountBalance());
   EXPECT_NO_THROW(upbitPrivate.queryDepositWallet("ETH"));
+  EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
 }
 
 }  // namespace

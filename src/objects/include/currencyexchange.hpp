@@ -13,7 +13,10 @@ class CurrencyExchange {
   enum class Deposit { kAvailable, kUnavailable };  // use scoped enums to ensure type checks and increase readability
   enum class Withdraw { kAvailable, kUnavailable };
 
-  /// Constructs a CurrencyExchange with up to two alternative codes.
+  /// Constructs a CurrencyExchange with up to two alternative codes, with unknown withdrawal / deposit statuses
+  CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode);
+
+  /// Constructs a CurrencyExchange with up to two alternative codes, with known withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode, Deposit deposit,
                    Withdraw withdraw);
 
@@ -30,6 +33,8 @@ class CurrencyExchange {
   bool canDeposit() const { return _canDeposit; }
   bool canWithdraw() const { return _canWithdraw; }
 
+  bool unknownDepositWithdrawalStatus() const { return _unknownDepositWithdrawalStatus; }
+
   bool operator<(const CurrencyExchange &o) const { return _standardCode < o._standardCode; }
   bool operator==(const CurrencyExchange &o) const { return _standardCode == o._standardCode; }
   bool operator!=(const CurrencyExchange &o) const { return !(*this == o); }
@@ -40,6 +45,7 @@ class CurrencyExchange {
   CurrencyCode _altCode;
   bool _canDeposit;
   bool _canWithdraw;
+  bool _unknownDepositWithdrawalStatus;
 };
 
 }  // namespace cct

@@ -22,6 +22,10 @@ bool Exchange::hasPrivateAPI() const {
   return std::addressof(gExchangePrivateDefault) != std::addressof(_exchangePrivate);
 }
 
+CurrencyExchangeFlatSet Exchange::queryTradableCurrencies() {
+  return hasPrivateAPI() ? _exchangePrivate.queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
+}
+
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
   if (_exchangeInfo.excludedCurrenciesWithdrawal().contains(currencyCode)) {
     return false;

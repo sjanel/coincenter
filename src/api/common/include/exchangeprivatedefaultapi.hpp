@@ -12,6 +12,8 @@ class ExchangePrivateDefault : public ExchangePrivate {
  public:
   ExchangePrivateDefault() : ExchangePrivate(APIKey("default", "", "xxx", "xxx")) {}
 
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { throw exception("Cannot use default private exchange"); }
+
   BalancePortfolio queryAccountBalance(CurrencyCode) override {
     throw exception("Cannot use default private exchange");
   }

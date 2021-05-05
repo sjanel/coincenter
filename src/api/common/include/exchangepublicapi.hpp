@@ -40,6 +40,7 @@ class ExchangePublic : public ExchangeBase {
   virtual ~ExchangePublic() {}
 
   /// Retrieve the possible currencies known by current exchange.
+  /// If some information is not known without any private key, information can be returned partially.
   virtual CurrencyExchangeFlatSet queryTradableCurrencies() = 0;
 
   virtual CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) = 0;

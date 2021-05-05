@@ -7,6 +7,7 @@
 #include "cachedresultvault.hpp"
 #include "cct_flatset.hpp"
 #include "curlhandle.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
 #include "market.hpp"
 #include "wallet.hpp"
@@ -31,6 +32,10 @@ class ExchangePrivate : public ExchangeBase {
   virtual ~ExchangePrivate() {}
 
   std::string_view keyName() const { return _apiKey.name(); }
+
+  /// Retrieve the possible currencies known by current exchange.
+  /// Information should be fully set with private key.
+  virtual CurrencyExchangeFlatSet queryTradableCurrencies() = 0;
 
   /// Get a fast overview of the available assets on this exchange.
   /// @param equiCurrency (optional) if provided, attempt to convert each asset to given currency as an

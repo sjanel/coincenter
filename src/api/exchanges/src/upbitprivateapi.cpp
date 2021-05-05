@@ -61,12 +61,47 @@ UpbitPrivate::UpbitPrivate(CoincenterInfo& config, UpbitPublic& upbitPublic, con
       _curlHandle(config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _config(config),
       _upbitPublic(upbitPublic),
+      _tradableCurrenciesCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
+          _curlHandle, _apiKey, upbitPublic),
       _balanceCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAccountBalance), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
+
+CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
+  const CurrencyExchangeFlatSet& partialInfoCurrencies = _upbitPublic._tradableCurrenciesCache.get();
+  CurrencyExchangeFlatSet currencies;
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "status/wallet");
+  currencies.reserve(partialInfoCurrencies.size());
+  for (const json& curDetails : result) {
+    CurrencyCode cur(curDetails["currency"].get<std::string_view>());
+    if (partialInfoCurrencies.contains(cur)) {
+      std::string_view walletState = curDetails["wallet_state"].get<std::string_view>();
+      CurrencyExchange::Withdraw withdrawStatus = CurrencyExchange::Withdraw::kUnavailable;
+      CurrencyExchange::Deposit depositStatus = CurrencyExchange::Deposit::kUnavailable;
+      if (walletState == "working") {
+        withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
+        depositStatus = CurrencyExchange::Deposit::kAvailable;
+      } else if (walletState == "withdraw_only") {
+        withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
+      } else if (walletState == "deposit_only") {
+        depositStatus = CurrencyExchange::Deposit::kAvailable;
+      }
+      if (withdrawStatus == CurrencyExchange::Withdraw::kUnavailable) {
+        log::info("{} cannot be withdrawn from Upbit", cur.str());
+      }
+      if (depositStatus == CurrencyExchange::Deposit::kUnavailable) {
+        log::info("{} cannot be deposited to Upbit", cur.str());
+      }
+      currencies.insert(CurrencyExchange(cur, cur, cur, depositStatus, withdrawStatus));
+    }
+  }
+  log::info("Retrieved {} Upbit currencies", currencies.size());
+  return currencies;
+}
 
 BalancePortfolio UpbitPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "accounts");

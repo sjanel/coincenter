@@ -20,10 +20,10 @@ class KrakenPublic : public ExchangePublic {
  public:
   KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _currenciesCache.get(); }
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) override {
-    return _currenciesCache.get().getOrThrow(currencyCode);
+    return _tradableCurrenciesCache.get().getOrThrow(currencyCode);
   }
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get().first; }
@@ -49,8 +49,8 @@ class KrakenPublic : public ExchangePublic {
  private:
   friend class KrakenPrivate;
 
-  struct CurrenciesFunc {
-    CurrenciesFunc(CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
+  struct TradableCurrenciesFunc {
+    TradableCurrenciesFunc(CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     CurrencyExchangeFlatSet operator()();
@@ -67,9 +67,12 @@ class KrakenPublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
-    MarketsFunc(CoincenterInfo& config, CachedResult<CurrenciesFunc>& currenciesCache, CurlHandle& curlHandle,
+    MarketsFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache, CurlHandle& curlHandle,
                 const ExchangeInfo& exchangeInfo)
-        : _currenciesCache(currenciesCache), _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+        : _tradableCurrenciesCache(currenciesCache),
+          _config(config),
+          _curlHandle(curlHandle),
+          _exchangeInfo(exchangeInfo) {}
 
     struct MarketInfo {
       VolAndPriNbDecimals volAndPriNbDecimals;
@@ -80,40 +83,46 @@ class KrakenPublic : public ExchangePublic {
 
     std::pair<MarketSet, MarketInfoMap> operator()();
 
-    CachedResult<CurrenciesFunc>& _currenciesCache;
+    CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CoincenterInfo& config, CachedResult<CurrenciesFunc>& currenciesCache,
+    AllOrderBooksFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
                       CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
-        : _currenciesCache(currenciesCache), _marketsCache(marketsCache), _config(config), _curlHandle(curlHandle) {}
+        : _tradableCurrenciesCache(currenciesCache),
+          _marketsCache(marketsCache),
+          _config(config),
+          _curlHandle(curlHandle) {}
 
     MarketOrderBookMap operator()(int depth);
 
-    CachedResult<CurrenciesFunc>& _currenciesCache;
+    CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
     CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CachedResult<CurrenciesFunc>& currenciesCache,
+    OrderBookFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
                   CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
-        : _currenciesCache(currenciesCache), _marketsCache(marketsCache), _config(config), _curlHandle(curlHandle) {}
+        : _tradableCurrenciesCache(currenciesCache),
+          _marketsCache(marketsCache),
+          _config(config),
+          _curlHandle(curlHandle) {}
 
     MarketOrderBook operator()(Market m, int count);
 
-    CachedResult<CurrenciesFunc>& _currenciesCache;
+    CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
     CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 
   CurlHandle _curlHandle;
-  CachedResult<CurrenciesFunc> _currenciesCache;
+  CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
