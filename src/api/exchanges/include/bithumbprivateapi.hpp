@@ -31,6 +31,8 @@ class BithumbPrivate : public ExchangePrivate {
 
   BithumbPrivate(CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
 
+  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override {
     return _balanceCache.get(equiCurrency);
   }

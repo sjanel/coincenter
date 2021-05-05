@@ -2,13 +2,22 @@
 
 namespace cct {
 
+CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode)
+    : _standardCode(standardCode),
+      _exchangeCode(exchangeCode),
+      _altCode(altCode),
+      _canDeposit(false),
+      _canWithdraw(false),
+      _unknownDepositWithdrawalStatus(true) {}
+
 CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode,
                                    Deposit deposit, Withdraw withdraw)
     : _standardCode(standardCode),
       _exchangeCode(exchangeCode),
       _altCode(altCode),
       _canDeposit(deposit == Deposit::kAvailable),
-      _canWithdraw(withdraw == Withdraw::kAvailable) {}
+      _canWithdraw(withdraw == Withdraw::kAvailable),
+      _unknownDepositWithdrawalStatus(false) {}
 
 std::string CurrencyExchange::str() const {
   std::string ret(_standardCode.str());

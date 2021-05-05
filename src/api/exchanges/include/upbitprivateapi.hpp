@@ -21,6 +21,8 @@ class UpbitPrivate : public ExchangePrivate {
  public:
   UpbitPrivate(CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey);
 
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
+
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override {
     return _balanceCache.get(equiCurrency);
   }
@@ -32,6 +34,17 @@ class UpbitPrivate : public ExchangePrivate {
   WithdrawInfo withdraw(MonetaryAmount, ExchangePrivate&) override { throw std::runtime_error(""); }
 
  private:
+  struct TradableCurrenciesFunc {
+    TradableCurrenciesFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& upbitPublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _upbitPublic(upbitPublic) {}
+
+    CurrencyExchangeFlatSet operator()();
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    UpbitPublic& _upbitPublic;
+  };
+
   struct AccountBalanceFunc {
     AccountBalanceFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& upbitPublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _upbitPublic(upbitPublic) {}
@@ -59,6 +72,7 @@ class UpbitPrivate : public ExchangePrivate {
   CurlHandle _curlHandle;
   CoincenterInfo& _config;
   UpbitPublic& _upbitPublic;
+  CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<AccountBalanceFunc, CurrencyCode> _balanceCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };

@@ -72,6 +72,8 @@ BinancePrivate::BinancePrivate(CoincenterInfo& config, BinancePublic& binancePub
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic) {}
 
+CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _public.queryTradableCurrencies(); }
+
 BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/account");
   BalancePortfolio balancePortfolio;
@@ -369,7 +371,7 @@ void BinancePrivate::updateRemainingVolume(Market m, const json& result, Monetar
 }
 
 WithdrawInfo BinancePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) {
-  CurrencyCode currencyCode = grossAmount.currencyCode();
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
   Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
   CurlPostData withdrawPostData{
       {"asset", currencyCode.str()}, {"amount", grossAmount.amountStr()}, {"address", destinationWallet.address()}};
@@ -437,8 +439,8 @@ WithdrawInfo BinancePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivat
             log::error("unknown status value {}", withdrawStatusInt);
             break;
         }
-        netWithdrawAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), grossAmount.currencyCode());
-        MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), grossAmount.currencyCode());
+        netWithdrawAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
+        MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), currencyCode);
         if (netWithdrawAmount + fee != grossAmount) {
           log::error("{} + {} != {}, maybe a change in API", netWithdrawAmount.amountStr(), fee.amountStr(),
                      grossAmount.amountStr());

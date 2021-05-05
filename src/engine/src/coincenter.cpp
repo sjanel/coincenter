@@ -111,7 +111,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
   const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
   cct::vector<CurrencyExchangeFlatSet> currencyExchangeSets(2);
   std::transform(std::execution::par, exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
-                 [](Exchange *e) { return e->apiPublic().queryTradableCurrencies(); });
+                 [](Exchange *e) { return e->queryTradableCurrencies(); });
 
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {

@@ -54,7 +54,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 BithumbPublic::BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI),
       _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
-      _currenciesCache(
+      _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           _curlHandle),
       _withdrawalFeesCache(
@@ -117,7 +117,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   return ret;
 }
 
-CurrencyExchangeFlatSet BithumbPublic::CurrenciesFunc::operator()() {
+CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "assetsstatus", "all");
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(result.size() + 1);

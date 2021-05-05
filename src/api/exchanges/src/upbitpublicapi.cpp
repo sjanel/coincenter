@@ -48,7 +48,7 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
       _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     _curlHandle, config.exchangeInfo(_name)),
-      _currenciesCache(
+      _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _marketsCache),
       _withdrawalFeesCache(
@@ -61,18 +61,16 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
           _curlHandle, config.exchangeInfo(_name)) {}
 
-CurrencyExchangeFlatSet UpbitPublic::CurrenciesFunc::operator()() {
+CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(markets.size() / 2);
   for (Market m : markets) {
-    for (CurrencyCode curCode : {m.base(), m.quote()}) {
-      CurrencyExchange currency(curCode, curCode, curCode, CurrencyExchange::Deposit::kAvailable,
-                                CurrencyExchange::Withdraw::kAvailable);
-      currencies.insert(std::move(currency));
-    }
+    currencies.insert(CurrencyExchange(m.base(), m.base(), m.base()));
+    currencies.insert(CurrencyExchange(m.quote(), m.quote(), m.quote()));
   }
-  log::info("Retrieved {} Upbit currencies", currencies.size());
+  log::info("Retrieved {} Upbit currencies with partial information", currencies.size());
+  log::warn("Use Upbit private API to get full withdrawal and deposit statuses");
   return currencies;
 }
 

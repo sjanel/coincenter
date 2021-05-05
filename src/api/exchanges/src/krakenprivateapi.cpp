@@ -93,6 +93,8 @@ KrakenPrivate::KrakenPrivate(CoincenterInfo& config, KrakenPublic& krakenPublic,
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
+CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _krakenPublic.queryTradableCurrencies(); }
+
 BalancePortfolio KrakenPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
   BalancePortfolio ret;
   json res = PrivateQuery(_curlHandle, _apiKey, "Balance");

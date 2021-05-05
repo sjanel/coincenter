@@ -21,6 +21,8 @@ class KrakenPrivate : public ExchangePrivate {
  public:
   KrakenPrivate(CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey);
 
+  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override {
     return _balanceCache.get(equiCurrency);
   }

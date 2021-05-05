@@ -71,20 +71,20 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI),
       _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
-      _currenciesCache(
+      _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           _name),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    config, _currenciesCache, _curlHandle, config.exchangeInfo(_name)),
+                    config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          config, _currenciesCache, _marketsCache, _curlHandle),
+          config, _tradableCurrenciesCache, _marketsCache, _curlHandle),
       _orderBookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _currenciesCache, _marketsCache, _curlHandle) {}
+          _tradableCurrenciesCache, _marketsCache, _curlHandle) {}
 
 ExchangePublic::WithdrawalFeeMap KrakenPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
@@ -99,7 +99,7 @@ ExchangePublic::WithdrawalFeeMap KrakenPublic::WithdrawalFeesFunc::operator()() 
   return ret;
 }
 
-CurrencyExchangeFlatSet KrakenPublic::CurrenciesFunc::operator()() {
+CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "Assets");
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(result.size());
@@ -138,7 +138,7 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
   ret.first.reserve(result.size());
   ret.second.reserve(result.size());
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
-  const CurrencyExchangeFlatSet& currencies = _currenciesCache.get();
+  const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
   for (const auto& [key, value] : result.items()) {
     if (!value.contains("ordermin")) {
       log::debug("Discard market {} as it does not contain min order information", key);
@@ -178,7 +178,7 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
 ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   std::string allAssetPairs;
-  const CurrencyExchangeFlatSet& krakenCurrencies = _currenciesCache.get();
+  const CurrencyExchangeFlatSet& krakenCurrencies = _tradableCurrenciesCache.get();
   const MarketSet& markets = _marketsCache.get().first;
   allAssetPairs.reserve(markets.size() * 8);
   using KrakenAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
@@ -236,7 +236,7 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
 }
 
 MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
-  CurrencyExchangeFlatSet krakenCurrencies = _currenciesCache.get();
+  CurrencyExchangeFlatSet krakenCurrencies = _tradableCurrenciesCache.get();
   auto lb = krakenCurrencies.find(m.base());
   if (lb == krakenCurrencies.end()) {
     throw exception("Cannot find " + std::string(m.base().str()) + " in Kraken currencies");

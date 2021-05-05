@@ -179,6 +179,8 @@ BithumbPrivate::BithumbPrivate(CoincenterInfo& config, BithumbPublic& bithumbPub
   }
 }
 
+CurrencyExchangeFlatSet BithumbPrivate::queryTradableCurrencies() { return _bithumbPublic.queryTradableCurrencies(); }
+
 BalancePortfolio BithumbPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
   BalancePortfolio ret;
