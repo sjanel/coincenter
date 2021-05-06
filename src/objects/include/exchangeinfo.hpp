@@ -14,6 +14,8 @@ class ExchangeInfo {
   using CurrencySet = FlatSet<CurrencyCode>;
   using Clock = std::chrono::high_resolution_clock;
 
+  enum struct FeeType { kMaker, kTaker };
+
   ExchangeInfo(std::string_view exchangeNameStr, const json &exchangeData);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
@@ -24,10 +26,10 @@ class ExchangeInfo {
   const CurrencySet &excludedCurrenciesWithdrawal() const { return _excludedCurrenciesWithdrawal; }
 
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
-  MonetaryAmount applyMakerFee(MonetaryAmount m) const { return m * _generalMakerRatio; }
-
-  /// Apply the general taker fee defined for this exchange on given MonetaryAmount.
-  MonetaryAmount applyTakerFee(MonetaryAmount m) const { return m * _generalTakerRatio; }
+  /// In other words, convert a gross amount into a net amount with maker fees
+  MonetaryAmount applyFee(MonetaryAmount m, FeeType feeType) const {
+    return m * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
+  }
 
   /// Get the minimum time between two public api queries
   Clock::duration minPublicQueryDelay() const { return _minPublicQueryDelay; }
