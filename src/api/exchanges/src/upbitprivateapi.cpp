@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <execution>
+#include <string_view>
 #include <thread>
 
 #include "apikey.hpp"
@@ -17,7 +18,7 @@
 #include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 #include "upbitpublicapi.hpp"
 
 namespace cct {
@@ -56,11 +57,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
 }
 }  // namespace
 
-UpbitPrivate::UpbitPrivate(CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
-    : ExchangePrivate(apiKey),
+UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
+    : ExchangePrivate(upbitPublic, config, apiKey),
       _curlHandle(config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
-      _config(config),
-      _upbitPublic(upbitPublic),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
@@ -72,7 +71,7 @@ UpbitPrivate::UpbitPrivate(CoincenterInfo& config, UpbitPublic& upbitPublic, con
           _curlHandle, _apiKey, upbitPublic) {}
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
-  const CurrencyExchangeFlatSet& partialInfoCurrencies = _upbitPublic._tradableCurrenciesCache.get();
+  const CurrencyExchangeFlatSet& partialInfoCurrencies = _exchangePublic._tradableCurrenciesCache.get();
   CurrencyExchangeFlatSet currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "status/wallet");
   currencies.reserve(partialInfoCurrencies.size());
@@ -111,10 +110,10 @@ BalancePortfolio UpbitPrivate::AccountBalanceFunc::operator()(CurrencyCode equiC
                      accountDetail["currency"].get<std::string_view>());
     if (!a.isZero()) {
       if (equiCurrency == CurrencyCode::kNeutral) {
-        log::info("{} Balance {}", _upbitPublic.name(), a.str());
+        log::info("{} Balance {}", _exchangePublic.name(), a.str());
         ret.add(a, MonetaryAmount("0", equiCurrency));
       } else {
-        MonetaryAmount equivalentInMainCurrency = _upbitPublic.computeEquivalentInMainCurrency(a, equiCurrency);
+        MonetaryAmount equivalentInMainCurrency = _exchangePublic.computeEquivalentInMainCurrency(a, equiCurrency);
         ret.add(a, equivalentInMainCurrency);
       }
     }
@@ -153,14 +152,165 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = result["secondary_address"].get<std::string_view>();
   }
 
-  Wallet w(PrivateExchangeName(_upbitPublic.name(), _apiKey.name()), currencyCode, address, tag);
+  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag);
   log::info("Retrieved {}", w.str());
   return w;
+}
+
+PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
+                                        const TradeInfo& tradeInfo) {
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
+  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isSimulation = tradeInfo.options.isSimulation();
+  const Market m = tradeInfo.m;
+
+  const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
+  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
+
+  CurlPostData placePostData{{"market", m.reverse().assetsPairStr('-')}, {"side", askOrBid}, {"ord_type", orderType}};
+
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
+  if (isSimulation) {
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+  if (fromCurrencyCode == m.quote()) {
+    // For 'buy', from amount is fee excluded
+    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    const ExchangeInfo& exchangeInfo = _config.exchangeInfo(_exchangePublic.name());
+    if (isTakerStrategy) {
+      from = exchangeInfo.applyFee(from, feeType);
+    } else {
+      volume = exchangeInfo.applyFee(volume, feeType);
+    }
+  }
+  if (isTakerStrategy) {
+    // Upbit has an exotic way to distinguish buy and sell on the same market
+    if (fromCurrencyCode == m.base()) {
+      placePostData.append("volume", volume.amountStr());
+    } else {
+      placePostData.append("price", from.amountStr());
+    }
+  } else {
+    placePostData.append("volume", volume.amountStr());
+    placePostData.append("price", price.amountStr());
+  }
+
+  if (isOrderTooSmall(volume, price)) {
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
+  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "orders", placePostData);
+
+  placeOrderInfo.orderId = placeOrderRes["uuid"];
+  placeOrderInfo.orderInfo = parseOrderJson(placeOrderRes, fromCurrencyCode, m);
+
+  // Upbit takes some time to match the market order - We should wait that it has been matched
+  bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
+  while (takerOrderNotClosed) {
+    json orderRes =
+        PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "order", {{"uuid", placeOrderInfo.orderId}});
+
+    placeOrderInfo.orderInfo = parseOrderJson(orderRes, fromCurrencyCode, m);
+
+    takerOrderNotClosed = !placeOrderInfo.orderInfo.isClosed;
+  }
+  return placeOrderInfo;
+}
+
+OrderInfo UpbitPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
+  CurlPostData postData{{"uuid", orderId}};
+  json orderRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kDelete, "order", postData);
+  bool cancelledOrderClosed = isOrderClosed(orderRes);
+  while (!cancelledOrderClosed) {
+    orderRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "order", postData);
+    cancelledOrderClosed = isOrderClosed(orderRes);
+  }
+  return parseOrderJson(orderRes, tradeInfo.fromCurrencyCode, tradeInfo.m);
+}
+
+OrderInfo UpbitPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) {
+  json orderRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "order", {{"uuid", orderId}});
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
+  return parseOrderJson(orderRes, fromCurrencyCode, tradeInfo.m);
 }
 
 json UpbitPrivate::withdrawalInformation(CurrencyCode currencyCode) {
   return PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "withdraws/chance",
                       {{"currency", currencyCode.str()}});
+}
+
+OrderInfo UpbitPrivate::parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const {
+  OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == m.base() ? m.quote() : m.base()),
+                      isOrderClosed(orderJson));
+
+  if (orderJson.contains("trades")) {
+    CurrencyCode feeCurrencyCode(m.quote());  // TODO: to be confirmed (this is true at least for markets involving KRW)
+    MonetaryAmount fee(orderJson["paid_fee"].get<std::string_view>(), feeCurrencyCode);
+
+    for (const json& orderDetails : orderJson["trades"]) {
+      MonetaryAmount tradedVol(orderDetails["volume"].get<std::string_view>(), m.base());  // always in base currency
+      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), m.quote());      // always in quote currency
+      MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), m.quote());
+
+      if (fromCurrencyCode == m.quote()) {
+        orderInfo.tradedAmounts.tradedFrom += tradedCost;
+        orderInfo.tradedAmounts.tradedTo += tradedVol;
+      } else {
+        orderInfo.tradedAmounts.tradedFrom += tradedVol;
+        orderInfo.tradedAmounts.tradedTo += tradedCost;
+      }
+    }
+    if (fromCurrencyCode == m.quote()) {
+      orderInfo.tradedAmounts.tradedFrom += fee;
+    } else {
+      orderInfo.tradedAmounts.tradedTo -= fee;
+    }
+  }
+
+  return orderInfo;
+}
+
+bool UpbitPrivate::isOrderClosed(const json& orderJson) const {
+  std::string_view state = orderJson["state"].get<std::string_view>();
+  if (state == "done" || state == "cancel") {
+    return true;
+  } else if (state == "wait" || state == "watch") {
+    return false;
+  } else {
+    log::error("Unknown state {} to be handled for Upbit", state);
+    return true;
+  }
+}
+
+bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) const {
+  /// Value found in this page:
+  /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
+  /// confirmed with some tests. However, could change in the future.
+  constexpr std::array<MonetaryAmount, 2> minOrderAmounts{
+      {MonetaryAmount(5000, "KRW", 0), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
+  bool orderIsTooSmall = false;
+  for (MonetaryAmount minOrderAmount : minOrderAmounts) {
+    if (volume.currencyCode() == minOrderAmount.currencyCode()) {
+      orderIsTooSmall = volume < minOrderAmount;
+      if (orderIsTooSmall) {
+        log::warn("No trade of {} because min vol order is {} for this market", volume.str(), minOrderAmount.str());
+      }
+    } else if (price.currencyCode() == minOrderAmount.currencyCode()) {
+      MonetaryAmount orderAmount(volume.toNeutral() * price);
+      orderIsTooSmall = orderAmount < minOrderAmount;
+      if (orderIsTooSmall) {
+        log::warn("No trade of {} because min vol order is {} for this market", orderAmount.str(),
+                  minOrderAmount.str());
+      }
+    }
+    if (orderIsTooSmall) {
+      break;
+    }
+  }
+  return orderIsTooSmall;
 }
 
 }  // namespace api

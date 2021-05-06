@@ -6,7 +6,7 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -61,7 +61,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
 void PrivateTest(BithumbPrivate &bithumbPrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(bithumbPrivate.queryAccountBalance());
-  TradeOptions tradeOptions(TradeOptions::Strategy::kMaker, TradeOptions::Mode::kSimulation, std::chrono::seconds(15));
+  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("13.567XRP");
   EXPECT_NO_THROW(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions));
   MonetaryAmount bigFrom("135670067.1234KRW");

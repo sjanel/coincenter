@@ -17,7 +17,7 @@ class BinancePublic;
 
 class BinancePrivate : public ExchangePrivate {
  public:
-  BinancePrivate(CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey);
+  BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
@@ -25,14 +25,25 @@ class BinancePrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
-  MonetaryAmount trade(MonetaryAmount& from, CurrencyCode toCurrencyCode, const TradeOptions& options) override;
-
   WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) override;
 
- private:
-  TradedOrdersInfo queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
+ protected:
+  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo& tradeInfo) override;
 
-  TradedOrdersInfo queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
+  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override {
+    return queryOrder(orderId, tradeInfo, true);
+  }
+
+  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override {
+    return queryOrder(orderId, tradeInfo, false);
+  }
+
+ private:
+  OrderInfo queryOrder(const OrderId& orderId, const TradeInfo& tradeInfo, bool isCancel);
+
+  TradedAmounts queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
+
+  TradedAmounts queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
 
   void updateRemainingVolume(Market m, const json& result, MonetaryAmount& remFrom) const;
 
@@ -48,8 +59,6 @@ class BinancePrivate : public ExchangePrivate {
   };
 
   CurlHandle _curlHandle;
-  CoincenterInfo& _config;
-  BinancePublic& _public;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

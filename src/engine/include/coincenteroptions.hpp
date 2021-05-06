@@ -6,7 +6,7 @@
 
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 #include "wallet.hpp"
 
 namespace cct {
@@ -41,7 +41,7 @@ struct CoincenterCmdLineOptions {
   int trade_updateprice_ms{static_cast<int>(
       std::chrono::duration_cast<std::chrono::milliseconds>(api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates)
           .count())};
-  bool trade_sim{api::TradeOptions().simulation()};
+  bool trade_sim{api::TradeOptions().isSimulation()};
 
   std::string withdraw{};
 };
@@ -55,7 +55,7 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
   constexpr int64_t minUpdatePriceTime =
       std::chrono::duration_cast<std::chrono::milliseconds>(api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates)
           .count();
-  const bool isSimulationModeByDefault = api::TradeOptions().simulation();
+  const bool isSimulationModeByDefault = api::TradeOptions().isSimulation();
 
   // clang-format off
   return CommandLineOptionsParser<OptValueType>(

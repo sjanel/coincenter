@@ -7,7 +7,7 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -37,7 +37,7 @@ void PublicTest(BinancePublic &binancePublic) {
 void PrivateTest(BinancePrivate &binancePrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
-  TradeOptions tradeOptions(TradeOptions::Strategy::kMaker, TradeOptions::Mode::kSimulation, std::chrono::seconds(15));
+  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("13.567ADA");
   EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));
   MonetaryAmount bigFrom("13567.1234BNB");

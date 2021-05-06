@@ -83,10 +83,6 @@ class ExchangePublic : public ExchangeBase {
   /// @return ordered list of currency code, or empty list if conversion is not possible
   Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to);
 
- protected:
-  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi)
-      : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi) {}
-
   MonetaryAmount computeWorstOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy);
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
@@ -99,6 +95,10 @@ class ExchangePublic : public ExchangeBase {
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);
 
   MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
+
+ protected:
+  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi)
+      : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi) {}
 
   std::string _name;
   FiatConverter &_fiatConverter;

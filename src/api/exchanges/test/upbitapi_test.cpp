@@ -4,7 +4,7 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 

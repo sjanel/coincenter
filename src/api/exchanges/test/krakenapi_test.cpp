@@ -9,7 +9,7 @@
 #include "fiatconverter.hpp"
 #include "krakenprivateapi.hpp"
 #include "krakenpublicapi.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -77,7 +77,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
 void PrivateTest(KrakenPrivate &krakenPrivate) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
   EXPECT_NO_THROW(krakenPrivate.queryAccountBalance());
-  TradeOptions tradeOptions(TradeOptions::Strategy::kMaker, TradeOptions::Mode::kSimulation, std::chrono::seconds(15));
+  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("0.001BTC");
   EXPECT_NO_THROW(krakenPrivate.trade(smallFrom, "EUR", tradeOptions));
   MonetaryAmount bigFrom("135670067.1234EUR");

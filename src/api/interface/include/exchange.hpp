@@ -20,16 +20,28 @@ class Exchange {
            api::ExchangePrivate &exchangePrivate);
 
   std::string_view name() const { return _exchangePublic.name(); }
-  std::string_view keyName() const { return _exchangePrivate.keyName(); }
+  std::string_view keyName() const { return apiPrivate().keyName(); }
 
   api::ExchangePublic &apiPublic() { return _exchangePublic; }
   const api::ExchangePublic &apiPublic() const { return _exchangePublic; }
 
-  api::ExchangePrivate &apiPrivate() { return _exchangePrivate; }
+  api::ExchangePrivate &apiPrivate() {
+    if (_pExchangePrivate) {
+      return *_pExchangePrivate;
+    }
+    throw exception("Cannot use default private exchange");
+  }
+
+  const api::ExchangePrivate &apiPrivate() const {
+    if (_pExchangePrivate) {
+      return *_pExchangePrivate;
+    }
+    throw exception("Cannot use default private exchange");
+  }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
-  bool hasPrivateAPI() const;
+  bool hasPrivateAPI() const { return _pExchangePrivate; }
 
   CurrencyExchangeFlatSet queryTradableCurrencies();
 
@@ -50,7 +62,7 @@ class Exchange {
 
  private:
   api::ExchangePublic &_exchangePublic;
-  api::ExchangePrivate &_exchangePrivate;
+  api::ExchangePrivate *_pExchangePrivate;
   const ExchangeInfo &_exchangeInfo;
 };
 }  // namespace cct

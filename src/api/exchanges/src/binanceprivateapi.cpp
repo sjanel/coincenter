@@ -6,7 +6,7 @@
 #include "binancepublicapi.hpp"
 #include "cct_nonce.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -63,20 +63,19 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
 
 }  // namespace
 
-BinancePrivate::BinancePrivate(CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
-    : ExchangePrivate(apiKey),
+BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
+    : ExchangePrivate(binancePublic, config, apiKey),
       _curlHandle(config.exchangeInfo(binancePublic.name()).minPrivateQueryDelay(), config.getRunMode()),
-      _config(config),
-      _public(binancePublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic) {}
 
-CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _public.queryTradableCurrencies(); }
+CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
 BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/account");
   BalancePortfolio balancePortfolio;
+  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   for (const json& balance : result["balances"]) {
     /*
     {
@@ -90,10 +89,11 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 
     if (!available.isZero()) {
       if (equiCurrency == CurrencyCode::kNeutral) {
-        log::info("{} Balance {}", _public.name(), available.str());
+        log::info("{} Balance {}", _exchangePublic.name(), available.str());
         balancePortfolio.add(available, MonetaryAmount("0", equiCurrency));
       } else {
-        MonetaryAmount equivalentInMainCurrency = _public.computeEquivalentInMainCurrency(available, equiCurrency);
+        MonetaryAmount equivalentInMainCurrency =
+            binancePublic.computeEquivalentInMainCurrency(available, equiCurrency);
         balancePortfolio.add(available, equivalentInMainCurrency);
       }
     }
@@ -116,27 +116,28 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return w;
 }
 
-MonetaryAmount BinancePrivate::trade(MonetaryAmount& from, CurrencyCode toCurrencyCode, const TradeOptions& options) {
-  using Clock = TradeOptions::Clock;
-  using TimePoint = TradeOptions::TimePoint;
-  TimePoint timerStart = Clock::now();
-  const bool isTakerStrategy = options.isTakerStrategy();
-  Market m = _public.retrieveMarket(from.currencyCode(), toCurrencyCode);
-  const std::string_view buyOrSell = from.currencyCode() == m.base() ? "SELL" : "BUY";
-  const std::string_view orderType = options.isTakerStrategy() ? "MARKET" : "LIMIT";
+PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
+                                          const TradeInfo& tradeInfo) {
+  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
+  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const Market m = tradeInfo.m;
+  const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
 
-  MonetaryAmount price = _public.sanitizePrice(m, _public.computeAvgOrderPrice(m, from, isTakerStrategy, 100));
-  MonetaryAmount volume = from.currencyCode() == m.quote() ? MonetaryAmount(from / price, m.base()) : from;
-  MonetaryAmount sanitizedVol = _public.sanitizeVolume(m, volume, price, isTakerStrategy);
+  price = binancePublic.sanitizePrice(m, price);
 
+  MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(m, volume, price, isTakerStrategy);
+
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < sanitizedVol) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", from.str(), toCurrencyCode.str(),
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
               sanitizedVol.str());
-    return MonetaryAmount("0", toCurrencyCode);
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
   }
-
   volume = sanitizedVol;
-
   CurlPostData placePostData{
       {"symbol", m.assetsPairStr()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
@@ -145,189 +146,63 @@ MonetaryAmount BinancePrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
     placePostData.append("price", price.amountStr());
   }
 
-  const std::string_view methodName = options.simulation() ? "api/v3/order/test" : "api/v3/order";
+  const bool isSimulation = tradeInfo.options.isSimulation();
+  const std::string_view methodName = isSimulation ? "api/v3/order/test" : "api/v3/order";
 
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, methodName, placePostData);
-  if (options.simulation()) {
-    MonetaryAmount toAmount = from.currencyCode() == m.quote() ? volume : volume.convertTo(price);
-    toAmount = _config.exchangeInfo(_public._name)
-                   .applyFee(toAmount, isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker);
-    from -= from.currencyCode() == m.quote() ? volume.toNeutral() * price : volume;
-
-    return toAmount;
+  if (isSimulation) {
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
   }
-
-  TimePoint lastPriceUpdateTime = Clock::now();
-  MonetaryAmount lastPrice = price;
-
-  long orderId = result["orderId"].get<long>();
-  bool queryOrdersInfo = false;
-  TradedOrdersInfo globalTradedInfo(from.currencyCode(), toCurrencyCode);
-
-  using OrdersIdToCheck = cct::SmallVector<long, 4>;
-  OrdersIdToCheck ordersIdToCheck(1, orderId);
-
-  MonetaryAmount remFrom = from;
-
-  do {
-    if (queryOrdersInfo) {
-      // Query Order Info
-      result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, methodName,
-                            {{"symbol", m.assetsPairStr()}, {"orderId", std::to_string(orderId)}});
-    }
-    std::string_view status = result["status"].get<std::string_view>();
-    if (status == "FILLED" || status == "REJECTED") {
-      if (status == "REJECTED") {
-        log::error("{} rejected our order", _public.name());
-      } else {
-        log::debug("Order filled!");
-      }
-      if (queryOrdersInfo) {
-        if (status == "FILLED") {
-          updateRemainingVolume(m, result, remFrom);
-        } else {
-          ordersIdToCheck.pop_back();
-        }
-      } else {
-        // In this case result comes from the first place order - no need to double check in trade history as we have
-        // the 'filled' information
-        globalTradedInfo += queryOrdersAfterPlace(m, from.currencyCode(), result);
-        ordersIdToCheck.pop_back();
-      }
-
-      break;
+  placeOrderInfo.orderId = std::to_string(result["orderId"].get<long>());
+  std::string_view status = result["status"].get<std::string_view>();
+  if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
+    if (status == "FILLED") {
+      placeOrderInfo.tradedAmounts() += queryOrdersAfterPlace(m, fromCurrencyCode, result);
+    } else {
+      log::error("{} rejected our place order with status {}", _exchangePublic.name(), status);
     }
 
-    queryOrdersInfo = true;
-
-    TimePoint t = Clock::now();
-
-    enum class NextAction { kPlaceMarketOrder, kNewOrderLimitPrice, kWait };
-
-    NextAction nextAction = NextAction::kWait;
-
-    bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + options.emergencyBufferTime();
-    bool updatePriceNeeded = false;
-    if (!reachedEmergencyTime && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < Clock::now()) {
-      // Let's see if we need to change the price if limit price has changed.
-      price = _public.computeLimitOrderPrice(m, remFrom);
-      updatePriceNeeded = (from.currencyCode() == m.base() && price < lastPrice) ||
-                          (from.currencyCode() == m.quote() && price > lastPrice);
-    }
-    if (reachedEmergencyTime || updatePriceNeeded) {
-      // Cancel
-      result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kDelete, methodName,
-                            {{"symbol", m.assetsPairStr()}, {"orderId", std::to_string(orderId)}});
-      status = result["status"].get<std::string_view>();
-      if (status == "FILLED" || status == "PARTIALLY_FILLED") {
-        updateRemainingVolume(m, result, remFrom);
-      } else {
-        // No eaten part, no need to double check trades history
-        ordersIdToCheck.pop_back();
-      }
-      if (status == "FILLED" || status == "REJECTED") {
-        if (status == "REJECTED") {
-          log::error("{} rejected our order", _public.name());
-        } else {
-          log::debug("Order filled while we asked for cancel!");
-        }
-        break;
-      }
-
-      if (reachedEmergencyTime) {
-        // timeout. Action depends on Strategy
-        if (timerStart + options.maxTradeTime() < t) {
-          log::warn("Time out reached, stop from there");
-          break;
-        }
-        if (options.strategy() == TradeOptions::Strategy::kMakerThenTaker) {
-          log::info("Emergency time reached, force match as adapt strategy");
-          nextAction = NextAction::kPlaceMarketOrder;
-        } else {
-          log::info("Emergency time reached, stop as maker strategy");
-          break;
-        }
-      } else {
-        nextAction = NextAction::kNewOrderLimitPrice;
-      }
-      if (nextAction != NextAction::kWait) {
-        // Compute new volume (price is either not needed in taker order, or already recomputed)
-        volume = remFrom.currencyCode() == m.quote() ? MonetaryAmount(remFrom / price, m.base()) : remFrom;
-        sanitizedVol = _public.sanitizeVolume(m, volume, price, isTakerStrategy);
-
-        if (volume < sanitizedVol) {
-          log::warn("No trade of {} into {} because min vol order is {} for this market", from.str(),
-                    toCurrencyCode.str(), sanitizedVol.str());
-          break;
-        }
-
-        volume = sanitizedVol;
-        placePostData.set("quantity", volume.amountStr());
-        if (nextAction == NextAction::kPlaceMarketOrder) {
-          placePostData.erase("timeInForce");
-          placePostData.erase("price");
-          placePostData.set("type", "MARKET");
-          log::warn("Reaching emergency time, make a last order at market price");
-        } else {
-          placePostData.set("price", price.amountStr());
-
-          lastPriceUpdateTime = Clock::now();
-          log::info("Limit price changed from {} to {}, update order", lastPrice.str(), price.str());
-          lastPrice = price;
-        }
-        result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, methodName, placePostData);
-
-        status = result["status"].get<std::string_view>();
-        orderId = result["orderId"].get<long>();
-
-        if (status == "FILLED" || status == "REJECTED") {
-          if (status == "REJECTED") {
-            log::error("{} rejected our order", _public.name());
-          } else {
-            log::debug("Order filled!");
-          }
-          TradedOrdersInfo tradeOrdersInfo = queryOrdersAfterPlace(m, from.currencyCode(), result);
-          remFrom -= tradeOrdersInfo.tradedFrom;
-          globalTradedInfo += tradeOrdersInfo;
-          break;
-        }
-        ordersIdToCheck.push_back(orderId);
-      }
-    }
-
-  } while (true);
-
-  int nbRetries = 0;
-  CurlHandle::Clock::duration sleepingTime = _curlHandle.minDurationBetweenQueries();
-  while (!ordersIdToCheck.empty() && ++nbRetries < kNbOrderRequestsRetries) {
-    // We need an additional call to trade history to get the fees, quantities matched as well
-    result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/myTrades",
-                          {{"symbol", m.assetsPairStr()}});
-
-    for (const json& fillDetail : result) {
-      long tradeOrderId = fillDetail["orderId"].get<long>();
-      auto findIt = std::find(ordersIdToCheck.begin(), ordersIdToCheck.end(), tradeOrderId);
-      if (findIt != ordersIdToCheck.end()) {
-        globalTradedInfo += queryOrder(m, from.currencyCode(), fillDetail);
-        ordersIdToCheck.erase(findIt);
-      }
-    }
-    if (!ordersIdToCheck.empty()) {
-      log::warn("Binance cannot find order {} in trades history yet", ordersIdToCheck.front());
-      sleepingTime = (3 * sleepingTime) / 2;
-      log::trace("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
-      std::this_thread::sleep_for(sleepingTime);
-    }
+    placeOrderInfo.setClosed();
   }
-
-  from -= globalTradedInfo.tradedFrom;
-  return globalTradedInfo.tradedTo;
+  return placeOrderInfo;
 }
 
-TradedOrdersInfo BinancePrivate::queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode,
-                                                       const json& orderJson) const {
+OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tradeInfo, bool isCancel) {
+  const CurrencyCode fromCurrencyCode = tradeInfo.fromCurrencyCode;
+  const CurrencyCode toCurrencyCode = tradeInfo.toCurrencyCode;
+  const Market m = tradeInfo.m;
+  const CurlOptions::RequestType requestType =
+      isCancel ? CurlOptions::RequestType::kDelete : CurlOptions::RequestType::kGet;
+  json result = PrivateQuery(_curlHandle, _apiKey, requestType, "api/v3/order",
+                             {{"symbol", m.assetsPairStr()}, {"orderId", orderId}});
+  std::string_view status = result["status"].get<std::string_view>();
+  bool isClosed = false;
+  if (status == "FILLED" || status == "CANCELED") {
+    isClosed = true;
+  } else if (status == "REJECTED" || status == "EXPIRED") {
+    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, status);
+    isClosed = true;
+  }
+  OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
+  MonetaryAmount executedVol(result["executedQty"].get<std::string_view>(), m.base());
+  if (!executedVol.isZero()) {
+    MonetaryAmount executedPri(result["price"].get<std::string_view>(), m.quote());
+    if (fromCurrencyCode == m.quote()) {
+      orderInfo.tradedAmounts.tradedFrom += executedVol.toNeutral() * executedPri;
+      orderInfo.tradedAmounts.tradedTo += executedVol;
+    } else {
+      orderInfo.tradedAmounts.tradedFrom += executedVol;
+      orderInfo.tradedAmounts.tradedTo += executedVol.toNeutral() * executedPri;
+    }
+  }
+  return orderInfo;
+}
+
+TradedAmounts BinancePrivate::queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode,
+                                                    const json& orderJson) const {
   CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
-  TradedOrdersInfo ret(fromCurrencyCode, toCurrencyCode);
+  TradedAmounts ret(fromCurrencyCode, toCurrencyCode);
 
   if (orderJson.contains("fills")) {
     for (const json& fillDetail : orderJson["fills"]) {
@@ -338,12 +213,12 @@ TradedOrdersInfo BinancePrivate::queryOrdersAfterPlace(Market m, CurrencyCode fr
   return ret;
 }
 
-TradedOrdersInfo BinancePrivate::queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const {
+TradedAmounts BinancePrivate::queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const {
   MonetaryAmount price(fillDetail["price"].get<std::string_view>(), m.quote());
   MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), m.base());
   MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
-  TradedOrdersInfo detailTradedInfo(fromCurrencyCode == m.quote() ? quantityTimesPrice : quantity,
-                                    fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
+  TradedAmounts detailTradedInfo(fromCurrencyCode == m.quote() ? quantityTimesPrice : quantity,
+                                 fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
   MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
                      fillDetail["commissionAsset"].get<std::string_view>());
   log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity.str(), price.str(), fee.str());
