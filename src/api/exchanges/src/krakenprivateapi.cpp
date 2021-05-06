@@ -238,11 +238,8 @@ MonetaryAmount KrakenPrivate::trade(MonetaryAmount& from, CurrencyCode toCurrenc
     // In simulation mode, just assume all was eaten (for simplicity)
     MonetaryAmount toAmount =
         volume.currencyCode() == m.quote() ? MonetaryAmount(from / price.toNeutral(), m.base()) : from.convertTo(price);
-    if (isTakerStrategy) {
-      toAmount = _config.exchangeInfo(_krakenPublic._name).applyTakerFee(toAmount);
-    } else {
-      toAmount = _config.exchangeInfo(_krakenPublic._name).applyMakerFee(toAmount);
-    }
+    toAmount = _config.exchangeInfo(_krakenPublic._name)
+                   .applyFee(toAmount, isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker);
     from = MonetaryAmount("0", from.currencyCode());
     return toAmount;
   }

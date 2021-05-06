@@ -148,11 +148,8 @@ MonetaryAmount BinancePrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, methodName, placePostData);
   if (options.simulation()) {
     MonetaryAmount toAmount = from.currencyCode() == m.quote() ? volume : volume.convertTo(price);
-    if (isTakerStrategy) {
-      toAmount = _config.exchangeInfo(_public._name).applyTakerFee(toAmount);
-    } else {
-      toAmount = _config.exchangeInfo(_public._name).applyMakerFee(toAmount);
-    }
+    toAmount = _config.exchangeInfo(_public._name)
+                   .applyFee(toAmount, isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker);
     from -= from.currencyCode() == m.quote() ? volume.toNeutral() * price : volume;
 
     return toAmount;
@@ -242,7 +239,11 @@ MonetaryAmount BinancePrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
           break;
         }
         if (options.strategy() == TradeOptions::Strategy::kMakerThenTaker) {
+          log::info("Emergency time reached, force match as adapt strategy");
           nextAction = NextAction::kPlaceMarketOrder;
+        } else {
+          log::info("Emergency time reached, stop as maker strategy");
+          break;
         }
       } else {
         nextAction = NextAction::kNewOrderLimitPrice;
@@ -436,8 +437,8 @@ WithdrawInfo BinancePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivat
             log::error("unknown status value {}", withdrawStatusInt);
             break;
         }
-        netWithdrawAmount = MonetaryAmount(withdrawDetail["amount"].get<std::string_view>());
-        MonetaryAmount fee(withdrawDetail["transactionFee"].get<std::string_view>());
+        netWithdrawAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), grossAmount.currencyCode());
+        MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), grossAmount.currencyCode());
         if (netWithdrawAmount + fee != grossAmount) {
           log::error("{} + {} != {}, maybe a change in API", netWithdrawAmount.amountStr(), fee.amountStr(),
                      grossAmount.amountStr());

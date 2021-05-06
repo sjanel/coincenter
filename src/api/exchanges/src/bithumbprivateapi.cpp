@@ -241,13 +241,11 @@ MonetaryAmount BithumbPrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
   using Clock = TradeOptions::Clock;
   using TimePoint = TradeOptions::TimePoint;
   TimePoint timerStart = Clock::now();
-  CurlPostData placePostData;
   const bool isTakerStrategy = options.strategy() == TradeOptions::Strategy::kTaker;
   Market m = _bithumbPublic.retrieveMarket(from.currencyCode(), toCurrencyCode);
 
   // I think Bithumb uses what I call "standard" currency codes, no need to translate them
-  placePostData.append("order_currency", m.base().str());
-  placePostData.append("payment_currency", m.quote().str());
+  CurlPostData placePostData{{"order_currency", m.base().str()}, {"payment_currency", m.quote().str()}};
   const std::string_view orderType = from.currencyCode() == m.base() ? "ask" : "bid";
   // Bithumb fees seem to be in quote currency for sell, base currency for buy (to be confirmed)
   MonetaryAmount volume = from;
@@ -257,13 +255,14 @@ MonetaryAmount BithumbPrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
     // In simulation mode, just assume all was eaten (for simplicity)
     MonetaryAmount convertedAmount =
         volume.currencyCode() == m.quote() ? MonetaryAmount(from / price.toNeutral(), m.base()) : from.convertTo(price);
-    if (isTakerStrategy) {
-      convertedAmount = _config.exchangeInfo(_bithumbPublic._name).applyTakerFee(convertedAmount);
-    } else {
-      convertedAmount = _config.exchangeInfo(_bithumbPublic._name).applyMakerFee(convertedAmount);
-    }
+    convertedAmount =
+        _config.exchangeInfo(_bithumbPublic._name)
+            .applyFee(convertedAmount, isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker);
     from = MonetaryAmount("0", from.currencyCode());
     return convertedAmount;
+  }
+  if (volume.currencyCode() == m.quote()) {
+    volume /= price;
   }
 
   std::string methodName = "trade/";
@@ -275,9 +274,6 @@ MonetaryAmount BithumbPrivate::trade(MonetaryAmount& from, CurrencyCode toCurren
     placePostData.append("price", price.amountStr());
   }
 
-  if (volume.currencyCode() == m.quote()) {
-    volume /= price;
-  }
   MaxNbDecimalsUnitMap::const_iterator maxUnitNbDecimalsIt = _maxNbDecimalsPerCurrencyCodePlace.find(m.base());
   int8_t nbMaxDecimalsUnits = std::numeric_limits<MonetaryAmount::AmountType>::digits10;
   if (maxUnitNbDecimalsIt != _maxNbDecimalsPerCurrencyCodePlace.end() &&
