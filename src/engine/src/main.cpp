@@ -19,7 +19,7 @@
 #include "krakenprivateapi.hpp"
 #include "krakenpublicapi.hpp"
 #include "stringoptionparser.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 
@@ -87,12 +87,11 @@ int main(int argc, const char* argv[]) {
       std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
           anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
 
-      tradeOptions = api::TradeOptions(
-          cmdLineOptions.trade_strategy,
-          cmdLineOptions.trade_sim ? api::TradeOptions::Mode::kSimulation : api::TradeOptions::Mode::kReal,
-          std::chrono::seconds(cmdLineOptions.trade_timeout_s),
-          std::chrono::milliseconds(cmdLineOptions.trade_emergency_ms),
-          std::chrono::milliseconds(cmdLineOptions.trade_updateprice_ms));
+      tradeOptions = api::TradeOptions(cmdLineOptions.trade_strategy,
+                                       cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal,
+                                       std::chrono::seconds(cmdLineOptions.trade_timeout_s),
+                                       std::chrono::milliseconds(cmdLineOptions.trade_emergency_ms),
+                                       std::chrono::milliseconds(cmdLineOptions.trade_updateprice_ms));
     }
 
     if (!cmdLineOptions.withdraw.empty()) {

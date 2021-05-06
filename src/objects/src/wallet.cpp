@@ -5,10 +5,9 @@
 #include "jsonhelpers.hpp"
 
 namespace cct {
-namespace {
 
-bool ValidateWalletFromFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
-                            std::string_view expectedAddress = "", std::string_view expectedTag = "") {
+bool Wallet::IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
+                                           std::string_view expectedAddress, std::string_view expectedTag) {
   json data = OpenJsonFile(Wallet::kDepositAddressesFilename, FileNotFoundMode::kThrow);
   if (!data.contains(privateExchangeName.name())) {
     log::warn("Unknown exchange {} for wallet", privateExchangeName.name());
@@ -34,17 +33,13 @@ bool ValidateWalletFromFile(const PrivateExchangeName &privateExchangeName, Curr
         std::string addressAndTag = value;
         std::size_t tagPos = addressAndTag.find_first_of(',');
         std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
+        if (expectedAddress != address) {
+          return false;
+        }
         std::string_view tag(tagPos == std::string::npos ? addressAndTag.end() : (addressAndTag.begin() + tagPos + 1),
                              addressAndTag.end());
-        if (!expectedAddress.empty()) {
-          if (expectedAddress != address) {
-            throw exception("Invalid wallet because " + std::string(expectedAddress) + " unknown from " +
-                            Wallet::kDepositAddressesFilename);
-          }
-          if (expectedTag != tag) {
-            throw exception("Invalid wallet because " + std::string(expectedTag) + " unknown from " +
-                            Wallet::kDepositAddressesFilename);
-          }
+        if (expectedTag != tag) {
+          return false;
         }
         return true;
       }
@@ -54,13 +49,12 @@ bool ValidateWalletFromFile(const PrivateExchangeName &privateExchangeName, Curr
   log::error("Unknown currency {} for wallet", currency.str());
   return false;
 }
-}  // namespace
 
 Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
                std::string_view tag)
     : _privateExchangeName(privateExchangeName), _address(address), _tag(tag), _currency(currency) {
   if (kValidateWalletFromDepositAddressesFile &&
-      !ValidateWalletFromFile(_privateExchangeName, currency, address, tag)) {
+      !IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
     throw exception("Incorrect wallet compared to the one stored in " + std::string(Wallet::kDepositAddressesFilename));
   }
 }
@@ -69,7 +63,7 @@ Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency,
                std::string_view tag)
     : _privateExchangeName(std::move(privateExchangeName)), _address(address), _tag(tag), _currency(currency) {
   if (kValidateWalletFromDepositAddressesFile &&
-      !ValidateWalletFromFile(_privateExchangeName, currency, address, tag)) {
+      !IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
     throw exception("Incorrect wallet compared to the one stored in " + std::string(Wallet::kDepositAddressesFilename));
   }
 }

@@ -6,6 +6,19 @@
 
 namespace cct {
 namespace api {
+
+enum class TradeStrategy {
+  kMaker,           // Buy / sell at limit price for better conversion rate. Can be longer though.
+  kMakerThenTaker,  // Start trade at limit price, updates the price to market price if at timeout order is not
+                    // fully executed
+  kTaker            // Take all available amount in the order book directly. Useful for arbitrage.
+};
+
+enum class TradeMode {
+  kSimulation,
+  kReal
+};  // An enum for documentation and compile time checking for such important option
+
 class TradeOptions {
  public:
   using Clock = std::chrono::high_resolution_clock;
@@ -15,28 +28,17 @@ class TradeOptions {
   static constexpr Clock::duration kDefaultEmergencyTime = std::chrono::milliseconds(2500);
   static constexpr Clock::duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 
-  enum class Strategy {
-    kMaker,           // Buy / sell at limit price for better conversion rate. Can be longer though.
-    kMakerThenTaker,  // Start trade at limit price, updates the price to market price if at timeout order is not
-                      // fully executed
-    kTaker            // Take all available amount in the order book directly. Useful for arbitrage.
-  };
-
-  enum class Mode {
-    kSimulation,
-    kReal
-  };  // An enum for documentation and compile time checking for such important option
-
-  explicit TradeOptions(Strategy strategy = Strategy::kMaker, Clock::duration dur = kDefaultTradeDuration,
+  explicit TradeOptions(TradeStrategy tradeStrategy = TradeStrategy::kMaker,
+                        Clock::duration dur = kDefaultTradeDuration,
                         Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
                         Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates)
-      : TradeOptions(strategy, Mode::kReal, dur, emergencyBufferTime, minTimeBetweenPriceUpdates) {}
+      : TradeOptions(tradeStrategy, TradeMode::kReal, dur, emergencyBufferTime, minTimeBetweenPriceUpdates) {}
 
-  TradeOptions(Strategy strategy, Mode mode, Clock::duration dur,
+  TradeOptions(TradeStrategy tradeStrategy, TradeMode tradeMode, Clock::duration dur,
                Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
                Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates);
 
-  TradeOptions(std::string_view strategyStr, Mode mode, Clock::duration dur,
+  TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Clock::duration dur,
                Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
                Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates);
 
@@ -46,11 +48,15 @@ class TradeOptions {
 
   Clock::duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
 
-  Strategy strategy() const { return _strategy; }
+  TradeStrategy strategy() const { return _strategy; }
 
-  bool isTakerStrategy() const { return _strategy == Strategy::kTaker; }
+  TradeMode tradeMode() const { return _tradeMode; }
 
-  bool simulation() const { return _simulationMode; }
+  bool isTakerStrategy() const { return _strategy == TradeStrategy::kTaker; }
+
+  bool isSimulation() const { return _tradeMode == TradeMode::kSimulation; }
+
+  void switchToTakerStrategy() { _strategy = TradeStrategy::kTaker; }
 
   std::string strategyStr() const;
 
@@ -60,8 +66,8 @@ class TradeOptions {
   Clock::duration _maxTradeTime;
   Clock::duration _emergencyBufferTime;
   Clock::duration _minTimeBetweenPriceUpdates;
-  Strategy _strategy;
-  bool _simulationMode;
+  TradeStrategy _strategy;
+  TradeMode _tradeMode;
 };
 }  // namespace api
 }  // namespace cct

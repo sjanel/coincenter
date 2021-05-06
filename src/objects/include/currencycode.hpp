@@ -12,6 +12,7 @@
 #include <string_view>
 
 #include "cct_hash.hpp"
+#include "cct_toupper.hpp"
 
 namespace cct {
 
@@ -25,15 +26,17 @@ class CurrencyCode {
 
   static const CurrencyCode kNeutral;
 
-  CurrencyCode(std::string_view acronym = "");
+  constexpr CurrencyCode() noexcept { std::fill(_data.begin(), _data.end(), '\0'); }
 
   template <unsigned N, std::enable_if_t<N <= sizeof(AcronymType), bool> = true>
-  CurrencyCode(const char (&acronym)[N]) noexcept {
+  constexpr CurrencyCode(const char (&acronym)[N]) noexcept {
     // Fill extra chars to 0 is important as we always read them for code generation
-    std::fill(std::transform(std::begin(acronym), std::end(acronym), _data.begin(),
-                             [](unsigned char c) { return std::toupper(c); }),
-              _data.end(), '\0');
+    std::fill(
+        std::transform(std::begin(acronym), std::end(acronym), _data.begin(), [](char c) { return cct::toupper(c); }),
+        _data.end(), '\0');
   }
+
+  CurrencyCode(std::string_view acronym);
 
   std::string_view str() const { return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0')); }
 

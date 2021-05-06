@@ -1,47 +1,47 @@
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 #include "cct_exception.hpp"
 
 namespace cct {
 namespace api {
 namespace {
-TradeOptions::Strategy StrategyFromStr(std::string_view strategyStr) {
+TradeStrategy StrategyFromStr(std::string_view strategyStr) {
   if (strategyStr == "maker") {
-    return TradeOptions::Strategy::kMaker;
+    return TradeStrategy::kMaker;
   }
   if (strategyStr == "adapt") {
-    return TradeOptions::Strategy::kMakerThenTaker;
+    return TradeStrategy::kMakerThenTaker;
   }
   if (strategyStr == "taker") {
-    return TradeOptions::Strategy::kTaker;
+    return TradeStrategy::kTaker;
   }
   throw exception("Unrecognized trade strategy " + std::string(strategyStr));
 }
 }  // namespace
 
-TradeOptions::TradeOptions(Strategy strategy, Mode mode, Clock::duration dur, Clock::duration emergencyBufferTime,
-                           Clock::duration minTimeBetweenPriceUpdates)
+TradeOptions::TradeOptions(TradeStrategy tradeStrategy, TradeMode tradeMode, Clock::duration dur,
+                           Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates)
     : _maxTradeTime(dur),
       _emergencyBufferTime(emergencyBufferTime),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
-      _strategy(strategy),
-      _simulationMode(mode == Mode::kSimulation) {}
+      _strategy(tradeStrategy),
+      _tradeMode(tradeMode) {}
 
-TradeOptions::TradeOptions(std::string_view strategyStr, Mode mode, Clock::duration dur,
+TradeOptions::TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Clock::duration dur,
                            Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates)
     : _maxTradeTime(dur),
       _emergencyBufferTime(emergencyBufferTime),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _strategy(StrategyFromStr(strategyStr)),
-      _simulationMode(mode == Mode::kSimulation) {}
+      _tradeMode(tradeMode) {}
 
 std::string TradeOptions::strategyStr() const {
   switch (_strategy) {
-    case Strategy::kMaker:
+    case TradeStrategy::kMaker:
       return "maker";
-    case Strategy::kMakerThenTaker:
+    case TradeStrategy::kMakerThenTaker:
       return "adapt";
-    case Strategy::kTaker:
+    case TradeStrategy::kTaker:
       return "taker";
     default:
       throw exception("Unexpected strategy value");
@@ -49,7 +49,7 @@ std::string TradeOptions::strategyStr() const {
 }
 
 std::string TradeOptions::str() const {
-  std::string ret(_simulationMode ? "Simulated " : "Real ");
+  std::string ret(isSimulation() ? "Simulated " : "Real ");
   ret.append(strategyStr());
   ret.append(" strategy, timeout of ");
   ret.append(std::to_string(std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count()));

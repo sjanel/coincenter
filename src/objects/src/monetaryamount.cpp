@@ -218,7 +218,7 @@ bool MonetaryAmount::operator<(MonetaryAmount o) const {
 }
 
 bool MonetaryAmount::operator==(MonetaryAmount o) const {
-  return _currencyCode == o._currencyCode && _nbDecimals == o._nbDecimals && _amount == o._amount;
+  return _amount == o._amount && _nbDecimals == o._nbDecimals && _currencyCode == o._currencyCode;
 }
 
 MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {

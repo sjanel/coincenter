@@ -18,7 +18,7 @@
 #include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {

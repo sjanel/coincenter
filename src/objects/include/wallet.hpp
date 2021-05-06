@@ -65,6 +65,9 @@ class Wallet {
   }
   bool operator!=(const Wallet &w) const { return !(*this == w); }
 
+  static bool IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
+                                            std::string_view expectedAddress, std::string_view expectedTag);
+
  private:
   PrivateExchangeName _privateExchangeName;
   std::string _address;

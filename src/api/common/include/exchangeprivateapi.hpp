@@ -9,7 +9,9 @@
 #include "curlhandle.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
+#include "exchangepublicapi.hpp"
 #include "market.hpp"
+#include "tradeinfo.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
 
@@ -54,7 +56,7 @@ class ExchangePrivate : public ExchangeBase {
   ///             Will be modified containing the remaining (untraded) amount (0 if trade is complete)
   /// @param toCurrencyCode the destination currency
   /// @return converted net amount (fees deduced)
-  virtual MonetaryAmount trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options) = 0;
+  MonetaryAmount trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options);
 
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes (or hours with Bitcoin)
@@ -69,8 +71,20 @@ class ExchangePrivate : public ExchangeBase {
   virtual WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange) = 0;
 
  protected:
-  explicit ExchangePrivate(const APIKey &apiKey) : ExchangeBase(), _apiKey(apiKey) {}
+  ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
+      : ExchangeBase(), _exchangePublic(exchangePublic), _config(config), _apiKey(apiKey) {}
 
+  /// Place an order in mode fire and forget.
+  virtual PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
+                                    const TradeInfo &tradeInfo) = 0;
+
+  /// Cancel given order id and returned its possible matched amounts
+  virtual OrderInfo cancelOrder(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
+
+  virtual OrderInfo queryOrderInfo(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
+
+  ExchangePublic &_exchangePublic;
+  const CoincenterInfo &_config;
   const APIKey &_apiKey;
 };
 }  // namespace api

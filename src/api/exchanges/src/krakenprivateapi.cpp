@@ -12,7 +12,7 @@
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptionsapi.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -81,11 +81,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 }
 }  // namespace
 
-KrakenPrivate::KrakenPrivate(CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
-    : ExchangePrivate(apiKey),
+KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
+    : ExchangePrivate(krakenPublic, config, apiKey),
       _curlHandle(config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
-      _config(config),
-      _krakenPublic(krakenPublic),
       _balanceCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAccountBalance), _cachedResultVault),
           _curlHandle, config, _apiKey, krakenPublic),
@@ -93,7 +91,7 @@ KrakenPrivate::KrakenPrivate(CoincenterInfo& config, KrakenPublic& krakenPublic,
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
-CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _krakenPublic.queryTradableCurrencies(); }
+CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
 BalancePortfolio KrakenPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
   BalancePortfolio ret;
@@ -108,7 +106,7 @@ BalancePortfolio KrakenPrivate::AccountBalanceFunc::operator()(CurrencyCode equi
         log::info("Kraken Balance {}", a.str());
         ret.add(a, MonetaryAmount("0", equiCurrency));
       } else {
-        MonetaryAmount equivalentInMainCurrency = _krakenPublic.computeEquivalentInMainCurrency(a, equiCurrency);
+        MonetaryAmount equivalentInMainCurrency = _exchangePublic.computeEquivalentInMainCurrency(a, equiCurrency);
         ret.add(a, equivalentInMainCurrency);
       }
     }
@@ -117,7 +115,7 @@ BalancePortfolio KrakenPrivate::AccountBalanceFunc::operator()(CurrencyCode equi
 }
 
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  CurrencyExchange krakenCurrency = _krakenPublic.convertStdCurrencyToCurrencyExchange(currencyCode);
+  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json res = PrivateQuery(_curlHandle, _apiKey, "DepositMethods", {{"asset", krakenCurrency.altStr()}});
   // [ { "fee": "0.0000000000", "gen-address": true, "limit": false, "method": "Bitcoin"}]
   if (res.empty()) {
@@ -128,229 +126,188 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       PrivateQuery(_curlHandle, _apiKey, "DepositAddresses", {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
     // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
-    log::warn("No deposit address found on {} for {}, creating a new one...", _krakenPublic.name(), currencyCode.str());
+    log::warn("No deposit address found on {} for {}, creating a new one...", _exchangePublic.name(),
+              currencyCode.str());
     res = PrivateQuery(_curlHandle, _apiKey, "DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
       throw exception("Cannot create a new deposit address on Kraken for " + std::string(currencyCode.str()));
     }
   }
+  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
+
   std::string address, tag;
-  for (const auto& [keyStr, valueStr] : res.front().items()) {
-    if (keyStr == "address") {
-      address = valueStr;
-    } else if (keyStr == "expiretm") {
-      if (valueStr != "0") {
-        log::error("{} wallet has an expire time of {}", _krakenPublic.name(), valueStr);
-      }
-    } else if (keyStr == "new") {
-      // Never used, it's ok, safely pass this
-    } else {
-      // Heuristic: this last field may change key name and is optional (tag for XRP, memo for EOS for instance)
-      if (!tag.empty()) {
-        throw exception("Tag already set / unknown key information for " + std::string(currencyCode.str()));
-      }
-      if (valueStr.is_number_integer()) {
-        tag = std::to_string(static_cast<long>(valueStr));
+  for (const json& depositDetail : res) {
+    for (const auto& [keyStr, valueStr] : depositDetail.items()) {
+      if (keyStr == "address") {
+        address = valueStr;
+      } else if (keyStr == "expiretm") {
+        if (valueStr != "0") {
+          log::error("{} wallet has an expire time of {}", _exchangePublic.name(), valueStr);
+        }
+      } else if (keyStr == "new") {
+        // Never used, it's ok, safely pass this
       } else {
-        tag = valueStr.get<std::string>();
+        // Heuristic: this last field may change key name and is optional (tag for XRP, memo for EOS for instance)
+        if (!tag.empty()) {
+          throw exception("Tag already set / unknown key information for " + std::string(currencyCode.str()));
+        }
+        if (valueStr.is_number_integer()) {
+          tag = std::to_string(static_cast<long>(valueStr));
+        } else {
+          tag = valueStr.get<std::string>();
+        }
       }
     }
+    if (Wallet::IsAddressPresentInDepositFile(privateExchangeName, currencyCode, address, tag)) {
+      break;
+    }
+    log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
+    tag.clear();
   }
-  Wallet w(PrivateExchangeName(_krakenPublic.name(), _apiKey.name()), currencyCode, address, tag);
+
+  Wallet w(privateExchangeName, currencyCode, address, tag);
   log::info("Retrieved {}", w.str());
   return w;
 }
 
-MonetaryAmount KrakenPrivate::trade(MonetaryAmount& from, CurrencyCode toCurrencyCode, const TradeOptions& options) {
-  // Documentation: https://www.kraken.com/fr-fr/features/api#add-standard-order
+PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
+                                         const TradeInfo& tradeInfo) {
   using Clock = TradeOptions::Clock;
-  using TimePoint = TradeOptions::TimePoint;
-  TimePoint timerStart = Clock::now();
-  const bool isTakerStrategy = options.isTakerStrategy();
-  const Market m = _krakenPublic.retrieveMarket(from.currencyCode(), toCurrencyCode);
-  const MonetaryAmount orderMin = _krakenPublic.queryVolumeOrderMin(m);
-  // Make input market 'Kraken' like.
-  CurrencyExchange krakenCurrencyBase = _krakenPublic.convertStdCurrencyToCurrencyExchange(m.base());
-  CurrencyExchange krakenCurrencyQuote = _krakenPublic.convertStdCurrencyToCurrencyExchange(m.quote());
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
+  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isSimulation = tradeInfo.options.isSimulation();
+  const Market m = tradeInfo.m;
+  KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);
+  const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(m);
+  CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.base());
+  CurrencyExchange krakenCurrencyQuote = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.quote());
   Market krakenMarket(krakenCurrencyBase.altStr(), krakenCurrencyQuote.altStr());
-  const std::string_view orderType = from.currencyCode() == m.base() ? "sell" : "buy";
-  // Mandatory options
-  MonetaryAmount price = _krakenPublic.computeAvgOrderPrice(m, from, isTakerStrategy);
+  const std::string_view orderType = fromCurrencyCode == m.base() ? "sell" : "buy";
 
-  auto volAndPriNbDecimals = _krakenPublic._marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
+  auto volAndPriNbDecimals = krakenPublic._marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
 
   price.truncate(volAndPriNbDecimals.priNbDecimals);
 
   // volume in quote currency (viqc) is not available (as of March 2021), receiving error 'EAPI:Feature disabled:viqc'
   // We have to compute the amount manually (always in base currency)
-  MonetaryAmount volume = from.currencyCode() == m.quote() ? MonetaryAmount(from / price, m.base()) : from;
-
   volume.truncate(volAndPriNbDecimals.volNbDecimals);
 
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < orderMin) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
-              orderMin.str());
-    return MonetaryAmount("0", toCurrencyCode);
+              volume.str());
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
   }
 
   // minimum expire time tested on my side was 5 seconds. I chose 10 seconds just to be sure that we will not have any
   // problem.
-  const int maxTradeTimeInSeconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(options.maxTradeTime()).count());
+  const int maxTradeTimeInSeconds =
+      static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(tradeInfo.options.maxTradeTime()).count());
   const int expireTimeInSeconds = std::max(10, maxTradeTimeInSeconds);
 
-  const auto nbSecondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
+  const auto nbSecondsSinceEpoch =
+      std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
+
+  // Below 32 bits int acts as a hash: it is maybe not unique, so we should filter again based on the txid.
+  // we will keep it unique for this whole trade
+  if (placeOrderInfo.userRef.empty()) {
+    // This method can be called as a first place order or next updated ones. Only create a new userRef for the first
+    // place order
+    placeOrderInfo.userRef = std::to_string(static_cast<int32_t>(nbSecondsSinceEpoch));
+  }
 
   // oflags: Ask fee in destination currency.
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).
   // Warning: this does not change the currency of the returned fee from Kraken in the get Closed / Opened orders,
   // which will be always in quote currency (as per the documentation)
-
-  // Below 32 bits int acts as a hash: it is maybe not unique, so we should filter again based on the txid.
-  // we will keep it unique for this whole trade
-  const int32_t orderId32Bits = static_cast<int32_t>(nbSecondsSinceEpoch);
-
   CurlPostData placePostData{{"pair", krakenMarket.assetsPairStr()},
                              {"type", orderType},
                              {"ordertype", isTakerStrategy ? "market" : "limit"},
                              {"price", price.amountStr()},
                              {"volume", volume.amountStr()},
-                             {"oflags", from.currencyCode() == m.quote() ? "fcib" : "fciq"},
+                             {"oflags", fromCurrencyCode == m.quote() ? "fcib" : "fciq"},
                              {"expiretm", std::to_string(nbSecondsSinceEpoch + expireTimeInSeconds)},
-                             {"userref", std::to_string(orderId32Bits)}};
-  if (options.simulation()) {
+                             {"userref", placeOrderInfo.userRef}};
+  if (isSimulation) {
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
   }
 
   json placeOrderRes = PrivateQuery(_placeCancelOrder, _apiKey, "AddOrder", placePostData);
-  TimePoint lastPriceUpdateTime = Clock::now();
   // {"error":[],"result":{"descr":{"order":"buy 24.69898116 XRPETH @ limit 0.0003239"},"txid":["OWBA44-TQZQ7-EEYSXA"]}}
+  if (isSimulation) {
+    // In simulation mode, there is no txid returned. If we arrived here (after CollectResults) we assume that the call
+    // to api was a success.
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
+  placeOrderInfo.orderId = placeOrderRes["txid"].front();
+
   // Kraken will automatically truncate the decimals to the maximum allowed for the trade assets. Get this information
   // and adjust our amount.
-  std::string orderDescriptionStr = placeOrderRes["descr"]["order"];
+  std::string_view orderDescriptionStr = placeOrderRes["descr"]["order"].get<std::string_view>();
   std::string_view krakenTruncatedAmount(
       orderDescriptionStr.begin() + orderType.size() + 1,
       orderDescriptionStr.begin() + orderDescriptionStr.find_first_of(' ', orderType.size() + 1));
   MonetaryAmount krakenVolume(krakenTruncatedAmount, m.base());
   log::debug("Kraken adjusted volume: {}", krakenVolume.str());
 
-  if (options.simulation()) {
-    // In simulation mode, there is no txid returned. If we arrived here (after CollectResults) we assume that the call
-    // to api was a success.
-    // In simulation mode, just assume all was eaten (for simplicity)
-    MonetaryAmount toAmount =
-        volume.currencyCode() == m.quote() ? MonetaryAmount(from / price.toNeutral(), m.base()) : from.convertTo(price);
-    toAmount = _config.exchangeInfo(_krakenPublic._name)
-                   .applyFee(toAmount, isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker);
-    from = MonetaryAmount("0", from.currencyCode());
-    return toAmount;
-  }
-  std::string txIdString = placeOrderRes["txid"].front();
-  using CreatedOrders = cct::SmallVector<std::string, 8>;
-  CreatedOrders createdOrders(1, txIdString);
+  TradeInfo newTradeInfo(tradeInfo);
+  newTradeInfo.userRef = placeOrderInfo.userRef;
 
-  // Now, we need to follow our order's life, until either:
-  //  - All its amount is eated before the timeout
-  //  - Timeout is reached and order will expire naturally.
-  //  - If Maker strategy and limit price changes, update order to new limit price (cancel then new)
-  MonetaryAmount lastPrice = price;
-  MonetaryAmount remFrom = from;
-  do {
-    json ordersRes =
-        queryOrdersData(m, from.currencyCode(), orderId32Bits, createdOrders, QueryOrder::kOpenedThenClosed);
+  placeOrderInfo.orderInfo =
+      queryOrderInfo(placeOrderInfo.orderId, newTradeInfo,
+                     isTakerStrategy ? QueryOrder::kClosedThenOpened : QueryOrder::kOpenedThenClosed);
 
-    const json& openedOrdersMap = ordersRes["open"];
-    // TODO: Simplify below lambda
-    auto updateOrder = [this, m, orderId32Bits, &placePostData, expireTimeInSeconds, volAndPriNbDecimals,
-                        isTakerStrategy,
-                        orderMin](MonetaryAmount& remFrom, const std::string& txIdString) -> std::string {
-      TradedOrdersInfo closedOrderInfo =
-          queryOrders(m, remFrom.currencyCode(), orderId32Bits,
-                      std::span<const std::string>(std::addressof(txIdString), 1), QueryOrder::kClosedThenOpened);
-
-      remFrom -= closedOrderInfo.tradedFrom;
-
-      auto nbSecondsSinceEpoch =
-          std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
-      placePostData.set("expiretm", std::to_string(nbSecondsSinceEpoch + expireTimeInSeconds));
-      // Add a new order at market price (to make it matched immediately)
-      // We need to recalculate the volume in this case, it's possible that order book has changed.
-      MonetaryAmount price = _krakenPublic.computeAvgOrderPrice(m, remFrom, isTakerStrategy);
-      MonetaryAmount volume = remFrom.currencyCode() == m.quote() ? MonetaryAmount(remFrom / price, m.base()) : remFrom;
-      volume.truncate(volAndPriNbDecimals.volNbDecimals);
-      if (volume < orderMin) {
-        log::warn("Do not trade remaining {} because min vol order is {} for this market", volume.str(),
-                  orderMin.str());
-        return "";
-      }
-
-      placePostData.set("volume", volume.amountStr());
-      price.truncate(volAndPriNbDecimals.priNbDecimals);
-      placePostData.set("price", price.amountStr());
-      json newPlaceOrderRes = PrivateQuery(_placeCancelOrder, _apiKey, "AddOrder", placePostData);
-      return newPlaceOrderRes["txid"].front();
-    };
-
-    if (openedOrdersMap.contains(txIdString)) {
-      TimePoint t = Clock::now();
-      if (timerStart + options.maxTradeTime() < t + options.emergencyBufferTime()) {
-        // timeout. Action depends on Strategy
-        if (isTakerStrategy) {
-          log::error("Kraken taker order was not matched immediately, try again");
-        }
-        PrivateQuery(_placeCancelOrder, _apiKey, "CancelOrder", {{"txid", txIdString}});
-        // {"error":[],"result":{"count":1}}
-
-        if (isTakerStrategy || options.strategy() == TradeOptions::Strategy::kMakerThenTaker) {
-          if (timerStart + options.maxTradeTime() < t) {
-            break;
-          }
-          placePostData.set("ordertype", "market");
-          txIdString = updateOrder(remFrom, txIdString);
-          if (txIdString.empty()) {
-            break;
-          } else {
-            createdOrders.push_back(txIdString);
-          }
-        }
-      } else if (!isTakerStrategy && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < Clock::now()) {
-        // Let's see if we need to change the price if limit price has changed.
-        price = _krakenPublic.computeAvgOrderPrice(m, remFrom, isTakerStrategy);
-        if ((from.currencyCode() == m.base() && price < lastPrice) ||
-            (from.currencyCode() == m.quote() && price > lastPrice)) {
-          log::info("Limit price changed from {} to {}, update order", lastPrice.str(), price.str());
-          PrivateQuery(_placeCancelOrder, _apiKey, "CancelOrder", {{"txid", txIdString}});
-          txIdString = updateOrder(remFrom, txIdString);
-          if (txIdString.empty()) {
-            break;
-          } else {
-            createdOrders.push_back(txIdString);
-          }
-          lastPrice = price;
-          lastPriceUpdateTime = Clock::now();
-        }
-      }
-    } else {
-      break;
-    }
-  } while (true);
-
-  // Final call just to confirm the traded amount. At this point, all orders made by this function should be closed.
-  TradedOrdersInfo closedOrdersInfo =
-      queryOrders(m, from.currencyCode(), orderId32Bits, createdOrders, QueryOrder::kClosedThenOpened);
-  from -= closedOrdersInfo.tradedFrom;
-  return closedOrdersInfo.tradedTo;
+  return placeOrderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(Market m, CurrencyCode fromCurrencyCode, int32_t orderId32Bits,
-                                    std::span<const std::string> createdOrdersId, QueryOrder queryOrder) {
+OrderInfo KrakenPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
+  PrivateQuery(_placeCancelOrder, _apiKey, "CancelOrder", {{"txid", orderId}});
+  // {"error":[],"result":{"count":1}}
+  return queryOrderInfo(orderId, tradeInfo, QueryOrder::kClosedThenOpened);
+}
+
+OrderInfo KrakenPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo, QueryOrder queryOrder) {
+  const CurrencyCode fromCurrencyCode = tradeInfo.fromCurrencyCode;
+  const CurrencyCode toCurrencyCode = tradeInfo.toCurrencyCode;
+  const Market m = tradeInfo.m;
+
+  json ordersRes = queryOrdersData(m, fromCurrencyCode, tradeInfo.userRef, orderId, queryOrder);
+  const bool orderInOpenedPart = ordersRes.contains("open") && ordersRes["open"].contains(orderId);
+  const json& orderJson = orderInOpenedPart ? ordersRes["open"][orderId] : ordersRes["closed"][orderId];
+  MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), m.base());             // always in base currency
+  MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), m.base());  // always in base currency
+  OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode), !orderInOpenedPart);
+  // Avoid division by 0 as the price is returned as 0.
+  if (!tradedVol.isZero()) {
+    MonetaryAmount tradedCost(orderJson["cost"].get<std::string_view>(), m.quote());  // always in quote currency
+    MonetaryAmount fee(orderJson["fee"].get<std::string_view>(), m.quote());          // always in quote currency
+
+    if (fromCurrencyCode == m.quote()) {
+      MonetaryAmount price(orderJson["price"].get<std::string_view>(), m.base());
+      orderInfo.tradedAmounts.tradedFrom += tradedCost;
+      orderInfo.tradedAmounts.tradedTo += (tradedCost - fee).toNeutral() / price;
+    } else {
+      orderInfo.tradedAmounts.tradedFrom += tradedVol;
+      orderInfo.tradedAmounts.tradedTo += tradedCost - fee;
+    }
+  }
+
+  return orderInfo;
+}
+
+json KrakenPrivate::queryOrdersData(Market m, CurrencyCode fromCurrencyCode, std::string_view userRef,
+                                    const OrderId& orderId, QueryOrder queryOrder) {
   CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
   constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
-  CurlPostData ordersPostData{{"trades", "true"}, {"userref", std::to_string(orderId32Bits)}};
+  CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};
   const bool kOpenedFirst = queryOrder == QueryOrder::kOpenedThenClosed;
   const std::string_view kFirstQueryFullName = kOpenedFirst ? "OpenOrders" : "ClosedOrders";
-  const std::string kFirstQueryMapName = kOpenedFirst ? "open" : "closed";
   do {
     json data = PrivateQuery(_curlHandle, _apiKey, kFirstQueryFullName, ordersPostData);
     /*
@@ -361,68 +318,32 @@ json KrakenPrivate::queryOrdersData(Market m, CurrencyCode fromCurrencyCode, int
      24.96099843 XRPETH @ limit
      0.0003205","close":""},"vol":"24.96099843","vol_exec":"0.00000000","cost":"0.0000000000","fee":"0.0000000000","price":"0.0000000000","stopprice":"0.0000000000","limitprice":"0.0000000000","misc":"","oflags":"fciq"}},"count":2}}
     */
-    const json& firstOrders = data[kFirstQueryMapName];
-    auto notFoundIt =
-        std::find_if_not(createdOrdersId.begin(), createdOrdersId.end(),
-                         [&firstOrders](const std::string& orderId) { return firstOrders.contains(orderId); });
-    if (notFoundIt != createdOrdersId.end()) {
+    const json& firstOrders = data[kOpenedFirst ? "open" : "closed"];
+    bool foundOrder = firstOrders.contains(orderId);
+    if (!foundOrder) {
       const std::string_view kSecondQueryFullName = kOpenedFirst ? "ClosedOrders" : "OpenOrders";
-      const std::string kSecondQueryMapName = kOpenedFirst ? "closed" : "open";
-
       data.update(PrivateQuery(_curlHandle, _apiKey, kSecondQueryFullName, ordersPostData));
-      const json& secondOrders = data[kSecondQueryMapName];
-      notFoundIt = std::find_if_not(createdOrdersId.begin(), createdOrdersId.end(),
-                                    [&firstOrders, &secondOrders](const std::string& orderId) {
-                                      return firstOrders.contains(orderId) || secondOrders.contains(orderId);
-                                    });
+      const json& secondOrders = data[kOpenedFirst ? "closed" : "open"];
+      foundOrder = secondOrders.contains(orderId);
     }
 
-    if (notFoundIt != createdOrdersId.end()) {
+    if (!foundOrder) {
       if (++nbRetries < kNbMaxRetriesQueryOrders) {
-        log::warn("{} is not present in opened nor closed orders, retry {}", *notFoundIt, nbRetries);
+        log::warn("{} is not present in opened nor closed orders, retry {}", orderId, nbRetries);
         continue;
       }
-      throw exception("I lost contact with Kraken order " + *notFoundIt);
+      throw exception("I lost contact with Kraken order " + orderId);
     }
     return data;
 
   } while (true);
 }
 
-TradedOrdersInfo KrakenPrivate::queryOrders(Market m, CurrencyCode fromCurrencyCode, int32_t orderId32Bits,
-                                            std::span<const std::string> createdOrdersId, QueryOrder queryOrder) {
-  CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
-  TradedOrdersInfo ret(fromCurrencyCode, toCurrencyCode);
-  json ordersRes = queryOrdersData(m, fromCurrencyCode, orderId32Bits, createdOrdersId, queryOrder);
-  for (const std::string& orderTxIdStr : createdOrdersId) {
-    const json& closedOrder = ordersRes.contains("open") && ordersRes["open"].contains(orderTxIdStr)
-                                  ? ordersRes["open"][orderTxIdStr]
-                                  : ordersRes["closed"][orderTxIdStr];
-    MonetaryAmount tradedVol(closedOrder["vol_exec"].get<std::string_view>(), m.base());  // always in base currency
-    // Avoid division by 0 as the price is returned as 0.
-    if (tradedVol.isZero()) {
-      continue;
-    }
-    MonetaryAmount tradedCost(closedOrder["cost"].get<std::string_view>(), m.quote());  // always in quote currency
-    MonetaryAmount fee(closedOrder["fee"].get<std::string_view>(), m.quote());          // always in quote currency
-
-    if (fromCurrencyCode == m.quote()) {
-      MonetaryAmount price(closedOrder["price"].get<std::string_view>(), m.base());
-      ret.tradedFrom += tradedCost;
-      ret.tradedTo += (tradedCost - fee).toNeutral() / price;
-    } else {
-      ret.tradedFrom += tradedVol;
-      ret.tradedTo += tradedCost - fee;
-    }
-  }
-  return ret;
-}
-
 WithdrawInfo KrakenPrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) {
   CurrencyCode currencyCode = grossAmount.currencyCode();
   Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
-  MonetaryAmount withdrawFee = _krakenPublic.queryWithdrawalFees(currencyCode);
-  CurrencyExchange krakenCurrency = _krakenPublic.convertStdCurrencyToCurrencyExchange(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
 
   std::string krakenWalletName(destinationWallet.exchangeName());
   krakenWalletName.push_back('_');

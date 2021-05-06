@@ -2,8 +2,16 @@
 
 namespace cct {
 namespace api {
-TradedOrdersInfo TradedOrdersInfo::operator+(const TradedOrdersInfo &o) const {
-  return TradedOrdersInfo(tradedFrom + o.tradedFrom, tradedTo + o.tradedTo);
+TradedAmounts TradedAmounts::operator+(const TradedAmounts &o) const {
+  return TradedAmounts(tradedFrom + o.tradedFrom, tradedTo + o.tradedTo);
+}
+
+std::string TradedAmounts::str() const {
+  std::string ret;
+  ret.append(tradedFrom.str());
+  ret.append(" -> ");
+  ret.append(tradedTo.str());
+  return ret;
 }
 }  // namespace api
 }  // namespace cct

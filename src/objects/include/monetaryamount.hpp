@@ -18,11 +18,11 @@ class MonetaryAmount {
   using AmountType = int64_t;
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
-  MonetaryAmount() noexcept : _amount(0), _currencyCode(CurrencyCode::kNeutral), _nbDecimals(0) {}
+  constexpr MonetaryAmount() noexcept : _amount(0), _currencyCode(), _nbDecimals(0) {}
 
   /// Constructs a new MonetaryAmount from an integral representation which is already multiplied by given
   /// number of decimals
-  MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals)
+  constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
       : _amount(amount), _currencyCode(currencyCode), _nbDecimals(nbDecimals) {
     simplify();
   }
@@ -40,7 +40,7 @@ class MonetaryAmount {
 
   /// Constructs a new MonetaryAmount from another MonetaryAmount and a new CurrencyCode.
   /// Use this constructor to change currency of an existing MonetaryAmount.
-  MonetaryAmount(MonetaryAmount o, CurrencyCode newCurrencyCode)
+  constexpr MonetaryAmount(MonetaryAmount o, CurrencyCode newCurrencyCode)
       : _amount(o._amount), _currencyCode(newCurrencyCode), _nbDecimals(o._nbDecimals) {}
 
   /// Construct a new MonetaryAmount from a double.
@@ -53,23 +53,23 @@ class MonetaryAmount {
   std::optional<AmountType> amount(int8_t nbDecimals) const;
 
   /// Get the integer part of the amount of this MonetaryAmount.
-  AmountType integerPart() const { return _amount / ipow(10, _nbDecimals); }
+  constexpr AmountType integerPart() const { return _amount / ipow(10, _nbDecimals); }
 
   /// Get the decimal part of the amount of this MonetaryAmount.
   /// Warning: starting zeros will not be part of the returned value. Use nbDecimals to retrieve the number of decimals
   /// of this MonetaryAmount.
   /// Example: "45.046" decimalPart() = 46
-  AmountType decimalPart() const { return _amount - integerPart() * ipow(10, _nbDecimals); }
+  constexpr AmountType decimalPart() const { return _amount - integerPart() * ipow(10, _nbDecimals); }
 
   /// Get the amount of this MonetaryAmount in double format.
-  double toDouble() const { return static_cast<double>(_amount) / ipow(10, _nbDecimals); }
+  constexpr double toDouble() const { return static_cast<double>(_amount) / ipow(10, _nbDecimals); }
 
-  CurrencyCode currencyCode() const { return _currencyCode; }
+  constexpr CurrencyCode currencyCode() const { return _currencyCode; }
 
-  int8_t nbDecimals() const { return _nbDecimals; }
+  constexpr int8_t nbDecimals() const { return _nbDecimals; }
 
   /// Returns the maximum number of decimals that this amount could hold, given its integral part.
-  int8_t maxNbDecimals() const {
+  constexpr int8_t maxNbDecimals() const {
     return _nbDecimals + static_cast<int8_t>(std::numeric_limits<AmountType>::digits10 - ndigits(_amount));
   }
 
@@ -145,10 +145,10 @@ class MonetaryAmount {
     return *this;
   }
 
-  MonetaryAmount toNeutral() const { return MonetaryAmount(_amount, CurrencyCode::kNeutral, _nbDecimals); }
+  constexpr MonetaryAmount toNeutral() const { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
-  void truncate(int8_t maxNbDecimals) { sanitizeNbDecimals(maxNbDecimals); }
+  constexpr void truncate(int8_t maxNbDecimals) { sanitizeNbDecimals(maxNbDecimals); }
 
   /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
   std::string amountStr() const;
@@ -160,7 +160,7 @@ class MonetaryAmount {
  private:
   using UnsignedAmountType = uint64_t;
 
-  inline void simplify() {
+  constexpr void simplify() {
     if (_amount == 0) {
       _nbDecimals = 0;
     } else {
@@ -170,7 +170,7 @@ class MonetaryAmount {
     }
   }
 
-  inline void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) {
+  constexpr void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) {
     const int8_t nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
@@ -178,7 +178,7 @@ class MonetaryAmount {
     }
   }
 
-  inline bool isSane() const {
+  constexpr bool isSane() const {
     return _nbDecimals < std::numeric_limits<AmountType>::digits10 &&
            ndigits(_amount) <= std::numeric_limits<AmountType>::digits10;
   }

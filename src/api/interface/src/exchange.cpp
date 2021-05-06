@@ -3,27 +3,20 @@
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
-#include "exchangeprivatedefaultapi.hpp"
 
 namespace cct {
-namespace {
-
-api::ExchangePrivateDefault gExchangePrivateDefault;
-}  // namespace
 
 Exchange::Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic,
                    api::ExchangePrivate &exchangePrivate)
-    : _exchangePublic(exchangePublic), _exchangePrivate(exchangePrivate), _exchangeInfo(exchangeInfo) {}
+    : _exchangePublic(exchangePublic),
+      _pExchangePrivate(std::addressof(exchangePrivate)),
+      _exchangeInfo(exchangeInfo) {}
 
 Exchange::Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic)
-    : Exchange(exchangeInfo, exchangePublic, gExchangePrivateDefault) {}
-
-bool Exchange::hasPrivateAPI() const {
-  return std::addressof(gExchangePrivateDefault) != std::addressof(_exchangePrivate);
-}
+    : _exchangePublic(exchangePublic), _pExchangePrivate(nullptr), _exchangeInfo(exchangeInfo) {}
 
 CurrencyExchangeFlatSet Exchange::queryTradableCurrencies() {
-  return hasPrivateAPI() ? _exchangePrivate.queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
+  return hasPrivateAPI() ? _pExchangePrivate->queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
 }
 
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
@@ -49,6 +42,8 @@ bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatS
 
 void Exchange::updateCacheFile() const {
   _exchangePublic.updateCacheFile();
-  _exchangePrivate.updateCacheFile();
+  if (_pExchangePrivate) {
+    _pExchangePrivate->updateCacheFile();
+  }
 }
 }  // namespace cct

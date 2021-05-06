@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <span>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
@@ -29,63 +28,63 @@ class BithumbPrivate : public ExchangePrivate {
 
   using MaxNbDecimalsUnitMap = std::unordered_map<CurrencyCode, NbDecimalsTimeValue>;
 
-  BithumbPrivate(CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
+  BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override {
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override {
     return _balanceCache.get(equiCurrency);
   }
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
-  MonetaryAmount trade(MonetaryAmount& from, CurrencyCode toCurrencyCode, const TradeOptions& options) override;
-
   WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) override;
 
   void updateCacheFile() const override;
 
+ protected:
+  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo& tradeInfo) override;
+
+  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+
+  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+
  private:
   struct AccountBalanceFunc {
     AccountBalanceFunc(CurlHandle& curlHandle, const APIKey& apiKey, MaxNbDecimalsUnitMap& maxNbDecimalsUnitMap,
-                       BithumbPublic& bithumbPublic)
+                       BithumbPublic& exchangePublic)
         : _curlHandle(curlHandle),
           _apiKey(apiKey),
           _maxNbDecimalsUnitMap(maxNbDecimalsUnitMap),
-          _bithumbPublic(bithumbPublic) {}
+          _exchangePublic(exchangePublic) {}
 
     BalancePortfolio operator()(CurrencyCode equiCurrency);
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
     MaxNbDecimalsUnitMap& _maxNbDecimalsUnitMap;
-    BithumbPublic& _bithumbPublic;
+    BithumbPublic& _exchangePublic;
   };
 
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, MaxNbDecimalsUnitMap& maxNbDecimalsUnitMap,
-                      BithumbPublic& bithumbPublic)
+                      BithumbPublic& exchangePublic)
         : _curlHandle(curlHandle),
           _apiKey(apiKey),
           _maxNbDecimalsUnitMap(maxNbDecimalsUnitMap),
-          _bithumbPublic(bithumbPublic) {}
+          _exchangePublic(exchangePublic) {}
 
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
     MaxNbDecimalsUnitMap& _maxNbDecimalsUnitMap;
-    BithumbPublic& _bithumbPublic;
+    BithumbPublic& _exchangePublic;
   };
-
-  TradedOrdersInfo queryClosedOrders(Market m, CurrencyCode fromCurrencyCode,
-                                     std::span<const std::string> createdOrdersId);
 
   CurlHandle _curlHandle;
   MaxNbDecimalsUnitMap _maxNbDecimalsPerCurrencyCodePlace;
   Clock::duration _nbDecimalsRefreshTime;
-  CoincenterInfo& _config;
-  BithumbPublic& _bithumbPublic;
   CachedResult<AccountBalanceFunc, CurrencyCode> _balanceCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
