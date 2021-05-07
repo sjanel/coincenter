@@ -8,6 +8,16 @@ target_link_libraries(coincenter_objects PUBLIC coincenter_tools)
 target_include_directories(coincenter_objects PUBLIC include)
 
 add_unit_test(
+    balanceportfolio_test
+    src/balanceportfolio.cpp
+    src/currencycode.cpp
+    src/monetaryamount.cpp
+    test/balanceportfolio_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
     currencycode_test
     src/currencycode.cpp
     test/currencycode_test.cpp

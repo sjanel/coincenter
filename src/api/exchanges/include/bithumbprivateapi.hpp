@@ -38,8 +38,6 @@ class BithumbPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) override;
-
   void updateCacheFile() const override;
 
  protected:
@@ -48,6 +46,13 @@ class BithumbPrivate : public ExchangePrivate {
   OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
 
   OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+
+  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
+
+  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
+
+  bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                          const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
   struct AccountBalanceFunc {

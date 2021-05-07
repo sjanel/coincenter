@@ -25,8 +25,6 @@ class BinancePrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) override;
-
  protected:
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo& tradeInfo) override;
 
@@ -38,14 +36,19 @@ class BinancePrivate : public ExchangePrivate {
     return queryOrder(orderId, tradeInfo, false);
   }
 
+  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
+
+  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
+
+  bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                          const SentWithdrawInfo& sentWithdrawInfo) override;
+
  private:
   OrderInfo queryOrder(const OrderId& orderId, const TradeInfo& tradeInfo, bool isCancel);
 
   TradedAmounts queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
 
   TradedAmounts queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
-
-  void updateRemainingVolume(Market m, const json& result, MonetaryAmount& remFrom) const;
 
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)

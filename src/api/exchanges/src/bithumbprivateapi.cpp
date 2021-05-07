@@ -344,70 +344,79 @@ OrderInfo BithumbPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo
   return orderInfo;
 }
 
-WithdrawInfo BithumbPrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) {
-  CurrencyCode currencyCode = grossAmount.currencyCode();
-  Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
+InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
   MonetaryAmount netWithdrawAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{{"units", netWithdrawAmount.amountStr()},
-                                {"currency", currencyCode.str()},
-                                {"address", destinationWallet.address()}};
-  if (destinationWallet.hasDestinationTag()) {
-    withdrawPostData.append("destination", destinationWallet.destinationTag());
+  CurlPostData withdrawPostData{
+      {"units", netWithdrawAmount.amountStr()}, {"currency", currencyCode.str()}, {"address", wallet.address()}};
+  if (wallet.hasDestinationTag()) {
+    withdrawPostData.append("destination", wallet.destinationTag());
   }
   PrivateQuery(_curlHandle, _apiKey, "trade/btc_withdrawal", _maxNbDecimalsPerCurrencyCodePlace, withdrawPostData);
-  // empty return means that withdraw request is OK
-  auto withdrawTime = WithdrawInfo::Clock::now();
-  log::info("Withdraw of {} to {} initiated...", netWithdrawAmount.str(), destinationWallet.str());
-  CurlPostData checkWithdrawPostData{
-      {"searchGb", "3"}, {"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}};
-  bool withdrawInProgress = true;
-  bool withdrawSuccess = false;
-  do {
-    std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
+  return InitiatedWithdrawInfo(std::move(wallet), "", grossAmount);
+}
+
+SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  CurlPostData checkWithdrawPostData{{"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}};
+  constexpr std::string_view kSearchGbs[] = {"3", "5"};
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  for (std::string_view searchGb : kSearchGbs) {
+    checkWithdrawPostData.set("searchGb", searchGb);
     json trxList = PrivateQuery(_curlHandle, _apiKey, "info/user_transactions", _maxNbDecimalsPerCurrencyCodePlace,
                                 checkWithdrawPostData);
-    if (withdrawInProgress) {
-      if (trxList.empty()) {
-        checkWithdrawPostData.set("searchGb", "5");  // confirm in a second transaction
-        withdrawInProgress = false;
-      } else {
-        log::info("Still in progress...");
-      }
-      continue;
-    }
     for (const json& trx : trxList) {
-      CurrencyCode cur(trx["order_currency"].get<std::string_view>());
-      if (cur == currencyCode) {
-        std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
-        MonetaryAmount realFee(trx["fee"].get<std::string_view>(), cur);
-        if (realFee != withdrawFee) {
-          log::warn("Bithumb withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
-        }
-        std::size_t first = unitsStr.find_first_of("0123456789");
-        if (first == std::string_view::npos) {
-          throw exception("Bithumb: cannot parse amount " + std::string(unitsStr));
-        }
-        MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), cur);
-        if (consumedAmt == grossAmount) {
-          withdrawSuccess = true;
-          break;
-        }
-        // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
-        // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
-        // Let's not implement this for now unless it becomes an issue
-        log::warn("Bithumb: similar withdraw found with different amount {} (expected {})", consumedAmt.str(),
-                  grossAmount.str());
+      assert(trx["order_currency"].get<std::string_view>() == currencyCode);
+      std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
+      MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
+      if (realFee != withdrawFee) {
+        log::warn("Bithumb withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
+      }
+      std::size_t first = unitsStr.find_first_of("0123456789");
+      if (first == std::string_view::npos) {
+        throw exception("Bithumb: cannot parse amount " + std::string(unitsStr));
+      }
+      MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
+      if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
+        bool isWithdrawSuccess = searchGb == "5";
+        return SentWithdrawInfo(initiatedWithdrawInfo.grossEmittedAmount() - realFee, isWithdrawSuccess);
+      }
+      // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
+      // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
+      // Let's not implement this for now unless it becomes an issue
+      log::debug("Bithumb: similar withdraw found with different amount {} (expected {})", consumedAmt.str(),
+                 initiatedWithdrawInfo.grossEmittedAmount().str());
+    }
+  }
+  throw exception("Bithumb: unable to find withdrawal confirmation of " +
+                  initiatedWithdrawInfo.grossEmittedAmount().str());
+}
+
+bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                        const SentWithdrawInfo& sentWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  CurlPostData checkDepositPostData{
+      {"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}, {"searchGb", "4"}};
+  json trxList = PrivateQuery(_curlHandle, _apiKey, "info/user_transactions", _maxNbDecimalsPerCurrencyCodePlace,
+                              checkDepositPostData);
+  for (const json& trx : trxList) {
+    assert(trx["order_currency"].get<std::string_view>() == currencyCode);
+    MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
+    if (amountReceived == sentWithdrawInfo.netEmittedAmount()) {
+      const BalancePortfolio& balancePortfolio = _balanceCache.get();
+      if (balancePortfolio.getBalance(currencyCode) >= sentWithdrawInfo.netEmittedAmount()) {
+        // Additional check to be sure money is available
+        return true;
       }
     }
-    if (withdrawSuccess) {
-      break;
-    }
-    throw exception("Bithumb: unable to find withdrawal confirmation of " + grossAmount.str());
-  } while (true);
-  log::warn("Confirmed withdrawal of {} to {} {}", netWithdrawAmount.str(),
-            destinationWallet.privateExchangeName().str(), destinationWallet.address());
-  return WithdrawInfo(std::move(destinationWallet), withdrawTime, netWithdrawAmount);
+    // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
+    // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
+    // Let's not implement this for now unless it becomes an issue
+    log::debug("{}: similar deposit found with different amount {} (expected {})", _exchangePublic.name(),
+               amountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
+  }
+  return false;
 }
 
 void BithumbPrivate::updateCacheFile() const {

@@ -29,8 +29,6 @@ class KrakenPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) override;
-
  protected:
   enum class QueryOrder { kOpenedThenClosed, kClosedThenOpened };
 
@@ -42,6 +40,13 @@ class KrakenPrivate : public ExchangePrivate {
   OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override {
     return queryOrderInfo(orderId, tradeInfo, QueryOrder::kOpenedThenClosed);
   }
+
+  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
+
+  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
+
+  bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                          const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
   struct AccountBalanceFunc {
