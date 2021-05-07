@@ -1,5 +1,7 @@
 #include "balanceportfolio.hpp"
 
+#include <algorithm>
+
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_variadictable.hpp"
 
@@ -21,6 +23,16 @@ void BalancePortfolio::merge(const BalancePortfolio &o) {
   for (const MonetaryAmountWithEquivalent &monetaryAmountWithEqui : o) {
     add(monetaryAmountWithEqui.amount, monetaryAmountWithEqui.equi);
   }
+}
+
+MonetaryAmount BalancePortfolio::getBalance(CurrencyCode currencyCode) const {
+  auto it = std::partition_point(
+      _monetaryAmountSet.begin(), _monetaryAmountSet.end(),
+      [currencyCode](const MonetaryAmountWithEquivalent &a) { return a.amount.currencyCode() < currencyCode; });
+  if (it == _monetaryAmountSet.end() || it->amount.currencyCode() != currencyCode) {
+    return MonetaryAmount(0, currencyCode, 0);
+  }
+  return it->amount;
 }
 
 void BalancePortfolio::print(std::ostream &os) const {

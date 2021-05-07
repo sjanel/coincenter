@@ -1,6 +1,7 @@
 #include "exchangeprivateapi.hpp"
 
 #include <chrono>
+#include <thread>
 
 namespace cct {
 namespace api {
@@ -120,6 +121,42 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
 
   from -= totalTradedAmounts.tradedFrom;
   return totalTradedAmounts.tradedTo;
+}
+
+WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange) {
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
+  InitiatedWithdrawInfo initiatedWithdrawInfo =
+      launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
+  log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount.str(),
+            initiatedWithdrawInfo.receivingWallet().str(), _exchangePublic.name(),
+            targetExchange._exchangePublic.name());
+  enum class NextAction { kCheckSender, kCheckReceiver, kTerminate };
+  NextAction action = NextAction::kCheckSender;
+  SentWithdrawInfo sentWithdrawInfo;
+  do {
+    std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
+    switch (action) {
+      case NextAction::kCheckSender:
+        sentWithdrawInfo = isWithdrawSuccessfullySent(initiatedWithdrawInfo);
+        if (sentWithdrawInfo.isWithdrawSent()) {
+          log::info("Withdraw successfully sent from {}", _exchangePublic.name());
+          action = NextAction::kCheckReceiver;
+        }
+        break;
+      case NextAction::kCheckReceiver:
+        if (targetExchange.isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo)) {
+          log::info("Withdraw successfully received at {}", targetExchange._exchangePublic.name());
+          action = NextAction::kTerminate;
+        }
+        break;
+      case NextAction::kTerminate:
+        break;
+    }
+  } while (action != NextAction::kTerminate);
+  log::warn("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount().str(),
+            initiatedWithdrawInfo.receivingWallet().privateExchangeName().str(),
+            initiatedWithdrawInfo.receivingWallet().address());
+  return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
 }
 }  // namespace api
 }  // namespace cct

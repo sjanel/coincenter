@@ -233,100 +233,92 @@ TradedAmounts BinancePrivate::queryOrder(Market m, CurrencyCode fromCurrencyCode
   return detailTradedInfo;
 }
 
-void BinancePrivate::updateRemainingVolume(Market m, const json& result, MonetaryAmount& remFrom) const {
-  MonetaryAmount executedVol(result["executedQty"].get<std::string_view>(), m.base());
-  if (!executedVol.isZero()) {
-    if (remFrom.currencyCode() == m.quote()) {
-      MonetaryAmount executedPri(result["price"].get<std::string_view>(), m.quote());
-      remFrom -= executedVol.toNeutral() * executedPri;
-    } else {
-      remFrom -= executedVol;
-    }
-  }
-}
-
-WithdrawInfo BinancePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) {
+InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
   CurlPostData withdrawPostData{
-      {"asset", currencyCode.str()}, {"amount", grossAmount.amountStr()}, {"address", destinationWallet.address()}};
-  if (destinationWallet.hasDestinationTag()) {
-    withdrawPostData.append("addressTag", destinationWallet.destinationTag());
+      {"asset", currencyCode.str()}, {"amount", grossAmount.amountStr()}, {"address", wallet.address()}};
+  if (wallet.hasDestinationTag()) {
+    withdrawPostData.append("addressTag", wallet.destinationTag());
   }
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "wapi/v3/withdraw.html",
-                             std::move(withdrawPostData));
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "wapi/v3/withdraw.html", withdrawPostData);
   bool isSuccess = result["success"].get<bool>();
-  std::string_view msg;
-  if (result.contains("msg")) {
-    msg = result["msg"].get<std::string_view>();
-  }
   if (!isSuccess) {
+    std::string_view msg = result.contains("msg") ? result["msg"].get<std::string_view>() : "";
     throw exception("Unsuccessful withdraw request of " + std::string(currencyCode.str()) +
                     ", msg = " + std::string(msg));
   }
-  auto withdrawTime = WithdrawInfo::Clock::now();
   std::string_view withdrawId(result["id"].get<std::string_view>());
-  log::info("Withdraw of {} to {} initiated with id {}", grossAmount.str(), destinationWallet.str(), withdrawId);
-  json withdrawStatus;
-  int withdrawStatusInt = -1;
-  MonetaryAmount netWithdrawAmount;
+  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+}
 
-  do {
-    std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
-    withdrawStatus = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "wapi/v3/withdrawHistory.html",
-                                  {{"asset", currencyCode.str()}});
-    isSuccess = withdrawStatus["success"].get<bool>();
-    std::string_view msg;
-    if (withdrawStatus.contains("msg")) {
-      msg = withdrawStatus["msg"].get<std::string_view>();
-    }
-    if (!isSuccess) {
-      throw exception("Unsuccessful withdraw info request of " + std::string(currencyCode.str()) +
-                      ", msg = " + std::string(msg));
-    }
-    for (const json& withdrawDetail : withdrawStatus["withdrawList"]) {
-      std::string_view withdrawDetailId(withdrawDetail["id"].get<std::string_view>());
-      if (withdrawDetailId == withdrawId) {
-        withdrawStatusInt = withdrawDetail["status"].get<int>();
-        switch (withdrawStatusInt) {
-          case 0:
-            log::warn("Email was sent");
-            break;
-          case 1:
-            log::warn("Withdraw cancelled");
-            break;
-          case 2:
-            log::warn("Awaiting Approval");
-            break;
-          case 3:
-            log::error("Withdraw rejected");
-            break;
-          case 4:
-            log::info("Processing withdraw...");
-            break;
-          case 5:
-            log::error("Withdraw failed");
-            break;
-          case 6:
-            log::warn("Withdraw completed!");
-            break;
-          default:
-            log::error("unknown status value {}", withdrawStatusInt);
-            break;
-        }
-        netWithdrawAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-        MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), currencyCode);
-        if (netWithdrawAmount + fee != grossAmount) {
-          log::error("{} + {} != {}, maybe a change in API", netWithdrawAmount.amountStr(), fee.amountStr(),
-                     grossAmount.amountStr());
-        }
-        break;
+SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  json withdrawStatus = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
+                                     "wapi/v3/withdrawHistory.html", {{"asset", currencyCode.str()}});
+  std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
+  MonetaryAmount netEmittedAmount;
+  bool isWithdrawSent = false;
+  for (const json& withdrawDetail : withdrawStatus["withdrawList"]) {
+    std::string_view withdrawDetailId(withdrawDetail["id"].get<std::string_view>());
+    if (withdrawDetailId == withdrawId) {
+      int withdrawStatusInt = withdrawDetail["status"].get<int>();
+      switch (withdrawStatusInt) {
+        case 0:
+          log::warn("Email was sent");
+          break;
+        case 1:
+          log::warn("Withdraw cancelled");
+          break;
+        case 2:
+          log::warn("Awaiting Approval");
+          break;
+        case 3:
+          log::error("Withdraw rejected");
+          break;
+        case 4:
+          log::info("Processing withdraw...");
+          break;
+        case 5:
+          log::error("Withdraw failed");
+          break;
+        case 6:
+          log::warn("Withdraw completed!");
+          isWithdrawSent = true;
+          break;
+        default:
+          log::error("unknown status value {}", withdrawStatusInt);
+          break;
       }
+      netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
+      MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), currencyCode);
+      if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
+        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
+                   initiatedWithdrawInfo.grossEmittedAmount().amountStr());
+      }
+      break;
     }
-  } while (withdrawStatusInt != 6);
-  log::warn("Confirmed withdrawal of {} to {} {}", netWithdrawAmount.str(),
-            destinationWallet.privateExchangeName().str(), destinationWallet.address());
-  return WithdrawInfo(std::move(destinationWallet), withdrawTime, netWithdrawAmount);
+  }
+  return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
+}
+
+bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                        const SentWithdrawInfo& sentWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  json depositStatus = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "wapi/v3/depositHistory.html",
+                                    {{"asset", currencyCode.str()}});
+  for (const json& depositDetail : depositStatus["depositList"]) {
+    std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
+    if (depositAddress == initiatedWithdrawInfo.receivingWallet().address()) {
+      MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
+      if (amountReceived == sentWithdrawInfo.netEmittedAmount()) {
+        return true;
+      }
+      log::debug("{}: similar deposit found with different amount {} (expected {})", _exchangePublic.name(),
+                 amountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
+    }
+  }
+  return false;
 }
 
 }  // namespace api

@@ -25,8 +25,11 @@ class BalancePortfolio {
   using MonetaryAmountSet =
       cct::FlatSet<MonetaryAmountWithEquivalent, CompareMonetaryAmountWithEquivalentByCurrencyCode>;
 
-  void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency);
+  void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency = MonetaryAmount());
+
   void merge(const BalancePortfolio &o);
+
+  MonetaryAmount getBalance(CurrencyCode currencyCode) const;
 
   MonetaryAmountSet::const_iterator begin() const { return _monetaryAmountSet.begin(); }
   MonetaryAmountSet::const_iterator end() const { return _monetaryAmountSet.end(); }

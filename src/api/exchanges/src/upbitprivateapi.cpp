@@ -14,6 +14,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
+#include "cct_toupper.hpp"
 #include "coincenterinfo.hpp"
 #include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
@@ -311,6 +312,69 @@ bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) 
     }
   }
   return orderIsTooSmall;
+}
+
+InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
+  CurlPostData withdrawPostData{
+      {"currency", currencyCode.str()}, {"amount", netEmittedAmount.amountStr()}, {"address", wallet.address()}};
+  if (wallet.hasDestinationTag()) {
+    withdrawPostData.append("secondary_address", wallet.destinationTag());
+  }
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "withdraws/coin", withdrawPostData);
+  std::string_view withdrawId(result["uuid"].get<std::string_view>());
+  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+}
+
+SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "withdraw",
+                             {{"currency", currencyCode.str()}, {"uuid", initiatedWithdrawInfo.withdrawId()}});
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount realFee(result["fee"].get<std::string_view>(), currencyCode);
+  if (realFee != withdrawFee) {
+    log::error("{} withdraw fee is {} instead of {}", _exchangePublic.name(), realFee.str(), withdrawFee.str());
+  }
+  MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
+
+  std::string_view state(result["state"].get<std::string_view>());
+  std::string stateUpperStr;
+  std::transform(state.begin(), state.end(), std::back_inserter(stateUpperStr), [](char c) { return cct::toupper(c); });
+  log::debug("{} withdrawal status {}", _exchangePublic.name(), state);
+  // state values: {'submitting', 'submitted', 'almost_accepted', 'rejected', 'accepted', 'processing', 'done',
+  // 'canceled'}
+  const bool isCanceled = stateUpperStr == "CANCELED";
+  if (isCanceled) {
+    log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode.str());
+  }
+  const bool isDone = stateUpperStr == "DONE";
+  return SentWithdrawInfo(netEmittedAmount, isDone || isCanceled);
+}
+
+bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                      const SentWithdrawInfo& sentWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "deposits",
+                             {{"currency", currencyCode.str()}});
+  for (const json& trx : result) {
+    MonetaryAmount netAmountReceived(trx["amount"].get<std::string_view>(), currencyCode);
+    if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
+      std::string_view depositState(trx["state"].get<std::string_view>());
+      log::debug("Deposit state {}", depositState);
+      std::string depositStateUpperStr;
+      std::transform(depositState.begin(), depositState.end(), std::back_inserter(depositStateUpperStr),
+                     [](char c) { return cct::toupper(c); });
+      if (depositStateUpperStr == "ACCEPTED") {
+        return true;
+      }
+    }
+    log::debug("Deposit {} with amount {} is similar, but different amount than {}",
+               trx["refid"].get<std::string_view>(), netAmountReceived.str(),
+               sentWithdrawInfo.netEmittedAmount().str());
+  }
+  return false;
 }
 
 }  // namespace api

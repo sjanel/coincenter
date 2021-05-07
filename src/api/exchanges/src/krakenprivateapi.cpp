@@ -328,75 +328,69 @@ json KrakenPrivate::queryOrdersData(Market m, CurrencyCode fromCurrencyCode, std
   } while (true);
 }
 
-WithdrawInfo KrakenPrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange) {
-  CurrencyCode currencyCode = grossAmount.currencyCode();
-  Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
 
-  std::string krakenWalletName(destinationWallet.exchangeName());
+  std::string krakenWalletName(wallet.exchangeName());
   krakenWalletName.push_back('_');
   krakenWalletName.append(currencyCode.str());
   std::transform(std::begin(krakenWalletName), std::end(krakenWalletName), krakenWalletName.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  json withdrawData = PrivateQuery(_curlHandle, _apiKey, "Withdraw",
-                                   {{"amount", grossAmount.amountStr()},  // amount to withdraw, including fees
-                                    {"asset", krakenCurrency.altStr()},
-                                    {"key", krakenWalletName}});
-  auto withdrawTime = WithdrawInfo::Clock::now();
-  log::info("Withdraw of {} to {} initiated...", (grossAmount - withdrawFee).str(), destinationWallet.str());
+  json withdrawData = PrivateQuery(
+      _curlHandle, _apiKey, "Withdraw",
+      {{"amount", grossAmount.amountStr()}, {"asset", krakenCurrency.altStr()}, {"key", krakenWalletName}});
 
   // // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
-  std::string_view txnRefid = withdrawData["refid"].get<std::string_view>();
+  std::string_view withdrawId = withdrawData["refid"].get<std::string_view>();
+  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+}
+
+SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   CurlPostData checkWithdrawPostData{{"asset", krakenCurrency.altStr()}};
   MonetaryAmount netWithdrawAmount;
-  bool withdrawSuccess = false;
-  do {
-    std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
-    json trxList = PrivateQuery(_curlHandle, _apiKey, "WithdrawStatus", checkWithdrawPostData);
-    /*
-    [
-      {
-        "aclass": "currency",
-        "amount": "99.990000",
-        "asset": "TRX",
-        "fee": "0.010000",
-        "info": "TDunWDzakWwgeopzT1LYYnwPDri37EeGUK",
-        "method": "Tron",
-        "refid": "BSH3QF5-TDIYVJ-X6U74X",
-        "status": "Initial|Settled|Success",
-        "time": 1618260686,
-        "txid": null
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  json trxList = PrivateQuery(_curlHandle, _apiKey, "WithdrawStatus", checkWithdrawPostData);
+  for (const json& trx : trxList) {
+    std::string_view withdrawId = trx["refid"].get<std::string_view>();
+    if (withdrawId == initiatedWithdrawInfo.withdrawId()) {
+      MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
+      if (realFee != withdrawFee) {
+        log::warn("Kraken withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
       }
-    ]
-    */
-    bool withdrawRefFound = false;
-    for (const json& trx : trxList) {
-      std::string_view trxRefId = trx["refid"].get<std::string_view>();
-      if (trxRefId == txnRefid) {
-        MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
-        if (realFee != withdrawFee) {
-          log::warn("Kraken withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
-        }
-        std::string_view status = trx["status"].get<std::string_view>();
-        if (status == "Success") {
-          netWithdrawAmount = MonetaryAmount(trx["amount"].get<std::string_view>(), currencyCode);
-          withdrawSuccess = true;
-        } else {
-          log::info("Still in progress... (Kraken status: {})", status);
-        }
-        withdrawRefFound = true;
-        break;
-      }
+      std::string_view status = trx["status"].get<std::string_view>();
+      MonetaryAmount netWithdrawAmount(trx["amount"].get<std::string_view>(), currencyCode);
+      return SentWithdrawInfo(netWithdrawAmount, status == "Success");
     }
-    if (!withdrawRefFound) {
-      throw exception("Kraken: unable to find withdrawal confirmation of " + grossAmount.str());
+  }
+  throw exception("Kraken: unable to find withdrawal confirmation of " +
+                  initiatedWithdrawInfo.grossEmittedAmount().str());
+}
+
+bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                       const SentWithdrawInfo& sentWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
+  CurlPostData checkDepositPostData{{"asset", krakenCurrency.altStr()}};
+  json trxList = PrivateQuery(_curlHandle, _apiKey, "DepositStatus", checkDepositPostData);
+  for (const json& trx : trxList) {
+    std::string_view status(trx["status"].get<std::string_view>());
+    if (status != "Success") {
+      log::debug("Deposit {} status {}", trx["refid"].get<std::string_view>(), status);
+      continue;
     }
-  } while (!withdrawSuccess);
-  log::warn("Confirmed withdrawal of {} to {} {}", netWithdrawAmount.str(), destinationWallet.exchangeName(),
-            destinationWallet.address());
-  return WithdrawInfo(std::move(destinationWallet), withdrawTime, netWithdrawAmount);
+    MonetaryAmount netAmountReceived(trx["amount"].get<std::string_view>(), currencyCode);
+    if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
+      return true;
+    }
+    log::debug("Deposit {} with amount {} is similar, but different amount than {}",
+               trx["refid"].get<std::string_view>(), netAmountReceived.str(),
+               sentWithdrawInfo.netEmittedAmount().str());
+  }
+  return false;
 }
 
 }  // namespace api

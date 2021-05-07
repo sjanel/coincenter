@@ -1,28 +1,88 @@
 #pragma once
 
 #include <chrono>
+#include <string>
+#include <string_view>
 
 #include "monetaryamount.hpp"
+#include "wallet.hpp"
 
 namespace cct {
+using WithdrawId = std::string;
+using WithdrawIdView = std::string_view;
+
+namespace api {
+class InitiatedWithdrawInfo {
+ public:
+  using Clock = std::chrono::high_resolution_clock;
+  using TimePoint = std::chrono::time_point<Clock>;
+
+  InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
+      : _receivingWallet(std::move(receivingWallet)),
+        _withdrawId(withdrawId),
+        _initiatedTime(Clock::now()),
+        _grossEmittedAmount(grossEmittedAmount) {}
+
+  TimePoint initiatedTime() const { return _initiatedTime; }
+
+  const Wallet &receivingWallet() const { return _receivingWallet; }
+
+  const WithdrawId withdrawId() const { return _withdrawId; }
+
+  MonetaryAmount grossEmittedAmount() const { return _grossEmittedAmount; }
+
+ private:
+  Wallet _receivingWallet;
+  WithdrawId _withdrawId;
+  TimePoint _initiatedTime;  // The time at which withdraw has been ordered from the source exchange
+  MonetaryAmount _grossEmittedAmount;
+};
+
+class SentWithdrawInfo {
+ public:
+  SentWithdrawInfo() : _netEmittedAmount(), _isWithdrawSent(false) {}
+
+  SentWithdrawInfo(MonetaryAmount netEmittedAmount, bool isWithdrawSent)
+      : _netEmittedAmount(netEmittedAmount), _isWithdrawSent(isWithdrawSent) {}
+
+  bool isWithdrawSent() const { return _isWithdrawSent; }
+
+  MonetaryAmount netEmittedAmount() const { return _netEmittedAmount; }
+
+ private:
+  MonetaryAmount _netEmittedAmount;
+  bool _isWithdrawSent;
+};
+
+}  // namespace api
+
 class WithdrawInfo {
  public:
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  WithdrawInfo(const Wallet &receivingWallet, TimePoint initiatedTime, MonetaryAmount netEmittedAmount)
-      : _receivingWallet(receivingWallet), _initiatedTime(initiatedTime), _netEmittedAmount(netEmittedAmount) {}
-
-  WithdrawInfo(Wallet &&receivingWallet, TimePoint initiatedTime, MonetaryAmount netEmittedAmount)
-      : _receivingWallet(std::move(receivingWallet)),
-        _initiatedTime(initiatedTime),
-        _netEmittedAmount(netEmittedAmount) {}
+  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo)
+      : _receivingWallet(initiatedWithdrawInfo.receivingWallet()),
+        _withdrawId(initiatedWithdrawInfo.withdrawId()),
+        _initiatedTime(initiatedWithdrawInfo.initiatedTime()),
+        _receivedTime(Clock::now()),
+        _netEmittedAmount(sentWithdrawInfo.netEmittedAmount()) {}
 
   TimePoint initiatedTime() const { return _initiatedTime; }
 
+  TimePoint receivedTime() const { return _receivedTime; }
+
+  const Wallet &receivingWallet() const { return _receivingWallet; }
+
+  MonetaryAmount netEmittedAmount() const { return _netEmittedAmount; }
+
+  const WithdrawId withdrawId() const { return _withdrawId; }
+
  private:
   Wallet _receivingWallet;
-  TimePoint _initiatedTime;  // The time at which withdraw has been ordered from the source exchange
-  MonetaryAmount _netEmittedAmount;
+  WithdrawId _withdrawId;
+  TimePoint _initiatedTime;          // The time at which withdraw has been ordered from the source exchange
+  TimePoint _receivedTime;           // time at which destination provides received funds as available for trade
+  MonetaryAmount _netEmittedAmount;  // fee deduced amount that destination will receive
 };
 }  // namespace cct
