@@ -28,8 +28,8 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
     constexpr const char *const kSubAssetConfig[] = {"allexclude", "withdrawexclude"};
     CurrencySet *const pCurrencySetPerConfig[] = {std::addressof(_excludedCurrenciesAll),
                                                   std::addressof(_excludedCurrenciesWithdrawal)};
-    const int kNbSub = std::end(pCurrencySetPerConfig) - std::begin(pCurrencySetPerConfig);
-    for (int subIdx = 0; subIdx < kNbSub; ++subIdx) {
+    const auto kNbSub = std::end(pCurrencySetPerConfig) - std::begin(pCurrencySetPerConfig);
+    for (auto subIdx = 0; subIdx < kNbSub; ++subIdx) {
       if (assetData.contains(kSubAssetConfig[subIdx])) {
         // Don't make these json fields required, do nothing if not present
         const json &subData = assetData[kSubAssetConfig[subIdx]];

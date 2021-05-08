@@ -45,15 +45,15 @@ TEST(MathHelpers, NDigits) {
   EXPECT_EQ(ndigits(-590385614858L), 12);
   EXPECT_EQ(ndigits(-59085614858L), 11);
   EXPECT_EQ(ndigits(-5905614858L), 10);
-  EXPECT_EQ(ndigits(-908561485L), 9);
-  EXPECT_EQ(ndigits(18561485L), 8);
-  EXPECT_EQ(ndigits(1861485L), 7);
-  EXPECT_EQ(ndigits(186148L), 6);
-  EXPECT_EQ(ndigits(36816L), 5);
-  EXPECT_EQ(ndigits(3686L), 4);
-  EXPECT_EQ(ndigits(686L), 3);
-  EXPECT_EQ(ndigits(10L), 2);
-  EXPECT_EQ(ndigits(0L), 1);
+  EXPECT_EQ(ndigits(-908561485), 9);
+  EXPECT_EQ(ndigits(18561485), 8);
+  EXPECT_EQ(ndigits(1861485), 7);
+  EXPECT_EQ(ndigits(186148), 6);
+  EXPECT_EQ(ndigits(36816), 5);
+  EXPECT_EQ(ndigits(3686), 4);
+  EXPECT_EQ(ndigits(686), 3);
+  EXPECT_EQ(ndigits(10), 2);
+  EXPECT_EQ(ndigits(0), 1);
   static_assert(ndigits(72993850285626590L) == 17);
 }
 

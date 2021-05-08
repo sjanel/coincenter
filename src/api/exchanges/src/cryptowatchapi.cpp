@@ -38,7 +38,7 @@ CryptowatchAPI::CryptowatchAPI(settings::RunMode runMode, Clock::duration fiatsU
                                bool loadFromFileCacheAtInit)
     : _curlHandle(Clock::duration::zero(), runMode),
       _fiatsUpdateFrequency(fiatsUpdateFrequency),
-      _supportedExchanges(CachedResultOptions(std::chrono::days(15), _cachedResultVault), _curlHandle),
+      _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(10), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
     json data = OpenJsonFile(kFiatFileName, FileNotFoundMode::kNoThrow);

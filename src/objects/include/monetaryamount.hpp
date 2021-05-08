@@ -171,9 +171,9 @@ class MonetaryAmount {
   }
 
   inline void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) {
-    const int nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
+    const int8_t nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
-      _amount /= ipow(10, nbDecimalsToTruncate);
+      _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
       _nbDecimals -= nbDecimalsToTruncate;
     }
   }

@@ -32,6 +32,7 @@ TEST_F(CurlSetup, Queries) {
   {
     std::string header = "MyHeaderIsVeryLongToAvoidSSO";
     CurlOptions opts(CurlOptions::RequestType::kGet);
+    opts.verbose = true;
     opts.httpHeaders.push_back(header);
     opts.postdata.append("opts", "dummy");
 

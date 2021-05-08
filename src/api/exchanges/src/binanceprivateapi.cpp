@@ -400,7 +400,7 @@ WithdrawInfo BinancePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivat
     std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
     withdrawStatus = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "wapi/v3/withdrawHistory.html",
                                   {{"asset", currencyCode.str()}});
-    bool isSuccess = withdrawStatus["success"].get<bool>();
+    isSuccess = withdrawStatus["success"].get<bool>();
     std::string_view msg;
     if (withdrawStatus.contains("msg")) {
       msg = withdrawStatus["msg"].get<std::string_view>();

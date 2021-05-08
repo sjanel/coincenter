@@ -49,6 +49,9 @@
 #elif defined(__GNUC__)
 #define CCT_COMPILER_NAME "g++"
 #define CCT_COMPILER_VERSION CCT_COMPILER_NAME " " CCT_VER_STRING(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#elif defined(_WIN32)
+#define CCT_COMPILER_NAME "MSVC"
+#define CCT_COMPILER_VERSION CCT_COMPILER_NAME " " CCT_STRINGIFY(_MSC_FULL_VER)
 #else
 #error "Unknown compiler"
 #endif

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <string_view>
 
 #include "cct_hash.hpp"
@@ -60,7 +61,7 @@ class CurrencyCode {
   bool operator<=(CurrencyCode o) const { return !(o < *this); }
   bool operator>(CurrencyCode o) const { return o < *this; }
   bool operator>=(CurrencyCode o) const { return !(*this < o); }
-  bool operator==(CurrencyCode o) const { return memcmp(_data.begin(), o._data.begin(), sizeof(AcronymType)) == 0; }
+  bool operator==(CurrencyCode o) const { return memcmp(_data.data(), o._data.data(), sizeof(AcronymType)) == 0; }
   bool operator!=(CurrencyCode o) const { return !(*this == o); }
 
  private:
