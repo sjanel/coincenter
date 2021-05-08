@@ -196,10 +196,10 @@ MonetaryAmount KrakenPrivate::trade(MonetaryAmount& from, CurrencyCode toCurrenc
 
   // minimum expire time tested on my side was 5 seconds. I chose 10 seconds just to be sure that we will not have any
   // problem.
-  const int64_t expireTimeInSeconds =
-      std::max(10L, std::chrono::duration_cast<std::chrono::seconds>(options.maxTradeTime()).count());
+  const int maxTradeTimeInSeconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(options.maxTradeTime()).count());
+  const int expireTimeInSeconds = std::max(10, maxTradeTimeInSeconds);
 
-  auto nbSecondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
+  const auto nbSecondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
 
   // oflags: Ask fee in destination currency.
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).

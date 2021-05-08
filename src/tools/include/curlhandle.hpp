@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "cct_run_modes.hpp"
-#include "cct_vector.hpp"
 #include "curloptions.hpp"
 
 namespace cct {

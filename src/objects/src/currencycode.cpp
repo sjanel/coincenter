@@ -14,9 +14,9 @@ CurrencyCode::CurrencyCode(std::string_view acronym) {
     log::warn("Acronym {} is too long, truncating to {}", acronym, acronym.substr(0, _data.size()));
     acronym.remove_suffix(acronym.size() - _data.size());
   }
-  std::fill(
-      std::transform(acronym.begin(), acronym.end(), _data.begin(), [](unsigned char c) { return std::toupper(c); }),
-      _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
+  std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::toupper(c)); }),
+            _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
 }
 
 std::ostream &operator<<(std::ostream &os, const CurrencyCode &c) {

@@ -85,14 +85,14 @@ class exception : public std::exception {
   ~exception() = default;
 
   const char* what() const noexcept override {
-    return _info ? _info : (_storage.front() == '\0' ? _str.c_str() : std::begin(_storage));
+    return _info ? _info : (_storage.front() == '\0' ? _str.c_str() : _storage.data());
   }
 
  private:
   inline void copyStrToInlineStorage(std::string_view str) noexcept {
-    const std::size_t sizeToCopy = std::min(sizeof(_storage), str.length());
-    std::memcpy(std::begin(_storage), str.begin(), sizeToCopy);
-    _storage[std::min(sizeof(_storage) - 1, sizeToCopy)] = '\0';
+    const int sizeToCopy = std::min(static_cast<int>(sizeof(_storage)), static_cast<int>(str.size()));
+    std::memcpy(_storage.data(), str.data(), sizeToCopy);
+    _storage[std::min(static_cast<int>(sizeof(_storage) - 1), sizeToCopy)] = '\0';
   }
 
   const char* _info;

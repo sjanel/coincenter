@@ -42,13 +42,13 @@ namespace std {
 template <class... TT>
 struct hash<std::tuple<TT...>> {
   size_t operator()(const std::tuple<TT...>& tup) const {
-    auto lazyHasher = [](size_t hash, auto&&... values) {
-      auto lazyCombiner = [&hash](auto&& val) {
-        hash ^= std::hash<std::decay_t<decltype(val)>>{}(val) + 0Xeeffddcc + (hash << 5) + (hash >> 3);
+    auto lazyHasher = [](size_t h, auto&&... values) {
+      auto lazyCombiner = [&h](auto&& val) {
+        h ^= std::hash<std::decay_t<decltype(val)>>{}(val) + 0Xeeffddcc + (h << 5) + (h >> 3);
       };
       (void)lazyCombiner;
       (lazyCombiner(std::forward<decltype(values)>(values)), ...);
-      return hash;
+      return h;
     };
     return std::apply(lazyHasher, std::tuple_cat(std::tuple(0), tup));
   }

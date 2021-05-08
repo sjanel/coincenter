@@ -1,4 +1,4 @@
-#include "ssl_sha.hpp"
+﻿#include "ssl_sha.hpp"
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
@@ -25,7 +25,7 @@ Sha256 ComputeSha256(const std::string& data) {
   SHA256_CTX ctx;
   SHA256_Init(&ctx);
   SHA256_Update(&ctx, data.c_str(), data.length());
-  SHA256_Final(reinterpret_cast<unsigned char*>(std::begin(ret)), &ctx);
+  SHA256_Final(reinterpret_cast<unsigned char*>(ret.data()), &ctx);
 
   return ret;
 }

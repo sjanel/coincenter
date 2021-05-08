@@ -116,7 +116,7 @@ function(add_exe name)
    set_target_properties(${name} PROPERTIES
        COMPILE_DEFINITIONS "${exe_definitions}"
        BUILD_RPATH "${runtime_path}")
-   target_link_libraries(${name} PRIVATE ${exe_libraries} m rt)
+   target_link_libraries(${name} PRIVATE ${exe_libraries})
    list(REMOVE_DUPLICATES exe_include_dirs)
    target_include_directories(${name} PRIVATE ${exe_include_dirs} ${all_includes})
 endfunction()
@@ -155,6 +155,8 @@ endfunction()
 # Activate all warnings, in all build modes
 if (MSVC)
   add_compile_options(/W4)
+  # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
+  add_compile_definitions(NOMINMAX)
 else()
   add_compile_options(-Wall -Wextra -pedantic)
 endif()

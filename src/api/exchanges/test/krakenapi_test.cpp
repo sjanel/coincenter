@@ -38,7 +38,7 @@ namespace {
 void PublicTest(KrakenPublic &krakenPublic) {
   CurrencyExchangeFlatSet currencies = krakenPublic.queryTradableCurrencies();
 
-  EXPECT_GT(currencies.size(), 10);
+  EXPECT_GT(currencies.size(), 10U);
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
                           [](const CurrencyExchange &c) { return c.standardCode().str() == "BTC"; }));
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
