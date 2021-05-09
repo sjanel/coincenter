@@ -1,0 +1,44 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  ci_windows_build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        buildmode: [Debug, Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: install curl openssl
+
+      - name: Set Curl certificate
+        run: setx CURL_CA_BUNDLE "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\bin\curl-ca-bundle.crt" /M
+
+      - name: Add curl bin directory in the path
+        run: setx /M path "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\bin;%path%"
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        # TODO: Can we avoid below path hardcodes?
+        run: cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCURL_LIBRARY="C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\lib\libcurl.dll.a" -DCURL_INCLUDE_DIR="C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\include"
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config ${{matrix.buildmode}}
+
+      # TODO: find a way to link curl statically to avoid tests failures
+      #- name: Tests
+      #  working-directory: ${{github.workspace}}/build
+      #  run: ctest -C ${{matrix.buildmode}} -j 10 --output-on-failure
