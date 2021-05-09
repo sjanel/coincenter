@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_proxy.hpp"
+#include "cct_log.hpp"
 
 // #define DEBUG
 /* URL available to test HTTPS, cf
@@ -18,38 +19,39 @@ class CurlSetup : public ::testing::Test {
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  CurlInitRAII _raiiCurl;
+  CurlHandle handle;
 };
 
 TEST_F(CurlSetup, BasicCurlTest) {
-  CurlHandle handle;
   std::string out = handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet));
   EXPECT_EQ(out, "POOL_UP");
 }
 
 TEST_F(CurlSetup, Queries) {
-  CurlHandle curl;
   {
     std::string header = "MyHeaderIsVeryLongToAvoidSSO";
     CurlOptions opts(CurlOptions::RequestType::kGet);
+#ifdef DEBUG
     opts.verbose = true;
+#endif
     opts.httpHeaders.push_back(header);
-    opts.postdata.append("opts", "dummy");
 
-    std::string s = curl.query("https://api.kraken.com/0/public/Time", opts);
+    std::string s = handle.query("https://api.kraken.com/0/public/Time", opts);
     EXPECT_TRUE(s.find("unixtime") != std::string::npos);
   }
   {
     CurlOptions opts(CurlOptions::RequestType::kGet);
+#ifdef DEBUG
     opts.verbose = true;
-    std::string s = curl.query("https://api.kraken.com/0/public/SystemStatus", opts);
+#endif
+    log::set_level(log::level::trace);
+    std::string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
     EXPECT_TRUE(s.find("online") != std::string::npos);
   }
 }
 
 TEST_F(CurlSetup, ProxyMockTest) {
   if (IsProxyAvailable()) {
-    CurlHandle handle;
     CurlOptions opts(CurlOptions::RequestType::kGet);
     opts.proxy._url = GetProxyURL();
 #ifdef DEBUG

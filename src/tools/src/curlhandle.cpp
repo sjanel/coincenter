@@ -98,6 +98,11 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
   curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
 
+#ifdef _WIN32
+  // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
+  curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+#endif
+
   // Important! We should reset ALL fields of curl object at each call to query,
   // as it would be possible for a new query to read from a dangling reference form a previous
   // query.

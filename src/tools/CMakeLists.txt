@@ -1,10 +1,19 @@
 # Create tools lib
 aux_source_directory(src API_TOOLS_SRC)
 
+
 add_library(coincenter_tools STATIC ${API_TOOLS_SRC})
 target_link_libraries(coincenter_tools PUBLIC amc::amc)
 target_link_libraries(coincenter_tools PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(coincenter_tools PUBLIC spdlog)
+if (MSVC)
+  # cURL may have been built with MingW64, allow following extensions to be understood by Visual Studio.
+  # https://discourse.cmake.org/t/problem-with-findpackage-curl-required-and-precompiled-curl-7-68-0-for-windows/686/3
+  list(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".dll.a" ".a")
+endif()
+
+include(FindCURL)
+
 target_link_libraries(coincenter_tools PRIVATE CURL::libcurl)
 target_include_directories(coincenter_tools PUBLIC include)
 

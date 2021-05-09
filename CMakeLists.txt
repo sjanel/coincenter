@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.15)
 
 project(coincenter VERSION 1.0
                    DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
@@ -74,9 +74,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 FetchContent_MakeAvailable(spdlog)
-
-include(FindCURL)
-include(FindOpenSSL)
 
 # Unit Tests 
 
