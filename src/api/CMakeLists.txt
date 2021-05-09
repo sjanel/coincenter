@@ -18,6 +18,8 @@ aux_source_directory(common/src API_COMMON_SRC)
 aux_source_directory(exchanges/src API_EXCHANGES_SRC)
 aux_source_directory(interface/src API_INTERFACE_SRC)
 
+include(FindOpenSSL)
+
 add_library(coincenter_exchangeapi STATIC ${API_COMMON_SRC} ${API_EXCHANGES_SRC} ${API_INTERFACE_SRC})
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_tools)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_objects)
