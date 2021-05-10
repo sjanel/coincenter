@@ -21,24 +21,21 @@ jobs:
         with:
           args: install curl openssl
 
-      - name: Set Curl certificate
-        run: setx CURL_CA_BUNDLE "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\bin\curl-ca-bundle.crt" /M
-
-      - name: Add curl bin directory in the path
-        run: setx /M path "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\bin;%path%"
+      - name: Add cURL directory in the path
+        run: |
+           echo "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+           echo "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\lib" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        # TODO: Can we avoid below path hardcodes?
-        run: cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCURL_LIBRARY="C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\lib\libcurl.dll.a" -DCURL_INCLUDE_DIR="C:\ProgramData\chocolatey\lib\curl\tools\curl-7.76.1-win64-mingw\include"
+        run: cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build
         run: cmake --build . --config ${{matrix.buildmode}}
 
-      # TODO: find a way to link curl statically to avoid tests failures
-      #- name: Tests
-      #  working-directory: ${{github.workspace}}/build
-      #  run: ctest -C ${{matrix.buildmode}} -j 10 --output-on-failure
+      - name: Tests
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{matrix.buildmode}} -j 10 --output-on-failure
