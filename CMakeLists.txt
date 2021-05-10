@@ -149,24 +149,21 @@ function(add_unit_test name)
    endif(CCT_ENABLE_TESTS)
 endfunction()
 
-# Activate all warnings, in all build modes
 if (MSVC)
   add_compile_options(/W4)
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
   add_compile_definitions(NOMINMAX)
 else()
   add_compile_options(-Wall -Wextra -pedantic)
-endif()
-
-if(CCT_ENABLE_ASAN)
-  if (NOT MSVC)
+  if(CCT_ENABLE_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover")
     message(STATUS "Activate asan")
-  endif()
-endif(CCT_ENABLE_ASAN)
+  endif(CCT_ENABLE_ASAN)
+endif()
 
 message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 
+# Definition of project constants
 add_compile_definitions("CCT_DATA_PATH=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
 
