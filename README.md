@@ -32,17 +32,29 @@ Supported exchanges are:
   - [Get an overview of your portfolio in Euros](#get-an-overview-of-your-portfolio-in-euros)
   - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
 
-# Pre-requisites
+# Install
 
-You will need to install *OpenSSL* (min version 1.1.0), *cURL*, *cmake* and a C++20 compiler (only *gcc-10* is supported for now) on your system.
+## Pre-requisites
 
-For instance, for Unix Debian based systems:
+You will need to install *OpenSSL* (min version 1.1.0), *cURL*, *cmake* and a C++20 compiler (only *gcc>=10* and *MSVC>=19.28* have been tested for now) on your system.
+
+### Linux
+
+For instance, for Unix Debian based systems (tested on Ubuntu 18 & 20):
 ```
 sudo apt-get update
 sudo apt-get install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
 ```
 
-# Install
+### Windows
+
+On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install **cURL** and **OpenSSL**:
+
+```
+choco install curl openssl
+```
+
+Then, locate where curl is installed (by default, should be in `C:\ProgramData\chocolatey\lib\curl\tools\curl-xxx`, let's note this `CURL_DIR`) and add both `CURL_DIR/lib` and `CURL_DIR/bin` in your `PATH`. From this step, **cURL** and **OpenSSL** can be found by `cmake` and will be linked statically to the executables.
 
 ## As an executable (CLI tool)
 
@@ -81,22 +93,24 @@ target_link_libraries(<MyProgram> PRIVATE coincenter)
 
 ## Build
 
-### From source 
+### From source
 
 This is a C++20 project. Today, it is only partially supported by the main compilers.
 
-Does not (yet) compile with clang (does not support lambdas in unevaluated context), but it has been tested with GCC 10.1 and GCC 10.2.
+Does not (yet) compile with clang (does not support lambdas in unevaluated context), but it has been tested with GCC 10 and MSVC 19.28.
 
 Other compilers have not been tested yet. If you successfully compiled it on Windows or Mac for instance, please open a PR and update the CI!
 
 `coincenter` uses `cmake`.
 
-Example: to compile it in `Release` mode and `ninja` generator
+Example on Linux: to compile it in `Release` mode and `ninja` generator
 ```
 BUILD_MODE=Release; mkdir -p build/${BUILD_MODE} && cd build/${BUILD_MODE} && cmake -GNinja -DCMAKE_BUILD_TYPE=${BUILD_MODE} ../.. && ninja -j 8
 ```
 
-### From docker
+On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2019**, etc), or build it from command line, with generator `-G "Visual Studio 16 2019"`. Refer to the GitHub Windows workflow to have the detailed installation steps.
+
+### From Docker
 
 Build
 ```
