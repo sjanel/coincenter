@@ -72,7 +72,7 @@ Simply launch the help command for more information
 
 ## As a static library
 
-**coincenter** can also be used in a sub project, such as a trading bot for instance. It is the case by default if built as a sub-module in `cmake`.
+**coincenter** can also be used as a sub project, such as a trading bot for instance. It is the case by default if built as a sub-module in `cmake`.
 
 To build your `cmake` project with **coincenter** library, you can do it with `FetchContent`:
 ```
@@ -99,7 +99,7 @@ This is a C++20 project. Today, it is only partially supported by the main compi
 
 Does not (yet) compile with clang (does not support lambdas in unevaluated context), but it has been tested with GCC 10 and MSVC 19.28.
 
-Other compilers have not been tested yet. If you successfully compiled it on Windows or Mac for instance, please open a PR and update the CI!
+Other compilers have not been tested yet.
 
 `coincenter` uses `cmake`.
 
