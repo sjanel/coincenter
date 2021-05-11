@@ -8,6 +8,7 @@
 #include "cct_exception.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_time_helpers.hpp"
+#include "cct_variadictable.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
@@ -45,7 +46,7 @@ Exchange &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::
 }
 }  // namespace
 
-MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, PublicExchangeNames exchangeNames,
+MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                                  std::optional<int> depth) {
   MarketOrderBooks ret;
   for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
@@ -54,9 +55,9 @@ MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, PublicExchangeNames e
   return ret;
 }
 
-Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, PublicExchangeNames exchangeNames,
-                                                                           CurrencyCode equiCurrencyCode,
-                                                                           std::optional<int> depth) {
+Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
+    Market m, std::span<const PublicExchangeName> exchangeNames, CurrencyCode equiCurrencyCode,
+    std::optional<int> depth) {
   MarketOrderBookConversionRates ret;
   for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
     std::optional<MonetaryAmount> optConversionRate =
@@ -92,9 +93,36 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
   for (const PrivateExchangeName &privateExchangeName : privateExchangeNames) {
     exchangesStr.append(privateExchangeName.str());
   }
-  log::warn("Query balance from {}", exchangesStr);
+  log::info("Query balance from {}", exchangesStr);
   BalancePortfolio portfolio = getBalance(privateExchangeNames, balanceCurrencyCode);
   portfolio.print(std::cout);
+}
+
+void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, CurrencyCode fromCurrencyCode,
+                                     CurrencyCode toCurrencyCode) {
+  std::string exchangesStr;
+  for (const PublicExchangeName &exchangeName : exchangeNames) {
+    exchangesStr.append(exchangeName);
+  }
+  log::info("Query conversion path from {}", exchangesStr);
+  VariadicTable<std::string, std::string> vt({"Exchange", "Fastest conversion path"});
+  for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
+    std::string conversionPathStr;
+    api::ExchangePublic::Currencies conversionPath =
+        e->apiPublic().findFastestConversionPath(fromCurrencyCode, toCurrencyCode);
+    if (conversionPath.empty()) {
+      conversionPathStr = "--- Impossible ---";
+    } else {
+      for (CurrencyCode currencyCode : conversionPath) {
+        if (!conversionPathStr.empty()) {
+          conversionPathStr.push_back('-');
+        }
+        conversionPathStr.append(currencyCode.str());
+      }
+    }
+    vt.addRow(std::string(e->name()), conversionPathStr);
+  }
+  vt.print();
 }
 
 MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
@@ -142,7 +170,7 @@ void Coincenter::updateFileCaches() const {
   }
 }
 
-Coincenter::SelectedExchanges Coincenter::RetrieveSelectedExchanges(PublicExchangeNames exchangeNames,
+Coincenter::SelectedExchanges Coincenter::RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
                                                                     std::span<Exchange> exchanges) {
   SelectedExchanges ret;
   for (std::string_view exchangeName : exchangeNames) {

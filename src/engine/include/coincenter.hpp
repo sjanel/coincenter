@@ -38,12 +38,12 @@ class Coincenter {
   Coincenter &operator=(Coincenter &&) noexcept = default;
 
   /// Retrieve market order book of market for given exchanges
-  MarketOrderBooks getMarketOrderBooks(Market m, PublicExchangeNames exchangeNames,
+  MarketOrderBooks getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                        std::optional<int> depth = std::nullopt);
 
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
-  MarketOrderBookConversionRates getMarketOrderBooks(Market m, PublicExchangeNames exchangeNames,
+  MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
@@ -52,6 +52,9 @@ class Coincenter {
                               CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
+
+  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, CurrencyCode fromCurrencyCode,
+                           CurrencyCode toCurrencyCode);
 
   /// Single trade from 'startAmount' into 'toCurrency', on exchange named 'exchangeName'.
   /// Options should be wisely chosen here to avoid mistakes.
@@ -77,7 +80,8 @@ class Coincenter {
   using WithdrawalFeeMapPerExchange = cct::vector<api::ExchangePublic::WithdrawalFeeMap>;
   using MarketsOrderBookPerExchange = cct::vector<api::ExchangePublic::MarketOrderBookMap>;
 
-  static SelectedExchanges RetrieveSelectedExchanges(PublicExchangeNames exchangeNames, std::span<Exchange> exchanges);
+  static SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
+                                                     std::span<Exchange> exchanges);
 
   const CoincenterInfo &_coincenterInfo;
   FiatConverter &_fiatConverter;

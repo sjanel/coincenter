@@ -23,7 +23,10 @@ class Exchange {
   std::string_view keyName() const { return _exchangePrivate.keyName(); }
 
   api::ExchangePublic &apiPublic() { return _exchangePublic; }
+  const api::ExchangePublic &apiPublic() const { return _exchangePublic; }
+
   api::ExchangePrivate &apiPrivate() { return _exchangePrivate; }
+
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
   bool hasPrivateAPI() const;

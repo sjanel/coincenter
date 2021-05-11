@@ -76,6 +76,13 @@ class ExchangePublic : public ExchangeBase {
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
+  using Currencies = cct::SmallVector<CurrencyCode, 6>;
+
+  /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
+  /// of 'from' towards 'to' currency code
+  /// @return ordered list of currency code, or empty list if conversion is not possible
+  Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to);
+
  protected:
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi)
       : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi) {}
@@ -90,12 +97,6 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);
-
-  using Currencies = cct::SmallVector<CurrencyCode, 6>;
-
-  /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
-  /// of 'from' towards 'to' currency code
-  Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to);
 
   MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
 
