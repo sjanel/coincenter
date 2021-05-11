@@ -39,7 +39,7 @@ void FiatConverter::updateCacheFile() const {
   WriteJsonFile(kRatesFileName, data);
 }
 
-double FiatConverter::queryCurrencyRate(Market m) {
+std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   std::string url = kCurrencyConverterBaseUrl;
   url.append("/convert?");
 
@@ -51,12 +51,20 @@ double FiatConverter::queryCurrencyRate(Market m) {
   url.append(opts.postdata.c_str());
   opts.postdata.clear();
 
-  json data = json::parse(_curlHandle.query(url, opts));
+  json data = json::parse(_curlHandle.query(url, opts), nullptr, false /* allow exceptions */);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
-  const json& res = data["results"];
-  if (!res.contains(qStr)) {
-    throw exception("Cannot find data for " + qStr);
+  if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
+    log::error("No JSON data received from fiat currency converter service");
+    auto it = _pricesMap.find(m);
+    if (it != _pricesMap.end()) {
+      // Update cache time anyway to avoid querying too much the service
+      TimePoint t = Clock::now();
+      it->second.lastUpdatedTime = t;
+      _pricesMap[m.reverse()].lastUpdatedTime = t;
+    }
+    return std::nullopt;
   }
+  const json& res = data["results"];
   const json& rates = res[qStr];
   double rate = rates["val"];
   log::debug("Stored rate {} for market {}", rate, qStr);
@@ -74,7 +82,16 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
   double rate;
   auto it = _pricesMap.find(m);
   if (it == _pricesMap.end() || it->second.lastUpdatedTime + _ratesUpdateFrequency < Clock::now()) {
-    rate = queryCurrencyRate(m);
+    std::optional<double> queriedRate = queryCurrencyRate(m);
+    if (queriedRate) {
+      rate = *queriedRate;
+    } else {
+      if (it == _pricesMap.end()) {
+        throw exception("Unable to query fiat currency rates and no rate found in cache");
+      }
+      log::warn("Fiat currency rate service unavailable, use not up to date currency rate in cache");
+      rate = it->second.rate;
+    }
   } else {
     rate = it->second.rate;
   }
