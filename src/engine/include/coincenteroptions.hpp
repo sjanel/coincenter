@@ -27,6 +27,8 @@ struct CoincenterCmdLineOptions {
   int orderbook_depth{};
   std::string orderbook_cur{};
 
+  std::string conversion_path{};
+
   std::string balance{};
   std::string balance_cur{CurrencyCode::kNeutral.str()};
 
@@ -64,12 +66,14 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
 
-       {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2,exch1,...>", "Print order book of currency pair on a list of exchanges"}, 
+       {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2,exch1,...>", "Print order book of currency pair for given exchanges"}, 
                                                                              &OptValueType::orderbook},
        {{{"Public queries", 2}, "--orderbook-depth", "", "Override default depth of order book"}, &OptValueType::orderbook_depth},
        {{{"Public queries", 2}, "--orderbook-cur", "<cur code>", "If conversion of cur2 into cur is possible on exch1, "
                                                                  "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
+       {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2,exch1,...>", "Print fastest conversion path of 'cur1' to 'cur2' for given exchanges if possible"}, 
+                                                                 &OptValueType::conversion_path},
 
        {{{"Private queries", 3}, "--balance", 'b', "<exch1,...|all>", "Prints available balance on given exchanges. "
                                                                       "If 'all' is specified, sums all available private exchange accounts"}, 

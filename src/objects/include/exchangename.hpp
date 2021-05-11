@@ -8,7 +8,8 @@
 
 namespace cct {
 
-using PublicExchangeNames = cct::SmallVector<std::string, kTypicalNbExchanges>;
+using PublicExchangeName = std::string;
+using PublicExchangeNames = cct::SmallVector<PublicExchangeName, kTypicalNbExchanges>;
 
 class PrivateExchangeName {
  public:

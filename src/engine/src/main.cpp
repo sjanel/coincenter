@@ -37,6 +37,9 @@ int main(int argc, const char* argv[]) {
   int orderbookDepth = 0;
   CurrencyCode orderbookCur(CurrencyCode::kNeutral);
 
+  Market marketForConversionPath;
+  PublicExchangeNames conversionPathExchanges;
+
   PrivateExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
 
@@ -66,6 +69,11 @@ int main(int argc, const char* argv[]) {
 
       orderbookDepth = cmdLineOptions.orderbook_depth;
       orderbookCur = CurrencyCode(cmdLineOptions.orderbook_cur);
+    }
+
+    if (!cmdLineOptions.conversion_path.empty()) {
+      AnyParser anyParser(cmdLineOptions.conversion_path);
+      std::tie(marketForConversionPath, conversionPathExchanges) = anyParser.getMarketExchanges();
     }
 
     if (!cmdLineOptions.balance.empty()) {
@@ -168,7 +176,7 @@ int main(int argc, const char* argv[]) {
     int orderBookPos = 0;
     for (std::string_view exchangeName : orderBookExchanges) {
       const auto& [marketOrderBook, optConversionRate] = marketOrderBooksConversionRates[orderBookPos];
-      log::warn("Order book of {} on {} requested{}{}", marketForOrderBook.str(), exchangeName,
+      log::info("Order book of {} on {} requested{}{}", marketForOrderBook.str(), exchangeName,
                 optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
 
       if (optConversionRate) {
@@ -183,6 +191,11 @@ int main(int argc, const char* argv[]) {
 
       ++orderBookPos;
     }
+  }
+
+  if (!conversionPathExchanges.empty()) {
+    coincenter.printConversionPath(conversionPathExchanges, marketForConversionPath.base(),
+                                   marketForConversionPath.quote());
   }
 
   if (!balancePrivateExchanges.empty()) {
