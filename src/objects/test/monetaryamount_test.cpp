@@ -230,4 +230,13 @@ TEST(MonetaryAmountTest, NegativeDoubleConstructor) {
   EXPECT_EQ(MonetaryAmount(-0.14000001), MonetaryAmount("-0.14000001"));
 }
 
+TEST(MonetaryAmountTest, Truncate) {
+  MonetaryAmount a("0.00008244");
+  a.truncate(6);
+  EXPECT_EQ(a, MonetaryAmount("0.000082"));
+  a.truncate(4);
+  EXPECT_EQ(a, MonetaryAmount("0"));
+  EXPECT_TRUE(a.isZero());
+}
+
 }  // namespace cct

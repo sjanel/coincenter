@@ -12,14 +12,14 @@ namespace api {
 using OrderId = std::string;
 
 struct TradeInfo {
-  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts)
-      : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts) {}
+  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, std::string &&uRef)
+      : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts), userRef(std::move(uRef)) {}
 
   CurrencyCode fromCurrencyCode;
   CurrencyCode toCurrencyCode;
   Market m;
   TradeOptions options;
-  std::string userRef;  // Only used for Kraken
+  std::string userRef;  // Only used for Kraken, used to group orders queries context
 };
 
 struct TradedAmounts {
@@ -64,7 +64,6 @@ struct PlaceOrderInfo {
 
   OrderInfo orderInfo;
   OrderId orderId;
-  std::string userRef;  // Only used for Kraken
 };
 
 }  // namespace api

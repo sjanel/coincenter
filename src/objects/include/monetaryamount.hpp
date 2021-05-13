@@ -175,6 +175,7 @@ class MonetaryAmount {
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
       _nbDecimals -= nbDecimalsToTruncate;
+      simplify();
     }
   }
 

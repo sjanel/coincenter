@@ -75,12 +75,19 @@ class ExchangePrivate : public ExchangeBase {
       : ExchangeBase(), _exchangePublic(exchangePublic), _config(config), _apiKey(apiKey) {}
 
   /// Place an order in mode fire and forget.
+  /// When this method ends, order should be successfully placed in the exchange, or if not possible (for instance, too
+  /// small volume) return a closed PlaceOrderInfo.
+  /// @param from the remaining from amount to trade
   virtual PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                     const TradeInfo &tradeInfo) = 0;
 
-  /// Cancel given order id and returned its possible matched amounts
+  /// Cancel given order id and return its possible matched amounts.
+  /// When this methods ends, order should be successfully cancelled and its matched parts returned definitely (trade
+  /// automaton will not come back on this order later on)
   virtual OrderInfo cancelOrder(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
 
+  /// Query an order and return and 'OrderInfo' with its matched parts and if it is closed or not (closed means that its
+  /// status and matched parts will not evolve in the future).
   virtual OrderInfo queryOrderInfo(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
 
   ExchangePublic &_exchangePublic;
