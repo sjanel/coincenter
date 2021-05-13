@@ -211,14 +211,6 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
 
-  // Below 32 bits int acts as a hash: it is maybe not unique, so we should filter again based on the txid.
-  // we will keep it unique for this whole trade
-  if (placeOrderInfo.userRef.empty()) {
-    // This method can be called as a first place order or next updated ones. Only create a new userRef for the first
-    // place order
-    placeOrderInfo.userRef = std::to_string(static_cast<int32_t>(nbSecondsSinceEpoch));
-  }
-
   // oflags: Ask fee in destination currency.
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).
   // Warning: this does not change the currency of the returned fee from Kraken in the get Closed / Opened orders,
@@ -230,7 +222,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
                              {"volume", volume.amountStr()},
                              {"oflags", fromCurrencyCode == m.quote() ? "fcib" : "fciq"},
                              {"expiretm", std::to_string(nbSecondsSinceEpoch + expireTimeInSeconds)},
-                             {"userref", placeOrderInfo.userRef}};
+                             {"userref", tradeInfo.userRef}};
   if (isSimulation) {
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
   }
@@ -255,11 +247,8 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   MonetaryAmount krakenVolume(krakenTruncatedAmount, m.base());
   log::debug("Kraken adjusted volume: {}", krakenVolume.str());
 
-  TradeInfo newTradeInfo(tradeInfo);
-  newTradeInfo.userRef = placeOrderInfo.userRef;
-
   placeOrderInfo.orderInfo =
-      queryOrderInfo(placeOrderInfo.orderId, newTradeInfo,
+      queryOrderInfo(placeOrderInfo.orderId, tradeInfo,
                      isTakerStrategy ? QueryOrder::kClosedThenOpened : QueryOrder::kOpenedThenClosed);
 
   return placeOrderInfo;

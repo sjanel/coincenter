@@ -121,6 +121,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               CurlPostData updatedPostData(curlPostData);
               MonetaryAmount volume(opts.postdata.get("units"));
               volume.truncate(maxNbDecimals);
+              if (volume.isZero()) {
+                return {};
+              }
               updatedPostData.set("units", volume.amountStr());
               return PrivateQuery(curlHandle, apiKey, methodName, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
             }
@@ -252,6 +255,13 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     placePostData.append("price", price.amountStr());
   }
 
+  // Volume is gross amount if from amount is in quote currency, we should remove the fees
+  if (fromCurrencyCode == m.quote()) {
+    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    const ExchangeInfo& exchangeInfo = _config.exchangeInfo(_exchangePublic.name());
+    volume = exchangeInfo.applyFee(volume, feeType);
+  }
+
   MaxNbDecimalsUnitMap::const_iterator maxUnitNbDecimalsIt = _maxNbDecimalsPerCurrencyCodePlace.find(m.base());
   int8_t nbMaxDecimalsUnits = std::numeric_limits<MonetaryAmount::AmountType>::digits10;
   if (maxUnitNbDecimalsIt != _maxNbDecimalsPerCurrencyCodePlace.end() &&
@@ -260,12 +270,25 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     volume.truncate(nbMaxDecimalsUnits);
   }
 
+  if (volume.isZero()) {
+    log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
+              toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
   placePostData.append("units", volume.amountStr());
 
   json result = PrivateQuery(_curlHandle, _apiKey, methodName, _maxNbDecimalsPerCurrencyCodePlace, placePostData);
   //{"status" : "0000","order_id" : "1428646963419"}
-  placeOrderInfo.orderId = result["order_id"];
-  placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo);
+  if (result.contains("order_id")) {
+    placeOrderInfo.orderId = result["order_id"];
+    placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo);
+  } else {
+    log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
+              toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
+    placeOrderInfo.setClosed();
+  }
 
   return placeOrderInfo;
 }

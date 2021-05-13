@@ -13,13 +13,15 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
   const CurrencyCode fromCurrencyCode = from.currencyCode();
   const Market m = _exchangePublic.retrieveMarket(fromCurrencyCode, toCurrencyCode);
 
-  TradeInfo tradeInfo(fromCurrencyCode, toCurrencyCode, m, options);
+  const auto nbSecondsSinceEpoch =
+      std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
+
+  TradeInfo tradeInfo(fromCurrencyCode, toCurrencyCode, m, options,
+                      std::to_string(static_cast<int32_t>(nbSecondsSinceEpoch)));
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.isTakerStrategy());
   MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
-
-  tradeInfo.userRef = placeOrderInfo.userRef;
 
   // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
   const OrderId &orderId = placeOrderInfo.orderId;
