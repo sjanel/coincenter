@@ -23,9 +23,7 @@ class UpbitPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override {
-    return _balanceCache.get(equiCurrency);
-  }
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
@@ -56,17 +54,6 @@ class UpbitPrivate : public ExchangePrivate {
     UpbitPublic& _exchangePublic;
   };
 
-  struct AccountBalanceFunc {
-    AccountBalanceFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-
-    BalancePortfolio operator()(CurrencyCode equiCurrency);
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    UpbitPublic& _exchangePublic;
-  };
-
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
@@ -87,7 +74,6 @@ class UpbitPrivate : public ExchangePrivate {
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
-  CachedResult<AccountBalanceFunc, CurrencyCode> _balanceCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

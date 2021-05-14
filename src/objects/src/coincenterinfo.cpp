@@ -120,7 +120,6 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
                                  {api::QueryTypeEnum::kWithdrawalFees, std::chrono::hours(1)},
                                  {api::QueryTypeEnum::kAllOrderBooks, std::chrono::seconds(8)},
                                  {api::QueryTypeEnum::kOrderBook, std::chrono::seconds(1)},
-                                 {api::QueryTypeEnum::kAccountBalance, std::chrono::seconds(5)},
                                  {api::QueryTypeEnum::kDepositWallet, std::chrono::hours(12)},
                                  {api::QueryTypeEnum::kNbDecimalsUnitsBithumb, std::chrono::hours(96)}},
       _exchangeInfoMap(ComputeExchangeInfoMap()),

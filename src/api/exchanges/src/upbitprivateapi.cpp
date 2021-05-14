@@ -64,9 +64,6 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
-      _balanceCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAccountBalance), _cachedResultVault),
-          _curlHandle, _apiKey, upbitPublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
@@ -103,21 +100,13 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   return currencies;
 }
 
-BalancePortfolio UpbitPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
+BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "accounts");
   BalancePortfolio ret;
   for (const json& accountDetail : result) {
     MonetaryAmount a(accountDetail["balance"].get<std::string_view>(),
                      accountDetail["currency"].get<std::string_view>());
-    if (!a.isZero()) {
-      if (equiCurrency == CurrencyCode::kNeutral) {
-        log::info("{} Balance {}", _exchangePublic.name(), a.str());
-        ret.add(a, MonetaryAmount("0", equiCurrency));
-      } else {
-        MonetaryAmount equivalentInMainCurrency = _exchangePublic.computeEquivalentInMainCurrency(a, equiCurrency);
-        ret.add(a, equivalentInMainCurrency);
-      }
-    }
+    this->addBalance(ret, a, equiCurrency);
   }
   return ret;
 }

@@ -83,13 +83,9 @@ class ExchangePublic : public ExchangeBase {
   /// @return ordered list of currency code, or empty list if conversion is not possible
   Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to);
 
-  MonetaryAmount computeWorstOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy);
-
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 
   MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy, int depth = 10);
-
-  MonetaryAmount computeEquivalentInMainCurrency(MonetaryAmount a, CurrencyCode equiCurrency);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);

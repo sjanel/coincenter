@@ -57,7 +57,7 @@ if(CCT_ENABLE_TESTS)
   FetchContent_MakeAvailable(googletest)
 
   enable_testing()
-endif(CCT_ENABLE_TESTS)
+endif()
 
 FetchContent_Declare(
   json
@@ -146,7 +146,7 @@ function(add_unit_test name)
                           ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1 abort_on_error=1 print_stacktrace=1;\
                           LSAN_OPTIONS=detect_leaks=1 malloc_context_size=2 print_suppressions=0"
                         WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY})
-   endif(CCT_ENABLE_TESTS)
+   endif()
 endfunction()
 
 if (MSVC)
@@ -158,7 +158,7 @@ else()
   if(CCT_ENABLE_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover")
     message(STATUS "Activate asan")
-  endif(CCT_ENABLE_ASAN)
+  endif()
 endif()
 
 message(STATUS "Using Data directory ${CCT_DATA_DIR}")

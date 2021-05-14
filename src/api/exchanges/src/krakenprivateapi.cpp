@@ -84,32 +84,21 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(krakenPublic, config, apiKey),
       _curlHandle(config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
-      _balanceCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAccountBalance), _cachedResultVault),
-          _curlHandle, config, _apiKey, krakenPublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
 CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
-BalancePortfolio KrakenPrivate::AccountBalanceFunc::operator()(CurrencyCode equiCurrency) {
+BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   BalancePortfolio ret;
   json res = PrivateQuery(_curlHandle, _apiKey, "Balance");
   // Kraken returns an empty array in case of account with no balance at all
   for (const auto& [curCode, amountStr] : res.items()) {
     std::string amount = amountStr;
     CurrencyCode currencyCode(_config.standardizeCurrencyCode(curCode));
-    MonetaryAmount a(std::move(amount), currencyCode);
-    if (!a.isZero()) {
-      if (equiCurrency == CurrencyCode::kNeutral) {
-        log::info("Kraken Balance {}", a.str());
-        ret.add(a, MonetaryAmount("0", equiCurrency));
-      } else {
-        MonetaryAmount equivalentInMainCurrency = _exchangePublic.computeEquivalentInMainCurrency(a, equiCurrency);
-        ret.add(a, equivalentInMainCurrency);
-      }
-    }
+
+    addBalance(ret, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
   }
   return ret;
 }

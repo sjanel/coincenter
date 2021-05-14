@@ -23,9 +23,7 @@ class KrakenPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override {
-    return _balanceCache.get(equiCurrency);
-  }
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
@@ -49,19 +47,6 @@ class KrakenPrivate : public ExchangePrivate {
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
-  struct AccountBalanceFunc {
-    AccountBalanceFunc(CurlHandle& curlHandle, const CoincenterInfo& config, const APIKey& apiKey,
-                       KrakenPublic& exchangePublic)
-        : _curlHandle(curlHandle), _config(config), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-
-    BalancePortfolio operator()(CurrencyCode equiCurrency);
-
-    CurlHandle& _curlHandle;
-    const CoincenterInfo& _config;
-    const APIKey& _apiKey;
-    KrakenPublic& _exchangePublic;
-  };
-
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, KrakenPublic& exchangePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
@@ -80,7 +65,6 @@ class KrakenPrivate : public ExchangePrivate {
 
   CurlHandle _curlHandle;
   CurlHandle _placeCancelOrder;  // Kraken has no API limit on place / cancel order, hence a separate CurlHandle
-  CachedResult<AccountBalanceFunc, CurrencyCode> _balanceCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

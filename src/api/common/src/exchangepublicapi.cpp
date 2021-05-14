@@ -46,19 +46,6 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
   return a;
 }
 
-MonetaryAmount ExchangePublic::computeEquivalentInMainCurrency(MonetaryAmount a, CurrencyCode equiCurrency) {
-  std::optional<MonetaryAmount> optConvertedAmountEquiCurrency = convertAtAveragePrice(a, equiCurrency);
-  MonetaryAmount equivalentInMainCurrency;
-  if (!optConvertedAmountEquiCurrency) {
-    log::warn("Cannot convert {} into {} on {}", a.currencyCode().str(), equiCurrency.str(), name());
-    equivalentInMainCurrency = MonetaryAmount("0", equiCurrency);
-  } else {
-    equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
-  }
-  log::info("{} Balance {} (eq. {})", name(), a.str(), equivalentInMainCurrency.str());
-  return equivalentInMainCurrency;
-}
-
 ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(CurrencyCode fromCurrencyCode,
                                                                      CurrencyCode toCurrencyCode) {
   const bool isToFiat = _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
@@ -90,18 +77,6 @@ ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(CurrencyCod
   } while (!searchPaths.empty());
 
   return Currencies();
-}
-
-MonetaryAmount ExchangePublic::computeWorstOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy) {
-  MarketOrderBook marketOrderBook = queryOrderBook(m);
-  if (isTakerStrategy) {
-    std::optional<MonetaryAmount> optWorstPrice = marketOrderBook.computeWorstPriceForTakerAmount(from);
-    if (optWorstPrice) {
-      return *optWorstPrice;
-    }
-    log::error("{} is too big to be matched immediately on {}, return limit price instead", from.str(), m.str());
-  }
-  return from.currencyCode() == m.base() ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
 }
 
 MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from) {

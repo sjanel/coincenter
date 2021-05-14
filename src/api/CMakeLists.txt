@@ -14,66 +14,63 @@ FetchContent_MakeAvailable(jwt-cpp)
 #-------------------------------------------------------------------------------
 # Add library exchangeapi
 #-------------------------------------------------------------------------------
-aux_source_directory(common/src API_COMMON_SRC)
 aux_source_directory(exchanges/src API_EXCHANGES_SRC)
 aux_source_directory(interface/src API_INTERFACE_SRC)
 
-include(FindOpenSSL)
-
-add_library(coincenter_exchangeapi STATIC ${API_COMMON_SRC} ${API_EXCHANGES_SRC} ${API_INTERFACE_SRC})
+add_library(coincenter_exchangeapi STATIC ${API_EXCHANGES_SRC} ${API_INTERFACE_SRC})
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_tools)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_objects)
-target_link_libraries(coincenter_exchangeapi PRIVATE OpenSSL::SSL)
+target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_apicommon)
 target_link_libraries(coincenter_exchangeapi PRIVATE jwt-cpp)
 
 target_include_directories(coincenter_exchangeapi PUBLIC exchanges/include)
-target_include_directories(coincenter_exchangeapi PUBLIC common/include)
 target_include_directories(coincenter_exchangeapi PUBLIC interface/include)
 
-add_unit_test(
+function(add_exchange_test name)
+   set(oneValueArgs)
+   set(multiValueArgs)
+   cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+   if(CCT_ENABLE_TESTS)
+     add_unit_test(
+       ${name} 
+       ${MY_UNPARSED_ARGUMENTS}
+       LIBRARIES
+       jwt-cpp
+       coincenter_apicommon
+       coincenter_objects
+       coincenter_tools
+     )
+     target_include_directories(${name} PRIVATE exchanges/include)
+   endif() 
+endfunction()
+
+add_exchange_test(
   binanceapi_test
-  common/src/exchangepublicapi.cpp
   exchanges/src/binancepublicapi.cpp
   exchanges/src/binanceprivateapi.cpp
   exchanges/test/binanceapi_test.cpp
-  LIBRARIES
-  coincenter_exchangeapi
 )
 
-add_unit_test(
+add_exchange_test(
   bithumbapi_test
-  common/src/exchangepublicapi.cpp
   exchanges/src/bithumbpublicapi.cpp
   exchanges/src/bithumbprivateapi.cpp
   exchanges/test/bithumbapi_test.cpp
-  LIBRARIES
-  coincenter_exchangeapi
 )
 
-add_unit_test(
-  cryptowatchapi_test
-  exchanges/src/cryptowatchapi.cpp
-  exchanges/test/cryptowatchapi_test.cpp
-  LIBRARIES
-  coincenter_exchangeapi
-)
-
-add_unit_test(
+add_exchange_test(
   krakenapi_test
-  common/src/exchangepublicapi.cpp
-  exchanges/src/cryptowatchapi.cpp
   exchanges/src/krakenpublicapi.cpp
   exchanges/src/krakenprivateapi.cpp
   exchanges/test/krakenapi_test.cpp
-  LIBRARIES
-  coincenter_exchangeapi
 )
 
-add_unit_test(
+add_exchange_test(
   upbitapi_test
-  common/src/exchangepublicapi.cpp
   exchanges/src/upbitpublicapi.cpp
+  exchanges/src/upbitprivateapi.cpp
   exchanges/test/upbitapi_test.cpp
-  LIBRARIES
-  coincenter_exchangeapi
 )
+
+add_subdirectory(common)

@@ -75,7 +75,6 @@ CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _exch
 BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/account");
   BalancePortfolio balancePortfolio;
-  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   for (const json& balance : result["balances"]) {
     /*
     {
@@ -85,18 +84,9 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
     },
     */
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
-    MonetaryAmount available(balance["free"].get<std::string_view>(), currencyCode);
+    MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
 
-    if (!available.isZero()) {
-      if (equiCurrency == CurrencyCode::kNeutral) {
-        log::info("{} Balance {}", _exchangePublic.name(), available.str());
-        balancePortfolio.add(available, MonetaryAmount("0", equiCurrency));
-      } else {
-        MonetaryAmount equivalentInMainCurrency =
-            binancePublic.computeEquivalentInMainCurrency(available, equiCurrency);
-        balancePortfolio.add(available, equivalentInMainCurrency);
-      }
-    }
+    addBalance(balancePortfolio, amount, equiCurrency);
   }
 
   return balancePortfolio;

@@ -75,7 +75,7 @@ class Coincenter {
 
  private:
   using MarketsPerExchange = cct::vector<api::ExchangePublic::MarketSet>;
-  using UniqueQueryRefresherHandles = cct::vector<ExchangeBase::UniqueQueryRefresherHandle>;
+  using UniqueQueryRefresherHandles = cct::vector<api::ExchangeBase::UniqueQueryRefresherHandle>;
   using CurrencyExchangeSets = cct::vector<CurrencyExchangeFlatSet>;
   using WithdrawalFeeMapPerExchange = cct::vector<api::ExchangePublic::WithdrawalFeeMap>;
   using MarketsOrderBookPerExchange = cct::vector<api::ExchangePublic::MarketOrderBookMap>;
