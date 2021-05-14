@@ -7,18 +7,24 @@ coincenter
 
 A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
 Supported exchanges are:
-- Kraken
-- Bithumb
-- Binance
-- Upbit (work in progress)
+| Exchange | Link                                                                            |
+| -------- | :-----------------------------------------------------------------------------: |
+| Kraken   | [<img src="./resources/krakenlogo.svg" width="100">](https://www.kraken.com/)   |
+| Bithumb  | [<img src="./resources/bithumblogo.svg" width="60">](https://www.bithumb.com/)  |
+| Binance  | [<img src="./resources/binancelogo.svg" width="160">](https://www.binance.com/) |
+| Upbit    | [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)     |
  
  *Table of Contents*
 - [coincenter](#coincenter)
-- [Pre-requisites](#pre-requisites)
 - [Install](#install)
+  - [Pre-requisites](#pre-requisites)
+    - [Linux](#linux)
+    - [Windows](#windows)
   - [As an executable (CLI tool)](#as-an-executable-cli-tool)
   - [As a static library](#as-a-static-library)
   - [Build](#build)
+    - [From source](#from-source)
+    - [From Docker](#from-docker)
 - [Tests](#tests)
 - [Usage](#usage)
   - [Simple Trade](#simple-trade)
