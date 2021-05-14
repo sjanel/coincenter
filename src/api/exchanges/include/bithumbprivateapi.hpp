@@ -32,16 +32,15 @@ class BithumbPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override {
-    return _balanceCache.get(equiCurrency);
-  }
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
   void updateCacheFile() const override;
 
  protected:
-  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo& tradeInfo) override;
+  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
+                            const TradeInfo& tradeInfo) override;
 
   OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
 
@@ -55,22 +54,6 @@ class BithumbPrivate : public ExchangePrivate {
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
-  struct AccountBalanceFunc {
-    AccountBalanceFunc(CurlHandle& curlHandle, const APIKey& apiKey, MaxNbDecimalsUnitMap& maxNbDecimalsUnitMap,
-                       BithumbPublic& exchangePublic)
-        : _curlHandle(curlHandle),
-          _apiKey(apiKey),
-          _maxNbDecimalsUnitMap(maxNbDecimalsUnitMap),
-          _exchangePublic(exchangePublic) {}
-
-    BalancePortfolio operator()(CurrencyCode equiCurrency);
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    MaxNbDecimalsUnitMap& _maxNbDecimalsUnitMap;
-    BithumbPublic& _exchangePublic;
-  };
-
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, MaxNbDecimalsUnitMap& maxNbDecimalsUnitMap,
                       BithumbPublic& exchangePublic)
@@ -88,9 +71,8 @@ class BithumbPrivate : public ExchangePrivate {
   };
 
   CurlHandle _curlHandle;
-  MaxNbDecimalsUnitMap _maxNbDecimalsPerCurrencyCodePlace;
+  MaxNbDecimalsUnitMap _maxNbDecimalsUnitMap;
   Clock::duration _nbDecimalsRefreshTime;
-  CachedResult<AccountBalanceFunc, CurrencyCode> _balanceCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

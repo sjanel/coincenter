@@ -6,6 +6,28 @@
 namespace cct {
 namespace api {
 
+void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
+  if (!amount.isZero()) {
+    if (equiCurrency == CurrencyCode::kNeutral) {
+      log::info("{} Balance {}", _exchangePublic.name(), amount.str());
+      balancePortfolio.add(amount);
+    } else {
+      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
+          _exchangePublic.convertAtAveragePrice(amount, equiCurrency);
+      MonetaryAmount equivalentInMainCurrency;
+      if (!optConvertedAmountEquiCurrency) {
+        log::warn("Cannot convert {} into {} on {}", amount.currencyCode().str(), equiCurrency.str(),
+                  _exchangePublic.name());
+        equivalentInMainCurrency = MonetaryAmount(0, equiCurrency, 0);
+      } else {
+        equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
+      }
+      log::info("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
+      balancePortfolio.add(amount, equivalentInMainCurrency);
+    }
+  }
+}
+
 MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options) {
   using Clock = TradeOptions::Clock;
   using TimePoint = TradeOptions::TimePoint;

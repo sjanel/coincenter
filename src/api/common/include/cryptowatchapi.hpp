@@ -19,10 +19,6 @@ class CryptowatchAPI : public ExchangeBase {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  /// Cryptowatch markets are represented by one unique string pair, it's not trivial to split the two currencies
-  /// acronyms. A second match will be needed to transform it to a final 'cct::Market'
-  using PricesPerMarketMap = std::unordered_map<std::string, double>;
-
   explicit CryptowatchAPI(settings::RunMode runMode = settings::kProd,
                           Clock::duration fiatsUpdateFrequency = std::chrono::hours(6),
                           bool loadFromFileCacheAtInit = true);
@@ -31,11 +27,6 @@ class CryptowatchAPI : public ExchangeBase {
   bool queryIsExchangeSupported(const std::string &exchangeName) {
     return _supportedExchanges.get().contains(exchangeName);
   }
-
-  /// Get a map containing all the average prices for all markets of given exchange.
-  /// The Markets are represented as a unique string with the concatenation of both currency acronyms in upper case:
-  /// Example: Market Bitcoin - Euro would have "BTCEUR" as key.
-  PricesPerMarketMap queryAllPrices(std::string_view exchangeName) { return _allPricesCache.get(exchangeName); }
 
   /// Query the approximate price of market 'm' for exchange name 'exchangeName'.
   /// Data may not be up to date, but should respond quickly.
@@ -51,6 +42,9 @@ class CryptowatchAPI : public ExchangeBase {
  private:
   using Fiats = cct::FlatSet<CurrencyCode>;
   using SupportedExchanges = cct::FlatSet<std::string>;
+  /// Cryptowatch markets are represented by one unique string pair, it's not trivial to split the two currencies
+  /// acronyms. A second match will be needed to transform it to a final 'cct::Market'
+  using PricesPerMarketMap = std::unordered_map<std::string, double>;
 
   CryptowatchAPI(const CryptowatchAPI &) = delete;
   CryptowatchAPI(CryptowatchAPI &&) = default;

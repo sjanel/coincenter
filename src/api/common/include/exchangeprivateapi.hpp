@@ -75,6 +75,10 @@ class ExchangePrivate : public ExchangeBase {
   ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
       : ExchangeBase(), _exchangePublic(exchangePublic), _config(config), _apiKey(apiKey) {}
 
+  /// Adds an amount to given BalancePortfolio.
+  /// @param equiCurrency Asks conversion of given amount into this currency as well
+  void addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency);
+
   /// Place an order in mode fire and forget.
   /// When this method ends, order should be successfully placed in the exchange, or if not possible (for instance, too
   /// small volume) return a closed PlaceOrderInfo.

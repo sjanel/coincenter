@@ -3,6 +3,7 @@
 #include "cachedresultvault.hpp"
 
 namespace cct {
+namespace api {
 class ExchangeBase {
  public:
   class UniqueQueryRefresherHandle {
@@ -49,4 +50,5 @@ class ExchangeBase {
 
   CachedResultVault _cachedResultVault;
 };
+}  // namespace api
 }  // namespace cct

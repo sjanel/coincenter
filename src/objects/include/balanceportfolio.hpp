@@ -25,6 +25,8 @@ class BalancePortfolio {
   using MonetaryAmountSet =
       cct::FlatSet<MonetaryAmountWithEquivalent, CompareMonetaryAmountWithEquivalentByCurrencyCode>;
 
+  /// Adds an amount in the `BalancePortfolio`.
+  /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency
   void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency = MonetaryAmount());
 
   void merge(const BalancePortfolio &o);
