@@ -3,8 +3,8 @@
 #include <curl/curl.h>
 #include <gtest/gtest.h>
 
-#include "cct_proxy.hpp"
 #include "cct_log.hpp"
+#include "cct_proxy.hpp"
 
 // #define DEBUG
 /* URL available to test HTTPS, cf
@@ -46,7 +46,8 @@ TEST_F(CurlSetup, Queries) {
 #endif
     log::set_level(log::level::trace);
     std::string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
-    EXPECT_TRUE(s.find("online") != std::string::npos);
+    EXPECT_TRUE(s.find("online") != std::string::npos || s.find("maintenance") != std::string::npos ||
+                s.find("cancel_only") != std::string::npos || s.find("post_only") != std::string::npos);
   }
 }
 
