@@ -1,6 +1,7 @@
 #include "monetaryamount.hpp"
 
 #include <cassert>
+#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
@@ -21,14 +22,14 @@ constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 /// Converts a string into a fixed precision integral containing both the integer and decimal part.
 /// @param amountStr the string to convert
 /// @param heuristicRoundingFromDouble if true, more than 5 consecutive zeros or 9 in the decimals part will be rounded
-std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string &&amountStr,
+std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
                                                                     bool heuristicRoundingFromDouble = false) {
   bool isNeg = false;
   if (!amountStr.empty()) {
     char firstChar = amountStr.front();
     if (firstChar == '-') {
       isNeg = true;
-      amountStr.erase(amountStr.begin());
+      amountStr.remove_prefix(1);
     } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
       throw exception("Parsing error, unexpected first char " + std::string(1, firstChar));
     }
@@ -36,9 +37,10 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string 
   std::size_t dotPos = amountStr.find_first_of('.');
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
+  MonetaryAmount::AmountType decPart = 0, integerPart = 0;
   if (dotPos != std::string::npos) {
     while (amountStr.back() == '0') {
-      amountStr.pop_back();
+      amountStr.remove_suffix(1);
     }
     if (heuristicRoundingFromDouble && (amountStr.size() - dotPos - 1) == kNbMaxDoubleDecimals) {
       std::size_t bestFindPos = 0;
@@ -57,27 +59,32 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string 
       if (bestFindPos != 0) {
         const bool roundingUp = amountStr[bestFindPos] == '9';
         log::trace("Heuristic rounding {} for {}", roundingUp ? "up" : "down", amountStr);
-        amountStr.erase(amountStr.begin() + bestFindPos, amountStr.end());
+        amountStr.remove_suffix(amountStr.size() - bestFindPos);
         if (roundingUp) {
           roundingUpNinesDouble = 1;
         }
       }
     }
-    nbDecimals = amountStr.size() - dotPos - 1;
+    nbDecimals = static_cast<int8_t>(amountStr.size() - dotPos - 1);
     // dotPos is still valid as we erased only past elements
-    if (amountStr.length() > std::numeric_limits<MonetaryAmount::AmountType>::digits10 + 1) {
-      int nbDigitsToRemove = amountStr.length() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1;
+    if (amountStr.size() > std::numeric_limits<MonetaryAmount::AmountType>::digits10 + 1) {
+      int8_t nbDigitsToRemove =
+          static_cast<int8_t>(amountStr.size() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1);
       if (nbDigitsToRemove > nbDecimals) {
-        throw exception("Received amount string " + amountStr + " whose integral part is too big");
+        throw exception("Received amount string " + std::string(amountStr) + " whose integral part is too big");
       }
       log::trace("Received amount string '{}' too big for MonetaryAmount, truncating {} digits", amountStr,
                  nbDigitsToRemove);
-      amountStr.erase(amountStr.end() - nbDigitsToRemove, amountStr.end());
+      amountStr.remove_suffix(nbDigitsToRemove);
       nbDecimals -= nbDigitsToRemove;
     }
-    amountStr.erase(amountStr.begin() + dotPos);
+    std::from_chars(amountStr.data() + dotPos + 1, amountStr.data() + amountStr.size(), decPart);
+    std::from_chars(amountStr.data(), amountStr.data() + dotPos, integerPart);
+  } else {
+    std::from_chars(amountStr.data(), amountStr.data() + amountStr.size(), integerPart);
   }
-  MonetaryAmount::AmountType integralAmount = std::stoll(amountStr) + roundingUpNinesDouble;
+
+  MonetaryAmount::AmountType integralAmount = integerPart * cct::ipow(10, nbDecimals) + decPart + roundingUpNinesDouble;
   if (isNeg) {
     integralAmount *= -1;
   }
@@ -93,7 +100,7 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   while (last != endIt && ((*last >= '0' && *last <= '9') || *last == '.')) {
     ++last;
   }
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string(amountCurrencyStr.begin(), last));
+  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string_view(amountCurrencyStr.begin(), last));
   while (last != endIt && *last == ' ') {
     ++last;
   }
@@ -102,7 +109,7 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
 }
 
 MonetaryAmount::MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode) : _currencyCode(currencyCode) {
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string(amountStr));
+  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
   assert(isSane());
 }
 
@@ -167,17 +174,15 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
 MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) const {
   AmountType lhsAmount = _amount;
   AmountType rhsAmount = step._amount;
-  int8_t lhsNbDecimals = _nbDecimals;
-  int8_t rhsNbDecimals = step._nbDecimals;
   assert(rhsAmount != 0);
-  lhsNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, lhsNbDecimals, rhsNbDecimals);
+  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, step._nbDecimals);
   AmountType epsilon = lhsAmount % rhsAmount;
   if (lhsAmount < 0) {
     roundType = roundType == RoundType::kDown ? RoundType::kUp : RoundType::kDown;
   }
   AmountType resAmount =
       roundType == RoundType::kDown || epsilon == 0 ? lhsAmount - epsilon : lhsAmount + (rhsAmount - epsilon);
-  MonetaryAmount ret(resAmount, _currencyCode, lhsNbDecimals);
+  MonetaryAmount ret(resAmount, _currencyCode, resNbDecimals);
   ret.simplify();
   assert(ret.isSane());
   return ret;
@@ -227,12 +232,8 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
   }
   AmountType lhsAmount = _amount;
   AmountType rhsAmount = o._amount;
-  int lhsNbDecimals = _nbDecimals;
-  int rhsNbDecimals = o._nbDecimals;
-  lhsNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, lhsNbDecimals, rhsNbDecimals);
-
+  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, o._nbDecimals);
   AmountType resAmount = lhsAmount + rhsAmount;
-  int resNbDecimals = lhsNbDecimals;
   constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
   if (resAmount >= kMaxAmountFullNDigits || resAmount <= -kMaxAmountFullNDigits) {
     resAmount /= 10;
@@ -392,19 +393,19 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
 }
 
 std::string MonetaryAmount::amountStr() const {
-  bool isNeg = _amount < 0;
-  std::string ret = std::to_string(std::abs(_amount));
-  int nbZerosToInsertFront = _nbDecimals + 1 - ret.size();
-  if (nbZerosToInsertFront > 0) {
-    ret.insert(ret.begin(), nbZerosToInsertFront, '0');
+  const bool isNeg = _amount < 0;
+  const int nbDigits = ndigits(_amount);
+  const int nbZerosToInsertFront = std::max(0, static_cast<int>(_nbDecimals + 1 - nbDigits));
+
+  std::string ret(isNeg + nbDigits, '-');
+  std::to_chars(ret.data(), ret.data() + ret.size(), _amount);
+
+  ret.insert(ret.begin() + isNeg, nbZerosToInsertFront, '0');
+
+  if (_nbDecimals > 0) {
+    ret.insert(ret.end() - _nbDecimals, '.');
   }
-  ret.insert(ret.end() - _nbDecimals, '.');
-  if (ret.back() == '.') {
-    ret.pop_back();
-  }
-  if (isNeg) {
-    ret.insert(ret.begin(), '-');
-  }
+
   return ret;
 }
 

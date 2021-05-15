@@ -51,8 +51,7 @@ class VariadicTable {
    * @param headers The names of the columns
    * @param static_column_size The size of columns that can't be found automatically
    */
-  VariadicTable(std::span<const std::string> headers, unsigned int static_column_size = 0,
-                unsigned int cell_padding = 1)
+  VariadicTable(std::span<const std::string> headers, std::size_t static_column_size = 0, std::size_t cell_padding = 1)
       : _headers(headers.begin(), headers.end()),
         _num_columns(std::tuple_size<DataTuple>::value),
         _static_column_size(static_column_size),
@@ -84,7 +83,7 @@ class VariadicTable {
 
     // Start computing the total width
     // First - we will have _num_columns + 1 "|" characters
-    unsigned int total_width = _num_columns + 1;
+    std::size_t total_width = _num_columns + 1;
 
     // Now add in the size of each colum
     for (const auto &col_size : _column_sizes) {
@@ -97,9 +96,9 @@ class VariadicTable {
 
       // Print out the headers
       stream << colSep;
-      for (unsigned int i = 0; i < _num_columns; i++) {
+      for (std::size_t i = 0; i < _num_columns; i++) {
         // Must find the center of the column
-        auto half = _column_sizes[i] / 2;
+        std::size_t half = _column_sizes[i] / 2;
         half -= _headers[i].size() / 2;
 
         stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[i]) << std::left
@@ -113,7 +112,7 @@ class VariadicTable {
     }
 
     // Now print the rows of the table
-    for (auto &row : _data) {
+    for (const DataTuple &row : _data) {
       stream << colSep;
       print_each(row, stream, colSep);
       stream << std::endl;
@@ -154,6 +153,7 @@ class VariadicTable {
   // Just some handy typedefs for the following two functions
   typedef decltype(&std::right) right_type;
   typedef decltype(&std::left) left_type;
+  using SizeVector = cct::vector<std::size_t>;
 
   // Attempts to figure out the correct justification for the data
   // If it's a floating point value
@@ -272,7 +272,7 @@ class VariadicTable {
    */
   template <typename TupleType>
   void size_each(
-      TupleType &&, cct::vector<unsigned int> & /*sizes*/,
+      TupleType &&, SizeVector & /*sizes*/,
       std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
 
   /**
@@ -281,7 +281,7 @@ class VariadicTable {
   template <std::size_t I, typename TupleType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void size_each(TupleType &&t, cct::vector<unsigned int> &sizes, std::integral_constant<size_t, I>) {
+  void size_each(TupleType &&t, SizeVector &sizes, std::integral_constant<size_t, I>) {
     sizes[I] = sizeOfData(std::get<I>(t));
 
     // Override for Percent
@@ -296,7 +296,7 @@ class VariadicTable {
    * The function that is actually called that starts the recursion
    */
   template <typename TupleType>
-  void size_each(TupleType &&t, cct::vector<unsigned int> &sizes) {
+  void size_each(TupleType &&t, SizeVector &sizes) {
     size_each(std::forward<TupleType>(t), sizes, std::integral_constant<size_t, 0>());
   }
 
@@ -307,16 +307,16 @@ class VariadicTable {
     _column_sizes.resize(_num_columns);
 
     // Temporary for querying each row
-    cct::vector<unsigned int> column_sizes(_num_columns);
+    SizeVector column_sizes(static_cast<SizeVector::size_type>(_num_columns));
 
     // Start with the size of the headers
-    for (unsigned int i = 0; i < _num_columns; i++) _column_sizes[i] = _headers[i].size();
+    for (std::size_t i = 0; i < _num_columns; i++) _column_sizes[i] = _headers[i].size();
 
     // Grab the size of each entry of each row and see if it's bigger
-    for (auto &row : _data) {
+    for (const DataTuple &row : _data) {
       size_each(row, column_sizes);
 
-      for (unsigned int i = 0; i < _num_columns; i++) _column_sizes[i] = std::max(_column_sizes[i], column_sizes[i]);
+      for (std::size_t i = 0; i < _num_columns; i++) _column_sizes[i] = std::max(_column_sizes[i], column_sizes[i]);
     }
   }
 
@@ -324,19 +324,19 @@ class VariadicTable {
   cct::vector<std::string> _headers;
 
   /// Number of columns in the table
-  unsigned int _num_columns;
+  std::size_t _num_columns;
 
   /// Size of columns that we can't get the size of
-  unsigned int _static_column_size;
+  std::size_t _static_column_size;
 
   /// Size of the cell padding
-  unsigned int _cell_padding;
+  std::size_t _cell_padding;
 
   /// The actual data
   cct::vector<DataTuple> _data;
 
   /// Holds the printable width of each column
-  cct::vector<unsigned int> _column_sizes;
+  SizeVector _column_sizes;
 
   /// Column Format
   cct::vector<VariadicTableColumnFormat> _column_format;

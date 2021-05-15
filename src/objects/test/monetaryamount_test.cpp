@@ -239,4 +239,17 @@ TEST(MonetaryAmountTest, Truncate) {
   EXPECT_TRUE(a.isZero());
 }
 
+TEST(MonetaryAmountTest, PositiveAmountStr) {
+  EXPECT_EQ(MonetaryAmount("7").amountStr(), "7");
+  EXPECT_EQ(MonetaryAmount("9204.1260").amountStr(), "9204.126");
+  EXPECT_EQ(MonetaryAmount("0.709").amountStr(), "0.709");
+  EXPECT_EQ(MonetaryAmount("0.0").amountStr(), "0");
+}
+
+TEST(MonetaryAmountTest, NegativeAmountStr) {
+  EXPECT_EQ(MonetaryAmount("-3.4950EUR").amountStr(), "-3.495");
+  EXPECT_EQ(MonetaryAmount("-0.0034090").amountStr(), "-0.003409");
+  EXPECT_EQ(MonetaryAmount("-0.0").amountStr(), "0");
+}
+
 }  // namespace cct
