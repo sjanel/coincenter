@@ -153,8 +153,8 @@ class CommandLineOptionsParser : private Opts {
     int lenFirstRows = 0;
     constexpr int kMaxCharLine = 140;
     for (const auto& [opt, v] : _commandLineOptionsWithValues) {
-      int lenRows = opt.fullName().size() + opt.valueDescription().size() + 1;
-      int shortNameSize = opt.shortName().size();
+      int lenRows = static_cast<int>(opt.fullName().size() + opt.valueDescription().size() + 1);
+      int shortNameSize = static_cast<int>(opt.shortName().size());
       if (shortNameSize > 0) {
         lenRows += shortNameSize + 2;
       }
@@ -201,7 +201,7 @@ class CommandLineOptionsParser : private Opts {
           linePos = lenFirstRows + 3;
         }
 
-        linePos += breakPos + 1;
+        linePos += static_cast<int>(breakPos) + 1;
         descr.remove_prefix(breakPos + 1);
       }
 

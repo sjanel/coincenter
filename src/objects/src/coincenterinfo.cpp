@@ -124,7 +124,7 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
                                  {api::QueryTypeEnum::kNbDecimalsUnitsBithumb, std::chrono::hours(96)}},
       _exchangeInfoMap(ComputeExchangeInfoMap()),
       _runMode(runMode),
-      _useMonitoring(_runMode == settings::kProd) {}
+      _useMonitoring(_runMode == settings::RunMode::kProd) {}
 
 std::string_view CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCode) const {
   auto it = _currencyEquiAcronymMap.find(std::string(currencyCode));

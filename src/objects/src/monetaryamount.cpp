@@ -329,7 +329,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   assert(rhsAmount != 0);
   int8_t lhsNbDecimals = _nbDecimals;
   int8_t rhsNbDecimals = div._nbDecimals;
-  int8_t lhsNbDigits = ndigits(_amount);
+  int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
   const int negMult = ((lhsAmount < 0 && rhsAmount > 0) || (lhsAmount > 0 && rhsAmount < 0)) ? -1 : 1;
   UnsignedAmountType lhs = std::abs(lhsAmount);
   UnsignedAmountType rhs = std::abs(rhsAmount);
@@ -347,41 +347,42 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   // Indeed, on 64 bits the unsigned integral type can hold one more digit than its signed counterpart.
   static_assert(std::numeric_limits<UnsignedAmountType>::digits10 > std::numeric_limits<AmountType>::digits10);
 
-  const int lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
-  lhs *= ipow(static_cast<UnsignedAmountType>(10), lhsNbDigitsToAdd);
+  const int8_t lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
+  lhs *= ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(lhsNbDigitsToAdd));
   lhsNbDecimals += lhsNbDigitsToAdd;
   lhsNbDigits += lhsNbDigitsToAdd;
 
   UnsignedAmountType totalIntPart = 0;
   int8_t nbDecimals = lhsNbDecimals - rhsNbDecimals;
-  int totalPartNbDigits;
+  int8_t totalPartNbDigits;
   do {
     totalIntPart += lhs / rhs;  // Add integral part
-    totalPartNbDigits = ndigits(totalIntPart);
+    totalPartNbDigits = static_cast<int8_t>(ndigits(totalIntPart));
     lhs %= rhs;  // Keep the rest
     if (lhs == 0) {
       break;
     }
-    const int lhsNbDigits = ndigits(lhs);
-    const int nbDigitsToAdd =
-        std::numeric_limits<UnsignedAmountType>::digits10 - std::max(totalPartNbDigits, lhsNbDigits);
+    const int8_t nbDigitsToAdd =
+        std::numeric_limits<UnsignedAmountType>::digits10 - std::max(totalPartNbDigits, static_cast<int8_t>(ndigits(lhs)));
     if (nbDigitsToAdd == 0) {
       break;
     }
-    const auto kMultPower = ipow(static_cast<UnsignedAmountType>(10), nbDigitsToAdd);
+    const auto kMultPower = ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(nbDigitsToAdd));
     totalIntPart *= kMultPower;
     lhs *= kMultPower;
     nbDecimals += nbDigitsToAdd;
   } while (true);
+
   if (nbDecimals < 0) {
     throw exception("Overflow during divide");
   }
-  const int nbDigitsTruncate = totalPartNbDigits - std::numeric_limits<AmountType>::digits10;
+
+  const int8_t nbDigitsTruncate = totalPartNbDigits - std::numeric_limits<AmountType>::digits10;
   if (nbDigitsTruncate > 0) {
-    totalIntPart /= ipow(static_cast<UnsignedAmountType>(10), static_cast<unsigned int>(nbDigitsTruncate));
     if (nbDecimals < nbDigitsTruncate) {
       throw exception("Overflow during divide");
     }
+    totalIntPart /= ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(nbDigitsTruncate));
     nbDecimals -= nbDigitsTruncate;
   }
 
@@ -393,11 +394,11 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
 }
 
 std::string MonetaryAmount::amountStr() const {
-  const bool isNeg = _amount < 0;
+  const int isNeg = static_cast<int>(_amount < 0);
   const int nbDigits = ndigits(_amount);
   const int nbZerosToInsertFront = std::max(0, static_cast<int>(_nbDecimals + 1 - nbDigits));
 
-  std::string ret(isNeg + nbDigits, '-');
+  std::string ret(static_cast<size_t>(isNeg) + nbDigits, '-');
   std::to_chars(ret.data(), ret.data() + ret.size(), _amount);
 
   ret.insert(ret.begin() + isNeg, nbZerosToInsertFront, '0');

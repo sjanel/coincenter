@@ -4,6 +4,7 @@
 #include <cassert>
 #include <execution>
 #include <thread>
+#include <charconv>
 
 #include "apikey.hpp"
 #include "bithumbpublicapi.hpp"
@@ -26,7 +27,7 @@ constexpr char kNbDecimalsUnitsCacheFile[] = ".bithumbdecimalscache";
 
 std::string UrlEncode(std::string_view str) {
   std::string ret;
-  const int s = str.size();
+  const int s = static_cast<int>(str.size());
   ret.reserve(s);
   for (int i = 0; i < s; ++i) {
     unsigned char c = str[i];
@@ -110,7 +111,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               // so I get them this way, by parsing the Korean error message of the response
               log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
                         maxNbDecimalsStr);
-              const int8_t maxNbDecimals = std::stoi(std::string(maxNbDecimalsStr));
+              int8_t maxNbDecimals;
+              std::from_chars(maxNbDecimalsStr.data(), maxNbDecimalsStr.data() + maxNbDecimalsStr.size(),
+                              maxNbDecimals);
 
               using Clock = std::chrono::high_resolution_clock;
 

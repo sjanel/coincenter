@@ -24,7 +24,7 @@ class CurlHandle {
   /// Constructs a new CurlHandle.
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
   explicit CurlHandle(Clock::duration minDurationBetweenQueries = Clock::duration::zero(),
-                      settings::RunMode runMode = settings::kProd);
+                      settings::RunMode runMode = settings::RunMode::kProd);
 
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;

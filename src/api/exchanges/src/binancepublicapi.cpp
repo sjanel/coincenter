@@ -75,15 +75,12 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies() {
       log::trace("Discard {} excluded by config", cur.str());
       continue;
     }
-    for (const json& networkListPart : el["networkList"]) {
-      bool withdrawEnable = networkListPart["withdrawEnable"];
-      bool depositEnable = networkListPart["depositEnable"];
-      ret.insert(CurrencyExchange(
-          cur, cur, cur,
-          depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
-          withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable));
-      break;
-    }
+    const json& networkListPart = el["networkList"].front();
+    bool withdrawEnable = networkListPart["withdrawEnable"];
+    bool depositEnable = networkListPart["depositEnable"];
+    ret.insert(CurrencyExchange(
+        cur, cur, cur, depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
+        withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable));
   }
 
   log::info("Retrieved {} {} currencies", _name, ret.size());
@@ -94,7 +91,7 @@ ExchangePublic::MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeInfoCache.get();
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
-  ret.reserve(exchangeInfoData.size());
+  ret.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
   for (auto it = exchangeInfoData.begin(), endIt = exchangeInfoData.end(); it != endIt; ++it) {
     const json& symbol = it->second;
     std::string_view baseAsset = symbol["baseAsset"].get<std::string_view>();
@@ -113,8 +110,9 @@ ExchangePublic::MarketSet BinancePublic::MarketsFunc::operator()() {
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
   json exchangeInfoData = PublicQuery(_curlHandle, "exchangeInfo");
-  const json& symbols = exchangeInfoData["symbols"];
-  for (auto it = symbols.begin(), endIt = symbols.end(); it != endIt; ++it) {
+  json& symbols = exchangeInfoData["symbols"];
+  for (auto it = std::make_move_iterator(symbols.begin()), endIt = std::make_move_iterator(symbols.end()); it != endIt;
+       ++it) {
     std::string_view baseAsset = (*it)["baseAsset"].get<std::string_view>();
     std::string_view quoteAsset = (*it)["quoteAsset"].get<std::string_view>();
     if ((*it)["status"].get<std::string_view>() != "TRADING") {
@@ -167,12 +165,10 @@ ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
       continue;
     }
     CurrencyCode cur(coinStr);
-    for (const json& networkListPart : el["networkList"]) {
-      MonetaryAmount withdrawFee = MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur);
-      log::trace("Retrieved {} withdrawal fees {}", _name, withdrawFee.str());
-      ret.insert_or_assign(cur, withdrawFee);
-      break;
-    }
+    const json& networkListPart = el["networkList"].front();
+    MonetaryAmount withdrawFee = MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur);
+    log::trace("Retrieved {} withdrawal fees {}", _name, withdrawFee.str());
+    ret.insert_or_assign(cur, withdrawFee);
   }
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
@@ -184,9 +180,7 @@ MonetaryAmount BinancePublic::queryWithdrawalFees(CurrencyCode currencyCode) {
   for (const json& el : _globalInfosCache.get()) {
     CurrencyCode cur(el["coin"].get<std::string_view>());
     if (cur == currencyCode) {
-      for (const json& networkListPart : el["networkList"]) {
-        return MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur);
-      }
+      return MonetaryAmount(el["networkList"].front()["withdrawFee"].get<std::string_view>(), cur);
     }
   }
   throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
@@ -194,7 +188,8 @@ MonetaryAmount BinancePublic::queryWithdrawalFees(CurrencyCode currencyCode) {
 
 VolAndPriNbDecimals BinancePublic::queryVolAndPriNbDecimals(Market m) {
   const json& marketData = retrieveMarketData(m);
-  return VolAndPriNbDecimals(marketData["baseAssetPrecision"].get<int>(), marketData["quoteAssetPrecision"].get<int>());
+  return VolAndPriNbDecimals(marketData["baseAssetPrecision"].get<int8_t>(),
+                             marketData["quoteAssetPrecision"].get<int8_t>());
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
@@ -351,8 +346,9 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
   json asksAndBids = PublicQuery(_curlHandle, "depth", postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
-  cct::vector<OrderBookLine> orderBookLines;
-  orderBookLines.reserve(asks.size() + bids.size());
+  using OrderBookVec = cct::vector<OrderBookLine>;
+  OrderBookVec orderBookLines;
+  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
     for (const auto& priceQuantityPair : *asksOrBids) {

@@ -102,7 +102,7 @@ ExchangePublic::WithdrawalFeeMap KrakenPublic::WithdrawalFeesFunc::operator()() 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "Assets");
   CurrencyExchangeFlatSet currencies;
-  currencies.reserve(result.size());
+  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size()));
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
@@ -135,7 +135,7 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
     "fee_volume_currency":"ZUSD","margin_call":80,"margin_stop":40,"ordermin":"25"}
   */
   std::pair<MarketSet, MarketInfoMap> ret;
-  ret.first.reserve(result.size());
+  ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
   ret.second.reserve(result.size());
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
@@ -255,8 +255,9 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   const json& bids = entry["bids"];
 
   auto volAndPriNbDecimals = _marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
-  cct::vector<OrderBookLine> orderBookLines;
-  orderBookLines.reserve(asks.size() + bids.size());
+  using OrderBookVec = cct::vector<OrderBookLine>;
+  OrderBookVec orderBookLines;
+  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
     for (const auto& priceQuantityTuple : *asksOrBids) {

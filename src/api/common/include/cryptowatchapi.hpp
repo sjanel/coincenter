@@ -19,7 +19,7 @@ class CryptowatchAPI : public ExchangeBase {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  explicit CryptowatchAPI(settings::RunMode runMode = settings::kProd,
+  explicit CryptowatchAPI(settings::RunMode runMode = settings::RunMode::kProd,
                           Clock::duration fiatsUpdateFrequency = std::chrono::hours(6),
                           bool loadFromFileCacheAtInit = true);
 

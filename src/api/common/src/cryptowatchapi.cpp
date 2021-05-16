@@ -45,7 +45,7 @@ CryptowatchAPI::CryptowatchAPI(settings::RunMode runMode, Clock::duration fiatsU
     if (!data.empty()) {
       int64_t timeepoch = data["timeepoch"];
       _lastUpdatedFiatsTime = TimePoint(std::chrono::seconds(timeepoch));
-      _fiats.reserve(data["fiats"].size());
+      _fiats.reserve(static_cast<Fiats::size_type>(data["fiats"].size()));
       for (std::string fiatCode : data["fiats"]) {
         log::debug("Storing fiat {} from cache file", fiatCode);
         _fiats.emplace(std::move(fiatCode));
@@ -107,7 +107,7 @@ CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std
   json dataJson = json::parse(Query(_curlHandle, "markets/prices"));
   const json& result = CollectResults(dataJson);
   std::string marketPrefix = "market:" + std::string(exchangeName) + ":";
-  int marketPrefixLen = marketPrefix.length();
+  size_t marketPrefixLen = marketPrefix.size();
   // {"result":{"market:kraken:ethdai":1493.844,"market:kraken:etheur":1238.14, ...},
   // "allowance":{"cost":0.015,"remaining":9.943,"upgrade":"For unlimited API access..."}}
   PricesPerMarketMap ret;
@@ -115,7 +115,7 @@ CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std
     if (key.starts_with(marketPrefix)) {
       std::string marketStr = key.substr(marketPrefixLen);
       std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(),
-                     [](unsigned char c) -> unsigned char { return std::toupper(c); });
+                     [](unsigned char c) { return std::toupper(c); });
       ret.insert_or_assign(marketStr, static_cast<double>(price));
     }
   }

@@ -13,13 +13,14 @@ class CachedResultBase {
  protected:
   friend class CachedResultVault;
 
-  enum State { kStandardRefresh, kForceUniqueRefresh, kForceCache };
+  enum class State { kStandardRefresh, kForceUniqueRefresh, kForceCache };
 
-  explicit CachedResultBase(Clock::duration refreshPeriod) : _refreshPeriod(refreshPeriod), _state(kStandardRefresh) {}
+  explicit CachedResultBase(Clock::duration refreshPeriod)
+      : _refreshPeriod(refreshPeriod), _state(State::kStandardRefresh) {}
 
-  void freeze() noexcept { _state = kForceUniqueRefresh; }
+  void freeze() noexcept { _state = State::kForceUniqueRefresh; }
 
-  void unfreeze() noexcept { _state = kStandardRefresh; }
+  void unfreeze() noexcept { _state = State::kStandardRefresh; }
 
   Clock::duration _refreshPeriod;
   State _state;
