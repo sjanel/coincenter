@@ -19,7 +19,7 @@ class CoincenterInfo {
   using ExchangeInfoMap = std::unordered_map<std::string, ExchangeInfo>;
   using Duration = std::chrono::high_resolution_clock::duration;
 
-  CoincenterInfo(settings::RunMode runMode = settings::kProd);
+  explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd);
 
   CoincenterInfo(const CoincenterInfo &) = delete;
   CoincenterInfo &operator=(const CoincenterInfo &) = delete;

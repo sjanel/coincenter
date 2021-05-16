@@ -133,7 +133,6 @@ class VariadicTable {
    */
   void setColumnFormat(const cct::vector<VariadicTableColumnFormat> &column_format) {
     assert(column_format.size() == std::tuple_size<DataTuple>::value);
-
     _column_format = column_format;
   }
 
@@ -149,10 +148,16 @@ class VariadicTable {
     _precision = precision;
   }
 
+  void setColumnPrecision(cct::vector<int> &&precision) {
+    assert(precision.size() == std::tuple_size<DataTuple>::value);
+    _precision = std::move(precision);
+  }
+
  protected:
   // Just some handy typedefs for the following two functions
-  typedef decltype(&std::right) right_type;
-  typedef decltype(&std::left) left_type;
+  using right_type = decltype(&std::right);
+  using left_type = decltype(&std::left);
+
   using SizeVector = cct::vector<std::size_t>;
 
   // Attempts to figure out the correct justification for the data
@@ -304,19 +309,23 @@ class VariadicTable {
    * Finds the size each column should be and set it in _column_sizes
    */
   void size_columns() {
-    _column_sizes.resize(_num_columns);
+    _column_sizes.resize(static_cast<SizeVector::size_type>(_num_columns));
 
     // Temporary for querying each row
     SizeVector column_sizes(static_cast<SizeVector::size_type>(_num_columns));
 
     // Start with the size of the headers
-    for (std::size_t i = 0; i < _num_columns; i++) _column_sizes[i] = _headers[i].size();
+    for (std::size_t i = 0; i < _num_columns; i++) {
+      _column_sizes[i] = _headers[i].size();
+    }
 
     // Grab the size of each entry of each row and see if it's bigger
     for (const DataTuple &row : _data) {
       size_each(row, column_sizes);
 
-      for (std::size_t i = 0; i < _num_columns; i++) _column_sizes[i] = std::max(_column_sizes[i], column_sizes[i]);
+      for (std::size_t i = 0; i < _num_columns; i++) {
+        _column_sizes[i] = std::max(_column_sizes[i], column_sizes[i]);
+      }
     }
   }
 

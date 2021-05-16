@@ -18,7 +18,7 @@ class APIKeysProvider {
  public:
   using KeyNames = cct::SmallVector<std::string, 3>;
 
-  APIKeysProvider(settings::RunMode runMode = settings::kProd) : _apiKeysMap(ParseAPIKeys(runMode)) {}
+  APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd) : _apiKeysMap(ParseAPIKeys(runMode)) {}
 
   APIKeysProvider(const APIKeysProvider &) = delete;
   APIKeysProvider &operator=(const APIKeysProvider &) = delete;

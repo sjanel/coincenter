@@ -65,14 +65,14 @@ class CachedResult : public CachedResultBase {
     TimePoint t = Clock::now();
     auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
     auto tValueBuilder = [&flattenTuple, t](TKey &&key) { return TValue(std::apply(flattenTuple, std::move(key)), t); };
-    if (_state == kForceUniqueRefresh) {
+    if (_state == State::kForceUniqueRefresh) {
       _cachedResultsMap.clear();
-      _state = kForceCache;
+      _state = State::kForceCache;
     }
     typename MapType::iterator it = _cachedResultsMap.find(key);
     if (it == _cachedResultsMap.end()) {
       it = _cachedResultsMap.insert_or_assign(key, tValueBuilder(std::move(key))).first;
-    } else if (_state != kForceCache && it->second.second + _refreshPeriod < t) {
+    } else if (_state != State::kForceCache && it->second.second + _refreshPeriod < t) {
       it->second = tValueBuilder(std::move(key));
     }
     return it->second.first;

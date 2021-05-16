@@ -78,7 +78,7 @@ ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "market/all", {{"isDetails", "true"}});
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
-  ret.reserve(result.size());
+  ret.reserve(static_cast<MarketSet::size_type>(result.size()));
   for (const json& marketDetails : result) {
     //{"market_warning":"NONE","market":"KRW-BTC","korean_name":"비트코인","english_name":"Bitcoin"}
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
@@ -158,7 +158,7 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result) {
 ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int) {
   const MarketSet& markets = _marketsCache.get();
   std::string marketsStr;
-  marketsStr.reserve(markets.size() * 8);
+  marketsStr.reserve(static_cast<std::string::size_type>(markets.size()) * 8);
   for (Market m : markets) {
     if (!marketsStr.empty()) {
       marketsStr.push_back(',');

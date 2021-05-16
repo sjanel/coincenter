@@ -14,11 +14,11 @@ class ExchangeBase {
     }
 
     UniqueQueryRefresherHandle(const UniqueQueryRefresherHandle &) = delete;
-    UniqueQueryRefresherHandle(UniqueQueryRefresherHandle &&o)
+    UniqueQueryRefresherHandle(UniqueQueryRefresherHandle &&o) noexcept
         : _pCachedResultVault(std::exchange(o._pCachedResultVault, nullptr)) {}
 
     UniqueQueryRefresherHandle &operator=(const UniqueQueryRefresherHandle &) = delete;
-    UniqueQueryRefresherHandle &operator=(UniqueQueryRefresherHandle &&o) {
+    UniqueQueryRefresherHandle &operator=(UniqueQueryRefresherHandle &&o) noexcept {
       if (this != std::addressof(o)) {
         _pCachedResultVault = std::exchange(o._pCachedResultVault, nullptr);
       }

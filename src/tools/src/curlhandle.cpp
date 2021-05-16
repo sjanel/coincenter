@@ -34,7 +34,7 @@ CurlHandle::CurlHandle(Clock::duration minDurationBetweenQueries, settings::RunM
   log::debug("Initialize a new CurlHandle with {} ms as minimum duration between queries",
              std::chrono::duration_cast<std::chrono::milliseconds>(minDurationBetweenQueries).count());
 
-  if (ProxyRequested(runMode)) {
+  if (IsProxyRequested(runMode)) {
     if (IsProxyAvailable()) {
       setUpProxy(CurlOptions::ProxySettings(false, GetProxyURL()));
     } else {
@@ -175,7 +175,7 @@ void CurlHandle::UrlEncodeDeleter::operator()(char *ptr) const { curl_free(ptr);
 
 CurlHandle::CurlStringUniquePtr CurlHandle::urlEncode(const std::string &url) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
-  return CurlStringUniquePtr(curl_easy_escape(curl, url.c_str(), url.length()));
+  return CurlStringUniquePtr(curl_easy_escape(curl, url.c_str(), static_cast<int>(url.size())));
 }
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }

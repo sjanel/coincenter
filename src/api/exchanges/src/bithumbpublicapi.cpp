@@ -69,7 +69,7 @@ BithumbPublic::BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverte
 ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
   const MarketOrderBookMap& marketOrderBookMap = _allOrderBooksCache.get();
   MarketSet markets;
-  markets.reserve(marketOrderBookMap.size());
+  markets.reserve(static_cast<MarketSet::size_type>(marketOrderBookMap.size()));
   std::transform(marketOrderBookMap.begin(), marketOrderBookMap.end(), std::inserter(markets, markets.end()),
                  [](const auto& it) { return it.first; });
   return markets;
@@ -120,7 +120,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "assetsstatus", "all");
   CurrencyExchangeFlatSet currencies;
-  currencies.reserve(result.size() + 1);
+  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
     // "BTC":{"withdrawal_status":1,"deposit_status":1},"ETH":{"withdrawal_status":1,"deposit_status":1}
     CurrencyCode currencyCode(_config.standardizeCurrencyCode(asset));
@@ -203,8 +203,9 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
                 "asks": [{"quantity" : "2.67575", "price" : "506000"},
                          {"quantity" : "3.54343","price" : "507000"}]
       */
-      cct::vector<OrderBookLine> orderBookLines;
-      orderBookLines.reserve(asks->size() + bids->size());
+      using OrderBookVec = cct::vector<OrderBookLine>;
+      OrderBookVec orderBookLines;
+      orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks->size() + bids->size()));
       for (auto asksOrBids : {asks, bids}) {
         const bool isAsk = asksOrBids == asks;
         for (const auto& priceQuantityPair : *asksOrBids) {

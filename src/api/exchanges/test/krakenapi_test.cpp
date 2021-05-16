@@ -16,8 +16,8 @@ namespace api {
 class KrakenAPI : public ::testing::Test {
  protected:
   KrakenAPI()
-      : coincenterProdInfo(settings::kProd),
-        coincenterTestInfo(settings::kTest),
+      : coincenterProdInfo(settings::RunMode::kProd),
+        coincenterTestInfo(settings::RunMode::kTest),
         apiProdKeyProvider(coincenterProdInfo.getRunMode()),
         apiTestKeyProvider(coincenterTestInfo.getRunMode()),
         krakenPublic(coincenterProdInfo, fiatConverter, cryptowatchAPI) {}

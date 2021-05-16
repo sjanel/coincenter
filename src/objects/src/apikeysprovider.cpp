@@ -16,7 +16,7 @@ namespace {
 
 std::string_view GetSecretFileName(settings::RunMode runMode) {
   switch (runMode) {
-    case settings::kTest:
+    case settings::RunMode::kTest:
       log::info("Test mode activated, shifting to secret_test.json file.");
       return "/secret_test.json";
     default:

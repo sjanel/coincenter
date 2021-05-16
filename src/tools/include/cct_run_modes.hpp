@@ -2,13 +2,13 @@
 
 namespace cct {
 namespace settings {
-enum RunMode {
-  kProd = 0,
+enum class RunMode {
+  kProd,
   kProxy,  // proxy : capture & match requests from proxy
   kTest,   // proxy + use test keys
 };
 
 }  // namespace settings
 
-inline bool ProxyRequested(settings::RunMode mode) { return mode >= settings::kProxy; }
+inline bool IsProxyRequested(settings::RunMode mode) { return mode >= settings::RunMode::kProxy; }
 }  // namespace cct

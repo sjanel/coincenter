@@ -23,7 +23,7 @@ constexpr double kUSD = 1.21;
 constexpr double kGBP = 0.88;
 }  // namespace
 
-CurlHandle::CurlHandle(Clock::duration, settings::RunMode) : _handle(nullptr) {}
+CurlHandle::CurlHandle(Clock::duration d, settings::RunMode) : _handle(nullptr), _minDurationBetweenQueries(d) {}
 
 std::string CurlHandle::query(std::string_view url, const CurlOptions &) {
   json j;

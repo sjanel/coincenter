@@ -13,7 +13,7 @@ namespace cct {
 
 MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, VolAndPriNbDecimals volAndPriNbDecimals)
     : _market(market), _volAndPriNbDecimals(volAndPriNbDecimals), _isArtificiallyExtended(false) {
-  const int nbPrices = orderLines.size();
+  const int nbPrices = static_cast<int>(orderLines.size());
   _orders.reserve(nbPrices);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
     for (const OrderBookLine& l : orderLines) {
@@ -48,9 +48,9 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
 
     auto highestBidPriceIt =
         std::partition_point(_orders.begin(), _orders.end(), [](AmountPrice a) { return a.amount > 0; });
-    _highestBidPricePos = highestBidPriceIt - _orders.begin() - 1;
-    _lowestAskPricePos =
-        std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice a) { return a.amount < 0; }) - _orders.begin();
+    _highestBidPricePos = static_cast<int>(highestBidPriceIt - _orders.begin() - 1);
+    _lowestAskPricePos = static_cast<int>(
+        std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice a) { return a.amount < 0; }) - _orders.begin());
   }
 }
 
@@ -79,7 +79,7 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
                                       *askPrice.amount(_volAndPriNbDecimals.priNbDecimals));
   const AmountPrice::AmountType simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
 
-  for (int d = depth; d != 0; --d) {
+  for (AmountPrice::AmountType d = depth; d != 0; --d) {
     AmountPrice amountPrice = refBidAmountPrice;
     if (d != 1) {
       amountPrice.price -= stepPrice * (d - 1);
@@ -91,7 +91,7 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   _lowestAskPricePos = _highestBidPricePos + 1;
 
   // Finally add ask lines
-  for (int d = 0; d < depth; ++d) {
+  for (AmountPrice::AmountType d = 0; d < depth; ++d) {
     AmountPrice amountPrice = refAskAmountPrice;
     if (d != 0) {
       amountPrice.price += stepPrice * d;
