@@ -1,41 +1,54 @@
 #pragma once
 
 #include <execution>
+#include <forward_list>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include "apikeysprovider.hpp"
+#include "binanceprivateapi.hpp"
+#include "binancepublicapi.hpp"
+#include "bithumbprivateapi.hpp"
+#include "bithumbpublicapi.hpp"
 #include "cct_flatset.hpp"
+#include "coincenterinfo.hpp"
+#include "cryptowatchapi.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
 #include "exchangevector.hpp"
+#include "fiatconverter.hpp"
+#include "krakenprivateapi.hpp"
+#include "krakenpublicapi.hpp"
 #include "marketorderbooks.hpp"
+#include "upbitprivateapi.hpp"
+#include "upbitpublicapi.hpp"
 
 namespace cct {
 
+struct CoincenterParsedOptions;
+
 namespace api {
-class CryptowatchAPI;
 class TradeOptions;
 }  // namespace api
-
-class CoincenterInfo;
-class FiatConverter;
 
 class Coincenter {
  public:
   using MarketOrderBookConversionRate = std::pair<MarketOrderBook, std::optional<MonetaryAmount>>;
   using MarketOrderBookConversionRates = cct::SmallVector<MarketOrderBookConversionRate, kTypicalNbExchanges>;
 
-  Coincenter(const CoincenterInfo &coincenterInfo, FiatConverter &fiatConverter, api::CryptowatchAPI &cryptowatchAPI,
-             ExchangeVector &&exchanges);
+  Coincenter();
 
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;
 
   Coincenter(Coincenter &&) noexcept = default;
   Coincenter &operator=(Coincenter &&) noexcept = default;
+
+  void process(const CoincenterParsedOptions &opts);
 
   /// Retrieve market order book of market for given exchanges
   MarketOrderBooks getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
@@ -83,9 +96,26 @@ class Coincenter {
   static SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
                                                      std::span<Exchange> exchanges);
 
-  const CoincenterInfo &_coincenterInfo;
-  FiatConverter &_fiatConverter;
+  CurlInitRAII _curlInitRAII;
+  CoincenterInfo _coincenterInfo;
+  api::CryptowatchAPI _cryptowatchAPI;
+  FiatConverter _fiatConverter;
+  api::APIKeysProvider _apiKeyProvider;
+
+  // Public exchanges
+  api::KrakenPublic _krakenPublic;
+  api::BithumbPublic _bithumbPublic;
+  api::BinancePublic _binancePublic;
+  api::UpbitPublic _upbitPublic;
+
+  // Private exchanges (based on provided keys)
+  // Use forward_list to guarantee validity of the iterators and pointers, as we give them to Exchange object as
+  // pointers
+  std::forward_list<api::KrakenPrivate> _krakenPrivates;
+  std::forward_list<api::BinancePrivate> _binancePrivates;
+  std::forward_list<api::BithumbPrivate> _bithumbPrivates;
+  std::forward_list<api::UpbitPrivate> _upbitPrivates;
+
   ExchangeVector _exchanges;
-  api::CryptowatchAPI &_cryptowatchAPI;
 };
 }  // namespace cct

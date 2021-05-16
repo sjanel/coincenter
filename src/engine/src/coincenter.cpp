@@ -9,19 +9,12 @@
 #include "cct_smallvector.hpp"
 #include "cct_time_helpers.hpp"
 #include "cct_variadictable.hpp"
-#include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
-#include "fiatconverter.hpp"
+#include "coincenteroptions.hpp"
+#include "coincenterparsedoptions.hpp"
+#include "stringoptionparser.hpp"
 
 namespace cct {
 using SelectedExchanges = Coincenter::SelectedExchanges;
-
-Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, FiatConverter &fiatConverter,
-                       api::CryptowatchAPI &cryptowatchAPI, ExchangeVector &&exchanges)
-    : _coincenterInfo(coincenterInfo),
-      _fiatConverter(fiatConverter),
-      _exchanges(std::move(exchanges)),
-      _cryptowatchAPI(cryptowatchAPI) {}
 
 namespace {
 
@@ -45,6 +38,109 @@ Exchange &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::
   return *ret.front();
 }
 }  // namespace
+
+Coincenter::Coincenter()
+    : _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
+  for (std::string_view exchangeName : api::ExchangePublic::kSupportedExchanges) {
+    api::ExchangePublic *exchangePublic;
+    if (exchangeName == "kraken") {
+      exchangePublic = std::addressof(_krakenPublic);
+    } else if (exchangeName == "binance") {
+      exchangePublic = std::addressof(_binancePublic);
+    } else if (exchangeName == "bithumb") {
+      exchangePublic = std::addressof(_bithumbPublic);
+    } else if (exchangeName == "upbit") {
+      exchangePublic = std::addressof(_upbitPublic);
+    } else {
+      throw exception("Should not happen, unsupported platform " + std::string(exchangeName));
+    }
+
+    const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
+    if (canUsePrivateExchange) {
+      for (const std::string &keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
+        api::ExchangePrivate *exchangePrivate;
+        const api::APIKey &apiKey = _apiKeyProvider.get(PrivateExchangeName(exchangeName, keyName));
+        if (exchangeName == "kraken") {
+          exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
+        } else if (exchangeName == "binance") {
+          exchangePrivate = std::addressof(_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey));
+        } else if (exchangeName == "bithumb") {
+          exchangePrivate = std::addressof(_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey));
+        } else if (exchangeName == "upbit") {
+          exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
+        } else {
+          throw exception("Should not happen, unsupported platform " + std::string(exchangeName));
+        }
+
+        _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,
+                                *exchangePrivate);
+      }
+    } else {
+      _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic);
+    }
+  }
+}
+
+void Coincenter::process(const CoincenterParsedOptions &opts) {
+  Coincenter coincenter;
+
+  if (!opts.orderBookExchanges.empty()) {
+    std::optional<int> depth;
+    if (opts.orderbookDepth != 0) {
+      depth = opts.orderbookDepth;
+    }
+    Coincenter::MarketOrderBookConversionRates marketOrderBooksConversionRates =
+        coincenter.getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
+    int orderBookPos = 0;
+    for (std::string_view exchangeName : opts.orderBookExchanges) {
+      const auto &[marketOrderBook, optConversionRate] = marketOrderBooksConversionRates[orderBookPos];
+      log::info("Order book of {} on {} requested{}{}", opts.marketForOrderBook.str(), exchangeName,
+                optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
+
+      if (optConversionRate) {
+        marketOrderBook.print(std::cout, *optConversionRate);
+      } else {
+        if (opts.orderbookCur != CurrencyCode::kNeutral) {
+          log::warn("Unable to convert {} into {} on {}", opts.marketForOrderBook.quote().str(),
+                    opts.orderbookCur.str(), exchangeName);
+        }
+        marketOrderBook.print(std::cout);
+      }
+
+      ++orderBookPos;
+    }
+  }
+
+  if (!opts.conversionPathExchanges.empty()) {
+    coincenter.printConversionPath(opts.conversionPathExchanges, opts.marketForConversionPath.base(),
+                                   opts.marketForConversionPath.quote());
+  }
+
+  if (!opts.balancePrivateExchanges.empty()) {
+    coincenter.printBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
+  }
+
+  if (!opts.startTradeAmount.isZero()) {
+    log::warn("Trade {} into {} on {} requested", opts.startTradeAmount.str(), opts.toTradeCurrency.str(),
+              opts.tradePrivateExchangeName.str());
+    log::warn(opts.tradeOptions.str());
+    MonetaryAmount startAmount = opts.startTradeAmount;
+    MonetaryAmount toAmount =
+        coincenter.trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+    log::warn("**** Traded {} into {} ****", (opts.startTradeAmount - startAmount).str(), toAmount.str());
+  }
+
+  if (!opts.amountToWithdraw.isZero()) {
+    log::warn("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
+              opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
+    coincenter.withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
+  }
+
+  coincenter.updateFileCaches();
+}
 
 MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                                  std::optional<int> depth) {
