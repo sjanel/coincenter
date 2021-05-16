@@ -84,6 +84,12 @@ class Coincenter {
 
   std::span<Exchange> exchanges() { return _exchanges; }
 
+  api::CryptowatchAPI &cryptowatchAPI() { return _cryptowatchAPI; }
+  const api::CryptowatchAPI &cryptowatchAPI() const { return _cryptowatchAPI; }
+
+  FiatConverter &fiatConverter() { return _fiatConverter; }
+  const FiatConverter &fiatConverter() const { return _fiatConverter; }
+
   using SelectedExchanges = cct::SmallVector<Exchange *, kTypicalNbExchanges>;
 
  private:
