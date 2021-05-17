@@ -12,6 +12,8 @@ struct CoincenterCmdLineOptions;
 
 class CoincenterParsedOptions {
  public:
+  CoincenterParsedOptions() = default;
+
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
@@ -21,7 +23,7 @@ class CoincenterParsedOptions {
 
   Market marketForOrderBook;
   PublicExchangeNames orderBookExchanges;
-  int orderbookDepth = 0;
+  int orderbookDepth{};
   CurrencyCode orderbookCur;
 
   Market marketForConversionPath;
