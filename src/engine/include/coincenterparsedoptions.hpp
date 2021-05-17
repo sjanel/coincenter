@@ -1,5 +1,6 @@
 #pragma once
 
+#include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
@@ -7,7 +8,10 @@
 #include "tradeoptions.hpp"
 
 namespace cct {
-struct CoincenterParsedOptions {
+struct CoincenterCmdLineOptions;
+
+class CoincenterParsedOptions {
+ public:
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
@@ -30,5 +34,8 @@ struct CoincenterParsedOptions {
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
 
   bool noProcess{};
+
+ protected:
+  void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions, const char *programName);
 };
 }  // namespace cct

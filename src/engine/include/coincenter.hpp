@@ -29,7 +29,7 @@
 
 namespace cct {
 
-struct CoincenterParsedOptions;
+class CoincenterParsedOptions;
 
 namespace api {
 class TradeOptions;
@@ -83,6 +83,9 @@ class Coincenter {
   void updateFileCaches() const;
 
   std::span<Exchange> exchanges() { return _exchanges; }
+
+  CoincenterInfo &coincenterInfo() { return _coincenterInfo; }
+  const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
   api::CryptowatchAPI &cryptowatchAPI() { return _cryptowatchAPI; }
   const api::CryptowatchAPI &cryptowatchAPI() const { return _cryptowatchAPI; }
