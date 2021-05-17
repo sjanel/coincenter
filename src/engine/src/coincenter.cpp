@@ -88,15 +88,13 @@ Coincenter::Coincenter(settings::RunMode runMode)
 }
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
-  Coincenter coincenter;
-
   if (!opts.orderBookExchanges.empty()) {
     std::optional<int> depth;
     if (opts.orderbookDepth != 0) {
       depth = opts.orderbookDepth;
     }
     Coincenter::MarketOrderBookConversionRates marketOrderBooksConversionRates =
-        coincenter.getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
+        getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
     int orderBookPos = 0;
     for (std::string_view exchangeName : opts.orderBookExchanges) {
       const auto &[marketOrderBook, optConversionRate] = marketOrderBooksConversionRates[orderBookPos];
@@ -118,12 +116,12 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.conversionPathExchanges.empty()) {
-    coincenter.printConversionPath(opts.conversionPathExchanges, opts.marketForConversionPath.base(),
-                                   opts.marketForConversionPath.quote());
+    printConversionPath(opts.conversionPathExchanges, opts.marketForConversionPath.base(),
+                        opts.marketForConversionPath.quote());
   }
 
   if (!opts.balancePrivateExchanges.empty()) {
-    coincenter.printBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
+    printBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
   }
 
   if (!opts.startTradeAmount.isZero()) {
@@ -132,17 +130,17 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     log::warn(opts.tradeOptions.str());
     MonetaryAmount startAmount = opts.startTradeAmount;
     MonetaryAmount toAmount =
-        coincenter.trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+        trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
     log::warn("**** Traded {} into {} ****", (opts.startTradeAmount - startAmount).str(), toAmount.str());
   }
 
   if (!opts.amountToWithdraw.isZero()) {
     log::warn("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
               opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
-    coincenter.withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
+    withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
   }
 
-  coincenter.updateFileCaches();
+  updateFileCaches();
 }
 
 MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
