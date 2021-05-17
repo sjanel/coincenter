@@ -40,7 +40,7 @@ class Coincenter {
   using MarketOrderBookConversionRate = std::pair<MarketOrderBook, std::optional<MonetaryAmount>>;
   using MarketOrderBookConversionRates = cct::SmallVector<MarketOrderBookConversionRate, kTypicalNbExchanges>;
 
-  Coincenter();
+  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
 
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;

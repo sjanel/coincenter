@@ -39,8 +39,11 @@ Exchange &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::
 }
 }  // namespace
 
-Coincenter::Coincenter()
-    : _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+Coincenter::Coincenter(settings::RunMode runMode)
+    : _coincenterInfo(runMode),
+      _cryptowatchAPI(runMode),
+      _apiKeyProvider(runMode),
+      _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
