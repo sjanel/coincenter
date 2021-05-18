@@ -11,7 +11,13 @@ TEST(CurlOptionsTest, DefaultConstructor) {
   EXPECT_STREQ(curlPostData.c_str(), "");
 }
 
-TEST(CurlOptionsTest, Main) {
+TEST(CurlOptionsTest, SetEmpty) {
+  CurlPostData curlPostData;
+  curlPostData.set("timestamp", "1621785125200");
+  EXPECT_STREQ(curlPostData.c_str(), "timestamp=1621785125200");
+}
+
+TEST(CurlOptionsTest, SetAndAppend) {
   CurlPostData curlPostData;
   curlPostData.append("abc", "666");
   curlPostData.append("de", "aX");
@@ -45,12 +51,34 @@ TEST(CurlOptionsTest, Erase) {
   EXPECT_EQ(curlPostData.toStringView(), expected);
 }
 
-TEST(CurlOptionsTest, Get) {
+TEST(CurlOptionsTest, EmptyConvertToJson) {
+  json emptyJson = CurlPostData().toJson();
+  EXPECT_EQ(emptyJson, json());
+}
+
+class CurlOptionsCase1 : public ::testing::Test {
+ protected:
+  virtual void SetUp() {}
+  virtual void TearDown() {}
+
   CurlPostData curlPostData{{"units", "0.11176"}, {"price", "357.78"}, {"777", "encoredutravail?"}, {"hola", "quetal"}};
+};
+
+TEST_F(CurlOptionsCase1, Get) {
   EXPECT_EQ(curlPostData.get("units"), "0.11176");
   EXPECT_EQ(curlPostData.get("price"), "357.78");
   EXPECT_EQ(curlPostData.get("777"), "encoredutravail?");
   EXPECT_EQ(curlPostData.get("hola"), "quetal");
   EXPECT_EQ(curlPostData.get("laipas"), "");
 }
+
+TEST_F(CurlOptionsCase1, ConvertToJson) {
+  json jsonData = curlPostData.toJson();
+
+  EXPECT_EQ(jsonData["units"].get<std::string_view>(), "0.11176");
+  EXPECT_EQ(jsonData["price"].get<std::string_view>(), "357.78");
+  EXPECT_EQ(jsonData["777"].get<std::string_view>(), "encoredutravail?");
+  EXPECT_EQ(jsonData["hola"].get<std::string_view>(), "quetal");
+}
+
 }  // namespace cct

@@ -27,7 +27,7 @@ class InitiatedWithdrawInfo {
 
   const Wallet &receivingWallet() const { return _receivingWallet; }
 
-  const WithdrawId withdrawId() const { return _withdrawId; }
+  const WithdrawId &withdrawId() const { return _withdrawId; }
 
   MonetaryAmount grossEmittedAmount() const { return _grossEmittedAmount; }
 

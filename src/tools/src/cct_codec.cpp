@@ -7,23 +7,12 @@
 
 namespace cct {
 
-namespace {
-constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-constexpr char kReverseTable[] = {
-    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63, 52, 53, 54, 55,
-    56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64, 64, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
-    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64, 64, 26, 27, 28, 29, 30, 31, 32,
-    33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
-}  // namespace
-
 std::string BinToHex(const unsigned char* in, int size) {
-  constexpr char hexits[] = "0123456789abcdef";
+  constexpr char kHexits[] = "0123456789abcdef";
   std::string ret(2 * size, 0);
   for (int i = 0; i < size; ++i) {
-    ret[i * 2] = hexits[in[i] >> 4];
-    ret[(i * 2) + 1] = hexits[in[i] & 0x0F];
+    ret[i * 2] = kHexits[in[i] >> 4];
+    ret[(i * 2) + 1] = kHexits[in[i] & 0x0F];
   }
   return ret;
 }
@@ -36,6 +25,8 @@ std::string B64Encode(std::string_view bindata) {
   int bits_collected = 0;
   unsigned int accumulator = 0;
   const std::string_view::const_iterator binend = bindata.end();
+
+  constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   for (std::string_view::const_iterator i = bindata.begin(); i != binend; ++i) {
     accumulator = (accumulator << 8) | (*i & 0xffu);
@@ -60,6 +51,13 @@ std::string B64Decode(std::string_view ascdata) {
   const std::string_view::const_iterator last = ascdata.end();
   int bits_collected = 0;
   unsigned int accumulator = 0;
+
+  constexpr char kReverseTable[] = {
+      64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+      64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63, 52, 53, 54, 55,
+      56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64, 64, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+      13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64, 64, 26, 27, 28, 29, 30, 31, 32,
+      33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
 
   for (std::string_view::const_iterator i = ascdata.begin(); i != last; ++i) {
     const int c = *i;

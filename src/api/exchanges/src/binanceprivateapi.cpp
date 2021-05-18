@@ -20,7 +20,7 @@ constexpr int kNbOrderRequestsRetries = 15;
 
 void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
   Nonce nonce = Nonce_TimeSinceEpoch();
-  postData.set("timestamp", std::string_view(nonce.begin(), nonce.end()));
+  postData.set("timestamp", nonce);
   postData.erase("signature");
   postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.toString(), apiKey.privateKey()));
 }
@@ -76,13 +76,6 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/account");
   BalancePortfolio balancePortfolio;
   for (const json& balance : result["balances"]) {
-    /*
-    {
-      "asset": "BTC",
-      "free": "0.01136184",
-      "locked": "0.00000000"
-    },
-    */
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
     MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
 

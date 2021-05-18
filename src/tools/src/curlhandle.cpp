@@ -85,16 +85,25 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   // General option settings.
-  log::info("{} {}{}{}", opts.requestTypeStr(), url, opts.postdata.empty() ? "" : " opts ", opts.postdata.c_str());
+  const char *optsStr = opts.postdata.c_str();
+
   std::string modifiedURL(url);
+  std::string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
   if (opts.requestType() != CurlOptions::RequestType::kPost && !opts.postdata.empty()) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
     modifiedURL.append(opts.postdata.toStringView());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
   } else {
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, opts.postdata.c_str());
+    if (opts.postdataInJsonFormat) {
+      jsonBuf = opts.postdata.toJson().dump();
+      optsStr = jsonBuf.c_str();
+    }
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, optsStr);
   }
+
+  log::info("{} {}{}{}", opts.requestTypeStr(), url, opts.postdata.empty() ? "" : " opts ", optsStr);
+
   curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
   curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
 
@@ -171,11 +180,19 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   return out;
 }
 
-void CurlHandle::UrlEncodeDeleter::operator()(char *ptr) const { curl_free(ptr); }
-
-CurlHandle::CurlStringUniquePtr CurlHandle::urlEncode(const std::string &url) {
+std::string CurlHandle::urlEncode(std::string_view url) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
-  return CurlStringUniquePtr(curl_easy_escape(curl, url.c_str(), static_cast<int>(url.size())));
+  std::string ret(url);
+
+  using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;
+
+  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, ret.c_str(), static_cast<int>(url.size())));
+  const char *encodedChars = uniquePtr.get();
+  if (!encodedChars) {
+    throw std::bad_alloc();
+  }
+  ret.assign(encodedChars, encodedChars + strlen(encodedChars));
+  return ret;
 }
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }

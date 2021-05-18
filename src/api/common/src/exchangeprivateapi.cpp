@@ -90,6 +90,7 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
       // Cancel
+      log::debug("Cancel order {}", orderId);
       OrderInfo cancelledOrderInfo = cancelOrder(orderId, tradeInfo);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
       remFrom -= cancelledOrderInfo.tradedAmounts.tradedFrom;
@@ -129,7 +130,7 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
 
         lastPrice = price;
 
-        // Place new order with 'volume' and 'price' updated
+        log::debug("Place new order {} at price {}", volume.str(), price.str());
         placeOrderInfo = placeOrder(remFrom, volume, price, tradeInfo);
 
         if (placeOrderInfo.isClosed()) {

@@ -76,6 +76,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
 void PrivateTest(KrakenPrivate &krakenPrivate) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
   EXPECT_NO_THROW(krakenPrivate.queryAccountBalance());
+  EXPECT_FALSE(krakenPrivate.queryDepositWallet("BCH").hasDestinationTag());
   TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("0.001BTC");
   EXPECT_NO_THROW(krakenPrivate.trade(smallFrom, "EUR", tradeOptions));

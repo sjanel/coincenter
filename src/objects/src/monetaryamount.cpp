@@ -362,8 +362,8 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     if (lhs == 0) {
       break;
     }
-    const int8_t nbDigitsToAdd =
-        std::numeric_limits<UnsignedAmountType>::digits10 - std::max(totalPartNbDigits, static_cast<int8_t>(ndigits(lhs)));
+    const int8_t nbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 -
+                                 std::max(totalPartNbDigits, static_cast<int8_t>(ndigits(lhs)));
     if (nbDigitsToAdd == 0) {
       break;
     }

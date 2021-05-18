@@ -21,6 +21,8 @@
 #include "exchangename.hpp"
 #include "exchangevector.hpp"
 #include "fiatconverter.hpp"
+#include "huobiprivateapi.hpp"
+#include "huobipublicapi.hpp"
 #include "krakenprivateapi.hpp"
 #include "krakenpublicapi.hpp"
 #include "marketorderbooks.hpp"
@@ -112,9 +114,10 @@ class Coincenter {
   api::APIKeysProvider _apiKeyProvider;
 
   // Public exchanges
-  api::KrakenPublic _krakenPublic;
-  api::BithumbPublic _bithumbPublic;
   api::BinancePublic _binancePublic;
+  api::BithumbPublic _bithumbPublic;
+  api::HuobiPublic _huobiPublic;
+  api::KrakenPublic _krakenPublic;
   api::UpbitPublic _upbitPublic;
 
   // Private exchanges (based on provided keys)
@@ -122,6 +125,7 @@ class Coincenter {
   // pointers
   std::forward_list<api::KrakenPrivate> _krakenPrivates;
   std::forward_list<api::BinancePrivate> _binancePrivates;
+  std::forward_list<api::HuobiPrivate> _huobiPrivates;
   std::forward_list<api::BithumbPrivate> _bithumbPrivates;
   std::forward_list<api::UpbitPrivate> _upbitPrivates;
 

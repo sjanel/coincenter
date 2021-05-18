@@ -122,7 +122,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
     }
     if ((*it)["permissions"].size() == 1 && (*it)["permissions"].front().get<std::string_view>() == "LEVERAGED") {
       // These are '*DOWN' and '*UP' assets, do not take them into account for now
-      log::trace("Discard {}-{} as coincenter does not support standard markets", baseAsset, quoteAsset);
+      log::trace("Discard {}-{} as coincenter does not support leveraged markets", baseAsset, quoteAsset);
       continue;
     }
     if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
@@ -167,7 +167,7 @@ ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
     CurrencyCode cur(coinStr);
     const json& networkListPart = el["networkList"].front();
     MonetaryAmount withdrawFee = MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur);
-    log::trace("Retrieved {} withdrawal fees {}", _name, withdrawFee.str());
+    log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
     ret.insert_or_assign(cur, withdrawFee);
   }
 
@@ -317,14 +317,13 @@ ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(
   }
   for (const json& tickerDetails : result) {
     std::string assetsPairStr = tickerDetails["symbol"];
-    if (binanceAssetPairToStdMarketMap.find(assetsPairStr) == binanceAssetPairToStdMarketMap.end()) {
+    auto it = binanceAssetPairToStdMarketMap.find(assetsPairStr);
+    if (it == binanceAssetPairToStdMarketMap.end()) {
       continue;
     }
-    Market m = binanceAssetPairToStdMarketMap.find(assetsPairStr)->second;
+    Market m = it->second;
     MonetaryAmount askPri(tickerDetails["askPrice"].get<std::string_view>(), m.quote());
     MonetaryAmount bidPri(tickerDetails["bidPrice"].get<std::string_view>(), m.quote());
-    // Whole lot volume and lot volume seems to be the same value, I honestly I don't know the differences.
-    // We will take the lot volume
     MonetaryAmount askVol(tickerDetails["askQty"].get<std::string_view>(), m.base());
     MonetaryAmount bidVol(tickerDetails["bidQty"].get<std::string_view>(), m.base());
 
@@ -340,7 +339,8 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
   constexpr int kAuthorizedDepths[] = {5, 10, 20, 50, 100, 500, 1000, 5000};
   auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
   if (lb == std::end(kAuthorizedDepths)) {
-    throw exception("Invalid depth " + std::to_string(depth));
+    lb = std::next(std::end(kAuthorizedDepths), -1);
+    log::error("Invalid depth {}, default to {}", *lb);
   }
   CurlPostData postData{{"symbol", m.assetsPairStr()}, {"limit", std::to_string(*lb)}};
   json asksAndBids = PublicQuery(_curlHandle, "depth", postData);

@@ -10,9 +10,12 @@
 #include <iterator>
 #include <memory>
 #include <string_view>
+#include <type_traits>
 
+#include "cct_config.hpp"
 #include "cct_hash.hpp"
-#include "cct_toupper.hpp"
+#include "cct_log.hpp"
+#include "cct_toupperlower.hpp"
 
 namespace cct {
 
@@ -36,14 +39,25 @@ class CurrencyCode {
         _data.end(), '\0');
   }
 
-  CurrencyCode(std::string_view acronym);
+  constexpr CurrencyCode(std::string_view acronym) {
+    if (CCT_UNLIKELY(_data.size() < acronym.size())) {
+      if (!std::is_constant_evaluated()) {
+        log::warn("Acronym {} is too long, truncating to {}", acronym, acronym.substr(0, _data.size()));
+      }
+      acronym.remove_suffix(acronym.size() - _data.size());
+    }
+    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return cct::toupper(c); }),
+              _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
+  }
 
-  std::string_view str() const { return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0')); }
+  constexpr std::string_view str() const {
+    return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0'));
+  }
 
   std::string toString() const { return std::string(str()); }
 
   /// Returns a 64 bits code
-  uint64_t code() const {
+  constexpr uint64_t code() const {
     uint64_t ret = _data[0];
     ret |= static_cast<uint64_t>(_data[1]) << 8;
     ret |= static_cast<uint64_t>(_data[2]) << 16;
@@ -54,18 +68,18 @@ class CurrencyCode {
     return ret;
   }
 
-  bool isNeutral() const { return _data.front() == '\0'; }
+  constexpr bool isNeutral() const { return _data.front() == '\0'; }
 
   void print(std::ostream &os) const { os << str(); }
 
-  bool operator<(CurrencyCode o) const {
+  constexpr bool operator<(CurrencyCode o) const {
     return std::lexicographical_compare(_data.begin(), _data.end(), o._data.begin(), o._data.end());
   }
-  bool operator<=(CurrencyCode o) const { return !(o < *this); }
-  bool operator>(CurrencyCode o) const { return o < *this; }
-  bool operator>=(CurrencyCode o) const { return !(*this < o); }
-  bool operator==(CurrencyCode o) const { return memcmp(_data.data(), o._data.data(), sizeof(AcronymType)) == 0; }
-  bool operator!=(CurrencyCode o) const { return !(*this == o); }
+  constexpr bool operator<=(CurrencyCode o) const { return !(o < *this); }
+  constexpr bool operator>(CurrencyCode o) const { return o < *this; }
+  constexpr bool operator>=(CurrencyCode o) const { return !(*this < o); }
+  constexpr bool operator==(CurrencyCode o) const { return std::equal(_data.begin(), _data.end(), o._data.begin()); }
+  constexpr bool operator!=(CurrencyCode o) const { return !(*this == o); }
 
  private:
   AcronymType _data;

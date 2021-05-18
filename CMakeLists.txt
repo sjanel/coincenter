@@ -30,6 +30,8 @@ option(CCT_BUILD_EXEC_INSTEAD_OF_LIB "Build an executable instead of a static li
 option(CCT_OVERRIDE_DATA_DIR "Override Data directory from CCT_DATA_DIR (./data by default)" OFF)
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 
+option(CCT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE_STR "Always validate a destination address for a withdraw (recommended)" ON)
+
 if (NOT CCT_OVERRIDE_DATA_DIR)
   set(CCT_DATA_DIR "${CMAKE_SOURCE_DIR}/data")
 endif()
@@ -166,6 +168,13 @@ message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 # Definition of project constants
 add_compile_definitions("CCT_DATA_PATH=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
+
+if (CCT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE_STR)
+  message(STATUS "Validate deposit address for withdraws")
+else()
+  message(STATUS "Do not validate deposit address for withdraws")
+  add_compile_definitions(CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE)
+endif()
 
 # Link to sub folders CMakeLists.txt
 add_subdirectory(src/tools)

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <limits>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
@@ -19,17 +22,17 @@ namespace api {
 class CryptowatchAPI;
 class TradeOptions;
 
-class BinancePublic : public ExchangePublic {
+class HuobiPublic : public ExchangePublic {
  public:
-  static constexpr char kUrlBase[] = "https://api.binance.com";
+  static constexpr char kUrlBase[] = "https://api.huobi.pro";
 
-  static constexpr char kUrlBaseAlt1[] = "https://api1.binance.com";
-  static constexpr char kUrlBaseAlt2[] = "https://api2.binance.com";
-  static constexpr char kUrlBaseAlt3[] = "https://api3.binance.com";
+  static constexpr char kUrlAlt[] = "https://api-aws.huobi.pro";  // More optimized if coincenter is used within 'AWS'
 
-  static constexpr char kUserAgent[] = "Binance C++ API Client";
+  static constexpr char kUserAgent[] = "Huobi C++ API Client";
 
-  BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  static constexpr int kDefaultDepth = 150;
+
+  HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
@@ -37,7 +40,7 @@ class BinancePublic : public ExchangePublic {
     return *queryTradableCurrencies().find(standardCode);
   }
 
-  MarketSet queryTradableMarkets() override { return _marketsCache.get(); }
+  MarketSet queryTradableMarkets() override { return _marketsCache.get().first; }
 
   MarketPriceMap queryAllPrices() override { return marketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
@@ -47,51 +50,53 @@ class BinancePublic : public ExchangePublic {
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
   VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
 
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount sanitizedPrice, bool isTakerOrder);
+  MonetaryAmount sanitizeVolume(Market m, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
+                                MonetaryAmount sanitizedPrice, bool isTakerOrder);
 
  private:
-  friend class BinancePrivate;
+  friend class HuobiPrivate;
 
-  const json& retrieveMarketData(Market m) {
-    const BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket& exchangeInfoData = _exchangeInfoCache.get();
-    auto it = exchangeInfoData.find(m);
-    if (it == exchangeInfoData.end()) {
-      throw exception("Unable to retrieve market data " + m.str());
-    }
-    return it->second;
-  }
+   struct TradableCurrenciesFunc {
+    explicit TradableCurrenciesFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 
-  struct ExchangeInfoFunc {
-    using ExchangeInfoDataByMarket = std::unordered_map<Market, json>;
+    json operator()();
 
-    ExchangeInfoFunc(CoincenterInfo& config, CurlHandle& curlHandle) : _config(config), _curlHandle(curlHandle) {}
-
-    ExchangeInfoDataByMarket operator()();
-
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 
-  struct GlobalInfosFunc {
-    json operator()();
-
-    CurlHandle _curlHandle;
-  };
-
   struct MarketsFunc {
-    MarketsFunc(CachedResult<ExchangeInfoFunc>& exchangeInfoCache, CurlHandle& curlHandle,
-                const ExchangeInfo& exchangeInfo)
-        : _exchangeInfoCache(exchangeInfoCache), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    MarketsFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
-    MarketSet operator()();
+    struct MarketInfo {
+      MarketInfo() noexcept
+          : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode("USDT"), 0) {}
 
-    CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
+      VolAndPriNbDecimals volAndPriNbDecimals;
+
+      MonetaryAmount minOrderValue;
+      MonetaryAmount maxOrderValueUSDT;
+
+      MonetaryAmount limitMinOrderAmount;
+      MonetaryAmount limitMaxOrderAmount;
+
+      MonetaryAmount sellMarketMinOrderAmount;
+      MonetaryAmount sellMarketMaxOrderAmount;
+
+      MonetaryAmount buyMarketMaxOrderValue;
+    };
+
+    using MarketInfoMap = std::unordered_map<Market, MarketInfo>;
+
+    std::pair<MarketSet, MarketInfoMap> operator()();
+
+    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -120,8 +125,7 @@ class BinancePublic : public ExchangePublic {
 
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;
-  CachedResult<ExchangeInfoFunc> _exchangeInfoCache;
-  CachedResult<GlobalInfosFunc> _globalInfosCache;
+  CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;

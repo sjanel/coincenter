@@ -223,8 +223,6 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
     const json& bidDetails = assetPairDetails["b"];
     MonetaryAmount askPri(askDetails[0].get<std::string_view>(), m.quote());
     MonetaryAmount bidPri(bidDetails[0].get<std::string_view>(), m.quote());
-    // Whole lot volume and lot volume seems to be the same value, I honestly I don't know the differences.
-    // We will take the lot volume
     MonetaryAmount askVol(askDetails[2].get<std::string_view>(), m.base());
     MonetaryAmount bidVol(bidDetails[2].get<std::string_view>(), m.base());
 

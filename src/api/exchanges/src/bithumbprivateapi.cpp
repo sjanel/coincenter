@@ -25,6 +25,7 @@ namespace {
 
 constexpr char kNbDecimalsUnitsCacheFile[] = ".bithumbdecimalscache";
 
+/// Similar to CurlHandle::urlEncore, except that it does not convert '=' (Bithumb would complain if we did)
 std::string UrlEncode(std::string_view str) {
   std::string ret;
   const int s = static_cast<int>(str.size());
@@ -35,11 +36,9 @@ std::string UrlEncode(std::string_view str) {
         c == '=' || c == '\\' || c == '-' || c == '_' || c == ':' || c == '&') {
       ret.push_back(c);
     } else {
-      char buf[2 + 1];
-      sprintf(buf, "%02X", c);
-      ret.push_back('%');
-      ret.push_back(buf[0]);
-      ret.push_back(buf[1]);
+      char buf[4];
+      snprintf(buf, sizeof(buf), "%%%02X", c);
+      ret.append(buf);
     }
   }
   return ret;

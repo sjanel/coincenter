@@ -43,18 +43,21 @@ Coincenter::Coincenter(settings::RunMode runMode)
     : _coincenterInfo(runMode),
       _cryptowatchAPI(runMode),
       _apiKeyProvider(runMode),
-      _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
   for (std::string_view exchangeName : api::ExchangePublic::kSupportedExchanges) {
     api::ExchangePublic *exchangePublic;
-    if (exchangeName == "kraken") {
-      exchangePublic = std::addressof(_krakenPublic);
-    } else if (exchangeName == "binance") {
+    if (exchangeName == "binance") {
       exchangePublic = std::addressof(_binancePublic);
     } else if (exchangeName == "bithumb") {
       exchangePublic = std::addressof(_bithumbPublic);
+    } else if (exchangeName == "huobi") {
+      exchangePublic = std::addressof(_huobiPublic);
+    } else if (exchangeName == "kraken") {
+      exchangePublic = std::addressof(_krakenPublic);
     } else if (exchangeName == "upbit") {
       exchangePublic = std::addressof(_upbitPublic);
     } else {
@@ -66,12 +69,14 @@ Coincenter::Coincenter(settings::RunMode runMode)
       for (const std::string &keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
         api::ExchangePrivate *exchangePrivate;
         const api::APIKey &apiKey = _apiKeyProvider.get(PrivateExchangeName(exchangeName, keyName));
-        if (exchangeName == "kraken") {
-          exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
-        } else if (exchangeName == "binance") {
+        if (exchangeName == "binance") {
           exchangePrivate = std::addressof(_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey));
         } else if (exchangeName == "bithumb") {
           exchangePrivate = std::addressof(_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey));
+        } else if (exchangeName == "huobi") {
+          exchangePrivate = std::addressof(_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey));
+        } else if (exchangeName == "kraken") {
+          exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {

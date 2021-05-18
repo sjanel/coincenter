@@ -40,4 +40,10 @@ TEST(CurrencyCodeTest, UpperConversion) {
   EXPECT_EQ(CurrencyCode("duRfVgh"), CurrencyCode("dUrfVGH"));
 }
 
+TEST(CurrencyCodeTest, Constexpr) {
+  static_assert(CurrencyCode("doge") == CurrencyCode("DOGE"));
+  static_assert(CurrencyCode("etc").str() == "ETC");
+  static_assert(CurrencyCode("XRP").code() != 0);
+}
+
 }  // namespace cct

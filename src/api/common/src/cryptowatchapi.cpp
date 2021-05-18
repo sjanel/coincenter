@@ -5,6 +5,7 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_toupperlower.hpp"
 #include "jsonhelpers.hpp"
 
 namespace cct {
@@ -114,9 +115,8 @@ CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std
   for (const auto& [key, price] : result.items()) {
     if (key.starts_with(marketPrefix)) {
       std::string marketStr = key.substr(marketPrefixLen);
-      std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(),
-                     [](unsigned char c) { return std::toupper(c); });
-      ret.insert_or_assign(marketStr, static_cast<double>(price));
+      std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(), [](char c) { return cct::toupper(c); });
+      ret.insert_or_assign(std::move(marketStr), static_cast<double>(price));
     }
   }
   log::debug("Retrieved {} prices from Cryptowatch all prices call", ret.size());

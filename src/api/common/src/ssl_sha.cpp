@@ -33,7 +33,8 @@ Sha256 ComputeSha256(const std::string& data) {
 std::string ShaBin(ShaType shaType, const std::string& data, const char* secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
-  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)), shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
+  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
+               shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
   HMAC_Update(ctx.get(), reinterpret_cast<const unsigned char*>(data.data()), data.size());
 
   unsigned int len = ShaDigestLen(shaType);
@@ -46,7 +47,8 @@ std::string ShaBin(ShaType shaType, const std::string& data, const char* secret)
 std::string ShaHex(ShaType shaType, const std::string& data, const char* secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
-  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)), shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
+  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
+               shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
   HMAC_Update(ctx.get(), reinterpret_cast<const unsigned char*>(data.data()), data.size());
 
   unsigned int len = ShaDigestLen(shaType);

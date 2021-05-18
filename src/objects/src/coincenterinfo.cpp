@@ -63,6 +63,20 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
         "minprivatequerydelayms": 8
       }
     },
+    "huobi": {
+      "asset": {
+        "allexclude": "",
+        "withdrawexclude": "BTC,EUR"
+      },
+      "tradefees": {
+        "maker": "0.2",
+        "taker": "0.2"
+      },
+      "query": {
+        "minpublicquerydelayms": 50,
+        "minprivatequerydelayms": 100
+      }
+    },
     "kraken": {
       "asset": {
         "allexclude": "AUD,CAD,GBP,JPY,USD,KFEE,CHF",

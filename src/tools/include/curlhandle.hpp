@@ -32,13 +32,7 @@ class CurlHandle {
   CurlHandle(CurlHandle &&o) noexcept;
   CurlHandle &operator=(CurlHandle &&o) noexcept;
 
-  struct UrlEncodeDeleter {
-    void operator()(char *ptr) const;
-  };
-
-  using CurlStringUniquePtr = std::unique_ptr<char, UrlEncodeDeleter>;
-
-  CurlStringUniquePtr urlEncode(const std::string &url);
+  std::string urlEncode(std::string_view url);
 
   std::string query(std::string_view url, const CurlOptions &opts);
 
