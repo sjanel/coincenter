@@ -9,9 +9,10 @@ A C++ library centralizing several crypto currencies exchanges REST API into a s
 Supported exchanges are:
 | Exchange | Link                                                                            |
 | -------- | :-----------------------------------------------------------------------------: |
-| Kraken   | [<img src="./resources/krakenlogo.svg" width="100">](https://www.kraken.com/)   |
-| Bithumb  | [<img src="./resources/bithumblogo.svg" width="60">](https://www.bithumb.com/)  |
-| Binance  | [<img src="./resources/binancelogo.svg" width="160">](https://www.binance.com/) |
+| Binance  | [<img src="./resources/binancelogo.svg" width="170">](https://www.binance.com/) |
+| Bithumb  | [<img src="./resources/bithumblogo.svg" width="55">](https://www.bithumb.com/)  |
+| Huobi    | [<img src="./resources/huobilogo.svg" width="160">](https://www.huobi.com/)     |
+| Kraken   | [<img src="./resources/krakenlogo.svg" width="90">](https://www.kraken.com/)    |
 | Upbit    | [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)     |
  
  *Table of Contents*

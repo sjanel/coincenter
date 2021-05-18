@@ -62,12 +62,13 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   if (depth == 0) {
     throw exception("Invalid depth, should be strictly positive");
   }
-  if (bidPrice == askPrice || bidVolume.isZero() || askVolume.isZero()) {
+  if (bidPrice >= askPrice || bidVolume.isZero() || askVolume.isZero()) {
+    log::critical("Bid pri {}, Ask pri {}, Bid vol {}, Ask vol {}", bidPrice.str(), askPrice.str(), bidVolume.str(),
+                  askVolume.str());
     throw exception("Invalid ticker information for MarketOrderBook");
   }
-  _orders.reserve(depth);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
-    _volAndPriNbDecimals.volNbDecimals = std::max(askVolume.nbDecimals(), bidVolume.nbDecimals());
+    _volAndPriNbDecimals.volNbDecimals = std::min(askVolume.nbDecimals(), bidVolume.nbDecimals());
     _volAndPriNbDecimals.priNbDecimals = std::max(askPrice.nbDecimals(), bidPrice.nbDecimals());
   }
   const AmountPrice::AmountType stepPrice = *(askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
@@ -78,24 +79,27 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   const AmountPrice refAskAmountPrice(-(*askVolume.amount(_volAndPriNbDecimals.volNbDecimals)),
                                       *askPrice.amount(_volAndPriNbDecimals.priNbDecimals));
   const AmountPrice::AmountType simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
+  constexpr AmountPrice::AmountType kMaxVol = std::numeric_limits<AmountPrice::AmountType>::max() / 2;
 
-  for (AmountPrice::AmountType d = depth; d != 0; --d) {
-    AmountPrice amountPrice = refBidAmountPrice;
-    if (d != 1) {
-      amountPrice.price -= stepPrice * (d - 1);
-      amountPrice.amount += (3L * simulatedStepVol * (d - 1)) / 2;  // TODO: add overflow check here
+  _orders.reserve(depth * 2);
+  _orders.resize(depth);
+  for (AmountPrice::AmountType d = 0; d < depth; ++d) {
+    AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[static_cast<AmountPrice::AmountType>(depth) - d];
+    amountPrice.price -= stepPrice * d;
+    if (d != 0 && amountPrice.amount < kMaxVol) {
+      amountPrice.amount += simulatedStepVol / 2;
     }
-    _orders.push_back(amountPrice);
+    _orders[static_cast<AmountPrice::AmountType>(depth) - d - 1] = amountPrice;
   }
   _highestBidPricePos = _orders.size() - 1;
   _lowestAskPricePos = _highestBidPricePos + 1;
 
   // Finally add ask lines
   for (AmountPrice::AmountType d = 0; d < depth; ++d) {
-    AmountPrice amountPrice = refAskAmountPrice;
-    if (d != 0) {
-      amountPrice.price += stepPrice * d;
-      amountPrice.amount -= (3L * simulatedStepVol * d) / 2;  // TODO: add overflow check here
+    AmountPrice amountPrice = d == 0 ? refAskAmountPrice : _orders.back();
+    amountPrice.price += stepPrice * d;
+    if (d != 0 && -amountPrice.amount < kMaxVol) {
+      amountPrice.amount -= simulatedStepVol / 2;
     }
     _orders.push_back(amountPrice);
   }

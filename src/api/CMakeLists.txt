@@ -30,11 +30,15 @@ function(add_exchange_test name)
    set(oneValueArgs)
    set(multiValueArgs)
    cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
-
+   
    if(CCT_ENABLE_TESTS)
+     # Recompile wallet.cpp to disable validation of deposit address in file (only for unit tests, no worries)
      add_unit_test(
        ${name} 
        ${MY_UNPARSED_ARGUMENTS}
+       ../objects/src/wallet.cpp
+       DEFINITIONS
+       CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE
        LIBRARIES
        jwt-cpp
        coincenter_apicommon
@@ -57,6 +61,13 @@ add_exchange_test(
   exchanges/src/bithumbpublicapi.cpp
   exchanges/src/bithumbprivateapi.cpp
   exchanges/test/bithumbapi_test.cpp
+)
+
+add_exchange_test(
+  huobiapi_test
+  exchanges/src/huobipublicapi.cpp
+  exchanges/src/huobiprivateapi.cpp
+  exchanges/test/huobiapi_test.cpp
 )
 
 add_exchange_test(

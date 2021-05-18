@@ -27,7 +27,7 @@ class BinanceAPI : public ::testing::Test {
 
 namespace {
 void PublicTest(BinancePublic &binancePublic) {
-  EXPECT_NO_THROW(binancePublic.queryOrderBook(Market("PSG", "BTC")));
+  EXPECT_NO_THROW(binancePublic.queryOrderBook(Market("BTC", "USDT")));
   EXPECT_GT(binancePublic.queryAllApproximatedOrderBooks().size(), 20);
   EXPECT_NO_THROW(binancePublic.queryTradableCurrencies());
   EXPECT_NO_THROW(binancePublic.queryWithdrawalFees());
@@ -37,6 +37,7 @@ void PublicTest(BinancePublic &binancePublic) {
 void PrivateTest(BinancePrivate &binancePrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
+  EXPECT_TRUE(binancePrivate.queryDepositWallet("XLM").hasDestinationTag());
   TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("13.567ADA");
   EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));

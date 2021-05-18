@@ -14,7 +14,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
-#include "cct_toupper.hpp"
+#include "cct_toupperlower.hpp"
 #include "coincenterinfo.hpp"
 #include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"

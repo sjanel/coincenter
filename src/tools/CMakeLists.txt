@@ -51,6 +51,7 @@ add_unit_test(
     LIBRARIES
     spdlog
     CURL::libcurl
+    nlohmann_json::nlohmann_json
 )
 
 add_unit_test(
@@ -59,6 +60,8 @@ add_unit_test(
     test/curloptions_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
+    LIBRARIES
+    nlohmann_json::nlohmann_json
 )
 
 add_unit_test(

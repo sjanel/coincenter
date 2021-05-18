@@ -6,6 +6,7 @@
 #include <string_view>
 #include <type_traits>
 
+#include "cct_json.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
@@ -28,6 +29,10 @@ class CurlPostData {
   void append(std::string_view key, T value) {
     append(key, std::to_string(value));
   }
+
+  /// Appends content of other CurlPostData into 'this'.
+  /// No check is made on duplicated keys, it is client's responsibility to make sure keys are not duplicated.
+  void append(const CurlPostData &o);
 
   /// Updates the value for given key, or append if not existing.
   void set(std::string_view key, std::string_view value);
@@ -55,6 +60,8 @@ class CurlPostData {
 
   const std::string &toString() const { return _postdata; }
 
+  json toJson() const;
+
  private:
   /// Finds the position of the given key
   std::size_t find(std::string_view key) const;
@@ -75,6 +82,7 @@ class CurlOptions {
         proxy(false, pUrl),
         postdata(std::forward<CurlPostDataT>(ipostData)),
         verbose(v),
+        postdataInJsonFormat(false),
         _requestType(requestType) {}
 
   RequestType requestType() const { return _requestType; }
@@ -94,6 +102,7 @@ class CurlOptions {
 
   CurlPostData postdata;
   bool verbose;
+  bool postdataInJsonFormat;
 
  private:
   RequestType _requestType;

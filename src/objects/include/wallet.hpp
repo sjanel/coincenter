@@ -20,12 +20,6 @@ class Wallet {
   /// field.
   static constexpr char kDepositAddressesFilename[] = ".depositaddresses";
 
-  /// Flag controlling the behavior of the wallet creation security:
-  ///  false: do not validate and read wallets from above file, only trust deposit address method from target exchange
-  ///  true: always validate wallet at construction from the known ones defined in the above file. Exception will be
-  ///        thrown in case addresses mismatched compared to the query of deposit addresses from target exchange
-  static constexpr bool kValidateWalletFromDepositAddressesFile = true;
-
   /// Build an empty wallet, which cannot be used.
   Wallet() = default;
 
@@ -45,9 +39,9 @@ class Wallet {
 
   std::string_view exchangeName() const { return _privateExchangeName.name(); }
 
-  const std::string &address() const;
+  std::string_view address() const;
 
-  const std::string &destinationTag() const { return _tag; }
+  std::string_view destinationTag() const { return _tag; }
 
   CurrencyCode currencyCode() const { return _currency; }
 
