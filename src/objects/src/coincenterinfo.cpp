@@ -13,10 +13,20 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
   json jsonData = OpenJsonFile("currencyacronymtranslator", FileNotFoundMode::kThrow);
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
-    log::trace("Currency " + std::string(key) + " <=> " + std::string(value));
-    map.insert_or_assign(key, value);
+    log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
+    map.insert_or_assign(CurrencyCode(key), value.get<std::string_view>());
   }
   return map;
+}
+
+CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
+  json jsonData = OpenJsonFile("stablecoins", FileNotFoundMode::kThrow);
+  CoincenterInfo::StableCoinsMap ret;
+  for (const auto& [key, value] : jsonData.items()) {
+    log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
+    ret.insert_or_assign(CurrencyCode(key), value.get<std::string_view>());
+  }
+  return ret;
 }
 
 CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
@@ -114,6 +124,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
 
 CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap()),
+      _stableCoinsMap(ComputeStableCoinsMap()),
       // TODO: make below values configurable, with default value in a json file
       _apiCallUpdateFrequencyMap{{api::QueryTypeEnum::kCurrencies, std::chrono::hours(1)},
                                  {api::QueryTypeEnum::kMarkets, std::chrono::hours(1)},
@@ -126,13 +137,20 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
       _runMode(runMode),
       _useMonitoring(_runMode == settings::RunMode::kProd) {}
 
-std::string_view CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCode) const {
-  auto it = _currencyEquiAcronymMap.find(std::string(currencyCode));
+CurrencyCode CoincenterInfo::standardizeCurrencyCode(CurrencyCode currencyCode) const {
+  auto it = _currencyEquiAcronymMap.find(currencyCode);
   if (it != _currencyEquiAcronymMap.end()) {
-    // returning a const ref is OK as _currencyEquiAcronymMap is const (permanent validity of pointers)
     return it->second;
   }
   return currencyCode;
+}
+
+std::optional<CurrencyCode> CoincenterInfo::fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const {
+  auto it = _stableCoinsMap.find(stableCoinCandidate);
+  if (it != _stableCoinsMap.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
 }  // namespace cct

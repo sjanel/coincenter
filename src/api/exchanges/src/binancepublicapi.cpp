@@ -45,7 +45,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 }  // namespace
 
 BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("binance", fiatConverter, cryptowatchAPI),
+    : ExchangePublic("binance", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(_exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _exchangeInfoCache(

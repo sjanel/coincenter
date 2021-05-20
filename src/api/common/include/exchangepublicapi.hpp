@@ -81,7 +81,7 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
   /// of 'from' towards 'to' currency code
   /// @return ordered list of currency code, or empty list if conversion is not possible
-  Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to);
+  Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to, bool considerStableCoinsAsFiats = false);
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 
@@ -93,12 +93,14 @@ class ExchangePublic : public ExchangeBase {
   MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
 
  protected:
-  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi)
-      : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi) {}
+  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+                 const CoincenterInfo &coincenterInfo)
+      : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi), _coincenterInfo(coincenterInfo) {}
 
   std::string _name;
   FiatConverter &_fiatConverter;
   CryptowatchAPI &_cryptowatchApi;
+  const CoincenterInfo &_coincenterInfo;
 };
 }  // namespace api
 }  // namespace cct

@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include <chrono>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -15,9 +16,10 @@
 namespace cct {
 class CoincenterInfo {
  public:
-  using CurrencyEquivalentAcronymMap = std::unordered_map<std::string, std::string>;
+  using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
   using ExchangeInfoMap = std::unordered_map<std::string, ExchangeInfo>;
   using Duration = std::chrono::high_resolution_clock::duration;
+  using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd);
 
@@ -29,7 +31,15 @@ class CoincenterInfo {
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.
   /// Use this function to standardize names (will return BTC for the latter)
-  std::string_view standardizeCurrencyCode(std::string_view currencyCode) const;
+  CurrencyCode standardizeCurrencyCode(CurrencyCode currencyCode) const;
+
+  CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const {
+    return standardizeCurrencyCode(CurrencyCode(currencyCode));
+  }
+
+  /// If 'stableCoinCandidate' is a stable crypto currency, return its associated fiat currency code.
+  /// Otherwise, return 'std::nullopt'
+  std::optional<CurrencyCode> fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const;
 
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
     return _exchangeInfoMap.find(std::string(exchangeName))->second;
@@ -46,10 +56,11 @@ class CoincenterInfo {
  private:
   using APICallUpdateFrequencyMap = std::unordered_map<api::QueryTypeEnum, Duration>;
 
-  const CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
-  const APICallUpdateFrequencyMap _apiCallUpdateFrequencyMap;
-  const ExchangeInfoMap _exchangeInfoMap;
-  const settings::RunMode _runMode;
-  const bool _useMonitoring;
+  CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
+  StableCoinsMap _stableCoinsMap;
+  APICallUpdateFrequencyMap _apiCallUpdateFrequencyMap;
+  ExchangeInfoMap _exchangeInfoMap;
+  settings::RunMode _runMode;
+  bool _useMonitoring;
 };
 }  // namespace cct
