@@ -69,7 +69,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 }  // namespace
 
 KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("kraken", fiatConverter, cryptowatchAPI),
+    : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,

@@ -44,7 +44,7 @@ bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySe
 }  // namespace
 
 UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("upbit", fiatConverter, cryptowatchAPI),
+    : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     _curlHandle, config.exchangeInfo(_name)),

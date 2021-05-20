@@ -170,7 +170,13 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
 
 BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                         CurrencyCode equiCurrency) {
-  BalancePortfolio ret;
+  std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
+  if (optEquiCur) {
+    log::warn("Consider {} instead of stable coin {} as equivalent currency", optEquiCur->str(), equiCurrency.str());
+    equiCurrency = *optEquiCur;
+  }
+
+  cct::vector<Exchange *> balanceExchanges;
   for (Exchange &exchange : _exchanges) {
     const bool computeBalance = (privateExchangeNames.size() == 1 && privateExchangeNames.front().name() == "all" &&
                                  exchange.hasPrivateAPI()) ||
@@ -179,8 +185,16 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
                                               return exchange.matchesKeyNameWildcard(privateExchangeName);
                                             });
     if (computeBalance) {
-      ret.merge(exchange.apiPrivate().queryAccountBalance(equiCurrency));
+      balanceExchanges.push_back(std::addressof(exchange));
     }
+  }
+
+  cct::vector<BalancePortfolio> subRet(balanceExchanges.size());
+  std::transform(std::execution::par, balanceExchanges.begin(), balanceExchanges.end(), subRet.begin(),
+                 [equiCurrency](Exchange *e) { return e->apiPrivate().queryAccountBalance(equiCurrency); });
+  BalancePortfolio ret;
+  for (const BalancePortfolio &sub : subRet) {
+    ret.merge(sub);
   }
   return ret;
 }

@@ -7,7 +7,7 @@
 namespace cct {
 namespace api {
 std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmount a, CurrencyCode toCurrencyCode) {
-  Currencies currencies = findFastestConversionPath(a.currencyCode(), toCurrencyCode);
+  Currencies currencies = findFastestConversionPath(a.currencyCode(), toCurrencyCode, true);
   if (currencies.empty()) {
     return std::nullopt;
   }
@@ -17,10 +17,14 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
   for (int curPos = 0; curPos < nbMarkets; ++curPos) {
     Market m(currencies[curPos], currencies[curPos + 1]);
     assert(m.base() == a.currencyCode());
-    const bool isFromFiat = _cryptowatchApi.queryIsCurrencyCodeFiat(m.base());
-    const bool isToFiat = _cryptowatchApi.queryIsCurrencyCodeFiat(m.quote());
-    if (isFromFiat && isToFiat) {
-      a = _fiatConverter.convert(a, m.quote());
+    std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(m.base());
+    CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : m.base());
+    std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(m.quote());
+    CurrencyCode fiatToLikeCurCode = (optFiatLikeTo ? *optFiatLikeTo : m.quote());
+    const bool isFromFiatLike = optFiatLikeFrom || _cryptowatchApi.queryIsCurrencyCodeFiat(m.base());
+    const bool isToFiatLike = optFiatLikeTo || _cryptowatchApi.queryIsCurrencyCodeFiat(m.quote());
+    if (isFromFiatLike && isToFiatLike) {
+      a = _fiatConverter.convert(MonetaryAmount(a, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
       if (canUseCryptoWatch) {
         std::optional<double> rate = _cryptowatchApi.queryPrice(_name, m);
@@ -47,8 +51,11 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
 }
 
 ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(CurrencyCode fromCurrencyCode,
-                                                                     CurrencyCode toCurrencyCode) {
-  const bool isToFiat = _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
+                                                                     CurrencyCode toCurrencyCode,
+                                                                     bool considerStableCoinsAsFiats) {
+  std::optional<CurrencyCode> optFiatFromStableCoin =
+      considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode) : std::nullopt;
+  const bool isToFiatLike = optFiatFromStableCoin || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
   MarketSet markets = queryTradableMarkets();
 
   cct::vector<Currencies> searchPaths(1, {fromCurrencyCode});
@@ -70,7 +77,10 @@ ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(CurrencyCod
         }
       }
     }
-    if (isToFiat && _cryptowatchApi.queryIsCurrencyCodeFiat(lastCurrencyCode)) {
+    std::optional<CurrencyCode> optLastFiat =
+        considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(lastCurrencyCode) : std::nullopt;
+    const bool isLastFiatLike = optLastFiat || _cryptowatchApi.queryIsCurrencyCodeFiat(lastCurrencyCode);
+    if (isToFiatLike && isLastFiatLike) {
       searchPaths.emplace_back(std::move(path)).push_back(toCurrencyCode);
       std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
     }

@@ -11,8 +11,9 @@ namespace cct {
 namespace api {
 class MockExchangePublic : public ExchangePublic {
  public:
-  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi)
-      : ExchangePublic(name, fiatConverter, cryptowatchApi) {}
+  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+                     const CoincenterInfo &config)
+      : ExchangePublic(name, fiatConverter, cryptowatchApi, config) {}
 
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
   MOCK_METHOD(CurrencyExchange, convertStdCurrencyToCurrencyExchange, (CurrencyCode currencyCode), (override));
@@ -26,13 +27,14 @@ class MockExchangePublic : public ExchangePublic {
 
 class ExchangePublicTest : public ::testing::Test {
  protected:
-  ExchangePublicTest() : exchangePublic("test", fiatConverter, cryptowatchAPI) {}
+  ExchangePublicTest() : exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
 
   CryptowatchAPI cryptowatchAPI;
   FiatConverter fiatConverter;
+  CoincenterInfo coincenterInfo;
   MockExchangePublic exchangePublic;
 };
 
