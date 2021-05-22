@@ -47,7 +47,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
   ExchangePublic::MarketSet markets = krakenPublic.queryTradableMarkets();
   EXPECT_GT(markets.size(), 10);
   const int nbMarkets = markets.size();
-  const int kNbOrderBooksToQuery = 4;
+  const int kNbOrderBooksToQuery = 2;
   ExchangePublic::MarketSet sampleMarkets;
   sampleMarkets.reserve(std::min(nbMarkets, kNbOrderBooksToQuery));
   std::sample(markets.begin(), markets.end(), std::inserter(sampleMarkets, sampleMarkets.end()), kNbOrderBooksToQuery,
@@ -60,6 +60,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
     }
   }
 
+  EXPECT_GT(krakenPublic.queryAllApproximatedOrderBooks(1).size(), 10);
   ExchangePublic::MarketPriceMap marketPriceMap = krakenPublic.queryAllPrices();
   EXPECT_GT(marketPriceMap.size(), 10);
   EXPECT_TRUE(marketPriceMap.contains(Market("BTC", "EUR")));
@@ -70,8 +71,6 @@ void PublicTest(KrakenPublic &krakenPublic) {
   EXPECT_TRUE(withdrawalFees.contains(CurrencyCode("BTC")));
   EXPECT_TRUE(withdrawalFees.contains(CurrencyCode("ZEC")));
   EXPECT_FALSE(withdrawalFees.find(CurrencyCode("ETH"))->second.isZero());
-
-  EXPECT_GT(krakenPublic.queryAllApproximatedOrderBooks().size(), 10);
 }
 
 void PrivateTest(KrakenPrivate &krakenPrivate) {
@@ -80,9 +79,9 @@ void PrivateTest(KrakenPrivate &krakenPrivate) {
   TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("0.001BTC");
   EXPECT_NO_THROW(krakenPrivate.trade(smallFrom, "EUR", tradeOptions));
-  MonetaryAmount bigFrom("135670067.1234EUR");
-  EXPECT_NO_THROW(krakenPrivate.trade(bigFrom, "BTC", tradeOptions));
-  EXPECT_LT(bigFrom, MonetaryAmount("13567.1234EUR"));
+  MonetaryAmount stdFrom("100.1234EUR");
+  EXPECT_NO_THROW(krakenPrivate.trade(stdFrom, "BTC", tradeOptions));
+  EXPECT_LT(stdFrom, MonetaryAmount("50EUR"));
 }
 }  // namespace
 

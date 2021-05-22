@@ -37,6 +37,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
                           [](const CurrencyExchange &currency) { return currency.standardCode().str() == "KRW"; }));
 
+  EXPECT_GT(bithumbPublic.queryAllApproximatedOrderBooks(1).size(), 10);
   ExchangePublic::MarketPriceMap marketPriceMap = bithumbPublic.queryAllPrices();
   EXPECT_GT(marketPriceMap.size(), 10);
   EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
@@ -55,7 +56,6 @@ void PublicTest(BithumbPublic &bithumbPublic) {
 
   MarketOrderBook marketOrderBook = bithumbPublic.queryOrderBook(*std::next(markets.begin(), 2));
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
-  EXPECT_GT(bithumbPublic.queryAllApproximatedOrderBooks().size(), 10);
 }
 
 void PrivateTest(BithumbPrivate &bithumbPrivate) {
