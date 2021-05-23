@@ -340,7 +340,7 @@ SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   CurlPostData checkWithdrawPostData{{"asset", krakenCurrency.altStr()}};
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   json trxList = PrivateQuery(_curlHandle, _apiKey, "WithdrawStatus", checkWithdrawPostData);
   for (const json& trx : trxList) {
     std::string_view withdrawId = trx["refid"].get<std::string_view>();

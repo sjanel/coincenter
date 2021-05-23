@@ -305,7 +305,7 @@ bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) 
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{
       {"currency", currencyCode.str()}, {"amount", netEmittedAmount.amountStr()}, {"address", wallet.address()}};
@@ -321,7 +321,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "withdraw",
                              {{"currency", currencyCode.str()}, {"uuid", initiatedWithdrawInfo.withdrawId()}});
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount realFee(result["fee"].get<std::string_view>(), currencyCode);
   if (realFee != withdrawFee) {
     log::error("{} withdraw fee is {} instead of {}", _exchangePublic.name(), realFee.str(), withdrawFee.str());

@@ -326,7 +326,7 @@ OrderInfo BithumbPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo
 
 InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount netWithdrawAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{
       {"units", netWithdrawAmount.amountStr()}, {"currency", currencyCode.str()}, {"address", wallet.address()}};
@@ -341,7 +341,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurlPostData checkWithdrawPostData{{"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}};
   constexpr std::string_view kSearchGbs[] = {"3", "5"};
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFees(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   for (std::string_view searchGb : kSearchGbs) {
     checkWithdrawPostData.set("searchGb", searchGb);
     json trxList =

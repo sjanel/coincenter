@@ -176,7 +176,7 @@ ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
   return ret;
 }
 
-MonetaryAmount BinancePublic::queryWithdrawalFees(CurrencyCode currencyCode) {
+MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const json& el : _globalInfosCache.get()) {
     CurrencyCode cur(el["coin"].get<std::string_view>());
     if (cur == currencyCode) {
