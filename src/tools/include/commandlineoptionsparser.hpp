@@ -6,6 +6,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
@@ -91,7 +92,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
-  using OptionType = std::variant<std::string Opts::*, int Opts::*, bool Opts::*>;
+  using OptionType = std::variant<std::string Opts::*, std::optional<std::string> Opts::*, int Opts::*, bool Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -252,6 +253,14 @@ class CommandLineOptionsParser : private Opts {
       }
     }
 
+    void operator()(std::optional<std::string> Opts::*arg) const {
+      if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+        opts->*arg = argv[idx + 1];
+      } else {
+        opts->*arg = std::string();
+      }
+    }
+
     Opts* opts;
     int idx;
     std::span<const char*> argv;
@@ -285,6 +294,13 @@ class CommandLineOptionsParser : private Opts {
                          } else {
                            throw InvalidArgumentException("Expecting a value for option '" +
                                                           commandLineOption.fullName() + "'");
+                         }
+                       },
+                       [this, idx, argv, &commandLineOption](std::optional<std::string> Opts::*arg) {
+                         if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+                           this->*arg = argv[idx + 1];
+                         } else {
+                           this->*arg = std::string();
                          }
                        },
 #endif

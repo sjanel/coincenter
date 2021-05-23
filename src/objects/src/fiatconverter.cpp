@@ -80,8 +80,11 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
   }
   Market m(from, to);
   double rate;
+  std::lock_guard<std::mutex> guard(_pricesMutex);
   auto it = _pricesMap.find(m);
-  if (it == _pricesMap.end() || it->second.lastUpdatedTime + _ratesUpdateFrequency < Clock::now()) {
+  if (it != _pricesMap.end() && Clock::now() < it->second.lastUpdatedTime + _ratesUpdateFrequency) {
+    rate = it->second.rate;
+  } else {
     std::optional<double> queriedRate = queryCurrencyRate(m);
     if (queriedRate) {
       rate = *queriedRate;
@@ -92,15 +95,9 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
       log::warn("Fiat currency rate service unavailable, use not up to date currency rate in cache");
       rate = it->second.rate;
     }
-  } else {
-    rate = it->second.rate;
   }
 
   return amount * rate;
-}
-
-MonetaryAmount FiatConverter::convert(MonetaryAmount amount, CurrencyCode to) {
-  return MonetaryAmount(convert(amount.toDouble(), amount.currencyCode(), to), to);
 }
 
 }  // namespace cct

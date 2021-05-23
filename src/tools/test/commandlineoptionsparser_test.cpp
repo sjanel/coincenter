@@ -14,6 +14,7 @@ class CommandLineOptionsParserTest : public ::testing::Test {
     int intOpt{};
     int int2Opt{};
     bool boolOpt{};
+    std::optional<std::string> optStr{};
   };
 
   using ParserType = CommandLineOptionsParser<Opts>;
@@ -22,6 +23,7 @@ class CommandLineOptionsParserTest : public ::testing::Test {
       : _parser({{{{"General", 1}, "--opt1", 'o', "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
                  {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
                  {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
+                 {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
                  {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}) {}
 
  protected:
@@ -55,6 +57,27 @@ TEST_F(CommandLineOptionsParserTest, AlternativeOptionName) {
   EXPECT_TRUE(options.boolOpt);
   cct::vector<const char *> opts2 = {"coincenter", "-j"};
   EXPECT_THROW(_parser.parse(opts2), std::invalid_argument);
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {
+  cct::vector<const char *> opts = {"coincenter", "--opt4", "2000 EUR, kraken"};
+  Opts options = _parser.parse(opts);
+  EXPECT_EQ(*options.optStr, "2000 EUR, kraken");
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringEmpty1) {
+  cct::vector<const char *> opts = {"coincenter", "--opt4", "--opt1", "Opt1 value"};
+  EXPECT_EQ(*_parser.parse(opts).optStr, std::string());
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
+  cct::vector<const char *> opts = {"coincenter", "--opt4"};
+  EXPECT_EQ(*_parser.parse(opts).optStr, std::string());
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) {
+  cct::vector<const char *> opts = {"coincenter", "--help"};
+  EXPECT_EQ(_parser.parse(opts).optStr, std::nullopt);
 }
 
 }  // namespace cct

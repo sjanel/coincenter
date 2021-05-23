@@ -125,7 +125,7 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
                         opts.marketForConversionPath.quote());
   }
 
-  if (!opts.balancePrivateExchanges.empty()) {
+  if (opts.balanceForAll || !opts.balancePrivateExchanges.empty()) {
     printBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
   }
 
@@ -175,6 +175,7 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
 
 BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                         CurrencyCode equiCurrency) {
+  bool balanceForAll = privateExchangeNames.empty();
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
     log::warn("Consider {} instead of stable coin {} as equivalent currency", optEquiCur->str(), equiCurrency.str());
@@ -183,8 +184,7 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
 
   cct::vector<Exchange *> balanceExchanges;
   for (Exchange &exchange : _exchanges) {
-    const bool computeBalance = (privateExchangeNames.size() == 1 && privateExchangeNames.front().name() == "all" &&
-                                 exchange.hasPrivateAPI()) ||
+    const bool computeBalance = (balanceForAll && exchange.hasPrivateAPI()) ||
                                 std::any_of(privateExchangeNames.begin(), privateExchangeNames.end(),
                                             [&exchange](const PrivateExchangeName &privateExchangeName) {
                                               return exchange.matchesKeyNameWildcard(privateExchangeName);
@@ -205,8 +205,12 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
 }
 
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {
-  std::string exchangesStr;
+  bool balanceForAll = privateExchangeNames.empty();
+  std::string exchangesStr(balanceForAll ? "all" : "");
   for (const PrivateExchangeName &privateExchangeName : privateExchangeNames) {
+    if (!exchangesStr.empty()) {
+      exchangesStr.push_back(',');
+    }
     exchangesStr.append(privateExchangeName.str());
   }
   log::info("Query balance from {}", exchangesStr);

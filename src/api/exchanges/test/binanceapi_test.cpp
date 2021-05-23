@@ -28,7 +28,7 @@ class BinanceAPI : public ::testing::Test {
 namespace {
 void PublicTest(BinancePublic &binancePublic) {
   EXPECT_NO_THROW(binancePublic.queryOrderBook(Market("BTC", "USDT")));
-  EXPECT_GT(binancePublic.queryAllApproximatedOrderBooks().size(), 20);
+  EXPECT_GT(binancePublic.queryAllApproximatedOrderBooks().size(), 20U);
   EXPECT_NO_THROW(binancePublic.queryTradableCurrencies());
   EXPECT_NO_THROW(binancePublic.queryWithdrawalFees());
   EXPECT_NO_THROW(binancePublic.queryTradableMarkets());
