@@ -30,21 +30,21 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   ExchangePublic::MarketSet markets = bithumbPublic.queryTradableMarkets();
   CurrencyExchangeFlatSet currencies = bithumbPublic.queryTradableCurrencies();
 
-  EXPECT_GT(markets.size(), 10);
+  EXPECT_GT(markets.size(), 10U);
   EXPECT_FALSE(currencies.empty());
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
                           [](const CurrencyExchange &currency) { return currency.standardCode().str() == "BTC"; }));
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
                           [](const CurrencyExchange &currency) { return currency.standardCode().str() == "KRW"; }));
 
-  EXPECT_GT(bithumbPublic.queryAllApproximatedOrderBooks(1).size(), 10);
+  EXPECT_GT(bithumbPublic.queryAllApproximatedOrderBooks(1).size(), 10U);
   ExchangePublic::MarketPriceMap marketPriceMap = bithumbPublic.queryAllPrices();
-  EXPECT_GT(marketPriceMap.size(), 10);
+  EXPECT_GT(marketPriceMap.size(), 10U);
   EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
   EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
 
   ExchangePublic::WithdrawalFeeMap withdrawalFees = bithumbPublic.queryWithdrawalFees();
-  EXPECT_GT(withdrawalFees.size(), 10);
+  EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
   const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};

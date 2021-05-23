@@ -45,7 +45,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
                           [](const CurrencyExchange &c) { return c.standardCode().str() == "EUR"; }));
 
   ExchangePublic::MarketSet markets = krakenPublic.queryTradableMarkets();
-  EXPECT_GT(markets.size(), 10);
+  EXPECT_GT(markets.size(), 10U);
   const int nbMarkets = markets.size();
   const int kNbOrderBooksToQuery = 2;
   ExchangePublic::MarketSet sampleMarkets;
@@ -62,12 +62,12 @@ void PublicTest(KrakenPublic &krakenPublic) {
 
   EXPECT_GT(krakenPublic.queryAllApproximatedOrderBooks(1).size(), 10);
   ExchangePublic::MarketPriceMap marketPriceMap = krakenPublic.queryAllPrices();
-  EXPECT_GT(marketPriceMap.size(), 10);
+  EXPECT_GT(marketPriceMap.size(), 10U);
   EXPECT_TRUE(marketPriceMap.contains(Market("BTC", "EUR")));
   EXPECT_TRUE(marketPriceMap.contains(Market("ETH", "EUR")));
 
   ExchangePublic::WithdrawalFeeMap withdrawalFees = krakenPublic.queryWithdrawalFees();
-  EXPECT_GT(withdrawalFees.size(), 10);
+  EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(CurrencyCode("BTC")));
   EXPECT_TRUE(withdrawalFees.contains(CurrencyCode("ZEC")));
   EXPECT_FALSE(withdrawalFees.find(CurrencyCode("ETH"))->second.isZero());

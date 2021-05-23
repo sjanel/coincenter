@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <mutex>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
@@ -16,15 +17,16 @@ namespace cct {
 /// Current chosen source is, for now:
 /// https://free.currconv.com/api/v7
 ///
+/// Conversion methods are thread safe.
+///
 /// More information here:
 /// https://stackoverflow.com/questions/3139879/how-do-i-get-currency-exchange-rates-via-an-api-such-as-google-finance
-
 class FiatConverter {
  public:
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  explicit FiatConverter(Clock::duration ratesUpdateFrequency = std::chrono::hours(2),
+  explicit FiatConverter(Clock::duration ratesUpdateFrequency = std::chrono::hours(8),
                          bool loadFromFileCacheAtInit = true);
 
   FiatConverter(const FiatConverter &) = delete;
@@ -34,8 +36,12 @@ class FiatConverter {
 
   double convert(double amount, CurrencyCode from, CurrencyCode to);
 
-  MonetaryAmount convert(MonetaryAmount amount, CurrencyCode to);
+  MonetaryAmount convert(MonetaryAmount amount, CurrencyCode to) {
+    return MonetaryAmount(convert(amount.toDouble(), amount.currencyCode(), to), to);
+  }
 
+  /// Store rates in a file to make data persistent.
+  /// This method is not thread-safe and is expected to be called only once before end of normal termination of program.
   void updateCacheFile() const;
 
  private:
@@ -51,5 +57,6 @@ class FiatConverter {
   CurlHandle _curlHandle;
   PricesMap _pricesMap;
   Clock::duration _ratesUpdateFrequency;
+  std::mutex _pricesMutex;
 };
 }  // namespace cct

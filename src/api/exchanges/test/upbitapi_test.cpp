@@ -30,7 +30,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
   ExchangePublic::MarketSet markets = upbitPublic.queryTradableMarkets();
   CurrencyExchangeFlatSet currencies = upbitPublic.queryTradableCurrencies();
 
-  EXPECT_GT(markets.size(), 10);
+  EXPECT_GT(markets.size(), 10U);
   EXPECT_FALSE(currencies.empty());
   EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
                           [](const CurrencyExchange &currency) { return currency.standardCode().str() == "BTC"; }));
@@ -38,12 +38,12 @@ void PublicTest(UpbitPublic &upbitPublic) {
                           [](const CurrencyExchange &currency) { return currency.standardCode().str() == "KRW"; }));
 
   ExchangePublic::MarketPriceMap marketPriceMap = upbitPublic.queryAllPrices();
-  EXPECT_GT(marketPriceMap.size(), 10);
+  EXPECT_GT(marketPriceMap.size(), 10U);
   EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
   EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
 
   ExchangePublic::WithdrawalFeeMap withdrawalFees = upbitPublic.queryWithdrawalFees();
-  EXPECT_GT(withdrawalFees.size(), 10);
+  EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
   const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};

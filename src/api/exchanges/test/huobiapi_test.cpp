@@ -28,7 +28,7 @@ class HuobiAPI : public ::testing::Test {
 namespace {
 void PublicTest(HuobiPublic &huobiPublic) {
   EXPECT_NO_THROW(huobiPublic.queryOrderBook(Market("BTC", "USDT")));
-  EXPECT_GT(huobiPublic.queryAllApproximatedOrderBooks().size(), 20);
+  EXPECT_GT(huobiPublic.queryAllApproximatedOrderBooks().size(), 20U);
   EXPECT_NO_THROW(huobiPublic.queryTradableCurrencies());
   EXPECT_NO_THROW(huobiPublic.queryWithdrawalFees());
   EXPECT_NO_THROW(huobiPublic.queryTradableMarkets());

@@ -50,9 +50,13 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     std::tie(marketForConversionPath, conversionPathExchanges) = anyParser.getMarketExchanges();
   }
 
-  if (!cmdLineOptions.balance.empty()) {
-    AnyParser anyParser(cmdLineOptions.balance);
-    balancePrivateExchanges = anyParser.getPrivateExchanges();
+  if (cmdLineOptions.balance) {
+    if (cmdLineOptions.balance->empty()) {
+      balanceForAll = true;
+    } else {
+      AnyParser anyParser(*cmdLineOptions.balance);
+      balancePrivateExchanges = anyParser.getPrivateExchanges();
+    }
     balanceCurrencyCode = CurrencyCode(cmdLineOptions.balance_cur);
   }
 

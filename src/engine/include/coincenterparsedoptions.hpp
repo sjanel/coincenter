@@ -29,6 +29,7 @@ class CoincenterParsedOptions {
   Market marketForConversionPath;
   PublicExchangeNames conversionPathExchanges;
 
+  bool balanceForAll{};
   PrivateExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
 

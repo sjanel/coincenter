@@ -29,7 +29,7 @@ struct CoincenterCmdLineOptions {
 
   std::string conversion_path{};
 
-  std::string balance{};
+  std::optional<std::string> balance{};
   std::string balance_cur{CurrencyCode::kNeutral.str()};
 
   std::string trade{};
@@ -73,23 +73,24 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                                  "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
        {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2,exch1,...>", "Print fastest conversion path of 'cur1' to 'cur2' for given exchanges if possible"}, 
-                                                                 &OptValueType::conversion_path},
+                                                          &OptValueType::conversion_path},
 
-       {{{"Private queries", 3}, "--balance", 'b', "<exch1,...|all>", "Prints available balance on given exchanges. "
-                                                                      "If 'all' is specified, sums all available private exchange accounts"}, 
-                                                                      &OptValueType::balance},
+       {{{"Private queries", 3}, "--balance", 'b', "<exch1,...>", "Prints sum of available balance for all private accounts if no value is given, "
+                                                                  "or only for specified ones separated by commas"}, 
+                                                                  &OptValueType::balance},
        {{{"Private queries", 3}, "--balance-cur", "<cur code>", "Print additional information with each asset "
-                                                                "converted to given currency, plus a total summary"}, 
+                                                                "converted to given currency, plus a total summary in this currency"}, 
                                                                 &OptValueType::balance_cur},
 
-       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange. "
+       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange "
                                                                    "Order will be placed at limit price by default"}, &OptValueType::trade},
        {{{"Trade", 4}, "--trade-strategy", "<maker|taker|adapt>", "Customize the strategy of the trade\n"
                                                                   " - 'maker': order placed at limit price (default), continuously "
                                                                   "adjusted to limit price\n"
                                                                   " - 'taker': order placed at market price should be matched directly\n"
                                                                   " - 'adapt': same as maker, except that order will be updated"
-                                                                  " at market price before the timeout to make it eventually completely matched"}, 
+                                                                  " at market price before the timeout to make it eventually completely matched. "
+                                                                  "Useful for exchanges proposing cheaper maker than taker fees."}, 
                                                                   &OptValueType::trade_strategy},
        {{{"Trade", 4}, "--trade-timeout", "<s>", std::string("Adjust trade timeout (default: ")
                                                 .append(std::to_string(defaultTradeTimeout))
