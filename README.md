@@ -6,6 +6,7 @@ coincenter
 ==========
 
 A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
+
 Supported exchanges are:
 | Exchange | Link                                                                            |
 | -------- | :-----------------------------------------------------------------------------: |
@@ -43,7 +44,7 @@ Supported exchanges are:
 
 ## Pre-requisites
 
-You will need to install *OpenSSL* (min version 1.1.0), *cURL*, *cmake* and a C++20 compiler (only *gcc>=10* and *MSVC>=19.28* have been tested for now) on your system.
+You will need to install *OpenSSL* (min version 1.1.0), *cURL*, *cmake* and a *C++20* compiler on your system.
 
 ### Linux
 
@@ -55,7 +56,7 @@ sudo apt-get install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
 
 ### Windows
 
-On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install **cURL** and **OpenSSL**:
+On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install *cURL* and *OpenSSL*:
 
 ```
 choco install curl openssl
@@ -104,7 +105,11 @@ target_link_libraries(<MyProgram> PRIVATE coincenter)
 
 This is a C++20 project. Today, it is only partially supported by the main compilers.
 
-Does not (yet) compile with clang (does not support lambdas in unevaluated context), but it has been tested with GCC 10 and MSVC 19.28.
+Tested compilers:
+ - GCC version >= 10
+ - MSVC version >= 19.28
+
+As of May 2021, latest *clang* compiler does not support lambdas in unevaluated context yet and thus cannot compile `coincenter`.
 
 Other compilers have not been tested yet.
 
@@ -182,8 +187,6 @@ Special exchange name `all` allows to print the accumulation of balances from al
 ```
 ./coincenter --balance all --balance-cur usdt
 ```
-
-# Debug
 
 # Configuration files
 Configuration files are all stored in the data directory 
