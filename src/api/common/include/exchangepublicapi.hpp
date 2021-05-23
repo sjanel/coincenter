@@ -63,10 +63,10 @@ class ExchangePublic : public ExchangeBase {
   virtual WithdrawalFeeMap queryWithdrawalFees() = 0;
 
   /// Retrieve the withdrawal fee of a Currency only
-  virtual MonetaryAmount queryWithdrawalFees(CurrencyCode currencyCode) = 0;
+  virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) = 0;
 
   /// Get all the MarketOrderBooks of this exchange as fast as possible.
-  /// Exchanges which do not support retrieval of all of them at once may used heuristics methods.
+  /// Exchanges which do not support retrieval of all of them at once may used heuristic methods.
   virtual MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) = 0;
 
   /// Retrieve the order book of given market.

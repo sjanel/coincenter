@@ -239,7 +239,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     withdrawPostData.append("addr-tag", wallet.destinationTag());
   }
 
-  MonetaryAmount fee(_exchangePublic.queryWithdrawalFees(grossAmount.currencyCode()));
+  MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(grossAmount.currencyCode()));
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
   withdrawPostData.append("amount", netEmittedAmount.amountStr());

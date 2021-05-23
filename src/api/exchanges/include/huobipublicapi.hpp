@@ -46,7 +46,7 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawalFeeMap queryWithdrawalFees() override;
 
-  MonetaryAmount queryWithdrawalFees(CurrencyCode currencyCode) override;
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
 

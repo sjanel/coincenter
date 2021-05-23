@@ -34,7 +34,7 @@ class KrakenPublic : public ExchangePublic {
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
-  MonetaryAmount queryWithdrawalFees(CurrencyCode currencyCode) override {
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
     return _withdrawalFeesCache.get().find(currencyCode)->second;
   }
 

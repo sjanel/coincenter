@@ -190,7 +190,7 @@ ExchangePublic::WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
   return ret;
 }
 
-MonetaryAmount HuobiPublic::queryWithdrawalFees(CurrencyCode currencyCode) {
+MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
