@@ -10,7 +10,7 @@ namespace cct {
 
 namespace {
 CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap() {
-  json jsonData = OpenJsonFile("currencyacronymtranslator", FileNotFoundMode::kThrow);
+  json jsonData = OpenJsonFile("currencyacronymtranslator.json", FileNotFoundMode::kThrow, FileType::kData);
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
@@ -20,7 +20,7 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
 }
 
 CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
-  json jsonData = OpenJsonFile("stablecoins", FileNotFoundMode::kThrow);
+  json jsonData = OpenJsonFile("stablecoins.json", FileNotFoundMode::kThrow, FileType::kData);
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
@@ -30,8 +30,8 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
 }
 
 CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
-  constexpr char kExchangeConfigFileName[] = ".exchangeconfig";
-  json jsonData = OpenJsonFile(kExchangeConfigFileName, FileNotFoundMode::kNoThrow);
+  constexpr char kExchangeConfigFileName[] = ".exchangeconfig.json";
+  json jsonData = OpenJsonFile(kExchangeConfigFileName, FileNotFoundMode::kNoThrow, FileType::kConfig);
   // clang-format off
   const json kDefaultConfig = R"(
   {
@@ -113,7 +113,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
     log::warn("No file {}.json found. Creating a default one which can be updated freely at your convenience.",
               kExchangeConfigFileName);
     jsonData = kDefaultConfig;
-    WriteJsonFile(kExchangeConfigFileName, jsonData);
+    WriteJsonFile(kExchangeConfigFileName, jsonData, FileType::kConfig);
   } else {
     bool updateFileNeeded = false;
     for (const auto& [exchangeName, v] : kDefaultConfig.items()) {
@@ -123,7 +123,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
       }
     }
     if (updateFileNeeded) {
-      WriteJsonFile(kExchangeConfigFileName, jsonData);
+      WriteJsonFile(kExchangeConfigFileName, jsonData, FileType::kConfig);
     }
   }
   CoincenterInfo::ExchangeInfoMap map;

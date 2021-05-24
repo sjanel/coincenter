@@ -27,13 +27,11 @@ endif()
 
 option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC_INSTEAD_OF_LIB "Build an executable instead of a static library" ${MAIN_PROJECT})
-option(CCT_OVERRIDE_DATA_DIR "Override Data directory from CCT_DATA_DIR (./data by default)" OFF)
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
-
 option(CCT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE_STR "Always validate a destination address for a withdraw (recommended)" ON)
 
-if (NOT CCT_OVERRIDE_DATA_DIR)
-  set(CCT_DATA_DIR "${CMAKE_SOURCE_DIR}/data")
+if (NOT DEFINED CCT_CONFIG_DIR)
+  set(CCT_CONFIG_DIR "${CMAKE_SOURCE_DIR}/config")
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -163,9 +161,13 @@ else()
   endif()
 endif()
 
+set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data")
+
+message(STATUS "Using Config directory ${CCT_CONFIG_DIR}")
 message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 
 # Definition of project constants
+add_compile_definitions("CCT_CONFIG_PATH=\"${CCT_CONFIG_DIR}\"")
 add_compile_definitions("CCT_DATA_PATH=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
 

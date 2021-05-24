@@ -7,7 +7,7 @@
 
 namespace cct {
 namespace {
-constexpr char kRatesFileName[] = ".ratescache";
+constexpr char kRatesFileName[] = ".ratescache.json";
 constexpr char kCurrencyConverterBaseUrl[] = "https://free.currconv.com/api/v7";
 constexpr char kAPIKey[] = "b25453de7984135a084b";
 // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
@@ -17,7 +17,7 @@ constexpr char kAPIKey[] = "b25453de7984135a084b";
 FiatConverter::FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFromFileCacheAtInit)
     : _ratesUpdateFrequency(ratesUpdateFrequency) {
   if (loadFromFileCacheAtInit) {
-    json data = OpenJsonFile(kRatesFileName, FileNotFoundMode::kNoThrow);
+    json data = OpenJsonFile(kRatesFileName, FileNotFoundMode::kNoThrow, FileType::kData);
     _pricesMap.reserve(data.size());
     for (const auto& [marketStr, rateAndTimeData] : data.items()) {
       Market m(marketStr, '-');
@@ -36,7 +36,7 @@ void FiatConverter::updateCacheFile() const {
     data[market.assetsPairStr('-')]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
   }
-  WriteJsonFile(kRatesFileName, data);
+  WriteJsonFile(kRatesFileName, data, FileType::kData);
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {

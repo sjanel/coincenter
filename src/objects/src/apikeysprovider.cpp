@@ -1,7 +1,5 @@
 #include "apikeysprovider.hpp"
 
-#include <fstream>
-#include <streambuf>
 #include <string>
 
 #include "cct_const.hpp"
@@ -9,6 +7,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "exchangename.hpp"
+#include "jsonhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -18,11 +17,11 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
   switch (runMode) {
     case settings::RunMode::kTest:
       log::info("Test mode activated, shifting to secret_test.json file.");
-      return "/secret_test.json";
+      return "secret_test.json";
     default:
       break;
   };
-  return "/secret.json";
+  return "secret.json";
 }
 }  // namespace
 
@@ -63,23 +62,16 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
 
 APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(settings::RunMode runMode) {
   APIKeysProvider::APIKeysMap map;
-  std::string secretKeyFile(kDataPath);
-  secretKeyFile.append(GetSecretFileName(runMode));
-  std::ifstream file(secretKeyFile);
-  if (!file) {
-    log::warn("No private api keys file at path '{}'. Only public exchange queries will be supported.", secretKeyFile);
-  } else {
-    std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    json jsonData = json::parse(data);
-    for (const auto& [platform, keyObj] : jsonData.items()) {
-      for (const auto& [name, keySecretObj] : keyObj.items()) {
-        log::warn("Found key '{}' for platform {}", name, platform);
-        map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
-      }
+  json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
+  for (const auto& [platform, keyObj] : jsonData.items()) {
+    for (const auto& [name, keySecretObj] : keyObj.items()) {
+      log::warn("Found key '{}' for platform {}", name, platform);
+      map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
     }
   }
   if (map.empty()) {
-    log::warn("No private api keys found, unable to use any private API");
+    log::warn("No private api keys file '{}' found. Only public exchange queries will be supported",
+              GetSecretFileName(runMode));
   }
   return map;
 }
