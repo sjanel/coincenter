@@ -17,7 +17,7 @@ std::string Market::assetsPairStr(char sep) const {
   if (sep != 0) {
     ret.push_back(sep);
   }
-  ret += _assets.back().str();
+  ret.append(_assets.back().str());
   return ret;
 }
 

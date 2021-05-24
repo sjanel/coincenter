@@ -1,33 +1,52 @@
 #pragma once
 
 #include <array>
+#include <charconv>
 #include <initializer_list>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
 #include "cct_json.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
+
 class CurlPostData {
  public:
-  using KeyValuePair = std::array<std::string_view, 2>;
+  struct KeyValuePair {
+    using IntegralType = int64_t;
+    using value_type = std::variant<std::string, std::string_view, IntegralType>;
 
-  CurlPostData() = default;
+    KeyValuePair(std::string_view k, std::string_view v) : key(k), val(v) {}
+
+    KeyValuePair(std::string_view k, const char *v) : key(k), val(std::string_view(v)) {}
+
+    KeyValuePair(std::string_view k, std::string v) : key(k), val(std::move(v)) {}
+
+    KeyValuePair(std::string_view k, IntegralType v) : key(k), val(v) {}
+
+    std::string_view key;
+    value_type val;
+  };
+
+  CurlPostData() noexcept(std::is_nothrow_default_constructible_v<std::string>) = default;
 
   CurlPostData(std::initializer_list<KeyValuePair> init);
 
-  explicit CurlPostData(std::string &&rawPostData) : _postdata(std::move(rawPostData)) {}
-
-  CurlPostData &operator=(std::initializer_list<KeyValuePair> init);
+  explicit CurlPostData(std::string &&rawPostData) noexcept(std::is_nothrow_move_constructible_v<std::string>)
+      : _postdata(std::move(rawPostData)) {}
 
   /// Append a new URL option from given key value pair.
   void append(std::string_view key, std::string_view value);
 
   template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
   void append(std::string_view key, T value) {
-    append(key, std::to_string(value));
+    char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
+    auto ret = std::to_chars(std::begin(buf), std::end(buf), value);
+    append(key, std::string_view(buf, ret.ptr));
   }
 
   /// Appends content of other CurlPostData into 'this'.
@@ -39,7 +58,9 @@ class CurlPostData {
 
   template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
   void set(std::string_view key, T value) {
-    set(key, std::to_string(value));
+    char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
+    auto ret = std::to_chars(std::begin(buf), std::end(buf), value);
+    set(key, std::string_view(buf, ret.ptr));
   }
 
   /// Erases given key if present.

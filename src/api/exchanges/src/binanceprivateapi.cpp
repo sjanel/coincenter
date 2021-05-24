@@ -158,8 +158,10 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   const Market m = tradeInfo.m;
   const CurlOptions::RequestType requestType =
       isCancel ? CurlOptions::RequestType::kDelete : CurlOptions::RequestType::kGet;
-  const json result = PrivateQuery(_curlHandle, _apiKey, requestType, "api/v3/order",
-                                   {{"symbol", m.assetsPairStr()}, {"orderId", orderId}});
+  const std::string assetsStr = m.assetsPairStr();
+  const std::string_view assets(assetsStr);
+  const json result =
+      PrivateQuery(_curlHandle, _apiKey, requestType, "api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
   const std::string_view status = result["status"].get<std::string_view>();
   bool isClosed = false;
   bool queryClosedOrder = false;
@@ -173,10 +175,9 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (queryClosedOrder) {
     const int64_t timeStampOrder = result["time"].get<int64_t>();
-    const std::string timeStampOrderStr = std::to_string(timeStampOrder - 100L);  // -100 just to be sure
-
-    const json tradesRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/myTrades",
-                                        {{"symbol", m.assetsPairStr()}, {"startTime", timeStampOrderStr}});
+    const json tradesRes =
+        PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/myTrades",
+                     {{"symbol", assets}, {"startTime", timeStampOrder - 100L}});  // // -100 just to be sure
     int64_t integralOrderId{};
     std::from_chars(orderId.data(), orderId.data() + orderId.size(), integralOrderId);
     for (const json& tradeDetails : tradesRes) {
