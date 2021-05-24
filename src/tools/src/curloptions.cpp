@@ -8,17 +8,15 @@
 namespace cct {
 
 CurlPostData::CurlPostData(std::initializer_list<KeyValuePair> init) {
-  for (const auto& [k, v] : init) {
-    append(k, v);
+  for (const KeyValuePair& kv : init) {
+    if (kv.val.index() == 0) {
+      append(kv.key, std::get<std::string>(kv.val));
+    } else if (kv.val.index() == 1) {
+      append(kv.key, std::get<std::string_view>(kv.val));
+    } else {
+      append(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
+    }
   }
-}
-
-CurlPostData& CurlPostData::operator=(std::initializer_list<KeyValuePair> init) {
-  clear();
-  for (const auto& [k, v] : init) {
-    append(k, v);
-  }
-  return *this;
 }
 
 void CurlPostData::append(std::string_view key, std::string_view value) {

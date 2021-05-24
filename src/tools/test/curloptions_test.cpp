@@ -81,4 +81,24 @@ TEST_F(CurlOptionsCase1, ConvertToJson) {
   EXPECT_EQ(jsonData["hola"].get<std::string_view>(), "quetal");
 }
 
+TEST_F(CurlOptionsCase1, AppendIntegralValues) {
+  curlPostData.append("price1", 1957386078376L);
+  EXPECT_EQ(curlPostData.get("price1"), "1957386078376");
+  int8_t s = -116;
+  curlPostData.append("testu", s);
+  EXPECT_EQ(curlPostData.get("testu"), "-116");
+}
+
+TEST_F(CurlOptionsCase1, SetIntegralValues) {
+  curlPostData.set("price1", 42);
+  EXPECT_EQ(curlPostData.get("price"), "357.78");
+  EXPECT_EQ(curlPostData.get("price1"), "42");
+  curlPostData.set("777", -666);
+  EXPECT_EQ(curlPostData.get("777"), "-666");
+  EXPECT_EQ(curlPostData.toStringView(), "units=0.11176&price=357.78&777=-666&hola=quetal&price1=42");
+  int8_t s = -116;
+  curlPostData.set("testu", s);
+  EXPECT_EQ(curlPostData.get("testu"), "-116");
+}
+
 }  // namespace cct

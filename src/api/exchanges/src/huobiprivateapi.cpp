@@ -159,7 +159,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount, MonetaryAmount volume, M
 
   volume = sanitizedVol;
 
-  CurlPostData placePostData{{"account-id", std::to_string(_accountIdCache.get())}, {"amount", volume.amountStr()}};
+  CurlPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
   if (!isTakerStrategy) {
     placePostData.append("price", price.amountStr());
   }

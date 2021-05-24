@@ -210,7 +210,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
                              {"price", price.amountStr()},
                              {"volume", volume.amountStr()},
                              {"oflags", fromCurrencyCode == m.quote() ? "fcib" : "fciq"},
-                             {"expiretm", std::to_string(nbSecondsSinceEpoch + expireTimeInSeconds)},
+                             {"expiretm", nbSecondsSinceEpoch + expireTimeInSeconds},
                              {"userref", tradeInfo.userRef}};
   if (isSimulation) {
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
