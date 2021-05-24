@@ -26,7 +26,8 @@ class BinancePrivate : public ExchangePrivate {
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
  protected:
-  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo& tradeInfo) override;
+  PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
+                            const TradeInfo& tradeInfo) override;
 
   OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override {
     return queryOrder(orderId, tradeInfo, true);

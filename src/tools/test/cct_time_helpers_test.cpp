@@ -1,9 +1,9 @@
 #include "cct_time_helpers.hpp"
 
+#include <gtest/gtest.h>
+
 #include <chrono>
 #include <thread>
-
-#include <gtest/gtest.h>
 
 namespace cct {
 namespace time {
