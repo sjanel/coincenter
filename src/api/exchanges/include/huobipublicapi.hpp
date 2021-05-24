@@ -62,7 +62,7 @@ class HuobiPublic : public ExchangePublic {
  private:
   friend class HuobiPrivate;
 
-   struct TradableCurrenciesFunc {
+  struct TradableCurrenciesFunc {
     explicit TradableCurrenciesFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 
     json operator()();
