@@ -88,7 +88,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 
 ExchangePublic::WithdrawalFeeMap KrakenPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
-  json jsonData = OpenJsonFile("withdrawfees", FileNotFoundMode::kThrow);
+  json jsonData = OpenJsonFile("withdrawfees.json", FileNotFoundMode::kThrow, FileType::kData);
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);

@@ -15,7 +15,7 @@ static constexpr bool kValidateWalletFromDepositAddressesFile = true;
 
 bool Wallet::IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
                                            std::string_view expectedAddress, std::string_view expectedTag) {
-  json data = OpenJsonFile(Wallet::kDepositAddressesFilename, FileNotFoundMode::kThrow);
+  json data = OpenJsonFile(Wallet::kDepositAddressesFilename, FileNotFoundMode::kThrow, FileType::kConfig);
   if (!data.contains(privateExchangeName.name())) {
     log::warn("No deposit addresses found in {} for {}", Wallet::kDepositAddressesFilename, privateExchangeName.name());
     return false;

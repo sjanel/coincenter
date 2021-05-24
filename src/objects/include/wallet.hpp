@@ -18,7 +18,7 @@ class Wallet {
   /// }
   /// In case crypto contains an additional "tag", "memo" or other, it will be placed after the ',' in the address
   /// field.
-  static constexpr char kDepositAddressesFilename[] = ".depositaddresses";
+  static constexpr char kDepositAddressesFilename[] = ".depositaddresses.json";
 
   /// Build an empty wallet, which cannot be used.
   Wallet() = default;

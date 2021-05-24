@@ -62,5 +62,6 @@
 .ycm_extra_conf.py*
 *-ut
 cscope*
-data/secret.json
+**/secret.json
 data/.*
+config/.*
