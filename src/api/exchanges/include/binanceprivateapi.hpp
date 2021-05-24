@@ -49,7 +49,7 @@ class BinancePrivate : public ExchangePrivate {
 
   TradedAmounts queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
 
-  TradedAmounts queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
+  TradedAmounts parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
 
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)

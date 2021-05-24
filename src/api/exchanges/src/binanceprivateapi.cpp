@@ -1,5 +1,6 @@
 #include "binanceprivateapi.hpp"
 
+#include <charconv>
 #include <thread>
 
 #include "apikey.hpp"
@@ -157,26 +158,32 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   const Market m = tradeInfo.m;
   const CurlOptions::RequestType requestType =
       isCancel ? CurlOptions::RequestType::kDelete : CurlOptions::RequestType::kGet;
-  json result = PrivateQuery(_curlHandle, _apiKey, requestType, "api/v3/order",
-                             {{"symbol", m.assetsPairStr()}, {"orderId", orderId}});
-  std::string_view status = result["status"].get<std::string_view>();
+  const json result = PrivateQuery(_curlHandle, _apiKey, requestType, "api/v3/order",
+                                   {{"symbol", m.assetsPairStr()}, {"orderId", orderId}});
+  const std::string_view status = result["status"].get<std::string_view>();
   bool isClosed = false;
+  bool queryClosedOrder = false;
   if (status == "FILLED" || status == "CANCELED") {
     isClosed = true;
+    queryClosedOrder = true;
   } else if (status == "REJECTED" || status == "EXPIRED") {
     log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, status);
     isClosed = true;
   }
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
-  MonetaryAmount executedVol(result["executedQty"].get<std::string_view>(), m.base());
-  if (!executedVol.isZero()) {
-    MonetaryAmount executedPri(result["price"].get<std::string_view>(), m.quote());
-    if (fromCurrencyCode == m.quote()) {
-      orderInfo.tradedAmounts.tradedFrom += executedVol.toNeutral() * executedPri;
-      orderInfo.tradedAmounts.tradedTo += executedVol;
-    } else {
-      orderInfo.tradedAmounts.tradedFrom += executedVol;
-      orderInfo.tradedAmounts.tradedTo += executedVol.toNeutral() * executedPri;
+  if (queryClosedOrder) {
+    const int64_t timeStampOrder = result["time"].get<int64_t>();
+    const std::string timeStampOrderStr = std::to_string(timeStampOrder - 100L);  // -100 just to be sure
+
+    const json tradesRes = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "api/v3/myTrades",
+                                        {{"symbol", m.assetsPairStr()}, {"startTime", timeStampOrderStr}});
+    int64_t integralOrderId{};
+    std::from_chars(orderId.data(), orderId.data() + orderId.size(), integralOrderId);
+    for (const json& tradeDetails : tradesRes) {
+      int64_t tradedOrderId = tradeDetails["orderId"].get<int64_t>();
+      if (tradedOrderId == integralOrderId) {
+        orderInfo.tradedAmounts += parseTrades(m, fromCurrencyCode, tradeDetails);
+      }
     }
   }
   return orderInfo;
@@ -189,14 +196,14 @@ TradedAmounts BinancePrivate::queryOrdersAfterPlace(Market m, CurrencyCode fromC
 
   if (orderJson.contains("fills")) {
     for (const json& fillDetail : orderJson["fills"]) {
-      ret += queryOrder(m, fromCurrencyCode, fillDetail);
+      ret += parseTrades(m, fromCurrencyCode, fillDetail);
     }
   }
 
   return ret;
 }
 
-TradedAmounts BinancePrivate::queryOrder(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const {
+TradedAmounts BinancePrivate::parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const {
   MonetaryAmount price(fillDetail["price"].get<std::string_view>(), m.quote());
   MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), m.base());
   MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
