@@ -128,8 +128,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
   }
   CoincenterInfo::ExchangeInfoMap map;
   for (const auto& [exchangeName, value] : jsonData.items()) {
-    log::info("Storing exchange {} info", exchangeName);
-
+    log::trace("Storing exchange {} info", exchangeName);
     map.insert_or_assign(exchangeName, ExchangeInfo(exchangeName, value));
   }
   return map;
@@ -142,7 +141,7 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
       // TODO: make below values configurable, with default value in a json file
       _apiCallUpdateFrequencyMap{{api::QueryTypeEnum::kCurrencies, std::chrono::hours(1)},
                                  {api::QueryTypeEnum::kMarkets, std::chrono::hours(1)},
-                                 {api::QueryTypeEnum::kWithdrawalFees, std::chrono::hours(1)},
+                                 {api::QueryTypeEnum::kWithdrawalFees, std::chrono::hours(96)},
                                  {api::QueryTypeEnum::kAllOrderBooks, std::chrono::seconds(8)},
                                  {api::QueryTypeEnum::kOrderBook, std::chrono::seconds(1)},
                                  {api::QueryTypeEnum::kDepositWallet, std::chrono::hours(12)},

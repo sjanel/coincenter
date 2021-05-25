@@ -14,6 +14,8 @@ namespace cct {
 namespace api {
 namespace {
 
+constexpr char kKrakenWithdrawInfoFile[] = ".krakenwithdrawinfo.json";
+
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   std::string method_url = KrakenPublic::kUrlBase;
   method_url.push_back('/');
@@ -76,7 +78,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          _name),
+          config, _curlHandle, _name),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
@@ -84,18 +86,137 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           config, _tradableCurrenciesCache, _marketsCache, _curlHandle),
       _orderBookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _tradableCurrenciesCache, _marketsCache, _curlHandle) {}
+          _tradableCurrenciesCache, _marketsCache, _curlHandle) {
+  // To save queries to Kraken site, let's check if there is recent cached data
+  json data = OpenJsonFile(kKrakenWithdrawInfoFile, FileNotFoundMode::kNoThrow, FileType::kData);
+  if (!data.empty()) {
+    using Clock = std::chrono::high_resolution_clock;
+    using TimePoint = std::chrono::time_point<Clock>;
+    using Duration = Clock::duration;
 
-ExchangePublic::WithdrawalFeeMap KrakenPublic::WithdrawalFeesFunc::operator()() {
-  WithdrawalFeeMap ret;
-  json jsonData = OpenJsonFile("withdrawfees.json", FileNotFoundMode::kThrow, FileType::kData);
-  for (const auto& [coin, value] : jsonData[_name].items()) {
-    CurrencyCode coinAcro(coin);
-    MonetaryAmount ma(value.get<std::string_view>(), coinAcro);
-    log::debug("Updated Kraken withdrawal fees {}", ma.str());
-    ret.insert_or_assign(coinAcro, ma);
+    Duration withdrawDataRefreshTime = config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees);
+    TimePoint lastUpdatedTime(std::chrono::seconds(data["timeepoch"].get<int64_t>()));
+    if (Clock::now() < lastUpdatedTime + withdrawDataRefreshTime) {
+      // we can reuse file data
+      KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps withdrawalInfoMaps;
+
+      for (const auto& [curCodeStr, val] : data["assets"].items()) {
+        CurrencyCode cur(curCodeStr);
+        MonetaryAmount withdrawMin(val["min"].get<std::string_view>(), cur);
+        MonetaryAmount withdrawFee(val["fee"].get<std::string_view>(), cur);
+
+        log::trace("Updated Kraken withdrawal fee {} from cache", withdrawFee.str());
+        log::trace("Updated Kraken min withdraw {} from cache", withdrawMin.str());
+
+        withdrawalInfoMaps.first.insert_or_assign(cur, withdrawFee);
+        withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
+      }
+
+      _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime);
+    }
   }
-  log::info("Updated Kraken withdrawal fees for {} coins", ret.size());
+}
+
+KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
+  constexpr char kWithdrawalFeesCSVUrl[] =
+      "https://support.kraken.com/hc/article_attachments/360096575731/WithdrawalMinimumsandFees.csv";
+
+  std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
+
+  std::size_t assetPos = std::string_view::npos;
+  std::size_t minWithdrawAmountPos = std::string_view::npos;
+  std::size_t withdrawFeePos = std::string_view::npos;
+
+  bool isFirstLine = true;
+
+  // Let's parse this CSV manually (it's not so difficult)
+  WithdrawalInfoMaps ret;
+  for (std::size_t nextLinePos = withdrawalFeesCsv.find_first_of('\n'), lineBegPos = 0;;
+       nextLinePos = withdrawalFeesCsv.find_first_of('\n', lineBegPos)) {
+    std::string_view line(std::next(withdrawalFeesCsv.begin(), lineBegPos),
+                          nextLinePos == std::string_view::npos ? withdrawalFeesCsv.end()
+                                                                : std::next(withdrawalFeesCsv.begin(), nextLinePos));
+    if (line.empty()) {
+      break;
+    }
+    if (line.back() == 13) {  // Windows style 'CR' end of line to be removed
+      line.remove_suffix(1);
+    }
+
+    CurrencyCode cur;
+    std::string_view withdrawFeeMinStr[2];
+    for (std::size_t commaPos = line.find_first_of(','), fieldBegPos = 0, fieldPos = 0;;
+         commaPos = line.find_first_of(',', fieldBegPos), ++fieldPos) {
+      std::string_view field(std::next(line.begin(), fieldBegPos),
+                             commaPos == std::string_view::npos ? line.end() : std::next(line.begin(), commaPos));
+
+      // Lines should look like this:
+      //  USDT,5,2.5
+      //  USDT (ERC20),5,2.5
+      //  USDT (OMNI),10,5
+      //  USDT (TRC20),2,1
+      // In case several variations of coins are present, just take the max for all as a defensive assumption.
+
+      if (isFirstLine) {
+        if (field == "Asset") {
+          assetPos = fieldPos;
+        } else if (field == "Minimum") {
+          minWithdrawAmountPos = fieldPos;
+        } else if (field == "Fee") {
+          withdrawFeePos = fieldPos;
+        }
+      } else {
+        if (fieldPos == assetPos) {
+          std::size_t spacePos = field.find_first_of(" (");
+          if (spacePos != std::string_view::npos) {
+            field = field.substr(0, spacePos);
+          }
+          cur = CurrencyCode(_config.standardizeCurrencyCode(field));
+        } else if (fieldPos == withdrawFeePos) {
+          withdrawFeeMinStr[0] = field;
+        } else if (fieldPos == minWithdrawAmountPos) {
+          withdrawFeeMinStr[1] = field;
+        }
+      }
+
+      if (commaPos == std::string_view::npos) {
+        break;
+      }
+      fieldBegPos = commaPos + 1;
+    }
+
+    if (isFirstLine) {
+      isFirstLine = false;
+      if (assetPos == std::string_view::npos || minWithdrawAmountPos == std::string_view::npos ||
+          withdrawFeePos == std::string_view::npos) {
+        throw exception("Unable to parse Kraken withdrawal fees CSV, syntax has probably changed");
+      }
+    } else {
+      bool isFeeMap = true;
+      for (std::string_view wStr : withdrawFeeMinStr) {
+        if (wStr != "*") {
+          MonetaryAmount amount(wStr, cur);
+          auto& map = isFeeMap ? ret.first : ret.second;
+          auto it = map.find(cur);
+          if (it == map.end() || it->second < amount) {
+            log::trace("Updated Kraken {} {}", isFeeMap ? "withdrawal fee" : "min withdraw", amount.str());
+            if (it == map.end()) {
+              map.insert_or_assign(cur, amount);
+            } else {
+              it->second = amount;
+            }
+          }
+        }
+        isFeeMap = false;
+      }
+    }
+
+    if (nextLinePos == std::string_view::npos) {
+      break;
+    }
+    lineBegPos = nextLinePos + 1;
+  }
+  log::info("Updated Kraken withdraw infos for {} coins", ret.first.size());
   return ret;
 }
 
@@ -269,6 +390,24 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
     }
   }
   return MarketOrderBook(m, orderBookLines, volAndPriNbDecimals);
+}
+
+void KrakenPublic::updateCacheFile() const {
+  const auto [withdrawalInfoMapsPtr, latestUpdate] = _withdrawalFeesCache.retrieve();
+  if (withdrawalInfoMapsPtr) {
+    using WithdrawalInfoMaps = KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps;
+
+    const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
+
+    json data;
+    data["timeepoch"] = std::chrono::duration_cast<std::chrono::seconds>(latestUpdate.time_since_epoch()).count();
+    for (const auto& [curCode, withdrawFee] : withdrawalInfoMaps.first) {
+      std::string curCodeStr(curCode.str());
+      data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
+      data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
+    }
+    WriteJsonFile(kKrakenWithdrawInfoFile, data, FileType::kData);
+  }
 }
 
 }  // namespace api

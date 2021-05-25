@@ -331,7 +331,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
       _curlHandle, _apiKey, "Withdraw",
       {{"amount", grossAmount.amountStr()}, {"asset", krakenCurrency.altStr()}, {"key", krakenWalletName}});
 
-  // // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
+  // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
   std::string_view withdrawId = withdrawData["refid"].get<std::string_view>();
   return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
 }

@@ -285,9 +285,7 @@ PublicExchangeNames Coincenter::getPublicExchangeNames() const {
 void Coincenter::updateFileCaches() const {
   _cryptowatchAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
-  for (const Exchange &exchange : _exchanges) {
-    exchange.updateCacheFile();
-  }
+  std::for_each(_exchanges.begin(), _exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
 }
 
 Coincenter::SelectedExchanges Coincenter::RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,

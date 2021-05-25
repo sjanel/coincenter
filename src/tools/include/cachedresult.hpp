@@ -59,6 +59,21 @@ class CachedResult : public CachedResultBase {
   CachedResult(CachedResult &&) = default;
   CachedResult &operator=(CachedResult &&) = default;
 
+  /// Sets given value associated to the key built with given parameters,
+  /// if given timestamp is more recent than the one associated to the value already present at this key (if any)
+  template <class ResultTypeT, class... Args>
+  void set(ResultTypeT &&val, TimePoint t, Args &&...funcArgs) {
+    TKey key(std::forward<Args &&>(funcArgs)...);
+    auto it = _cachedResultsMap.find(key);
+    if (it == _cachedResultsMap.end()) {
+      _cachedResultsMap.insert_or_assign(std::move(key), TValue(std::forward<ResultTypeT>(val), t));
+    } else if (it->second.second < t) {
+      it->second = TValue(std::forward<ResultTypeT>(val), t);
+    }
+  }
+
+  /// Get the latest value associated to the key built with given parameters.
+  /// If the value is too old according to refresh period, it will be recomputed automatically.
   template <class... Args>
   const ResultType &get(Args &&...funcArgs) {
     TKey key(std::forward<Args &&>(funcArgs)...);
@@ -69,13 +84,24 @@ class CachedResult : public CachedResultBase {
       _cachedResultsMap.clear();
       _state = State::kForceCache;
     }
-    typename MapType::iterator it = _cachedResultsMap.find(key);
+    auto it = _cachedResultsMap.find(key);
     if (it == _cachedResultsMap.end()) {
       it = _cachedResultsMap.insert_or_assign(key, tValueBuilder(std::move(key))).first;
     } else if (_state != State::kForceCache && it->second.second + _refreshPeriod < t) {
       it->second = tValueBuilder(std::move(key));
     }
     return it->second.first;
+  }
+
+  /// Retrieve a pointer to latest value associated to the key built with given parameters.
+  /// If no value has been computed for this key, returns a nullptr.
+  template <class... Args>
+  std::pair<const ResultType *, TimePoint> retrieve(Args &&...funcArgs) const {
+    TKey key(std::forward<Args &&>(funcArgs)...);
+    auto it = _cachedResultsMap.find(key);
+    return it == _cachedResultsMap.end()
+               ? std::pair<const ResultType *, TimePoint>()
+               : std::pair<const ResultType *, TimePoint>(std::addressof(it->second.first), it->second.second);
   }
 
  private:

@@ -32,15 +32,17 @@ class KrakenPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return marketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
-    return _withdrawalFeesCache.get().find(currencyCode)->second;
+    return _withdrawalFeesCache.get().first.find(currencyCode)->second;
   }
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
 
   MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderBookCache.get(m, depth); }
+
+  void updateCacheFile() const override;
 
   static constexpr char kUrlBase[] = "https://api.kraken.com";
   static constexpr char kVersion = '0';
@@ -61,8 +63,16 @@ class KrakenPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    explicit WithdrawalFeesFunc(const std::string& name) : _name(name) {}
-    WithdrawalFeeMap operator()();
+    using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
+    using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
+
+    WithdrawalFeesFunc(CoincenterInfo& config, CurlHandle& curlHandle, const std::string& name)
+        : _config(config), _curlHandle(curlHandle), _name(name) {}
+
+    WithdrawalInfoMaps operator()();
+
+    CoincenterInfo& _config;
+    CurlHandle& _curlHandle;
     const std::string& _name;
   };
 

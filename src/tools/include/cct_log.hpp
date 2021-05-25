@@ -16,6 +16,13 @@ inline void warn(std::string_view, ...) {}
 inline void info(std::string_view, ...) {}
 inline void debug(std::string_view, ...) {}
 inline void trace(std::string_view, ...) {}
+
+inline int get_level() { return 0; }
+
+struct level {
+  static constexpr int trace{};
+};
+
 }  // namespace log
 #else
 namespace log = spdlog;
