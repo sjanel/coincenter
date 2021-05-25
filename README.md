@@ -10,13 +10,13 @@ coincenter
 A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
 
 Supported exchanges are:
-| Exchange | Link                                                                            |
+| Exchange |                                      Link                                       |
 | -------- | :-----------------------------------------------------------------------------: |
 | Binance  | [<img src="./resources/binancelogo.svg" width="170">](https://www.binance.com/) |
 | Bithumb  | [<img src="./resources/bithumblogo.svg" width="55">](https://www.bithumb.com/)  |
-| Huobi    | [<img src="./resources/huobilogo.svg" width="160">](https://www.huobi.com/)     |
-| Kraken   | [<img src="./resources/krakenlogo.svg" width="90">](https://www.kraken.com/)    |
-| Upbit    | [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)     |
+| Huobi    |   [<img src="./resources/huobilogo.svg" width="160">](https://www.huobi.com/)   |
+| Kraken   |  [<img src="./resources/krakenlogo.svg" width="90">](https://www.kraken.com/)   |
+| Upbit    |   [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)   |
  
  *Table of Contents*
 - [coincenter](#coincenter)
@@ -31,16 +31,21 @@ Supported exchanges are:
     - [From Docker](#from-docker)
 - [Tests](#tests)
 - [Usage](#usage)
-  - [Simple Trade](#simple-trade)
-  - [Check markets order book](#check-markets-order-book)
   - [Balance](#balance)
-- [Debug](#debug)
+  - [Simple Trade](#simple-trade)
+    - [Trade simulation](#trade-simulation)
+  - [Check markets order book](#check-markets-order-book)
+  - [Withdraw coin](#withdraw-coin)
 - [Configuration files](#configuration-files)
   - [Secrets](#secrets)
   - [Exchange config](#exchange-config)
-- [Examples](#examples)
-  - [Get an overview of your portfolio in Euros](#get-an-overview-of-your-portfolio-in-euros)
+- [Other examples](#other-examples)
+  - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
   - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
+    - [Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy-in-simulation-mode)
+      - [Possible output](#possible-output)
+  - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
+    - [Possible output](#possible-output-1)
 
 # Install
 
@@ -237,61 +242,40 @@ You can exclude currencies in the exchange configuration file (for instance: som
 **** Traded 999.99999999954052 EUR into 1221.7681748109101 XRP ****
 ```
 
-## Prints bithumb and upbit orderbook of Ethereum also converted to euros
+## Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
 ```
-./coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur
+./coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
 ```
 
 ### Possible output
 ```
-[2021-05-25 10:22:30.020] [info] Order book of ETH-KRW on bithumb requested with conversion rate 0.000727 EUR
 --------------------------------------------------------------------------------------
 | Sellers of ETH (asks) | ETH price in KRW | ETH price in EUR | Buyers of ETH (bids) |
 --------------------------------------------------------------------------------------
-| 7.5279                | 3180000          | 2311.86          |                      |
-| 14.5042               | 3179000          | 2311.133         |                      |
-| 13.767                | 3178000          | 2310.406         |                      |
-| 1.6862                | 3177000          | 2309.679         |                      |
-| 9.5308                | 3176000          | 2308.952         |                      |
-|                       | 3172000          | 2306.044         | 0.0138               |
-|                       | 3171000          | 2305.317         | 6.3197               |
-|                       | 3170000          | 2304.59          | 1.616                |
-|                       | 3169000          | 2303.863         | 2.4065               |
-|                       | 3168000          | 2303.136         | 2.3281               |
+| 0.2673                | 3196000          | 2323.492         |                      |
+| 9.7201                | 3195000          | 2322.765         |                      |
+| 0.067                 | 3194000          | 2322.038         |                      |
+| 12.3853               | 3193000          | 2321.311         |                      |
+| 7.36                  | 3191000          | 2319.857         |                      |
+|                       | 3189000          | 2318.403         | 0.015                |
+|                       | 3188000          | 2317.676         | 2.0048               |
+|                       | 3187000          | 2316.949         | 0.0628               |
+|                       | 3186000          | 2316.222         | 9.9882               |
+|                       | 3185000          | 2315.495         | 0.17                 |
 --------------------------------------------------------------------------------------
-[2021-05-25 10:22:30.020] [info] Order book of ETH-KRW on upbit requested with conversion rate 0.000727 EUR
+[2021-05-25 17:57:35.939] [info] Order book of ETH-KRW on upbit requested with conversion rate 0.000727 EUR
 --------------------------------------------------------------------------------------
 | Sellers of ETH (asks) | ETH price in KRW | ETH price in EUR | Buyers of ETH (bids) |
 --------------------------------------------------------------------------------------
-| 12.834572039999999    | 3201000          | 2327.127         |                      |
-| 19.1836957            | 3200000          | 2326.4           |                      |
-| 2.01859888            | 3199000          | 2325.673         |                      |
-| 0.09736826            | 3198000          | 2324.946         |                      |
-| 5.94347545            | 3197000          | 2324.219         |                      |
-| 0.83657297            | 3196000          | 2323.492         |                      |
-| 0.68518813            | 3194000          | 2322.038         |                      |
-| 38.09911129           | 3193000          | 2321.311         |                      |
-| 0.2586356             | 3192000          | 2320.584         |                      |
-| 3.2692701             | 3190000          | 2319.13          |                      |
-| 2.8232                | 3189000          | 2318.403         |                      |
-| 2.86476538            | 3188000          | 2317.676         |                      |
-| 2.84372958            | 3187000          | 2316.949         |                      |
-| 4.26207148            | 3185000          | 2315.495         |                      |
-| 0.62962581            | 3183000          | 2314.041         |                      |
-|                       | 3180000          | 2311.86          | 0.56930835           |
-|                       | 3179000          | 2311.133         | 0.01                 |
-|                       | 3178000          | 2310.406         | 2.77698431           |
-|                       | 3177000          | 2309.679         | 7.36741461           |
-|                       | 3176000          | 2308.952         | 2.58938208           |
-|                       | 3175000          | 2308.225         | 13.96513205          |
-|                       | 3174000          | 2307.498         | 6.09463114           |
-|                       | 3173000          | 2306.771         | 7.126524             |
-|                       | 3172000          | 2306.044         | 10.74460863          |
-|                       | 3171000          | 2305.317         | 12.21257505          |
-|                       | 3170000          | 2304.59          | 35.67871081          |
-|                       | 3169000          | 2303.863         | 5.33896981           |
-|                       | 3168000          | 2303.136         | 167.72148545         |
-|                       | 3167000          | 2302.409         | 7.92094383           |
-|                       | 3166000          | 2301.682         | 11.50667905          |
+| 3.35718064            | 3195000          | 2322.765         |                      |
+| 10.07306967           | 3194000          | 2322.038         |                      |
+| 4.1710622             | 3193000          | 2321.311         |                      |
+| 22.5008735900000012   | 3192000          | 2320.584         |                      |
+| 17.31016963           | 3191000          | 2319.857         |                      |
+|                       | 3189000          | 2318.403         | 0.97522874           |
+|                       | 3188000          | 2317.676         | 6.58649442           |
+|                       | 3187000          | 2316.949         | 28.90471404          |
+|                       | 3186000          | 2316.222         | 5.72230368           |
+|                       | 3185000          | 2315.495         | 7.89530817           |
 --------------------------------------------------------------------------------------
 ```
