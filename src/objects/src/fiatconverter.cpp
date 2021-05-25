@@ -32,8 +32,9 @@ FiatConverter::FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFrom
 void FiatConverter::updateCacheFile() const {
   json data;
   for (const auto& [market, priceTimeValue] : _pricesMap) {
-    data[market.assetsPairStr('-')]["rate"] = priceTimeValue.rate;
-    data[market.assetsPairStr('-')]["timeepoch"] =
+    std::string marketPairStr = market.assetsPairStr('-');
+    data[marketPairStr]["rate"] = priceTimeValue.rate;
+    data[marketPairStr]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
   }
   WriteJsonFile(kRatesFileName, data, FileType::kData);

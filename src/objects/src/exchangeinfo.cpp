@@ -45,10 +45,12 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
         if (first != currenciesCSV.size()) {
           currencySet.emplace(std::string_view(currenciesCSV.begin() + first, currenciesCSV.end()));
         }
-        for (CurrencyCode code : currencySet) {
-          log::debug("{}: Adding {} as {}", exchangeNameStr, code.str(), kSubAssetConfig[subIdx]);
+        if (log::get_level() <= log::level::trace) {
+          for (CurrencyCode code : currencySet) {
+            log::trace("{}: Adding {} as {}", exchangeNameStr, code.str(), kSubAssetConfig[subIdx]);
+          }
+          log::trace("Loaded {} currencies in config", currencySet.size());
         }
-        log::info("Loaded {} currencies in config", currencySet.size());
       }
     }
   }
@@ -61,9 +63,10 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
   const json &queryData = exchangeData[kQuery];
   _minPublicQueryDelay = std::chrono::milliseconds(queryData["minpublicquerydelayms"].get<int>());
   _minPrivateQueryDelay = std::chrono::milliseconds(queryData["minprivatequerydelayms"].get<int>());
-  log::info("Loaded {} & {} ms as minimum time between two queries in config (public & private exchanges respectively)",
-            std::chrono::duration_cast<std::chrono::milliseconds>(_minPublicQueryDelay).count(),
-            std::chrono::duration_cast<std::chrono::milliseconds>(_minPrivateQueryDelay).count());
+  log::trace(
+      "Loaded {} & {} ms as minimum time between two queries in config (public & private exchanges respectively)",
+      std::chrono::duration_cast<std::chrono::milliseconds>(_minPublicQueryDelay).count(),
+      std::chrono::duration_cast<std::chrono::milliseconds>(_minPrivateQueryDelay).count());
 }
 
 }  // namespace cct
