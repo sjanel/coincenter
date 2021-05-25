@@ -10,7 +10,15 @@
 
 namespace cct {
 
-/// Represents a decimal amount with a currency (fiat or coin). Examples: $50, -2.045 BTC.
+/// Represents a fixed-precision decimal amount with a currency (fiat or coin).
+///
+/// This object aims to provide high performance operations as well as predictive and precise basic arithmetic (as
+/// opposed to double).
+/// In addition, it is light (only 16 bytes) and can be passed by copy instead of reference.
+///
+/// It is easy and straightforward to use with implicit string constructor and partial constexpr support.
+///
+/// Examples: $50, -2.045 BTC.
 /// The integral value stored in the MonetaryAmount is multiplied by 10^'_nbDecimals'
 /// Its number of decimals is automatically adjusted and simplified.
 class MonetaryAmount {
@@ -188,6 +196,8 @@ class MonetaryAmount {
   CurrencyCode _currencyCode;
   int8_t _nbDecimals;
 };
+
+static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size increase");
 
 inline MonetaryAmount operator*(MonetaryAmount::AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 
