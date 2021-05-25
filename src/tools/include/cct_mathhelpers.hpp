@@ -8,8 +8,8 @@
 
 namespace cct {
 /// constexpr and integral version of math.power.
+/// Taken from https://gist.github.com/orlp/3551590
 constexpr int64_t ipow(int64_t base, uint8_t exp) {
-  // Taken from https://gist.github.com/orlp/3551590
   constexpr uint8_t highest_bit_set[] = {0,   1,   2,   2,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   4,
                                          4,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,
                                          5,   5,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,
@@ -68,6 +68,7 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) {
 }
 
 /// Return the number of digits of given integral.
+/// Uses dichotomy for highest performance as possible.
 constexpr int ndigits(int32_t n) {
   if (n < 0) {
     if (CCT_UNLIKELY(n == std::numeric_limits<decltype(n)>::min())) {
@@ -80,6 +81,7 @@ constexpr int ndigits(int32_t n) {
 }
 
 /// Return the number of digits of given integral.
+/// Uses dichotomy for highest performance as possible.
 constexpr int ndigits(uint64_t n) {
   return n < 10000000000UL
              ? (n < 1000000UL
@@ -93,6 +95,7 @@ constexpr int ndigits(uint64_t n) {
 }
 
 /// Return the number of digits of given integral.
+/// Uses dichotomy for highest performance as possible.
 constexpr int ndigits(int64_t n) {
   if (n < 0) {
     if (CCT_UNLIKELY(n == std::numeric_limits<decltype(n)>::min())) {

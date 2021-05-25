@@ -20,18 +20,17 @@ class Wallet {
   /// field.
   static constexpr char kDepositAddressesFilename[] = ".depositaddresses.json";
 
-  /// Build an empty wallet, which cannot be used.
-  Wallet() = default;
-
   /// Build a wallet with all information.
-  /// Be careful: if such a wallet is not present in 'kDepositAddressesFilename'.json file,
-  /// exception will be thrown if kValidateWalletFromDepositAddressesFile is true
+  /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
+  /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
+  /// not withdraw)
   Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
          std::string_view tag);
 
   /// Build a wallet with all information.
-  /// Be careful: if such a wallet is not present in 'kDepositAddressesFilename'.json file,
-  /// exception will be thrown if kValidateWalletFromDepositAddressesFile is true
+  /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
+  /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
+  /// not withdraw)
   Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, std::string_view address,
          std::string_view tag);
 
@@ -39,15 +38,11 @@ class Wallet {
 
   std::string_view exchangeName() const { return _privateExchangeName.name(); }
 
-  std::string_view address() const;
+  std::string_view address() const { return _address; }
 
   std::string_view destinationTag() const { return _tag; }
 
   CurrencyCode currencyCode() const { return _currency; }
-
-  bool empty() const { return _address.empty(); }
-
-  bool isValid() const { return !_address.empty(); }
 
   bool hasDestinationTag() const { return !_tag.empty(); }
 
