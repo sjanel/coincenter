@@ -122,7 +122,7 @@ ExchangePublic::WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
 }
 
 namespace {
-ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result) {
+ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
   ExchangePublic::MarketOrderBookMap ret;
   for (const json& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
@@ -147,6 +147,14 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result) {
 
       orderBookLines.emplace_back(askVol, askPri, true /* isAsk */);
       orderBookLines.emplace_back(bidVol, bidPri, false /* isAsk */);
+
+      if (static_cast<int>(orderBookLines.size() / 2) == depth) {
+        // Upbit does not have a depth parameter, the only thing we can do is to truncate it manually
+        break;
+      }
+    }
+    if (static_cast<int>(orderBookLines.size() / 2) < depth) {
+      log::warn("Upbit does not support orderbook depth larger than {}", orderBookLines.size() / 2);
     }
     ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
   }
@@ -155,7 +163,7 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result) {
 }
 }  // namespace
 
-ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int) {
+ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
   const MarketSet& markets = _marketsCache.get();
   std::string marketsStr;
   marketsStr.reserve(static_cast<std::string::size_type>(markets.size()) * 8);
@@ -165,12 +173,12 @@ ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(in
     }
     marketsStr.append(m.reverse().assetsPairStr('-'));
   }
-  return ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", marketsStr}}));
+  return ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", marketsStr}}), depth);
 }
 
-MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int) {
+MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
   ExchangePublic::MarketOrderBookMap marketOrderBookMap =
-      ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", m.reverse().assetsPairStr('-')}}));
+      ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", m.reverse().assetsPairStr('-')}}), depth);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");
