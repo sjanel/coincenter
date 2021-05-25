@@ -140,7 +140,6 @@ To keep secrets, build using the keepsecrets option. **Warning : image will cont
 docker build --build-arg keepsecrets=1 -t coincenter .
 ```
 
-
 # Tests
 
 Tests are compiled only if `coincenter` is built as a main project by default. You can set `cmake` flag `CCT_ENABLE_TESTS` to 1 or 0 to change this behavior.
@@ -149,64 +148,150 @@ Note that exchanges API are also unit tested. If no private key is found, only p
 
 # Usage
 
+## Balance
+
+Check your balance across supported exchanges at one glance!
+```
+./coincenter --balance
+```
+prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
+It is also possible to give a list of exchanges (comma separated) to print balance only on those ones.
+You can specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
+For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*, launch:
+```
+./coincenter --balance kraken,bithumb --balance-cur eur
+```
+
 ## Simple Trade
 
 It is possible to realize a simple trade on one exchange by the command line handled automatically by the program, according to different strategies.
-Of course, this requires that your private keys for the considered exchange are well settled in the 'data/secret.json' file, and that your balance is adequate. 
+Of course, this requires that your private keys for the considered exchange are well settled in the 'config/secret.json' file, and that your balance is adequate. 
 
 Possible strategies:
- - maker: order placed at limit price (default) 
-          price is continuously adjusted to limit price
- - taker: order placed at market price should be matched directly
- - adapt: same as maker, except that order will be updated at market price before the timeout to make it eventually completely matched
-
-Order will be placed at limit price by default, with a maker strategy.
+ - maker: Order placed at limit price (default) 
+          Price is continuously adjusted to limit price and will be cancelled at expired time if not fully matched (controlled with `--trade-timeout`)
+ - taker: order placed at market price, should be matched immediately
+ - adapt: same as maker, except that after `t + timeout - trade-emergency` time (`t` being the start time of the trade) remaining unmatched part is placed at market price to force the trade
 
 Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
           an emergency mode triggered before 1500 ms of the timeout of 15 seconds."
 ```
-./coincenter --trade "0.5btc-eur,kraken" --trade-sim --trade-strategy adapt --trade-emergency 1500 --trade-timeout 15
+./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 1500 --trade-timeout 15
 ```
+
+### Trade simulation
+Some exchanges (Kraken and Binance for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `coincenter` thanks to `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
 ## Check markets order book
 
 Check one or several (one per given exchange) market order books with `--orderbook` option. By default, chosen `depth` is `10`, can be configured with `--orderbook-depth`.
+
 Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance:
 ```
 ./coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
 ```
 
-## Balance
+## Withdraw coin
 
-Check your balance across supported exchanges at one glance! For this, just give `--balance <exchanges>` to print a formatted table with all given exchanges,
-separated by commas. Same assets on different exchanges will be summed on the same row.
-You can specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
-For instance, to print all balance on Kraken and Bithumb exchanges, with a summary currency of Euro, launch:
+It is possible to withdraw coin with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination).
+Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
+
+To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
+ - External address is not taken as an input parameter, by instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
+ - Then retrieved deposit address is validated in `config/.depositaddresses.json` which serves as a *postfolio* of trusted addresses
+
+Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
-./coincenter --balance kraken,bithumb --balance-cur eur
-```
-Special exchange name `all` allows to print the accumulation of balances from all available private accounts:
-```
-./coincenter --balance all --balance-cur usdt
+./coincenter --withdraw 10000xlm,bithumb-huobi
 ```
 
 # Configuration files
-Configuration files are all stored in the data directory 
+Configuration files are all stored in the *config* directory 
 
 ## Secrets
-secret.json holds your private keys. Keep it safe (and never commit / push it!). 'data/secret_test.json' shows the syntax.
+*secret.json* holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` to avoid mistakes.
+`config/secret_test.json` shows the syntax.
 
 ## Exchange config
 You can exclude currencies in the exchange configuration file (for instance: some unstable fiat currencies in binance).
 
-# Examples
+# Other examples
 
-## Get an overview of your portfolio in Euros
+## Get an overview of your portfolio in Korean Won
 ```
-./coincenter --balance all --balance-cur eur
+./coincenter -b --balance-cur krw
 ```
 
 ## Trade 1000 euros to XRP on kraken with a maker strategy
 ```
 ./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-emergency 1500 --trade-timeout 60
+```
+
+### Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode
+```
+./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-emergency 1500 --trade-timeout 60 --trade-sim
+```
+
+#### Possible output
+```
+**** Traded 999.99999999954052 EUR into 1221.7681748109101 XRP ****
+```
+
+## Prints bithumb and upbit orderbook of Ethereum also converted to euros
+```
+./coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur
+```
+
+### Possible output
+```
+[2021-05-25 10:22:30.020] [info] Order book of ETH-KRW on bithumb requested with conversion rate 0.000727 EUR
+--------------------------------------------------------------------------------------
+| Sellers of ETH (asks) | ETH price in KRW | ETH price in EUR | Buyers of ETH (bids) |
+--------------------------------------------------------------------------------------
+| 7.5279                | 3180000          | 2311.86          |                      |
+| 14.5042               | 3179000          | 2311.133         |                      |
+| 13.767                | 3178000          | 2310.406         |                      |
+| 1.6862                | 3177000          | 2309.679         |                      |
+| 9.5308                | 3176000          | 2308.952         |                      |
+|                       | 3172000          | 2306.044         | 0.0138               |
+|                       | 3171000          | 2305.317         | 6.3197               |
+|                       | 3170000          | 2304.59          | 1.616                |
+|                       | 3169000          | 2303.863         | 2.4065               |
+|                       | 3168000          | 2303.136         | 2.3281               |
+--------------------------------------------------------------------------------------
+[2021-05-25 10:22:30.020] [info] Order book of ETH-KRW on upbit requested with conversion rate 0.000727 EUR
+--------------------------------------------------------------------------------------
+| Sellers of ETH (asks) | ETH price in KRW | ETH price in EUR | Buyers of ETH (bids) |
+--------------------------------------------------------------------------------------
+| 12.834572039999999    | 3201000          | 2327.127         |                      |
+| 19.1836957            | 3200000          | 2326.4           |                      |
+| 2.01859888            | 3199000          | 2325.673         |                      |
+| 0.09736826            | 3198000          | 2324.946         |                      |
+| 5.94347545            | 3197000          | 2324.219         |                      |
+| 0.83657297            | 3196000          | 2323.492         |                      |
+| 0.68518813            | 3194000          | 2322.038         |                      |
+| 38.09911129           | 3193000          | 2321.311         |                      |
+| 0.2586356             | 3192000          | 2320.584         |                      |
+| 3.2692701             | 3190000          | 2319.13          |                      |
+| 2.8232                | 3189000          | 2318.403         |                      |
+| 2.86476538            | 3188000          | 2317.676         |                      |
+| 2.84372958            | 3187000          | 2316.949         |                      |
+| 4.26207148            | 3185000          | 2315.495         |                      |
+| 0.62962581            | 3183000          | 2314.041         |                      |
+|                       | 3180000          | 2311.86          | 0.56930835           |
+|                       | 3179000          | 2311.133         | 0.01                 |
+|                       | 3178000          | 2310.406         | 2.77698431           |
+|                       | 3177000          | 2309.679         | 7.36741461           |
+|                       | 3176000          | 2308.952         | 2.58938208           |
+|                       | 3175000          | 2308.225         | 13.96513205          |
+|                       | 3174000          | 2307.498         | 6.09463114           |
+|                       | 3173000          | 2306.771         | 7.126524             |
+|                       | 3172000          | 2306.044         | 10.74460863          |
+|                       | 3171000          | 2305.317         | 12.21257505          |
+|                       | 3170000          | 2304.59          | 35.67871081          |
+|                       | 3169000          | 2303.863         | 5.33896981           |
+|                       | 3168000          | 2303.136         | 167.72148545         |
+|                       | 3167000          | 2302.409         | 7.92094383           |
+|                       | 3166000          | 2301.682         | 11.50667905          |
+--------------------------------------------------------------------------------------
 ```
