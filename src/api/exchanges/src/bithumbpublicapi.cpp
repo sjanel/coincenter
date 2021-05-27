@@ -100,7 +100,6 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
     if (nextRightOutFee > nextCoinSep) {
       // This means no withdraw fee data, probably 0 ?
       MonetaryAmount ma("0", coinAcro);
-      log::debug("Updated Bithumb withdrawal fees {}", ma.str());
       ret.insert_or_assign(coinAcro, ma);
       continue;
     }
