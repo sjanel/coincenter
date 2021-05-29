@@ -82,6 +82,7 @@ class Coincenter {
 
   PublicExchangeNames getPublicExchangeNames() const;
 
+  /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
 
   std::span<Exchange> exchanges() { return _exchanges; }

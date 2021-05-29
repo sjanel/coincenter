@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
@@ -17,17 +18,28 @@ namespace cct {
 /// Current chosen source is, for now:
 /// https://free.currconv.com/api/v7
 ///
-/// Conversion methods are thread safe.
+/// It requires an API key even for free usage.
 ///
-/// More information here:
-/// https://stackoverflow.com/questions/3139879/how-do-i-get-currency-exchange-rates-via-an-api-such-as-google-finance
+/// Hard-coded key exists in case you don't have one but if you want to use extensively coincenter, please create your
+/// own key on https://free.currencyconverterapi.com/free-api-key and place it in 'config/thirdparty_secret.json' file
+/// such that 'coincenter' uses it instead of the hardcoded one. The reason is that API services are hourly limited and
+/// reaching the limit would make it basically unusable for the community.
+///
+/// Conversion methods are thread safe.
 class FiatConverter {
  public:
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  explicit FiatConverter(Clock::duration ratesUpdateFrequency = std::chrono::hours(8),
-                         bool loadFromFileCacheAtInit = true);
+  /// Creates a FiatConverter unable to perform live queries to free converter api loading frozen rates from
+  /// 'data/kRatesFileName' file.
+  /// Useful for unit tests to avoid querying the API.
+  FiatConverter() : FiatConverter(Clock::duration::max()) {}
+
+  /// Creates a FiatConverter able to perform live queries to free converter api.
+  /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
+  /// @param loadFromFileCacheAtInit if 'true', load at construction the rates and times of a past program
+  explicit FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFromFileCacheAtInit = true);
 
   FiatConverter(const FiatConverter &) = delete;
   FiatConverter &operator=(const FiatConverter &) = delete;
@@ -58,5 +70,6 @@ class FiatConverter {
   PricesMap _pricesMap;
   Clock::duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;
+  std::string _apiKey;
 };
 }  // namespace cct

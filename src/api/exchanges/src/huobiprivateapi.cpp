@@ -84,7 +84,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
     if (typeStr == "trade") {
       this->addBalance(ret, amount, equiCurrency);
     } else {
-      log::warn("Do not consider {} as it is {} on {}", amount.str(), typeStr, _exchangePublic.name());
+      log::debug("Do not consider {} as it is {} on {}", amount.str(), typeStr, _exchangePublic.name());
     }
   }
   return ret;

@@ -42,6 +42,7 @@ Exchange &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::
 Coincenter::Coincenter(settings::RunMode runMode)
     : _coincenterInfo(runMode),
       _cryptowatchAPI(runMode),
+      _fiatConverter(std::chrono::hours(8)),
       _apiKeyProvider(runMode),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
@@ -283,6 +284,7 @@ PublicExchangeNames Coincenter::getPublicExchangeNames() const {
 }
 
 void Coincenter::updateFileCaches() const {
+  log::debug("Store all cache files");
   _cryptowatchAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
   std::for_each(_exchanges.begin(), _exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });

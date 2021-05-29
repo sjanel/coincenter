@@ -68,7 +68,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &) {
 CurlHandle::~CurlHandle() {}
 
 TEST(FiatConverterTest, DirectConversion) {
-  FiatConverter converter(std::chrono::hours(2), false);
+  FiatConverter converter(std::chrono::milliseconds(1), false);
   double amount = 10;
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "KRW"), amount));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "KRW"), amount * kKRW));
@@ -78,7 +78,7 @@ TEST(FiatConverterTest, DirectConversion) {
 }
 
 TEST(FiatConverterTest, DoubleConversion) {
-  FiatConverter converter(std::chrono::hours(2), false);
+  FiatConverter converter(std::chrono::milliseconds(1), false);
   double amount = 20'000'000;
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "EUR"), amount / kKRW));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "USD"), (amount / kKRW) * kUSD));
