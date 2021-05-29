@@ -34,8 +34,8 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config ${{matrix.buildmode}}
+        run: cmake --build . --config ${{matrix.buildmode}} --parallel 2
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{matrix.buildmode}} -j 10 --output-on-failure
+        run: ctest -C ${{matrix.buildmode}} -j 2 --output-on-failure
