@@ -42,7 +42,7 @@ include(FetchContent)
 FetchContent_Declare(
   amadeusamc
   GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-  GIT_TAG        origin/master
+  GIT_TAG        main
 )
 
 FetchContent_MakeAvailable(amadeusamc)
@@ -51,7 +51,7 @@ if(CCT_ENABLE_TESTS)
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        origin/master
+    GIT_TAG        master
   )
 
   FetchContent_MakeAvailable(googletest)
@@ -62,7 +62,7 @@ endif()
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
-  GIT_TAG        origin/master
+  GIT_TAG        master
 )
 
 FetchContent_Declare(
