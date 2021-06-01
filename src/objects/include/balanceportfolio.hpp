@@ -38,7 +38,8 @@ class BalancePortfolio {
 
   void print(std::ostream &os) const;
 
-  bool empty() const { return _monetaryAmountSet.empty(); }
+  bool empty() const noexcept { return _monetaryAmountSet.empty(); }
+  MonetaryAmountSet::size_type size() const noexcept { return _monetaryAmountSet.size(); }
 
  private:
   using MonetaryAmountVec = cct::vector<MonetaryAmountWithEquivalent>;

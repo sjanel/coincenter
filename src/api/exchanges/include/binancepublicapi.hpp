@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
@@ -21,11 +22,8 @@ class TradeOptions;
 
 class BinancePublic : public ExchangePublic {
  public:
-  static constexpr char kUrlBase[] = "https://api.binance.com";
-
-  static constexpr char kUrlBaseAlt1[] = "https://api1.binance.com";
-  static constexpr char kUrlBaseAlt2[] = "https://api2.binance.com";
-  static constexpr char kUrlBaseAlt3[] = "https://api3.binance.com";
+  static constexpr std::string_view kURLBases[] = {"https://api.binance.com", "https://api1.binance.com",
+                                                   "https://api2.binance.com", "https://api3.binance.com"};
 
   static constexpr char kUserAgent[] = "Binance C++ API Client";
 
@@ -67,15 +65,36 @@ class BinancePublic : public ExchangePublic {
     return it->second;
   }
 
+  class CommonInfo {
+   public:
+    static constexpr auto kNbBaseURLs = std::distance(std::begin(kURLBases), std::end(kURLBases));
+
+    CommonInfo(const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
+
+    /// Get the Binance base URL providing the lowest response time thanks to periodic pings.
+    std::string_view getBestBaseURL() { return _baseURLUpdater.get(); }
+
+    const ExchangeInfo& _exchangeInfo;
+    CurlHandle _curlHandle;
+
+   private:
+    struct BaseURLUpdater {
+      std::string_view operator()();
+
+      CurlHandle _curlHandles[kNbBaseURLs];
+    };
+    CachedResult<BaseURLUpdater> _baseURLUpdater;
+  };
+
   struct ExchangeInfoFunc {
     using ExchangeInfoDataByMarket = std::unordered_map<Market, json>;
 
-    ExchangeInfoFunc(CoincenterInfo& config, CurlHandle& curlHandle) : _config(config), _curlHandle(curlHandle) {}
+    ExchangeInfoFunc(CoincenterInfo& config, CommonInfo& commonInfo) : _config(config), _commonInfo(commonInfo) {}
 
     ExchangeInfoDataByMarket operator()();
 
     CoincenterInfo& _config;
-    CurlHandle& _curlHandle;
+    CommonInfo& _commonInfo;
   };
 
   struct GlobalInfosFunc {
@@ -97,29 +116,25 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _marketsCache(marketsCache), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    AllOrderBooksFunc(CachedResult<MarketsFunc>& marketsCache, CommonInfo& commonInfo)
+        : _marketsCache(marketsCache), _commonInfo(commonInfo) {}
 
     MarketOrderBookMap operator()(int depth);
 
     CachedResult<MarketsFunc>& _marketsCache;
-    CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    CommonInfo& _commonInfo;
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    OrderBookFunc(CoincenterInfo& config, CommonInfo& commonInfo) : _config(config), _commonInfo(commonInfo) {}
 
     MarketOrderBook operator()(Market m, int depth = 10);
 
     CoincenterInfo& _config;
-    CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    CommonInfo& _commonInfo;
   };
 
-  const ExchangeInfo& _exchangeInfo;
-  CurlHandle _curlHandle;
+  CommonInfo _commonInfo;
   CachedResult<ExchangeInfoFunc> _exchangeInfoCache;
   CachedResult<GlobalInfosFunc> _globalInfosCache;
   CachedResult<MarketsFunc> _marketsCache;

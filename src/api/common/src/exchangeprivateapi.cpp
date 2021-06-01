@@ -9,7 +9,7 @@ namespace api {
 void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
   if (!amount.isZero()) {
     if (equiCurrency == CurrencyCode::kNeutral) {
-      log::info("{} Balance {}", _exchangePublic.name(), amount.str());
+      log::debug("{} Balance {}", _exchangePublic.name(), amount.str());
       balancePortfolio.add(amount);
     } else {
       std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
@@ -22,7 +22,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       } else {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       }
-      log::info("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
+      log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
       balancePortfolio.add(amount, equivalentInMainCurrency);
     }
   }
