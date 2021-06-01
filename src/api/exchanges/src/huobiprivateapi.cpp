@@ -1,6 +1,5 @@
 #include "huobiprivateapi.hpp"
 
-#include <ctime>
 #include <thread>
 
 #include "apikey.hpp"
@@ -15,15 +14,6 @@ namespace cct {
 namespace api {
 
 namespace {
-
-Nonce Nonce_LiteralDate() {
-  std::time_t t = std::time(0);
-  struct tm* utc = std::gmtime(&t);
-  Nonce buf(50, ' ');
-  std::size_t bytesWritten = std::strftime(buf.data(), buf.size(), "%Y-%m-%dT%H:%M:%S", utc);
-  buf.resize(bytesWritten);
-  return buf;
-}
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view method, const CurlPostData& postdata = CurlPostData()) {
