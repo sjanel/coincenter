@@ -65,7 +65,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(settings::RunMode runM
   json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
   for (const auto& [platform, keyObj] : jsonData.items()) {
     for (const auto& [name, keySecretObj] : keyObj.items()) {
-      log::warn("Found key '{}' for platform {}", name, platform);
+      log::info("Found key '{}' for platform {}", name, platform);
       map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
     }
   }

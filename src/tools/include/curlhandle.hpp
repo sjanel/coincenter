@@ -21,6 +21,9 @@ class CurlHandle {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
+  // CurlHandle is trivially relocatable
+  using trivially_relocatable = std::true_type;
+
   /// Constructs a new CurlHandle.
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
   explicit CurlHandle(Clock::duration minDurationBetweenQueries = Clock::duration::zero(),
