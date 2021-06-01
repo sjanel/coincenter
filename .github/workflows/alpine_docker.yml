@@ -3,7 +3,7 @@ name: alpine_docker
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 jobs:
