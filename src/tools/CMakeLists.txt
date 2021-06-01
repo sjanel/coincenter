@@ -36,6 +36,14 @@ add_unit_test(
 )
 
 add_unit_test(
+    cct_nonce_test
+    src/cct_nonce.cpp
+    test/cct_nonce_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
     cachedresult_test
     src/cachedresultvault.cpp
     test/cachedresult_test.cpp
