@@ -119,7 +119,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
   constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://support.kraken.com/hc/article_attachments/360096575731/WithdrawalMinimumsandFees.csv";
+      "https://support.kraken.com/hc/article_attachments/360097267392/Withdrawal_Minimuns_and_Fees_-_Sheet.csv";
 
   std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
 
@@ -216,6 +216,11 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     }
     lineBegPos = nextLinePos + 1;
   }
+  if (assetPos == std::string_view::npos || minWithdrawAmountPos == std::string_view::npos ||
+      withdrawFeePos == std::string_view::npos) {
+    throw exception("Unable to parse Kraken withdrawal fees CSV, syntax or URL has probably changed");
+  }
+
   log::info("Updated Kraken withdraw infos for {} coins", ret.first.size());
   return ret;
 }
