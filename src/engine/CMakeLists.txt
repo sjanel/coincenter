@@ -25,3 +25,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set_property(TARGET coincenter PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   message(STATUS "Activate LTO for coincenter")
 endif(CMAKE_BUILD_TYPE STREQUAL "Release")
+
+add_unit_test(
+    stringoptionparser_test
+    src/stringoptionparser.cpp
+    test/stringoptionparser_test.cpp
+    LIBRARIES
+    coincenter_objects
+    coincenter_tools
+)

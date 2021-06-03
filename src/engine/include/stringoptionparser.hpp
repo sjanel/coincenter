@@ -11,15 +11,16 @@
 #include "monetaryamount.hpp"
 
 namespace cct {
-class AnyParser {
+class StringOptionParser {
  public:
   using MarketExchanges = std::pair<Market, PublicExchangeNames>;
   using MonetaryAmountExchanges = std::pair<MonetaryAmount, PublicExchangeNames>;
   using MonetaryAmountCurrencyCodePrivateExchange = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeName>;
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
+  using CurrencyCodePublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
 
-  explicit AnyParser(std::string_view optFullStr) : _opt(optFullStr) {}
+  explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
   PublicExchangeNames getExchanges() const;
 
@@ -33,7 +34,7 @@ class AnyParser {
 
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
-  MonetaryAmountFromToPublicExchangeToCurrency getMonetaryAmountFromToPublicExchangeToCurrency() const;
+  CurrencyCodePublicExchanges getCurrencyCodePublicExchanges() const;
 
  private:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;

@@ -43,7 +43,8 @@ struct CoincenterCmdLineOptions {
           .count())};
   bool trade_sim{api::TradeOptions().isSimulation()};
 
-  std::string withdraw{};
+  std::string withdraw;
+  std::string withdraw_fee;
 };
 
 template <class OptValueType>
@@ -66,16 +67,18 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
 
-       {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2,exch1,...>", "Print order book of currency pair for given exchanges"}, 
-                                                                             &OptValueType::orderbook},
+       {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2[,exch1,...]>", "Print order book of currency pair for all exchanges offering "
+                                                                               " this market, or only for specified exchanges."}, 
+                                                                               &OptValueType::orderbook},
        {{{"Public queries", 2}, "--orderbook-depth", "", "Override default depth of order book"}, &OptValueType::orderbook_depth},
-       {{{"Public queries", 2}, "--orderbook-cur", "<cur code>", "If conversion of cur2 into cur is possible on exch1, "
-                                                                 "prints additional column converted to given asset"}, 
+       {{{"Public queries", 2}, "--orderbook-cur", "<cur>", "If conversion of cur2 into cur is possible (for each exchange), "
+                                                            "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
-       {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2,exch1,...>", "Print fastest conversion path of 'cur1' to 'cur2' for given exchanges if possible"}, 
+       {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
+                                                                                     "for given exchanges if possible"}, 
                                                           &OptValueType::conversion_path},
 
-       {{{"Private queries", 3}, "--balance", 'b', "<exch1,...>", "Prints sum of available balance for all private accounts if no value is given, "
+       {{{"Private queries", 3}, "--balance", 'b', "[exch1,...]", "Prints sum of available balance for all private accounts if no value is given, "
                                                                   "or only for specified ones separated by commas"}, 
                                                                   &OptValueType::balance},
        {{{"Private queries", 3}, "--balance-cur", "<cur code>", "Print additional information with each asset "
@@ -111,11 +114,13 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                          "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::trade_sim},
 
        {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", std::string("Withdraw amount from exchange 'from' to exchange 'to'."
-                                                                         " Amount is gross, including fees. Address and tag will be "
-                                                                         "retrieved automatically from '")
+                                                                         " Amount is gross, including fees. Address and tag will be retrieved"
+                                                                         " automatically from destination exchange and should match an entry in '")
                                                                         .append(Wallet::kDepositAddressesFilename)
-                                                                        .append(".json' file. Make sure that values are up to date (and "
-                                                                        "correct of course!)")}, &OptValueType::withdraw}});
+                                                                        .append("' file.")}, &OptValueType::withdraw},
+       {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", std::string("Prints withdraw fees of given currency on all supported exchanges,"
+                                                                         " or only for the list of specified ones if provided (comma separated).")}, 
+                                                                &OptValueType::withdraw_fee}});
   // clang-format on
 }
 }  // namespace cct

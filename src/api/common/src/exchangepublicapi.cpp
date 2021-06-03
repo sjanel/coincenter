@@ -7,7 +7,7 @@
 namespace cct {
 namespace api {
 std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmount a, CurrencyCode toCurrencyCode) {
-  Currencies currencies = findFastestConversionPath(a.currencyCode(), toCurrencyCode, true);
+  Currencies currencies = findFastestConversionPath(Market(a.currencyCode(), toCurrencyCode), true);
   if (currencies.empty()) {
     return std::nullopt;
   }
@@ -50,9 +50,10 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
   return a;
 }
 
-ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(CurrencyCode fromCurrencyCode,
-                                                                     CurrencyCode toCurrencyCode,
+ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(Market conversionMarket,
                                                                      bool considerStableCoinsAsFiats) {
+  CurrencyCode fromCurrencyCode(conversionMarket.base());
+  CurrencyCode toCurrencyCode(conversionMarket.quote());
   std::optional<CurrencyCode> optFiatFromStableCoin =
       considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode) : std::nullopt;
   const bool isToFiatLike = optFiatFromStableCoin || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);

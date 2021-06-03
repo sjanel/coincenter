@@ -37,6 +37,54 @@ Exchange &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::
   }
   return *ret.front();
 }
+
+std::string_view ToString(const PublicExchangeName &exchangeName) { return exchangeName; }
+std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
+
+Coincenter::SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
+                                                        std::span<Exchange> exchanges) {
+  SelectedExchanges ret;
+  if (exchangeNames.empty()) {
+    std::transform(exchanges.begin(), exchanges.end(), std::back_inserter(ret),
+                   [](Exchange &e) { return std::addressof(e); });
+  } else {
+    for (std::string_view exchangeName : exchangeNames) {
+      auto exchangeIt = std::find_if(exchanges.begin(), exchanges.end(),
+                                     [exchangeName](const Exchange &e) { return e.name() == exchangeName; });
+      if (exchangeIt == exchanges.end()) {
+        throw exception("Cannot find exchange " + std::string(exchangeName));
+      }
+      ret.push_back(std::addressof(*exchangeIt));
+    }
+  }
+
+  return ret;
+}
+
+using UniquePublicExchanges = cct::FlatSet<api::ExchangePublic *>;
+
+UniquePublicExchanges RetrieveUniquePublicExchanges(std::span<const PublicExchangeName> exchangeNames,
+                                                    std::span<Exchange> exchanges) {
+  SelectedExchanges selectedExchanges = RetrieveSelectedExchanges(exchangeNames, exchanges);
+  UniquePublicExchanges selectedPublicExchanges;
+  selectedPublicExchanges.reserve(selectedExchanges.size());
+  std::transform(selectedExchanges.begin(), selectedExchanges.end(),
+                 std::inserter(selectedPublicExchanges, selectedPublicExchanges.end()),
+                 [](Exchange *e) { return std::addressof(e->apiPublic()); });
+  return selectedPublicExchanges;
+}
+
+template <class ExchangeNameT>
+std::string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchangeNames) {
+  std::string exchangesStr(exchangeNames.empty() ? "all" : "");
+  for (const ExchangeNameT &exchangeName : exchangeNames) {
+    if (!exchangesStr.empty()) {
+      exchangesStr.push_back(',');
+    }
+    exchangesStr.append(ToString(exchangeName));
+  }
+  return exchangesStr;
+}
 }  // namespace
 
 Coincenter::Coincenter(settings::RunMode runMode)
@@ -94,7 +142,7 @@ Coincenter::Coincenter(settings::RunMode runMode)
 }
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
-  if (!opts.orderBookExchanges.empty()) {
+  if (opts.marketForOrderBook != Market()) {
     std::optional<int> depth;
     if (opts.orderbookDepth != 0) {
       depth = opts.orderbookDepth;
@@ -102,13 +150,12 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     Coincenter::MarketOrderBookConversionRates marketOrderBooksConversionRates =
         getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
     int orderBookPos = 0;
-    for (std::string_view exchangeName : opts.orderBookExchanges) {
-      const auto &[marketOrderBook, optConversionRate] = marketOrderBooksConversionRates[orderBookPos];
+    for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
       log::info("Order book of {} on {} requested{}{}", opts.marketForOrderBook.str(), exchangeName,
                 optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
 
       if (optConversionRate) {
-        marketOrderBook.print(std::cout, *optConversionRate);
+        marketOrderBook.print(std::cout, exchangeName, *optConversionRate);
       } else {
         if (opts.orderbookCur != CurrencyCode::kNeutral) {
           log::warn("Unable to convert {} into {} on {}", opts.marketForOrderBook.quote().str(),
@@ -121,9 +168,8 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     }
   }
 
-  if (!opts.conversionPathExchanges.empty()) {
-    printConversionPath(opts.conversionPathExchanges, opts.marketForConversionPath.base(),
-                        opts.marketForConversionPath.quote());
+  if (opts.marketForConversionPath != Market()) {
+    printConversionPath(opts.conversionPathExchanges, opts.marketForConversionPath);
   }
 
   if (opts.balanceForAll || !opts.balancePrivateExchanges.empty()) {
@@ -131,45 +177,42 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.startTradeAmount.isZero()) {
-    log::warn("Trade {} into {} on {} requested", opts.startTradeAmount.str(), opts.toTradeCurrency.str(),
+    log::info("Trade {} into {} on {} requested", opts.startTradeAmount.str(), opts.toTradeCurrency.str(),
               opts.tradePrivateExchangeName.str());
-    log::warn(opts.tradeOptions.str());
+    log::info(opts.tradeOptions.str());
     MonetaryAmount startAmount = opts.startTradeAmount;
     MonetaryAmount toAmount =
         trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
-    log::warn("**** Traded {} into {} ****", (opts.startTradeAmount - startAmount).str(), toAmount.str());
+    log::info("**** Traded {} into {} ****", (opts.startTradeAmount - startAmount).str(), toAmount.str());
   }
 
   if (!opts.amountToWithdraw.isZero()) {
-    log::warn("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
+    log::info("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
               opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
     withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
   }
 
-  updateFileCaches();
-}
-
-MarketOrderBooks Coincenter::getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
-                                                 std::optional<int> depth) {
-  MarketOrderBooks ret;
-  for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
-    ret.push_back(depth ? e->apiPublic().queryOrderBook(m, *depth) : e->apiPublic().queryOrderBook(m));
+  if (opts.withdrawFeeCur != CurrencyCode()) {
+    printWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
   }
-  return ret;
+
+  updateFileCaches();
 }
 
 Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
     Market m, std::span<const PublicExchangeName> exchangeNames, CurrencyCode equiCurrencyCode,
     std::optional<int> depth) {
   MarketOrderBookConversionRates ret;
-  for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
-    std::optional<MonetaryAmount> optConversionRate =
-        equiCurrencyCode == CurrencyCode::kNeutral
-            ? std::nullopt
-            : e->apiPublic().convertAtAveragePrice(MonetaryAmount("1", m.quote()), equiCurrencyCode);
-    ret.emplace_back(
-        MarketOrderBook(depth ? e->apiPublic().queryOrderBook(m, *depth) : e->apiPublic().queryOrderBook(m)),
-        optConversionRate);
+  for (api::ExchangePublic *e : RetrieveUniquePublicExchanges(exchangeNames, _exchanges)) {
+    // Do not check if market exists when exchange names are specified to save API call
+    if (!exchangeNames.empty() || e->queryTradableMarkets().contains(m)) {
+      std::optional<MonetaryAmount> optConversionRate =
+          equiCurrencyCode == CurrencyCode::kNeutral
+              ? std::nullopt
+              : e->convertAtAveragePrice(MonetaryAmount("1", m.quote()), equiCurrencyCode);
+      ret.emplace_back(e->name(), MarketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m)),
+                       optConversionRate);
+    }
   }
   return ret;
 }
@@ -206,31 +249,18 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
 }
 
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {
-  bool balanceForAll = privateExchangeNames.empty();
-  std::string exchangesStr(balanceForAll ? "all" : "");
-  for (const PrivateExchangeName &privateExchangeName : privateExchangeNames) {
-    if (!exchangesStr.empty()) {
-      exchangesStr.push_back(',');
-    }
-    exchangesStr.append(privateExchangeName.str());
-  }
-  log::info("Query balance from {}", exchangesStr);
+  log::info("Query balance from {}",
+            ConstructAccumulatedExchangeNames(std::span<const PrivateExchangeName>(privateExchangeNames)));
   BalancePortfolio portfolio = getBalance(privateExchangeNames, balanceCurrencyCode);
   portfolio.print(std::cout);
 }
 
-void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, CurrencyCode fromCurrencyCode,
-                                     CurrencyCode toCurrencyCode) {
-  std::string exchangesStr;
-  for (const PublicExchangeName &exchangeName : exchangeNames) {
-    exchangesStr.append(exchangeName);
-  }
-  log::info("Query conversion path from {}", exchangesStr);
+void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {
+  log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   VariadicTable<std::string, std::string> vt({"Exchange", "Fastest conversion path"});
-  for (Exchange *e : RetrieveSelectedExchanges(exchangeNames, _exchanges)) {
+  for (api::ExchangePublic *e : RetrieveUniquePublicExchanges(exchangeNames, _exchanges)) {
     std::string conversionPathStr;
-    api::ExchangePublic::Currencies conversionPath =
-        e->apiPublic().findFastestConversionPath(fromCurrencyCode, toCurrencyCode);
+    api::ExchangePublic::Currencies conversionPath = e->findFastestConversionPath(m);
     if (conversionPath.empty()) {
       conversionPathStr = "--- Impossible ---";
     } else {
@@ -275,6 +305,24 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate());
 }
 
+void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames) {
+  log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicExchanges selectedPublicExchanges = RetrieveUniquePublicExchanges(exchangeNames, _exchanges);
+  cct::vector<api::ExchangePublic::WithdrawalFeeMap> withdrawFeesPerExchange(selectedPublicExchanges.size());
+  std::transform(std::execution::par, selectedPublicExchanges.begin(), selectedPublicExchanges.end(),
+                 std::begin(withdrawFeesPerExchange),
+                 [currencyCode](api::ExchangePublic *e) { return e->queryWithdrawalFees(); });
+  VariadicTable<std::string, std::string> vt({"Exchange", "Withdraw fee"});
+  int exchangePos = 0;
+  for (const api::ExchangePublic::WithdrawalFeeMap &withdrawFeesMap : withdrawFeesPerExchange) {
+    auto foundIt = withdrawFeesMap.find(currencyCode);
+    if (foundIt != withdrawFeesMap.end()) {
+      vt.addRow(std::string(selectedPublicExchanges.begin()[exchangePos++]->name()), foundIt->second.str());
+    }
+  }
+  vt.print();
+}
+
 PublicExchangeNames Coincenter::getPublicExchangeNames() const {
   PublicExchangeNames ret;
   ret.reserve(_exchanges.size());
@@ -288,20 +336,6 @@ void Coincenter::updateFileCaches() const {
   _cryptowatchAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
   std::for_each(_exchanges.begin(), _exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
-}
-
-Coincenter::SelectedExchanges Coincenter::RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
-                                                                    std::span<Exchange> exchanges) {
-  SelectedExchanges ret;
-  for (std::string_view exchangeName : exchangeNames) {
-    auto exchangeIt = std::find_if(exchanges.begin(), exchanges.end(),
-                                   [exchangeName](const Exchange &e) { return e.name() == exchangeName; });
-    if (exchangeIt == exchanges.end()) {
-      throw exception("Cannot find exchange " + std::string(exchangeName));
-    }
-    ret.push_back(std::addressof(*exchangeIt));
-  }
-  return ret;
 }
 
 }  // namespace cct

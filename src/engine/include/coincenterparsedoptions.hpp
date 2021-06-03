@@ -35,6 +35,8 @@ class CoincenterParsedOptions {
 
   MonetaryAmount amountToWithdraw;
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
+  CurrencyCode withdrawFeeCur;
+  PublicExchangeNames withdrawFeeExchanges;
 
   bool noProcess{};
 
