@@ -38,6 +38,7 @@ class CachedResult : public CachedResultBase {
  public:
   using Clock = std::chrono::high_resolution_clock;
   using ResultType = std::remove_cvref_t<decltype(std::declval<T>()(std::declval<FuncTArgs>()...))>;
+  using ResPtrTimePair = std::pair<const ResultType *, TimePoint>;
 
  private:
   using TKey = std::tuple<std::remove_cvref_t<FuncTArgs>...>;
@@ -96,12 +97,11 @@ class CachedResult : public CachedResultBase {
   /// Retrieve a pointer to latest value associated to the key built with given parameters.
   /// If no value has been computed for this key, returns a nullptr.
   template <class... Args>
-  std::pair<const ResultType *, TimePoint> retrieve(Args &&...funcArgs) const {
+  ResPtrTimePair retrieve(Args &&...funcArgs) const {
     TKey key(std::forward<Args &&>(funcArgs)...);
     auto it = _cachedResultsMap.find(key);
-    return it == _cachedResultsMap.end()
-               ? std::pair<const ResultType *, TimePoint>()
-               : std::pair<const ResultType *, TimePoint>(std::addressof(it->second.first), it->second.second);
+    return it == _cachedResultsMap.end() ? ResPtrTimePair()
+                                         : ResPtrTimePair(std::addressof(it->second.first), it->second.second);
   }
 
  private:
