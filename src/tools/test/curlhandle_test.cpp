@@ -11,9 +11,11 @@
  * https://support.nmi.com/hc/en-gb/articles/360021544791-How-to-Check-If-the-Correct-Certificates-Are-Installed-on-Linux
  */
 
-static const char *const kTestUrl = "https://live.cardeasexml.com/ultradns.php";
-
 namespace cct {
+namespace {
+constexpr char kTestUrl[] = "https://live.cardeasexml.com/ultradns.php";
+}
+
 class CurlSetup : public ::testing::Test {
  protected:
   virtual void SetUp() {}
@@ -27,28 +29,26 @@ TEST_F(CurlSetup, BasicCurlTest) {
   EXPECT_EQ(out, "POOL_UP");
 }
 
-TEST_F(CurlSetup, Queries) {
-  {
-    std::string header = "MyHeaderIsVeryLongToAvoidSSO";
-    CurlOptions opts(CurlOptions::RequestType::kGet);
+TEST_F(CurlSetup, QueryKrakenTime) {
+  CurlOptions opts(CurlOptions::RequestType::kGet);
 #ifdef DEBUG
-    opts.verbose = true;
+  opts.verbose = true;
 #endif
-    opts.httpHeaders.push_back(header);
+  opts.httpHeaders.push_back("MyHeaderIsVeryLongToAvoidSSO");
 
-    std::string s = handle.query("https://api.kraken.com/0/public/Time", opts);
-    EXPECT_TRUE(s.find("unixtime") != std::string::npos);
-  }
-  {
-    CurlOptions opts(CurlOptions::RequestType::kGet);
+  std::string s = handle.query("https://api.kraken.com/0/public/Time", opts);
+  EXPECT_TRUE(s.find("unixtime") != std::string::npos);
+}
+
+TEST_F(CurlSetup, QueryKrakenSystemStatus) {
+  CurlOptions opts(CurlOptions::RequestType::kGet);
 #ifdef DEBUG
-    opts.verbose = true;
+  opts.verbose = true;
 #endif
-    log::set_level(log::level::trace);
-    std::string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
-    EXPECT_TRUE(s.find("online") != std::string::npos || s.find("maintenance") != std::string::npos ||
-                s.find("cancel_only") != std::string::npos || s.find("post_only") != std::string::npos);
-  }
+  log::set_level(log::level::trace);
+  std::string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
+  EXPECT_TRUE(s.find("online") != std::string::npos || s.find("maintenance") != std::string::npos ||
+              s.find("cancel_only") != std::string::npos || s.find("post_only") != std::string::npos);
 }
 
 TEST_F(CurlSetup, ProxyMockTest) {

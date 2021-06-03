@@ -105,8 +105,8 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
         MonetaryAmount withdrawMin(val["min"].get<std::string_view>(), cur);
         MonetaryAmount withdrawFee(val["fee"].get<std::string_view>(), cur);
 
-        log::trace("Updated Kraken withdrawal fee {} from cache", withdrawFee.str());
-        log::trace("Updated Kraken min withdraw {} from cache", withdrawMin.str());
+        log::trace("Updated {} withdrawal fee {} from cache", _name, withdrawFee.str());
+        log::trace("Updated {} min withdraw {} from cache", _name, withdrawMin.str());
 
         withdrawalInfoMaps.first.insert_or_assign(cur, withdrawFee);
         withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
