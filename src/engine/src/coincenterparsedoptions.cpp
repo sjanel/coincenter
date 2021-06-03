@@ -38,7 +38,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   cmdLineOptions.setLogFile();
 
   if (!cmdLineOptions.orderbook.empty()) {
-    AnyParser anyParser(cmdLineOptions.orderbook);
+    StringOptionParser anyParser(cmdLineOptions.orderbook);
     std::tie(marketForOrderBook, orderBookExchanges) = anyParser.getMarketExchanges();
 
     orderbookDepth = cmdLineOptions.orderbook_depth;
@@ -46,22 +46,19 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   }
 
   if (!cmdLineOptions.conversion_path.empty()) {
-    AnyParser anyParser(cmdLineOptions.conversion_path);
+    StringOptionParser anyParser(cmdLineOptions.conversion_path);
     std::tie(marketForConversionPath, conversionPathExchanges) = anyParser.getMarketExchanges();
   }
 
   if (cmdLineOptions.balance) {
-    if (cmdLineOptions.balance->empty()) {
-      balanceForAll = true;
-    } else {
-      AnyParser anyParser(*cmdLineOptions.balance);
-      balancePrivateExchanges = anyParser.getPrivateExchanges();
-    }
+    StringOptionParser anyParser(*cmdLineOptions.balance);
+    balancePrivateExchanges = anyParser.getPrivateExchanges();
+    balanceForAll = balancePrivateExchanges.empty();
     balanceCurrencyCode = CurrencyCode(cmdLineOptions.balance_cur);
   }
 
   if (!cmdLineOptions.trade.empty()) {
-    AnyParser anyParser(cmdLineOptions.trade);
+    StringOptionParser anyParser(cmdLineOptions.trade);
     std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
         anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
 
@@ -73,9 +70,14 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   }
 
   if (!cmdLineOptions.withdraw.empty()) {
-    AnyParser anyParser(cmdLineOptions.withdraw);
+    StringOptionParser anyParser(cmdLineOptions.withdraw);
     std::tie(amountToWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =
         anyParser.getMonetaryAmountFromToPrivateExchange();
+  }
+
+  if (!cmdLineOptions.withdraw_fee.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.withdraw_fee);
+    std::tie(withdrawFeeCur, withdrawFeeExchanges) = anyParser.getCurrencyCodePublicExchanges();
   }
 }
 }  // namespace cct

@@ -41,7 +41,7 @@ class TradeOptions;
 
 class Coincenter {
  public:
-  using MarketOrderBookConversionRate = std::pair<MarketOrderBook, std::optional<MonetaryAmount>>;
+  using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
   using MarketOrderBookConversionRates = cct::FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
 
   explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
@@ -55,10 +55,6 @@ class Coincenter {
   void process(const CoincenterParsedOptions &opts);
 
   /// Retrieve market order book of market for given exchanges
-  MarketOrderBooks getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
-                                       std::optional<int> depth = std::nullopt);
-
-  /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
   MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
@@ -70,8 +66,7 @@ class Coincenter {
 
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
 
-  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, CurrencyCode fromCurrencyCode,
-                           CurrencyCode toCurrencyCode);
+  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);
 
   /// Single trade from 'startAmount' into 'toCurrency', on exchange named 'exchangeName'.
   /// Options should be wisely chosen here to avoid mistakes.
@@ -81,6 +76,8 @@ class Coincenter {
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName);
+
+  void printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
 
   PublicExchangeNames getPublicExchangeNames() const;
 
@@ -106,9 +103,6 @@ class Coincenter {
   using CurrencyExchangeSets = cct::vector<CurrencyExchangeFlatSet>;
   using WithdrawalFeeMapPerExchange = cct::vector<api::ExchangePublic::WithdrawalFeeMap>;
   using MarketsOrderBookPerExchange = cct::vector<api::ExchangePublic::MarketOrderBookMap>;
-
-  static SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
-                                                     std::span<Exchange> exchanges);
 
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;

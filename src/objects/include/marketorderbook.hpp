@@ -5,6 +5,7 @@
 #include <optional>
 #include <ostream>
 #include <span>
+#include <string_view>
 
 #include "cct_smallvector.hpp"
 #include "market.hpp"
@@ -124,7 +125,7 @@ class MarketOrderBook {
   /// Print the market order book to given stream.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
-  void print(std::ostream& os, MonetaryAmount conversionPriceRate) const;
+  void print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const;
 
  private:
   /// Represents a total amount of waiting orders at a given price.

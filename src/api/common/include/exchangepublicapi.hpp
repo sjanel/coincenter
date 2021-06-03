@@ -77,9 +77,9 @@ class ExchangePublic : public ExchangeBase {
   using Currencies = cct::SmallVector<CurrencyCode, 6>;
 
   /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
-  /// of 'from' towards 'to' currency code
+  /// of 'm.base()' towards 'm.quote()' currency code
   /// @return ordered list of currency code, or empty list if conversion is not possible
-  Currencies findFastestConversionPath(CurrencyCode from, CurrencyCode to, bool considerStableCoinsAsFiats = false);
+  Currencies findFastestConversionPath(Market conversionMarket, bool considerStableCoinsAsFiats = false);
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 
