@@ -29,8 +29,6 @@ class ExchangePublic : public ExchangeBase {
   using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
   using WithdrawalFeeMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
 
-  static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "upbit"};
-
   ExchangePublic(const ExchangePublic &) = delete;
   ExchangePublic &operator=(const ExchangePublic &) = delete;
 

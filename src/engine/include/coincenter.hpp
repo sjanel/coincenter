@@ -14,6 +14,8 @@
 #include "binancepublicapi.hpp"
 #include "bithumbprivateapi.hpp"
 #include "bithumbpublicapi.hpp"
+#include "cct_const.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_flatset.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
@@ -40,7 +42,7 @@ class TradeOptions;
 class Coincenter {
  public:
   using MarketOrderBookConversionRate = std::pair<MarketOrderBook, std::optional<MonetaryAmount>>;
-  using MarketOrderBookConversionRates = cct::SmallVector<MarketOrderBookConversionRate, kTypicalNbExchanges>;
+  using MarketOrderBookConversionRates = cct::FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
 
   explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
 
@@ -96,7 +98,7 @@ class Coincenter {
   FiatConverter &fiatConverter() { return _fiatConverter; }
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
-  using SelectedExchanges = cct::SmallVector<Exchange *, kTypicalNbExchanges>;
+  using SelectedExchanges = cct::SmallVector<Exchange *, kTypicalNbPrivateAccounts>;
 
  private:
   using MarketsPerExchange = cct::vector<api::ExchangePublic::MarketSet>;

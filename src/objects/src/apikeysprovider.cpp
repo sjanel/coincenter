@@ -27,8 +27,7 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
 
 APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform) const {
   KeyNames keyNames;
-  std::string platformStr(platform);
-  auto foundIt = _apiKeysMap.find(platformStr);
+  auto foundIt = _apiKeysMap.find(platform);
   if (foundIt != _apiKeysMap.end()) {
     const APIKeys& apiKeys = foundIt->second;
     std::transform(apiKeys.begin(), apiKeys.end(), std::back_inserter(keyNames),
@@ -38,15 +37,15 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform
 }
 
 const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeName) const {
-  std::string platformStr(privateExchangeName.name());
+  std::string_view platformStr = privateExchangeName.name();
   auto foundIt = _apiKeysMap.find(platformStr);
   if (foundIt == _apiKeysMap.end()) {
-    throw exception("Unable to retrieve private key for " + platformStr);
+    throw exception("Unable to retrieve private key for " + std::string(platformStr));
   }
   const APIKeys& apiKeys = foundIt->second;
   if (!privateExchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
-      throw exception("Specify name for " + platformStr + " keys as you have several");
+      throw exception("Specify name for " + std::string(platformStr) + " keys as you have several");
     }
     return apiKeys.front();
   }
@@ -54,7 +53,7 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     return apiKey.name() == privateExchangeName.keyName();
   });
   if (keyNameIt == apiKeys.end()) {
-    throw exception("Unable to retrieve private key for " + platformStr + " named " +
+    throw exception("Unable to retrieve private key for " + std::string(platformStr) + " named " +
                     std::string(privateExchangeName.keyName()));
   }
   return *keyNameIt;

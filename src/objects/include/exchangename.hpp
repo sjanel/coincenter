@@ -4,12 +4,13 @@
 #include <string_view>
 
 #include "cct_const.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
 
 namespace cct {
 
 using PublicExchangeName = std::string;
-using PublicExchangeNames = cct::SmallVector<PublicExchangeName, kTypicalNbExchanges>;
+using PublicExchangeNames = cct::FixedCapacityVector<PublicExchangeName, kNbSupportedExchanges>;
 
 class PrivateExchangeName {
  public:
@@ -43,5 +44,5 @@ class PrivateExchangeName {
   std::size_t _dashPos;
 };
 
-using PrivateExchangeNames = cct::SmallVector<PrivateExchangeName, kTypicalNbExchanges>;
+using PrivateExchangeNames = cct::SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
 }  // namespace cct
