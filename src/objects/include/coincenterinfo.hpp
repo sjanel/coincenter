@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include <chrono>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -17,7 +18,7 @@ namespace cct {
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
-  using ExchangeInfoMap = std::unordered_map<std::string, ExchangeInfo>;
+  using ExchangeInfoMap = std::map<std::string, ExchangeInfo, std::less<>>;
   using Duration = std::chrono::high_resolution_clock::duration;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
@@ -42,7 +43,7 @@ class CoincenterInfo {
   std::optional<CurrencyCode> fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const;
 
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
-    return _exchangeInfoMap.find(std::string(exchangeName))->second;
+    return _exchangeInfoMap.find(exchangeName)->second;
   }
 
   Duration getAPICallUpdateFrequency(api::QueryTypeEnum apiCallType) const {

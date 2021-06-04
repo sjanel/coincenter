@@ -49,7 +49,7 @@ Coincenter::Coincenter(settings::RunMode runMode)
       _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
-  for (std::string_view exchangeName : api::ExchangePublic::kSupportedExchanges) {
+  for (std::string_view exchangeName : kSupportedExchanges) {
     api::ExchangePublic *exchangePublic;
     if (exchangeName == "binance") {
       exchangePublic = std::addressof(_binancePublic);
