@@ -29,8 +29,11 @@ namespace {
 void PublicTest(HuobiPublic &huobiPublic) {
   EXPECT_NO_THROW(huobiPublic.queryOrderBook(Market("BTC", "USDT")));
   EXPECT_GT(huobiPublic.queryAllApproximatedOrderBooks().size(), 20U);
-  EXPECT_NO_THROW(huobiPublic.queryTradableCurrencies());
-  EXPECT_NO_THROW(huobiPublic.queryWithdrawalFees());
+  ExchangePublic::WithdrawalFeeMap withdrawFees = huobiPublic.queryWithdrawalFees();
+  EXPECT_FALSE(withdrawFees.empty());
+  for (const CurrencyExchange &curEx : huobiPublic.queryTradableCurrencies()) {
+    EXPECT_TRUE(withdrawFees.contains(curEx.standardCode()));
+  }
   EXPECT_NO_THROW(huobiPublic.queryTradableMarkets());
 }
 
