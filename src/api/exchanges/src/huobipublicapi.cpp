@@ -69,15 +69,17 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       continue;
     }
     bool foundChainWithSameName = false;
-    CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(curStr));
+    CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     for (const json& chainDetail : curDetail["chains"]) {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
-      if (chainName != currencyCode) {
+      std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
+      if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
+        log::debug("Discarding chain {}", chainName);
         continue;
       }
       std::string_view depositAllowedStr = chainDetail["depositStatus"].get<std::string_view>();
       std::string_view withdrawAllowedStr = chainDetail["withdrawStatus"].get<std::string_view>();
-      CurrencyExchange newCurrency(currencyCode, curStr, curStr,
+      CurrencyExchange newCurrency(cur, curStr, curStr,
                                    depositAllowedStr == "allowed" ? CurrencyExchange::Deposit::kAvailable
                                                                   : CurrencyExchange::Deposit::kUnavailable,
                                    withdrawAllowedStr == "allowed" ? CurrencyExchange::Withdraw::kAvailable
@@ -92,7 +94,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::warn("Cannot find {} main chain in Huobi, discarding currency", curStr);
+      log::warn("Cannot find {} main chain in Huobi, discarding currency", cur.str());
     }
   }
   log::info("Retrieved {} Huobi currencies", currencies.size());
@@ -168,7 +170,9 @@ ExchangePublic::WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
     bool foundChainWithSameName = false;
     for (const json& chainDetail : curDetail["chains"]) {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
-      if (chainName != cur) {
+      std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
+      if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
+        log::debug("Discarding chain '{}'", chainName);
         continue;
       }
       std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
@@ -181,7 +185,7 @@ ExchangePublic::WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::warn("Cannot find {} main chain in {}, discarding currency", curStr, _name);
+      log::warn("Cannot find '{}' main chain in {}, discarding currency", curStr, _name);
     }
   }
 
