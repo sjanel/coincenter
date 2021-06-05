@@ -1,6 +1,7 @@
 #include "exchangepublicapi.hpp"
 
 #include "cct_exception.hpp"
+#include "cct_flatset.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 
@@ -61,21 +62,22 @@ ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(Market conv
 
   cct::vector<Currencies> searchPaths(1, {fromCurrencyCode});
   auto comp = [](const Currencies &lhs, const Currencies &rhs) { return lhs.size() > rhs.size(); };
+  cct::FlatSet<CurrencyCode> visitedCurrencies;
   do {
     std::pop_heap(searchPaths.begin(), searchPaths.end(), comp);
     Currencies path = std::move(searchPaths.back());
     searchPaths.pop_back();
     CurrencyCode lastCurrencyCode = path.back();
+    if (visitedCurrencies.contains(lastCurrencyCode)) {
+      continue;
+    }
     if (lastCurrencyCode == toCurrencyCode) {
       return path;
     }
     for (Market m : markets) {
       if (m.canTrade(lastCurrencyCode)) {
-        CurrencyCode newCurrencyCode(lastCurrencyCode == m.base() ? m.quote() : m.base());
-        if (std::find(path.begin(), path.end(), newCurrencyCode) == path.end()) {
-          searchPaths.emplace_back(path).push_back(newCurrencyCode);
-          std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
-        }
+        searchPaths.emplace_back(path).push_back(CurrencyCode(lastCurrencyCode == m.base() ? m.quote() : m.base()));
+        std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
       }
     }
     std::optional<CurrencyCode> optLastFiat =
@@ -85,6 +87,7 @@ ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(Market conv
       searchPaths.emplace_back(std::move(path)).push_back(toCurrencyCode);
       std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
     }
+    visitedCurrencies.insert(std::move(lastCurrencyCode));
   } while (!searchPaths.empty());
 
   return Currencies();
