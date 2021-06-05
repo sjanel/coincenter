@@ -36,7 +36,7 @@ class StringOptionParser {
 
   CurrencyCodePublicExchanges getCurrencyCodePublicExchanges() const;
 
- private:
+ protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;
   std::string _opt;
 };
