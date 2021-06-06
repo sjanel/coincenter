@@ -64,6 +64,8 @@ class Coincenter {
   BalancePortfolio getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                               CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
+  void printMarkets(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
+
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
 
   void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);

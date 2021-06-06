@@ -21,6 +21,9 @@ class CoincenterParsedOptions {
   PrivateExchangeName tradePrivateExchangeName;
   api::TradeOptions tradeOptions;
 
+  CurrencyCode marketsCurrency;
+  PublicExchangeNames marketsExchanges;
+
   Market marketForOrderBook;
   PublicExchangeNames orderBookExchanges;
   int orderbookDepth{};

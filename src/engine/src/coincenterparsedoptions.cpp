@@ -37,6 +37,11 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   cmdLineOptions.setLogLevel();
   cmdLineOptions.setLogFile();
 
+  if (!cmdLineOptions.markets.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.markets);
+    std::tie(marketsCurrency, marketsExchanges) = anyParser.getCurrencyCodePublicExchanges();
+  }
+
   if (!cmdLineOptions.orderbook.empty()) {
     StringOptionParser anyParser(cmdLineOptions.orderbook);
     std::tie(marketForOrderBook, orderBookExchanges) = anyParser.getMarketExchanges();
