@@ -48,8 +48,12 @@ Supported exchanges are:
   - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
     - [Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy-in-simulation-mode)
       - [Possible output](#possible-output)
-  - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
+  - [Prints conversion paths](#prints-conversion-paths)
     - [Possible output](#possible-output-1)
+  - [Prints all markets trading Stellar (XLM)](#prints-all-markets-trading-stellar-xlm)
+    - [Possible output](#possible-output-2)
+  - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
+    - [Possible output](#possible-output-3)
 
 # Install
 
@@ -244,6 +248,56 @@ You can exclude currencies in the exchange configuration file (for instance: som
 #### Possible output
 ```
 **** Traded 999.99999999954052 EUR into 1221.7681748109101 XRP ****
+```
+
+## Prints conversion paths
+
+How to change Yearn Finance to Bitcoin on all exchanges
+
+```
+./coincenter -c yfi-btc
+```
+
+### Possible output
+```
+--------------------------------------
+| Exchange | Fastest conversion path |
+--------------------------------------
+| binance  | YFI-BTC                 |
+| bithumb  | YFI-KRW-BTC             |
+| huobi    | YFI-BTC                 |
+| kraken   | YFI-BTC                 |
+| upbit    | --- Impossible ---      |
+--------------------------------------
+```
+
+## Prints all markets trading Stellar (XLM)
+```
+./coincenter -m xlm
+```
+
+### Possible output
+```
+-------------------------------
+| Exchange | Markets with XLM |
+-------------------------------
+| binance  | XLM-BNB          |
+| binance  | XLM-BTC          |
+| binance  | XLM-BUSD         |
+| binance  | XLM-ETH          |
+| binance  | XLM-EUR          |
+| binance  | XLM-TRY          |
+| binance  | XLM-USDT         |
+| bithumb  | XLM-KRW          |
+| huobi    | XLM-BTC          |
+| huobi    | XLM-ETH          |
+| huobi    | XLM-HUSD         |
+| huobi    | XLM-USDT         |
+| kraken   | XLM-BTC          |
+| kraken   | XLM-EUR          |
+| upbit    | XLM-BTC          |
+| upbit    | XLM-KRW          |
+-------------------------------
 ```
 
 ## Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
