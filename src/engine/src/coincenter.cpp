@@ -61,13 +61,14 @@ Coincenter::SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicEx
   return ret;
 }
 
-using UniquePublicExchanges = cct::FlatSet<api::ExchangePublic *>;
+using PublicExchangesVec = FixedCapacityVector<api::ExchangePublic *, kNbSupportedExchanges>;
+using UniquePublicExchanges = cct::FlatSet<api::ExchangePublic *, std::less<api::ExchangePublic *>,
+                                           PublicExchangesVec::allocator_type, PublicExchangesVec>;
 
 UniquePublicExchanges RetrieveUniquePublicExchanges(std::span<const PublicExchangeName> exchangeNames,
                                                     std::span<Exchange> exchanges) {
   SelectedExchanges selectedExchanges = RetrieveSelectedExchanges(exchangeNames, exchanges);
   UniquePublicExchanges selectedPublicExchanges;
-  selectedPublicExchanges.reserve(selectedExchanges.size());
   std::transform(selectedExchanges.begin(), selectedExchanges.end(),
                  std::inserter(selectedPublicExchanges, selectedPublicExchanges.end()),
                  [](Exchange *e) { return std::addressof(e->apiPublic()); });
@@ -142,6 +143,10 @@ Coincenter::Coincenter(settings::RunMode runMode)
 }
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
+  if (opts.marketsCurrency != CurrencyCode()) {
+    printMarkets(opts.marketsCurrency, opts.marketsExchanges);
+  }
+
   if (opts.marketForOrderBook != Market()) {
     std::optional<int> depth;
     if (opts.orderbookDepth != 0) {
@@ -246,6 +251,31 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
     ret.merge(sub);
   }
   return ret;
+}
+
+void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames) {
+  log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicExchanges exchanges = RetrieveUniquePublicExchanges(exchangeNames, _exchanges);
+  cct::FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges> marketsPerExchange(exchanges.size());
+  auto marketsWithCur = [cur](api::ExchangePublic *e) {
+    api::ExchangePublic::MarketSet markets = e->queryTradableMarkets();
+    api::ExchangePublic::MarketSet ret;
+    std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()),
+                 [cur](Market m) { return m.canTrade(cur); });
+    return ret;
+  };
+  std::transform(std::execution::par, exchanges.begin(), exchanges.end(), marketsPerExchange.begin(), marketsWithCur);
+  std::string marketsCol("Markets with ");
+  marketsCol.append(cur.str());
+  VariadicTable<std::string, std::string> vt({"Exchange", marketsCol});
+  int exchangePos = 0;
+  for (api::ExchangePublic *e : exchanges) {
+    for (Market m : marketsPerExchange[exchangePos]) {
+      vt.addRow(std::string(e->name()), m.str());
+    }
+    ++exchangePos;
+  }
+  vt.print(std::cout);
 }
 
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {

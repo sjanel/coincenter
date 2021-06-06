@@ -18,21 +18,23 @@ struct CoincenterCmdLineOptions {
 
   static void PrintVersion(const char* programName);
 
-  std::string logLevel{};
+  std::string logLevel;
   bool help{};
   bool version{};
   bool logFile{};
 
-  std::string orderbook{};
+  std::string markets;
+
+  std::string orderbook;
   int orderbook_depth{};
-  std::string orderbook_cur{};
+  std::string orderbook_cur;
 
-  std::string conversion_path{};
+  std::string conversion_path;
 
-  std::optional<std::string> balance{};
+  std::optional<std::string> balance;
   std::string balance_cur{CurrencyCode::kNeutral.str()};
 
-  std::string trade{};
+  std::string trade;
   std::string trade_strategy{api::TradeOptions().strategyStr()};
   int trade_timeout_s{static_cast<int>(
       std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultTradeDuration).count())};
@@ -66,6 +68,9 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                       "Possible values are: trace|debug|info|warning|error|critical|off"}, 
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
+
+       {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
+                                                                       &OptValueType::markets},
 
        {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2[,exch1,...]>", "Print order book of currency pair for all exchanges offering "
                                                                                " this market, or only for specified exchanges."}, 
