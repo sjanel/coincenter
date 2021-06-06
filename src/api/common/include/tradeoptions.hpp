@@ -25,7 +25,7 @@ class TradeOptions {
   using TimePoint = std::chrono::time_point<Clock>;
 
   static constexpr Clock::duration kDefaultTradeDuration = std::chrono::seconds(30);
-  static constexpr Clock::duration kDefaultEmergencyTime = std::chrono::milliseconds(2500);
+  static constexpr Clock::duration kDefaultEmergencyTime = std::chrono::seconds(2);
   static constexpr Clock::duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 
   explicit TradeOptions(TradeStrategy tradeStrategy = TradeStrategy::kMaker,

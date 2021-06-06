@@ -53,12 +53,11 @@ std::string TradeOptions::str() const {
   ret.append(strategyStr());
   ret.append(" strategy, timeout of ");
   ret.append(std::to_string(std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count()));
-  ret.append("s, emergency time of ");
-  ret.append(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(_emergencyBufferTime).count()));
-  ret.append("ms, min time between two limit price updates of ");
-  ret.append(
-      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(_minTimeBetweenPriceUpdates).count()));
-  ret.append("ms");
+  ret.append(" s, emergency time of ");
+  ret.append(std::to_string(std::chrono::duration_cast<std::chrono::seconds>(_emergencyBufferTime).count()));
+  ret.append(" s, min time between two limit price updates of ");
+  ret.append(std::to_string(std::chrono::duration_cast<std::chrono::seconds>(_minTimeBetweenPriceUpdates).count()));
+  ret.append(" s");
   return ret;
 }
 }  // namespace api
