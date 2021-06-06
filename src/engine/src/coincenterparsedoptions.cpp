@@ -13,7 +13,7 @@ CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[]) {
     CommandLineOptionsParser<CoincenterCmdLineOptions> cmdLineOptionsParser =
         CreateCoincenterCommandLineOptionsParser<CoincenterCmdLineOptions>();
     CoincenterCmdLineOptions cmdLineOptions = cmdLineOptionsParser.parse(argc, argv);
-    if (cmdLineOptions.help) {
+    if (cmdLineOptions.help || argc == 1) {
       cmdLineOptionsParser.displayHelp(argv[0], std::cout);
       noProcess = true;
     } else {
@@ -67,11 +67,10 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
         anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
 
-    tradeOptions = api::TradeOptions(cmdLineOptions.trade_strategy,
-                                     cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal,
-                                     std::chrono::seconds(cmdLineOptions.trade_timeout_s),
-                                     std::chrono::milliseconds(cmdLineOptions.trade_emergency_ms),
-                                     std::chrono::milliseconds(cmdLineOptions.trade_updateprice_ms));
+    tradeOptions = api::TradeOptions(
+        cmdLineOptions.trade_strategy, cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal,
+        std::chrono::seconds(cmdLineOptions.trade_timeout_s), std::chrono::seconds(cmdLineOptions.trade_emergency_s),
+        std::chrono::seconds(cmdLineOptions.trade_updateprice_s));
   }
 
   if (!cmdLineOptions.withdraw.empty()) {

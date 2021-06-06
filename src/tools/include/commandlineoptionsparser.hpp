@@ -146,7 +146,7 @@ class CommandLineOptionsParser : private Opts {
 
   template <typename StreamType>
   void displayHelp(const char* programName, StreamType& stream) const {
-    stream << "usage: " << programName << " [options]" << std::endl;
+    stream << "usage: " << programName << " <options>" << std::endl;
     if (_commandLineOptionsWithValues.empty()) {
       return;
     }
