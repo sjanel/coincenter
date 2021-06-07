@@ -69,8 +69,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
     tradeOptions = api::TradeOptions(
         cmdLineOptions.trade_strategy, cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal,
-        std::chrono::seconds(cmdLineOptions.trade_timeout_s), std::chrono::seconds(cmdLineOptions.trade_emergency_s),
-        std::chrono::seconds(cmdLineOptions.trade_updateprice_s));
+        cmdLineOptions.trade_timeout, cmdLineOptions.trade_emergency, cmdLineOptions.trade_updateprice);
   }
 
   if (!cmdLineOptions.withdraw.empty()) {

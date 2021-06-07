@@ -14,68 +14,11 @@
 #include <variant>
 
 #include "cct_flatset.hpp"
+#include "commandlineoption.hpp"
 
 namespace cct {
-using InvalidArgumentException = std::invalid_argument;
 
-/// Description of a command line option.
-class CommandLineOption {
- public:
-  using GroupNameAndPrio = std::pair<std::string_view, int>;
-
-  CommandLineOption(GroupNameAndPrio optionGroupName, std::string_view fullName, char shortName,
-                    std::string_view valueDescription, std::string_view description)
-      : _optionGroupName(optionGroupName.first),
-        _fullName(fullName),
-        _valueDescription(valueDescription),
-        _description(description),
-        _prio(optionGroupName.second),
-        _shortName(shortName) {}
-
-  CommandLineOption(GroupNameAndPrio optionGroupName, std::string_view fullName, std::string_view valueDescription,
-                    std::string_view description)
-      : CommandLineOption(optionGroupName, fullName, '\0', valueDescription, description) {}
-
-  bool matches(std::string_view optName) const {
-    if (optName.size() == 2 && optName.front() == '-' && optName.back() == _shortName) {
-      return true;
-    }
-    return optName == _fullName;
-  }
-
-  const std::string& optionGroupName() const { return _optionGroupName; }
-  const std::string& fullName() const { return _fullName; }
-  const std::string& description() const { return _description; }
-  const std::string& valueDescription() const { return _valueDescription; }
-
-  std::string shortName() const {
-    std::string ret;
-    if (_shortName != '\0') {
-      ret.push_back('-');
-      ret.push_back(_shortName);
-    }
-    return ret;
-  }
-
-  bool operator<(const CommandLineOption& o) const {
-    if (_prio != o._prio) {
-      return _prio < o._prio;
-    }
-    if (_optionGroupName != o._optionGroupName) {
-      return _optionGroupName < o._optionGroupName;
-    }
-    return _fullName < o._fullName;
-  }
-
- private:
-  std::string _optionGroupName;
-  std::string _fullName;
-  std::string _valueDescription;
-  std::string _description;
-  int _prio;
-  char _shortName;
-};
-
+#ifndef _WIN32
 // helper type for the visitor #4
 template <class... Ts>
 struct overloaded : Ts... {
@@ -84,6 +27,7 @@ struct overloaded : Ts... {
 // explicit deduction guide (not needed as of C++20)
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
+#endif
 
 /// Simple Command line options parser.
 /// Base taken from https://www.codeproject.com/Tips/5261900/Cplusplus-Lightweight-Parsing-Command-Line-Argumen
@@ -92,7 +36,9 @@ overloaded(Ts...) -> overloaded<Ts...>;
 template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
-  using OptionType = std::variant<std::string Opts::*, std::optional<std::string> Opts::*, int Opts::*, bool Opts::*>;
+  using Duration = CommandLineOption::Duration;
+  using OptionType = std::variant<std::string Opts::*, std::optional<std::string> Opts::*, int Opts::*, bool Opts::*,
+                                  Duration Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -261,6 +207,14 @@ class CommandLineOptionsParser : private Opts {
       }
     }
 
+    void operator()(Duration Opts::*arg) const {
+      if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+        opts->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
+      } else {
+        throw InvalidArgumentException("Expecting a value for option '" + commandLineOption.fullName() + "'");
+      }
+    }
+
     Opts* opts;
     int idx;
     std::span<const char*> argv;
@@ -301,6 +255,14 @@ class CommandLineOptionsParser : private Opts {
                            this->*arg = argv[idx + 1];
                          } else {
                            this->*arg = std::string();
+                         }
+                       },
+                       [this, idx, argv, &commandLineOption](Duration Opts::*arg) {
+                         if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+                           this->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
+                         } else {
+                           throw InvalidArgumentException("Expecting a value for option '" +
+                                                          commandLineOption.fullName() + "'");
                          }
                        },
 #endif
