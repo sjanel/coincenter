@@ -177,7 +177,7 @@ For instance, to print total balance on Kraken and Bithumb exchanges, with a sum
 
 ## Simple Trade
 
-It is possible to realize a simple trade on one exchange by the command line handled automatically by the program, according to different strategies.
+It is possible to make a simple trade on one exchange by the command line handled automatically by the program, according to different strategies.
 Of course, this requires that your private keys for the considered exchange are well settled in the 'config/secret.json' file, and that your balance is adequate. 
 
 Possible strategies:
@@ -187,9 +187,9 @@ Possible strategies:
  - adapt: same as maker, except that after `t + timeout - trade-emergency` time (`t` being the start time of the trade) remaining unmatched part is placed at market price to force the trade
 
 Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
-          an emergency mode triggered before 1500 ms of the timeout of 15 seconds."
+          an emergency mode triggered before 2 seconds of the timeout of 15 seconds."
 ```
-./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 1500 --trade-timeout 15
+./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2 --trade-timeout 15
 ```
 
 ### Trade simulation
@@ -237,12 +237,12 @@ You can exclude currencies in the exchange configuration file (for instance: som
 
 ## Trade 1000 euros to XRP on kraken with a maker strategy
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-emergency 1500 --trade-timeout 60
+./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-emergency 1500 --trade-timeout 60 --trade-sim
+./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60 --trade-sim
 ```
 
 #### Possible output
