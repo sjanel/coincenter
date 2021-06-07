@@ -393,8 +393,13 @@ void MarketOrderBook::print(std::ostream& os) const {
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const {
   cct::FixedCapacityVector<std::string, 4> cols;
   cols.emplace_back("Sellers of ").append(_market.base().str()).append(" (asks)");
-  cols.emplace_back(exchangeName).append(_market.base().str()).append(" price in ").append(_market.quote().str());
   cols.emplace_back(exchangeName)
+      .append(" ")
+      .append(_market.base().str())
+      .append(" price in ")
+      .append(_market.quote().str());
+  cols.emplace_back(exchangeName)
+      .append(" ")
       .append(_market.base().str())
       .append(" price in ")
       .append(conversionPriceRate.currencyCode().str());
