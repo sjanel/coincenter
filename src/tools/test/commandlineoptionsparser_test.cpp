@@ -1,4 +1,3 @@
-
 #include "commandlineoptionsparser.hpp"
 
 #include <gtest/gtest.h>
@@ -9,12 +8,17 @@ namespace cct {
 
 class CommandLineOptionsParserTest : public ::testing::Test {
  public:
+  using Clock = std::chrono::high_resolution_clock;
+  using TimePoint = std::chrono::time_point<Clock>;
+  using Duration = Clock::duration;
+
   struct Opts {
     std::string stringOpt{};
     int intOpt{};
     int int2Opt{};
     bool boolOpt{};
     std::optional<std::string> optStr{};
+    Duration timeOpt;
   };
 
   using ParserType = CommandLineOptionsParser<Opts>;
@@ -24,7 +28,13 @@ class CommandLineOptionsParserTest : public ::testing::Test {
                  {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
                  {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
                  {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
+                 {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
                  {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}) {}
+
+  Opts createOptions(std::initializer_list<const char *> init) {
+    cct::vector<const char *> opts = init;
+    return _parser.parse(opts);
+  }
 
  protected:
   virtual void SetUp() {}
@@ -34,50 +44,74 @@ class CommandLineOptionsParserTest : public ::testing::Test {
 };
 
 TEST_F(CommandLineOptionsParserTest, Basic) {
-  cct::vector<const char *> opts1 = {"coincenter", "--opt1", "toto", "--help"};
-  Opts options = _parser.parse(opts1);
+  Opts options = createOptions({"coincenter", "--opt1", "toto", "--help"});
   EXPECT_EQ(options.stringOpt, "toto");
   EXPECT_TRUE(options.boolOpt);
 
-  cct::vector<const char *> opts2 = {"coincenter", "--opt1", "toto", "--opt3", "--opt2"};
-  EXPECT_THROW(_parser.parse(opts2), std::invalid_argument);
-  cct::vector<const char *> opts3 = {"coincenter", "--opt1", "toto", "--opts3", "--opt2", "3"};
-  EXPECT_THROW(_parser.parse(opts3), std::invalid_argument);
+  EXPECT_THROW(createOptions({"coincenter", "--opt1", "toto", "--opt3", "--opt2"}), std::invalid_argument);
+  EXPECT_THROW(createOptions({"coincenter", "--opt1", "toto", "--opts3", "--opt2", "3"}), std::invalid_argument);
 }
 
 TEST_F(CommandLineOptionsParserTest, String) {
-  cct::vector<const char *> opts = {"coincenter", "--opt1", "2000 EUR, kraken"};
-  Opts options = _parser.parse(opts);
-  EXPECT_EQ(options.stringOpt, "2000 EUR, kraken");
+  EXPECT_EQ(createOptions({"coincenter", "--opt1", "2000 EUR, kraken"}).stringOpt, "2000 EUR, kraken");
 }
 
 TEST_F(CommandLineOptionsParserTest, AlternativeOptionName) {
-  cct::vector<const char *> opts = {"coincenter", "-h"};
-  Opts options = _parser.parse(opts);
-  EXPECT_TRUE(options.boolOpt);
-  cct::vector<const char *> opts2 = {"coincenter", "-j"};
-  EXPECT_THROW(_parser.parse(opts2), std::invalid_argument);
+  EXPECT_TRUE(createOptions({"coincenter", "-h"}).boolOpt);
+  EXPECT_THROW(createOptions({"coincenter", "-j"}), std::invalid_argument);
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {
-  cct::vector<const char *> opts = {"coincenter", "--opt4", "2000 EUR, kraken"};
-  Opts options = _parser.parse(opts);
-  EXPECT_EQ(*options.optStr, "2000 EUR, kraken");
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "2000 EUR, kraken"}).optStr, "2000 EUR, kraken");
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty1) {
-  cct::vector<const char *> opts = {"coincenter", "--opt4", "--opt1", "Opt1 value"};
-  EXPECT_EQ(*_parser.parse(opts).optStr, std::string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "--opt1", "Opt1 value"}).optStr, std::string());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
-  cct::vector<const char *> opts = {"coincenter", "--opt4"};
-  EXPECT_EQ(*_parser.parse(opts).optStr, std::string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4"}).optStr, std::string());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) {
-  cct::vector<const char *> opts = {"coincenter", "--help"};
-  EXPECT_EQ(_parser.parse(opts).optStr, std::nullopt);
+  EXPECT_EQ(createOptions({"coincenter", "--help"}).optStr, std::nullopt);
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionHours) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "12h"}).timeOpt, std::chrono::hours(12));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionMinutesSpace) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "45 min"}).timeOpt, std::chrono::minutes(45));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionSeconds) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "3s"}).timeOpt, std::chrono::seconds(3));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionMilliseconds) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "1500 ms"}).timeOpt, std::chrono::milliseconds(1500));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionMicroseconds) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "567889358us"}).timeOpt, std::chrono::microseconds(567889358));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionNanoseconds) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "100000000000000  ns"}).timeOpt,
+            std::chrono::nanoseconds(100000000000000L));
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit1) {
+  EXPECT_THROW(createOptions({"coincenter", "--opt5", "13mon"}), InvalidArgumentException);
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit2) {
+  EXPECT_THROW(createOptions({"coincenter", "--opt5", "42"}), InvalidArgumentException);
+}
+
+TEST_F(CommandLineOptionsParserTest, DurationOptionThrowOnlyIntegral) {
+  EXPECT_THROW(createOptions({"coincenter", "--opt5", "2.5min"}), InvalidArgumentException);
 }
 
 }  // namespace cct

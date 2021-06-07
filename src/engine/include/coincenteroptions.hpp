@@ -12,6 +12,8 @@
 namespace cct {
 
 struct CoincenterCmdLineOptions {
+  using Duration = api::TradeOptions::Clock::duration;
+
   void setLogLevel() const;
 
   void setLogFile() const;
@@ -36,12 +38,9 @@ struct CoincenterCmdLineOptions {
 
   std::string trade;
   std::string trade_strategy{api::TradeOptions().strategyStr()};
-  int trade_timeout_s{static_cast<int>(
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultTradeDuration).count())};
-  int trade_emergency_s{static_cast<int>(
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultEmergencyTime).count())};
-  int trade_updateprice_s{static_cast<int>(
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates).count())};
+  Duration trade_timeout{api::TradeOptions::kDefaultTradeDuration};
+  Duration trade_emergency{api::TradeOptions::kDefaultEmergencyTime};
+  Duration trade_updateprice{api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates};
   bool trade_sim{api::TradeOptions().isSimulation()};
 
   std::string withdraw;
@@ -98,19 +97,19 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                                   " at market price before the timeout to make it eventually completely matched. "
                                                                   "Useful for exchanges proposing cheaper maker than taker fees."}, 
                                                                   &OptValueType::trade_strategy},
-       {{{"Trade", 4}, "--trade-timeout", "<s>", std::string("Adjust trade timeout (default: ")
+       {{{"Trade", 4}, "--trade-timeout", "<time>", std::string("Adjust trade timeout (default: ")
                                                 .append(std::to_string(defaultTradeTimeout))
-                                                .append(" s). Remaining orders will be cancelled after the timeout.")}, 
-                                                &OptValueType::trade_timeout_s},
-       {{{"Trade", 4}, "--trade-emergency", "<s>", std::string("Adjust emergency buffer for the 'adapt' strategy (default: ")
+                                                .append("s). Remaining orders will be cancelled after the timeout.")}, 
+                                                &OptValueType::trade_timeout},
+       {{{"Trade", 4}, "--trade-emergency", "<time>", std::string("Adjust emergency buffer for the 'adapt' strategy (default: ")
                                                    .append(std::to_string(emergencyBufferTime))
-                                                   .append(" s). Remaining order will be switched from limit to market price "
+                                                   .append("s). Remaining order will be switched from limit to market price "
                                                    "after 'timeout - emergency' time to force completion of the trade")}, 
-                                                   &OptValueType::trade_emergency_s},
-       {{{"Trade", 4}, "--trade-updateprice", "<s>", std::string("Set the min time allowed between two limit price updates (default: ")
+                                                   &OptValueType::trade_emergency},
+       {{{"Trade", 4}, "--trade-updateprice", "<time>", std::string("Set the min time allowed between two limit price updates (default: ")
                                                     .append(std::to_string(minUpdatePriceTime))
-                                                    .append(" s). Avoids cancelling / placing new orders too often with high volumes "
-                                                    "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice_s},
+                                                    .append("s). Avoids cancelling / placing new orders too often with high volumes "
+                                                    "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
        {{{"Trade", 4}, "--trade-sim", "", std::string("Activates simulation mode only (default: ")
                                          .append(isSimulationModeByDefault ? "true" : "false")
                                          .append("). For some exchanges, API can even be queried in this "

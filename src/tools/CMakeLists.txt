@@ -27,6 +27,7 @@ add_unit_test(
 
 add_unit_test(
     commandlineoptionsparser_test
+    src/commandlineoption.cpp
     test/commandlineoptionsparser_test.cpp
 )
 

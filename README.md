@@ -82,8 +82,9 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
 ## As an executable (CLI tool)
 
 **coincenter** can be used as a stand-alone project which provides an executable able to perform most common exchange operations on supported exchanges:
- - Balance
+ - Market
  - Orderbook
+ - Balance
  - Trade
  - Withdraw
 
@@ -189,7 +190,7 @@ Possible strategies:
 Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
           an emergency mode triggered before 2 seconds of the timeout of 15 seconds."
 ```
-./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2 --trade-timeout 15
+./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
 ```
 
 ### Trade simulation
@@ -237,12 +238,12 @@ You can exclude currencies in the exchange configuration file (for instance: som
 
 ## Trade 1000 euros to XRP on kraken with a maker strategy
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60
+./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60s
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60 --trade-sim
+./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 1min --trade-sim
 ```
 
 #### Possible output
