@@ -94,7 +94,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::warn("Cannot find {} main chain in Huobi, discarding currency", cur.str());
+      log::debug("Cannot find {} main chain in Huobi, discarding currency", cur.str());
     }
   }
   log::info("Retrieved {} Huobi currencies", currencies.size());
@@ -185,7 +185,7 @@ ExchangePublic::WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::warn("Cannot find '{}' main chain in {}, discarding currency", curStr, _name);
+      log::debug("Cannot find '{}' main chain in {}, discarding currency", curStr, _name);
     }
   }
 
