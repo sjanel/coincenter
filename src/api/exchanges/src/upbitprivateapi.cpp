@@ -66,6 +66,9 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          _curlHandle, _apiKey, upbitPublic),
+      _withdrawalFeesCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
@@ -88,10 +91,10 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
         depositStatus = CurrencyExchange::Deposit::kAvailable;
       }
       if (withdrawStatus == CurrencyExchange::Withdraw::kUnavailable) {
-        log::info("{} cannot be withdrawn from Upbit", cur.str());
+        log::debug("{} cannot be withdrawn from Upbit", cur.str());
       }
       if (depositStatus == CurrencyExchange::Deposit::kUnavailable) {
-        log::info("{} cannot be deposited to Upbit", cur.str());
+        log::debug("{} cannot be deposited to Upbit", cur.str());
       }
       currencies.insert(CurrencyExchange(cur, cur, cur, depositStatus, withdrawStatus));
     }
@@ -227,9 +230,11 @@ OrderInfo UpbitPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& 
   return parseOrderJson(orderRes, fromCurrencyCode, tradeInfo.m);
 }
 
-json UpbitPrivate::withdrawalInformation(CurrencyCode currencyCode) {
-  return PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "withdraws/chance",
-                      {{"currency", currencyCode.str()}});
+MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "withdraws/chance",
+                             {{"currency", currencyCode.str()}});
+  std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
+  return MonetaryAmount(amountStr, currencyCode);
 }
 
 OrderInfo UpbitPrivate::parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const {

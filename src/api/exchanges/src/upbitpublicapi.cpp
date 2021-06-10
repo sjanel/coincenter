@@ -70,7 +70,7 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
     currencies.insert(CurrencyExchange(m.quote(), m.quote(), m.quote()));
   }
   log::info("Retrieved {} Upbit currencies with partial information", currencies.size());
-  log::warn("Use Upbit private API to get full withdrawal and deposit statuses");
+  log::debug("Use Upbit private API to get full withdrawal and deposit statuses");
   return currencies;
 }
 

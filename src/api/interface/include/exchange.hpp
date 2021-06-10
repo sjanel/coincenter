@@ -12,6 +12,8 @@
 namespace cct {
 class Exchange {
  public:
+  using WithdrawalFeeMap = api::ExchangePublic::WithdrawalFeeMap;
+
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
   Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic);
 
@@ -44,6 +46,10 @@ class Exchange {
   bool hasPrivateAPI() const { return _pExchangePrivate; }
 
   CurrencyExchangeFlatSet queryTradableCurrencies();
+
+  WithdrawalFeeMap queryWithdrawalFees();
+
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode);
 
   bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 

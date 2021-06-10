@@ -46,7 +46,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
   EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
+  constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
   for (CurrencyCode code : kCurrencyCodesToTest) {
     if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
       EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
@@ -57,11 +57,12 @@ void PublicTest(UpbitPublic &upbitPublic) {
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
 }
 
-void PrivateTest(UpbitPrivate &upbitPrivate) {
+void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
   EXPECT_NO_THROW(upbitPrivate.queryAccountBalance());
   EXPECT_TRUE(upbitPrivate.queryDepositWallet("XRP").hasDestinationTag());
   EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
+  EXPECT_EQ(upbitPrivate.queryWithdrawalFee("ADA"), upbitPublic.queryWithdrawalFee("ADA"));
 }
 
 }  // namespace
@@ -82,7 +83,7 @@ TEST_F(UpbitAPI, Public) {
   // The following test will target the proxy
   // To avoid matching the test case, you can simply provide production keys
   UpbitPrivate upbitPrivate(coincenterInfo, upbitPublic, firstAPIKey);
-  PrivateTest(upbitPrivate);
+  PrivateTest(upbitPrivate, upbitPublic);
 }
 
 }  // namespace api
