@@ -27,6 +27,10 @@ class UpbitPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
+    return _withdrawalFeesCache.get(currencyCode);
+  }
+
  protected:
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
@@ -65,7 +69,16 @@ class UpbitPrivate : public ExchangePrivate {
     UpbitPublic& _exchangePublic;
   };
 
-  json withdrawalInformation(CurrencyCode currencyCode);
+  struct WithdrawFeesFunc {
+    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
+
+    MonetaryAmount operator()(CurrencyCode currencyCode);
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    UpbitPublic& _exchangePublic;
+  };
 
   OrderInfo parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const;
 
@@ -75,6 +88,7 @@ class UpbitPrivate : public ExchangePrivate {
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
+  CachedResult<WithdrawFeesFunc, CurrencyCode> _withdrawalFeesCache;
 };
 }  // namespace api
 }  // namespace cct

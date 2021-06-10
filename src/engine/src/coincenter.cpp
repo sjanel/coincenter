@@ -42,7 +42,8 @@ std::string_view ToString(const PublicExchangeName &exchangeName) { return excha
 std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
 
 Coincenter::SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
-                                                        std::span<Exchange> exchanges) {
+                                                        std::span<Exchange> exchanges,
+                                                        bool atMostOneAccountPerExchange = false) {
   SelectedExchanges ret;
   if (exchangeNames.empty()) {
     std::transform(exchanges.begin(), exchanges.end(), std::back_inserter(ret),
@@ -56,6 +57,13 @@ Coincenter::SelectedExchanges RetrieveSelectedExchanges(std::span<const PublicEx
       }
       ret.push_back(std::addressof(*exchangeIt));
     }
+  }
+  if (atMostOneAccountPerExchange) {
+    std::sort(ret.begin(), ret.end(),
+              [](const Exchange *lhs, const Exchange *rhs) { return lhs->name() < rhs->name(); });
+    auto newEndIt = std::unique(ret.begin(), ret.end(),
+                                [](const Exchange *lhs, const Exchange *rhs) { return lhs->name() == rhs->name(); });
+    ret.erase(newEndIt, ret.end());
   }
 
   return ret;
@@ -337,18 +345,27 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
 
 void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  UniquePublicExchanges selectedPublicExchanges = RetrieveUniquePublicExchanges(exchangeNames, _exchanges);
-  cct::vector<api::ExchangePublic::WithdrawalFeeMap> withdrawFeesPerExchange(selectedPublicExchanges.size());
-  std::transform(std::execution::par, selectedPublicExchanges.begin(), selectedPublicExchanges.end(),
-                 std::begin(withdrawFeesPerExchange),
-                 [currencyCode](api::ExchangePublic *e) { return e->queryWithdrawalFees(); });
+  SelectedExchanges selectedExchanges = RetrieveSelectedExchanges(exchangeNames, _exchanges, true);
+  cct::FixedCapacityVector<bool, kNbSupportedExchanges> isCurrencyTradablePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                 isCurrencyTradablePerExchange.begin(),
+                 [currencyCode](Exchange *e) { return e->queryTradableCurrencies().contains(currencyCode); });
+
+  // Erases Exchanges which do not propose asked currency (from last to first to keep index consistent)
+  for (int exchangePos = selectedExchanges.size(); exchangePos > 0; --exchangePos) {
+    if (!isCurrencyTradablePerExchange[exchangePos - 1]) {
+      selectedExchanges.erase(selectedExchanges.begin() + exchangePos - 1);
+    }
+  }
+
+  cct::FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges> withdrawFeePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                 withdrawFeePerExchange.begin(),
+                 [currencyCode](Exchange *e) { return e->queryWithdrawalFee(currencyCode); });
   VariadicTable<std::string, std::string> vt({"Exchange", "Withdraw fee"});
   int exchangePos = 0;
-  for (const api::ExchangePublic::WithdrawalFeeMap &withdrawFeesMap : withdrawFeesPerExchange) {
-    auto foundIt = withdrawFeesMap.find(currencyCode);
-    if (foundIt != withdrawFeesMap.end()) {
-      vt.addRow(std::string(selectedPublicExchanges.begin()[exchangePos++]->name()), foundIt->second.str());
-    }
+  for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
+    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), withdrawFee.str());
   }
   vt.print();
 }

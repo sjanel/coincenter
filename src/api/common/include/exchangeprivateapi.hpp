@@ -25,6 +25,8 @@ class TradeOptions;
 
 class ExchangePrivate : public ExchangeBase {
  public:
+  using WithdrawalFeeMap = ExchangePublic::WithdrawalFeeMap;
+
   ExchangePrivate(const ExchangePrivate &) = delete;
   ExchangePrivate &operator=(const ExchangePrivate &) = delete;
 
@@ -70,6 +72,16 @@ class ExchangePrivate : public ExchangeBase {
   /// @param targetExchange private exchange to which we should deliver the transfer
   /// @return information about the withdraw
   WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange);
+
+  /// Retrieve the fixed withdrawal fees per currency.
+  /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
+  virtual WithdrawalFeeMap queryWithdrawalFees() { return _exchangePublic.queryWithdrawalFees(); }
+
+  /// Retrieve the withdrawal fee of a Currency only
+  /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
+  virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) {
+    return _exchangePublic.queryWithdrawalFee(currencyCode);
+  }
 
  protected:
   ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
