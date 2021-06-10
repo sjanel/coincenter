@@ -43,7 +43,7 @@ template <class... Ts>
 class VariadicTable {
  public:
   /// The type stored for each row
-  typedef std::tuple<Ts...> DataTuple;
+  using DataTuple = std::tuple<Ts...>;
 
   /**
    * Construct the table with headers
@@ -154,7 +154,7 @@ class VariadicTable {
   }
 
  protected:
-  // Just some handy typedefs for the following two functions
+  // Just some handy types for the following two functions
   using right_type = decltype(&std::right);
   using left_type = decltype(&std::left);
 
