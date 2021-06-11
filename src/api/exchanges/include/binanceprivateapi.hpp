@@ -25,6 +25,10 @@ class BinancePrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
+
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
+
  protected:
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
@@ -62,8 +66,32 @@ class BinancePrivate : public ExchangePrivate {
     BinancePublic& _public;
   };
 
+  struct AllWithdrawFeesFunc {
+    AllWithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
+
+    WithdrawalFeeMap operator()();
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    BinancePublic& _exchangePublic;
+  };
+
+  struct WithdrawFeesFunc {
+    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
+
+    MonetaryAmount operator()(CurrencyCode currencyCode);
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    BinancePublic& _exchangePublic;
+  };
+
   CurlHandle _curlHandle;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
+  CachedResult<AllWithdrawFeesFunc> _allWithdrawFeesCache;
+  CachedResult<WithdrawFeesFunc, CurrencyCode> _withdrawFeesCache;
 };
 }  // namespace api
 }  // namespace cct

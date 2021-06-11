@@ -69,6 +69,12 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& bina
       _curlHandle(config.exchangeInfo(binancePublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          _curlHandle, _apiKey, binancePublic),
+      _allWithdrawFeesCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
+          _curlHandle, _apiKey, binancePublic),
+      _withdrawFeesCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic) {}
 
 CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
@@ -100,6 +106,33 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   Wallet w(PrivateExchangeName(_public.name(), _apiKey.name()), currencyCode, address, tag);
   log::info("Retrieved {}", w.str());
   return w;
+}
+
+ExchangePublic::WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
+                             _exchangePublic._commonInfo.getBestBaseURL(), "sapi/v1/asset/assetDetail");
+  WithdrawalFeeMap ret;
+  for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
+    if (withdrawFeeDetails["withdrawStatus"].get<bool>()) {
+      CurrencyCode cur(curCodeStr);
+      ret.insert_or_assign(cur, MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), cur));
+    }
+  }
+  return ret;
+}
+
+MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, _exchangePublic._commonInfo.getBestBaseURL(),
+                   "sapi/v1/asset/assetDetail", {{"asset", currencyCode.str()}});
+  if (!result.contains(currencyCode.str())) {
+    throw exception("Unable to find asset information in assetDetail query to Binance");
+  }
+  const json& withdrawFeeDetails = result[std::string(currencyCode.str())];
+  if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
+    log::error("{} is currently unavailable for withdraw from {}", currencyCode.str(), _exchangePublic.name());
+  }
+  return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
 }
 
 PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,

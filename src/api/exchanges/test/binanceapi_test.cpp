@@ -37,7 +37,7 @@ void PublicTest(BinancePublic &binancePublic) {
   EXPECT_NO_THROW(binancePublic.queryTradableMarkets());
 }
 
-void PrivateTest(BinancePrivate &binancePrivate) {
+void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
   EXPECT_TRUE(binancePrivate.queryDepositWallet("XLM").hasDestinationTag());
@@ -47,6 +47,7 @@ void PrivateTest(BinancePrivate &binancePrivate) {
   MonetaryAmount bigFrom("13567.1234BNB");
   EXPECT_NO_THROW(binancePrivate.trade(bigFrom, "ADA", tradeOptions));
   EXPECT_LT(bigFrom, MonetaryAmount("13567.1234BNB"));
+  EXPECT_EQ(binancePrivate.queryWithdrawalFee("ETH"), binancePublic.queryWithdrawalFee("ETH"));
 }
 }  // namespace
 
@@ -65,7 +66,7 @@ TEST_F(BinanceAPI, Main) {
 
   BinancePrivate binancePrivate(coincenterInfo, binancePublic, firstAPIKey);
 
-  PrivateTest(binancePrivate);
+  PrivateTest(binancePrivate, binancePublic);
 }
 
 }  // namespace api
