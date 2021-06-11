@@ -11,7 +11,7 @@
 coincenter
 ==========
 
-A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
+A C++ library / CLI stand-alone program centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
 
 Supported exchanges are:
 | Exchange |                                      Link                                       |
@@ -24,6 +24,7 @@ Supported exchanges are:
  
  *Table of Contents*
 - [coincenter](#coincenter)
+- [About](#about)
 - [Install](#install)
   - [Pre-requisites](#pre-requisites)
     - [Linux](#linux)
@@ -55,11 +56,17 @@ Supported exchanges are:
   - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
     - [Possible output](#possible-output-3)
 
+# About
+
+This project is for **C++** and **crypto enthusiasts** providing an alternative to other crypto exchanges clients often written in higher level languages. 
+At the beginning, it started as a experimental project aiming to learn modern C++ (**C++17** and **C++20**), **cmake** and practice all aspects of large project development such as CI/CD, building and documentation.
+All suggestions to improve the project are welcome (should it be bug fixing, support of a new crypto exchange, feature addition / improvements or even technical aspects about the source code and best development practices).
+
 # Install
 
 ## Pre-requisites
 
-You will need to install *OpenSSL* (min version 1.1.0), *cURL*, *cmake* and a *C++20* compiler on your system.
+You will need to install **OpenSSL** (min version 1.1.0), **cURL**, **cmake** and a **C++20** compiler on your system.
 
 ### Linux
 
@@ -105,7 +112,7 @@ include(FetchContent)
 FetchContent_Declare(
   coincenter
   GIT_REPOSITORY https://github.com/sjanel/coincenter.git
-  GIT_TAG        origin/master
+  GIT_TAG        main
 )
 
 FetchContent_MakeAvailable(coincenter)
@@ -125,7 +132,7 @@ Tested compilers:
  - GCC version >= 10
  - MSVC version >= 19.28
 
-As of May 2021, latest *clang* compiler does not support lambdas in unevaluated context yet and thus cannot compile `coincenter`.
+As of June 2021, latest *clang* compiler does not support lambdas in unevaluated context yet and thus cannot compile `coincenter`.
 
 Other compilers have not been tested yet.
 
