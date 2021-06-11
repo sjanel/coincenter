@@ -195,6 +195,16 @@ json BinancePublic::GlobalInfosFunc::operator()() {
   throw exception("Unexpected json from " + std::string(kInfoFeeUrl));
 }
 
+namespace {
+MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json& networkList) {
+  MonetaryAmount withdrawFee(0, cur, 0);
+  for (const json& networkListPart : networkList) {
+    withdrawFee = std::max(withdrawFee, MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur));
+  }
+  return withdrawFee;
+}
+}  // namespace
+
 ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const json& el : _globalInfosCache.get()) {
@@ -203,8 +213,7 @@ ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
       continue;
     }
     CurrencyCode cur(coinStr);
-    const json& networkListPart = el["networkList"].front();
-    MonetaryAmount withdrawFee = MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur);
+    MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
     ret.insert_or_assign(cur, withdrawFee);
   }
@@ -218,7 +227,7 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const json& el : _globalInfosCache.get()) {
     CurrencyCode cur(el["coin"].get<std::string_view>());
     if (cur == currencyCode) {
-      return MonetaryAmount(el["networkList"].front()["withdrawFee"].get<std::string_view>(), cur);
+      return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     }
   }
   throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
