@@ -33,9 +33,11 @@ class BithumbPublic : public ExchangePublic {
     return _withdrawalFeesCache.get().find(currencyCode)->second;
   }
 
-  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
+  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
+    return _allOrderBooksCache.get(depth);
+  }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
   static constexpr char kUrlBase[] = "https://api.bithumb.com";
   static constexpr char kUserAgent[] = "Bithumb C++ API Client";

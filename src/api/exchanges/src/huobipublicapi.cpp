@@ -213,7 +213,7 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 
 ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
-  const MarketSet& markets = _marketsCache.get().first;
+  const auto& [markets, marketInfoMap] = _marketsCache.get();
   using HuobiAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
   HuobiAssetPairToStdMarketMap huobiAssetPairToStdMarketMap;
   huobiAssetPairToStdMarketMap.reserve(markets.size());
@@ -238,7 +238,9 @@ ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(in
       continue;
     }
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, depth));
+    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+
+    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Huobi ticker information from {} markets", ret.size());
@@ -249,12 +251,12 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Huobi has a fixed range of authorized values for depth
   std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
   CurlPostData postData{{"symbol", std::string_view(lowerCaseAssets)}, {"type", "step0"}};
-  if (depth != kDefaultDepth) {
+  if (depth != kHuobiStandardOrderBookDefaultDepth) {
     constexpr int kAuthorizedDepths[] = {5, 10, 20};
     auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
     if (lb == std::end(kAuthorizedDepths)) {
       lb = std::next(std::end(kAuthorizedDepths), -1);
-      log::error("Invalid depth {}, default to {}", kDefaultDepth);
+      log::error("Invalid depth {}, default to {}", kHuobiStandardOrderBookDefaultDepth);
     } else {
       postData.append("depth", std::to_string(*lb));
     }

@@ -24,6 +24,8 @@ class CryptowatchAPI;
 
 class ExchangePublic : public ExchangeBase {
  public:
+  static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
+
   using MarketSet = FlatSet<Market>;
   using MarketOrderBookMap = std::unordered_map<Market, MarketOrderBook>;
   using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
@@ -65,11 +67,11 @@ class ExchangePublic : public ExchangeBase {
 
   /// Get all the MarketOrderBooks of this exchange as fast as possible.
   /// Exchanges which do not support retrieval of all of them at once may used heuristic methods.
-  virtual MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) = 0;
+  virtual MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) = 0;
 
   /// Retrieve the order book of given market.
   /// It should be more precise that previous version with possibility to go deeper.
-  virtual MarketOrderBook queryOrderBook(Market m, int depth = 10) = 0;
+  virtual MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) = 0;
 
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
@@ -83,7 +85,7 @@ class ExchangePublic : public ExchangeBase {
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 
-  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy, int depth = 10);
+  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy, int depth = kDefaultDepth);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);

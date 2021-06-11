@@ -20,6 +20,19 @@ add_unit_test(
 )
 
 add_unit_test(
+  exchangeprivateapi_test
+  src/cryptowatchapi.cpp
+  src/exchangeprivateapi.cpp
+  src/exchangepublicapi.cpp
+  src/tradeinfo.cpp
+  src/tradeoptions.cpp
+  test/exchangeprivateapi_test.cpp
+  LIBRARIES
+  coincenter_objects
+  coincenter_tools
+)
+
+add_unit_test(
   exchangepublicapi_test
   src/cryptowatchapi.cpp
   src/exchangepublicapi.cpp

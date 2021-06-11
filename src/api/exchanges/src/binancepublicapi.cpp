@@ -64,6 +64,21 @@ CurlHandle::Clock::duration Ping(CurlHandle& curlHandle, std::string_view baseUR
   return ping;
 }
 
+template <class ExchangeInfoDataByMarket>
+const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market m) {
+  auto it = exchangeInfoData.find(m);
+  if (it == exchangeInfoData.end()) {
+    throw exception("Unable to retrieve market data " + m.str());
+  }
+  return it->second;
+}
+
+template <class ExchangeInfoDataByMarket>
+VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exchangeInfoData, Market m) {
+  const json& marketData = RetrieveMarketData(exchangeInfoData, m);
+  return VolAndPriNbDecimals(marketData["baseAssetPrecision"].get<int8_t>(),
+                             marketData["quoteAssetPrecision"].get<int8_t>());
+}
 }  // namespace
 
 BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
@@ -78,7 +93,7 @@ BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverte
                     _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          _marketsCache, _commonInfo),
+          _exchangeInfoCache, _marketsCache, _commonInfo),
       _orderbookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
           _commonInfo) {}
@@ -224,14 +239,8 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
 }
 
-VolAndPriNbDecimals BinancePublic::queryVolAndPriNbDecimals(Market m) {
-  const json& marketData = retrieveMarketData(m);
-  return VolAndPriNbDecimals(marketData["baseAssetPrecision"].get<int8_t>(),
-                             marketData["quoteAssetPrecision"].get<int8_t>());
-}
-
 MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
-  const json& marketData = retrieveMarketData(m);
+  const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), m);
 
   const json* priceFilter = nullptr;
   MonetaryAmount ret(pri);
@@ -263,7 +272,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
     }
   }
 
-  VolAndPriNbDecimals volAndPriNbDecimals = queryVolAndPriNbDecimals(m);
+  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), m);
   ret.truncate(volAndPriNbDecimals.priNbDecimals);
   if (pri != ret) {
     log::warn("Sanitize price {} -> {}", pri.str(), ret.str());
@@ -273,7 +282,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount sanitizedPrice,
                                              bool isTakerOrder) {
-  const json& marketData = retrieveMarketData(m);
+  const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), m);
   MonetaryAmount ret(vol);
 
   const json* minNotionalFilter = nullptr;
@@ -335,7 +344,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
     }
   }
 
-  VolAndPriNbDecimals volAndPriNbDecimals = queryVolAndPriNbDecimals(m);
+  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), m);
   ret.truncate(volAndPriNbDecimals.volNbDecimals);
   if (ret != vol) {
     log::warn("Sanitize volume {} -> {}", vol.str(), ret.str());
@@ -365,7 +374,8 @@ ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(
     MonetaryAmount askVol(tickerDetails["askQty"].get<std::string_view>(), m.base());
     MonetaryAmount bidVol(tickerDetails["bidQty"].get<std::string_view>(), m.base());
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, depth));
+    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol,
+                                            QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), m), depth));
   }
 
   log::info("Retrieved ticker information from {} markets", ret.size());

@@ -30,7 +30,7 @@ class HuobiPublic : public ExchangePublic {
 
   static constexpr char kUserAgent[] = "Huobi C++ API Client";
 
-  static constexpr int kDefaultDepth = 150;
+  static constexpr int kHuobiStandardOrderBookDefaultDepth = 150;
 
   HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
@@ -48,9 +48,13 @@ class HuobiPublic : public ExchangePublic {
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
-  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
+  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
+    return _allOrderBooksCache.get(depth);
+  }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market m, int depth = kHuobiStandardOrderBookDefaultDepth) override {
+    return _orderbookCache.get(m, depth);
+  }
 
   VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
 
@@ -116,7 +120,7 @@ class HuobiPublic : public ExchangePublic {
     OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
-    MarketOrderBook operator()(Market m, int depth = 10);
+    MarketOrderBook operator()(Market m, int depth);
 
     CoincenterInfo& _config;
     CurlHandle& _curlHandle;

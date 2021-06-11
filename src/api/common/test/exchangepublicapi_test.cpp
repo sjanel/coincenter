@@ -6,25 +6,10 @@
 #include "cct_exception.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
+#include "mock_exchangepublicapi.hpp"
 
 namespace cct {
 namespace api {
-class MockExchangePublic : public ExchangePublic {
- public:
-  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
-                     const CoincenterInfo &config)
-      : ExchangePublic(name, fiatConverter, cryptowatchApi, config) {}
-
-  MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
-  MOCK_METHOD(CurrencyExchange, convertStdCurrencyToCurrencyExchange, (CurrencyCode currencyCode), (override));
-  MOCK_METHOD(MarketSet, queryTradableMarkets, (), (override));
-  MOCK_METHOD(MarketPriceMap, queryAllPrices, (), (override));
-  MOCK_METHOD(WithdrawalFeeMap, queryWithdrawalFees, (), (override));
-  MOCK_METHOD(MonetaryAmount, queryWithdrawalFee, (CurrencyCode currencyCode), (override));
-  MOCK_METHOD(MarketOrderBookMap, queryAllApproximatedOrderBooks, (int depth), (override));
-  MOCK_METHOD(MarketOrderBook, queryOrderBook, (Market m, int depth), (override));
-};
-
 class ExchangePublicTest : public ::testing::Test {
  protected:
   ExchangePublicTest() : exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
@@ -53,7 +38,7 @@ TEST_F(ExchangePublicTest, FindFastestConversionPath) {
   EXPECT_EQ(exchangePublic.findFastestConversionPath(Market("EOS", "KRW")), Currencies());
 }
 
-TEST_F(ExchangePublicTest, RetriveMarket) {
+TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets())
       .Times(3)
       .WillRepeatedly(::testing::Return(MarketSet{{"BTC", "KRW"}, {"XLM", "KRW"}, {"USD", "EOS"}}));

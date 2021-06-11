@@ -173,7 +173,7 @@ class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
  protected:
   MarketOrderBookTestCaseExtended1()
       : marketOrderBook(MonetaryAmount("2300.45 EUR"), MonetaryAmount("193.09 ADA"), MonetaryAmount("2300.4 EUR"),
-                        MonetaryAmount("41 ADA"), 50) {}
+                        MonetaryAmount("41 ADA"), {2, 2}, 50) {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
@@ -190,12 +190,22 @@ TEST_F(MarketOrderBookTestCaseExtended1, Convert) {
   EXPECT_NE(marketOrderBook.convert(MonetaryAmount("10000 ADA")), std::nullopt);
 }
 
-TEST(MarketOrderBookTest, ComputeVolAndPriNbDecimalsFromTickerInfo) {
+TEST(MarketOrderBookExtendedTest, ComputeVolAndPriNbDecimalsFromTickerInfo) {
   MarketOrderBook marketOrderBook(MonetaryAmount("12355.00002487 XLM"), MonetaryAmount("193.0900000000078 ADA"),
-                                  MonetaryAmount("12355.00002486 XLM"), MonetaryAmount("504787104.7801 ADA"), 10);
+                                  MonetaryAmount("12355.00002486 XLM"), MonetaryAmount("504787104.7801 ADA"), {4, 8},
+                                  10);
 
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("12355.00002486 XLM"));
   EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("12355.00002487 XLM"));
+}
+
+TEST(MarketOrderBookExtendedTest, InvalidDepth) {
+  EXPECT_THROW(MarketOrderBook(MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+                               MonetaryAmount("5ADA"), {0, 0}, 0),
+               cct::exception);
+  EXPECT_THROW(MarketOrderBook(MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+                               MonetaryAmount("5ADA"), {0, 0}, -1),
+               cct::exception);
 }
 
 }  // namespace cct
