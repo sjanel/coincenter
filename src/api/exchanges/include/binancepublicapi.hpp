@@ -43,11 +43,11 @@ class BinancePublic : public ExchangePublic {
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
-  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
+  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
+    return _allOrderBooksCache.get(depth);
+  }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderbookCache.get(m, depth); }
-
-  VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
+  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
 
@@ -55,15 +55,6 @@ class BinancePublic : public ExchangePublic {
 
  private:
   friend class BinancePrivate;
-
-  const json& retrieveMarketData(Market m) {
-    const BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket& exchangeInfoData = _exchangeInfoCache.get();
-    auto it = exchangeInfoData.find(m);
-    if (it == exchangeInfoData.end()) {
-      throw exception("Unable to retrieve market data " + m.str());
-    }
-    return it->second;
-  }
 
   class CommonInfo {
    public:
@@ -116,11 +107,13 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CachedResult<MarketsFunc>& marketsCache, CommonInfo& commonInfo)
-        : _marketsCache(marketsCache), _commonInfo(commonInfo) {}
+    AllOrderBooksFunc(CachedResult<ExchangeInfoFunc>& exchangeInfoCache, CachedResult<MarketsFunc>& marketsCache,
+                      CommonInfo& commonInfo)
+        : _exchangeInfoCache(exchangeInfoCache), _marketsCache(marketsCache), _commonInfo(commonInfo) {}
 
     MarketOrderBookMap operator()(int depth);
 
+    CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
     CachedResult<MarketsFunc>& _marketsCache;
     CommonInfo& _commonInfo;
   };
@@ -128,7 +121,7 @@ class BinancePublic : public ExchangePublic {
   struct OrderBookFunc {
     OrderBookFunc(CoincenterInfo& config, CommonInfo& commonInfo) : _config(config), _commonInfo(commonInfo) {}
 
-    MarketOrderBook operator()(Market m, int depth = 10);
+    MarketOrderBook operator()(Market m, int depth = kDefaultDepth);
 
     CoincenterInfo& _config;
     CommonInfo& _commonInfo;

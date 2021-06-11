@@ -55,11 +55,11 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
 }
 
 MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice,
-                                 MonetaryAmount bidVolume, int depth, VolAndPriNbDecimals volAndPriNbDecimals)
+                                 MonetaryAmount bidVolume, VolAndPriNbDecimals volAndPriNbDecimals, int depth)
     : _market(askVolume.currencyCode(), askPrice.currencyCode()),
       _volAndPriNbDecimals(volAndPriNbDecimals),
       _isArtificiallyExtended(depth > 1) {
-  if (depth == 0) {
+  if (depth <= 0) {
     throw exception("Invalid depth, should be strictly positive");
   }
   if (bidPrice >= askPrice || bidVolume.isZero() || askVolume.isZero()) {
@@ -67,10 +67,11 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
                   askVolume.str());
     throw exception("Invalid ticker information for MarketOrderBook");
   }
-  if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
-    _volAndPriNbDecimals.volNbDecimals = std::min(askVolume.nbDecimals(), bidVolume.nbDecimals());
-    _volAndPriNbDecimals.priNbDecimals = std::max(askPrice.nbDecimals(), bidPrice.nbDecimals());
-  }
+  askPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
+  bidPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
+  askVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
+  bidVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
+
   const AmountPrice::AmountType stepPrice = *(askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
 
   // Add bid lines first
@@ -79,6 +80,7 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   const AmountPrice refAskAmountPrice(-(*askVolume.amount(_volAndPriNbDecimals.volNbDecimals)),
                                       *askPrice.amount(_volAndPriNbDecimals.priNbDecimals));
   const AmountPrice::AmountType simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
+
   constexpr AmountPrice::AmountType kMaxVol = std::numeric_limits<AmountPrice::AmountType>::max() / 2;
 
   _orders.reserve(depth * 2);

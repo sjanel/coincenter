@@ -305,7 +305,7 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
   MarketOrderBookMap ret;
   std::string allAssetPairs;
   const CurrencyExchangeFlatSet& krakenCurrencies = _tradableCurrenciesCache.get();
-  const MarketSet& markets = _marketsCache.get().first;
+  const auto& [markets, marketInfoMap] = _marketsCache.get();
   allAssetPairs.reserve(markets.size() * 8);
   using KrakenAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
   KrakenAssetPairToStdMarketMap krakenAssetPairToStdMarketMap;
@@ -352,7 +352,9 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
     MonetaryAmount askVol(askDetails[2].get<std::string_view>(), m.base());
     MonetaryAmount bidVol(bidDetails[2].get<std::string_view>(), m.base());
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, depth));
+    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+
+    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved ticker information from {} markets", ret.size());

@@ -33,6 +33,8 @@ class OrderBookLine {
 /// Important note: all convert methods do not take fees into account, they should be handled accordingly.
 class MarketOrderBook {
  public:
+  static constexpr int kDefaultDepth = 10;
+
   using OrderBookLineSpan = std::span<const OrderBookLine>;
 
   struct AmountAtPrice {
@@ -55,9 +57,9 @@ class MarketOrderBook {
                   VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals())
       : MarketOrderBook(market, OrderBookLineSpan(orderLines.begin(), orderLines.end()), volAndPriNbDecimals) {}
 
-  /// Constructs a MarketOrderBook based on simple ticker information.
+  /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
   MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice, MonetaryAmount bidVolume,
-                  int depth = 10, VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
+                  VolAndPriNbDecimals volAndPriNbDecimals, int depth = kDefaultDepth);
 
   Market market() const { return _market; }
 

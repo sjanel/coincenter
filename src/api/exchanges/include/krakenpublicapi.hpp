@@ -38,9 +38,11 @@ class KrakenPublic : public ExchangePublic {
     return _withdrawalFeesCache.get().first.find(currencyCode)->second;
   }
 
-  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = 10) override { return _allOrderBooksCache.get(depth); }
+  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
+    return _allOrderBooksCache.get(depth);
+  }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderBookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderBookCache.get(m, depth); }
 
   void updateCacheFile() const override;
 

@@ -44,6 +44,7 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.isTakerStrategy());
   MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
+
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
 
   // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
