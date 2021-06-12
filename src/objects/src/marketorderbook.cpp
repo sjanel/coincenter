@@ -85,19 +85,19 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
 
   _orders.reserve(depth * 2);
   _orders.resize(depth);
-  for (AmountPrice::AmountType d = 0; d < depth; ++d) {
-    AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[static_cast<AmountPrice::AmountType>(depth) - d];
+  for (int d = 0; d < depth; ++d) {
+    AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[depth - d];
     amountPrice.price -= stepPrice * d;
     if (d != 0 && amountPrice.amount < kMaxVol) {
       amountPrice.amount += simulatedStepVol / 2;
     }
-    _orders[static_cast<AmountPrice::AmountType>(depth) - d - 1] = amountPrice;
+    _orders[depth - d - 1] = amountPrice;
   }
   _highestBidPricePos = _orders.size() - 1;
   _lowestAskPricePos = _highestBidPricePos + 1;
 
   // Finally add ask lines
-  for (AmountPrice::AmountType d = 0; d < depth; ++d) {
+  for (int d = 0; d < depth; ++d) {
     AmountPrice amountPrice = d == 0 ? refAskAmountPrice : _orders.back();
     amountPrice.price += stepPrice * d;
     if (d != 0 && -amountPrice.amount < kMaxVol) {

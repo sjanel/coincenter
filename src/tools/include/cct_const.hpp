@@ -11,7 +11,7 @@ static constexpr char kVersion[] = CCT_VERSION;
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "upbit"};
 
 static constexpr int kNbSupportedExchanges =
-    std::distance(std::begin(kSupportedExchanges), std::end(kSupportedExchanges));
+    static_cast<int>(std::distance(std::begin(kSupportedExchanges), std::end(kSupportedExchanges)));
 
 static constexpr int kTypicalNbPrivateAccounts = kNbSupportedExchanges;
 

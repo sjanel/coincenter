@@ -5,7 +5,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -16,12 +15,11 @@
 #include "bithumbpublicapi.hpp"
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_flatset.hpp"
+#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
-#include "exchangevector.hpp"
 #include "fiatconverter.hpp"
 #include "huobiprivateapi.hpp"
 #include "huobipublicapi.hpp"
@@ -87,6 +85,7 @@ class Coincenter {
   void updateFileCaches() const;
 
   std::span<Exchange> exchanges() { return _exchanges; }
+  std::span<const Exchange> exchanges() const { return _exchanges; }
 
   CoincenterInfo &coincenterInfo() { return _coincenterInfo; }
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
@@ -97,14 +96,9 @@ class Coincenter {
   FiatConverter &fiatConverter() { return _fiatConverter; }
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
-  using SelectedExchanges = cct::SmallVector<Exchange *, kTypicalNbPrivateAccounts>;
-
  private:
-  using MarketsPerExchange = cct::vector<api::ExchangePublic::MarketSet>;
-  using UniqueQueryRefresherHandles = cct::vector<api::ExchangeBase::UniqueQueryRefresherHandle>;
-  using CurrencyExchangeSets = cct::vector<CurrencyExchangeFlatSet>;
-  using WithdrawalFeeMapPerExchange = cct::vector<api::ExchangePublic::WithdrawalFeeMap>;
-  using MarketsOrderBookPerExchange = cct::vector<api::ExchangePublic::MarketOrderBookMap>;
+  using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
+  using ExchangeVector = SmallVector<Exchange, kTypicalNbPrivateAccounts>;
 
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;
