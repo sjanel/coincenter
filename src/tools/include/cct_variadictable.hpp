@@ -45,18 +45,19 @@ class VariadicTable {
   /// The type stored for each row
   using DataTuple = std::tuple<Ts...>;
 
+ private:
+  /// Number of columns in the table
+  static constexpr uint32_t kNbColumns = std::tuple_size<DataTuple>::value;
+
+ public:
   /**
    * Construct the table with headers
    *
    * @param headers The names of the columns
-   * @param static_column_size The size of columns that can't be found automatically
    */
-  VariadicTable(std::span<const std::string> headers, std::size_t static_column_size = 0, std::size_t cell_padding = 1)
-      : _headers(headers.begin(), headers.end()),
-        _num_columns(std::tuple_size<DataTuple>::value),
-        _static_column_size(static_column_size),
-        _cell_padding(cell_padding) {
-    assert(headers.size() == _num_columns);
+  VariadicTable(std::span<const std::string> headers, uint32_t cellPadding = 1)
+      : _headers(headers.begin(), headers.end()), _cellPadding(cellPadding) {
+    assert(headers.size() == kNbColumns);
   }
 
   VariadicTable(std::initializer_list<std::string> init)
@@ -79,48 +80,50 @@ class VariadicTable {
    */
   template <typename StreamType>
   void print(StreamType &stream, char colSep = '|', char headerLineSep = '-', bool printHeaders = true) {
-    size_columns();
+    sizeColumns();
 
     // Start computing the total width
-    // First - we will have _num_columns + 1 "|" characters
-    std::size_t total_width = _num_columns + 1;
+    // First - we will have kNbColumns + 1 "|" characters
+    auto totalWidth = kNbColumns + 1;
 
     // Now add in the size of each colum
-    for (const auto &col_size : _column_sizes) {
-      total_width += col_size + (2 * _cell_padding);
+    for (auto colSize : _columnSizes) {
+      totalWidth += colSize + 2 * _cellPadding;
     }
+
+    const std::string headerLine(totalWidth, headerLineSep);
 
     if (printHeaders) {
       // Print out the top line
-      stream << std::string(total_width, headerLineSep) << std::endl;
+      stream << headerLine << std::endl;
 
       // Print out the headers
       stream << colSep;
-      for (std::size_t i = 0; i < _num_columns; i++) {
+      for (uint32_t i = 0; i < kNbColumns; ++i) {
         // Must find the center of the column
-        std::size_t half = _column_sizes[i] / 2;
+        std::size_t half = _columnSizes[i] / 2;
         half -= _headers[i].size() / 2;
 
-        stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[i]) << std::left
-               << std::string(half, ' ') + _headers[i] << std::string(_cell_padding, ' ') << colSep;
+        stream << std::string(_cellPadding, ' ') << std::setw(_columnSizes[i]) << std::left
+               << std::string(half, ' ') + _headers[i] << std::string(_cellPadding, ' ') << colSep;
       }
 
       stream << std::endl;
 
       // Print out the line below the header
-      stream << std::string(total_width, headerLineSep) << std::endl;
+      stream << headerLine << std::endl;
     }
 
     // Now print the rows of the table
     for (const DataTuple &row : _data) {
       stream << colSep;
-      print_each(row, stream, colSep);
+      printEach(row, stream, colSep);
       stream << std::endl;
     }
 
     if (printHeaders) {
       // Print out the line below the header
-      stream << std::string(total_width, headerLineSep) << std::endl;
+      stream << headerLine << std::endl;
     }
   }
 
@@ -133,7 +136,7 @@ class VariadicTable {
    */
   void setColumnFormat(const cct::vector<VariadicTableColumnFormat> &column_format) {
     assert(column_format.size() == std::tuple_size<DataTuple>::value);
-    _column_format = column_format;
+    _columnFormat = column_format;
   }
 
   /**
@@ -158,7 +161,8 @@ class VariadicTable {
   using right_type = decltype(&std::right);
   using left_type = decltype(&std::left);
 
-  using SizeVector = cct::vector<std::size_t>;
+  using SizeVector = cct::vector<uint32_t>;
+  using size_type = SizeVector::size_type;
 
   // Attempts to figure out the correct justification for the data
   // If it's a floating point value
@@ -188,7 +192,7 @@ class VariadicTable {
    *  This ends the recursion
    */
   template <typename TupleType, typename StreamType>
-  void print_each(
+  void printEach(
       TupleType &&, StreamType & /*stream*/, char,
       std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
 
@@ -198,7 +202,7 @@ class VariadicTable {
   template <std::size_t I, typename TupleType, typename StreamType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void print_each(TupleType &&t, StreamType &stream, char colSep, std::integral_constant<size_t, I>) {
+  void printEach(TupleType &&t, StreamType &stream, char colSep, std::integral_constant<size_t, I>) {
     auto &val = std::get<I>(t);
 
     // Set the precision
@@ -209,35 +213,35 @@ class VariadicTable {
     }
 
     // Set the format
-    if (!_column_format.empty()) {
-      assert(_column_format.size() == std::tuple_size<typename std::remove_reference<TupleType>::type>::value);
+    if (!_columnFormat.empty()) {
+      assert(_columnFormat.size() == std::tuple_size<typename std::remove_reference<TupleType>::type>::value);
 
-      if (_column_format[I] == VariadicTableColumnFormat::SCIENTIFIC) stream << std::scientific;
+      if (_columnFormat[I] == VariadicTableColumnFormat::SCIENTIFIC) stream << std::scientific;
 
-      if (_column_format[I] == VariadicTableColumnFormat::FIXED) stream << std::fixed;
+      if (_columnFormat[I] == VariadicTableColumnFormat::FIXED) stream << std::fixed;
 
-      if (_column_format[I] == VariadicTableColumnFormat::PERCENT) stream << std::fixed << std::setprecision(2);
+      if (_columnFormat[I] == VariadicTableColumnFormat::PERCENT) stream << std::fixed << std::setprecision(2);
     }
 
-    stream << std::string(_cell_padding, ' ') << std::setw(_column_sizes[I]) << justify<decltype(val)>(0) << val
-           << std::string(_cell_padding, ' ') << colSep;
+    stream << std::string(_cellPadding, ' ') << std::setw(_columnSizes[I]) << justify<decltype(val)>(0) << val
+           << std::string(_cellPadding, ' ') << colSep;
 
     // Unset the format
-    if (!_column_format.empty()) {
+    if (!_columnFormat.empty()) {
       // Because "stream << std::defaultfloat;" won't compile with old GCC or Clang
       stream.unsetf(std::ios_base::floatfield);
     }
 
     // Recursive call to print the next item
-    print_each(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, I + 1>());
+    printEach(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, I + 1>());
   }
 
   /**
    * his is what gets called first
    */
   template <typename TupleType, typename StreamType>
-  void print_each(TupleType &&t, StreamType &stream, char colSep) {
-    print_each(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, 0>());
+  void printEach(TupleType &&t, StreamType &stream, char colSep) {
+    printEach(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, 0>());
   }
 
   /**
@@ -246,8 +250,8 @@ class VariadicTable {
    * If the datatype has a size() member... let's call it
    */
   template <class T>
-  size_t sizeOfData(const T &data, decltype(((T *)nullptr)->size()) * /*dummy*/ = nullptr) {
-    return data.size();
+  uint32_t sizeOfData(const T &data, decltype(((T *)nullptr)->size()) * /*dummy*/ = nullptr) {
+    return static_cast<uint32_t>(data.size());
   }
 
   /**
@@ -256,16 +260,9 @@ class VariadicTable {
    * If the datatype is an integer - let's get it's length
    */
   template <class T>
-  size_t sizeOfData(const T &data, typename std::enable_if<std::is_integral<T>::value>::type * /*dummy*/ = nullptr) {
-    if (data == 0) return 1;
-
-    return std::log10(data) + 1;
+  uint32_t sizeOfData(const T &data, typename std::enable_if<std::is_integral<T>::value>::type * /*dummy*/ = nullptr) {
+    return data == 0 ? 1 : std::log10(data) + 1;
   }
-
-  /**
-   * If it doesn't... let's just use a statically set size
-   */
-  size_t sizeOfData(...) { return _static_column_size; }
 
   /**
    * These three functions iterate over the Tuple, find the printed size of each element and set it
@@ -276,55 +273,58 @@ class VariadicTable {
    * End the recursion
    */
   template <typename TupleType>
-  void size_each(
+  void sizeEach(
       TupleType &&, SizeVector & /*sizes*/,
-      std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
+      std::integral_constant<uint32_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
 
   /**
    * Recursively called for each element
    */
-  template <std::size_t I, typename TupleType,
+  template <uint32_t I, typename TupleType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void size_each(TupleType &&t, SizeVector &sizes, std::integral_constant<size_t, I>) {
+  void sizeEach(TupleType &&t, SizeVector &sizes, std::integral_constant<uint32_t, I>) {
     sizes[I] = sizeOfData(std::get<I>(t));
 
     // Override for Percent
-    if (!_column_format.empty())
-      if (_column_format[I] == VariadicTableColumnFormat::PERCENT) sizes[I] = 6;  // 100.00
+    if (!_columnFormat.empty()) {
+      if (_columnFormat[I] == VariadicTableColumnFormat::PERCENT) {
+        sizes[I] = 6;  // 100.00
+      }
+    }
 
     // Continue the recursion
-    size_each(std::forward<TupleType>(t), sizes, std::integral_constant<size_t, I + 1>());
+    sizeEach(std::forward<TupleType>(t), sizes, std::integral_constant<uint32_t, I + 1>());
   }
 
   /**
    * The function that is actually called that starts the recursion
    */
   template <typename TupleType>
-  void size_each(TupleType &&t, SizeVector &sizes) {
-    size_each(std::forward<TupleType>(t), sizes, std::integral_constant<size_t, 0>());
+  void sizeEach(TupleType &&t, SizeVector &sizes) {
+    sizeEach(std::forward<TupleType>(t), sizes, std::integral_constant<uint32_t, 0>());
   }
 
   /**
-   * Finds the size each column should be and set it in _column_sizes
+   * Finds the size each column should be and set it in _columnSizes
    */
-  void size_columns() {
-    _column_sizes.resize(static_cast<SizeVector::size_type>(_num_columns));
+  void sizeColumns() {
+    _columnSizes.resize(kNbColumns);
 
     // Temporary for querying each row
-    SizeVector column_sizes(static_cast<SizeVector::size_type>(_num_columns));
+    SizeVector columnSizes(kNbColumns);
 
     // Start with the size of the headers
-    for (std::size_t i = 0; i < _num_columns; i++) {
-      _column_sizes[i] = _headers[i].size();
+    for (uint32_t i = 0; i < kNbColumns; i++) {
+      _columnSizes[i] = static_cast<uint32_t>(_headers[i].size());
     }
 
     // Grab the size of each entry of each row and see if it's bigger
     for (const DataTuple &row : _data) {
-      size_each(row, column_sizes);
+      sizeEach(row, columnSizes);
 
-      for (std::size_t i = 0; i < _num_columns; i++) {
-        _column_sizes[i] = std::max(_column_sizes[i], column_sizes[i]);
+      for (uint32_t i = 0; i < kNbColumns; i++) {
+        _columnSizes[i] = std::max(_columnSizes[i], columnSizes[i]);
       }
     }
   }
@@ -332,25 +332,19 @@ class VariadicTable {
   /// The column headers
   cct::vector<std::string> _headers;
 
-  /// Number of columns in the table
-  std::size_t _num_columns;
-
-  /// Size of columns that we can't get the size of
-  std::size_t _static_column_size;
-
-  /// Size of the cell padding
-  std::size_t _cell_padding;
-
   /// The actual data
   cct::vector<DataTuple> _data;
 
   /// Holds the printable width of each column
-  SizeVector _column_sizes;
+  SizeVector _columnSizes;
 
   /// Column Format
-  cct::vector<VariadicTableColumnFormat> _column_format;
+  cct::vector<VariadicTableColumnFormat> _columnFormat;
 
   /// Precision For each column
   cct::vector<int> _precision;
+
+  /// Size of the cell padding
+  uint32_t _cellPadding;
 };
 }  // namespace cct
