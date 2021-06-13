@@ -20,6 +20,7 @@
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
+#include "exchangeretriever.hpp"
 #include "fiatconverter.hpp"
 #include "huobiprivateapi.hpp"
 #include "huobipublicapi.hpp"
@@ -123,5 +124,7 @@ class Coincenter {
   std::forward_list<api::UpbitPrivate> _upbitPrivates;
 
   ExchangeVector _exchanges;
+  ExchangeRetriever _exchangeRetriever;
+  ConstExchangeRetriever _cexchangeRetriever;
 };
 }  // namespace cct
