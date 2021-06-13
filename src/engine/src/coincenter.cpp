@@ -16,88 +16,10 @@
 
 namespace cct {
 
-template <class ExchangeT>
-using SelectedExchanges = SmallVector<ExchangeT *, kTypicalNbPrivateAccounts>;
-
 namespace {
-
-template <class ExchangeT>
-ExchangeT &RetrieveUniqueCandidate(PrivateExchangeName privateExchangeName, std::span<ExchangeT> exchanges) {
-  SelectedExchanges<ExchangeT> ret;
-  for (ExchangeT &exchange : exchanges) {
-    if (privateExchangeName.name() == exchange.name()) {
-      if (privateExchangeName.isKeyNameDefined() && exchange.keyName() != privateExchangeName.keyName()) {
-        continue;
-      }
-      ret.push_back(std::addressof(exchange));
-    }
-  }
-  if (ret.empty()) {
-    throw exception("Cannot find exchange " + privateExchangeName.str());
-  }
-  if (ret.size() > 1) {
-    throw exception("Several private exchanges found for " + privateExchangeName.str() +
-                    " - remove ambiguity by specifying key name");
-  }
-  return *ret.front();
-}
 
 std::string_view ToString(const PublicExchangeName &exchangeName) { return exchangeName; }
 std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
-
-template <class ExchangeT>
-SelectedExchanges<ExchangeT> RetrieveSelectedExchanges(std::span<const PublicExchangeName> exchangeNames,
-                                                       std::span<ExchangeT> exchanges) {
-  SelectedExchanges<ExchangeT> ret;
-  if (exchangeNames.empty()) {
-    std::transform(exchanges.begin(), exchanges.end(), std::back_inserter(ret),
-                   [](ExchangeT &e) { return std::addressof(e); });
-  } else {
-    for (std::string_view exchangeName : exchangeNames) {
-      auto exchangeIt = std::find_if(exchanges.begin(), exchanges.end(),
-                                     [exchangeName](const Exchange &e) { return e.name() == exchangeName; });
-      if (exchangeIt == exchanges.end()) {
-        throw exception("Cannot find exchange " + std::string(exchangeName));
-      }
-      ret.push_back(std::addressof(*exchangeIt));
-    }
-  }
-
-  return ret;
-}
-
-template <class ExchangeT>
-FixedCapacityVector<ExchangeT *, kNbSupportedExchanges> RetrieveAtMostOneAccountSelectedExchanges(
-    std::span<const PublicExchangeName> exchangeNames, std::span<ExchangeT> exchanges) {
-  auto selectedExchanges = RetrieveSelectedExchanges(exchangeNames, exchanges);
-  std::sort(selectedExchanges.begin(), selectedExchanges.end(),
-            [](ExchangeT *lhs, ExchangeT *rhs) { return lhs->name() < rhs->name(); });
-  auto newEndIt = std::unique(selectedExchanges.begin(), selectedExchanges.end(),
-                              [](ExchangeT *lhs, ExchangeT *rhs) { return lhs->name() == rhs->name(); });
-  return FixedCapacityVector<ExchangeT *, kNbSupportedExchanges>(selectedExchanges.begin(), newEndIt);
-}
-
-template <class ExchangePublicT>
-using PublicExchangesVec = FixedCapacityVector<ExchangePublicT *, kNbSupportedExchanges>;
-
-template <class ExchangePublicT>
-using UniquePublicExchanges =
-    FlatSet<ExchangePublicT *, std::less<ExchangePublicT *>, amc::vec::EmptyAlloc, PublicExchangesVec<ExchangePublicT>>;
-
-template <class ExchangeT>
-using ConvertToExchangePublicT =
-    std::conditional_t<std::is_const_v<ExchangeT>, const api::ExchangePublic, api::ExchangePublic>;
-
-template <class ExchangeT>
-UniquePublicExchanges<ConvertToExchangePublicT<ExchangeT>> RetrieveUniquePublicExchanges(
-    std::span<const PublicExchangeName> exchangeNames, std::span<ExchangeT> exchanges) {
-  auto selectedExchanges = RetrieveSelectedExchanges(exchangeNames, exchanges);
-  UniquePublicExchanges<ConvertToExchangePublicT<ExchangeT>> selectedPublicExchanges;
-  std::transform(selectedExchanges.begin(), selectedExchanges.end(),
-                 std::inserter(selectedPublicExchanges, selectedPublicExchanges.end()),
-                 [](ExchangeT *e) { return std::addressof(e->apiPublic()); });
-  return selectedPublicExchanges;
-}
 
 template <class ExchangeNameT>
 std::string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchangeNames) {
@@ -164,6 +86,8 @@ Coincenter::Coincenter(settings::RunMode runMode)
       _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic);
     }
   }
+  _exchangeRetriever = ExchangeRetriever(_exchanges);
+  _cexchangeRetriever = ConstExchangeRetriever(_exchanges);
 }
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
@@ -232,7 +156,7 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
     Market m, std::span<const PublicExchangeName> exchangeNames, CurrencyCode equiCurrencyCode,
     std::optional<int> depth) {
   MarketOrderBookConversionRates ret;
-  for (api::ExchangePublic *e : RetrieveUniquePublicExchanges(exchangeNames, exchanges())) {
+  for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     // Do not check if market exists when exchange names are specified to save API call
     if (!exchangeNames.empty() || e->queryTradableMarkets().contains(m)) {
       std::optional<MonetaryAmount> optConversionRate =
@@ -255,7 +179,7 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
     equiCurrency = *optEquiCur;
   }
 
-  SelectedExchanges<Exchange> balanceExchanges;
+  ExchangeRetriever::SelectedExchanges balanceExchanges;
   for (Exchange &exchange : _exchanges) {
     const bool computeBalance = (balanceForAll && exchange.hasPrivateAPI()) ||
                                 std::any_of(privateExchangeNames.begin(), privateExchangeNames.end(),
@@ -279,7 +203,7 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
 
 void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames) {
   log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
-  auto uniqueExchanges = RetrieveUniquePublicExchanges(exchangeNames, exchanges());
+  auto uniqueExchanges = _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames);
   MarketsPerExchange marketsPerExchange(uniqueExchanges.size());
   auto marketsWithCur = [cur](api::ExchangePublic *e) {
     api::ExchangePublic::MarketSet markets = e->queryTradableMarkets();
@@ -313,7 +237,7 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
 void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   VariadicTable<std::string, std::string> vt({"Exchange", "Fastest conversion path"});
-  for (api::ExchangePublic *e : RetrieveUniquePublicExchanges(exchangeNames, exchanges())) {
+  for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     std::string conversionPathStr;
     api::ExchangePublic::Currencies conversionPath = e->findFastestConversionPath(m);
     if (conversionPath.empty()) {
@@ -334,14 +258,14 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
 MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
                                  const PrivateExchangeName &privateExchangeName,
                                  const api::TradeOptions &tradeOptions) {
-  Exchange &exchange = RetrieveUniqueCandidate(privateExchangeName, exchanges());
+  Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
   return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
 }
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                                   const PrivateExchangeName &toPrivateExchangeName) {
-  Exchange &fromExchange = RetrieveUniqueCandidate(fromPrivateExchangeName, exchanges());
-  Exchange &toExchange = RetrieveUniqueCandidate(toPrivateExchangeName, exchanges());
+  Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);
+  Exchange &toExchange = _exchangeRetriever.retrieveUniqueCandidate(toPrivateExchangeName);
   const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
   std::array<CurrencyExchangeFlatSet, 2> currencyExchangeSets;
   std::transform(std::execution::par, exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
@@ -362,7 +286,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
 
 void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  auto selectedExchanges = RetrieveAtMostOneAccountSelectedExchanges(exchangeNames, exchanges());
+  auto selectedExchanges = _exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(exchangeNames);
   using IsCurrencyTradablePerExchange = FixedCapacityVector<bool, kNbSupportedExchanges>;
   IsCurrencyTradablePerExchange isCurrencyTradablePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
@@ -391,7 +315,7 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
 
 PublicExchangeNames Coincenter::getPublicExchangeNames() const {
   std::span<const PublicExchangeName> exchangeNames;
-  auto uniquePublicExchanges = RetrieveUniquePublicExchanges(exchangeNames, exchanges());
+  auto uniquePublicExchanges = _cexchangeRetriever.retrieveUniquePublicExchanges(exchangeNames);
   PublicExchangeNames ret;
   ret.reserve(uniquePublicExchanges.size());
   std::transform(std::begin(uniquePublicExchanges), std::end(uniquePublicExchanges), std::back_inserter(ret),

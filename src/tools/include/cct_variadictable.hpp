@@ -55,8 +55,8 @@ class VariadicTable {
    *
    * @param headers The names of the columns
    */
-  VariadicTable(std::span<const std::string> headers, uint32_t cellPadding = 1)
-      : _headers(headers.begin(), headers.end()), _cellPadding(cellPadding) {
+  VariadicTable(std::span<const std::string> headers, uint32_t staticColumnSize = 0, uint32_t cellPadding = 1)
+      : _headers(headers.begin(), headers.end()), _staticColumnSize(staticColumnSize), _cellPadding(cellPadding) {
     assert(headers.size() == kNbColumns);
   }
 
@@ -265,6 +265,11 @@ class VariadicTable {
   }
 
   /**
+   * If it doesn't... let's just use a statically set size
+   */
+  size_t sizeOfData(...) { return _staticColumnSize; }
+
+  /**
    * These three functions iterate over the Tuple, find the printed size of each element and set it
    * in a vector
    */
@@ -331,6 +336,9 @@ class VariadicTable {
 
   /// The column headers
   cct::vector<std::string> _headers;
+
+  /// Size of columns that we can't get the size of
+  uint32_t _staticColumnSize;
 
   /// The actual data
   cct::vector<DataTuple> _data;
