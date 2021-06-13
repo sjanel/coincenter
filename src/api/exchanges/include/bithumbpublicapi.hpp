@@ -39,6 +39,8 @@ class BithumbPublic : public ExchangePublic {
 
   MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+
   static constexpr char kUrlBase[] = "https://api.bithumb.com";
   static constexpr char kUserAgent[] = "Bithumb C++ API Client";
 
@@ -82,11 +84,20 @@ class BithumbPublic : public ExchangePublic {
     const ExchangeInfo& _exchangeInfo;
   };
 
+  struct TradedVolumeFunc {
+    explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+
+    MonetaryAmount operator()(Market m);
+
+    CurlHandle& _curlHandle;
+  };
+
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
+  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };
 
 }  // namespace api

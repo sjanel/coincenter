@@ -149,6 +149,10 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     printWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
   }
 
+  if (opts.tradedVolumeMarket != Market()) {
+    printLast24hTradedVolume(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
+  }
+
   updateFileCaches();
 }
 
@@ -201,7 +205,8 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
   return ret;
 }
 
-void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames) {
+Coincenter::MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur,
+                                                                 std::span<const PublicExchangeName> exchangeNames) {
   log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
   auto uniqueExchanges = _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames);
   MarketsPerExchange marketsPerExchange(uniqueExchanges.size());
@@ -214,11 +219,55 @@ void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeNa
   };
   std::transform(std::execution::par, uniqueExchanges.begin(), uniqueExchanges.end(), marketsPerExchange.begin(),
                  marketsWithCur);
+  return marketsPerExchange;
+}
+
+Coincenter::UniquePublicSelectedExchanges Coincenter::getExchangesTradingCurrency(
+    CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges =
+      _exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(exchangeNames);
+  using IsCurrencyTradablePerExchange = FixedCapacityVector<bool, kNbSupportedExchanges>;
+  IsCurrencyTradablePerExchange isCurrencyTradablePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                 isCurrencyTradablePerExchange.begin(),
+                 [currencyCode](Exchange *e) { return e->queryTradableCurrencies().contains(currencyCode); });
+
+  // Erases Exchanges which do not propose asked currency (from last to first to keep index consistent)
+  for (auto exchangePos = selectedExchanges.size(); exchangePos > 0; --exchangePos) {
+    if (!isCurrencyTradablePerExchange[exchangePos - 1]) {
+      selectedExchanges.erase(selectedExchanges.begin() + exchangePos - 1);
+    }
+  }
+  return selectedExchanges;
+}
+
+Coincenter::UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(
+    Market m, std::span<const PublicExchangeName> exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges =
+      _exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(exchangeNames);
+  using IsMarketTradablePerExchange = FixedCapacityVector<bool, kNbSupportedExchanges>;
+  IsMarketTradablePerExchange isMarketTradablePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                 isMarketTradablePerExchange.begin(),
+                 [m](Exchange *e) { return e->apiPublic().queryTradableMarkets().contains(m); });
+
+  // Erases Exchanges which do not propose asked currency (from last to first to keep index consistent)
+  for (auto exchangePos = selectedExchanges.size(); exchangePos > 0; --exchangePos) {
+    if (!isMarketTradablePerExchange[exchangePos - 1]) {
+      selectedExchanges.erase(selectedExchanges.begin() + exchangePos - 1);
+    }
+  }
+  return selectedExchanges;
+}
+
+void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames) {
+  log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cur, exchangeNames);
   std::string marketsCol("Markets with ");
   marketsCol.append(cur.str());
   VariadicTable<std::string, std::string> vt({"Exchange", marketsCol});
   MarketsPerExchange::size_type exchangePos = 0;
-  for (api::ExchangePublic *e : uniqueExchanges) {
+  for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     for (Market m : marketsPerExchange[exchangePos]) {
       vt.addRow(std::string(e->name()), m.str());
     }
@@ -286,19 +335,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
 
 void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  auto selectedExchanges = _exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(exchangeNames);
-  using IsCurrencyTradablePerExchange = FixedCapacityVector<bool, kNbSupportedExchanges>;
-  IsCurrencyTradablePerExchange isCurrencyTradablePerExchange(selectedExchanges.size());
-  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
-                 isCurrencyTradablePerExchange.begin(),
-                 [currencyCode](Exchange *e) { return e->queryTradableCurrencies().contains(currencyCode); });
-
-  // Erases Exchanges which do not propose asked currency (from last to first to keep index consistent)
-  for (auto exchangePos = selectedExchanges.size(); exchangePos > 0; --exchangePos) {
-    if (!isCurrencyTradablePerExchange[exchangePos - 1]) {
-      selectedExchanges.erase(selectedExchanges.begin() + exchangePos - 1);
-    }
-  }
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames);
 
   using WithdrawFeePerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
   WithdrawFeePerExchange withdrawFeePerExchange(selectedExchanges.size());
@@ -309,6 +346,32 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
     vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), withdrawFee.str());
+  }
+  vt.print();
+}
+
+Coincenter::TradedVolumePerExchange Coincenter::getLast24hTradedVolumePerExchange(
+    Market m, std::span<const PublicExchangeName> exchangeNames) {
+  log::info("Query last 24h traded volume from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
+
+  TradedVolumePerExchange tradedVolumePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                 tradedVolumePerExchange.begin(), [m](Exchange *e) { return e->apiPublic().queryLast24hVolume(m); });
+  return tradedVolumePerExchange;
+}
+
+void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchangeName> exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
+
+  TradedVolumePerExchange tradedVolumePerExchange = getLast24hTradedVolumePerExchange(m, exchangeNames);
+  std::string headerTradedVolume("Last 24h ");
+  headerTradedVolume.append(m.str());
+  headerTradedVolume.append(" traded volume");
+  VariadicTable<std::string, std::string> vt({"Exchange", headerTradedVolume});
+  decltype(selectedExchanges)::size_type exchangePos = 0;
+  for (MonetaryAmount tradedVolume : tradedVolumePerExchange) {
+    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), tradedVolume.str());
   }
   vt.print();
 }

@@ -34,7 +34,8 @@ void PublicTest(HuobiPublic &huobiPublic) {
   for (const CurrencyExchange &curEx : huobiPublic.queryTradableCurrencies()) {
     EXPECT_TRUE(withdrawFees.contains(curEx.standardCode()));
   }
-  EXPECT_NO_THROW(huobiPublic.queryTradableMarkets());
+  ExchangePublic::MarketSet markets = huobiPublic.queryTradableMarkets();
+  EXPECT_NO_THROW(huobiPublic.queryLast24hVolume(markets.front()));
 }
 
 void PrivateTest(HuobiPrivate &huobiPrivate) {

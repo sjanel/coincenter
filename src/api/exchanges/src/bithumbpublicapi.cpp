@@ -64,7 +64,10 @@ BithumbPublic::BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverte
           config, _curlHandle, config.exchangeInfo(_name)),
       _orderbookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _curlHandle, config.exchangeInfo(_name)) {}
+          _curlHandle, config.exchangeInfo(_name)),
+      _tradedVolumeCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          _curlHandle) {}
 
 ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
   const MarketOrderBookMap& marketOrderBookMap = _allOrderBooksCache.get();
@@ -237,6 +240,12 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
     throw exception("Unexpected answer from get OrderBooks");
   }
   return it->second;
+}
+
+MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
+  json result = PublicQuery(_curlHandle, "ticker", m.base(), m.quote());
+  std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
+  return MonetaryAmount(last24hVol, m.base());
 }
 
 }  // namespace api

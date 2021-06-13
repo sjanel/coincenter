@@ -55,6 +55,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
 
   MarketOrderBook marketOrderBook = upbitPublic.queryOrderBook(*std::next(markets.begin(), 2));
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
+  EXPECT_NO_THROW(upbitPublic.queryLast24hVolume(markets.front()));
 }
 
 void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {

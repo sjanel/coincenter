@@ -53,7 +53,10 @@ HuobiPublic::HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, a
           _marketsCache, _curlHandle, _exchangeInfo),
       _orderbookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _curlHandle, _exchangeInfo) {}
+          _curlHandle, _exchangeInfo),
+      _tradedVolumeCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          _curlHandle) {}
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "v2/reference/currencies"); }
 
@@ -310,6 +313,13 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
     log::warn("Sanitize volume {} -> {}", vol.str(), sanitizedVol.str());
   }
   return sanitizedVol;
+}
+
+MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
+  std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
+  json result = PublicQuery(_curlHandle, "market/detail/merged", {{"symbol", std::string_view(lowerCaseAssets)}});
+  double last24hVol = result["amount"].get<double>();
+  return MonetaryAmount(last24hVol, m.base());
 }
 
 }  // namespace api

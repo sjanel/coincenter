@@ -73,6 +73,9 @@ class ExchangePublic : public ExchangeBase {
   /// It should be more precise that previous version with possibility to go deeper.
   virtual MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) = 0;
 
+  /// Retrieve the total volume exchange on given market in the last 24 hours.
+  virtual MonetaryAmount queryLast24hVolume(Market m) = 0;
+
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 

@@ -45,6 +45,8 @@ struct CoincenterCmdLineOptions {
 
   std::string withdraw;
   std::string withdraw_fee;
+
+  std::string last24hTradedVolume;
 };
 
 template <class OptValueType>
@@ -79,6 +81,9 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
        {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
                                                                                      "for given exchanges if possible"}, 
                                                           &OptValueType::conversion_path},
+       {{{"Public queries", 2}, "--volume-day", "<cur1-cur2[,exch1,...]>", "Print last 24h traded volume for market 'cur1'-'cur2' "
+                                                                           "for all exchanges (or specified one)"}, 
+                                                          &OptValueType::last24hTradedVolume},                                        
 
        {{{"Private queries", 3}, "--balance", 'b', "[exch1,...]", "Prints sum of available balance for all private accounts if no value is given, "
                                                                   "or only for specified ones separated by commas"}, 

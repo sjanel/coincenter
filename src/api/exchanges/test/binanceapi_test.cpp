@@ -34,7 +34,8 @@ void PublicTest(BinancePublic &binancePublic) {
   for (const CurrencyExchange &curEx : binancePublic.queryTradableCurrencies()) {
     EXPECT_TRUE(withdrawFees.contains(curEx.standardCode()));
   }
-  EXPECT_NO_THROW(binancePublic.queryTradableMarkets());
+  ExchangePublic::MarketSet markets = binancePublic.queryTradableMarkets();
+  EXPECT_NO_THROW(binancePublic.queryLast24hVolume(markets.front()));
 }
 
 void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
