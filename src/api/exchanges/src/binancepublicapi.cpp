@@ -96,6 +96,9 @@ BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverte
           _exchangeInfoCache, _marketsCache, _commonInfo),
       _orderbookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          _commonInfo),
+      _tradedVolumeCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
           _commonInfo) {}
 
 BinancePublic::CommonInfo::CommonInfo(const ExchangeInfo& exchangeInfo, settings::RunMode runMode)
@@ -416,6 +419,13 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
     }
   }
   return MarketOrderBook(m, orderBookLines);
+}
+
+MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
+  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "ticker/24hr",
+                            {{"symbol", m.assetsPairStr()}});
+  std::string_view last24hVol = result["volume"].get<std::string_view>();
+  return MonetaryAmount(last24hVol, m.base());
 }
 
 }  // namespace api

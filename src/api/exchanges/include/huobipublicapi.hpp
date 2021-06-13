@@ -56,6 +56,8 @@ class HuobiPublic : public ExchangePublic {
     return _orderbookCache.get(m, depth);
   }
 
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+
   VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
 
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
@@ -127,12 +129,21 @@ class HuobiPublic : public ExchangePublic {
     const ExchangeInfo& _exchangeInfo;
   };
 
+  struct TradedVolumeFunc {
+    explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+
+    MonetaryAmount operator()(Market m);
+
+    CurlHandle& _curlHandle;
+  };
+
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
+  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };
 
 }  // namespace api

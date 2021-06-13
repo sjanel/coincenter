@@ -82,5 +82,10 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     StringOptionParser anyParser(cmdLineOptions.withdraw_fee);
     std::tie(withdrawFeeCur, withdrawFeeExchanges) = anyParser.getCurrencyCodePublicExchanges();
   }
+
+  if (!cmdLineOptions.last24hTradedVolume.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.last24hTradedVolume);
+    std::tie(tradedVolumeMarket, tradedVolumeExchanges) = anyParser.getMarketExchanges();
+  }
 }
 }  // namespace cct

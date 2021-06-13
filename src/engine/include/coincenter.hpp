@@ -42,6 +42,9 @@ class Coincenter {
  public:
   using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
   using MarketOrderBookConversionRates = cct::FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
+  using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
+  using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
+  using TradedVolumePerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
 
   explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
 
@@ -53,21 +56,29 @@ class Coincenter {
 
   void process(const CoincenterParsedOptions &opts);
 
+  /// Retrieve the markets for given selected public exchanges, or all if empty.
+  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames);
+
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
   MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
+  /// Retrieve the last 24h traded volume for exchanges supporting given market.
+  TradedVolumePerExchange getLast24hTradedVolumePerExchange(Market m,
+                                                            std::span<const PublicExchangeName> exchangeNames);
+
+  /// Retrieve all matching Exchange references trading currency, at most one per platform.
+  UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode,
+                                                            std::span<const PublicExchangeName> exchangeNames);
+
+  /// Retrieve all matching Exchange references proposing market, at most one per platform.
+  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, std::span<const PublicExchangeName> exchangeNames);
+
   /// Query the private balance
   BalancePortfolio getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                               CurrencyCode equiCurrency = CurrencyCode::kNeutral);
-
-  void printMarkets(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
-
-  void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
-
-  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);
 
   /// Single trade from 'startAmount' into 'toCurrency', on exchange named 'exchangeName'.
   /// Options should be wisely chosen here to avoid mistakes.
@@ -78,7 +89,15 @@ class Coincenter {
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName);
 
+  void printMarkets(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
+
+  void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
+
+  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);
+
   void printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
+
+  void printLast24hTradedVolume(Market m, std::span<const PublicExchangeName> exchangeNames);
 
   PublicExchangeNames getPublicExchangeNames() const;
 
@@ -98,7 +117,6 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using ExchangeVector = SmallVector<Exchange, kTypicalNbPrivateAccounts>;
 
   CurlInitRAII _curlInitRAII;

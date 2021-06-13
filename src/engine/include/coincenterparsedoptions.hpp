@@ -41,6 +41,9 @@ class CoincenterParsedOptions {
   CurrencyCode withdrawFeeCur;
   PublicExchangeNames withdrawFeeExchanges;
 
+  Market tradedVolumeMarket;
+  PublicExchangeNames tradedVolumeExchanges;
+
   bool noProcess{};
 
  protected:

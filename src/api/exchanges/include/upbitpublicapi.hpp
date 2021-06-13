@@ -39,6 +39,8 @@ class UpbitPublic : public ExchangePublic {
 
   MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+
   static constexpr char kUrlBase[] = "https://api.upbit.com";
   static constexpr char kUserAgent[] = "Upbit C++ API Client";
 
@@ -95,12 +97,21 @@ class UpbitPublic : public ExchangePublic {
     const ExchangeInfo& _exchangeInfo;
   };
 
+  struct TradedVolumeFunc {
+    explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+
+    MonetaryAmount operator()(Market m);
+
+    CurlHandle& _curlHandle;
+  };
+
   CurlHandle _curlHandle;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
+  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };
 
 }  // namespace api

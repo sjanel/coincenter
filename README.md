@@ -55,6 +55,7 @@ Supported exchanges are:
     - [Possible output](#possible-output-2)
   - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
     - [Possible output](#possible-output-3)
+  - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
 
 # About
 
@@ -91,13 +92,14 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
 **coincenter** can be used as a stand-alone project which provides an executable able to perform most common exchange operations on supported exchanges:
  - Market
  - Orderbook
+ - Traded volume
  - Balance
  - Trade
  - Withdraw
 
 Simply launch the help command for more information
 ```
-./coincenter --help
+coincenter --help
 ```
 **Warning :** you will need to install your API keys for some commands to work ([Configuration files](#configuration-files))
 
@@ -173,14 +175,14 @@ Note that exchanges API are also unit tested. If no private key is found, only p
 
 Check your balance across supported exchanges at one glance!
 ```
-./coincenter --balance
+coincenter --balance
 ```
 prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
 It is also possible to give a list of exchanges (comma separated) to print balance only on those ones.
 You can specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
 For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*, launch:
 ```
-./coincenter --balance kraken,bithumb --balance-cur eur
+coincenter --balance kraken,bithumb --balance-cur eur
 ```
 
 ## Simple Trade
@@ -197,7 +199,7 @@ Possible strategies:
 Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
           an emergency mode triggered before 2 seconds of the timeout of 15 seconds."
 ```
-./coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
+coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
 ```
 
 ### Trade simulation
@@ -209,7 +211,7 @@ Check one or several (one per given exchange) market order books with `--orderbo
 
 Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance:
 ```
-./coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
+coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
 ```
 
 ## Withdraw coin
@@ -223,7 +225,7 @@ To ensure maximum safety, there are two checks performed by `coincenter` prior t
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
-./coincenter --withdraw 10000xlm,bithumb-huobi
+coincenter --withdraw 10000xlm,bithumb-huobi
 ```
 
 # Configuration files
@@ -240,17 +242,17 @@ You can exclude currencies in the exchange configuration file (for instance: som
 
 ## Get an overview of your portfolio in Korean Won
 ```
-./coincenter -b --balance-cur krw
+coincenter -b --balance-cur krw
 ```
 
 ## Trade 1000 euros to XRP on kraken with a maker strategy
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60s
+coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60s
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode
 ```
-./coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 1min --trade-sim
+coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 1min --trade-sim
 ```
 
 #### Possible output
@@ -263,7 +265,7 @@ You can exclude currencies in the exchange configuration file (for instance: som
 How to change Yearn Finance to Bitcoin on all exchanges
 
 ```
-./coincenter -c yfi-btc
+coincenter -c yfi-btc
 ```
 
 ### Possible output
@@ -281,7 +283,7 @@ How to change Yearn Finance to Bitcoin on all exchanges
 
 ## Prints all markets trading Stellar (XLM)
 ```
-./coincenter -m xlm
+coincenter -m xlm
 ```
 
 ### Possible output
@@ -310,7 +312,7 @@ How to change Yearn Finance to Bitcoin on all exchanges
 
 ## Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
 ```
-./coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
+coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
 ```
 
 ### Possible output
@@ -344,4 +346,22 @@ How to change Yearn Finance to Bitcoin on all exchanges
 |                       | 3186000          | 2316.222         | 5.72230368           |
 |                       | 3185000          | 2315.495         | 7.89530817           |
 --------------------------------------------------------------------------------------
+```
+
+## Prints last 24h traded volume for all exchanges supporting ETH-USDT market
+
+```
+coincenter --volume-day eth-usdt
+```
+
+Possible output:
+```
+----------------------------------------------
+| Exchange | Last 24h ETH-USDT traded volume |
+----------------------------------------------
+| binance  | 647760.56051 ETH                |
+| huobi    | 375347.704456004546 ETH         |
+| kraken   | 1626.32378405 ETH               |
+| upbit    | 37.72550547 ETH                 |
+----------------------------------------------
 ```

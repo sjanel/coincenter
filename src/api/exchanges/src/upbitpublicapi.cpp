@@ -59,7 +59,10 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
           config, _curlHandle, config.exchangeInfo(_name), _marketsCache),
       _orderbookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _curlHandle, config.exchangeInfo(_name)) {}
+          _curlHandle, config.exchangeInfo(_name)),
+      _tradedVolumeCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          _curlHandle) {}
 
 CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
@@ -184,6 +187,12 @@ MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
     throw exception("Unexpected answer from get OrderBooks");
   }
   return it->second;
+}
+
+MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
+  json result = PublicQuery(_curlHandle, "candles/days", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
+  double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
+  return MonetaryAmount(last24hVol, m.base());
 }
 
 }  // namespace api

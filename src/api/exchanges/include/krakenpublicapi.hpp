@@ -44,6 +44,8 @@ class KrakenPublic : public ExchangePublic {
 
   MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderBookCache.get(m, depth); }
 
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+
   void updateCacheFile() const override;
 
   static constexpr char kUrlBase[] = "https://api.kraken.com";
@@ -133,12 +135,23 @@ class KrakenPublic : public ExchangePublic {
     CurlHandle& _curlHandle;
   };
 
+  struct TradedVolumeFunc {
+    TradedVolumeFunc(CachedResult<TradableCurrenciesFunc>& tradableCurrenciesCache, CurlHandle& curlHandle)
+        : _tradableCurrenciesCache(tradableCurrenciesCache), _curlHandle(curlHandle) {}
+
+    MonetaryAmount operator()(Market m);
+
+    CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
+    CurlHandle& _curlHandle;
+  };
+
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderBookCache;
+  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };
 }  // namespace api
 }  // namespace cct

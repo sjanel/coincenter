@@ -49,6 +49,8 @@ class BinancePublic : public ExchangePublic {
 
   MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
 
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
 
   MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount sanitizedPrice, bool isTakerOrder);
@@ -127,12 +129,21 @@ class BinancePublic : public ExchangePublic {
     CommonInfo& _commonInfo;
   };
 
+  struct TradedVolumeFunc {
+    explicit TradedVolumeFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
+
+    MonetaryAmount operator()(Market m);
+
+    CommonInfo& _commonInfo;
+  };
+
   CommonInfo _commonInfo;
   CachedResult<ExchangeInfoFunc> _exchangeInfoCache;
   CachedResult<GlobalInfosFunc> _globalInfosCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
+  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };
 
 }  // namespace api
