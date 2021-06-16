@@ -44,7 +44,9 @@ class KrakenPublic : public ExchangePublic {
 
   MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderBookCache.get(m, depth); }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market m) override { return _tickerCache.get(m).first; }
+
+  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m).second; }
 
   void updateCacheFile() const override;
 
@@ -135,11 +137,13 @@ class KrakenPublic : public ExchangePublic {
     CurlHandle& _curlHandle;
   };
 
-  struct TradedVolumeFunc {
-    TradedVolumeFunc(CachedResult<TradableCurrenciesFunc>& tradableCurrenciesCache, CurlHandle& curlHandle)
+  struct TickerFunc {
+    using Last24hTradedVolumeAndLatestPricePair = std::pair<MonetaryAmount, MonetaryAmount>;
+
+    TickerFunc(CachedResult<TradableCurrenciesFunc>& tradableCurrenciesCache, CurlHandle& curlHandle)
         : _tradableCurrenciesCache(tradableCurrenciesCache), _curlHandle(curlHandle) {}
 
-    MonetaryAmount operator()(Market m);
+    Last24hTradedVolumeAndLatestPricePair operator()(Market m);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CurlHandle& _curlHandle;
@@ -151,7 +155,7 @@ class KrakenPublic : public ExchangePublic {
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderBookCache;
-  CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
+  CachedResult<TickerFunc, Market> _tickerCache;
 };
 }  // namespace api
 }  // namespace cct

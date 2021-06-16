@@ -44,6 +44,9 @@ class CoincenterParsedOptions {
   Market tradedVolumeMarket;
   PublicExchangeNames tradedVolumeExchanges;
 
+  Market lastPriceMarket;
+  PublicExchangeNames lastPriceExchanges;
+
   bool noProcess{};
 
  protected:

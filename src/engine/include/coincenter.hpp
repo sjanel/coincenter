@@ -44,7 +44,7 @@ class Coincenter {
   using MarketOrderBookConversionRates = cct::FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
   using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
-  using TradedVolumePerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
+  using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
 
   explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
 
@@ -66,8 +66,11 @@ class Coincenter {
                                                      std::optional<int> depth = std::nullopt);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
-  TradedVolumePerExchange getLast24hTradedVolumePerExchange(Market m,
-                                                            std::span<const PublicExchangeName> exchangeNames);
+  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m,
+                                                              std::span<const PublicExchangeName> exchangeNames);
+
+  /// Retrieve the last price for exchanges supporting given market.
+  MonetaryAmountPerExchange getLastPricePerExchange(Market m, std::span<const PublicExchangeName> exchangeNames);
 
   /// Retrieve all matching Exchange references trading currency, at most one per platform.
   UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode,
@@ -98,6 +101,8 @@ class Coincenter {
   void printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
 
   void printLast24hTradedVolume(Market m, std::span<const PublicExchangeName> exchangeNames);
+
+  void printLastPrice(Market m, std::span<const PublicExchangeName> exchangeNames);
 
   PublicExchangeNames getPublicExchangeNames() const;
 

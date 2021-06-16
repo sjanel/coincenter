@@ -76,10 +76,13 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the total volume exchange on given market in the last 24 hours.
   virtual MonetaryAmount queryLast24hVolume(Market m) = 0;
 
+  /// Retrieve the last price of given market.
+  virtual MonetaryAmount queryLastPrice(Market m) = 0;
+
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
-  using Currencies = cct::SmallVector<CurrencyCode, 6>;
+  using Currencies = cct::SmallVector<CurrencyCode, 4>;
 
   /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
   /// of 'm.base()' towards 'm.quote()' currency code

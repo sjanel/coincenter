@@ -57,6 +57,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   MarketOrderBook marketOrderBook = bithumbPublic.queryOrderBook(*std::next(markets.begin(), 2));
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
   EXPECT_NO_THROW(bithumbPublic.queryLast24hVolume(markets.front()));
+  EXPECT_NO_THROW(bithumbPublic.queryLastPrice(markets.back()));
 }
 
 void PrivateTest(BithumbPrivate &bithumbPrivate) {

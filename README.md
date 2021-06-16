@@ -56,6 +56,7 @@ Supported exchanges are:
   - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
     - [Possible output](#possible-output-3)
   - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
+  - [Prints last price of Cardano in Bitcoin for all exchanges supporting it](#prints-last-price-of-cardano-in-bitcoin-for-all-exchanges-supporting-it)
 
 # About
 
@@ -93,6 +94,7 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
  - Market
  - Orderbook
  - Traded volume
+ - Last Price
  - Balance
  - Trade
  - Withdraw
@@ -364,4 +366,22 @@ Possible output:
 | kraken   | 1626.32378405 ETH               |
 | upbit    | 37.72550547 ETH                 |
 ----------------------------------------------
+```
+
+## Prints last price of Cardano in Bitcoin for all exchanges supporting it
+
+```
+coincenter --price ada-btc
+```
+
+Possible output:
+```
+---------------------------------
+| Exchange | ADA-BTC last price |
+---------------------------------
+| binance  | 0.00003951 BTC     |
+| huobi    | 0.00003952 BTC     |
+| kraken   | 0.00003955 BTC     |
+| upbit    | 0.00003984 BTC     |
+---------------------------------
 ```

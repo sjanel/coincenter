@@ -87,5 +87,10 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     StringOptionParser anyParser(cmdLineOptions.last24hTradedVolume);
     std::tie(tradedVolumeMarket, tradedVolumeExchanges) = anyParser.getMarketExchanges();
   }
+
+  if (!cmdLineOptions.lastPrice.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.lastPrice);
+    std::tie(lastPriceMarket, lastPriceExchanges) = anyParser.getMarketExchanges();
+  }
 }
 }  // namespace cct

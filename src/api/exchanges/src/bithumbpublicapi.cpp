@@ -78,6 +78,16 @@ ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
   return markets;
 }
 
+MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
+  // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
+  std::optional<MonetaryAmount> avgPrice = queryOrderBook(m).averagePrice();
+  if (!avgPrice) {
+    log::error("Empty order book for {} on {} cannot compute average price", m.str(), _name);
+    return MonetaryAmount(0, m.quote(), 0);
+  }
+  return *avgPrice;
+}
+
 ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.

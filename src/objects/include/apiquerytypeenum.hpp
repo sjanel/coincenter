@@ -9,6 +9,7 @@ enum class QueryTypeEnum {
   kAllOrderBooks,
   kOrderBook,
   kTradedVolume,
+  kLastPrice,
   kDepositWallet,
   kNbDecimalsUnitsBithumb
 };

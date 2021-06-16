@@ -72,6 +72,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
   EXPECT_TRUE(withdrawalFees.contains(CurrencyCode("ZEC")));
   EXPECT_FALSE(withdrawalFees.find(CurrencyCode("ETH"))->second.isZero());
   EXPECT_NO_THROW(krakenPublic.queryLast24hVolume(markets.front()));
+  EXPECT_NO_THROW(krakenPublic.queryLastPrice(markets.back()));
 }
 
 void PrivateTest(KrakenPrivate &krakenPrivate) {

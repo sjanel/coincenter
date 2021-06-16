@@ -99,7 +99,9 @@ BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverte
           _commonInfo),
       _tradedVolumeCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
-          _commonInfo) {}
+          _commonInfo),
+      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+                   _commonInfo) {}
 
 BinancePublic::CommonInfo::CommonInfo(const ExchangeInfo& exchangeInfo, settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),
@@ -431,6 +433,13 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
                             {{"symbol", m.assetsPairStr()}});
   std::string_view last24hVol = result["volume"].get<std::string_view>();
   return MonetaryAmount(last24hVol, m.base());
+}
+
+MonetaryAmount BinancePublic::TickerFunc::operator()(Market m) {
+  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "ticker/price",
+                            {{"symbol", m.assetsPairStr()}});
+  std::string_view lastPrice = result["price"].get<std::string_view>();
+  return MonetaryAmount(lastPrice, m.quote());
 }
 
 }  // namespace api
