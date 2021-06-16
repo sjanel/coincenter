@@ -62,7 +62,9 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
           _curlHandle, config.exchangeInfo(_name)),
       _tradedVolumeCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
-          _curlHandle) {}
+          _curlHandle),
+      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+                   _curlHandle) {}
 
 CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
@@ -193,6 +195,12 @@ MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
   json result = PublicQuery(_curlHandle, "candles/days", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
   double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
   return MonetaryAmount(last24hVol, m.base());
+}
+
+MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
+  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
+  double lastPrice = result.front()["trade_price"].get<double>();
+  return MonetaryAmount(lastPrice, m.quote());
 }
 
 }  // namespace api

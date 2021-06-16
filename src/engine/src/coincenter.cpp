@@ -153,6 +153,10 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     printLast24hTradedVolume(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
   }
 
+  if (opts.lastPriceMarket != Market()) {
+    printLastPrice(opts.lastPriceMarket, opts.lastPriceExchanges);
+  }
+
   updateFileCaches();
 }
 
@@ -350,21 +354,32 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
   vt.print();
 }
 
-Coincenter::TradedVolumePerExchange Coincenter::getLast24hTradedVolumePerExchange(
+Coincenter::MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(
     Market m, std::span<const PublicExchangeName> exchangeNames) {
   log::info("Query last 24h traded volume from {}", ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
-  TradedVolumePerExchange tradedVolumePerExchange(selectedExchanges.size());
+  MonetaryAmountPerExchange tradedVolumePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  tradedVolumePerExchange.begin(), [m](Exchange *e) { return e->apiPublic().queryLast24hVolume(m); });
   return tradedVolumePerExchange;
 }
 
+Coincenter::MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(
+    Market m, std::span<const PublicExchangeName> exchangeNames) {
+  log::info("Query last price from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
+
+  MonetaryAmountPerExchange lastPricePerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), lastPricePerExchange.begin(),
+                 [m](Exchange *e) { return e->apiPublic().queryLastPrice(m); });
+  return lastPricePerExchange;
+}
+
 void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchangeName> exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
-  TradedVolumePerExchange tradedVolumePerExchange = getLast24hTradedVolumePerExchange(m, exchangeNames);
+  MonetaryAmountPerExchange tradedVolumePerExchange = getLast24hTradedVolumePerExchange(m, exchangeNames);
   std::string headerTradedVolume("Last 24h ");
   headerTradedVolume.append(m.str());
   headerTradedVolume.append(" traded volume");
@@ -372,6 +387,20 @@ void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchan
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount tradedVolume : tradedVolumePerExchange) {
     vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), tradedVolume.str());
+  }
+  vt.print();
+}
+
+void Coincenter::printLastPrice(Market m, std::span<const PublicExchangeName> exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
+
+  MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(m, exchangeNames);
+  std::string headerLastPrice(m.str());
+  headerLastPrice.append(" last price");
+  VariadicTable<std::string, std::string> vt({"Exchange", headerLastPrice});
+  decltype(selectedExchanges)::size_type exchangePos = 0;
+  for (MonetaryAmount lastPrice : lastPricePerExchange) {
+    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), lastPrice.str());
   }
   vt.print();
 }

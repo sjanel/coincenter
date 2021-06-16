@@ -87,9 +87,10 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
       _orderBookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
           _tradableCurrenciesCache, _marketsCache, _curlHandle),
-      _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
-          _tradableCurrenciesCache, _curlHandle) {
+      _tickerCache(CachedResultOptions(std::min(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume),
+                                                config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice)),
+                                       _cachedResultVault),
+                   _tradableCurrenciesCache, _curlHandle) {
   // To save queries to Kraken site, let's check if there is recent cached data
   json data = OpenJsonFile(kKrakenWithdrawInfoFile, FileNotFoundMode::kNoThrow, FileType::kData);
   if (!data.empty()) {
@@ -402,13 +403,14 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   return MarketOrderBook(m, orderBookLines, volAndPriNbDecimals);
 }
 
-MonetaryAmount KrakenPublic::TradedVolumeFunc::operator()(Market m) {
+KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market m) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
                       _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
   json result = PublicQuery(_curlHandle, "Ticker", {{"pair", krakenMarket.assetsPairStr()}});
   for (const auto& [krakenAssetPair, assetPairDetails] : result.items()) {
     std::string_view last24hVol = assetPairDetails["v"][1].get<std::string_view>();
-    return MonetaryAmount(last24hVol, m.base());
+    std::string_view lastTickerPrice = assetPairDetails["c"][0].get<std::string_view>();
+    return {MonetaryAmount(last24hVol, m.base()), MonetaryAmount(lastTickerPrice, m.quote())};
   }
   throw exception("Invalid data retrieved from ticker information");
 }

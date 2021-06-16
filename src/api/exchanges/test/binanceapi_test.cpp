@@ -36,6 +36,7 @@ void PublicTest(BinancePublic &binancePublic) {
   }
   ExchangePublic::MarketSet markets = binancePublic.queryTradableMarkets();
   EXPECT_NO_THROW(binancePublic.queryLast24hVolume(markets.front()));
+  EXPECT_NO_THROW(binancePublic.queryLastPrice(markets.back()));
 }
 
 void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {

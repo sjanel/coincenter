@@ -41,6 +41,8 @@ class BithumbPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
 
+  MonetaryAmount queryLastPrice(Market m) override;
+
   static constexpr char kUrlBase[] = "https://api.bithumb.com";
   static constexpr char kUserAgent[] = "Bithumb C++ API Client";
 

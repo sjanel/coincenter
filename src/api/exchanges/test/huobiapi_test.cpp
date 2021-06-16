@@ -36,6 +36,7 @@ void PublicTest(HuobiPublic &huobiPublic) {
   }
   ExchangePublic::MarketSet markets = huobiPublic.queryTradableMarkets();
   EXPECT_NO_THROW(huobiPublic.queryLast24hVolume(markets.front()));
+  EXPECT_NO_THROW(huobiPublic.queryLastPrice(markets.back()));
 }
 
 void PrivateTest(HuobiPrivate &huobiPrivate) {
