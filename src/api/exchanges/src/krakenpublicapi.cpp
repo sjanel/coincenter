@@ -122,7 +122,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
   constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://support.kraken.com/hc/article_attachments/360097267392/Withdrawal_Minimuns_and_Fees_-_Sheet.csv";
+      "https://support.kraken.com/hc/article_attachments/4402292914580/Withdrawal_Minimuns_and_Fees.csv";
 
   std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
 

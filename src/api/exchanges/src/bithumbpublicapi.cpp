@@ -107,6 +107,9 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
       continue;
     }
     p = s.find(feeSep, endP);
+    if (p == std::string::npos) {
+      break;
+    }
     p = s.find('>', p) + 1;
     endP = s.find('<', p);
     std::string_view withdrawFee(s.begin() + p, s.begin() + endP);
