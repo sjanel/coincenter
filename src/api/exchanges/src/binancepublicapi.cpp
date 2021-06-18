@@ -192,7 +192,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/depositFee";
+  constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
   std::string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(CurlOptions::RequestType::kGet));
   constexpr std::string_view appBegJson = "application/json\">";
   std::string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
@@ -202,11 +202,16 @@ json BinancePublic::GlobalInfosFunc::operator()() {
   json globInfo = json::parse(jsonPart);
   for (const json& assetsInfo : globInfo) {
     if (assetsInfo.contains("redux")) {
-      const json& assets = assetsInfo["redux"];
-      for (const json& asset : assets) {
-        if (asset.contains("depositFee")) {
-          return asset["depositFee"];
+      const json& reduxPart = assetsInfo["redux"];
+      if (reduxPart.contains("ssrStore")) {
+        const json& ssrStorePart = reduxPart["ssrStore"];
+        if (ssrStorePart.contains("cryptoFee")) {
+          return ssrStorePart["cryptoFee"];
+        } else {
+          log::critical("Unexpected crypto fee request format (expected 'cryptoFee')");
         }
+      } else {
+        log::critical("Unexpected crypto fee request format (expected 'ssrStore')");
       }
     }
   }
