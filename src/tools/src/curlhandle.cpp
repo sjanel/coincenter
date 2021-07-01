@@ -197,7 +197,7 @@ std::string CurlHandle::urlEncode(std::string_view url) {
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }
 
-CurlInitRAII::CurlInitRAII() {
+CurlInitRAII::CurlInitRAII() : _ownResource(true) {
   CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
   if (code != CURLE_OK) {
     std::ostringstream oss;
@@ -206,6 +206,19 @@ CurlInitRAII::CurlInitRAII() {
   }
 }
 
-CurlInitRAII::~CurlInitRAII() { curl_global_cleanup(); }
+CurlInitRAII::CurlInitRAII(CurlInitRAII &&o) noexcept : _ownResource(std::exchange(o._ownResource, false)) {}
+
+CurlInitRAII &CurlInitRAII::operator=(CurlInitRAII &&o) noexcept {
+  if (this != &o) {
+    _ownResource = std::exchange(o._ownResource, false);
+  }
+  return *this;
+}
+
+CurlInitRAII::~CurlInitRAII() {
+  if (_ownResource) {
+    curl_global_cleanup();
+  }
+}
 
 }  // namespace cct

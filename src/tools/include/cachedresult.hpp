@@ -57,8 +57,8 @@ class CachedResult : public CachedResultBase {
   CachedResult(const CachedResult &) = delete;
   CachedResult &operator=(const CachedResult &) = delete;
 
-  CachedResult(CachedResult &&) = default;
-  CachedResult &operator=(CachedResult &&) = default;
+  CachedResult(CachedResult &&) noexcept = default;
+  CachedResult &operator=(CachedResult &&) noexcept = default;
 
   /// Sets given value associated to the key built with given parameters,
   /// if given timestamp is more recent than the one associated to the value already present at this key (if any)

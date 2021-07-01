@@ -250,7 +250,7 @@ class CommandLineOptionsParser : private Opts {
                                                           commandLineOption.fullName() + "'");
                          }
                        },
-                       [this, idx, argv, &commandLineOption](std::optional<std::string> Opts::*arg) {
+                       [this, idx, argv](std::optional<std::string> Opts::*arg) {
                          if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
                            this->*arg = argv[idx + 1];
                          } else {

@@ -43,8 +43,9 @@ class FiatConverter {
 
   FiatConverter(const FiatConverter &) = delete;
   FiatConverter &operator=(const FiatConverter &) = delete;
-  FiatConverter(FiatConverter &&) = default;
-  FiatConverter &operator=(FiatConverter &&) = default;
+
+  FiatConverter(FiatConverter &&) = delete;  // because of mutex
+  FiatConverter &operator=(FiatConverter &&) = delete;
 
   double convert(double amount, CurrencyCode from, CurrencyCode to);
 

@@ -134,9 +134,8 @@ This is a C++20 project. Today, it is only partially supported by the main compi
 
 Tested compilers:
  - GCC version >= 10
+ - Clang version >= 13
  - MSVC version >= 19.28
-
-As of June 2021, latest *clang* compiler does not support lambdas in unevaluated context yet and thus cannot compile `coincenter`.
 
 Other compilers have not been tested yet.
 

@@ -23,6 +23,12 @@ class CryptowatchAPI : public ExchangeBase {
                           Clock::duration fiatsUpdateFrequency = std::chrono::hours(6),
                           bool loadFromFileCacheAtInit = true);
 
+  CryptowatchAPI(const CryptowatchAPI &) = delete;
+  CryptowatchAPI &operator=(const CryptowatchAPI &) = delete;
+
+  CryptowatchAPI(CryptowatchAPI &&) noexcept = default;
+  CryptowatchAPI &operator=(CryptowatchAPI &&) = delete;
+
   /// Tells whether given exchange is supported by Cryptowatch.
   bool queryIsExchangeSupported(const std::string &exchangeName) {
     return _supportedExchanges.get().contains(exchangeName);
@@ -46,14 +52,11 @@ class CryptowatchAPI : public ExchangeBase {
   /// acronyms. A second match will be needed to transform it to a final 'cct::Market'
   using PricesPerMarketMap = std::unordered_map<std::string, double>;
 
-  CryptowatchAPI(const CryptowatchAPI &) = delete;
-  CryptowatchAPI(CryptowatchAPI &&) = default;
-  CryptowatchAPI &operator=(const CryptowatchAPI &) = delete;
-  CryptowatchAPI &operator=(CryptowatchAPI &&) = default;
-
   struct SupportedExchangesFunc {
     explicit SupportedExchangesFunc(CurlHandle &curlHandle) : _curlHandle(curlHandle) {}
+
     SupportedExchanges operator()();
+
     CurlHandle &_curlHandle;
   };
 

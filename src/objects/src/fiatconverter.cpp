@@ -39,7 +39,7 @@ FiatConverter::FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFrom
       Market m(marketStr, '-');
       double rate = rateAndTimeData["rate"];
       int64_t timeepoch = rateAndTimeData["timeepoch"];
-      log::trace("Stored rate {} for market {} from {}", rate, marketStr, kRatesFileName);
+      log::trace("Stored rate {} for market {} from {}", rate, marketStr.c_str(), kRatesFileName);
       _pricesMap.insert_or_assign(m, PriceTimedValue{rate, TimePoint(std::chrono::seconds(timeepoch))});
     }
     log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesFileName);
@@ -85,7 +85,7 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   const json& res = data["results"];
   const json& rates = res[qStr];
   double rate = rates["val"];
-  log::debug("Stored rate {} for market {}", rate, qStr);
+  log::debug("Stored rate {} for market {}", rate, qStr.c_str());
   TimePoint t = Clock::now();
   _pricesMap.insert_or_assign(m, PriceTimedValue{rate, t});
   _pricesMap.insert_or_assign(m.reverse(), PriceTimedValue{static_cast<double>(1) / rate, t});

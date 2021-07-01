@@ -278,9 +278,8 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo&
   return orderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(Market m, CurrencyCode fromCurrencyCode, std::string_view userRef,
-                                    const OrderId& orderId, QueryOrder queryOrder) {
-  CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
+json KrakenPrivate::queryOrdersData(Market, CurrencyCode, std::string_view userRef, const OrderId& orderId,
+                                    QueryOrder queryOrder) {
   constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
   CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};

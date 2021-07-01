@@ -59,9 +59,13 @@ class CurlInitRAII {
 
   CurlInitRAII(const CurlInitRAII &) = delete;
   CurlInitRAII &operator=(const CurlInitRAII &) = delete;
-  CurlInitRAII(CurlInitRAII &&) = delete;
-  CurlInitRAII &operator=(CurlInitRAII &&) = delete;
+
+  CurlInitRAII(CurlInitRAII &&) noexcept;
+  CurlInitRAII &operator=(CurlInitRAII &&) noexcept;
 
   ~CurlInitRAII();
+
+ private:
+  bool _ownResource;
 };
 }  // namespace cct
