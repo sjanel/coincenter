@@ -51,8 +51,8 @@ class Coincenter {
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;
 
-  Coincenter(Coincenter &&) noexcept = default;
-  Coincenter &operator=(Coincenter &&) noexcept = default;
+  Coincenter(Coincenter &&) = delete;
+  Coincenter &operator=(Coincenter &&) = delete;
 
   void process(const CoincenterParsedOptions &opts);
 

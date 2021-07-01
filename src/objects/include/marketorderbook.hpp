@@ -158,6 +158,10 @@ class MarketOrderBook {
   struct AmountPrice {
     using AmountType = int64_t;
 
+    AmountPrice() noexcept : amount(), price() {}
+
+    AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
+
     bool operator==(AmountPrice o) const { return amount == o.amount && price == o.price; }
 
     AmountType amount;

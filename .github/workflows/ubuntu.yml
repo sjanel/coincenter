@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [g++-10, g++-11]
+        compiler: [g++-10, g++-11, clang++-13]
         buildmode: [Debug, Release]
 
     steps:
@@ -21,8 +21,20 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install libssl-dev libcurl4-gnutls-dev ${{matrix.compiler}} 
+        sudo apt-get install libssl-dev libcurl4-gnutls-dev
+
+    - name: Install compiler
+      run: |
+        sudo apt-get install ${{matrix.compiler}}
+      if: matrix.compiler == 'g++-10' || matrix.compiler == 'g++-11'
     
+    - name: Install compiler
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 13
+      if: matrix.compiler == 'clang++-13'
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
 

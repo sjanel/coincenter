@@ -63,8 +63,8 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
     throw exception("Invalid depth, should be strictly positive");
   }
   if (bidPrice >= askPrice || bidVolume.isZero() || askVolume.isZero()) {
-    log::critical("Bid pri {}, Ask pri {}, Bid vol {}, Ask vol {}", bidPrice.str(), askPrice.str(), bidVolume.str(),
-                  askVolume.str());
+    log::critical("Bid pri {}, Ask pri {}, Bid vol {}, Ask vol {}", bidPrice.str().c_str(), askPrice.str().c_str(),
+                  bidVolume.str().c_str(), askVolume.str().c_str());
     throw exception("Invalid ticker information for MarketOrderBook");
   }
   askPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
@@ -103,7 +103,7 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
     if (d != 0 && -amountPrice.amount < kMaxVol) {
       amountPrice.amount -= simulatedStepVol / 2;
     }
-    _orders.push_back(amountPrice);
+    _orders.push_back(std::move(amountPrice));
   }
 }
 
@@ -165,7 +165,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
       a.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::warn("Not enough amount to buy {} on market {}", a.str(), _market.str());
+    log::warn("Not enough amount to buy {} on market {}", a.str().c_str(), _market.str().c_str());
     return ret;
   }
   const MonetaryAmount::AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -185,8 +185,8 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
       ret.emplace_back(negAmountAt(pos), price);
     }
   }
-  log::warn("Not enough amount to buy {} on market {} ({} max)", a.str(), _market.str(),
-            MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals).str());
+  log::warn("Not enough amount to buy {} on market {} ({} max)", a.str().c_str(), _market.str().c_str(),
+            MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals).str().c_str());
   ret.clear();
   return ret;
 }
@@ -249,7 +249,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
       a.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::debug("Not enough amount to sell {} on market {}", a.str(), _market.str());
+    log::debug("Not enough amount to sell {} on market {}", a.str().c_str(), _market.str().c_str());
     return ret;
   }
   const MonetaryAmount::AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -266,7 +266,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
     integralAmountRep += _orders[pos].amount;
     ret.emplace_back(amountAt(pos), price);
   }
-  log::debug("Not enough amount to sell {} on market {}", a.str(), _market.str());
+  log::debug("Not enough amount to sell {} on market {}", a.str().c_str(), _market.str().c_str());
   ret.clear();
   return ret;
 }
