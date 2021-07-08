@@ -124,7 +124,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
   // TODO: Find a way to make withdraw fees retrieval more robust, below address changes quite often
   constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://support.kraken.com/hc/article_attachments/4402946872468/Withdrawal_Minimums_and_Fees.csv";
+      "https://support.kraken.com/hc/article_attachments/4403048028820/Withdrawal_Minimuns_and_Fees.csv";
 
   std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
 
