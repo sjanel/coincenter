@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 #include <utility>
+#include <optional>
 
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
