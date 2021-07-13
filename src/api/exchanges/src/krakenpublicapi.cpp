@@ -1,8 +1,10 @@
 #include "krakenpublicapi.hpp"
 
 #include <cassert>
+#include <fstream>
 #include <unordered_map>
 
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
@@ -124,9 +126,22 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
   // TODO: Find a way to make withdraw fees retrieval more robust, below address changes quite often
   constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://support.kraken.com/hc/article_attachments/4403048028820/Withdrawal_Minimuns_and_Fees.csv";
+      "https://support.kraken.com/hc/article_attachments/4403335427099/Withdrawal_Minimuns_and_Fees.csv";
 
   std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
+
+  if (withdrawalFeesCsv.empty()) {
+    log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
+    log::warn("Defaulted to hardcoded provided CSV file.");
+    std::string filePath(kDataPath);
+    filePath.push_back('/');
+    filePath.append(".krakenwithdrawalfees.csv");
+    std::ifstream file(filePath);
+    if (!file) {
+      throw exception("Unable to open " + filePath + " for reading");
+    }
+    withdrawalFeesCsv = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  }
 
   std::size_t assetPos = std::string_view::npos;
   std::size_t minWithdrawAmountPos = std::string_view::npos;
