@@ -127,8 +127,11 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
     log::debug("Updated Bithumb withdrawal fees {}", ma.str());
     ret.insert_or_assign(coinAcro, ma);
   }
-  log::info("Updated Bithumb withdrawal fees for {} coins", ret.size());
-  assert(!ret.empty());
+  if (ret.empty()) {
+    log::error("Unable to parse Bithumb withdrawal fees, probably syntax has changed");
+  } else {
+    log::info("Updated Bithumb withdrawal fees for {} coins", ret.size());
+  }
   return ret;
 }
 
@@ -168,7 +171,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
   // all seems to work as default for all public methods
   CurrencyCode base("all");
   CurrencyCode quote(CurrencyCode::kNeutral);
-  const bool singleMarketQuote = optM != std::nullopt;
+  const bool singleMarketQuote = optM.has_value();
   if (optM) {
     base = optM->base();
     quote = optM->quote();
@@ -184,20 +187,20 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
   // anymore
   std::string quoteCurrency = result["payment_currency"];
   if (quoteCurrency != "KRW") {
-    log::critical("Unexpected Bithumb reply for orderbook. May require code api update");
+    log::error("Unexpected Bithumb reply for orderbook. May require code api update");
   }
   CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
   const ExchangeInfo::CurrencySet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
   for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
     std::string baseOrSpecialStr = baseOrSpecial;
     if (baseOrSpecialStr != "payment_currency" && baseOrSpecialStr != "timestamp") {
-      const json *asks, *bids;
+      const json* asksBids[2];
       CurrencyCode baseCurrencyCode;
       if (singleMarketQuote && baseOrSpecialStr == "order_currency") {
         // single market quote
         baseCurrencyCode = base;
-        asks = std::addressof(result["asks"]);
-        bids = std::addressof(result["bids"]);
+        asksBids[0] = std::addressof(result["asks"]);
+        asksBids[1] = std::addressof(result["bids"]);
       } else if (!singleMarketQuote) {
         // then it's a base currency
         baseCurrencyCode = CurrencyCode(config.standardizeCurrencyCode(baseOrSpecialStr));
@@ -206,24 +209,24 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
           log::trace("Discard {} excluded by config", baseCurrencyCode.str());
           continue;
         }
-        asks = std::addressof(asksAndBids["asks"]);
-        bids = std::addressof(asksAndBids["bids"]);
+        asksBids[0] = std::addressof(asksAndBids["asks"]);
+        asksBids[1] = std::addressof(asksAndBids["bids"]);
       } else {
         continue;
       }
 
       /*
-                "bids": [{"quantity" : "6.1189306","price" : "504000"},
-                         {"quantity" : "10.35117828","price" : "503000"}],
-                "asks": [{"quantity" : "2.67575", "price" : "506000"},
-                         {"quantity" : "3.54343","price" : "507000"}]
+        "bids": [{"quantity" : "6.1189306","price" : "504000"},
+                 {"quantity" : "10.35117828","price" : "503000"}],
+        "asks": [{"quantity" : "2.67575", "price" : "506000"},
+                 {"quantity" : "3.54343","price" : "507000"}]
       */
       using OrderBookVec = cct::vector<OrderBookLine>;
       OrderBookVec orderBookLines;
-      orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks->size() + bids->size()));
-      for (auto asksOrBids : {asks, bids}) {
-        const bool isAsk = asksOrBids == asks;
-        for (const auto& priceQuantityPair : *asksOrBids) {
+      orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
+      for (const json* asksOrBids : asksBids) {
+        const bool isAsk = asksOrBids == asksBids[0];
+        for (const json& priceQuantityPair : *asksOrBids) {
           MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
           MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
 
