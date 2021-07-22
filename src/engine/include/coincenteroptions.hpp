@@ -74,9 +74,9 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                                        &OptValueType::markets},
 
        {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2[,exch1,...]>", "Print order book of currency pair for all exchanges offering "
-                                                                               " this market, or only for specified exchanges."}, 
+                                                                               "this market, or only for specified exchanges."}, 
                                                                                &OptValueType::orderbook},
-       {{{"Public queries", 2}, "--orderbook-depth", "", "Override default depth of order book"}, &OptValueType::orderbook_depth},
+       {{{"Public queries", 2}, "--orderbook-depth", "<n>", "Override default depth of order book"}, &OptValueType::orderbook_depth},
        {{{"Public queries", 2}, "--orderbook-cur", "<cur>", "If conversion of cur2 into cur is possible (for each exchange), "
                                                             "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
