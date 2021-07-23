@@ -125,7 +125,7 @@ std::pair<ExchangePublic::MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> Hu
     }
     std::string_view apiTradingStr = marketDetails["api-trading"].get<std::string_view>();
     if (apiTradingStr != "enabled") {
-      log::trace("Trading is {} for market {}-{}", baseAsset, quoteAsset);
+      log::trace("Trading is {} for market {}-{}", apiTradingStr, baseAsset, quoteAsset);
       continue;
     }
     if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
@@ -261,7 +261,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
     auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
     if (lb == std::end(kAuthorizedDepths)) {
       lb = std::next(std::end(kAuthorizedDepths), -1);
-      log::error("Invalid depth {}, default to {}", kHuobiStandardOrderBookDefaultDepth);
+      log::error("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else {
       postData.append("depth", std::to_string(*lb));
     }
