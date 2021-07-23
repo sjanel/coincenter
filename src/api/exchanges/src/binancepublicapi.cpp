@@ -407,7 +407,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
   auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
   if (lb == std::end(kAuthorizedDepths)) {
     lb = std::next(std::end(kAuthorizedDepths), -1);
-    log::error("Invalid depth {}, default to {}", *lb);
+    log::error("Invalid depth {}, default to {}", depth, *lb);
   }
   CurlPostData postData{{"symbol", m.assetsPairStr()}, {"limit", *lb}};
   json asksAndBids = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "depth", postData);

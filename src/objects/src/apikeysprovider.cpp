@@ -64,8 +64,12 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(settings::RunMode runM
   json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
   for (const auto& [platform, keyObj] : jsonData.items()) {
     for (const auto& [name, keySecretObj] : keyObj.items()) {
-      log::info("Found key '{}' for platform {}", name, platform);
-      map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
+      if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
+        map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
+        log::info("Found key '{}' for platform {}", name, platform);
+      } else {
+        log::error("Wrong format for secret.json file. It should contain fields 'key' and 'private'");
+      }
     }
   }
   if (map.empty()) {
