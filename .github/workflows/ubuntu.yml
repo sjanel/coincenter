@@ -30,9 +30,8 @@ jobs:
     
     - name: Install compiler
       run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 13
+        sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        sudo apt-get install clang-13 lldb-13 lld-13
       if: matrix.compiler == 'clang++-13'
 
     - name: Create Build Environment
