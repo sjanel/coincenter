@@ -106,6 +106,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
 
   curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
   curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, opts.followLocation);
 
 #ifdef _WIN32
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows

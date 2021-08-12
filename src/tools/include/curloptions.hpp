@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <charconv>
 #include <initializer_list>
 #include <limits>
@@ -94,29 +93,30 @@ class CurlOptions {
  public:
   enum class RequestType { kGet, kPost, kDelete };
 
-  explicit CurlOptions(RequestType requestType) : CurlOptions(requestType, CurlPostData()) {}
-
-  template <class CurlPostDataT>
-  CurlOptions(RequestType requestType, CurlPostDataT &&ipostData, const char *ua = nullptr, const char *pUrl = nullptr,
-              bool v = false)
+  template <class CurlPostDataT = CurlPostData>
+  explicit CurlOptions(RequestType requestType, CurlPostDataT &&ipostData = CurlPostDataT(), const char *ua = nullptr,
+                       const char *pUrl = nullptr, bool v = false)
       : userAgent(ua),
         proxy(false, pUrl),
         postdata(std::forward<CurlPostDataT>(ipostData)),
         verbose(v),
         postdataInJsonFormat(false),
+        followLocation(false),
         _requestType(requestType) {}
 
   RequestType requestType() const { return _requestType; }
+
   std::string_view requestTypeStr() const {
     return _requestType == RequestType::kGet ? "GET" : (_requestType == RequestType::kPost ? "POST" : "DELETE");
   }
 
   cct::vector<std::string> httpHeaders;
+
   const char *userAgent;
 
   struct ProxySettings {
-    ProxySettings(bool reset = false, const char *url = nullptr) : _reset(reset), _url(url) {}
-    /// Required if at query level we want to avoid use of proxy
+    explicit ProxySettings(bool reset = false, const char *url = nullptr) : _reset(reset), _url(url) {}
+    // Required if at query level we want to avoid use of proxy
     bool _reset;
     const char *_url;
   } proxy;
@@ -124,6 +124,7 @@ class CurlOptions {
   CurlPostData postdata;
   bool verbose;
   bool postdataInJsonFormat;
+  bool followLocation;
 
  private:
   RequestType _requestType;
