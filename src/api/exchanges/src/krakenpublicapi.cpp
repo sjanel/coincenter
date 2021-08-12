@@ -80,7 +80,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          config, _curlHandle, _name),
+          config, _name),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
@@ -124,11 +124,14 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
-  // TODO: Find a way to make withdraw fees retrieval more robust, below address changes quite often
+  // Retrieve public file from Google Drive - Method found in
+  // https://gist.github.com/tanaikech/f0f2d122e05bf5f971611258c22c110f
   constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://support.kraken.com/hc/article_attachments/4403335427099/Withdrawal_Minimuns_and_Fees.csv";
+      "https://drive.google.com/uc?export=download&id=1tkvmX25d3uV_SWS2NEyfRvrSO2t1P3PJ";
 
-  std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, CurlOptions(CurlOptions::RequestType::kGet));
+  CurlOptions curlOptions(CurlOptions::RequestType::kGet);
+  curlOptions.followLocation = true;
+  std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, curlOptions);
 
   if (withdrawalFeesCsv.empty()) {
     log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
