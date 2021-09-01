@@ -54,6 +54,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   opts.httpHeaders.emplace_back("Authorization: Bearer ").append(token);
 
   json dataJson = json::parse(curlHandle.query(method_url, opts));
+  if (dataJson.contains("error")) {
+    const json& errorPart = dataJson["error"];
+    if (errorPart.contains("name")) {
+      throw exception(errorPart["name"].get<std::string_view>());
+    }
+    if (errorPart.contains("message")) {
+      throw exception(errorPart["message"].get<std::string_view>());
+    }
+    throw exception("Unknown Upbit API error message");
+  }
   return dataJson;
 }
 }  // namespace
