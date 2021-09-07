@@ -9,6 +9,7 @@
 #include "cct_flatset.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
+#include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
 #include "market.hpp"

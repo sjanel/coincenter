@@ -29,7 +29,7 @@ class CurrencyCode {
 
   static const CurrencyCode kNeutral;
 
-  constexpr CurrencyCode() noexcept { std::fill(_data.begin(), _data.end(), '\0'); }
+  constexpr CurrencyCode() noexcept { _data.fill('\0'); }
 
   template <unsigned N, std::enable_if_t<N <= sizeof(AcronymType), bool> = true>
   constexpr CurrencyCode(const char (&acronym)[N]) noexcept {
