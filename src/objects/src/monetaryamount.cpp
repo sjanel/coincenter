@@ -173,15 +173,25 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
 
 MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) const {
   AmountType lhsAmount = _amount;
-  AmountType rhsAmount = step._amount;
+  AmountType rhsAmount = std::abs(step._amount);
   assert(rhsAmount != 0);
   int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, step._nbDecimals);
   AmountType epsilon = lhsAmount % rhsAmount;
-  if (lhsAmount < 0) {
-    roundType = roundType == RoundType::kDown ? RoundType::kUp : RoundType::kDown;
+  AmountType resAmount = lhsAmount - epsilon;
+  if (epsilon != 0) {
+    if (lhsAmount < 0) {
+      if (roundType == RoundType::kDown || (roundType == RoundType::kNearest &&
+                                            (-lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5))) {
+        resAmount -= rhsAmount;
+      }
+    } else {
+      if (roundType == RoundType::kUp || (roundType == RoundType::kNearest &&
+                                          (lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5))) {
+        resAmount += rhsAmount;
+      }
+    }
   }
-  AmountType resAmount =
-      roundType == RoundType::kDown || epsilon == 0 ? lhsAmount - epsilon : lhsAmount + (rhsAmount - epsilon);
+
   MonetaryAmount ret(resAmount, _currencyCode, resNbDecimals);
   ret.simplify();
   assert(ret.isSane());

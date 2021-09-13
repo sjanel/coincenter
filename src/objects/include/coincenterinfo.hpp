@@ -43,11 +43,15 @@ class CoincenterInfo {
   std::optional<CurrencyCode> fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const;
 
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
-    return _exchangeInfoMap.find(exchangeName)->second;
+    auto it = _exchangeInfoMap.find(exchangeName);
+    assert(it != _exchangeInfoMap.end() && "Unable to find this exchange in the configuration file");
+    return it->second;
   }
 
   Duration getAPICallUpdateFrequency(api::QueryTypeEnum apiCallType) const {
-    return _apiCallUpdateFrequencyMap.find(apiCallType)->second;
+    auto it = _apiCallUpdateFrequencyMap.find(apiCallType);
+    assert(it != _apiCallUpdateFrequencyMap.end());
+    return it->second;
   }
 
   settings::RunMode getRunMode() const { return _runMode; }
