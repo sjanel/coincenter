@@ -7,8 +7,8 @@ namespace cct {
 namespace api {
 class APIKey {
  public:
-  APIKey(std::string_view platform, std::string_view name, std::string &&key, std::string &&privateKey)
-      : _platform(platform), _name(name), _key(std::move(key)), _privateKey(std::move(privateKey)) {}
+  APIKey(std::string_view platform, std::string_view name, std::string &&key, std::string &&privateKey,
+         std::string &&passphrase);
 
   APIKey(const APIKey &) = delete;
   APIKey operator=(const APIKey &) = delete;
@@ -19,14 +19,16 @@ class APIKey {
   std::string_view name() const { return _name; }
   const std::string &key() const { return _key; }
   const char *privateKey() const { return _privateKey.c_str(); }
+  std::string_view passphrase() const { return _passphrase; }
 
-  ~APIKey() { std::fill(_privateKey.begin(), _privateKey.end(), '\0'); }
+  ~APIKey();
 
  private:
   std::string _platform;
   std::string _name;
   std::string _key;
   std::string _privateKey;
+  std::string _passphrase;
 };
 }  // namespace api
 }  // namespace cct

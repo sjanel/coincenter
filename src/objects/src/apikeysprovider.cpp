@@ -65,10 +65,14 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(settings::RunMode runM
   for (const auto& [platform, keyObj] : jsonData.items()) {
     for (const auto& [name, keySecretObj] : keyObj.items()) {
       if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
-        map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"]);
+        std::string passphrase;
+        if (keySecretObj.contains("passphrase")) {
+          passphrase = keySecretObj["passphrase"];
+        }
+        map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"], std::move(passphrase));
         log::info("Found key '{}' for platform {}", name, platform);
       } else {
-        log::error("Wrong format for secret.json file. It should contain fields 'key' and 'private'");
+        log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
       }
     }
   }

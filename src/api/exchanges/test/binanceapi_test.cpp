@@ -42,7 +42,7 @@ void PublicTest(BinancePublic &binancePublic) {
 void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
-  EXPECT_TRUE(binancePrivate.queryDepositWallet("XLM").hasDestinationTag());
+  EXPECT_NO_THROW(binancePrivate.queryDepositWallet("XLM"));
   TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
   MonetaryAmount smallFrom("13.567ADA");
   EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));

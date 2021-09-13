@@ -26,6 +26,8 @@
 #include "huobipublicapi.hpp"
 #include "krakenprivateapi.hpp"
 #include "krakenpublicapi.hpp"
+#include "kucoinprivateapi.hpp"
+#include "kucoinpublicapi.hpp"
 #include "marketorderbooks.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
@@ -135,15 +137,17 @@ class Coincenter {
   api::BithumbPublic _bithumbPublic;
   api::HuobiPublic _huobiPublic;
   api::KrakenPublic _krakenPublic;
+  api::KucoinPublic _kucoinPublic;
   api::UpbitPublic _upbitPublic;
 
   // Private exchanges (based on provided keys)
   // Use forward_list to guarantee validity of the iterators and pointers, as we give them to Exchange object as
   // pointers
-  std::forward_list<api::KrakenPrivate> _krakenPrivates;
   std::forward_list<api::BinancePrivate> _binancePrivates;
-  std::forward_list<api::HuobiPrivate> _huobiPrivates;
   std::forward_list<api::BithumbPrivate> _bithumbPrivates;
+  std::forward_list<api::HuobiPrivate> _huobiPrivates;
+  std::forward_list<api::KrakenPrivate> _krakenPrivates;
+  std::forward_list<api::KucoinPrivate> _kucoinPrivates;
   std::forward_list<api::UpbitPrivate> _upbitPrivates;
 
   ExchangeVector _exchanges;
