@@ -8,7 +8,7 @@ static constexpr char kDataPath[] = CCT_DATA_PATH;
 static constexpr char kConfigPath[] = CCT_CONFIG_PATH;
 static constexpr char kVersion[] = CCT_VERSION;
 
-static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "upbit"};
+static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};
 
 static constexpr int kNbSupportedExchanges =
     static_cast<int>(std::distance(std::begin(kSupportedExchanges), std::end(kSupportedExchanges)));

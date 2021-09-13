@@ -257,7 +257,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
   CurlPostData postData{{"symbol", std::string_view(lowerCaseAssets)}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
-    constexpr int kAuthorizedDepths[] = {5, 10, 20};
+    static constexpr int kAuthorizedDepths[] = {5, 10, 20};
     auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
     if (lb == std::end(kAuthorizedDepths)) {
       lb = std::next(std::end(kAuthorizedDepths), -1);

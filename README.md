@@ -20,6 +20,7 @@ Supported exchanges are:
 | Bithumb  | [<img src="./resources/bithumblogo.svg" width="55">](https://www.bithumb.com/)  |
 | Huobi    |   [<img src="./resources/huobilogo.svg" width="160">](https://www.huobi.com/)   |
 | Kraken   |  [<img src="./resources/krakenlogo.svg" width="90">](https://www.kraken.com/)   |
+| Kucoin   |  [<img src="./resources/kucoinlogo.svg" width="150">](https://www.kucoin.com/)   |
 | Upbit    |   [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)   |
  
  *Table of Contents*

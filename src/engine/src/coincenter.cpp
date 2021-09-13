@@ -43,6 +43,7 @@ Coincenter::Coincenter(settings::RunMode runMode)
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
+      _kucoinPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
   for (std::string_view exchangeName : kSupportedExchanges) {
     api::ExchangePublic *exchangePublic;
@@ -54,6 +55,8 @@ Coincenter::Coincenter(settings::RunMode runMode)
       exchangePublic = std::addressof(_huobiPublic);
     } else if (exchangeName == "kraken") {
       exchangePublic = std::addressof(_krakenPublic);
+    } else if (exchangeName == "kucoin") {
+      exchangePublic = std::addressof(_kucoinPublic);
     } else if (exchangeName == "upbit") {
       exchangePublic = std::addressof(_upbitPublic);
     } else {
@@ -73,6 +76,8 @@ Coincenter::Coincenter(settings::RunMode runMode)
           exchangePrivate = std::addressof(_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey));
         } else if (exchangeName == "kraken") {
           exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
+        } else if (exchangeName == "kucoin") {
+          exchangePrivate = std::addressof(_kucoinPrivates.emplace_front(_coincenterInfo, _kucoinPublic, apiKey));
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {

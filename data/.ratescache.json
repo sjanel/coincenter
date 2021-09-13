@@ -4,8 +4,8 @@
     "timeepoch": 1618851165
   },
   "AUD-KRW": {
-    "rate": 863.609615,
-    "timeepoch": 1618647357
+    "rate": 859.699341,
+    "timeepoch": 1630922063
   },
   "AUD-USD": {
     "rate": 0.7755,
@@ -20,8 +20,8 @@
     "timeepoch": 1618851165
   },
   "EUR-KRW": {
-    "rate": 1364.256480218281,
-    "timeepoch": 1628769087
+    "rate": 1379.3103448275863,
+    "timeepoch": 1631195826
   },
   "EUR-NGN": {
     "rate": 460.6172270842929,
@@ -36,48 +36,48 @@
     "timeepoch": 1618851165
   },
   "EUR-USD": {
-    "rate": 1.1734816614153363,
-    "timeepoch": 1628769084
+    "rate": 1.1815931420334036,
+    "timeepoch": 1631195822
   },
   "GBP-EUR": {
     "rate": 1.161825,
     "timeepoch": 1618851165
   },
   "GBP-KRW": {
-    "rate": 1544.71829,
-    "timeepoch": 1618760277
+    "rate": 1601.375442,
+    "timeepoch": 1630922063
   },
   "GBP-USD": {
     "rate": 1.415749,
     "timeepoch": 1621886384
   },
   "KRW-AUD": {
-    "rate": 0.001157930600390548,
-    "timeepoch": 1618647357
+    "rate": 0.0011631973555275763,
+    "timeepoch": 1630922063
   },
   "KRW-EUR": {
-    "rate": 0.000733,
-    "timeepoch": 1628769087
+    "rate": 0.000725,
+    "timeepoch": 1631195826
   },
   "KRW-GBP": {
-    "rate": 0.0006473672296584252,
-    "timeepoch": 1618760277
+    "rate": 0.0006244631794472093,
+    "timeepoch": 1630922063
   },
   "KRW-NGN": {
     "rate": 0.3407546283849287,
     "timeepoch": 1618760278
   },
   "KRW-RUB": {
-    "rate": 0.06771045492758773,
-    "timeepoch": 1618760277
+    "rate": 0.06308540097837886,
+    "timeepoch": 1630922063
   },
   "KRW-UAH": {
     "rate": 0.025079805823114587,
     "timeepoch": 1618760276
   },
   "KRW-USD": {
-    "rate": 0.00089,
-    "timeepoch": 1621886387
+    "rate": 0.0008647229770055209,
+    "timeepoch": 1630922062
   },
   "NGN-EUR": {
     "rate": 0.002171,
@@ -96,8 +96,8 @@
     "timeepoch": 1618851164
   },
   "RUB-KRW": {
-    "rate": 14.768768,
-    "timeepoch": 1618760277
+    "rate": 15.851528,
+    "timeepoch": 1630922063
   },
   "RUB-USD": {
     "rate": 0.013607,
@@ -120,16 +120,16 @@
     "timeepoch": 1621886385
   },
   "USD-EUR": {
-    "rate": 0.852165,
-    "timeepoch": 1628769084
+    "rate": 0.846315,
+    "timeepoch": 1631195822
   },
   "USD-GBP": {
     "rate": 0.7063398949955112,
     "timeepoch": 1621886384
   },
   "USD-KRW": {
-    "rate": 1123.5955056179776,
-    "timeepoch": 1621886387
+    "rate": 1156.439723,
+    "timeepoch": 1630922062
   },
   "USD-NGN": {
     "rate": 380.9523809523809,

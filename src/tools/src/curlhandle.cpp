@@ -95,7 +95,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     modifiedURL.append(opts.postdata.toStringView());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
   } else {
-    if (opts.postdataInJsonFormat) {
+    if (opts.postdataInJsonFormat && !opts.postdata.empty()) {
       jsonBuf = opts.postdata.toJson().dump();
       optsStr = jsonBuf.c_str();
     }

@@ -91,6 +91,20 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
         "minprivatequerydelayms": 2000
       }
     },
+    "kucoin": {
+      "asset": {
+        "allexclude": "",
+        "withdrawexclude": "BTC"
+      },
+      "tradefees": {
+        "maker": "0.1",
+        "taker": "0.1"
+      },
+      "query": {
+        "minpublicquerydelayms": 200,
+        "minprivatequerydelayms": 200
+      }
+    },
     "upbit": {
       "asset": {
         "allexclude": "",

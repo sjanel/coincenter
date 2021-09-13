@@ -140,7 +140,6 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
-    // "BTC":{"withdrawal_status":1,"deposit_status":1},"ETH":{"withdrawal_status":1,"deposit_status":1}
     CurrencyCode currencyCode(_config.standardizeCurrencyCode(asset));
     CurrencyCode exchangeCode(asset);
     CurrencyExchange newCurrency(currencyCode, exchangeCode, exchangeCode,

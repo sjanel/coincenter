@@ -33,7 +33,7 @@ class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest()
       : exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
-        exchangePrivate(exchangePublic, coincenterInfo, APIKey("test", "testuser", "", "")) {}
+        exchangePrivate(exchangePublic, coincenterInfo, APIKey("test", "testuser", "", "", "")) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

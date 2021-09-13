@@ -71,6 +71,13 @@ add_exchange_test(
 )
 
 add_exchange_test(
+  kucoinapi_test
+  exchanges/src/kucoinpublicapi.cpp
+  exchanges/src/kucoinprivateapi.cpp
+  exchanges/test/kucoinapi_test.cpp
+)
+
+add_exchange_test(
   krakenapi_test
   exchanges/src/krakenpublicapi.cpp
   exchanges/src/krakenprivateapi.cpp
