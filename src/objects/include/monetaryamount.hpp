@@ -88,7 +88,7 @@ class MonetaryAmount {
   /// @return a monetary amount in the currency of given price
   MonetaryAmount convertTo(MonetaryAmount p) const { return p * toNeutral(); }
 
-  enum class RoundType { kDown, kUp };
+  enum class RoundType { kDown, kUp, kNearest };
 
   /// Rounds current monetary amount according to given step amount and return the result.
   /// Example: 123.45 with 0.1 as step will return 123.4.
