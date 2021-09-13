@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: cmake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl@1.1/1.1.1k
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
       - name: build
         run: cmake --build build --parallel 2
       - name: test
