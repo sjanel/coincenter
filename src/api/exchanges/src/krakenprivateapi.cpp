@@ -91,16 +91,17 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
 CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
 BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
-  BalancePortfolio ret;
+  BalancePortfolio balancePortfolio;
   json res = PrivateQuery(_curlHandle, _apiKey, "Balance");
   // Kraken returns an empty array in case of account with no balance at all
   for (const auto& [curCode, amountStr] : res.items()) {
     std::string amount = amountStr;
     CurrencyCode currencyCode(_config.standardizeCurrencyCode(curCode));
 
-    addBalance(ret, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
+    addBalance(balancePortfolio, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
   }
-  return ret;
+  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
+  return balancePortfolio;
 }
 
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {

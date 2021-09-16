@@ -76,18 +76,19 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   method += std::to_string(_accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, method);
-  BalancePortfolio ret;
+  BalancePortfolio balancePortfolio;
   for (const json& balanceDetail : result["data"]["list"]) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(balanceDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(balanceDetail["balance"].get<std::string_view>(), currencyCode);
     if (typeStr == "trade") {
-      this->addBalance(ret, amount, equiCurrency);
+      this->addBalance(balancePortfolio, amount, equiCurrency);
     } else {
       log::debug("Do not consider {} as it is {} on {}", amount.str(), typeStr, _exchangePublic.name());
     }
   }
-  return ret;
+  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
+  return balancePortfolio;
 }
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
