@@ -56,6 +56,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   strPost.push_back('&');
   strPost.append(curlPostData.toStringView());
 
+  // For Bithumb, we always use POST requests (even when read-only)
   CurlOptions opts(CurlOptions::RequestType::kPost, CurlPostData(UrlEncode(strPost)));
 
   std::string strData;
@@ -171,7 +172,7 @@ CurrencyExchangeFlatSet BithumbPrivate::queryTradableCurrencies() { return _exch
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
-  BalancePortfolio ret;
+  BalancePortfolio balancePortfolio;
   for (const auto& [key, value] : result.items()) {
     constexpr std::string_view prefixKey = "available_";
     if (key.starts_with(prefixKey)) {
@@ -179,11 +180,11 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
       keyCurrencyCode.remove_prefix(prefixKey.size());
       CurrencyCode currencyCode(keyCurrencyCode);
       MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
-      this->addBalance(ret, amount, equiCurrency);
+      this->addBalance(balancePortfolio, amount, equiCurrency);
     }
   }
-
-  return ret;
+  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
+  return balancePortfolio;
 }
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
@@ -222,7 +223,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   const Market m = tradeInfo.m;
 
-  // I think Bithumb uses "standard" currency codes, no need to translate them
+  // It seems Bithumb uses "standard" currency codes, no need to translate them
   CurlPostData placePostData{{"order_currency", m.base().str()}, {"payment_currency", m.quote().str()}};
   const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
 
