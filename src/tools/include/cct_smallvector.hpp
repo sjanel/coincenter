@@ -1,6 +1,6 @@
 #pragma once
 
-#include <amc_smallvector.hpp>
+#include <amc/smallvector.hpp>
 
 namespace cct {
 using amc::SmallVector;

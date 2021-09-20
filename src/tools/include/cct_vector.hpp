@@ -1,6 +1,6 @@
 #pragma once
 
-#include <amc_vector.hpp>
+#include <amc/vector.hpp>
 
 namespace cct {
 using amc::vector;

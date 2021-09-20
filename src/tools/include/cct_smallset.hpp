@@ -1,6 +1,6 @@
 #pragma once
 
-#include <amc_smallset.hpp>
+#include <amc/smallset.hpp>
 
 namespace cct {
 using amc::SmallSet;

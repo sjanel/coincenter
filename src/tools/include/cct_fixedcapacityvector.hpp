@@ -1,6 +1,6 @@
 #pragma once
 
-#include <amc_fixedcapacityvector.hpp>
+#include <amc/fixedcapacityvector.hpp>
 
 namespace cct {
 using amc::FixedCapacityVector;
