@@ -69,7 +69,7 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) {
 }
 
 template <class T>
-concept SignedIntegral = std::integral<T>&& std::is_signed<T>::value;
+concept SignedIntegral = std::integral<T> && std::is_signed<T>::value;
 
 template <class T>
 concept UnsignedIntegral = std::integral<T> && !SignedIntegral<T>;
