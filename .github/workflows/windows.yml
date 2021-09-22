@@ -23,8 +23,9 @@ jobs:
 
       - name: Add cURL directory in the path
         run: |
-           echo "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.79.0-win64-mingw\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-           echo "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.79.0-win64-mingw\lib" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+           $curlPath = Get-ChildItem -Path C:\ProgramData\chocolatey\lib\curl\tools\curl* -Name
+           echo "C:\ProgramData\chocolatey\lib\curl\tools\${curlPath}\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+           echo "C:\ProgramData\chocolatey\lib\curl\tools\${curlPath}\lib" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
