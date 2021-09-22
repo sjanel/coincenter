@@ -43,6 +43,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
   EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
 
+  log::set_level(log::level::trace);
   ExchangePublic::WithdrawalFeeMap withdrawalFees = bithumbPublic.queryWithdrawalFees();
   EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
