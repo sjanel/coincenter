@@ -96,15 +96,12 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, _public._commonInfo.getBestBaseURL(),
-                             "wapi/v3/depositAddress.html", {{"asset", currencyCode.str()}});
-  bool isSuccess = result["success"].get<bool>();
-  if (!isSuccess) {
-    throw exception("Unsuccessful deposit wallet for currency " + std::string(currencyCode.str()));
-  }
+                             "sapi/v1/capital/deposit/address", {{"coin", currencyCode.str()}});
   std::string_view address(result["address"].get<std::string_view>());
-  std::string_view tag(result["addressTag"].get<std::string_view>());
+  std::string_view tag(result["tag"].get<std::string_view>());
+  std::string_view url(result["url"].get<std::string_view>());
   Wallet w(PrivateExchangeName(_public.name(), _apiKey.name()), currencyCode, address, tag);
-  log::info("Retrieved {}", w.str());
+  log::info("Retrieved {} (URL: '{}')", w.str(), url);
   return w;
 }
 
@@ -264,19 +261,14 @@ TradedAmounts BinancePrivate::parseTrades(Market m, CurrencyCode fromCurrencyCod
 InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurlPostData withdrawPostData{
-      {"asset", currencyCode.str()}, {"amount", grossAmount.amountStr()}, {"address", wallet.address()}};
+      {"coin", currencyCode.str()}, {"address", wallet.address()}, {"amount", grossAmount.amountStr()}};
   if (wallet.hasDestinationTag()) {
     withdrawPostData.append("addressTag", wallet.destinationTag());
   }
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost,
-                             binancePublic._commonInfo.getBestBaseURL(), "wapi/v3/withdraw.html", withdrawPostData);
-  bool isSuccess = result["success"].get<bool>();
-  if (!isSuccess) {
-    std::string_view msg = result.contains("msg") ? result["msg"].get<std::string_view>() : "";
-    throw exception("Unsuccessful withdraw request of " + std::string(currencyCode.str()) +
-                    ", msg = " + std::string(msg));
-  }
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, binancePublic._commonInfo.getBestBaseURL(),
+                   "sapi/v1/capital/withdraw/apply", withdrawPostData);
   std::string_view withdrawId(result["id"].get<std::string_view>());
   return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
 }
@@ -286,11 +278,11 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json withdrawStatus =
       PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                   "wapi/v3/withdrawHistory.html", {{"asset", currencyCode.str()}});
+                   "sapi/v1/capital/withdraw/history", {{"coin", currencyCode.str()}});
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
   MonetaryAmount netEmittedAmount;
   bool isWithdrawSent = false;
-  for (const json& withdrawDetail : withdrawStatus["withdrawList"]) {
+  for (const json& withdrawDetail : withdrawStatus) {
     std::string_view withdrawDetailId(withdrawDetail["id"].get<std::string_view>());
     if (withdrawDetailId == withdrawId) {
       int withdrawStatusInt = withdrawDetail["status"].get<int>();
@@ -339,8 +331,8 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json depositStatus =
       PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                   "wapi/v3/depositHistory.html", {{"asset", currencyCode.str()}});
-  for (const json& depositDetail : depositStatus["depositList"]) {
+                   "sapi/v1/capital/deposit/hisrec", {{"coin", currencyCode.str()}});
+  for (const json& depositDetail : depositStatus) {
     std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
     if (depositAddress == initiatedWithdrawInfo.receivingWallet().address()) {
       MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
