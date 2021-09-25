@@ -196,28 +196,34 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 json BinancePublic::GlobalInfosFunc::operator()() {
   constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
   std::string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(CurlOptions::RequestType::kGet));
+  // This json is HUGE and contains numerous amounts of information
   constexpr std::string_view appBegJson = "application/json\">";
   std::string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
-  std::string::const_iterator last = s.begin() + s.find("}}</script><div", first - s.begin()) + 2;
-  std::string_view jsonPart(first, last);
-  // This json is HUGE and contains numerous amounts of information
-  json globInfo = json::parse(jsonPart);
-  for (const json& assetsInfo : globInfo) {
-    if (assetsInfo.contains("redux")) {
-      const json& reduxPart = assetsInfo["redux"];
-      if (reduxPart.contains("ssrStore")) {
-        const json& ssrStorePart = reduxPart["ssrStore"];
-        if (ssrStorePart.contains("cryptoFee")) {
-          return ssrStorePart["cryptoFee"];
-        } else {
-          log::critical("Unexpected crypto fee request format (expected 'cryptoFee')");
-        }
-      } else {
-        log::critical("Unexpected crypto fee request format (expected 'ssrStore')");
-      }
+  std::string_view sv(first, s.end());
+  std::size_t reduxPos = sv.find("redux\":");
+  std::size_t ssrStorePos = sv.find("ssrStore\":", reduxPos);
+  constexpr std::string_view kCryptoFeeStart = "cryptoFee\":";
+  std::size_t cryptoFeePos = sv.find(kCryptoFeeStart, ssrStorePos);
+
+  std::size_t startPos = cryptoFeePos + kCryptoFeeStart.size();
+
+  sv = std::string_view(sv.begin() + startPos, sv.end());
+
+  std::size_t endPos = 1;
+  for (int squareBracketCount = 1; squareBracketCount != 0; ++endPos) {
+    switch (sv[endPos]) {
+      case '[':
+        ++squareBracketCount;
+        break;
+      case ']':
+        --squareBracketCount;
+        break;
+      default:
+        break;
     }
   }
-  throw exception("Unexpected json from " + std::string(kInfoFeeUrl));
+
+  return json::parse(std::string_view(sv.begin(), sv.begin() + endPos));
 }
 
 namespace {
