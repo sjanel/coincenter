@@ -29,9 +29,7 @@ class UpbitPublic : public ExchangePublic {
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
-    return _withdrawalFeesCache.get().find(currencyCode)->second;
-  }
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get(depth);
