@@ -66,6 +66,15 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
       _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
+MonetaryAmount UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+  const auto& map = _withdrawalFeesCache.get();
+  auto it = map.find(currencyCode);
+  if (it == map.end()) {
+    throw exception("Unable to find currency code in withdrawal fees");
+  }
+  return it->second;
+}
+
 CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
   CurrencyExchangeFlatSet currencies;

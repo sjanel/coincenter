@@ -78,6 +78,15 @@ ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
   return markets;
 }
 
+MonetaryAmount BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+  const auto& map = _withdrawalFeesCache.get();
+  auto it = map.find(currencyCode);
+  if (it == map.end()) {
+    throw exception("Unable to find currency code in withdrawal fees");
+  }
+  return it->second;
+}
+
 MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
   // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
   std::optional<MonetaryAmount> avgPrice = queryOrderBook(m).averagePrice();
@@ -92,31 +101,29 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  constexpr char kInfoFeeUrl[] = "https://en.bithumb.com/customer_support/info_fee";
   CurlOptions opts(CurlOptions::RequestType::kGet);
-  std::string s = _curlHandle.query(kInfoFeeUrl, opts);
+  std::string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", opts);
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //
   // <tr data-coin="Bitcoin"><td class="money_type tx_c">Bitcoin(BTC)</td><td id="COIN_C0101"><div
   // class="right"></div></td><td><div class="right out_fee">0.001</div></td></tr><tr data-coin="Ethereum"><td
   // class="money_type tx_c">
-  constexpr std::string_view coinSep = "tr data-coin=";
-  constexpr std::string_view feeSep = "right out_fee";
-  for (std::size_t p = s.find(coinSep); p != std::string::npos; p = s.find(coinSep, p)) {
+  static constexpr std::string_view kCoinSep = "tr data-coin=";
+  static constexpr std::string_view kFeeSep = "right out_fee";
+  for (std::size_t p = s.find(kCoinSep); p != std::string::npos; p = s.find(kCoinSep, p)) {
     p = s.find("money_type tx_c", p);
     p = s.find('(', p) + 1;
     std::size_t endP = s.find(')', p);
     CurrencyCode coinAcro(std::string_view(s.begin() + p, s.begin() + endP));
-    std::size_t nextRightOutFee = s.find(feeSep, endP);
-    std::size_t nextCoinSep = s.find(coinSep, endP);
+    std::size_t nextRightOutFee = s.find(kFeeSep, endP);
+    std::size_t nextCoinSep = s.find(kCoinSep, endP);
     if (nextRightOutFee > nextCoinSep) {
       // This means no withdraw fee data, probably 0 ?
-      MonetaryAmount ma("0", coinAcro);
-      ret.insert_or_assign(coinAcro, ma);
+      ret.insert_or_assign(coinAcro, MonetaryAmount("0", coinAcro));
       continue;
     }
-    p = s.find(feeSep, endP);
+    p = s.find(kFeeSep, endP);
     if (p == std::string::npos) {
       break;
     }
@@ -125,10 +132,10 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
     std::string_view withdrawFee(s.begin() + p, s.begin() + endP);
     MonetaryAmount ma(withdrawFee, coinAcro);
     log::debug("Updated Bithumb withdrawal fees {}", ma.str());
-    ret.insert_or_assign(coinAcro, ma);
+    ret.insert_or_assign(coinAcro, std::move(ma));
   }
   if (ret.empty()) {
-    log::error("Unable to parse Bithumb withdrawal fees, probably syntax has changed");
+    log::error("Unable to parse Bithumb withdrawal fees, syntax might have changed");
   } else {
     log::info("Updated Bithumb withdrawal fees for {} coins", ret.size());
   }
