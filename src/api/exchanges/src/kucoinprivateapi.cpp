@@ -16,7 +16,7 @@ namespace api {
 namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
-                  std::string_view method, const CurlPostData& postdata = CurlPostData()) {
+                  std::string_view method, CurlPostData&& postdata = CurlPostData()) {
   const bool endpointWithParameters =
       requestType == CurlOptions::RequestType::kGet || requestType == CurlOptions::RequestType::kDelete;
 
@@ -203,7 +203,8 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   if (!isTakerStrategy) {
     placePostData.append("price", price.amountStr());
   }
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/api/v1/orders", placePostData);
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/api/v1/orders", std::move(placePostData));
   placeOrderInfo.orderId = result["orderId"].get<std::string_view>();
   return placeOrderInfo;
 }
@@ -255,7 +256,8 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
     opts.append("memo", wallet.destinationTag());
   }
 
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/api/v1/withdrawals", opts);
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/api/v1/withdrawals", std::move(opts));
   return InitiatedWithdrawInfo(std::move(wallet), result["withdrawalId"].get<std::string_view>(), grossAmount);
 }
 
