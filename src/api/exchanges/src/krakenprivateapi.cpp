@@ -187,7 +187,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < orderMin) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
-              volume.str());
+              orderMin.str());
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
