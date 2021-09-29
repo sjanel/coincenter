@@ -132,7 +132,7 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
 }
 
-PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
+PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
@@ -148,8 +148,26 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < sanitizedVol) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
-              sanitizedVol.str());
+    constexpr CurrencyCode kBinanceCoinCur("BNB");
+    if (m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
+      // Use special Binance Dust transfer
+      log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}",
+                kBinanceCoinCur.str());
+      json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost,
+                                 binancePublic._commonInfo.getBestBaseURL(), "/sapi/v1/asset/dust",
+                                 {{"asset", from.currencyCode().str()}});
+      if (!result.contains("transferResult") || result["transferResult"].empty()) {
+        throw exception("Unexpected dust transfer result");
+      }
+      const json& res = result["transferResult"].front();
+      placeOrderInfo.orderId = std::to_string(res["tranId"].get<std::size_t>());
+      MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
+      placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
+    } else {
+      log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(),
+                toCurrencyCode.str(), sanitizedVol.str());
+    }
+
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
