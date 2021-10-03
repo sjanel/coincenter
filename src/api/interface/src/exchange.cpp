@@ -13,7 +13,7 @@ Exchange::Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchan
       _exchangeInfo(exchangeInfo) {}
 
 Exchange::Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic)
-    : _exchangePublic(exchangePublic), _pExchangePrivate(nullptr), _exchangeInfo(exchangeInfo) {}
+    : _exchangePublic(exchangePublic), _exchangeInfo(exchangeInfo) {}
 
 CurrencyExchangeFlatSet Exchange::queryTradableCurrencies() {
   return hasPrivateAPI() ? _pExchangePrivate->queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();

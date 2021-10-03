@@ -10,6 +10,7 @@
 namespace cct {
 class Exchange {
  public:
+  using ExchangePublic = api::ExchangePublic;
   using WithdrawalFeeMap = api::ExchangePublic::WithdrawalFeeMap;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
@@ -66,7 +67,7 @@ class Exchange {
 
  private:
   api::ExchangePublic &_exchangePublic;
-  api::ExchangePrivate *_pExchangePrivate;
+  api::ExchangePrivate *_pExchangePrivate = nullptr;
   const ExchangeInfo &_exchangeInfo;
 };
 }  // namespace cct

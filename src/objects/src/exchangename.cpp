@@ -3,8 +3,8 @@
 #include "cct_exception.hpp"
 
 namespace cct {
-PrivateExchangeName::PrivateExchangeName(std::string_view globalExchangeName) : _nameWithKey(globalExchangeName) {
-  _dashPos = globalExchangeName.find_first_of('_');
+PrivateExchangeName::PrivateExchangeName(std::string_view globalExchangeName)
+    : _nameWithKey(globalExchangeName), _dashPos(globalExchangeName.find_first_of('_')) {
   if (_dashPos == std::string_view::npos) {
     _dashPos = _nameWithKey.size();
   }
