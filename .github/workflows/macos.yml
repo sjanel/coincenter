@@ -9,13 +9,11 @@ on:
 jobs:
   xcode:
     runs-on: macos-latest
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_12.4.app/Contents/Developer
 
     steps:
       - uses: actions/checkout@v2
       - name: cmake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1
       - name: build
         run: cmake --build build --parallel 2
       - name: test
