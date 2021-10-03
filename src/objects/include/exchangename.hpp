@@ -10,11 +10,11 @@
 namespace cct {
 
 using PublicExchangeName = std::string;
-using PublicExchangeNames = cct::FixedCapacityVector<PublicExchangeName, kNbSupportedExchanges>;
+using PublicExchangeNames = FixedCapacityVector<PublicExchangeName, kNbSupportedExchanges>;
 
 class PrivateExchangeName {
  public:
-  PrivateExchangeName() : _dashPos() {}
+  PrivateExchangeName() = default;
 
   /// Constructs a PrivateExchangeName with a unique identifier name.
   /// Two cases:
@@ -41,7 +41,7 @@ class PrivateExchangeName {
 
  private:
   std::string _nameWithKey;
-  std::size_t _dashPos;
+  std::size_t _dashPos = 0;
 };
 
 using PrivateExchangeNames = cct::SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
