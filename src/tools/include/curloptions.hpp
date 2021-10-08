@@ -100,8 +100,6 @@ class CurlOptions {
         proxy(false, pUrl),
         postdata(std::forward<CurlPostDataT>(ipostData)),
         verbose(v),
-        postdataInJsonFormat(false),
-        followLocation(false),
         _requestType(requestType) {}
 
   RequestType requestType() const { return _requestType; }
@@ -123,8 +121,8 @@ class CurlOptions {
 
   CurlPostData postdata;
   bool verbose;
-  bool postdataInJsonFormat;
-  bool followLocation;
+  bool postdataInJsonFormat = false;
+  bool followLocation = false;
 
  private:
   RequestType _requestType;

@@ -127,8 +127,8 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
     integralAmount /= 10;
   }
   for (; _nbDecimals < nbDecimals; --nbDecimals) {
-    if (CCT_UNLIKELY(integralAmount > std::numeric_limits<AmountType>::max() / 10 ||
-                     integralAmount < std::numeric_limits<AmountType>::min() / 10)) {
+    if (integralAmount > std::numeric_limits<AmountType>::max() / 10 ||
+        integralAmount < std::numeric_limits<AmountType>::min() / 10) {
       return std::nullopt;
     }
     integralAmount *= 10;
@@ -230,10 +230,6 @@ bool MonetaryAmount::operator<(MonetaryAmount o) const {
   };
   auto amounts = adjustDecimals(_amount, o._amount, _nbDecimals, o._nbDecimals);
   return amounts.first < amounts.second;
-}
-
-bool MonetaryAmount::operator==(MonetaryAmount o) const {
-  return _amount == o._amount && _nbDecimals == o._nbDecimals && _currencyCode == o._currencyCode;
 }
 
 MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {

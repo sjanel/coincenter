@@ -40,7 +40,7 @@ class InitiatedWithdrawInfo {
 
 class SentWithdrawInfo {
  public:
-  SentWithdrawInfo() : _netEmittedAmount(), _isWithdrawSent(false) {}
+  SentWithdrawInfo() = default;
 
   SentWithdrawInfo(MonetaryAmount netEmittedAmount, bool isWithdrawSent)
       : _netEmittedAmount(netEmittedAmount), _isWithdrawSent(isWithdrawSent) {}
@@ -51,7 +51,7 @@ class SentWithdrawInfo {
 
  private:
   MonetaryAmount _netEmittedAmount;
-  bool _isWithdrawSent;
+  bool _isWithdrawSent = false;
 };
 
 }  // namespace api

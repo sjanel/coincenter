@@ -29,27 +29,30 @@ class CurrencyCode {
 
   static const CurrencyCode kNeutral;
 
-  constexpr CurrencyCode() noexcept { _data.fill('\0'); }
+  /// Constructs a neutral currency code.
+  constexpr CurrencyCode() noexcept : _data() {}
 
+  /// Constructs a currency code from a static char array.
   template <unsigned N, std::enable_if_t<N <= sizeof(AcronymType), bool> = true>
   constexpr CurrencyCode(const char (&acronym)[N]) noexcept {
     // Fill extra chars to 0 is important as we always read them for code generation
-    std::fill(
-        std::transform(std::begin(acronym), std::end(acronym), _data.begin(), [](char c) { return cct::toupper(c); }),
-        _data.end(), '\0');
+    std::fill(std::transform(std::begin(acronym), std::end(acronym), _data.begin(), [](char c) { return toupper(c); }),
+              _data.end(), '\0');
   }
 
+  /// Constructs a currency code from given string.
   constexpr CurrencyCode(std::string_view acronym) {
     if (CCT_UNLIKELY(_data.size() < acronym.size())) {
-      if (!std::is_constant_evaluated()) {
+      if constexpr (!std::is_constant_evaluated()) {
         log::debug("Acronym {} is too long, truncating to {}", acronym, acronym.substr(0, _data.size()));
       }
       acronym.remove_suffix(acronym.size() - _data.size());
     }
-    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return cct::toupper(c); }),
+    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return toupper(c); }),
               _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
   }
 
+  /// Get a string view of this CurrencyCode, trimmed.
   constexpr std::string_view str() const {
     return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0'));
   }
@@ -58,13 +61,13 @@ class CurrencyCode {
 
   /// Returns a 64 bits code
   constexpr uint64_t code() const {
-    uint64_t ret = _data[0];
-    ret |= static_cast<uint64_t>(_data[1]) << 8;
-    ret |= static_cast<uint64_t>(_data[2]) << 16;
+    uint64_t ret = _data[6];
+    ret |= static_cast<uint64_t>(_data[5]) << 8;
+    ret |= static_cast<uint64_t>(_data[4]) << 16;
     ret |= static_cast<uint64_t>(_data[3]) << 24;
-    ret |= static_cast<uint64_t>(_data[4]) << 32;
-    ret |= static_cast<uint64_t>(_data[5]) << 40;
-    ret |= static_cast<uint64_t>(_data[6]) << 48;
+    ret |= static_cast<uint64_t>(_data[2]) << 32;
+    ret |= static_cast<uint64_t>(_data[1]) << 40;
+    ret |= static_cast<uint64_t>(_data[0]) << 48;
     return ret;
   }
 
@@ -72,9 +75,7 @@ class CurrencyCode {
 
   void print(std::ostream &os) const { os << str(); }
 
-  constexpr bool operator<(CurrencyCode o) const {
-    return std::lexicographical_compare(_data.begin(), _data.end(), o._data.begin(), o._data.end());
-  }
+  constexpr bool operator<(CurrencyCode o) const { return code() < o.code(); }
   constexpr bool operator<=(CurrencyCode o) const { return !(o < *this); }
   constexpr bool operator>(CurrencyCode o) const { return o < *this; }
   constexpr bool operator>=(CurrencyCode o) const { return !(*this < o); }

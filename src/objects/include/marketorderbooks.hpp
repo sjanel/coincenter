@@ -5,5 +5,5 @@
 #include "marketorderbook.hpp"
 
 namespace cct {
-using MarketOrderBooks = cct::FixedCapacityVector<MarketOrderBook, kNbSupportedExchanges>;
+using MarketOrderBooks = FixedCapacityVector<MarketOrderBook, kNbSupportedExchanges>;
 }

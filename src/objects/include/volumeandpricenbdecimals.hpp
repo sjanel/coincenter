@@ -5,16 +5,16 @@
 
 namespace cct {
 struct VolAndPriNbDecimals {
-  VolAndPriNbDecimals() : volNbDecimals(std::numeric_limits<uintmax_t>::digits10), priNbDecimals(volNbDecimals) {}
+  constexpr VolAndPriNbDecimals() noexcept = default;
 
-  VolAndPriNbDecimals(int8_t volNbDec, int8_t priNbDec) : volNbDecimals(volNbDec), priNbDecimals(priNbDec) {}
+  constexpr VolAndPriNbDecimals(int8_t volNbDec, int8_t priNbDec) : volNbDecimals(volNbDec), priNbDecimals(priNbDec) {}
 
-  bool operator==(VolAndPriNbDecimals o) const {
+  constexpr bool operator==(VolAndPriNbDecimals o) const {
     return volNbDecimals == o.volNbDecimals && priNbDecimals == o.priNbDecimals;
   }
-  bool operator!=(VolAndPriNbDecimals o) const { return !(*this == o); }
+  constexpr bool operator!=(VolAndPriNbDecimals o) const { return !(*this == o); }
 
-  int8_t volNbDecimals;
-  int8_t priNbDecimals;
+  int8_t volNbDecimals = std::numeric_limits<uintmax_t>::digits10;
+  int8_t priNbDecimals = std::numeric_limits<uintmax_t>::digits10;
 };
 }  // namespace cct

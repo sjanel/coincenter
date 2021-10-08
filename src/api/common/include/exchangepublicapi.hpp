@@ -83,7 +83,7 @@ class ExchangePublic : public ExchangeBase {
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
-  using Currencies = cct::SmallVector<CurrencyCode, 4>;
+  using Currencies = SmallVector<CurrencyCode, 4>;
 
   /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
   /// of 'm.base()' towards 'm.quote()' currency code

@@ -22,8 +22,7 @@ class BalancePortfolio {
     }
   };
 
-  using MonetaryAmountSet =
-      cct::FlatSet<MonetaryAmountWithEquivalent, CompareMonetaryAmountWithEquivalentByCurrencyCode>;
+  using MonetaryAmountSet = FlatSet<MonetaryAmountWithEquivalent, CompareMonetaryAmountWithEquivalentByCurrencyCode>;
 
   /// Adds an amount in the `BalancePortfolio`.
   /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency
@@ -42,7 +41,7 @@ class BalancePortfolio {
   MonetaryAmountSet::size_type size() const noexcept { return _monetaryAmountSet.size(); }
 
  private:
-  using MonetaryAmountVec = cct::vector<MonetaryAmountWithEquivalent>;
+  using MonetaryAmountVec = vector<MonetaryAmountWithEquivalent>;
 
   MonetaryAmountVec convertToSortedByAmountVector() const;
 

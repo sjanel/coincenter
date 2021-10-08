@@ -17,7 +17,7 @@ class PrivateExchangeName;
 namespace api {
 class APIKeysProvider {
  public:
-  using KeyNames = cct::SmallVector<std::string, kTypicalNbPrivateAccounts>;
+  using KeyNames = SmallVector<std::string, kTypicalNbPrivateAccounts>;
 
   explicit APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd) : _apiKeysMap(ParseAPIKeys(runMode)) {}
 
@@ -34,7 +34,7 @@ class APIKeysProvider {
   const APIKey &get(const PrivateExchangeName &privateExchangeName) const;
 
  private:
-  using APIKeys = cct::vector<APIKey>;
+  using APIKeys = vector<APIKey>;
   using APIKeysMap = std::map<std::string, APIKeys, std::less<>>;
 
   static APIKeysMap ParseAPIKeys(settings::RunMode runMode);

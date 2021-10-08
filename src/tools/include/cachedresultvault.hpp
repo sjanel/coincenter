@@ -15,22 +15,21 @@ class CachedResultBase {
 
   enum class State { kStandardRefresh, kForceUniqueRefresh, kForceCache };
 
-  explicit CachedResultBase(Clock::duration refreshPeriod)
-      : _refreshPeriod(refreshPeriod), _state(State::kStandardRefresh) {}
+  explicit CachedResultBase(Clock::duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
   void freeze() noexcept { _state = State::kForceUniqueRefresh; }
 
   void unfreeze() noexcept { _state = State::kStandardRefresh; }
 
   Clock::duration _refreshPeriod;
-  State _state;
+  State _state = State::kStandardRefresh;
 };
 
 /// Represents an Observer of CachedResults.
 /// It can be used to launch queries on all objects listening to this observer.
 class CachedResultVault {
  public:
-  CachedResultVault() noexcept : _cachedResults(), _allFrozen(false) {}
+  CachedResultVault() noexcept = default;
 
   void registerCachedResult(CachedResultBase &cacheResult);
 
@@ -39,9 +38,9 @@ class CachedResultVault {
   void unfreezeAll();
 
  private:
-  using CachedResultPtrs = cct::vector<CachedResultBase *>;
+  using CachedResultPtrs = vector<CachedResultBase *>;
 
   CachedResultPtrs _cachedResults;
-  bool _allFrozen;
+  bool _allFrozen = false;
 };
 }  // namespace cct

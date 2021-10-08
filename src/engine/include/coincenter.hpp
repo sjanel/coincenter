@@ -43,7 +43,7 @@ class TradeOptions;
 class Coincenter {
  public:
   using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
-  using MarketOrderBookConversionRates = cct::FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
+  using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
   using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;

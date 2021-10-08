@@ -24,7 +24,7 @@ struct TradeInfo {
 
 struct TradedAmounts {
   TradedAmounts(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode)
-      : tradedFrom("0", fromCurrencyCode), tradedTo("0", toCurrencyCode) {}
+      : tradedFrom(0, fromCurrencyCode, 0), tradedTo(0, toCurrencyCode, 0) {}
 
   TradedAmounts(MonetaryAmount fromAmount, MonetaryAmount toAmount) : tradedFrom(fromAmount), tradedTo(toAmount) {}
 
@@ -59,8 +59,8 @@ struct PlaceOrderInfo {
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.setClosed(); }
 
-  const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
   TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
+  const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
 
   OrderInfo orderInfo;
   OrderId orderId;

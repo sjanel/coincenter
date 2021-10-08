@@ -26,7 +26,7 @@ class MonetaryAmount {
   using AmountType = int64_t;
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
-  constexpr MonetaryAmount() noexcept : _amount(0), _currencyCode(), _nbDecimals(0) {}
+  constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
 
   /// Constructs a new MonetaryAmount from an integral representation which is already multiplied by given
   /// number of decimals
@@ -100,11 +100,13 @@ class MonetaryAmount {
   bool operator>(MonetaryAmount o) const { return o < *this; }
   bool operator>=(MonetaryAmount o) const { return !(*this < o); }
 
-  bool operator==(MonetaryAmount o) const;
-  bool operator!=(MonetaryAmount o) const { return !(*this == o); }
+  constexpr bool operator==(MonetaryAmount o) const {
+    return _amount == o._amount && _nbDecimals == o._nbDecimals && _currencyCode == o._currencyCode;
+  }
+  constexpr bool operator!=(MonetaryAmount o) const { return !(*this == o); }
 
   /// True if amount is 0
-  bool isZero() const { return _amount == 0; }
+  constexpr bool isZero() const { return _amount == 0; }
 
   MonetaryAmount operator-() const { return MonetaryAmount(-_amount, _currencyCode, _nbDecimals); }
 
