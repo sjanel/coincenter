@@ -6,7 +6,6 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "exchangename.hpp"
 #include "jsonhelpers.hpp"
 
 namespace cct {
@@ -59,27 +58,39 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
   return *keyNameIt;
 }
 
-APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(settings::RunMode runMode) {
+APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(const PublicExchangeNames& exchangesWithoutSecrets,
+                                                          bool allExchangesWithoutSecrets, settings::RunMode runMode) {
   APIKeysProvider::APIKeysMap map;
-  json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
-  for (const auto& [platform, keyObj] : jsonData.items()) {
-    for (const auto& [name, keySecretObj] : keyObj.items()) {
-      if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
-        std::string passphrase;
-        if (keySecretObj.contains("passphrase")) {
-          passphrase = keySecretObj["passphrase"];
+  if (allExchangesWithoutSecrets) {
+    log::info("Not loading private keys, using only public exchanges");
+  } else {
+    json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
+    for (const auto& [platform, keyObj] : jsonData.items()) {
+      if (std::find(exchangesWithoutSecrets.begin(), exchangesWithoutSecrets.end(), platform) !=
+          exchangesWithoutSecrets.end()) {
+        log::info("Not loading {} private keys as requested", platform);
+        continue;
+      }
+      for (const auto& [name, keySecretObj] : keyObj.items()) {
+        if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
+          std::string passphrase;
+          if (keySecretObj.contains("passphrase")) {
+            passphrase = keySecretObj["passphrase"];
+          }
+          map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"],
+                                     std::move(passphrase));
+          log::info("Found key '{}' for platform {}", name, platform);
+        } else {
+          log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
         }
-        map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"], std::move(passphrase));
-        log::info("Found key '{}' for platform {}", name, platform);
-      } else {
-        log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
       }
     }
+    if (map.empty()) {
+      log::warn("No private api keys file '{}' found. Only public exchange queries will be supported",
+                GetSecretFileName(runMode));
+    }
   }
-  if (map.empty()) {
-    log::warn("No private api keys file '{}' found. Only public exchange queries will be supported",
-              GetSecretFileName(runMode));
-  }
+
   return map;
 }
 }  // namespace api

@@ -32,9 +32,12 @@ class CoincenterParsedOptions {
   Market marketForConversionPath;
   PublicExchangeNames conversionPathExchanges;
 
-  bool balanceForAll{};
+  bool balanceForAll = false;
   PrivateExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
+
+  bool noSecretsForAll = false;
+  PublicExchangeNames noSecretsExchanges;
 
   MonetaryAmount amountToWithdraw;
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
@@ -47,7 +50,7 @@ class CoincenterParsedOptions {
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
 
-  bool noProcess{};
+  bool noProcess = false;
 
  protected:
   void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions, const char *programName);

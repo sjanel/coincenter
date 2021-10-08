@@ -34,11 +34,12 @@ std::string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exc
 }
 }  // namespace
 
-Coincenter::Coincenter(settings::RunMode runMode)
+Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
+                       settings::RunMode runMode)
     : _coincenterInfo(runMode),
       _cryptowatchAPI(runMode),
       _fiatConverter(std::chrono::hours(8)),
-      _apiKeyProvider(runMode),
+      _apiKeyProvider(exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),

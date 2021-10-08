@@ -48,7 +48,11 @@ class Coincenter {
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
 
-  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd);
+  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd)
+      : Coincenter(PublicExchangeNames(), false, runMode) {}
+
+  Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
+             settings::RunMode runMode = settings::RunMode::kProd);
 
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;
