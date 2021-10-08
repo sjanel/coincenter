@@ -12,9 +12,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: cmake
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1
+
       - name: build
         run: cmake --build build --parallel 2
-      - name: test
-        run: cd build && ctest -j 2 --output-on-failure
+
+      - name: Local Tests
+        run: ctest --test-dir build --output-on-failure --exclude-regex api_test
+        
+      - name: Public API Tests # Tries up to 3 times to avoid random timeout errors not coming from coincenter
+        run: ctest --test-dir build --output-on-failure --tests-regex api_test --repeat until-pass:3
