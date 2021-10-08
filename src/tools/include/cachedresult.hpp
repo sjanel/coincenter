@@ -17,8 +17,7 @@ class CachedResultOptions {
  public:
   using Clock = std::chrono::high_resolution_clock;
 
-  explicit CachedResultOptions(Clock::duration refreshPeriod)
-      : _refreshPeriod(refreshPeriod), _pCacheResultVault(nullptr) {}
+  explicit CachedResultOptions(Clock::duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
   CachedResultOptions(Clock::duration refreshPeriod, CachedResultVault &cacheResultVault)
       : _refreshPeriod(refreshPeriod), _pCacheResultVault(std::addressof(cacheResultVault)) {}
@@ -28,7 +27,7 @@ class CachedResultOptions {
   friend class CachedResult;
 
   Clock::duration _refreshPeriod;
-  CachedResultVault *_pCacheResultVault;
+  CachedResultVault *_pCacheResultVault = nullptr;
 };
 
 /// Wrapper of an object of type T (should be a functor) for which the underlying method is called at most once per

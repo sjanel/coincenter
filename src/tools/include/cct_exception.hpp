@@ -20,7 +20,7 @@ class exception : public std::exception {
                     std::is_nothrow_move_constructible<std::string>::value,
                 "cct::exception cannot be nothrow with a std::string");
 
-  explicit exception(const char* str) noexcept : _info(str), _str() {
+  explicit exception(const char* str) noexcept : _info(str) {
     if (str) {
       try {
         log::critical(str);
@@ -36,7 +36,7 @@ class exception : public std::exception {
   ///
   /// Thus we store the msg in a fixed size char storage.
   /// Msg will be truncated to 'kMsgMaxLen' chars.
-  explicit exception(std::string_view str) noexcept : _info(nullptr), _str() {
+  explicit exception(std::string_view str) noexcept {
     try {
       log::critical(str);
     } catch (...) {
@@ -44,7 +44,7 @@ class exception : public std::exception {
     copyStrToInlineStorage(str);
   }
 
-  explicit exception(std::string&& str) noexcept : _info(nullptr), _str(std::move(str)) {
+  explicit exception(std::string&& str) noexcept : _str(std::move(str)) {
     try {
       log::critical(_str);
     } catch (...) {
@@ -95,7 +95,7 @@ class exception : public std::exception {
     _storage[std::min(static_cast<int>(sizeof(_storage) - 1), sizeToCopy)] = '\0';
   }
 
-  const char* _info;
+  const char* _info = nullptr;
   std::array<char, kMsgMaxLen + 1> _storage;
   std::string _str;
 };

@@ -44,7 +44,7 @@ class MarketOrderBook {
     MonetaryAmount price;
   };
 
-  using AmountPerPriceVec = cct::SmallVector<AmountAtPrice, 8>;
+  using AmountPerPriceVec = SmallVector<AmountAtPrice, 8>;
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
@@ -158,17 +158,17 @@ class MarketOrderBook {
   struct AmountPrice {
     using AmountType = int64_t;
 
-    AmountPrice() noexcept : amount(), price() {}
+    AmountPrice() noexcept = default;
 
     AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
 
     bool operator==(AmountPrice o) const { return amount == o.amount && price == o.price; }
 
-    AmountType amount;
-    AmountType price;
+    AmountType amount{};
+    AmountType price{};
   };
 
-  using AmountPriceVector = cct::SmallVector<AmountPrice, 20>;
+  using AmountPriceVector = SmallVector<AmountPrice, 20>;
 
   MonetaryAmount amountAt(int pos) const {
     return MonetaryAmount(_orders[pos].amount, _market.base(), _volAndPriNbDecimals.volNbDecimals);

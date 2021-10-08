@@ -8,8 +8,7 @@ namespace cct {
 TEST(CurrencyCodeTest, Instantiate) {
   CurrencyCode eur = "EUR";
   EXPECT_EQ("EUR", eur.str());
-  CurrencyCode krw = CurrencyCode(std::string_view("KRW"));
-  EXPECT_EQ("KRW", krw.str());
+  EXPECT_EQ("KRW", CurrencyCode(std::string_view("KRW")).str());
 }
 
 TEST(CurrencyCodeTest, Code) {
@@ -19,7 +18,7 @@ TEST(CurrencyCodeTest, Code) {
   EXPECT_EQ(eur.code(), CurrencyCode("EUR").code());
 }
 
-TEST(CurrencyCodeTest, Comparison) {
+TEST(CurrencyCodeTest, Equality) {
   CurrencyCode doge = "DOGE";
   CurrencyCode sushi = "SUSHI";
   CurrencyCode renbtc = "RENBTC";
@@ -32,6 +31,20 @@ TEST(CurrencyCodeTest, Comparison) {
   EXPECT_EQ(sushi, sushi2);
   EXPECT_EQ(sushi2, sushi);
   EXPECT_NE(renbtc, doge2);
+}
+
+TEST(CurrencyCodeTest, Comparison) {
+  CurrencyCode doge = "DOGE";
+  CurrencyCode sushi = "SUSHI";
+  CurrencyCode renbtc = "RENBTC";
+  CurrencyCode doge2 = "DOGE";
+  CurrencyCode sushi2(sushi.str());
+  EXPECT_LT(doge, renbtc);
+  EXPECT_GT(sushi, renbtc);
+  EXPECT_LE(sushi, sushi2);
+  EXPECT_LE(doge2, sushi2);
+  EXPECT_GE(renbtc, renbtc);
+  EXPECT_GE(renbtc, doge);
 }
 
 TEST(CurrencyCodeTest, UpperConversion) {
