@@ -22,11 +22,12 @@ class ExchangeTest {
 };
 
 using ExchangeRetriever = ExchangeRetrieverBase<ExchangeTest>;
+using Order = ExchangeRetriever::Order;
 
 TEST(ExchangeRetriever, Empty) {
   EXPECT_TRUE(ExchangeRetriever().exchanges().empty());
   PublicExchangeNames names;
-  EXPECT_TRUE(ExchangeRetriever().retrieveSelectedExchanges(names).empty());
+  EXPECT_TRUE(ExchangeRetriever().retrieveSelectedExchanges(Order::kInitial, names).empty());
 }
 
 TEST(ExchangeRetriever, RetrieveUniqueCandidate) {
@@ -43,42 +44,65 @@ TEST(ExchangeRetriever, RetrieveUniqueCandidate) {
   EXPECT_EQ(krakenUser1.keyName(), "user3");
 }
 
-TEST(ExchangeRetriever, RetrieveSelectedExchanges) {
+TEST(ExchangeRetriever, RetrieveSelectedExchangesInitialOrder) {
   ExchangeTest kAllExchanges[] = {ExchangeTest("kraken", "user1"), ExchangeTest("bithumb", "user1"),
                                   ExchangeTest("kraken", "user2")};
   ExchangeRetriever exchangeRetriever(kAllExchanges);
   EXPECT_FALSE(exchangeRetriever.exchanges().empty());
   PublicExchangeNames names{"kraken"};
-  ExchangeRetriever::SelectedExchanges selectedExchanges = exchangeRetriever.retrieveSelectedExchanges(names);
-  EXPECT_EQ(selectedExchanges.size(), 2U);
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      exchangeRetriever.retrieveSelectedExchanges(Order::kInitial, names);
+  ASSERT_EQ(selectedExchanges.size(), 2U);
   EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
   EXPECT_EQ(selectedExchanges.back()->name(), "kraken");
-  selectedExchanges = exchangeRetriever.retrieveSelectedExchanges();
-  EXPECT_EQ(selectedExchanges.size(), 3U);
+  selectedExchanges = exchangeRetriever.retrieveSelectedExchanges(Order::kInitial);
+  ASSERT_EQ(selectedExchanges.size(), 3U);
   EXPECT_EQ(selectedExchanges[0]->name(), "kraken");
   EXPECT_EQ(selectedExchanges[1]->name(), "bithumb");
   EXPECT_EQ(selectedExchanges[2]->name(), "kraken");
 }
 
+TEST(ExchangeRetriever, RetrieveSelectedExchangesSelectedOrder) {
+  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  for (const auto &[first, second] : kExchangePairs) {
+    ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1"),
+                                    ExchangeTest(first, "user2")};
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
+    PublicExchangeNames names{second, first};
+    ExchangeRetriever::SelectedExchanges selectedExchanges =
+        exchangeRetriever.retrieveSelectedExchanges(Order::kSelection, names);
+    ASSERT_EQ(selectedExchanges.size(), 3U);
+    EXPECT_EQ(selectedExchanges[0]->name(), second);
+    EXPECT_EQ(selectedExchanges[1]->name(), first);
+    EXPECT_EQ(selectedExchanges[2]->name(), first);
+  }
+}
+
 TEST(ExchangeRetriever, RetrieveAtMostOneAccountSelectedExchanges) {
-  ExchangeTest kAllExchanges[] = {ExchangeTest("kraken", "user1"), ExchangeTest("bithumb", "user1"),
-                                  ExchangeTest("kraken", "user2")};
-  ExchangeRetriever exchangeRetriever(kAllExchanges);
-  PublicExchangeNames names{"bithumb", "kraken"};
-  ExchangeRetriever::UniquePublicSelectedExchanges selectedExchanges =
-      exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(names);
-  EXPECT_EQ(selectedExchanges.size(), 2U);
-  EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
-  EXPECT_EQ(selectedExchanges.back()->name(), "bithumb");
+  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  for (const auto &[first, second] : kExchangePairs) {
+    ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1"),
+                                    ExchangeTest(first, "user2")};
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
+    PublicExchangeNames names{second, first};
+    ExchangeRetriever::UniquePublicSelectedExchanges selectedExchanges =
+        exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(names);
+    ASSERT_EQ(selectedExchanges.size(), 2U);
+    EXPECT_EQ(selectedExchanges.front()->name(), second);
+    EXPECT_EQ(selectedExchanges.back()->name(), first);
+  }
 }
 
 TEST(ExchangeRetriever, RetrieveUniquePublicExchange) {
-  ExchangeTest kAllExchanges[] = {ExchangeTest("kraken", "user1"), ExchangeTest("bithumb", "user1")};
-  ExchangeRetriever exchangeRetriever(kAllExchanges);
-  PublicExchangeNames names{"bithumb", "kraken"};
-  ExchangeRetriever::UniquePublicExchanges selectedExchanges = exchangeRetriever.retrieveUniquePublicExchanges(names);
-  EXPECT_FALSE(selectedExchanges.empty());
-  EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
-  EXPECT_EQ(selectedExchanges.back()->name(), "bithumb");
+  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  for (const auto &[first, second] : kExchangePairs) {
+    ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1")};
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
+    PublicExchangeNames names{second, first};
+    ExchangeRetriever::UniquePublicExchanges selectedExchanges = exchangeRetriever.retrieveUniquePublicExchanges(names);
+    ASSERT_EQ(selectedExchanges.size(), 2U);
+    EXPECT_EQ(selectedExchanges.front()->name(), second);
+    EXPECT_EQ(selectedExchanges.back()->name(), first);
+  }
 }
 }  // namespace cct
