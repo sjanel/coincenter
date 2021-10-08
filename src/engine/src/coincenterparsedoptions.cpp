@@ -62,6 +62,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     balanceCurrencyCode = CurrencyCode(cmdLineOptions.balance_cur);
   }
 
+  if (cmdLineOptions.nosecrets) {
+    StringOptionParser anyParser(*cmdLineOptions.nosecrets);
+    noSecretsExchanges = anyParser.getExchanges();
+    noSecretsForAll = noSecretsExchanges.empty();
+  }
+
   if (!cmdLineOptions.trade.empty()) {
     StringOptionParser anyParser(cmdLineOptions.trade);
     std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =

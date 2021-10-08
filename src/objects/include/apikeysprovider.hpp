@@ -9,17 +9,20 @@
 #include "cct_run_modes.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_vector.hpp"
+#include "exchangename.hpp"
 
 namespace cct {
-
-class PrivateExchangeName;
-
 namespace api {
 class APIKeysProvider {
  public:
   using KeyNames = SmallVector<std::string, kTypicalNbPrivateAccounts>;
 
-  explicit APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd) : _apiKeysMap(ParseAPIKeys(runMode)) {}
+  explicit APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd)
+      : APIKeysProvider(PublicExchangeNames(), false, runMode) {}
+
+  APIKeysProvider(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
+                  settings::RunMode runMode = settings::RunMode::kProd)
+      : _apiKeysMap(ParseAPIKeys(exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode)) {}
 
   APIKeysProvider(const APIKeysProvider &) = delete;
   APIKeysProvider &operator=(const APIKeysProvider &) = delete;
@@ -37,7 +40,8 @@ class APIKeysProvider {
   using APIKeys = vector<APIKey>;
   using APIKeysMap = std::map<std::string, APIKeys, std::less<>>;
 
-  static APIKeysMap ParseAPIKeys(settings::RunMode runMode);
+  static APIKeysMap ParseAPIKeys(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
+                                 settings::RunMode runMode);
 
   APIKeysMap _apiKeysMap;
 };

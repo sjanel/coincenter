@@ -12,7 +12,7 @@ int main(int argc, const char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    cct::Coincenter coincenter;
+    cct::Coincenter coincenter(opts.noSecretsExchanges, opts.noSecretsForAll);
     coincenter.process(opts);
   } catch (...) {
     return EXIT_FAILURE;

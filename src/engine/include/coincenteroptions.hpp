@@ -22,9 +22,10 @@ struct CoincenterCmdLineOptions {
   static void PrintVersion(const char* programName);
 
   std::string logLevel;
-  bool help{};
-  bool version{};
-  bool logFile{};
+  bool help = false;
+  bool version = false;
+  bool logFile = false;
+  std::optional<std::string> nosecrets;
 
   std::string markets;
 
@@ -69,6 +70,9 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                       "Possible values are: trace|debug|info|warning|error|critical|off"}, 
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
+       {{{"General", 1}, "--nosecrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"
+                                                       "If empty list of exchanges, it skips secrets load for all private exchanges"}, 
+                                                       &OptValueType::nosecrets},
 
        {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
                                                                        &OptValueType::markets},
