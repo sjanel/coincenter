@@ -83,8 +83,9 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
     currencies.insert(CurrencyExchange(m.base(), m.base(), m.base()));
     currencies.insert(CurrencyExchange(m.quote(), m.quote(), m.quote()));
   }
-  log::info("Retrieved {} Upbit currencies with partial information", currencies.size());
-  log::debug("Use Upbit private API to get full withdrawal and deposit statuses");
+  log::warn("Retrieved {} Upbit currencies with partial information", currencies.size());
+  log::warn("Public API of Upbit does not provide deposit / withdrawal access");
+  log::warn("Use Upbit private API to get full withdrawal and deposit statuses");
   return currencies;
 }
 
@@ -94,7 +95,6 @@ ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
   for (const json& marketDetails : result) {
-    //{"market_warning":"NONE","market":"KRW-BTC","korean_name":"비트코인","english_name":"Bitcoin"}
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::string_view marketWarningStr = marketDetails["market_warning"].get<std::string_view>();
     if (marketWarningStr != "NONE") {
@@ -102,7 +102,7 @@ ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
       continue;
     }
     // Upbit markets are inverted
-    std::size_t dashPos = marketStr.find_first_of('-');
+    std::size_t dashPos = marketStr.find('-');
     if (dashPos == std::string_view::npos) {
       log::error("Discard Upbit market {} as unable to parse the currency codes in it", marketStr);
       continue;
@@ -146,7 +146,7 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth
       continue;
     }
 
-    cct::SmallVector<OrderBookLine, 10> orderBookLines;
+    SmallVector<OrderBookLine, 10> orderBookLines;
 
     /// Remember, Upbit markets are inverted, quote first then base
     CurrencyCode quote(std::string_view(marketStr.begin(), marketStr.begin() + dashPos));
