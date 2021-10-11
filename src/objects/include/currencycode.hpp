@@ -43,7 +43,7 @@ class CurrencyCode {
   /// Constructs a currency code from given string.
   constexpr CurrencyCode(std::string_view acronym) {
     if (CCT_UNLIKELY(_data.size() < acronym.size())) {
-      if constexpr (!std::is_constant_evaluated()) {
+      if (!std::is_constant_evaluated()) {
         log::debug("Acronym {} is too long, truncating to {}", acronym, acronym.substr(0, _data.size()));
       }
       acronym.remove_suffix(acronym.size() - _data.size());
