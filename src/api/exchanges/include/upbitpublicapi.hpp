@@ -47,6 +47,8 @@ class UpbitPublic : public ExchangePublic {
  private:
   friend class UpbitPrivate;
 
+  static bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies);
+
   struct MarketsFunc {
     MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
