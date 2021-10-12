@@ -32,15 +32,6 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
   return dataJson;
 }
 
-bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies) {
-  if (excludedCurrencies.contains(standardCode)) {
-    // Forbidden currency, do not consider its market
-    log::trace("Discard {} excluded by config", standardCode.str());
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
@@ -87,6 +78,15 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   log::warn("Public API of Upbit does not provide deposit / withdrawal access");
   log::warn("Use Upbit private API to get full withdrawal and deposit statuses");
   return currencies;
+}
+
+bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies) {
+  if (excludedCurrencies.contains(standardCode)) {
+    // Forbidden currency, do not consider its market
+    log::trace("Discard {} excluded by config", standardCode.str());
+    return false;
+  }
+  return true;
 }
 
 ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {

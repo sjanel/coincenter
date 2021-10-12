@@ -73,7 +73,7 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
       _curlHandle(config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _apiKey, upbitPublic),
+          _curlHandle, _apiKey, upbitPublic, config.exchangeInfo(_exchangePublic.name())),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
@@ -82,13 +82,13 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic) {}
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
-  const CurrencyExchangeFlatSet& partialInfoCurrencies = _exchangePublic._tradableCurrenciesCache.get();
+  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   CurrencyExchangeFlatSet currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "status/wallet");
-  currencies.reserve(partialInfoCurrencies.size());
+  currencies.reserve(result.size());
   for (const json& curDetails : result) {
     CurrencyCode cur(curDetails["currency"].get<std::string_view>());
-    if (partialInfoCurrencies.contains(cur)) {
+    if (UpbitPublic::CheckCurrencyCode(cur, excludedCurrencies)) {
       std::string_view walletState = curDetails["wallet_state"].get<std::string_view>();
       CurrencyExchange::Withdraw withdrawStatus = CurrencyExchange::Withdraw::kUnavailable;
       CurrencyExchange::Deposit depositStatus = CurrencyExchange::Deposit::kUnavailable;
