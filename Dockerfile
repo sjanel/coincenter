@@ -1,28 +1,48 @@
-FROM alpine:latest
+# Multi stage build to separate docker build image from executable (to make the latter smaller)
+FROM alpine:latest AS base-env
 
-RUN apk --no-cache add cmake make gcc g++ libc-dev linux-headers git bash zlib-dev curl-dev
+# Install base dependencies (especially run ones)
+RUN apk update && apk upgrade && apk add gcc g++ libc-dev curl-dev bash
 
-ADD . /service
-WORKDIR /service
-#Start from clean repo
-RUN rm -Rf /service/build || true
-# Clean secret data & caches (Warning : deploying secret keys could be dangerous !)
-RUN rm -f /service/data/\.*cache.json
-ARG keepsecrets
-RUN if [[ -z "$keepsecrets" ]]; then rm -f /service/data/.depositaddresses.json ;\
-    rm -f /service/data/secret.json ;\
-    else echo "Keeping secrets: warning do not deploy this docker image on a public space.";\
-    fi
+# Set default directory for application
+WORKDIR /app
 
-WORKDIR /service/build
+# Define a new temporary image with additional tools for build
+FROM base-env as build
 
-ARG mode=Release
-ARG test=0
+# Install build tools
+RUN apk update && apk upgrade && apk add cmake ninja git linux-headers
 
-RUN BUILD_MODE=${mode} && cmake -DCMAKE_BUILD_TYPE=${mode} -DCCT_ENABLE_TESTS=${test} -DCCT_ENABLE_ASAN=0 ..
-RUN make -j 4
+# Copy all files, excluding the ones in '.dockerignore' (WARNING: secrets should never be shipped in a Docker image!)
+COPY . .
 
-# Check if tests should be run: 
-RUN if [[ "$test" == "1" ]]; then ctest; else echo "No tests."; fi
+# Create and go to 'build' directory
+WORKDIR /app/bin
 
-ENTRYPOINT [ "/service/build/coincenter" ]
+# Declare and set default values of following arguments
+ARG BUILD_MODE=Release
+ARG TEST=0
+ARG ASAN=0
+
+# Create ninja file
+RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} -DCCT_ENABLE_TESTS=${TEST} -DCCT_ENABLE_ASAN=${ASAN} -GNinja ..
+
+# Compile
+RUN ninja
+
+# Launch tests if requested
+RUN if [[ "$TEST" == "1" ]]; then ctest; else echo "No tests"; fi
+
+# Multi stage build to separate docker build image from executable (to make the latter smaller)
+FROM base-env
+
+# Copy config and data
+COPY --from=build /app/config config
+COPY --from=build /app/data data
+
+WORKDIR /app/bin
+
+# Copy executable
+COPY --from=build /app/bin/coincenter .
+
+CMD [ "/app/bin/coincenter" ]

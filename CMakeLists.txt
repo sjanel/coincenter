@@ -34,6 +34,12 @@ if (NOT DEFINED CCT_CONFIG_DIR)
   set(CCT_CONFIG_DIR "${CMAKE_SOURCE_DIR}/config")
 endif()
 
+if(EXISTS "${CCT_CONFIG_DIR}/secret.json")
+  message(STATUS "Found secrets file '${CCT_CONFIG_DIR}/secret.json'")
+else()
+  message(STATUS "No secrets file found")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 
 # External dependencies (linked with FetchContent)
