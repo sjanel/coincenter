@@ -9,6 +9,9 @@ on:
 jobs:
   alpine_docker_build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        withtests: [0, 1]
 
     steps:
     - name: Checkout repository code
@@ -16,4 +19,4 @@ jobs:
 
     - name: Docker build
       working-directory: ${{github.workspace}}
-      run: docker build -t coincenter .
+      run: docker build --build-arg TEST=${{matrix.withtests}} -t coincenter .

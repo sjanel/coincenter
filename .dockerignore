@@ -1,0 +1,7 @@
+*.cmake
+.cache
+.vscode
+.git
+**/build*/
+**/*secret.json
+resources

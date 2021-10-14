@@ -73,11 +73,20 @@ You will need to install **OpenSSL** (min version 1.1.0), **cURL**, **cmake** an
 
 ### Linux
 
-For instance, for Unix Debian based systems (tested on Ubuntu 18 & 20):
+#### Debian / Ubuntu
+
 ```
-sudo apt-get update
-sudo apt-get install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
+sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
 ```
+
+#### Alpine
+
+With `ninja` generator for instance:
+```
+sudo apk update && sudo apk upgrade && sudo apk add gcc g++ libc-dev curl-dev bash cmake ninja git linux-headers
+```
+
+You can refer to the provided `Dockerfile` for more information.
 
 ### Windows
 
@@ -144,25 +153,35 @@ Other compilers have not been tested yet.
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 ```
-BUILD_MODE=Release; mkdir -p build/${BUILD_MODE} && cd build/${BUILD_MODE} && cmake -GNinja -DCMAKE_BUILD_TYPE=${BUILD_MODE} ../.. && ninja -j 8
+mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
 ```
 
 On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2019**, etc), or build it from command line, with generator `-G "Visual Studio 16 2019"`. Refer to the GitHub Windows workflow to have the detailed installation steps.
 
 ### From Docker
 
-Build
+You can ship `coincenter` in a **Docker** image. It uses **Alpine** Linux distribution as base and multi stage build to reduce the image size.
+Build options (all optional):
+
+CMake build mode
+`BUILD_MODE` (default: Release)
+
+Compile and launch tests
+`TEST` (default: 0)
+
+Activate Address Sanitizer
+`ASAN` (default: 0)
+
+#### Build
+
 ```
-docker build --build-arg test=1 --build-arg mode=Release -t coincenter .
-```
-Run
-```
-docker run -ti -e "TERM=xterm-256color" coincenter:latest --help
+docker build --build-arg BUILD_MODE=Release -t coincenter .
 ```
 
-To keep secrets, build using the keepsecrets option. **Warning : image will contain your secrets.**
+#### Run
+
 ```
-docker build --build-arg keepsecrets=1 -t coincenter .
+docker run -ti -e "TERM=xterm-256color" coincenter:latest --help
 ```
 
 # Tests
@@ -234,7 +253,7 @@ coincenter --withdraw 10000xlm,bithumb-huobi
 Configuration files are all stored in the *config* directory 
 
 ## Secrets
-*secret.json* holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` to avoid mistakes.
+*secret.json* holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
 `config/secret_test.json` shows the syntax.
 
 ## Exchange config
