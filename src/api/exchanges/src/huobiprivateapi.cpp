@@ -58,7 +58,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   url.push_back('?');
   url.append(signaturePostdata.toStringView());
 
-  return json::parse(curlHandle.query(url, opts));
+  json ret = json::parse(curlHandle.query(url, opts));
+  if (ret.contains("status") && ret["status"].get<std::string_view>() != "ok") {
+    std::string errMsg("Error: ");
+    if (ret.contains("err-msg")) {
+      errMsg.append(ret["err-msg"].get<std::string_view>());
+    }
+    throw exception(std::move(errMsg));
+  }
+
+  return ret;
 }
 
 }  // namespace
