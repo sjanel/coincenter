@@ -6,19 +6,19 @@
 #include <exception>
 #include <iostream>
 #include <memory>
-#include <string>
 #include <string_view>
 
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 
 namespace cct {
 class exception : public std::exception {
  public:
   static constexpr int kMsgMaxLen = 127;
 
-  static_assert(std::is_nothrow_default_constructible<std::string>::value &&
-                    std::is_nothrow_move_constructible<std::string>::value,
-                "cct::exception cannot be nothrow with a std::string");
+  static_assert(std::is_nothrow_default_constructible<string>::value &&
+                    std::is_nothrow_move_constructible<string>::value,
+                "exception cannot be nothrow with a string");
 
   explicit exception(const char* str) noexcept : _info(str) {
     if (str) {
@@ -31,7 +31,7 @@ class exception : public std::exception {
   }
 
   /// We cannot store a reference of a given string in an exception because of dangling reference problem.
-  /// We neither can store a std::string directly as it could throw by allocating memory, which is not acceptable in an
+  /// We neither can store a string directly as it could throw by allocating memory, which is not acceptable in an
   /// exception's constructor.
   ///
   /// Thus we store the msg in a fixed size char storage.
@@ -44,7 +44,7 @@ class exception : public std::exception {
     copyStrToInlineStorage(str);
   }
 
-  explicit exception(std::string&& str) noexcept : _str(std::move(str)) {
+  explicit exception(string&& str) noexcept : _str(std::move(str)) {
     try {
       log::critical(_str);
     } catch (...) {
@@ -97,6 +97,6 @@ class exception : public std::exception {
 
   const char* _info = nullptr;
   std::array<char, kMsgMaxLen + 1> _storage;
-  std::string _str;
+  string _str;
 };
 }  // namespace cct

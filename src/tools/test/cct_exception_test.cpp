@@ -24,7 +24,7 @@ TEST(CctExceptionTest, InfoTakenFromConstCharStar) {
 }
 
 TEST(CctExceptionTest, InlineStorage) {
-  std::string shortStrStdString(kShortStr);
+  string shortStrStdString(kShortStr);
   exception ex(shortStrStdString);
   EXPECT_EQ(ex.what(), shortStrStdString);
 
@@ -33,25 +33,25 @@ TEST(CctExceptionTest, InlineStorage) {
   ex = exception(shortStrStdString);
   EXPECT_EQ(ex.what(), shortStrStdString);
 
-  std::string longStrStdString(kVeryLongStr);
+  string longStrStdString(kVeryLongStr);
   ex = exception(longStrStdString);
   EXPECT_LT(strlen(ex.what()), longStrStdString.length());
-  EXPECT_EQ(ex.what(), std::string(longStrStdString.begin(), longStrStdString.begin() + exception::kMsgMaxLen));
+  EXPECT_EQ(ex.what(), string(longStrStdString.begin(), longStrStdString.begin() + exception::kMsgMaxLen));
 
-  std::string longStrStdStringCopy = longStrStdString;
+  string longStrStdStringCopy = longStrStdString;
   ex = exception(std::move(longStrStdString));
   EXPECT_EQ(ex.what(), longStrStdStringCopy);
 }
 
 TEST(CctExceptionTest, MoveStringConstructor) {
-  std::string str;
+  string str;
   exception ex(std::move(str));
   EXPECT_STREQ(ex.what(), "");
 }
 
 TEST(CctExceptionTest, RuleOfFive) {
-  std::string longStr(kVeryLongStr);
-  std::string shortStr(kShortStr);
+  string longStr(kVeryLongStr);
+  string shortStr(kShortStr);
   exception exWithLongStr(std::move(longStr));
   exception exWithShortStr(std::move(shortStr));
 
@@ -59,7 +59,7 @@ TEST(CctExceptionTest, RuleOfFive) {
   EXPECT_STREQ(exWithShortStr.what(), kShortStr);
   exWithShortStr = exWithLongStr;
   EXPECT_STRNE(exWithShortStr.what(), kVeryLongStr);
-  EXPECT_EQ(std::string(exWithShortStr.what()), std::string(kVeryLongStr).substr(0, exception::kMsgMaxLen));
+  EXPECT_EQ(string(exWithShortStr.what()), string(kVeryLongStr).substr(0, exception::kMsgMaxLen));
   exWithShortStr = std::move(exWithLongStr);
   EXPECT_STREQ(exWithShortStr.what(), kVeryLongStr);
 }

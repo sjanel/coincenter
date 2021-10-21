@@ -2,10 +2,10 @@
 
 #include <chrono>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
+#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "market.hpp"
@@ -71,6 +71,6 @@ class FiatConverter {
   PricesMap _pricesMap;
   Clock::duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;
-  std::string _apiKey;
+  string _apiKey;
 };
 }  // namespace cct

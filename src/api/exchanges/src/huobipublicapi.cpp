@@ -20,12 +20,12 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  std::string url = HuobiPublic::kUrlBase;
+  string url = HuobiPublic::kUrlBase;
   url.push_back('/');
   url.append(endpoint);
   if (!curlPostData.empty()) {
     url.push_back('?');
-    url.append(curlPostData.toStringView());
+    url.append(curlPostData.str());
   }
   CurlOptions opts(CurlOptions::RequestType::kGet);
   opts.userAgent = HuobiPublic::kUserAgent;
@@ -213,21 +213,21 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       }
     }
   }
-  throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
+  throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
 }
 
 ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  using HuobiAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
+  using HuobiAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   HuobiAssetPairToStdMarketMap huobiAssetPairToStdMarketMap;
   huobiAssetPairToStdMarketMap.reserve(markets.size());
   for (Market m : markets) {
-    std::string upperMarket = cct::toupper(m.assetsPairStr());
+    string upperMarket = toupper(m.assetsPairStr());
     huobiAssetPairToStdMarketMap.insert_or_assign(std::move(upperMarket), m);
   }
   for (const json& tickerDetails : PublicQuery(_curlHandle, "market/tickers")) {
-    std::string upperMarket = cct::toupper(tickerDetails["symbol"].get<std::string_view>());
+    string upperMarket = toupper(tickerDetails["symbol"].get<std::string_view>());
     auto it = huobiAssetPairToStdMarketMap.find(upperMarket);
     if (it == huobiAssetPairToStdMarketMap.end()) {
       continue;
@@ -254,7 +254,7 @@ ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(in
 
 MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Huobi has a fixed range of authorized values for depth
-  std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
+  string lowerCaseAssets = tolower(m.assetsPairStr());
   CurlPostData postData{{"symbol", std::string_view(lowerCaseAssets)}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
     static constexpr int kAuthorizedDepths[] = {5, 10, 20};
@@ -269,7 +269,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   json asksAndBids = PublicQuery(_curlHandle, "market/depth", postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
-  using OrderBookVec = cct::vector<OrderBookLine>;
+  using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
@@ -318,14 +318,14 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
 }
 
 MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
-  std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
+  string lowerCaseAssets = tolower(m.assetsPairStr());
   json result = PublicQuery(_curlHandle, "market/detail/merged", {{"symbol", std::string_view(lowerCaseAssets)}});
   double last24hVol = result["amount"].get<double>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 MonetaryAmount HuobiPublic::TickerFunc::operator()(Market m) {
-  std::string lowerCaseAssets = cct::tolower(m.assetsPairStr());
+  string lowerCaseAssets = tolower(m.assetsPairStr());
   json result = PublicQuery(_curlHandle, "market/trade", {{"symbol", std::string_view(lowerCaseAssets)}});
   double lastPrice = result["data"].front()["price"].get<double>();
   return MonetaryAmount(lastPrice, m.quote());

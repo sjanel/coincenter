@@ -1,8 +1,9 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <string_view>
+
+#include "cct_string.hpp"
 
 namespace cct {
 namespace api {
@@ -58,9 +59,9 @@ class TradeOptions {
 
   void switchToTakerStrategy() { _strategy = TradeStrategy::kTaker; }
 
-  std::string strategyStr() const;
+  std::string_view strategyStr() const;
 
-  std::string str() const;
+  string str() const;
 
  private:
   Clock::duration _maxTradeTime;

@@ -63,7 +63,7 @@ TEST(ExchangeRetriever, RetrieveSelectedExchangesInitialOrder) {
 }
 
 TEST(ExchangeRetriever, RetrieveSelectedExchangesSelectedOrder) {
-  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  const std::pair<string, string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
   for (const auto &[first, second] : kExchangePairs) {
     ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1"),
                                     ExchangeTest(first, "user2")};
@@ -79,7 +79,7 @@ TEST(ExchangeRetriever, RetrieveSelectedExchangesSelectedOrder) {
 }
 
 TEST(ExchangeRetriever, RetrieveAtMostOneAccountSelectedExchanges) {
-  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  const std::pair<string, string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
   for (const auto &[first, second] : kExchangePairs) {
     ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1"),
                                     ExchangeTest(first, "user2")};
@@ -94,7 +94,7 @@ TEST(ExchangeRetriever, RetrieveAtMostOneAccountSelectedExchanges) {
 }
 
 TEST(ExchangeRetriever, RetrieveUniquePublicExchange) {
-  const std::pair<std::string, std::string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
+  const std::pair<string, string> kExchangePairs[] = {{"kraken", "bithumb"}, {"bithumb", "kraken"}};
   for (const auto &[first, second] : kExchangePairs) {
     ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1")};
     ExchangeRetriever exchangeRetriever(kAllExchanges);

@@ -23,13 +23,13 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
   Nonce nonce = Nonce_TimeSinceEpoch();
   postData.set("timestamp", nonce);
   postData.erase("signature");
-  postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.toString(), apiKey.privateKey()));
+  postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
 }
 
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view baseURL, std::string_view method, CurlPostDataT&& curlPostData = CurlPostData()) {
-  std::string url(baseURL);
+  string url(baseURL);
   url.push_back('/');
   url.append(method);
 
@@ -57,7 +57,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
       statusCode = dataJson["code"];
     }
     const std::string_view errorMessage = dataJson["msg"].get<std::string_view>();
-    throw exception("error " + std::to_string(statusCode) + ", msg: " + std::string(errorMessage));
+    throw exception("error " + std::to_string(statusCode) + ", msg: " + string(errorMessage));
   }
   return dataJson;
 }
@@ -125,7 +125,7 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   if (!result.contains(currencyCode.str())) {
     throw exception("Unable to find asset information in assetDetail query to Binance");
   }
-  const json& withdrawFeeDetails = result[std::string(currencyCode.str())];
+  const json& withdrawFeeDetails = result[string(currencyCode.str())];
   if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
     log::error("{} is currently unavailable for withdraw from {}", currencyCode.str(), _exchangePublic.name());
   }
@@ -209,7 +209,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   const Market m = tradeInfo.m;
   const CurlOptions::RequestType requestType =
       isCancel ? CurlOptions::RequestType::kDelete : CurlOptions::RequestType::kGet;
-  const std::string assetsStr = m.assetsPairStr();
+  const string assetsStr = m.assetsPairStr();
   const std::string_view assets(assetsStr);
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   const json result = PrivateQuery(_curlHandle, _apiKey, requestType, binancePublic._commonInfo.getBestBaseURL(),

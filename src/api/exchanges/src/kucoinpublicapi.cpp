@@ -20,12 +20,12 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  std::string url = KucoinPublic::kUrlBase;
+  string url = KucoinPublic::kUrlBase;
   url.push_back('/');
   url.append(endpoint);
   if (!curlPostData.empty()) {
     url.push_back('?');
-    url.append(curlPostData.toStringView());
+    url.append(curlPostData.str());
   }
   CurlOptions opts(CurlOptions::RequestType::kGet);
   opts.userAgent = KucoinPublic::kUserAgent;
@@ -156,7 +156,7 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& currencyInfoSet = _tradableCurrenciesCache.get();
   auto it = currencyInfoSet.find(TradableCurrenciesFunc::CurrencyInfo(currencyCode));
   if (it == currencyInfoSet.end()) {
-    throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
+    throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
   }
   return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
 }
@@ -201,7 +201,7 @@ ExchangePublic::MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(i
 
 MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Kucoin has a fixed range of authorized values for depth
-  std::string symbol = m.assetsPairStr('-');
+  string symbol = m.assetsPairStr('-');
   CurlPostData postData{{"symbol", std::string_view(symbol)}};
   static constexpr int kAuthorizedDepths[] = {20, 100};
   auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
@@ -212,13 +212,13 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
   } else {
     depth = *lb;
   }
-  std::string endpoint("api/v1/market/orderbook/level2_");
+  string endpoint("api/v1/market/orderbook/level2_");
   endpoint.append(std::to_string(depth));
 
   json asksAndBids = PublicQuery(_curlHandle, endpoint, postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
-  using OrderBookVec = cct::vector<OrderBookLine>;
+  using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {

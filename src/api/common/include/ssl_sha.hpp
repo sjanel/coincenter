@@ -3,7 +3,9 @@
 #include <array>
 #include <climits>
 #include <span>
-#include <string>
+#include <string_view>
+
+#include "cct_string.hpp"
 
 namespace cct {
 namespace ssl {
@@ -12,18 +14,17 @@ namespace ssl {
 // helper function to compute SHA256:
 using Sha256 = std::array<char, 256 / CHAR_BIT>;
 
-Sha256 ComputeSha256(const std::string& data);
+Sha256 ComputeSha256(std::string_view data);
 
 enum class ShaType { kSha256, kSha512 };
 
-std::string ShaBin(ShaType shaType, const std::string& data, const char* secret);
+string ShaBin(ShaType shaType, std::string_view data, const char* secret);
 
-std::string ShaHex(ShaType shaType, const std::string& data, const char* secret);
+string ShaHex(ShaType shaType, std::string_view data, const char* secret);
 
-std::string ShaDigest(ShaType shaType, std::span<const std::string> data);
+string ShaDigest(ShaType shaType, std::string_view data);
 
-inline std::string ShaDigest(ShaType shaType, const std::string& data) {
-  return ShaDigest(shaType, std::span<const std::string>(std::addressof(data), 1));
-}
+string ShaDigest(ShaType shaType, std::span<const string> data);
+
 }  // namespace ssl
 }  // namespace cct

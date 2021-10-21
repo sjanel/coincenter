@@ -19,17 +19,17 @@ namespace {
 constexpr char kKrakenWithdrawInfoFile[] = ".krakenwithdrawinfo.json";
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  std::string method_url = KrakenPublic::kUrlBase;
+  string method_url = KrakenPublic::kUrlBase;
   method_url.push_back('/');
   method_url.push_back(KrakenPublic::kVersion);
   method_url.append("/public/");
   method_url.append(method);
 
   CurlOptions opts(CurlOptions::RequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
-  std::string ret = curlHandle.query(method_url, opts);
+  string ret = curlHandle.query(method_url, opts);
   json jsonData = json::parse(std::move(ret));
   if (jsonData.contains("error") && !jsonData["error"].empty()) {
-    throw exception("Kraken public query error: " + std::string(jsonData["error"].front()));
+    throw exception("Kraken public query error: " + string(jsonData["error"].front()));
   }
   return jsonData["result"];
 }
@@ -80,7 +80,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          config, _name),
+          config),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
@@ -131,19 +131,19 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
   CurlOptions curlOptions(CurlOptions::RequestType::kGet);
   curlOptions.followLocation = true;
-  std::string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, curlOptions);
+  string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, curlOptions);
 
   if (withdrawalFeesCsv.empty()) {
     log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
     log::warn("Defaulted to hardcoded provided CSV file.");
-    std::string filePath(kDataPath);
+    string filePath(kDataPath);
     filePath.push_back('/');
     filePath.append(".krakenwithdrawalfees.csv");
     std::ifstream file(filePath);
     if (!file) {
       throw exception("Unable to open " + filePath + " for reading");
     }
-    withdrawalFeesCsv = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    withdrawalFeesCsv = string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   }
 
   std::size_t assetPos = std::string_view::npos;
@@ -326,27 +326,27 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
 
 ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
-  std::string allAssetPairs;
+  string allAssetPairs;
   const CurrencyExchangeFlatSet& krakenCurrencies = _tradableCurrenciesCache.get();
   const auto& [markets, marketInfoMap] = _marketsCache.get();
   allAssetPairs.reserve(markets.size() * 8);
-  using KrakenAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
+  using KrakenAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   KrakenAssetPairToStdMarketMap krakenAssetPairToStdMarketMap;
   krakenAssetPairToStdMarketMap.reserve(markets.size());
   ret.reserve(markets.size());
   for (Market m : markets) {
     auto lb = krakenCurrencies.find(m.base());
     if (lb == krakenCurrencies.end()) {
-      throw exception("Cannot find " + std::string(m.base().str()) + " in Kraken currencies");
+      throw exception("Cannot find " + string(m.base().str()) + " in Kraken currencies");
     }
     CurrencyExchange krakenCurrencyExchangeBase = *lb;
     lb = krakenCurrencies.find(m.quote());
     if (lb == krakenCurrencies.end()) {
-      throw exception("Cannot find " + std::string(m.quote().str()) + " in Kraken currencies");
+      throw exception("Cannot find " + string(m.quote().str()) + " in Kraken currencies");
     }
     CurrencyExchange krakenCurrencyExchangeQuote = *lb;
     Market krakenMarket(krakenCurrencyExchangeBase.altStr(), krakenCurrencyExchangeQuote.altStr());
-    std::string assetPairStr = krakenMarket.assetsPairStr();
+    string assetPairStr = krakenMarket.assetsPairStr();
     if (!allAssetPairs.empty()) {
       allAssetPairs.push_back(',');
     }
@@ -364,8 +364,8 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
     }
 
     Market m = krakenAssetPairToStdMarketMap.find(krakenAssetPair)->second;
-    m = Market(CurrencyCode(_config.standardizeCurrencyCode(std::string(m.base().str()))),
-               CurrencyCode(_config.standardizeCurrencyCode(std::string(m.quote().str()))));
+    m = Market(CurrencyCode(_config.standardizeCurrencyCode(m.base().str())),
+               CurrencyCode(_config.standardizeCurrencyCode(m.quote().str())));
     //  a = ask array(<price>, <whole lot volume>, <lot volume>)
     //  b = bid array(<price>, <whole lot volume>, <lot volume>)
     const json& askDetails = assetPairDetails["a"];
@@ -388,15 +388,15 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   CurrencyExchangeFlatSet krakenCurrencies = _tradableCurrenciesCache.get();
   auto lb = krakenCurrencies.find(m.base());
   if (lb == krakenCurrencies.end()) {
-    throw exception("Cannot find " + std::string(m.base().str()) + " in Kraken currencies");
+    throw exception("Cannot find " + string(m.base().str()) + " in Kraken currencies");
   }
   CurrencyExchange krakenCurrencyExchangeBase = *lb;
   lb = krakenCurrencies.find(m.quote());
   if (lb == krakenCurrencies.end()) {
-    throw exception("Cannot find " + std::string(m.quote().str()) + " in Kraken currencies");
+    throw exception("Cannot find " + string(m.quote().str()) + " in Kraken currencies");
   }
   CurrencyExchange krakenCurrencyExchangeQuote = *lb;
-  std::string krakenAssetPair(krakenCurrencyExchangeBase.altStr());
+  string krakenAssetPair(krakenCurrencyExchangeBase.altStr());
   krakenAssetPair.append(krakenCurrencyExchangeQuote.altStr());
   json result = PublicQuery(_curlHandle, "Depth", {{"pair", krakenAssetPair}, {"count", std::to_string(count)}});
   const json& entry = result.front();
@@ -404,14 +404,14 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   const json& bids = entry["bids"];
 
   auto volAndPriNbDecimals = _marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
-  using OrderBookVec = cct::vector<OrderBookLine>;
+  using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
     for (const auto& priceQuantityTuple : *asksOrBids) {
-      std::string priceStr = priceQuantityTuple[0];
-      std::string amountStr = priceQuantityTuple[1];
+      std::string_view priceStr = priceQuantityTuple[0].get<std::string_view>();
+      std::string_view amountStr = priceQuantityTuple[1].get<std::string_view>();
 
       MonetaryAmount amount(amountStr, m.base());
       MonetaryAmount price(priceStr, m.quote());
@@ -444,7 +444,7 @@ void KrakenPublic::updateCacheFile() const {
     json data;
     data["timeepoch"] = std::chrono::duration_cast<std::chrono::seconds>(latestUpdate.time_since_epoch()).count();
     for (const auto& [curCode, withdrawFee] : withdrawalInfoMaps.first) {
-      std::string curCodeStr(curCode.str());
+      string curCodeStr(curCode.str());
       data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
       data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
     }

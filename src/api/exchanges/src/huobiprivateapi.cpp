@@ -17,18 +17,18 @@ namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view method, const CurlPostData& postdata = CurlPostData()) {
-  std::string url = HuobiPublic::kUrlBase;
+  string url = HuobiPublic::kUrlBase;
   url.append(method);
 
   Nonce nonce = Nonce_LiteralDate();
-  std::string encodedNonce = curlHandle.urlEncode(nonce);
+  string encodedNonce = curlHandle.urlEncode(nonce);
 
   CurlOptions opts(requestType);
   opts.userAgent = HuobiPublic::kUserAgent;
 
   opts.httpHeaders.push_back("Content-Type: application/json");
   // Remove 'https://' (which is 8 chars) from URL base
-  std::string paramsStr(opts.requestTypeStr());
+  string paramsStr(opts.requestTypeStr());
   paramsStr.push_back('\n');
   paramsStr.append(HuobiPublic::kUrlBase + 8);
   paramsStr.push_back('\n');
@@ -50,17 +50,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
     }
   }
 
-  paramsStr.append(signaturePostdata.toStringView());
+  paramsStr.append(signaturePostdata.str());
 
-  std::string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, paramsStr, apiKey.privateKey())));
+  string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, paramsStr, apiKey.privateKey())));
 
   signaturePostdata.append("Signature", sig);
   url.push_back('?');
-  url.append(signaturePostdata.toStringView());
+  url.append(signaturePostdata.str());
 
   json ret = json::parse(curlHandle.query(url, opts));
   if (ret.contains("status") && ret["status"].get<std::string_view>() != "ok") {
-    std::string errMsg("Error: ");
+    string errMsg("Error: ");
     if (ret.contains("err-msg")) {
       errMsg.append(ret["err-msg"].get<std::string_view>());
     }
@@ -81,7 +81,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPubli
           _curlHandle, _apiKey, huobiPublic) {}
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
-  std::string method = "/v1/account/accounts/";
+  string method = "/v1/account/accounts/";
   method += std::to_string(_accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, method);
@@ -101,7 +101,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 }
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  std::string lowerCaseCur = cct::tolower(currencyCode.str());
+  string lowerCaseCur = tolower(currencyCode.str());
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v2/account/deposit/address",
                              {{"currency", lowerCaseCur}});
   std::string_view address, tag;
@@ -135,7 +135,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount, MonetaryAmount volume, M
   }
 
   const Market m = tradeInfo.m;
-  std::string lowerCaseMarket = cct::tolower(m.assetsPairStr());
+  string lowerCaseMarket = tolower(m.assetsPairStr());
 
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
   std::string_view type;
@@ -173,7 +173,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount, MonetaryAmount volume, M
 }
 
 OrderInfo HuobiPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  std::string endpoint = "/v1/order/orders/";
+  string endpoint = "/v1/order/orders/";
   endpoint.append(orderId);
   endpoint.append("/submitcancel");
   PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, endpoint);
@@ -184,7 +184,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& 
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
   const Market m = tradeInfo.m;
-  std::string endpoint = "/v1/order/orders/";
+  string endpoint = "/v1/order/orders/";
   endpoint.append(orderId);
 
   json res = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, endpoint);
@@ -216,7 +216,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& 
 
 InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  std::string lowerCaseCur = cct::tolower(currencyCode.str());
+  string lowerCaseCur = tolower(currencyCode.str());
 
   json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
                                                "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
@@ -255,7 +255,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
 SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  std::string lowerCaseCur = cct::tolower(currencyCode.str());
+  string lowerCaseCur = tolower(currencyCode.str());
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
                                    {{"currency", lowerCaseCur}, {"from", withdrawId}, {"type", "withdraw"}});
@@ -310,7 +310,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
 bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                                       const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  std::string lowerCaseCur = cct::tolower(currencyCode.str());
+  string lowerCaseCur = tolower(currencyCode.str());
 
   json depositJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
                                   {{"currency", lowerCaseCur}, {"type", "deposit"}});

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <limits>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
 #include "cct_json.hpp"
+#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"

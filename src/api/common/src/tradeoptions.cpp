@@ -15,7 +15,7 @@ TradeStrategy StrategyFromStr(std::string_view strategyStr) {
   if (strategyStr == "taker") {
     return TradeStrategy::kTaker;
   }
-  throw exception("Unrecognized trade strategy " + std::string(strategyStr));
+  throw exception("Unrecognized trade strategy " + string(strategyStr));
 }
 }  // namespace
 
@@ -35,7 +35,7 @@ TradeOptions::TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Cl
       _strategy(StrategyFromStr(strategyStr)),
       _tradeMode(tradeMode) {}
 
-std::string TradeOptions::strategyStr() const {
+std::string_view TradeOptions::strategyStr() const {
   switch (_strategy) {
     case TradeStrategy::kMaker:
       return "maker";
@@ -48,8 +48,8 @@ std::string TradeOptions::strategyStr() const {
   }
 }
 
-std::string TradeOptions::str() const {
-  std::string ret(isSimulation() ? "Simulated " : "Real ");
+string TradeOptions::str() const {
+  string ret(isSimulation() ? "Simulated " : "Real ");
   ret.append(strategyStr());
   ret.append(" strategy, timeout of ");
   ret.append(std::to_string(std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count()));

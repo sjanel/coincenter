@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
+#include "cct_string.hpp"
 
 namespace cct {
 
-using Nonce = std::string;
+using Nonce = string;
 
 /// Create a string representation of a nonce.
 Nonce Nonce_TimeSinceEpoch();

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <optional>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "cachedresultvault.hpp"
 #include "cct_flatset.hpp"
+#include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
@@ -104,7 +104,7 @@ class ExchangePublic : public ExchangeBase {
                  const CoincenterInfo &coincenterInfo)
       : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi), _coincenterInfo(coincenterInfo) {}
 
-  std::string _name;
+  string _name;
   FiatConverter &_fiatConverter;
   CryptowatchAPI &_cryptowatchApi;
   const CoincenterInfo &_coincenterInfo;

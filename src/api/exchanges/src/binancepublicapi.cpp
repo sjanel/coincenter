@@ -26,12 +26,12 @@ namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_view method,
                  const CurlPostData& curlPostData = CurlPostData()) {
-  std::string url(baseURL);
+  string url(baseURL);
   url.append("/api/v3/");
   url.append(method);
   if (!curlPostData.empty()) {
     url.push_back('?');
-    url.append(curlPostData.toStringView());
+    url.append(curlPostData.str());
   }
   CurlOptions opts(CurlOptions::RequestType::kGet);
   opts.userAgent = BinancePublic::kUserAgent;
@@ -39,7 +39,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
   if (dataJson.contains("code") && dataJson.contains("msg")) {
     const int statusCode = dataJson["code"];  // "1100" for instance
     const std::string_view errorMessage = dataJson["msg"].get<std::string_view>();
-    throw exception("error " + std::to_string(statusCode) + ", msg: " + std::string(errorMessage));
+    throw exception("error " + std::to_string(statusCode) + ", msg: " + string(errorMessage));
   }
   return dataJson;
 }
@@ -195,10 +195,10 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 
 json BinancePublic::GlobalInfosFunc::operator()() {
   constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
-  std::string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(CurlOptions::RequestType::kGet));
+  string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(CurlOptions::RequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
   constexpr std::string_view appBegJson = "application/json\">";
-  std::string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
+  string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
   std::string_view sv(first, s.end());
   std::size_t reduxPos = sv.find("redux\":");
   std::size_t ssrStorePos = sv.find("ssrStore\":", reduxPos);
@@ -261,7 +261,7 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     }
   }
-  throw exception("Unable to find withdrawal fee for " + std::string(currencyCode.str()));
+  throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
@@ -381,14 +381,14 @@ ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
   json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "ticker/bookTicker");
-  using BinanceAssetPairToStdMarketMap = std::unordered_map<std::string, Market>;
+  using BinanceAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
   for (Market m : markets) {
     binanceAssetPairToStdMarketMap.insert_or_assign(m.assetsPairStr(), m);
   }
   for (const json& tickerDetails : result) {
-    std::string assetsPairStr = tickerDetails["symbol"];
+    string assetsPairStr = tickerDetails["symbol"];
     auto it = binanceAssetPairToStdMarketMap.find(assetsPairStr);
     if (it == binanceAssetPairToStdMarketMap.end()) {
       continue;
@@ -419,7 +419,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
   json asksAndBids = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "depth", postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
-  using OrderBookVec = cct::vector<OrderBookLine>;
+  using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
   for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {

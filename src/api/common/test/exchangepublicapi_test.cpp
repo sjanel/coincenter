@@ -45,7 +45,7 @@ TEST_F(ExchangePublicTest, RetrieveMarket) {
 
   EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW"), Market("BTC", "KRW"));
   EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC"), Market("BTC", "KRW"));
-  EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS"), cct::exception);
+  EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS"), exception);
 }
 
 }  // namespace api

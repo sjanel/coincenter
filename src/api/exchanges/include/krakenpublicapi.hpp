@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-
 #include "cachedresult.hpp"
+#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
 #include "volumeandpricenbdecimals.hpp"
@@ -72,13 +71,12 @@ class KrakenPublic : public ExchangePublic {
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
-    WithdrawalFeesFunc(CoincenterInfo& config, const std::string& name) : _config(config), _name(name) {}
+    explicit WithdrawalFeesFunc(CoincenterInfo& config) : _config(config) {}
 
     WithdrawalInfoMaps operator()();
 
     CoincenterInfo& _config;
     CurlHandle _curlHandle;
-    const std::string& _name;
   };
 
   struct MarketsFunc {

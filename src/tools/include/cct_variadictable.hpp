@@ -6,10 +6,11 @@
 #include <ios>
 #include <iostream>
 #include <span>
-#include <string>
 #include <tuple>
 #include <type_traits>
 
+#include "cct_mathhelpers.hpp"
+#include "cct_string.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
@@ -31,7 +32,7 @@ enum class VariadicTableColumnFormat { AUTO, SCIENTIFIC, FIXED, PERCENT };
  * with header names: "Name", "Weight", "Age", "Brother"
  *
  * You would invoke the table like so:
- * VariadicTable<std::string, double, int, std::string> vt("Name", "Weight", "Age", "Brother");
+ * VariadicTable<string, double, int, string> vt("Name", "Weight", "Age", "Brother");
  *
  * Then add the data to the table:
  * vt.addRow("Fred", 193.4, 35, "Sam");
@@ -55,13 +56,13 @@ class VariadicTable {
    *
    * @param headers The names of the columns
    */
-  VariadicTable(std::span<const std::string> headers, uint32_t staticColumnSize = 0, uint32_t cellPadding = 1)
+  VariadicTable(std::span<const string> headers, uint32_t staticColumnSize = 0, uint32_t cellPadding = 1)
       : _headers(headers.begin(), headers.end()), _staticColumnSize(staticColumnSize), _cellPadding(cellPadding) {
     assert(headers.size() == kNbColumns);
   }
 
-  VariadicTable(std::initializer_list<std::string> init)
-      : VariadicTable(std::span<const std::string>(init.begin(), init.end())) {}
+  VariadicTable(std::initializer_list<string> init)
+      : VariadicTable(std::span<const string>(init.begin(), init.end())) {}
 
   /**
    * Add a row of data
@@ -91,7 +92,7 @@ class VariadicTable {
       totalWidth += colSize + 2 * _cellPadding;
     }
 
-    const std::string headerLine(totalWidth, headerLineSep);
+    const string headerLine(totalWidth, headerLineSep);
 
     if (printHeaders) {
       // Print out the top line
@@ -104,8 +105,8 @@ class VariadicTable {
         std::size_t half = _columnSizes[i] / 2;
         half -= _headers[i].size() / 2;
 
-        stream << std::string(_cellPadding, ' ') << std::setw(_columnSizes[i]) << std::left
-               << std::string(half, ' ') + _headers[i] << std::string(_cellPadding, ' ') << colSep;
+        stream << string(_cellPadding, ' ') << std::setw(_columnSizes[i]) << std::left
+               << string(half, ' ') + _headers[i] << string(_cellPadding, ' ') << colSep;
       }
 
       stream << std::endl;
@@ -130,11 +131,11 @@ class VariadicTable {
   /**
    * Set how to format numbers for each column
    *
-   * Note: this is ignored for std::string columns
+   * Note: this is ignored for string columns
    *
    * @column_format The format for each column: MUST be the same length as the number of columns.
    */
-  void setColumnFormat(const cct::vector<VariadicTableColumnFormat> &column_format) {
+  void setColumnFormat(const vector<VariadicTableColumnFormat> &column_format) {
     assert(column_format.size() == std::tuple_size<DataTuple>::value);
     _columnFormat = column_format;
   }
@@ -142,16 +143,16 @@ class VariadicTable {
   /**
    * Set how many digits of precision to show for floating point numbers
    *
-   * Note: this is ignored for std::string columns
+   * Note: this is ignored for string columns
    *
    * @column_format The precision for each column: MUST be the same length as the number of columns.
    */
-  void setColumnPrecision(const cct::vector<int> &precision) {
+  void setColumnPrecision(const vector<int> &precision) {
     assert(precision.size() == std::tuple_size<DataTuple>::value);
     _precision = precision;
   }
 
-  void setColumnPrecision(cct::vector<int> &&precision) {
+  void setColumnPrecision(vector<int> &&precision) {
     assert(precision.size() == std::tuple_size<DataTuple>::value);
     _precision = std::move(precision);
   }
@@ -161,7 +162,7 @@ class VariadicTable {
   using right_type = decltype(&std::right);
   using left_type = decltype(&std::left);
 
-  using SizeVector = cct::vector<uint32_t>;
+  using SizeVector = vector<uint32_t>;
   using size_type = SizeVector::size_type;
 
   // Attempts to figure out the correct justification for the data
@@ -194,7 +195,7 @@ class VariadicTable {
   template <typename TupleType, typename StreamType>
   void printEach(
       TupleType &&, StreamType & /*stream*/, char,
-      std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
+      std::integral_constant<size_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) const {}
 
   /**
    * This gets called on each item
@@ -202,9 +203,7 @@ class VariadicTable {
   template <std::size_t I, typename TupleType, typename StreamType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void printEach(TupleType &&t, StreamType &stream, char colSep, std::integral_constant<size_t, I>) {
-    auto &val = std::get<I>(t);
-
+  void printEach(TupleType &&t, StreamType &stream, char colSep, std::integral_constant<size_t, I>) const {
     // Set the precision
     if (!_precision.empty()) {
       assert(_precision.size() == std::tuple_size<typename std::remove_reference<TupleType>::type>::value);
@@ -216,20 +215,28 @@ class VariadicTable {
     if (!_columnFormat.empty()) {
       assert(_columnFormat.size() == std::tuple_size<typename std::remove_reference<TupleType>::type>::value);
 
-      if (_columnFormat[I] == VariadicTableColumnFormat::SCIENTIFIC) stream << std::scientific;
-
-      if (_columnFormat[I] == VariadicTableColumnFormat::FIXED) stream << std::fixed;
-
-      if (_columnFormat[I] == VariadicTableColumnFormat::PERCENT) stream << std::fixed << std::setprecision(2);
+      switch (_columnFormat[I]) {
+        case VariadicTableColumnFormat::AUTO:
+          break;
+        case VariadicTableColumnFormat::SCIENTIFIC:
+          stream << std::scientific;
+          break;
+        case VariadicTableColumnFormat::FIXED:
+          stream << std::fixed;
+          break;
+        case VariadicTableColumnFormat::PERCENT:
+          stream << std::fixed << std::setprecision(2);
+          break;
+      }
     }
 
-    stream << std::string(_cellPadding, ' ') << std::setw(_columnSizes[I]) << justify<decltype(val)>(0) << val
-           << std::string(_cellPadding, ' ') << colSep;
+    const auto &val = std::get<I>(t);
+    stream << string(_cellPadding, ' ') << std::setw(_columnSizes[I]) << justify<decltype(val)>(0) << val
+           << string(_cellPadding, ' ') << colSep;
 
     // Unset the format
     if (!_columnFormat.empty()) {
-      // Because "stream << std::defaultfloat;" won't compile with old GCC or Clang
-      stream.unsetf(std::ios_base::floatfield);
+      stream << std::defaultfloat;
     }
 
     // Recursive call to print the next item
@@ -240,7 +247,7 @@ class VariadicTable {
    * his is what gets called first
    */
   template <typename TupleType, typename StreamType>
-  void printEach(TupleType &&t, StreamType &stream, char colSep) {
+  void printEach(TupleType &&t, StreamType &stream, char colSep) const {
     printEach(std::forward<TupleType>(t), stream, colSep, std::integral_constant<size_t, 0>());
   }
 
@@ -250,7 +257,7 @@ class VariadicTable {
    * If the datatype has a size() member... let's call it
    */
   template <class T>
-  uint32_t sizeOfData(const T &data, decltype(((T *)nullptr)->size()) * /*dummy*/ = nullptr) {
+  uint32_t sizeOfData(const T &data, decltype(((T *)nullptr)->size()) * = 0) const {
     return static_cast<uint32_t>(data.size());
   }
 
@@ -260,14 +267,14 @@ class VariadicTable {
    * If the datatype is an integer - let's get it's length
    */
   template <class T>
-  uint32_t sizeOfData(const T &data, typename std::enable_if<std::is_integral<T>::value>::type * /*dummy*/ = nullptr) {
-    return data == 0 ? 1 : std::log10(data) + 1;
+  uint32_t sizeOfData(const T &data, typename std::enable_if<std::is_integral<T>::value>::type * = 0) const {
+    return ndigits(data);
   }
 
   /**
    * If it doesn't... let's just use a statically set size
    */
-  size_t sizeOfData(...) { return _staticColumnSize; }
+  size_t sizeOfData(...) const { return _staticColumnSize; }
 
   /**
    * These three functions iterate over the Tuple, find the printed size of each element and set it
@@ -279,8 +286,9 @@ class VariadicTable {
    */
   template <typename TupleType>
   void sizeEach(
-      TupleType &&, SizeVector & /*sizes*/,
-      std::integral_constant<uint32_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) {}
+      TupleType &&, SizeVector &,
+      std::integral_constant<uint32_t, std::tuple_size<typename std::remove_reference<TupleType>::type>::value>) const {
+  }
 
   /**
    * Recursively called for each element
@@ -288,7 +296,7 @@ class VariadicTable {
   template <uint32_t I, typename TupleType,
             typename = typename std::enable_if<
                 I != std::tuple_size<typename std::remove_reference<TupleType>::type>::value>::type>
-  void sizeEach(TupleType &&t, SizeVector &sizes, std::integral_constant<uint32_t, I>) {
+  void sizeEach(TupleType &&t, SizeVector &sizes, std::integral_constant<uint32_t, I>) const {
     sizes[I] = sizeOfData(std::get<I>(t));
 
     // Override for Percent
@@ -306,7 +314,7 @@ class VariadicTable {
    * The function that is actually called that starts the recursion
    */
   template <typename TupleType>
-  void sizeEach(TupleType &&t, SizeVector &sizes) {
+  void sizeEach(TupleType &&t, SizeVector &sizes) const {
     sizeEach(std::forward<TupleType>(t), sizes, std::integral_constant<uint32_t, 0>());
   }
 
@@ -335,22 +343,22 @@ class VariadicTable {
   }
 
   /// The column headers
-  cct::vector<std::string> _headers;
+  vector<string> _headers;
 
   /// Size of columns that we can't get the size of
   uint32_t _staticColumnSize;
 
   /// The actual data
-  cct::vector<DataTuple> _data;
+  vector<DataTuple> _data;
 
   /// Holds the printable width of each column
   SizeVector _columnSizes;
 
   /// Column Format
-  cct::vector<VariadicTableColumnFormat> _columnFormat;
+  vector<VariadicTableColumnFormat> _columnFormat;
 
   /// Precision For each column
-  cct::vector<int> _precision;
+  vector<int> _precision;
 
   /// Size of the cell padding
   uint32_t _cellPadding;

@@ -22,8 +22,8 @@ std::string_view ToString(const PublicExchangeName &exchangeName) { return excha
 std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
 
 template <class ExchangeNameT>
-std::string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchangeNames) {
-  std::string exchangesStr(exchangeNames.empty() ? "all" : "");
+string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchangeNames) {
+  string exchangesStr(exchangeNames.empty() ? "all" : "");
   for (const ExchangeNameT &exchangeName : exchangeNames) {
     if (!exchangesStr.empty()) {
       exchangesStr.push_back(',');
@@ -61,12 +61,12 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
     } else if (exchangeName == "upbit") {
       exchangePublic = std::addressof(_upbitPublic);
     } else {
-      throw exception("Should not happen, unsupported platform " + std::string(exchangeName));
+      throw exception("Should not happen, unsupported platform " + string(exchangeName));
     }
 
     const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
     if (canUsePrivateExchange) {
-      for (const std::string &keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
+      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
         api::ExchangePrivate *exchangePrivate;
         const api::APIKey &apiKey = _apiKeyProvider.get(PrivateExchangeName(exchangeName, keyName));
         if (exchangeName == "binance") {
@@ -82,7 +82,7 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {
-          throw exception("Should not happen, unsupported platform " + std::string(exchangeName));
+          throw exception("Should not happen, unsupported platform " + string(exchangeName));
         }
 
         _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,
@@ -273,15 +273,15 @@ Coincenter::UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(
 void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames) {
   log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
   MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cur, exchangeNames);
-  std::string marketsCol("Markets with ");
+  string marketsCol("Markets with ");
   marketsCol.append(cur.str());
-  VariadicTable<std::string, std::string> vt({"Exchange", marketsCol});
-  MarketsPerExchange::size_type exchangePos = 0;
+  VariadicTable<std::string_view, string> vt({"Exchange", marketsCol});
+  auto exchangeIt = marketsPerExchange.begin();
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
-    for (Market m : marketsPerExchange[exchangePos]) {
-      vt.addRow(std::string(e->name()), m.str());
+    for (const Market &m : *exchangeIt) {
+      vt.addRow(e->name(), m.str());
     }
-    ++exchangePos;
+    ++exchangeIt;
   }
   vt.print(std::cout);
 }
@@ -295,9 +295,9 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
 
 void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  VariadicTable<std::string, std::string> vt({"Exchange", "Fastest conversion path"});
+  VariadicTable<std::string_view, string> vt({"Exchange", "Fastest conversion path"});
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
-    std::string conversionPathStr;
+    string conversionPathStr;
     api::ExchangePublic::Currencies conversionPath = e->findFastestConversionPath(m);
     if (conversionPath.empty()) {
       conversionPathStr = "--- Impossible ---";
@@ -309,7 +309,7 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
         conversionPathStr.append(currencyCode.str());
       }
     }
-    vt.addRow(std::string(e->name()), conversionPathStr);
+    vt.addRow(e->name(), std::move(conversionPathStr));
   }
   vt.print();
 }
@@ -332,12 +332,18 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
 
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
-    throw exception("It's currently not possible to withdraw " + std::string(currencyCode.str()) + " from " +
-                    fromPrivateExchangeName.str());
+    string errMsg("It's currently not possible to withdraw ");
+    errMsg.append(currencyCode.str());
+    errMsg.append(" from ");
+    errMsg.append(fromPrivateExchangeName.str());
+    throw exception(std::move(errMsg));
   }
   if (!toExchange.canDeposit(currencyCode, currencyExchangeSets.back())) {
-    throw exception("It's currently not possible to deposit " + std::string(currencyCode.str()) + " to " +
-                    toPrivateExchangeName.str());
+    string errMsg("It's currently not possible to deposit ");
+    errMsg.append(currencyCode.str());
+    errMsg.append(" to ");
+    errMsg.append(fromPrivateExchangeName.str());
+    throw exception(std::move(errMsg));
   }
 
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate());
@@ -352,10 +358,10 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  withdrawFeePerExchange.begin(),
                  [currencyCode](Exchange *e) { return e->queryWithdrawalFee(currencyCode); });
-  VariadicTable<std::string, std::string> vt({"Exchange", "Withdraw fee"});
+  VariadicTable<std::string_view, string> vt({"Exchange", "Withdraw fee"});
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
-    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), withdrawFee.str());
+    vt.addRow(selectedExchanges[exchangePos++]->name(), withdrawFee.str());
   }
   vt.print();
 }
@@ -386,13 +392,13 @@ void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchan
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
   MonetaryAmountPerExchange tradedVolumePerExchange = getLast24hTradedVolumePerExchange(m, exchangeNames);
-  std::string headerTradedVolume("Last 24h ");
+  string headerTradedVolume("Last 24h ");
   headerTradedVolume.append(m.str());
   headerTradedVolume.append(" traded volume");
-  VariadicTable<std::string, std::string> vt({"Exchange", headerTradedVolume});
+  VariadicTable<std::string_view, string> vt({"Exchange", headerTradedVolume});
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount tradedVolume : tradedVolumePerExchange) {
-    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), tradedVolume.str());
+    vt.addRow(selectedExchanges[exchangePos++]->name(), tradedVolume.str());
   }
   vt.print();
 }
@@ -401,12 +407,12 @@ void Coincenter::printLastPrice(Market m, std::span<const PublicExchangeName> ex
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
   MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(m, exchangeNames);
-  std::string headerLastPrice(m.str());
+  string headerLastPrice(m.str());
   headerLastPrice.append(" last price");
-  VariadicTable<std::string, std::string> vt({"Exchange", headerLastPrice});
+  VariadicTable<std::string_view, string> vt({"Exchange", headerLastPrice});
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount lastPrice : lastPricePerExchange) {
-    vt.addRow(std::string(selectedExchanges[exchangePos++]->name()), lastPrice.str());
+    vt.addRow(selectedExchanges[exchangePos++]->name(), lastPrice.str());
   }
   vt.print();
 }
@@ -417,7 +423,7 @@ PublicExchangeNames Coincenter::getPublicExchangeNames() const {
   PublicExchangeNames ret;
   ret.reserve(uniquePublicExchanges.size());
   std::transform(std::begin(uniquePublicExchanges), std::end(uniquePublicExchanges), std::back_inserter(ret),
-                 [](const api::ExchangePublic *e) { return std::string(e->name()); });
+                 [](const api::ExchangePublic *e) { return string(e->name()); });
   return ret;
 }
 

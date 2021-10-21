@@ -5,12 +5,12 @@
 #include <chrono>
 #include <map>
 #include <optional>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "apiquerytypeenum.hpp"
 #include "cct_run_modes.hpp"
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 
@@ -18,7 +18,7 @@ namespace cct {
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
-  using ExchangeInfoMap = std::map<std::string, ExchangeInfo, std::less<>>;
+  using ExchangeInfoMap = std::map<string, ExchangeInfo, std::less<>>;
   using Duration = std::chrono::high_resolution_clock::duration;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 

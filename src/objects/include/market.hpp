@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
 
@@ -43,8 +42,8 @@ class Market {
   bool operator==(const Market& o) const { return std::equal(_assets.begin(), _assets.end(), o._assets.begin()); }
   bool operator!=(const Market& o) const { return !(*this == o); }
 
-  std::string str() const { return assetsPairStr('-'); }
-  std::string assetsPairStr(char sep = 0) const;
+  string str() const { return assetsPairStr('-'); }
+  string assetsPairStr(char sep = 0) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Market& m);
 

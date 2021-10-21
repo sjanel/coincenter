@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-
+#include "cct_string.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "tradeoptions.hpp"
@@ -9,17 +8,17 @@
 namespace cct {
 namespace api {
 
-using OrderId = std::string;
+using OrderId = string;
 
 struct TradeInfo {
-  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, std::string &&uRef)
+  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, string &&uRef)
       : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts), userRef(std::move(uRef)) {}
 
   CurrencyCode fromCurrencyCode;
   CurrencyCode toCurrencyCode;
   Market m;
   TradeOptions options;
-  std::string userRef;  // Only used for Kraken, used to group orders queries context
+  string userRef;  // Only used for Kraken, used to group orders queries context
 };
 
 struct TradedAmounts {
@@ -36,7 +35,7 @@ struct TradedAmounts {
 
   bool isZero() const { return tradedFrom.isZero() && tradedTo.isZero(); }
 
-  std::string str() const;
+  string str() const;
 
   MonetaryAmount tradedFrom;  // In currency of 'from' amount
   MonetaryAmount tradedTo;    // In the opposite currency
@@ -54,7 +53,7 @@ struct OrderInfo {
 struct PlaceOrderInfo {
   explicit PlaceOrderInfo(OrderInfo &&oInfo) : orderInfo(std::move(oInfo)) {}
 
-  PlaceOrderInfo(OrderInfo &&oInfo, std::string orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
+  PlaceOrderInfo(OrderInfo &&oInfo, string orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
 
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.setClosed(); }

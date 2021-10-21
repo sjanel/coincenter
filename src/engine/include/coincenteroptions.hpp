@@ -2,9 +2,9 @@
 
 #include <chrono>
 #include <optional>
-#include <string>
 #include <utility>
 
+#include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "tradeoptions.hpp"
@@ -21,35 +21,35 @@ struct CoincenterCmdLineOptions {
 
   static void PrintVersion(const char* programName);
 
-  std::string logLevel;
+  string logLevel;
   bool help = false;
   bool version = false;
   bool logFile = false;
-  std::optional<std::string> nosecrets;
+  std::optional<string> nosecrets;
 
-  std::string markets;
+  string markets;
 
-  std::string orderbook;
+  string orderbook;
   int orderbook_depth{};
-  std::string orderbook_cur;
+  string orderbook_cur;
 
-  std::string conversion_path;
+  string conversion_path;
 
-  std::optional<std::string> balance;
-  std::string balance_cur{CurrencyCode::kNeutral.str()};
+  std::optional<string> balance;
+  string balance_cur{CurrencyCode::kNeutral.str()};
 
-  std::string trade;
-  std::string trade_strategy{api::TradeOptions().strategyStr()};
+  string trade;
+  string trade_strategy{api::TradeOptions().strategyStr()};
   Duration trade_timeout{api::TradeOptions::kDefaultTradeDuration};
   Duration trade_emergency{api::TradeOptions::kDefaultEmergencyTime};
   Duration trade_updateprice{api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates};
   bool trade_sim{api::TradeOptions().isSimulation()};
 
-  std::string withdraw;
-  std::string withdraw_fee;
+  string withdraw;
+  string withdraw_fee;
 
-  std::string last24hTradedVolume;
-  std::string lastPrice;
+  string last24hTradedVolume;
+  string lastPrice;
 };
 
 template <class OptValueType>
@@ -111,30 +111,30 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
                                                                   " at market price before the timeout to make it eventually completely matched. "
                                                                   "Useful for exchanges proposing cheaper maker than taker fees."}, 
                                                                   &OptValueType::trade_strategy},
-       {{{"Trade", 4}, "--trade-timeout", "<time>", std::string("Adjust trade timeout (default: ")
+       {{{"Trade", 4}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
                                                 .append(std::to_string(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 
                                                 &OptValueType::trade_timeout},
-       {{{"Trade", 4}, "--trade-emergency", "<time>", std::string("Adjust emergency buffer for the 'adapt' strategy (default: ")
+       {{{"Trade", 4}, "--trade-emergency", "<time>", string("Adjust emergency buffer for the 'adapt' strategy (default: ")
                                                    .append(std::to_string(emergencyBufferTime))
                                                    .append("s). Remaining order will be switched from limit to market price "
                                                    "after 'timeout - emergency' time to force completion of the trade")}, 
                                                    &OptValueType::trade_emergency},
-       {{{"Trade", 4}, "--trade-updateprice", "<time>", std::string("Set the min time allowed between two limit price updates (default: ")
+       {{{"Trade", 4}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
                                                     .append(std::to_string(minUpdatePriceTime))
                                                     .append("s). Avoids cancelling / placing new orders too often with high volumes "
                                                     "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
-       {{{"Trade", 4}, "--trade-sim", "", std::string("Activates simulation mode only (default: ")
+       {{{"Trade", 4}, "--trade-sim", "", string("Activates simulation mode only (default: ")
                                          .append(isSimulationModeByDefault ? "true" : "false")
                                          .append("). For some exchanges, API can even be queried in this "
                                          "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::trade_sim},
 
-       {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", std::string("Withdraw amount from exchange 'from' to exchange 'to'."
+       {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
                                                                          " Amount is gross, including fees. Address and tag will be retrieved"
                                                                          " automatically from destination exchange and should match an entry in '")
                                                                         .append(Wallet::kDepositAddressesFilename)
                                                                         .append("' file.")}, &OptValueType::withdraw},
-       {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", std::string("Prints withdraw fees of given currency on all supported exchanges,"
+       {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 
                                                                 &OptValueType::withdraw_fee}});
   // clang-format on

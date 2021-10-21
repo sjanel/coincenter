@@ -2,10 +2,10 @@
 
 #include <cstdint>
 #include <optional>
-#include <string>
 #include <string_view>
 
 #include "cct_mathhelpers.hpp"
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 
 namespace cct {
@@ -161,9 +161,9 @@ class MonetaryAmount {
   constexpr void truncate(int8_t maxNbDecimals) { sanitizeNbDecimals(maxNbDecimals); }
 
   /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
-  std::string amountStr() const;
+  string amountStr() const;
 
-  std::string str() const;
+  string str() const;
 
   friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &m);
 

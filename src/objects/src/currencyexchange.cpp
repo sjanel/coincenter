@@ -19,8 +19,8 @@ CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode excha
       _canWithdraw(withdraw == Withdraw::kAvailable),
       _unknownDepositWithdrawalStatus(false) {}
 
-std::string CurrencyExchange::str() const {
-  std::string ret(_standardCode.str());
+string CurrencyExchange::str() const {
+  string ret(_standardCode.str());
   ret.push_back('-');
   ret.push_back('D');
   ret.push_back(_canDeposit ? '1' : '0');

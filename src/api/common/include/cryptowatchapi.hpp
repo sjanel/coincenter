@@ -30,9 +30,7 @@ class CryptowatchAPI : public ExchangeBase {
   CryptowatchAPI &operator=(CryptowatchAPI &&) = delete;
 
   /// Tells whether given exchange is supported by Cryptowatch.
-  bool queryIsExchangeSupported(const std::string &exchangeName) {
-    return _supportedExchanges.get().contains(exchangeName);
-  }
+  bool queryIsExchangeSupported(const string &exchangeName) { return _supportedExchanges.get().contains(exchangeName); }
 
   /// Query the approximate price of market 'm' for exchange name 'exchangeName'.
   /// Data may not be up to date, but should respond quickly.
@@ -46,11 +44,11 @@ class CryptowatchAPI : public ExchangeBase {
   void updateCacheFile() const override;
 
  private:
-  using Fiats = cct::FlatSet<CurrencyCode>;
-  using SupportedExchanges = cct::FlatSet<std::string>;
+  using Fiats = FlatSet<CurrencyCode>;
+  using SupportedExchanges = FlatSet<string>;
   /// Cryptowatch markets are represented by one unique string pair, it's not trivial to split the two currencies
-  /// acronyms. A second match will be needed to transform it to a final 'cct::Market'
-  using PricesPerMarketMap = std::unordered_map<std::string, double>;
+  /// acronyms. A second match will be needed to transform it to a final 'Market'
+  using PricesPerMarketMap = std::unordered_map<string, double>;
 
   struct SupportedExchangesFunc {
     explicit SupportedExchangesFunc(CurlHandle &curlHandle) : _curlHandle(curlHandle) {}
@@ -75,7 +73,7 @@ class CryptowatchAPI : public ExchangeBase {
   TimePoint _lastUpdatedFiatsTime;
   Clock::duration _fiatsUpdateFrequency;
   CachedResult<SupportedExchangesFunc> _supportedExchanges;
-  CachedResult<AllPricesFunc, std::string> _allPricesCache;
+  CachedResult<AllPricesFunc, string> _allPricesCache;
 };
 }  // namespace api
 }  // namespace cct

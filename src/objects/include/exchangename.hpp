@@ -1,15 +1,15 @@
 #pragma once
 
-#include <string>
 #include <string_view>
 
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
+#include "cct_string.hpp"
 
 namespace cct {
 
-using PublicExchangeName = std::string;
+using PublicExchangeName = string;
 using PublicExchangeNames = FixedCapacityVector<PublicExchangeName, kNbSupportedExchanges>;
 
 class PrivateExchangeName {
@@ -34,15 +34,15 @@ class PrivateExchangeName {
 
   bool isKeyNameDefined() const { return _dashPos < _nameWithKey.size(); }
 
-  const std::string &str() const { return _nameWithKey; }
+  std::string_view str() const { return _nameWithKey; }
 
   bool operator==(const PrivateExchangeName &o) const { return _nameWithKey == o._nameWithKey; }
   bool operator!=(const PrivateExchangeName &o) const { return !(*this == o); }
 
  private:
-  std::string _nameWithKey;
+  string _nameWithKey;
   std::size_t _dashPos = 0;
 };
 
-using PrivateExchangeNames = cct::SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
+using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
 }  // namespace cct

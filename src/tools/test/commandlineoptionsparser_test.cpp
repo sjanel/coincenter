@@ -13,11 +13,11 @@ class CommandLineOptionsParserTest : public ::testing::Test {
   using Duration = Clock::duration;
 
   struct Opts {
-    std::string stringOpt{};
+    string stringOpt{};
     int intOpt{};
     int int2Opt{};
     bool boolOpt{};
-    std::optional<std::string> optStr{};
+    std::optional<string> optStr{};
     Duration timeOpt;
   };
 
@@ -32,7 +32,7 @@ class CommandLineOptionsParserTest : public ::testing::Test {
                  {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}) {}
 
   Opts createOptions(std::initializer_list<const char *> init) {
-    cct::vector<const char *> opts = init;
+    vector<const char *> opts = init;
     return _parser.parse(opts);
   }
 
@@ -66,11 +66,11 @@ TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty1) {
-  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "--opt1", "Opt1 value"}).optStr, std::string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "--opt1", "Opt1 value"}).optStr, string());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
-  EXPECT_EQ(*createOptions({"coincenter", "--opt4"}).optStr, std::string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4"}).optStr, string());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) {

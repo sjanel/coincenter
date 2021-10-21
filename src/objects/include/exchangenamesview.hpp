@@ -1,7 +1,8 @@
 #pragma once
 #include <span>
-#include <string>
+
+#include "cct_string.hpp"
 
 namespace cct {
-using ExchangeNamesView = std::span<const std::string>;
+using ExchangeNamesView = std::span<const string>;
 }

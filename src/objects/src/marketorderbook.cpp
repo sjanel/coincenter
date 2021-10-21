@@ -375,11 +375,11 @@ std::optional<MonetaryAmount> MarketOrderBook::convertQuoteAmountToBase(Monetary
 }
 
 void MarketOrderBook::print(std::ostream& os) const {
-  cct::FixedCapacityVector<std::string, 3> cols;
+  FixedCapacityVector<string, 3> cols;
   cols.emplace_back("Sellers of ").append(_market.base().str()).append(" (asks)");
   cols.emplace_back(_market.base().str()).append(" price in ").append(_market.quote().str());
   cols.emplace_back("Buyers of ").append(_market.base().str()).append(" (bids)");
-  VariadicTable<std::string, std::string, std::string> vt(std::move(cols));
+  VariadicTable<string, string, string> vt(std::move(cols));
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
@@ -393,7 +393,7 @@ void MarketOrderBook::print(std::ostream& os) const {
 }
 
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const {
-  cct::FixedCapacityVector<std::string, 4> cols;
+  FixedCapacityVector<string, 4> cols;
   cols.emplace_back("Sellers of ").append(_market.base().str()).append(" (asks)");
   cols.emplace_back(exchangeName)
       .append(" ")
@@ -406,7 +406,7 @@ void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, Mon
       .append(" price in ")
       .append(conversionPriceRate.currencyCode().str());
   cols.emplace_back("Buyers of ").append(_market.base().str()).append(" (bids)");
-  VariadicTable<std::string, std::string, std::string, std::string> vt(std::move(cols));
+  VariadicTable<string, string, string, string> vt(std::move(cols));
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
