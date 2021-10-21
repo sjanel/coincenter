@@ -12,7 +12,7 @@ PrivateExchangeName::PrivateExchangeName(std::string_view globalExchangeName)
 
 PrivateExchangeName::PrivateExchangeName(std::string_view exchangeName, std::string_view keyName)
     : _nameWithKey(exchangeName), _dashPos(_nameWithKey.size()) {
-  if (_nameWithKey.find_first_of('_') != std::string::npos) {
+  if (_nameWithKey.find_first_of('_') != string::npos) {
     throw exception("Invalid exchange name " + _nameWithKey);
   }
   if (!keyName.empty()) {

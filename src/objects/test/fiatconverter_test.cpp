@@ -25,7 +25,7 @@ constexpr double kGBP = 0.88;
 
 CurlHandle::CurlHandle(Clock::duration d, settings::RunMode) : _handle(nullptr), _minDurationBetweenQueries(d) {}
 
-std::string CurlHandle::query(std::string_view url, const CurlOptions &) {
+string CurlHandle::query(std::string_view url, const CurlOptions &) {
   json j;
   if (url.find("currencies") != std::string_view::npos) {
     // Currencies
@@ -59,7 +59,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &) {
     }
 
     if (rate != 0) {
-      j["results"][std::string(marketStr)]["val"] = rate;
+      j["results"][string(marketStr)]["val"] = rate;
     }
   }
   return j.dump();

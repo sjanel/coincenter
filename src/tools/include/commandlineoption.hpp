@@ -2,8 +2,9 @@
 
 #include <chrono>
 #include <stdexcept>
-#include <string>
 #include <string_view>
+
+#include "cct_string.hpp"
 
 namespace cct {
 using InvalidArgumentException = std::invalid_argument;
@@ -27,20 +28,20 @@ class CommandLineOption {
 
   bool matches(std::string_view optName) const;
 
-  const std::string& optionGroupName() const { return _optionGroupName; }
-  const std::string& fullName() const { return _fullName; }
-  const std::string& description() const { return _description; }
-  const std::string& valueDescription() const { return _valueDescription; }
+  std::string_view optionGroupName() const { return _optionGroupName; }
+  std::string_view fullName() const { return _fullName; }
+  std::string_view description() const { return _description; }
+  std::string_view valueDescription() const { return _valueDescription; }
 
-  std::string shortName() const;
+  string shortName() const;
 
   bool operator<(const CommandLineOption& o) const;
 
  private:
-  std::string _optionGroupName;
-  std::string _fullName;
-  std::string _valueDescription;
-  std::string _description;
+  string _optionGroupName;
+  string _fullName;
+  string _valueDescription;
+  string _description;
   int _prio;
   char _shortName;
 };

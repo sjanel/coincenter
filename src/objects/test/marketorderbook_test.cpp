@@ -48,7 +48,7 @@ TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountBoughtImmediately) {
             MonetaryAmount("5.1809", "ETH"));
   EXPECT_EQ(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1300.75", "EUR")),
             MonetaryAmount("0", "ETH"));
-  EXPECT_THROW(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1", "ETH")), cct::exception);
+  EXPECT_THROW(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1", "ETH")), exception);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountSoldImmediately) {
@@ -58,7 +58,7 @@ TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountSoldImmediately) {
             MonetaryAmount("0.89", "ETH"));
   EXPECT_EQ(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1303.5", "EUR")),
             MonetaryAmount("0", "ETH"));
-  EXPECT_THROW(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1", "ETH")), cct::exception);
+  EXPECT_THROW(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1", "ETH")), exception);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeMinPriceAtWhichAmountWouldBeBoughtImmediately) {
@@ -202,10 +202,10 @@ TEST(MarketOrderBookExtendedTest, ComputeVolAndPriNbDecimalsFromTickerInfo) {
 TEST(MarketOrderBookExtendedTest, InvalidDepth) {
   EXPECT_THROW(MarketOrderBook(MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("5ADA"), {0, 0}, 0),
-               cct::exception);
+               exception);
   EXPECT_THROW(MarketOrderBook(MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("5ADA"), {0, 0}, -1),
-               cct::exception);
+               exception);
 }
 
 }  // namespace cct

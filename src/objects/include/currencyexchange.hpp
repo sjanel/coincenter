@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
 #include <string_view>
 
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 
 namespace cct {
@@ -24,7 +24,7 @@ class CurrencyExchange {
   std::string_view exchangeStr() const { return _exchangeCode.str(); }
   std::string_view altStr() const { return _altCode.str(); }
 
-  std::string str() const;
+  string str() const;
 
   CurrencyCode standardCode() const { return _standardCode; }
   CurrencyCode exchangeCode() const { return _exchangeCode; }

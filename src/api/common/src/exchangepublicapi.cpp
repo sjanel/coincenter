@@ -60,9 +60,9 @@ ExchangePublic::Currencies ExchangePublic::findFastestConversionPath(Market conv
   const bool isToFiatLike = optFiatFromStableCoin || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
   MarketSet markets = queryTradableMarkets();
 
-  cct::vector<Currencies> searchPaths(1, {fromCurrencyCode});
+  vector<Currencies> searchPaths(1, {fromCurrencyCode});
   auto comp = [](const Currencies &lhs, const Currencies &rhs) { return lhs.size() > rhs.size(); };
-  cct::FlatSet<CurrencyCode> visitedCurrencies;
+  FlatSet<CurrencyCode> visitedCurrencies;
   do {
     std::pop_heap(searchPaths.begin(), searchPaths.end(), comp);
     Currencies path = std::move(searchPaths.back());
@@ -116,7 +116,7 @@ Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
   if (!markets.contains(m)) {
     m = m.reverse();
     if (!markets.contains(m)) {
-      throw exception("Cannot trade " + std::string(c1.str()) + " into " + std::string(c2.str()) + " on " + _name);
+      throw exception("Cannot trade " + string(c1.str()) + " into " + string(c2.str()) + " on " + _name);
     }
   }
   return m;

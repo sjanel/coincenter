@@ -18,9 +18,9 @@ namespace cct {
 namespace api {
 namespace {
 
-std::string PrivateSignature(const APIKey& apiKey, std::string data, const Nonce& nonce, std::string_view postdata) {
+string PrivateSignature(const APIKey& apiKey, string data, const Nonce& nonce, std::string_view postdata) {
   // concatenate nonce and postdata and compute SHA256
-  std::string noncePostData(nonce.begin(), nonce.end());
+  string noncePostData(nonce.begin(), nonce.end());
   noncePostData.append(postdata);
   ssl::Sha256 nonce_postdata = ssl::ComputeSha256(noncePostData);
 
@@ -34,14 +34,14 @@ std::string PrivateSignature(const APIKey& apiKey, std::string data, const Nonce
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view method,
                   CurlPostDataT&& curlPostData = CurlPostData()) {
-  std::string path;
+  string path;
   path.reserve(method.size() + 11);
   path.push_back('/');
   path.push_back(KrakenPublic::kVersion);
   path.append("/private/");
   path.append(method);
 
-  std::string method_url = KrakenPublic::kUrlBase + path;
+  string method_url = KrakenPublic::kUrlBase + path;
 
   CurlOptions opts(CurlOptions::RequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
   opts.userAgent = KrakenPublic::kUserAgent;
@@ -50,9 +50,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   opts.postdata.append("nonce", std::string_view(nonce.begin(), nonce.end()));
   opts.httpHeaders.reserve(2);
   opts.httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
-  opts.httpHeaders.emplace_back("API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.toStringView()));
+  opts.httpHeaders.emplace_back("API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.str()));
 
-  std::string ret = curlHandle.query(method_url, opts);
+  string ret = curlHandle.query(method_url, opts);
   json jsonData = json::parse(std::move(ret));
   CurlHandle::Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
@@ -65,7 +65,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     // We need to update the nonce
     nonce = Nonce_TimeSinceEpoch();
     opts.postdata.set("nonce", std::string_view(nonce.begin(), nonce.end()));
-    opts.httpHeaders.back() = "API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.toStringView());
+    opts.httpHeaders.back() = "API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.str());
     ret = curlHandle.query(method_url, opts);
     jsonData = json::parse(std::move(ret));
   }
@@ -74,7 +74,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
       log::warn("Unknown order from Kraken CancelOrder. Assuming closed order");
       jsonData = "{\" error \":[],\" result \":{\" count \":1}}"_json;
     } else {
-      throw exception("Kraken private query error: " + std::string(jsonData["error"].front()));
+      throw exception("Kraken private query error: " + string(jsonData["error"].front()));
     }
   }
   return jsonData["result"];
@@ -95,7 +95,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json res = PrivateQuery(_curlHandle, _apiKey, "Balance");
   // Kraken returns an empty array in case of account with no balance at all
   for (const auto& [curCode, amountStr] : res.items()) {
-    std::string amount = amountStr;
+    string amount = amountStr;
     CurrencyCode currencyCode(_config.standardizeCurrencyCode(curCode));
 
     addBalance(balancePortfolio, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
@@ -109,9 +109,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json res = PrivateQuery(_curlHandle, _apiKey, "DepositMethods", {{"asset", krakenCurrency.altStr()}});
   // [ { "fee": "0.0000000000", "gen-address": true, "limit": false, "method": "Bitcoin"}]
   if (res.empty()) {
-    throw exception("No deposit method found on Kraken for " + std::string(currencyCode.str()));
+    throw exception("No deposit method found on Kraken for " + string(currencyCode.str()));
   }
-  const std::string method = res.front()["method"];
+  const string method = res.front()["method"];
   res =
       PrivateQuery(_curlHandle, _apiKey, "DepositAddresses", {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
@@ -121,12 +121,12 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     res = PrivateQuery(_curlHandle, _apiKey, "DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
-      throw exception("Cannot create a new deposit address on Kraken for " + std::string(currencyCode.str()));
+      throw exception("Cannot create a new deposit address on Kraken for " + string(currencyCode.str()));
     }
   }
   PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
 
-  std::string address, tag;
+  string address, tag;
   for (const json& depositDetail : res) {
     for (const auto& [keyStr, valueStr] : depositDetail.items()) {
       if (keyStr == "address") {
@@ -140,12 +140,12 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       } else {
         // Heuristic: this last field may change key name and is optional (tag for XRP, memo for EOS for instance)
         if (!tag.empty()) {
-          throw exception("Tag already set / unknown key information for " + std::string(currencyCode.str()));
+          throw exception("Tag already set / unknown key information for " + string(currencyCode.str()));
         }
         if (valueStr.is_number_integer()) {
           tag = std::to_string(static_cast<long>(valueStr));
         } else {
-          tag = valueStr.get<std::string>();
+          tag = valueStr.get<string>();
         }
       }
     }
@@ -321,7 +321,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
 
-  std::string krakenWalletName(wallet.exchangeName());
+  string krakenWalletName(wallet.exchangeName());
   krakenWalletName.push_back('_');
   krakenWalletName.append(currencyCode.str());
   std::transform(std::begin(krakenWalletName), std::end(krakenWalletName), krakenWalletName.begin(),

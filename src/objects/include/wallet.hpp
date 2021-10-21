@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
 #include <string_view>
 
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 
@@ -46,7 +46,7 @@ class Wallet {
 
   bool hasDestinationTag() const { return !_tag.empty(); }
 
-  std::string str() const;
+  string str() const;
 
   bool operator==(const Wallet &w) const {
     return _currency == w._currency && _privateExchangeName == w._privateExchangeName && _address == w._address &&
@@ -59,8 +59,8 @@ class Wallet {
 
  private:
   PrivateExchangeName _privateExchangeName;
-  std::string _address;
-  std::string _tag;
+  string _address;
+  string _tag;
   CurrencyCode _currency;
 };
 

@@ -54,8 +54,8 @@ bool CommandLineOption::matches(std::string_view optName) const {
   return optName == _fullName;
 }
 
-std::string CommandLineOption::shortName() const {
-  std::string ret;
+string CommandLineOption::shortName() const {
+  string ret;
   if (_shortName != '\0') {
     ret.push_back('-');
     ret.push_back(_shortName);

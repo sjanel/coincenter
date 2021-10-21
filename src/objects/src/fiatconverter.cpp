@@ -11,7 +11,7 @@ constexpr char kRatesFileName[] = ".ratescache.json";
 constexpr char kCurrencyConverterBaseUrl[] = "https://free.currconv.com/api/v7";
 constexpr char kFiatConverterJsonKeyFile[] = "thirdparty_secret.json";
 
-std::string LoadCurrencyConverterAPIKey() {
+string LoadCurrencyConverterAPIKey() {
   constexpr char kDefaultCommunityKey[] = "b25453de7984135a084b";
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
 
@@ -25,7 +25,7 @@ std::string LoadCurrencyConverterAPIKey() {
     log::warn("Using default key provided as a demo to the community");
     return kDefaultCommunityKey;
   }
-  return std::string(data["freecurrencyconverter"].get<std::string_view>());
+  return string(data["freecurrencyconverter"].get<std::string_view>());
 }
 
 }  // namespace
@@ -49,7 +49,7 @@ FiatConverter::FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFrom
 void FiatConverter::updateCacheFile() const {
   json data;
   for (const auto& [market, priceTimeValue] : _pricesMap) {
-    std::string marketPairStr = market.assetsPairStr('-');
+    string marketPairStr = market.assetsPairStr('-');
     data[marketPairStr]["rate"] = priceTimeValue.rate;
     data[marketPairStr]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
@@ -58,15 +58,15 @@ void FiatConverter::updateCacheFile() const {
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
-  std::string url = kCurrencyConverterBaseUrl;
+  string url = kCurrencyConverterBaseUrl;
   url.append("/convert?");
 
   CurlOptions opts(CurlOptions::RequestType::kGet);
-  std::string qStr(m.assetsPairStr('_'));
+  string qStr(m.assetsPairStr('_'));
   opts.postdata.append("q", qStr);
   opts.postdata.append("apiKey", _apiKey);
 
-  url.append(opts.postdata.c_str());
+  url.append(opts.postdata.str());
   opts.postdata.clear();
 
   json data = json::parse(_curlHandle.query(url, opts), nullptr, false /* allow exceptions */);

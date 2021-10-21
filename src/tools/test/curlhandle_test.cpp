@@ -25,7 +25,7 @@ class CurlSetup : public ::testing::Test {
 };
 
 TEST_F(CurlSetup, BasicCurlTest) {
-  std::string out = handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet));
+  string out = handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet));
   EXPECT_EQ(out, "POOL_UP");
 }
 
@@ -36,8 +36,8 @@ TEST_F(CurlSetup, QueryKrakenTime) {
 #endif
   opts.httpHeaders.push_back("MyHeaderIsVeryLongToAvoidSSO");
 
-  std::string s = handle.query("https://api.kraken.com/0/public/Time", opts);
-  EXPECT_TRUE(s.find("unixtime") != std::string::npos);
+  string s = handle.query("https://api.kraken.com/0/public/Time", opts);
+  EXPECT_TRUE(s.find("unixtime") != string::npos);
 }
 
 TEST_F(CurlSetup, QueryKrakenSystemStatus) {
@@ -46,9 +46,9 @@ TEST_F(CurlSetup, QueryKrakenSystemStatus) {
   opts.verbose = true;
 #endif
   log::set_level(log::level::trace);
-  std::string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
-  EXPECT_TRUE(s.find("online") != std::string::npos || s.find("maintenance") != std::string::npos ||
-              s.find("cancel_only") != std::string::npos || s.find("post_only") != std::string::npos);
+  string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
+  EXPECT_TRUE(s.find("online") != string::npos || s.find("maintenance") != string::npos ||
+              s.find("cancel_only") != string::npos || s.find("post_only") != string::npos);
 }
 
 TEST_F(CurlSetup, ProxyMockTest) {
@@ -58,7 +58,7 @@ TEST_F(CurlSetup, ProxyMockTest) {
 #ifdef DEBUG
     opts.verbose = true;
 #endif
-    std::string out = handle.query(kTestUrl, opts);
+    string out = handle.query(kTestUrl, opts);
     EXPECT_EQ(out, "POOL_LEFT");
   }
 }

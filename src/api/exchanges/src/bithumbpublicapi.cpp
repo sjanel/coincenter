@@ -18,7 +18,7 @@ namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode::kNeutral, std::string_view urlOpts = "") {
-  std::string method_url = BithumbPublic::kUrlBase;
+  string method_url = BithumbPublic::kUrlBase;
   method_url.append("/public/");
   method_url.append(endpoint);
   method_url.push_back('/');
@@ -39,11 +39,11 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
   if (dataJson.contains("status")) {
     std::string_view statusCode = dataJson["status"].get<std::string_view>();  // "5300" for instance
     if (statusCode != "0000") {                                                // "0000" stands for: request OK
-      std::string msg;
+      string msg;
       if (dataJson.contains("message")) {
         msg = dataJson["message"];
       }
-      throw exception("error: " + std::string(statusCode) + " \"" + msg + "\"");
+      throw exception("error: " + string(statusCode) + " \"" + msg + "\"");
     }
   }
   return dataJson["data"];
@@ -102,7 +102,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
   CurlOptions opts(CurlOptions::RequestType::kGet);
-  std::string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", opts);
+  string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", opts);
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //
@@ -111,7 +111,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   // class="money_type tx_c">
   static constexpr std::string_view kCoinSep = "tr data-coin=";
   static constexpr std::string_view kFeeSep = "right out_fee";
-  for (std::size_t p = s.find(kCoinSep); p != std::string::npos; p = s.find(kCoinSep, p)) {
+  for (std::size_t p = s.find(kCoinSep); p != string::npos; p = s.find(kCoinSep, p)) {
     p = s.find("money_type tx_c", p);
     p = s.find('(', p) + 1;
     std::size_t endP = s.find(')', p);
@@ -124,7 +124,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
       continue;
     }
     p = s.find(kFeeSep, endP);
-    if (p == std::string::npos) {
+    if (p == string::npos) {
       break;
     }
     p = s.find('>', p) + 1;
@@ -182,34 +182,33 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
     base = optM->base();
     quote = optM->quote();
   }
-  std::string urlOpts;
+  string urlOpts;
   if (optDepth) {
-    urlOpts = std::string("count=").append(std::to_string(*optDepth));
+    urlOpts = string("count=").append(std::to_string(*optDepth));
   }
 
   json result = PublicQuery(curlHandle, "orderbook", base, quote, urlOpts);
 
   // Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
   // anymore
-  std::string quoteCurrency = result["payment_currency"];
+  std::string_view quoteCurrency = result["payment_currency"].get<std::string_view>();
   if (quoteCurrency != "KRW") {
     log::error("Unexpected Bithumb reply for orderbook. May require code api update");
   }
   CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
   const ExchangeInfo::CurrencySet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
   for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
-    std::string baseOrSpecialStr = baseOrSpecial;
-    if (baseOrSpecialStr != "payment_currency" && baseOrSpecialStr != "timestamp") {
+    if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
       const json* asksBids[2];
       CurrencyCode baseCurrencyCode;
-      if (singleMarketQuote && baseOrSpecialStr == "order_currency") {
+      if (singleMarketQuote && baseOrSpecial == "order_currency") {
         // single market quote
         baseCurrencyCode = base;
         asksBids[0] = std::addressof(result["asks"]);
         asksBids[1] = std::addressof(result["bids"]);
       } else if (!singleMarketQuote) {
         // then it's a base currency
-        baseCurrencyCode = CurrencyCode(config.standardizeCurrencyCode(baseOrSpecialStr));
+        baseCurrencyCode = CurrencyCode(config.standardizeCurrencyCode(baseOrSpecial));
         if (excludedCurrencies.contains(baseCurrencyCode)) {
           // Forbidden currency, do not consider its market
           log::trace("Discard {} excluded by config", baseCurrencyCode.str());
@@ -227,7 +226,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, Coincen
         "asks": [{"quantity" : "2.67575", "price" : "506000"},
                  {"quantity" : "3.54343","price" : "507000"}]
       */
-      using OrderBookVec = cct::vector<OrderBookLine>;
+      using OrderBookVec = vector<OrderBookLine>;
       OrderBookVec orderBookLines;
       orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
       for (const json* asksOrBids : asksBids) {

@@ -23,14 +23,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   CurlOptions opts(requestType, std::move(postdata));
 
   Nonce nonce = Nonce_TimeSinceEpoch();
-  std::string strToSign = nonce;
+  string strToSign = nonce;
   strToSign.append(opts.requestTypeStr());
   strToSign.append(method);
 
   if (!opts.postdata.empty()) {
     if (endpointWithParameters) {
       strToSign.push_back('?');
-      strToSign.append(opts.postdata.toStringView());
+      strToSign.append(opts.postdata.str());
     } else {
       strToSign.append(opts.postdata.toJson().dump());
       opts.httpHeaders.push_back("Content-Type: application/json");
@@ -38,9 +38,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
     }
   }
 
-  std::string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
-  std::string passphrase =
-      B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, std::string(apiKey.passphrase()), apiKey.privateKey()));
+  string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
+  string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
 
   opts.userAgent = KucoinPublic::kUserAgent;
 
@@ -50,7 +49,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   opts.httpHeaders.emplace_back("KC-API-PASSPHRASE: ").append(passphrase);
   opts.httpHeaders.emplace_back("KC-API-KEY-VERSION: 2");
 
-  std::string url = KucoinPublic::kUrlBase;
+  string url = KucoinPublic::kUrlBase;
   url.append(method);
 
   json dataJson = json::parse(curlHandle.query(url, opts));
@@ -210,7 +209,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 }
 
 OrderInfo KucoinPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  std::string endpoint = "/api/v1/orders/";
+  string endpoint = "/api/v1/orders/";
   endpoint.append(orderId);
   PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kDelete, endpoint);
   return queryOrderInfo(orderId, tradeInfo);
@@ -219,7 +218,7 @@ OrderInfo KucoinPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tr
 OrderInfo KucoinPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const Market m = tradeInfo.m;
-  std::string endpoint = "/api/v1/orders/";
+  string endpoint = "/api/v1/orders/";
   endpoint.append(orderId);
 
   json data = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, endpoint);

@@ -19,18 +19,18 @@ unsigned int ShaDigestLen(ShaType shaType) { return (shaType == ShaType::kSha256
 
 //------------------------------------------------------------------------------
 // helper function to compute SHA256:
-Sha256 ComputeSha256(const std::string& data) {
+Sha256 ComputeSha256(std::string_view data) {
   Sha256 ret;
 
   SHA256_CTX ctx;
   SHA256_Init(&ctx);
-  SHA256_Update(&ctx, data.c_str(), data.length());
+  SHA256_Update(&ctx, data.data(), data.length());
   SHA256_Final(reinterpret_cast<unsigned char*>(ret.data()), &ctx);
 
   return ret;
 }
 
-std::string ShaBin(ShaType shaType, const std::string& data, const char* secret) {
+string ShaBin(ShaType shaType, std::string_view data, const char* secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
   HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
@@ -38,13 +38,13 @@ std::string ShaBin(ShaType shaType, const std::string& data, const char* secret)
   HMAC_Update(ctx.get(), reinterpret_cast<const unsigned char*>(data.data()), data.size());
 
   unsigned int len = ShaDigestLen(shaType);
-  std::string binData(len, 0);
+  string binData(len, 0);
   HMAC_Final(ctx.get(), reinterpret_cast<unsigned char*>(binData.data()), &len);
   assert(len == binData.size());
   return binData;
 }
 
-std::string ShaHex(ShaType shaType, const std::string& data, const char* secret) {
+string ShaHex(ShaType shaType, std::string_view data, const char* secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
   HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
@@ -54,23 +54,39 @@ std::string ShaHex(ShaType shaType, const std::string& data, const char* secret)
   unsigned int len = ShaDigestLen(shaType);
   unsigned char binData[EVP_MAX_MD_SIZE];
   HMAC_Final(ctx.get(), binData, &len);
-  return BinToHex(binData, len);
+  return BinToHex(std::span<const unsigned char>(binData, len));
 }
 
-std::string ShaDigest(ShaType shaType, std::span<const std::string> data) {
+namespace {
+using EVPMDCTXUniquePtr = std::unique_ptr<EVP_MD_CTX, decltype([](EVP_MD_CTX* ptr) { EVP_MD_CTX_free(ptr); })>;
+
+inline EVPMDCTXUniquePtr InitEVPMDCTXUniquePtr(ShaType shaType) {
   const EVP_MD* md = shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512();
-
-  using EVPMDCTXUniquePtr = std::unique_ptr<EVP_MD_CTX, decltype([](EVP_MD_CTX* ptr) { EVP_MD_CTX_free(ptr); })>;
-
   EVPMDCTXUniquePtr mdctx(EVP_MD_CTX_new());
   EVP_DigestInit_ex(mdctx.get(), md, nullptr);
-  for (const std::string& s : data) {
-    EVP_DigestUpdate(mdctx.get(), s.c_str(), s.length());
-  }
+  return mdctx;
+}
+
+inline string EVPBinToHex(const EVPMDCTXUniquePtr& mdctx) {
   unsigned int len;
   unsigned char binData[EVP_MAX_MD_SIZE];
   EVP_DigestFinal_ex(mdctx.get(), binData, &len);
-  return BinToHex(binData, len);
+  return BinToHex(std::span<const unsigned char>(binData, len));
+}
+}  // namespace
+
+string ShaDigest(ShaType shaType, std::string_view data) {
+  EVPMDCTXUniquePtr mdctx = InitEVPMDCTXUniquePtr(shaType);
+  EVP_DigestUpdate(mdctx.get(), data.data(), data.length());
+  return EVPBinToHex(mdctx);
+}
+
+string ShaDigest(ShaType shaType, std::span<const string> data) {
+  EVPMDCTXUniquePtr mdctx = InitEVPMDCTXUniquePtr(shaType);
+  for (std::string_view s : data) {
+    EVP_DigestUpdate(mdctx.get(), s.data(), s.length());
+  }
+  return EVPBinToHex(mdctx);
 }
 
 }  // namespace ssl

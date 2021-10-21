@@ -9,14 +9,18 @@
 #include <optional>
 #include <span>
 #include <sstream>
-#include <string>
 #include <string_view>
 #include <variant>
 
 #include "cct_flatset.hpp"
+#include "cct_string.hpp"
 #include "commandlineoption.hpp"
 
 namespace cct {
+
+inline void ThrowExpectingValueException(const CommandLineOption& commandLineOption) {
+  throw InvalidArgumentException("Expecting a value for option: " + string(commandLineOption.fullName()));
+}
 
 #ifndef _WIN32
 // helper type for the visitor #4
@@ -37,8 +41,8 @@ template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
   using Duration = CommandLineOption::Duration;
-  using OptionType = std::variant<std::string Opts::*, std::optional<std::string> Opts::*, int Opts::*, bool Opts::*,
-                                  Duration Opts::*>;
+  using OptionType =
+      std::variant<string Opts::*, std::optional<string> Opts::*, int Opts::*, bool Opts::*, Duration Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -76,7 +80,7 @@ class CommandLineOptionsParser : private Opts {
         const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
                                              [argStr](const auto& opt) { return opt.first.matches(argStr); });
         if (!knownOption) {
-          throw InvalidArgumentException("unrecognized command-line option '" + std::string(argStr) + "'");
+          throw InvalidArgumentException("Unrecognized command-line option: " + string(argStr));
         }
       }
       for (auto& cbk : _callbacks) {
@@ -113,8 +117,8 @@ class CommandLineOptionsParser : private Opts {
       if (currentGroup != previousGroup) {
         stream << std::endl << ' ' << currentGroup << std::endl;
       }
-      std::string firstRowsStr = opt.fullName();
-      std::string shortName = opt.shortName();
+      string firstRowsStr(opt.fullName());
+      std::string_view shortName = opt.shortName();
       if (!shortName.empty()) {
         firstRowsStr.push_back(',');
         firstRowsStr.push_back(' ');
@@ -127,7 +131,7 @@ class CommandLineOptionsParser : private Opts {
 
       std::string_view descr = opt.description();
       int linePos = lenFirstRows + 3;
-      std::string spaces(linePos, ' ');
+      string spaces(linePos, ' ');
       while (!descr.empty()) {
         if (linePos + descr.size() <= kMaxCharLine) {
           stream << descr << std::endl;
@@ -187,23 +191,23 @@ class CommandLineOptionsParser : private Opts {
         value << argv[idx + 1];
         value >> opts->*arg;
       } else {
-        throw InvalidArgumentException("Expecting a value for option '" + commandLineOption.fullName() + "'");
+        ThrowExpectingValueException(commandLineOption);
       }
     }
 
-    void operator()(std::string Opts::*arg) const {
+    void operator()(string Opts::*arg) const {
       if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
         opts->*arg = argv[idx + 1];
       } else {
-        throw InvalidArgumentException("Expecting a value for option '" + commandLineOption.fullName() + "'");
+        ThrowExpectingValueException(commandLineOption);
       }
     }
 
-    void operator()(std::optional<std::string> Opts::*arg) const {
+    void operator()(std::optional<string> Opts::*arg) const {
       if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
         opts->*arg = argv[idx + 1];
       } else {
-        opts->*arg = std::string();
+        opts->*arg = string();
       }
     }
 
@@ -211,7 +215,7 @@ class CommandLineOptionsParser : private Opts {
       if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
         opts->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
       } else {
-        throw InvalidArgumentException("Expecting a value for option '" + commandLineOption.fullName() + "'");
+        ThrowExpectingValueException(commandLineOption);
       }
     }
 
@@ -238,31 +242,28 @@ class CommandLineOptionsParser : private Opts {
                            value << argv[idx + 1];
                            value >> this->*arg;
                          } else {
-                           throw InvalidArgumentException("Expecting a value for option '" +
-                                                          commandLineOption.fullName() + "'");
+                           ThrowExpectingValueException(commandLineOption);
                          }
                        },
-                       [this, idx, argv, &commandLineOption](std::string Opts::*arg) {
+                       [this, idx, argv, &commandLineOption](string Opts::*arg) {
                          if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
                            this->*arg = argv[idx + 1];
                          } else {
-                           throw InvalidArgumentException("Expecting a value for option '" +
-                                                          commandLineOption.fullName() + "'");
+                           ThrowExpectingValueException(commandLineOption);
                          }
                        },
-                       [this, idx, argv](std::optional<std::string> Opts::*arg) {
+                       [this, idx, argv](std::optional<string> Opts::*arg) {
                          if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
                            this->*arg = argv[idx + 1];
                          } else {
-                           this->*arg = std::string();
+                           this->*arg = string();
                          }
                        },
                        [this, idx, argv, &commandLineOption](Duration Opts::*arg) {
                          if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
                            this->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
                          } else {
-                           throw InvalidArgumentException("Expecting a value for option '" +
-                                                          commandLineOption.fullName() + "'");
+                           ThrowExpectingValueException(commandLineOption);
                          }
                        },
 #endif

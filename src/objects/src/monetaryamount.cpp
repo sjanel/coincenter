@@ -31,14 +31,14 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       isNeg = true;
       amountStr.remove_prefix(1);
     } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
-      throw exception("Parsing error, unexpected first char " + std::string(1, firstChar));
+      throw exception("Parsing error, unexpected first char " + string(1, firstChar));
     }
   }
   std::size_t dotPos = amountStr.find_first_of('.');
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
   MonetaryAmount::AmountType decPart = 0, integerPart = 0;
-  if (dotPos != std::string::npos) {
+  if (dotPos != string::npos) {
     while (amountStr.back() == '0') {
       amountStr.remove_suffix(1);
     }
@@ -46,7 +46,7 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       std::size_t bestFindPos = 0;
       for (std::string_view pattern : {"000", "999"}) {
         std::size_t findPos = amountStr.rfind(pattern);
-        if (findPos != std::string::npos && findPos > dotPos) {
+        if (findPos != string::npos && findPos > dotPos) {
           while (amountStr[findPos - 1] == pattern.front()) {
             --findPos;
           }
@@ -71,7 +71,7 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       int8_t nbDigitsToRemove =
           static_cast<int8_t>(amountStr.size() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1);
       if (nbDigitsToRemove > nbDecimals) {
-        throw exception("Received amount string " + std::string(amountStr) + " whose integral part is too big");
+        throw exception("Received amount string " + string(amountStr) + " whose integral part is too big");
       }
       log::trace("Received amount string '{}' too big for MonetaryAmount, truncating {} digits", amountStr,
                  nbDigitsToRemove);
@@ -84,7 +84,7 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
     std::from_chars(amountStr.data(), amountStr.data() + amountStr.size(), integerPart);
   }
 
-  MonetaryAmount::AmountType integralAmount = integerPart * cct::ipow(10, nbDecimals) + decPart + roundingUpNinesDouble;
+  MonetaryAmount::AmountType integralAmount = integerPart * ipow(10, nbDecimals) + decPart + roundingUpNinesDouble;
   if (isNeg) {
     integralAmount *= -1;
   }
@@ -399,12 +399,12 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   return ret;
 }
 
-std::string MonetaryAmount::amountStr() const {
+string MonetaryAmount::amountStr() const {
   const int isNeg = static_cast<int>(_amount < 0);
   const int nbDigits = ndigits(_amount);
   const int nbZerosToInsertFront = std::max(0, static_cast<int>(_nbDecimals + 1 - nbDigits));
 
-  std::string ret(static_cast<size_t>(isNeg) + nbDigits, '-');
+  string ret(static_cast<size_t>(isNeg) + nbDigits, '-');
   std::to_chars(ret.data(), ret.data() + ret.size(), _amount);
 
   ret.insert(ret.begin() + isNeg, nbZerosToInsertFront, '0');
@@ -416,8 +416,8 @@ std::string MonetaryAmount::amountStr() const {
   return ret;
 }
 
-std::string MonetaryAmount::str() const {
-  std::string ret = amountStr();
+string MonetaryAmount::str() const {
+  string ret = amountStr();
   if (!_currencyCode.isNeutral()) {
     ret.push_back(' ');
     ret.append(_currencyCode.str());

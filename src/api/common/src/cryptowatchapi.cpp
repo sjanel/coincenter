@@ -15,8 +15,8 @@ constexpr char kUrlBase[] = "https://api.cryptowat.ch";
 constexpr char kUserAgent[] = "Cryptowatch C++ API Client";
 constexpr char kFiatFileName[] = ".fiatcache.json";
 
-std::string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  std::string method_url = kUrlBase;
+string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
+  string method_url = kUrlBase;
   method_url.push_back('/');
   method_url.append(method);
 
@@ -29,7 +29,7 @@ std::string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&
 
 const json& CollectResults(const json& dataJson) {
   if (dataJson.contains("error") && !dataJson["error"].empty()) {
-    throw exception("Cryptowatch::query error: " + std::string(dataJson["error"].front()));
+    throw exception("Cryptowatch::query error: " + string(dataJson["error"].front()));
   }
   return dataJson["result"];
 }
@@ -46,10 +46,11 @@ CryptowatchAPI::CryptowatchAPI(settings::RunMode runMode, Clock::duration fiatsU
     if (!data.empty()) {
       int64_t timeepoch = data["timeepoch"];
       _lastUpdatedFiatsTime = TimePoint(std::chrono::seconds(timeepoch));
-      _fiats.reserve(static_cast<Fiats::size_type>(data["fiats"].size()));
-      for (std::string fiatCode : data["fiats"]) {
-        log::debug("Storing fiat {} from cache file", fiatCode);
-        _fiats.emplace(std::move(fiatCode));
+      const auto& fiats = data["fiats"];
+      _fiats.reserve(static_cast<Fiats::size_type>(fiats.size()));
+      for (auto it = fiats.begin(), endIt = fiats.end(); it != endIt; ++it) {
+        log::debug("Storing fiat {} from cache file", it->get<std::string_view>());
+        _fiats.emplace(it->get<std::string_view>());
       }
       log::info("Stored {} fiats from cache file", _fiats.size());
     }
@@ -96,9 +97,9 @@ CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc ::oper
   json dataJson = json::parse(Query(_curlHandle, "exchanges"));
   const json& result = CollectResults(dataJson);
   for (const json& exchange : result) {
-    std::string exchangeNameLowerCase = exchange["symbol"];
+    string exchangeNameLowerCase = exchange["symbol"];
     log::debug("{} is supported by Cryptowatch", exchangeNameLowerCase);
-    ret.insert(exchangeNameLowerCase);
+    ret.insert(std::move(exchangeNameLowerCase));
   }
   log::info("{} exchanges supported by Cryptowatch", ret.size());
   return ret;
@@ -107,15 +108,15 @@ CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc ::oper
 CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std::string_view exchangeName) {
   json dataJson = json::parse(Query(_curlHandle, "markets/prices"));
   const json& result = CollectResults(dataJson);
-  std::string marketPrefix = "market:" + std::string(exchangeName) + ":";
+  string marketPrefix = "market:" + string(exchangeName) + ":";
   size_t marketPrefixLen = marketPrefix.size();
   // {"result":{"market:kraken:ethdai":1493.844,"market:kraken:etheur":1238.14, ...},
   // "allowance":{"cost":0.015,"remaining":9.943,"upgrade":"For unlimited API access..."}}
   PricesPerMarketMap ret;
   for (const auto& [key, price] : result.items()) {
     if (key.starts_with(marketPrefix)) {
-      std::string marketStr = key.substr(marketPrefixLen);
-      std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(), [](char c) { return cct::toupper(c); });
+      string marketStr = key.substr(marketPrefixLen);
+      std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(), [](char c) { return toupper(c); });
       ret.insert_or_assign(std::move(marketStr), static_cast<double>(price));
     }
   }

@@ -19,7 +19,7 @@ namespace cct {
 namespace {
 
 size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-  reinterpret_cast<std::string *>(userp)->append(static_cast<const char *>(contents), size * nmemb);
+  reinterpret_cast<string *>(userp)->append(static_cast<const char *>(contents), size * nmemb);
   return size * nmemb;
 }
 }  // namespace
@@ -80,19 +80,19 @@ void CurlHandle::setUpProxy(const CurlOptions::ProxySettings &proxy) {
   }
 }
 
-std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
+string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   checkHandleOrInit();
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   // General option settings.
   const char *optsStr = opts.postdata.c_str();
 
-  std::string modifiedURL(url);
-  std::string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
+  string modifiedURL(url);
+  string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
   if (opts.requestType() != CurlOptions::RequestType::kPost && !opts.postdata.empty()) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
-    modifiedURL.append(opts.postdata.toStringView());
+    modifiedURL.append(opts.postdata.str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
   } else {
     if (opts.postdataInJsonFormat && !opts.postdata.empty()) {
@@ -127,7 +127,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
 
   curl_easy_setopt(curl, CURLOPT_VERBOSE, opts.verbose ? 1L : 0L);
   curl_slist *curlListPtr = nullptr, *oldCurlListPtr = nullptr;
-  for (const std::string &header : opts.httpHeaders) {
+  for (const string &header : opts.httpHeaders) {
     curlListPtr = curl_slist_append(curlListPtr, header.c_str());
     if (!curlListPtr) {
       if (oldCurlListPtr) {
@@ -142,7 +142,7 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
 
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curlListPtr);
-  std::string out;
+  string out;
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out);
 
   setUpProxy(opts.proxy);
@@ -181,9 +181,9 @@ std::string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   return out;
 }
 
-std::string CurlHandle::urlEncode(std::string_view url) {
+string CurlHandle::urlEncode(std::string_view url) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
-  std::string ret(url);
+  string ret(url);
 
   using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;
 

@@ -39,16 +39,16 @@ TEST(CurlOptionsTest, SetAndAppend) {
   EXPECT_STREQ(curlPostData.c_str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   curlPostData.set("d", "cestboncestfini");
   EXPECT_STREQ(curlPostData.c_str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
-  EXPECT_THROW(curlPostData.append("777", "cestinterditca"), cct::exception);
+  EXPECT_THROW(curlPostData.append("777", "cestinterditca"), exception);
 }
 
 TEST(CurlOptionsTest, Erase) {
   CurlPostData curlPostData{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
   curlPostData.erase("rm");
   const std::string_view expected = "abc=354&tata=abc&huhu=haha";
-  EXPECT_EQ(curlPostData.toStringView(), expected);
+  EXPECT_EQ(curlPostData.str(), expected);
   curlPostData.erase("haha");
-  EXPECT_EQ(curlPostData.toStringView(), expected);
+  EXPECT_EQ(curlPostData.str(), expected);
 }
 
 TEST(CurlOptionsTest, EmptyConvertToJson) {
@@ -95,7 +95,7 @@ TEST_F(CurlOptionsCase1, SetIntegralValues) {
   EXPECT_EQ(curlPostData.get("price1"), "42");
   curlPostData.set("777", -666);
   EXPECT_EQ(curlPostData.get("777"), "-666");
-  EXPECT_EQ(curlPostData.toStringView(), "units=0.11176&price=357.78&777=-666&hola=quetal&price1=42");
+  EXPECT_EQ(curlPostData.str(), "units=0.11176&price=357.78&777=-666&hola=quetal&price1=42");
   int8_t s = -116;
   curlPostData.set("testu", s);
   EXPECT_EQ(curlPostData.get("testu"), "-116");

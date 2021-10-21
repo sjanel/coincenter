@@ -4,8 +4,7 @@
 
 namespace cct {
 namespace api {
-APIKey::APIKey(std::string_view platform, std::string_view name, std::string &&key, std::string &&privateKey,
-               std::string &&passphrase)
+APIKey::APIKey(std::string_view platform, std::string_view name, string &&key, string &&privateKey, string &&passphrase)
     : _platform(platform),
       _name(name),
       _key(std::move(key)),

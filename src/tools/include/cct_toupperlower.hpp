@@ -1,8 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <string>
 #include <string_view>
+
+#include "cct_string.hpp"
 
 namespace cct {
 /// constexpr version of std::toupper with chars, as unfortunately for now (May 2021) std::toupper is not constexpr
@@ -77,15 +78,15 @@ constexpr char tolower(char c) noexcept {
   }
 }
 
-inline std::string toupper(std::string_view str) {
-  std::string ret(str);
-  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return cct::toupper(c); });
+inline string toupper(std::string_view str) {
+  string ret(str);
+  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return toupper(c); });
   return ret;
 }
 
-inline std::string tolower(std::string_view str) {
-  std::string ret(str);
-  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return cct::tolower(c); });
+inline string tolower(std::string_view str) {
+  string ret(str);
+  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return tolower(c); });
   return ret;
 }
 }  // namespace cct

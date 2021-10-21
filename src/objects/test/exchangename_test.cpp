@@ -26,7 +26,7 @@ TEST(ExchangeName, ComplexKeyName) {
 
 TEST(ExchangeName, ConstructorWith2Params) {
   EXPECT_EQ(PrivateExchangeName("binance", "_user13").str(), "binance__user13");
-  EXPECT_THROW(PrivateExchangeName("kraken_", "_user13"), cct::exception);
+  EXPECT_THROW(PrivateExchangeName("kraken_", "_user13"), exception);
 }
 
 TEST(ExchangeName, IsKeyNameDefined) {

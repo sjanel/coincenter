@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
 #include <string_view>
 #include <utility>
 
+#include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -39,6 +39,6 @@ class StringOptionParser {
  protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;
 
-  std::string _opt;
+  string _opt;
 };
 }  // namespace cct

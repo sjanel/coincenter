@@ -1,13 +1,15 @@
 #pragma once
 
-#include <string>
+#include <span>
 #include <string_view>
+
+#include "cct_string.hpp"
 
 namespace cct {
 
-std::string BinToHex(const unsigned char* in, int size);
+string BinToHex(std::span<const unsigned char> bindata);
 
-std::string B64Encode(std::string_view bindata);
+string B64Encode(std::string_view bindata);
 
-std::string B64Decode(std::string_view ascdata);
+string B64Decode(std::string_view ascdata);
 }  // namespace cct

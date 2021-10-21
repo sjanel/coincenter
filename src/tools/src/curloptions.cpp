@@ -10,7 +10,7 @@ namespace cct {
 CurlPostData::CurlPostData(std::initializer_list<KeyValuePair> init) {
   for (const KeyValuePair& kv : init) {
     if (kv.val.index() == 0) {
-      append(kv.key, std::get<std::string>(kv.val));
+      append(kv.key, std::get<string>(kv.val));
     } else if (kv.val.index() == 1) {
       append(kv.key, std::get<std::string_view>(kv.val));
     } else {
@@ -47,12 +47,12 @@ std::size_t CurlPostData::find(std::string_view key) const {
   const std::size_t ks = key.size();
   const std::size_t ps = _postdata.size();
   std::size_t pos = _postdata.find(key);
-  while (pos != std::string::npos && pos + ks < ps && _postdata[pos + ks] != '=') {
+  while (pos != string::npos && pos + ks < ps && _postdata[pos + ks] != '=') {
     pos = _postdata.find(key, pos + ks + 1);
   }
-  if (pos != std::string::npos && (pos + ks == ps || _postdata[pos + ks] == '&')) {
+  if (pos != string::npos && (pos + ks == ps || _postdata[pos + ks] == '&')) {
     // we found a value, not a key
-    pos = std::string::npos;
+    pos = string::npos;
   }
   return pos;
 }
@@ -62,7 +62,7 @@ void CurlPostData::set(std::string_view key, std::string_view value) {
          value.find('&') == std::string_view::npos && key.find('=') == std::string_view::npos &&
          value.find('=') == std::string_view::npos);
   std::size_t pos = find(key);
-  if (pos == std::string::npos) {
+  if (pos == string::npos) {
     append(key, value);
   } else {
     pos += key.size() + 1;
@@ -77,7 +77,7 @@ void CurlPostData::set(std::string_view key, std::string_view value) {
 
 void CurlPostData::erase(std::string_view key) {
   std::size_t first = find(key);
-  if (first != std::string::npos) {
+  if (first != string::npos) {
     if (first != 0) {
       --first;
     }
@@ -92,15 +92,15 @@ void CurlPostData::erase(std::string_view key) {
 
 std::string_view CurlPostData::get(std::string_view key) const {
   std::size_t pos = find(key);
-  std::string::const_iterator first;
-  std::string::const_iterator last;
-  if (pos == std::string::npos) {
+  string::const_iterator first;
+  string::const_iterator last;
+  if (pos == string::npos) {
     first = _postdata.end();
     last = _postdata.end();
   } else {
     first = _postdata.begin() + pos + key.size() + 1;
     std::size_t endPos = _postdata.find_first_of('&', pos + key.size() + 1);
-    if (endPos == std::string::npos) {
+    if (endPos == string::npos) {
       last = _postdata.end();
     } else {
       last = _postdata.begin() + endPos;
@@ -113,15 +113,15 @@ json CurlPostData::toJson() const {
   json ret;
   for (std::size_t sep = _postdata.find('&'), oldSep = 0;; sep = _postdata.find('&', oldSep)) {
     std::string_view keyValuePair(_postdata.begin() + oldSep,
-                                  sep == std::string::npos ? _postdata.end() : _postdata.begin() + sep);
+                                  sep == string::npos ? _postdata.end() : _postdata.begin() + sep);
     if (keyValuePair.empty()) {
       break;
     }
     std::size_t equalPos = keyValuePair.find('=');
-    std::string key(keyValuePair.begin(), keyValuePair.begin() + equalPos);
-    std::string val(keyValuePair.begin() + equalPos + 1, keyValuePair.end());
+    string key(keyValuePair.begin(), keyValuePair.begin() + equalPos);
+    string val(keyValuePair.begin() + equalPos + 1, keyValuePair.end());
     ret[key] = std::move(val);
-    if (sep == std::string::npos) {
+    if (sep == string::npos) {
       break;
     }
     oldSep = sep + 1;

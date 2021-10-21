@@ -15,7 +15,7 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  std::string method_url = UpbitPublic::kUrlBase;
+  string method_url = UpbitPublic::kUrlBase;
   method_url.append("/v1/");
   method_url.append(endpoint);
 
@@ -27,7 +27,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
   if (dataJson.contains("error")) {
     const long statusCode = dataJson["name"].get<long>();
     std::string_view msg = dataJson["message"].get<std::string_view>();
-    throw exception("error: " + std::to_string(statusCode) + " \"" + std::string(msg) + "\"");
+    throw exception("error: " + std::to_string(statusCode) + " \"" + string(msg) + "\"");
   }
   return dataJson;
 }
@@ -179,8 +179,8 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth
 
 ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
   const MarketSet& markets = _marketsCache.get();
-  std::string marketsStr;
-  marketsStr.reserve(static_cast<std::string::size_type>(markets.size()) * 8);
+  string marketsStr;
+  marketsStr.reserve(static_cast<string::size_type>(markets.size()) * 8);
   for (Market m : markets) {
     if (!marketsStr.empty()) {
       marketsStr.push_back(',');

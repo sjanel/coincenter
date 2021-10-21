@@ -7,26 +7,28 @@
 
 namespace cct {
 
-std::string BinToHex(const unsigned char* in, int size) {
-  constexpr char kHexits[] = "0123456789abcdef";
-  std::string ret(2 * size, 0);
-  for (int i = 0; i < size; ++i) {
-    ret[i * 2] = kHexits[in[i] >> 4];
-    ret[(i * 2) + 1] = kHexits[in[i] & 0x0F];
+string BinToHex(std::span<const unsigned char> bindata) {
+  static constexpr char kHexits[] = "0123456789abcdef";
+  const int s = bindata.size();
+  string ret(2 * s, 0);
+  ret.reserve(2 * s);
+  for (int i = 0; i < s; ++i) {
+    ret[i * 2] = kHexits[bindata[i] >> 4];
+    ret[(i * 2) + 1] = kHexits[bindata[i] & 0x0F];
   }
   return ret;
 }
 
-std::string B64Encode(std::string_view bindata) {
+string B64Encode(std::string_view bindata) {
   const ::std::size_t binlen = bindata.size();
   // Use = signs so the end is properly padded.
-  std::string retval((((binlen + 2) / 3) * 4), '=');
+  string retval((((binlen + 2) / 3) * 4), '=');
   std::size_t outpos = 0;
   int bits_collected = 0;
   unsigned int accumulator = 0;
   const std::string_view::const_iterator binend = bindata.end();
 
-  constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  static constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   for (std::string_view::const_iterator i = bindata.begin(); i != binend; ++i) {
     accumulator = (accumulator << 8) | (*i & 0xffu);
@@ -46,8 +48,8 @@ std::string B64Encode(std::string_view bindata) {
   return retval;
 }
 
-std::string B64Decode(std::string_view ascdata) {
-  std::string retval;
+string B64Decode(std::string_view ascdata) {
+  string retval;
   const std::string_view::const_iterator last = ascdata.end();
   int bits_collected = 0;
   unsigned int accumulator = 0;
@@ -65,7 +67,7 @@ std::string B64Decode(std::string_view ascdata) {
       // Skip whitespace and padding. Be liberal in what you accept.
       continue;
     }
-    if ((c > 127) || (c < 0) || (kReverseTable[c] > 63)) {
+    if (c > 127 || c < 0 || kReverseTable[c] > 63) {
       throw ::std::invalid_argument("This contains characters not legal in a base64 encoded string.");
     }
     accumulator = (accumulator << 6) | kReverseTable[c];

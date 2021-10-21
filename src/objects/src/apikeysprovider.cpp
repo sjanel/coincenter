@@ -1,11 +1,10 @@
 #include "apikeysprovider.hpp"
 
-#include <string>
-
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "jsonhelpers.hpp"
 
 namespace cct {
@@ -30,7 +29,7 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform
   if (foundIt != _apiKeysMap.end()) {
     const APIKeys& apiKeys = foundIt->second;
     std::transform(apiKeys.begin(), apiKeys.end(), std::back_inserter(keyNames),
-                   [](const APIKey& apiKey) { return std::string(apiKey.name()); });
+                   [](const APIKey& apiKey) { return string(apiKey.name()); });
   }
   return keyNames;
 }
@@ -39,12 +38,12 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
   std::string_view platformStr = privateExchangeName.name();
   auto foundIt = _apiKeysMap.find(platformStr);
   if (foundIt == _apiKeysMap.end()) {
-    throw exception("Unable to retrieve private key for " + std::string(platformStr));
+    throw exception("Unable to retrieve private key for " + string(platformStr));
   }
   const APIKeys& apiKeys = foundIt->second;
   if (!privateExchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
-      throw exception("Specify name for " + std::string(platformStr) + " keys as you have several");
+      throw exception("Specify name for " + string(platformStr) + " keys as you have several");
     }
     return apiKeys.front();
   }
@@ -52,8 +51,8 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     return apiKey.name() == privateExchangeName.keyName();
   });
   if (keyNameIt == apiKeys.end()) {
-    throw exception("Unable to retrieve private key for " + std::string(platformStr) + " named " +
-                    std::string(privateExchangeName.keyName()));
+    throw exception("Unable to retrieve private key for " + string(platformStr) + " named " +
+                    string(privateExchangeName.keyName()));
   }
   return *keyNameIt;
 }
@@ -73,7 +72,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(const PublicExchangeNa
       }
       for (const auto& [name, keySecretObj] : keyObj.items()) {
         if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
-          std::string passphrase;
+          string passphrase;
           if (keySecretObj.contains("passphrase")) {
             passphrase = keySecretObj["passphrase"];
           }

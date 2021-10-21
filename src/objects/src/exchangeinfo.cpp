@@ -11,7 +11,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
   // Load trade fees
   constexpr char kTradeFeesStr[] = "tradefees";
   if (!exchangeData.contains(kTradeFeesStr)) {
-    throw exception("Unable to load trade fees for exchange " + std::string(exchangeNameStr));
+    throw exception("Unable to load trade fees for exchange " + string(exchangeNameStr));
   }
   const json &tradeFeesData = exchangeData[kTradeFeesStr];
   std::string_view makerStr = tradeFeesData["maker"].get<std::string_view>();
@@ -34,10 +34,10 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
         // Don't make these json fields required, do nothing if not present
         const json &subData = assetData[kSubAssetConfig[subIdx]];
         CurrencySet &currencySet = *pCurrencySetPerConfig[subIdx];
-        std::string currenciesCSV = subData;
+        string currenciesCSV = subData;
         std::size_t first = 0;
         std::size_t last = currenciesCSV.find_first_of(',');
-        while (last != std::string::npos) {
+        while (last != string::npos) {
           currencySet.emplace(std::string_view(currenciesCSV.begin() + first, currenciesCSV.begin() + last));
           first = last + 1;
           last = currenciesCSV.find_first_of(',', first);
@@ -58,7 +58,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, const json &exchang
   // Load query config
   constexpr char kQuery[] = "query";
   if (!exchangeData.contains(kQuery)) {
-    throw exception("Unable to load query configuration for exchange " + std::string(exchangeNameStr));
+    throw exception("Unable to load query configuration for exchange " + string(exchangeNameStr));
   }
   const json &queryData = exchangeData[kQuery];
   _minPublicQueryDelay = std::chrono::milliseconds(queryData["minpublicquerydelayms"].get<int>());

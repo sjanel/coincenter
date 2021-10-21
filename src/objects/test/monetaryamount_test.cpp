@@ -161,7 +161,7 @@ TEST(MonetaryAmountTest, Divide) {
   EXPECT_EQ(MonetaryAmount("-870.5647", CurrencyCode("ETH")) / MonetaryAmount("4709.3467736", CurrencyCode("ETH")),
             MonetaryAmount("-0.18485890758358997"));
   EXPECT_EQ(MonetaryAmount("487.76 EUR") / MonetaryAmount("1300.5 EUR"), MonetaryAmount("0.3750557477893118"));
-  EXPECT_THROW(MonetaryAmount("100") / MonetaryAmount("0.00000000000000001"), cct::exception);
+  EXPECT_THROW(MonetaryAmount("100") / MonetaryAmount("0.00000000000000001"), exception);
   EXPECT_EQ(MonetaryAmount("10") / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
 }
 
@@ -170,7 +170,7 @@ TEST(MonetaryAmountTest, Multiply) {
             MonetaryAmount("14.8785", CurrencyCode("ETH")));
   EXPECT_EQ(MonetaryAmount("79871.9000917457") * MonetaryAmount("-34.141590974"),
             MonetaryAmount("-2726953.66542788469"));
-  EXPECT_THROW(MonetaryAmount("1", "EUR") * MonetaryAmount("2", "ETH"), cct::exception);
+  EXPECT_THROW(MonetaryAmount("1", "EUR") * MonetaryAmount("2", "ETH"), exception);
 }
 
 TEST(MonetaryAmountTest, Convert) {

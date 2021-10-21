@@ -42,23 +42,23 @@ void BalancePortfolio::print(std::ostream &os) const {
     CurrencyCode balanceCurrencyCode = _monetaryAmountSet.front().equi.currencyCode();
     if (balanceCurrencyCode != CurrencyCode::kNeutral) {
       MonetaryAmount totalSum = MonetaryAmount("0", balanceCurrencyCode);
-      cct::FixedCapacityVector<std::string, 3> cols;
+      FixedCapacityVector<string, 3> cols;
       cols.emplace_back("Amount");
       cols.emplace_back("Currency");
       cols.emplace_back("Eq. (").append(balanceCurrencyCode.str()).push_back(')');
-      VariadicTable<std::string, std::string, std::string> vt(cols);
+      VariadicTable<string, string, string> vt(cols);
       for (const auto &m : convertToSortedByAmountVector()) {
-        vt.addRow(m.amount.amountStr(), std::string(m.amount.currencyCode().str()),
+        vt.addRow(m.amount.amountStr(), string(m.amount.currencyCode().str()),
                   m.equi.isZero() ? "???" : m.equi.amountStr());
         totalSum += m.equi;
       }
       vt.print(os);
       os << "* Total: " << totalSum << std::endl;
     } else {
-      std::array<std::string, 2> cols = {"Amount", "Currency"};
-      VariadicTable<std::string, std::string> vt(cols);
+      std::array<string, 2> cols = {"Amount", "Currency"};
+      VariadicTable<string, string> vt(cols);
       for (const auto &m : *this) {
-        vt.addRow(m.amount.amountStr(), std::string(m.amount.currencyCode().str()));
+        vt.addRow(m.amount.amountStr(), string(m.amount.currencyCode().str()));
       }
       vt.print(os);
     }

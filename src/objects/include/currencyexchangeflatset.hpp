@@ -50,7 +50,7 @@ class CurrencyExchangeFlatSet {
   const CurrencyExchange &getOrThrow(CurrencyCode standardCode) const {
     const_iterator it = find(standardCode);
     if (it == _set.end()) {
-      throw exception("Unknown " + std::string(standardCode.str()));
+      throw exception("Unknown " + string(standardCode.str()));
     }
     return *it;
   }

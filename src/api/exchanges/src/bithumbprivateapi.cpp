@@ -26,53 +26,53 @@ namespace {
 constexpr char kNbDecimalsUnitsCacheFile[] = ".bithumbdecimalscache.json";
 
 /// Similar to CurlHandle::urlEncore, except that it does not convert '=' (Bithumb would complain if we did)
-std::string UrlEncode(std::string_view str) {
-  std::string ret;
+string UrlEncode(std::string_view str) {
   const int s = static_cast<int>(str.size());
-  ret.reserve(s);
+  string ret(3 * s, 0);
+  char* it = ret.data();
   for (int i = 0; i < s; ++i) {
     unsigned char c = str[i];
     if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '@' || c == '.' ||
         c == '=' || c == '\\' || c == '-' || c == '_' || c == ':' || c == '&') {
-      ret.push_back(c);
+      *it++ = c;
     } else {
-      char buf[4];
-      snprintf(buf, sizeof(buf), "%%%02X", c);
-      ret.append(buf);
+      sprintf(it, "%%%02X", c);
+      it += 3;
     }
   }
+  ret.resize(it - ret.data());
   return ret;
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName,
                   BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
                   const CurlPostData& curlPostData) {
-  std::string methodUrl = BithumbPublic::kUrlBase;
+  string methodUrl = BithumbPublic::kUrlBase;
   methodUrl.push_back('/');
   methodUrl.append(methodName);
 
-  std::string strPost = "endpoint=/";
+  string strPost = "endpoint=/";
   strPost.append(methodName);
   strPost.push_back('&');
-  strPost.append(curlPostData.toStringView());
+  strPost.append(curlPostData.str());
 
   // For Bithumb, we always use POST requests (even when read-only)
   CurlOptions opts(CurlOptions::RequestType::kPost, CurlPostData(UrlEncode(strPost)));
 
-  std::string strData;
+  string strData;
   strData.reserve(100);
   strData.push_back('/');
   strData.append(methodName);
 
   const char parChar = 1;
   strData.push_back(parChar);
-  strData.append(opts.postdata.c_str());
+  strData.append(opts.postdata.str());
   strData.push_back(parChar);
 
   Nonce nonce = Nonce_TimeSinceEpoch();
   strData.append(nonce.begin(), nonce.end());
 
-  std::string signature = cct::B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strData, apiKey.privateKey()));
+  string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strData, apiKey.privateKey()));
 
   opts.userAgent = BithumbPublic::kUserAgent;
 
@@ -132,7 +132,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
             }
           }
           if ((isInfoOpenedOrders || isCancelQuery) &&
-              msg.find("거래 진행중인 내역이 존재하지 않습니다") != std::string::npos) {
+              msg.find("거래 진행중인 내역이 존재하지 않습니다") != string::npos) {
             // This is not really an error, it means that order has been eaten or cancelled.
             // Just return empty json in this case
             log::info("Considering Bithumb order as closed as no data received from them");
@@ -141,7 +141,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
           }
         }
       }
-      throw exception(std::string("Bithumb::query error: ").append(statusCode).append(" \"").append(msg).append("\""));
+      throw exception(string("Bithumb::query error: ").append(statusCode).append(" \"").append(msg).append("\""));
     }
   }
   return methodName.starts_with("trade") ? dataJson : dataJson["data"];
@@ -227,7 +227,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   CurlPostData placePostData{{"order_currency", m.base().str()}, {"payment_currency", m.quote().str()}};
   const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
 
-  std::string methodName = "trade/";
+  string methodName = "trade/";
   if (isTakerStrategy) {
     methodName.append(fromCurrencyCode == m.base() ? "market_sell" : "market_buy");
   } else {
@@ -356,7 +356,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       }
       std::size_t first = unitsStr.find_first_of("0123456789");
       if (first == std::string_view::npos) {
-        throw exception("Bithumb: cannot parse amount " + std::string(unitsStr));
+        throw exception("Bithumb: cannot parse amount " + string(unitsStr));
       }
       MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
       if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
@@ -403,7 +403,7 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
 void BithumbPrivate::updateCacheFile() const {
   json data;
   for (const auto& [currency, nbDecimalsTimeValue] : _maxNbDecimalsUnitMap) {
-    std::string currencyStr(currency.str());
+    string currencyStr(currency.str());
     data[currencyStr]["nbdecimals"] = nbDecimalsTimeValue.nbDecimals;
     data[currencyStr]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(nbDecimalsTimeValue.lastUpdatedTime.time_since_epoch())

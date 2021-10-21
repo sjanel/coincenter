@@ -37,14 +37,14 @@ class ExchangeRetrieverBase {
       if (privateExchangeName.name() == exchange.name() &&
           (!privateExchangeName.isKeyNameDefined() || exchange.keyName() == privateExchangeName.keyName())) {
         if (pExchange) {
-          throw exception("Several private exchanges found for " + privateExchangeName.str() +
+          throw exception("Several private exchanges found for " + string(privateExchangeName.str()) +
                           " - remove ambiguity by specifying key name");
         }
         pExchange = std::addressof(exchange);
       }
     }
     if (!pExchange) {
-      throw exception("Cannot find exchange " + privateExchangeName.str());
+      throw exception("Cannot find exchange " + string(privateExchangeName.str()));
     }
     return *pExchange;
   }
@@ -84,7 +84,7 @@ class ExchangeRetrieverBase {
             }
             if (ret.size() == oldSize) {
               throw exception(
-                  std::string("Unable to find public exchange ").append(exchangeName).append(" in the exchange list"));
+                  string("Unable to find public exchange ").append(exchangeName).append(" in the exchange list"));
             }
           }
           break;

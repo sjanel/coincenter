@@ -1,13 +1,13 @@
 #pragma once
 
 #include <map>
-#include <string>
 #include <string_view>
 
 #include "apikey.hpp"
 #include "cct_const.hpp"
 #include "cct_run_modes.hpp"
 #include "cct_smallvector.hpp"
+#include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "exchangename.hpp"
 
@@ -15,7 +15,7 @@ namespace cct {
 namespace api {
 class APIKeysProvider {
  public:
-  using KeyNames = SmallVector<std::string, kTypicalNbPrivateAccounts>;
+  using KeyNames = SmallVector<string, kTypicalNbPrivateAccounts>;
 
   explicit APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd)
       : APIKeysProvider(PublicExchangeNames(), false, runMode) {}
@@ -38,7 +38,7 @@ class APIKeysProvider {
 
  private:
   using APIKeys = vector<APIKey>;
-  using APIKeysMap = std::map<std::string, APIKeys, std::less<>>;
+  using APIKeysMap = std::map<string, APIKeys, std::less<>>;
 
   static APIKeysMap ParseAPIKeys(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
                                  settings::RunMode runMode);

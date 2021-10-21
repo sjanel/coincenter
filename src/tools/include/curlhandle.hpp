@@ -1,11 +1,11 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <string_view>
 #include <utility>
 
 #include "cct_run_modes.hpp"
+#include "cct_string.hpp"
 #include "curloptions.hpp"
 
 namespace cct {
@@ -35,9 +35,9 @@ class CurlHandle {
   CurlHandle(CurlHandle &&o) noexcept;
   CurlHandle &operator=(CurlHandle &&o) noexcept;
 
-  std::string urlEncode(std::string_view url);
+  string urlEncode(std::string_view url);
 
-  std::string query(std::string_view url, const CurlOptions &opts);
+  string query(std::string_view url, const CurlOptions &opts);
 
   Clock::duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 

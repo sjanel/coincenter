@@ -1,10 +1,10 @@
 #pragma once
 
 #include <span>
-#include <string>
 
 #include "cachedresult.hpp"
 #include "cct_json.hpp"
+#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
 #include "tradeinfo.hpp"

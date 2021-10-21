@@ -2,7 +2,8 @@
 
 #include <chrono>
 #include <ctime>
-#include <string>
+
+#include "cct_string.hpp"
 
 namespace cct {
 namespace time {

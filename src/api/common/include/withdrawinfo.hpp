@@ -1,14 +1,14 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <string_view>
 
+#include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "wallet.hpp"
 
 namespace cct {
-using WithdrawId = std::string;
+using WithdrawId = string;
 using WithdrawIdView = std::string_view;
 
 namespace api {

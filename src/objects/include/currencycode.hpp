@@ -57,8 +57,6 @@ class CurrencyCode {
     return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0'));
   }
 
-  std::string toString() const { return std::string(str()); }
-
   /// Returns a 64 bits code
   constexpr uint64_t code() const {
     uint64_t ret = _data[6];
