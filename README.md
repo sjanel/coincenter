@@ -67,6 +67,14 @@ All suggestions to improve the project are welcome (should it be bug fixing, sup
 
 # Install
 
+## Use public docker image
+
+If you don't want to build `coincenter` locally, you can just download the public docker image, corresponding to the latest version of branch `main`.
+
+```
+docker run -t sjanel/coincenter ./coincenter -h
+```
+
 ## Pre-requisites
 
 You will need to install **OpenSSL** (min version 1.1.0), **cURL**, **cmake** and a **C++20** compiler on your system.
@@ -113,7 +121,7 @@ Simply launch the help command for more information
 ```
 coincenter --help
 ```
-**Warning :** you will need to install your API keys for some commands to work ([Configuration files](#configuration-files))
+**Warning :** you will need to provide your API keys for some commands to work ([Configuration files](#configuration-files))
 
 ## As a static library
 
