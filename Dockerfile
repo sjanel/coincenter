@@ -2,7 +2,7 @@
 FROM alpine:latest AS base-env
 
 # Install base dependencies (especially run ones)
-RUN apk update && apk upgrade && apk add gcc g++ libc-dev curl-dev bash
+RUN apk update && apk upgrade && apk add g++ libc-dev curl-dev
 
 # Set default directory for application
 WORKDIR /app

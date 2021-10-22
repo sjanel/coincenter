@@ -14,9 +14,9 @@ jobs:
         withtests: [0, 1]
 
     steps:
-    - name: Checkout repository code
-      uses: actions/checkout@v2
+      - name: Checkout repository code
+        uses: actions/checkout@v2
 
-    - name: Docker build
-      working-directory: ${{github.workspace}}
-      run: docker build --build-arg TEST=${{matrix.withtests}} -t coincenter .
+      - name: Docker build
+        working-directory: ${{github.workspace}}
+        run: docker build --build-arg TEST=${{matrix.withtests}} -t coincenter .
