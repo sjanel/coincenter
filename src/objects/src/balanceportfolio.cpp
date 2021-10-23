@@ -48,8 +48,8 @@ void BalancePortfolio::print(std::ostream &os) const {
       cols.emplace_back("Eq. (").append(balanceCurrencyCode.str()).push_back(')');
       VariadicTable<string, string, string> vt(cols);
       for (const auto &m : convertToSortedByAmountVector()) {
-        vt.addRow(m.amount.amountStr(), string(m.amount.currencyCode().str()),
-                  m.equi.isZero() ? "???" : m.equi.amountStr());
+        // Amounts impossible to convert have a zero value
+        vt.addRow(m.amount.amountStr(), string(m.amount.currencyCode().str()), m.equi.amountStr());
         totalSum += m.equi;
       }
       vt.print(os);

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.15)
 
-project(coincenter VERSION 2.1.0
+project(coincenter VERSION 3.0.0
                    DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
                    LANGUAGES CXX)
 
@@ -30,14 +30,18 @@ option(CCT_BUILD_EXEC_INSTEAD_OF_LIB "Build an executable instead of a static li
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 option(CCT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE_STR "Always validate a destination address for a withdraw (recommended)" ON)
 
-if (NOT DEFINED CCT_CONFIG_DIR)
-  set(CCT_CONFIG_DIR "${CMAKE_SOURCE_DIR}/config")
-endif()
+set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter")
 
-if(EXISTS "${CCT_CONFIG_DIR}/secret.json")
-  message(STATUS "Found secrets file '${CCT_CONFIG_DIR}/secret.json'")
+if (EXISTS ${CCT_DATA_DIR})
+  message(STATUS "Using Data directory ${CCT_DATA_DIR}") 
+  set(CCT_SECRET_PATH "${CCT_DATA_DIR}/secret/secret.json")
+  if(EXISTS ${CCT_SECRET_PATH})
+    message(STATUS "Found secret file '${CCT_SECRET_PATH}'")
+  else()
+    message(STATUS "No secrets file found")
+  endif()
 else()
-  message(STATUS "No secrets file found")
+  message(STATUS "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container") 
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -167,14 +171,8 @@ else()
   endif()
 endif()
 
-set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data")
-
-message(STATUS "Using Config directory ${CCT_CONFIG_DIR}")
-message(STATUS "Using Data directory ${CCT_DATA_DIR}")
-
 # Definition of project constants
-add_compile_definitions("CCT_CONFIG_PATH=\"${CCT_CONFIG_DIR}\"")
-add_compile_definitions("CCT_DATA_PATH=\"${CCT_DATA_DIR}\"")
+add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
 
 if (CCT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE_STR)

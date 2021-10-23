@@ -1,11 +1,11 @@
 #include "apikeysprovider.hpp"
 
+#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -63,7 +63,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(const PublicExchangeNa
   if (allExchangesWithoutSecrets) {
     log::info("Not loading private keys, using only public exchanges");
   } else {
-    json jsonData = OpenJsonFile(GetSecretFileName(runMode), FileNotFoundMode::kNoThrow, FileType::kConfig);
+    json jsonData = runMode == settings::RunMode::kProd ? kSecret.readJson() : kSecretTest.readJson();
     for (const auto& [platform, keyObj] : jsonData.items()) {
       if (std::find(exchangesWithoutSecrets.begin(), exchangesWithoutSecrets.end(), platform) !=
           exchangesWithoutSecrets.end()) {

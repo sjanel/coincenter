@@ -10,16 +10,6 @@ namespace cct {
 
 class Wallet {
  public:
-  /// File containing all validated external addresses.
-  /// It should be a json file with this format:
-  /// {
-  ///   "exchangeName1": {"BTC": "btcAddress", "XRP": "xrpAdress,xrpTag", "EOS": "eosAddress,eosTag"},
-  ///   "exchangeName2": {...}
-  /// }
-  /// In case crypto contains an additional "tag", "memo" or other, it will be placed after the ',' in the address
-  /// field.
-  static constexpr char kDepositAddressesFilename[] = ".depositaddresses.json";
-
   /// Build a wallet with all information.
   /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
   /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do

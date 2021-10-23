@@ -38,8 +38,7 @@ class FiatConverter {
 
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
-  /// @param loadFromFileCacheAtInit if 'true', load at construction the rates and times of a past program
-  explicit FiatConverter(Clock::duration ratesUpdateFrequency, bool loadFromFileCacheAtInit = true);
+  explicit FiatConverter(Clock::duration ratesUpdateFrequency);
 
   FiatConverter(const FiatConverter &) = delete;
   FiatConverter &operator=(const FiatConverter &) = delete;

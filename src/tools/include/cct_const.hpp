@@ -4,8 +4,7 @@
 #include <string_view>
 
 namespace cct {
-static constexpr char kDataPath[] = CCT_DATA_PATH;
-static constexpr char kConfigPath[] = CCT_CONFIG_PATH;
+static constexpr char kDataDir[] = CCT_DATA_DIR;
 static constexpr char kVersion[] = CCT_VERSION;
 
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};

@@ -1,16 +1,16 @@
 #include "coincenterinfo.hpp"
 
+#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 
 namespace {
 CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap() {
-  json jsonData = OpenJsonFile("currencyacronymtranslator.json", FileNotFoundMode::kThrow, FileType::kData);
+  json jsonData = kCurrencyAcronymsTranslator.readJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
@@ -20,7 +20,7 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
 }
 
 CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
-  json jsonData = OpenJsonFile("stablecoins.json", FileNotFoundMode::kThrow, FileType::kData);
+  json jsonData = kStableCoins.readJson();
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
@@ -30,8 +30,6 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
 }
 
 CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
-  constexpr char kExchangeConfigFileName[] = ".exchangeconfig.json";
-  json jsonData = OpenJsonFile(kExchangeConfigFileName, FileNotFoundMode::kNoThrow, FileType::kConfig);
   // clang-format off
   const json kDefaultConfig = R"(
   {
@@ -122,12 +120,13 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
   }
   )"_json;
   // clang-format on
+  json jsonData = kExchangeConfig.readJson();
   if (jsonData.empty()) {
     // Create a file with default values. User can then update them as he wishes.
-    log::warn("No file {}.json found. Creating a default one which can be updated freely at your convenience.",
-              kExchangeConfigFileName);
+    log::warn("No file {} found. Creating a default one which can be updated freely at your convenience.",
+              kExchangeConfig.name());
     jsonData = kDefaultConfig;
-    WriteJsonFile(kExchangeConfigFileName, jsonData, FileType::kConfig);
+    kExchangeConfig.write(jsonData);
   } else {
     bool updateFileNeeded = false;
     for (const auto& [exchangeName, v] : kDefaultConfig.items()) {
@@ -137,7 +136,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
       }
     }
     if (updateFileNeeded) {
-      WriteJsonFile(kExchangeConfigFileName, jsonData, FileType::kConfig);
+      kExchangeConfig.write(jsonData);
     }
   }
   CoincenterInfo::ExchangeInfoMap map;

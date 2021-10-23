@@ -2,18 +2,17 @@
 
 #include <cctype>
 
+#include "cct_allfiles.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_toupperlower.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 namespace api {
 namespace {
 constexpr char kUrlBase[] = "https://api.cryptowat.ch";
 constexpr char kUserAgent[] = "Cryptowatch C++ API Client";
-constexpr char kFiatFileName[] = ".fiatcache.json";
 
 string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   string method_url = kUrlBase;
@@ -42,7 +41,7 @@ CryptowatchAPI::CryptowatchAPI(settings::RunMode runMode, Clock::duration fiatsU
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(10), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
-    json data = OpenJsonFile(kFiatFileName, FileNotFoundMode::kNoThrow, FileType::kData);
+    json data = kFiatCache.readJson();
     if (!data.empty()) {
       int64_t timeepoch = data["timeepoch"];
       _lastUpdatedFiatsTime = TimePoint(std::chrono::seconds(timeepoch));
@@ -125,8 +124,7 @@ CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std
 }
 
 void CryptowatchAPI::updateCacheFile() const {
-  const FileType fileType = FileType::kData;
-  json data = OpenJsonFile(kFiatFileName, FileNotFoundMode::kNoThrow, fileType);
+  json data = kFiatCache.readJson();
   if (data.contains("timeepoch")) {
     int64_t lastTimeFileUpdated = data["timeepoch"];
     if (TimePoint(std::chrono::seconds(lastTimeFileUpdated)) > _lastUpdatedFiatsTime) {
@@ -139,7 +137,7 @@ void CryptowatchAPI::updateCacheFile() const {
   }
   data["timeepoch"] =
       std::chrono::duration_cast<std::chrono::seconds>(_lastUpdatedFiatsTime.time_since_epoch()).count();
-  WriteJsonFile(kFiatFileName, data, fileType);
+  kFiatCache.write(data);
 }
 }  // namespace api
 }  // namespace cct

@@ -15,7 +15,6 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "tradeoptions.hpp"
