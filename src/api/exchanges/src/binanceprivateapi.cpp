@@ -212,8 +212,8 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   const string assetsStr = m.assetsPairStr();
   const std::string_view assets(assetsStr);
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
-  const json result = PrivateQuery(_curlHandle, _apiKey, requestType, binancePublic._commonInfo.getBestBaseURL(),
-                                   "api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
+  json result = PrivateQuery(_curlHandle, _apiKey, requestType, binancePublic._commonInfo.getBestBaseURL(),
+                             "api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
   const std::string_view status = result["status"].get<std::string_view>();
   bool isClosed = false;
   bool queryClosedOrder = false;
@@ -226,15 +226,17 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
   }
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (queryClosedOrder) {
-    const int64_t timeStampOrder = result["time"].get<int64_t>();
-    const json tradesRes = PrivateQuery(
-        _curlHandle, _apiKey, CurlOptions::RequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-        "api/v3/myTrades", {{"symbol", assets}, {"startTime", timeStampOrder - 100L}});  // // -100 just to be sure
-    int64_t integralOrderId{};
+    CurlPostData myTradesOpts{{"symbol", assets}};
+    auto timeIt = result.find("time");
+    if (timeIt != result.end()) {
+      myTradesOpts.append("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
+    }
+    result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
+                          binancePublic._commonInfo.getBestBaseURL(), "api/v3/myTrades", myTradesOpts);
+    int64_t integralOrderId = 0;
     std::from_chars(orderId.data(), orderId.data() + orderId.size(), integralOrderId);
-    for (const json& tradeDetails : tradesRes) {
-      int64_t tradedOrderId = tradeDetails["orderId"].get<int64_t>();
-      if (tradedOrderId == integralOrderId) {
+    for (const json& tradeDetails : result) {
+      if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
         orderInfo.tradedAmounts += parseTrades(m, fromCurrencyCode, tradeDetails);
       }
     }
