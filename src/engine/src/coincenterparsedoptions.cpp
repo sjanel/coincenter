@@ -68,14 +68,17 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     noSecretsForAll = noSecretsExchanges.empty();
   }
 
-  if (!cmdLineOptions.trade.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.trade);
+  std::string_view tradeArgs = !cmdLineOptions.trade_multi.empty() ? cmdLineOptions.trade_multi : cmdLineOptions.trade;
+  if (!tradeArgs.empty()) {
+    StringOptionParser anyParser(tradeArgs);
     std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
         anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
 
-    tradeOptions = api::TradeOptions(
-        cmdLineOptions.trade_strategy, cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal,
-        cmdLineOptions.trade_timeout, cmdLineOptions.trade_emergency, cmdLineOptions.trade_updateprice);
+    api::TradeMode tradeMode = cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal;
+    api::TradeType tradeType =
+        cmdLineOptions.trade_multi.empty() ? api::TradeType::kSingleTrade : api::TradeType::kMultiTradePossible;
+    tradeOptions = api::TradeOptions(cmdLineOptions.trade_strategy, tradeMode, cmdLineOptions.trade_timeout,
+                                     cmdLineOptions.trade_emergency, cmdLineOptions.trade_updateprice, tradeType);
   }
 
   if (!cmdLineOptions.withdraw.empty()) {

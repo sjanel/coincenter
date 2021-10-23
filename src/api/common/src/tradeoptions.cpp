@@ -20,12 +20,14 @@ constexpr TradeStrategy StrategyFromStr(std::string_view strategyStr) {
 }  // namespace
 
 TradeOptions::TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Clock::duration dur,
-                           Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates)
+                           Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates,
+                           TradeType tradeType)
     : _maxTradeTime(dur),
       _emergencyBufferTime(emergencyBufferTime),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _strategy(StrategyFromStr(strategyStr)),
-      _tradeMode(tradeMode) {}
+      _tradeMode(tradeMode),
+      _tradeType(tradeType) {}
 
 std::string_view TradeOptions::strategyStr() const {
   switch (_strategy) {

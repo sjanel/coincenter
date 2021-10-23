@@ -29,17 +29,55 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
 }
 
 MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options) {
+  MonetaryAmount initialAmount = from;
+  log::info("{} trade {} -> {} on {}_{} requested", options.isMultiTradeAllowed() ? "Multi" : "Single", from.str(),
+            toCurrencyCode.str(), _exchangePublic.name(), keyName());
+  MonetaryAmount toAmt = options.isMultiTradeAllowed()
+                             ? multiTrade(from, toCurrencyCode, options)
+                             : singleTrade(from, toCurrencyCode, options,
+                                           _exchangePublic.retrieveMarket(from.currencyCode(), toCurrencyCode));
+  log::info("**** Traded {} into {} ****", (initialAmount - from).str(), toAmt.str());
+  return toAmt;
+}
+
+MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode toCurrency, const TradeOptions &options) {
+  MonetaryAmount initialAmount = from;
+  ExchangePublic::ConversionPath conversionPath =
+      _exchangePublic.findFastestConversionPath(from.currencyCode(), toCurrency);
+  if (conversionPath.empty()) {
+    log::error("Cannot trade {} into {} on {}", initialAmount.str(), toCurrency.str(), _exchangePublic.name());
+    return MonetaryAmount(0, toCurrency, 0);
+  }
+
+  log::info(options.str());
+  const int nbTrades = conversionPath.size();
+  MonetaryAmount avAmount = from;
+  for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
+    Market m = conversionPath[tradePos];
+    toCurrency = avAmount.currencyCode() == m.base() ? m.quote() : m.base();
+    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(), toCurrency.str());
+    MonetaryAmount &stepFrom = tradePos == 0 ? from : avAmount;
+    MonetaryAmount tradedTo = singleTrade(stepFrom, toCurrency, options, m);
+    avAmount = tradedTo;
+    if (tradedTo.isZero()) {
+      break;
+    }
+  }
+  return avAmount;
+}
+
+MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode toCurrency, const TradeOptions &options,
+                                            Market m) {
   using Clock = TradeOptions::Clock;
   using TimePoint = TradeOptions::TimePoint;
 
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrencyCode = from.currencyCode();
-  const Market m = _exchangePublic.retrieveMarket(fromCurrencyCode, toCurrencyCode);
 
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
 
-  TradeInfo tradeInfo(fromCurrencyCode, toCurrencyCode, m, options,
+  TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options,
                       std::to_string(static_cast<int32_t>(nbSecondsSinceEpoch)));
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.isTakerStrategy());
@@ -68,7 +106,7 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
   TimePoint lastPriceUpdateTime = Clock::now();
   MonetaryAmount lastPrice = price;
 
-  TradedAmounts totalTradedAmounts(fromCurrencyCode, toCurrencyCode);
+  TradedAmounts totalTradedAmounts(fromCurrencyCode, toCurrency);
   do {
     OrderInfo orderInfo = queryOrderInfo(orderId, tradeInfo);
     if (orderInfo.isClosed) {
@@ -121,7 +159,7 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
           price = _exchangePublic.computeAvgOrderPrice(m, remFrom, tradeInfo.options.isTakerStrategy());
-          log::warn("Reached emergency time, make a last taker order at price {}", price.str());
+          log::info("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();
           log::info("Limit price changed from {} to {}, update order", lastPrice.str(), price.str());

@@ -42,10 +42,11 @@ struct CoincenterCmdLineOptions {
   string balance_cur{CurrencyCode::kNeutral.str()};
 
   string trade;
+  string trade_multi;
   string trade_strategy{api::TradeOptions().strategyStr()};
-  Duration trade_timeout{api::TradeOptions::kDefaultTradeDuration};
-  Duration trade_emergency{api::TradeOptions::kDefaultEmergencyTime};
-  Duration trade_updateprice{api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates};
+  Duration trade_timeout{api::TradeOptions().maxTradeTime()};
+  Duration trade_emergency{api::TradeOptions().emergencyBufferTime()};
+  Duration trade_updateprice{api::TradeOptions().minTimeBetweenPriceUpdates()};
   bool trade_sim{api::TradeOptions().isSimulation()};
 
   string withdraw;
@@ -58,11 +59,11 @@ struct CoincenterCmdLineOptions {
 template <class OptValueType>
 CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser() {
   constexpr int64_t defaultTradeTimeout =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultTradeDuration).count();
+      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().maxTradeTime()).count();
   constexpr int64_t emergencyBufferTime =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultEmergencyTime).count();
+      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().emergencyBufferTime()).count();
   constexpr int64_t minUpdatePriceTime =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates).count();
+      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().minTimeBetweenPriceUpdates()).count();
   constexpr bool isSimulationModeByDefault = api::TradeOptions().isSimulation();
 
   // clang-format off
@@ -108,12 +109,18 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                 "converted to given currency, plus a total summary in this currency"}, 
                                                                 &OptValueType::balance_cur},
 
-       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange "
+       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange.\n"
                                                                    "Order will be placed at limit price by default"}, &OptValueType::trade},
+       {{{"Trade", 4}, "--singletrade", "<amt cur1-cur2,exchange>", "Synonym for '--trade'"}, &OptValueType::trade},
+       {{{"Trade", 4}, "--multitrade", "<amt cur1-cur2,exchange>", "Multi trade from given start amount on an exchange.\n"
+                                                                   "Multi trade will first compute fastest path from cur1 to cur2 and "
+                                                                   "if possible reach cur2 by launching multiple single trades.\n"
+                                                                   "Options are same than for single trade, applied to each step trade.\n"
+                                                                   "If multi trade is used in conjonction with single trade, the latter is ignored."}, &OptValueType::trade_multi},
        {{{"Trade", 4}, "--trade-strategy", "<maker|taker|adapt>", "Customize the strategy of the trade\n"
                                                                   " - 'maker': order placed at limit price (default), continuously "
                                                                   "adjusted to limit price\n"
-                                                                  " - 'taker': order placed at market price should be matched directly\n"
+                                                                  " - 'taker': order placed at market price (should be matched directly)\n"
                                                                   " - 'adapt': same as maker, except that order will be updated"
                                                                   " at market price before the timeout to make it eventually completely matched. "
                                                                   "Useful for exchanges proposing cheaper maker than taker fees."}, 

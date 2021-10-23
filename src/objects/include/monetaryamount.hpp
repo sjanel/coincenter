@@ -28,6 +28,19 @@ class MonetaryAmount {
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
 
+  /// Constructs a MonetaryAmount representing the integer 'amount' with a neutral currency
+  template <class IntegralType, typename std::enable_if_t<std::is_integral_v<IntegralType>, bool> = true>
+  constexpr explicit MonetaryAmount(IntegralType amount) noexcept : _amount(amount), _nbDecimals(0) {}
+
+  /// Constructs a MonetaryAmount representing the integer 'amount' with a currency
+  template <class IntegralType, typename std::enable_if_t<std::is_integral_v<IntegralType>, bool> = true>
+  constexpr explicit MonetaryAmount(IntegralType amount, CurrencyCode currencyCode) noexcept
+      : _amount(amount), _currencyCode(currencyCode), _nbDecimals(0) {}
+
+  /// Construct a new MonetaryAmount from a double.
+  /// Precision is calculated automatically.
+  explicit MonetaryAmount(double amount, CurrencyCode currencyCode = CurrencyCode());
+
   /// Constructs a new MonetaryAmount from an integral representation which is already multiplied by given
   /// number of decimals
   constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
@@ -50,10 +63,6 @@ class MonetaryAmount {
   /// Use this constructor to change currency of an existing MonetaryAmount.
   constexpr MonetaryAmount(MonetaryAmount o, CurrencyCode newCurrencyCode)
       : _amount(o._amount), _currencyCode(newCurrencyCode), _nbDecimals(o._nbDecimals) {}
-
-  /// Construct a new MonetaryAmount from a double.
-  /// Precision is calculated automatically.
-  MonetaryAmount(double amount, CurrencyCode currencyCode = CurrencyCode());
 
   /// Get an integral representation of this MonetaryAmount multiplied by given number of decimals.
   /// If an overflow would occur for the resulting amount, return std::nullopt

@@ -117,6 +117,10 @@ class ExchangePrivate : public ExchangeBase {
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                   const SentWithdrawInfo &sentWithdrawInfo) = 0;
 
+  MonetaryAmount singleTrade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
+
+  MonetaryAmount multiTrade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options);
+
   ExchangePublic &_exchangePublic;
   const CoincenterInfo &_config;
   const APIKey &_apiKey;

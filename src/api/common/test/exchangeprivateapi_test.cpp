@@ -35,7 +35,8 @@ class ExchangePrivateTest : public ::testing::Test {
       : cryptowatchAPI(coincenterInfo),
         fiatConverter(coincenterInfo.dataDir()),
         exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
-        exchangePrivate(exchangePublic, coincenterInfo, APIKey("test", "testuser", "", "", "")) {}
+        key("test", "testuser", "", "", ""),
+        exchangePrivate(exchangePublic, coincenterInfo, key) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
@@ -44,6 +45,7 @@ class ExchangePrivateTest : public ::testing::Test {
   CryptowatchAPI cryptowatchAPI;
   FiatConverter fiatConverter;
   MockExchangePublic exchangePublic;
+  APIKey key;
   MockExchangePrivate exchangePrivate;
 
   Market m{"eth", "eur"};
@@ -53,7 +55,6 @@ class ExchangePrivateTest : public ::testing::Test {
 };
 
 namespace {
-using Currencies = ExchangePublic::Currencies;
 using MarketSet = ExchangePublic::MarketSet;
 }  // namespace
 
@@ -74,7 +75,7 @@ inline bool operator==(const PlaceOrderInfo &lhs, const PlaceOrderInfo &rhs) {
 }
 
 TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
-  MonetaryAmount from("10", m.base());
+  MonetaryAmount from(10, m.base());
   MonetaryAmount vol(from);
   MonetaryAmount pri(bidPrice);
 
@@ -93,10 +94,10 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
 }
 
 TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
-  MonetaryAmount from("5000", m.quote());
+  MonetaryAmount from(5000, m.quote());
   MonetaryAmount pri(*marketOrderBook.computeAvgPriceForTakerAmount(from));
-  MonetaryAmount vol(from / pri, m.base());
 
+  MonetaryAmount vol(from / pri, m.base());
   TradeOptions tradeOptions(TradeStrategy::kTaker);
   TradeInfo tradeInfo(m.quote(), m.base(), m, tradeOptions, "MyTradeRef");
 

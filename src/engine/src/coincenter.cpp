@@ -139,13 +139,8 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.startTradeAmount.isZero()) {
-    log::info("Trade {} into {} on {} requested", opts.startTradeAmount.str(), opts.toTradeCurrency.str(),
-              opts.tradePrivateExchangeName.str());
-    log::info(opts.tradeOptions.str());
     MonetaryAmount startAmount = opts.startTradeAmount;
-    MonetaryAmount toAmount =
-        trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
-    log::info("**** Traded {} into {} ****", (opts.startTradeAmount - startAmount).str(), toAmount.str());
+    trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
   }
 
   if (!opts.amountToWithdraw.isZero()) {
@@ -301,15 +296,15 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
   VariadicTable<std::string_view, string> vt({"Exchange", "Fastest conversion path"});
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     string conversionPathStr;
-    api::ExchangePublic::Currencies conversionPath = e->findFastestConversionPath(m);
+    api::ExchangePublic::ConversionPath conversionPath = e->findFastestConversionPath(m.base(), m.quote());
     if (conversionPath.empty()) {
       conversionPathStr = "--- Impossible ---";
     } else {
-      for (CurrencyCode currencyCode : conversionPath) {
+      for (Market m : conversionPath) {
         if (!conversionPathStr.empty()) {
-          conversionPathStr.push_back('-');
+          conversionPathStr.push_back(',');
         }
-        conversionPathStr.append(currencyCode.str());
+        conversionPathStr.append(m.assetsPairStr('-'));
       }
     }
     vt.addRow(e->name(), std::move(conversionPathStr));
