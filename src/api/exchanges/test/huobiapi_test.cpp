@@ -32,7 +32,7 @@ void PrivateTest(HuobiPrivate &huobiPrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(huobiPrivate.queryAccountBalance());
   EXPECT_NO_THROW(huobiPrivate.queryDepositWallet("XRP"));
-  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
+  TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.1ETH");
   EXPECT_NO_THROW(huobiPrivate.trade(smallFrom, "BTC", tradeOptions));
   EXPECT_EQ(smallFrom, MonetaryAmount("0ETH"));

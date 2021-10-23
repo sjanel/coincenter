@@ -43,108 +43,105 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
                                Clock::duration fiatsUpdateFrequency, bool loadFromFileCacheAtInit)
     : _config(config),
       _curlHandle(Clock::duration::zero(), runMode),
-      _fiatsUpdateFrequency(fiatsUpdateFrequency),
+      _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), _curlHandle),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
-      _allPricesCache(CachedResultOptions(std::chrono::seconds(10), _cachedResultVault), _curlHandle) {
+      _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
     json data = GetFiatCacheFile(_config.dataDir()).readJson();
     if (!data.empty()) {
-      int64_t timeepoch = data["timeepoch"];
-      _lastUpdatedFiatsTime = TimePoint(std::chrono::seconds(timeepoch));
-      const auto& fiats = data["fiats"];
-      _fiats.reserve(static_cast<Fiats::size_type>(fiats.size()));
-      for (auto it = fiats.begin(), endIt = fiats.end(); it != endIt; ++it) {
+      const int64_t timeepoch = data["timeepoch"].get<int64_t>();
+      const auto& fiatsFile = data["fiats"];
+      Fiats fiats;
+      fiats.reserve(static_cast<Fiats::size_type>(fiatsFile.size()));
+      for (auto it = fiatsFile.begin(), endIt = fiatsFile.end(); it != endIt; ++it) {
         log::debug("Storing fiat {} from cache file", it->get<std::string_view>());
-        _fiats.emplace(it->get<std::string_view>());
+        fiats.emplace(it->get<std::string_view>());
       }
-      log::info("Stored {} fiats from cache file", _fiats.size());
+      log::info("Stored {} fiats from cache file", fiats.size());
+      _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeepoch)));
     }
   }
 }
 
 std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, Market m) {
-  const PricesPerMarketMap& allPrices = _allPricesCache.get(exchangeName);
-  auto it = allPrices.find(m.assetsPairStr());
-  if (it == allPrices.end()) {
-    it = allPrices.find(m.reverse().assetsPairStr());
-    if (it == allPrices.end()) {
-      return std::optional<double>();
+  string marketPrefix("market:");
+  marketPrefix.append(exchangeName);
+  marketPrefix.push_back(':');
+  // {"result":{"market:kraken:ethdai":1493.844,"market:kraken:etheur":1238.14, ...},
+  // "allowance":{"cost":0.015,"remaining":9.943,"upgrade":"For unlimited API access..."}}
+
+  for (int marketPos = 0; marketPos < 2; ++marketPos) {
+    string lowerStrMarket = m.assetsPairStr();
+    std::transform(lowerStrMarket.begin(), lowerStrMarket.end(), lowerStrMarket.begin(),
+                   [](char c) { return tolower(c); });
+    string mStr = marketPrefix;
+    mStr.append(lowerStrMarket);
+
+    const json& result = _allPricesCache.get();
+    auto foundIt = result.find(mStr);
+    if (foundIt != result.end()) {
+      const double p = static_cast<double>(*foundIt);
+      return marketPos == 0 ? p : (1 / p);
     }
-    return static_cast<double>(1) / it->second;
+    m = m.reverse();  // Second try with reversed market
   }
-  return it->second;
+  return std::nullopt;
 }
 
-bool CryptowatchAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) {
-  if (_fiats.empty() || _lastUpdatedFiatsTime + _fiatsUpdateFrequency < Clock::now()) {
-    queryFiats();
-  }
-  return _fiats.contains(currencyCode);
-}
-
-void CryptowatchAPI::queryFiats() {
+CryptowatchAPI::Fiats CryptowatchAPI::FiatsFunc::operator()() {
   json dataJson = json::parse(Query(_curlHandle, "assets"));
   const json& result = CollectResults(dataJson);
-  _fiats.clear();
+  Fiats fiats;
   for (const json& assetDetails : result) {
-    if (assetDetails.contains("fiat") && assetDetails["fiat"]) {
+    auto foundIt = assetDetails.find("fiat");
+    if (foundIt != assetDetails.end() && foundIt->get<bool>()) {
       CurrencyCode fiatCode(assetDetails["symbol"].get<std::string_view>());
-      _fiats.emplace(fiatCode);
       log::debug("Storing fiat {}", fiatCode.str());
+      fiats.insert(std::move(fiatCode));
     }
   }
-  log::info("Stored {} fiats", _fiats.size());
-  _lastUpdatedFiatsTime = Clock::now();
+  log::info("Stored {} fiats", fiats.size());
+  return fiats;
 }
 
-CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc ::operator()() {
+CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc::operator()() {
   SupportedExchanges ret;
   json dataJson = json::parse(Query(_curlHandle, "exchanges"));
   const json& result = CollectResults(dataJson);
   for (const json& exchange : result) {
-    string exchangeNameLowerCase = exchange["symbol"];
+    std::string_view exchangeNameLowerCase = exchange["symbol"].get<std::string_view>();
     log::debug("{} is supported by Cryptowatch", exchangeNameLowerCase);
-    ret.insert(std::move(exchangeNameLowerCase));
+    ret.emplace(exchangeNameLowerCase);
   }
   log::info("{} exchanges supported by Cryptowatch", ret.size());
   return ret;
 }
 
-CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std::string_view exchangeName) {
+json CryptowatchAPI::AllPricesFunc::operator()() {
   json dataJson = json::parse(Query(_curlHandle, "markets/prices"));
-  const json& result = CollectResults(dataJson);
-  string marketPrefix = "market:" + string(exchangeName) + ":";
-  size_t marketPrefixLen = marketPrefix.size();
-  // {"result":{"market:kraken:ethdai":1493.844,"market:kraken:etheur":1238.14, ...},
-  // "allowance":{"cost":0.015,"remaining":9.943,"upgrade":"For unlimited API access..."}}
-  PricesPerMarketMap ret;
-  for (const auto& [key, price] : result.items()) {
-    if (key.starts_with(marketPrefix)) {
-      string marketStr = key.substr(marketPrefixLen);
-      std::transform(marketStr.begin(), marketStr.end(), marketStr.begin(), [](char c) { return toupper(c); });
-      ret.insert_or_assign(std::move(marketStr), static_cast<double>(price));
-    }
-  }
-  log::debug("Retrieved {} prices from Cryptowatch all prices call", ret.size());
-  return ret;
+  return CollectResults(dataJson);
 }
 
 void CryptowatchAPI::updateCacheFile() const {
   File fiatsCacheFile = GetFiatCacheFile(_config.dataDir());
   json data = fiatsCacheFile.readJson();
-  if (data.contains("timeepoch")) {
-    int64_t lastTimeFileUpdated = data["timeepoch"];
-    if (TimePoint(std::chrono::seconds(lastTimeFileUpdated)) > _lastUpdatedFiatsTime) {
-      return;  // No update, file data is more up to date than our data
+  auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
+  auto timeEpochIt = data.find("timeepoch");
+  if (timeEpochIt != data.end()) {
+    int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
+    if (TimePoint(std::chrono::seconds(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
+      return;  // No update
     }
   }
   data.clear();
-  for (CurrencyCode fiatCode : _fiats) {
-    data["fiats"].emplace_back(fiatCode.str());
+  if (fiatsPtrLastUpdatedTimePair.first) {
+    for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
+      data["fiats"].emplace_back(fiatCode.str());
+    }
+    data["timeepoch"] =
+        std::chrono::duration_cast<std::chrono::seconds>(fiatsPtrLastUpdatedTimePair.second.time_since_epoch()).count();
+    fiatsCacheFile.write(data);
   }
-  data["timeepoch"] =
-      std::chrono::duration_cast<std::chrono::seconds>(_lastUpdatedFiatsTime.time_since_epoch()).count();
-  fiatsCacheFile.write(data);
 }
 }  // namespace api
 }  // namespace cct

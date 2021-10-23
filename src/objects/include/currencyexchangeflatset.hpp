@@ -22,6 +22,9 @@ class CurrencyExchangeFlatSet {
   using const_iterator = SetType::const_iterator;
   using size_type = SetType::size_type;
 
+  const CurrencyExchange &front() const { return _set.front(); }
+  const CurrencyExchange &back() const { return _set.back(); }
+
   const_iterator begin() const noexcept { return _set.begin(); }
   const_iterator end() const noexcept { return _set.end(); }
   const_iterator cbegin() const noexcept { return _set.begin(); }

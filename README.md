@@ -33,7 +33,9 @@ Supported exchanges are:
 | Kucoin   |  [<img src="./resources/kucoinlogo.svg" width="150">](https://www.kucoin.com/)  |
 | Upbit    |   [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)   |
  
- *Table of Contents*
+<details><summary>Sections</summary>
+<p>
+
 - [coincenter](#coincenter)
 - [About](#about)
 - [Installation](#installation)
@@ -59,6 +61,7 @@ Supported exchanges are:
 - [Usage](#usage)
   - [Balance](#balance)
   - [Simple Trade](#simple-trade)
+  - [Multi Trade](#multi-trade)
     - [Trade simulation](#trade-simulation)
   - [Check markets order book](#check-markets-order-book)
   - [Withdraw coin](#withdraw-coin)
@@ -71,6 +74,9 @@ Supported exchanges are:
     - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
     - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
     - [Prints last price of Cardano in Bitcoin for all exchanges supporting it](#prints-last-price-of-cardano-in-bitcoin-for-all-exchanges-supporting-it)
+
+</p>
+</details>
 
 # About
 
@@ -362,7 +368,8 @@ coincenter --balance kraken,bithumb --balance-cur eur
 
 ## Simple Trade
 
-It is possible to make a simple trade on one market / exchange according to different strategies.
+A simple trade per market / exchange can be done in a user friendly way supporting 3 parameterized strategies.
+It is 'Simple' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange.
 Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is sufficient. When unnecessary, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
 
 Possible strategies:
@@ -377,9 +384,13 @@ Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order wil
 coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
 ```
 
+## Multi Trade
+
+If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC* market and have *AAA-BBB* and *BBB-CCC*, then it's possible with a multi trade by changing `--trade` into `--multitrade`. Options are the same than for a simple trade. `coincenter` starts by evaluating the shortest conversion path to reach *CCC* from *AAA* and then applies the single trades in the correct order to its final goal.
+
 ### Trade simulation
 
-Some exchanges (Kraken and Binance for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `coincenter` thanks to `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
+Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
 ## Check markets order book
 

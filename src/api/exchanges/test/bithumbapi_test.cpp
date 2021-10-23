@@ -53,7 +53,7 @@ void PrivateTest(BithumbPrivate &bithumbPrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(bithumbPrivate.queryAccountBalance());
   EXPECT_FALSE(bithumbPrivate.queryDepositWallet("ETH").hasDestinationTag());
-  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
+  TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("13.567XRP");
   EXPECT_NO_THROW(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions));
   MonetaryAmount bigFrom("135670067.1234KRW");

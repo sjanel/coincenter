@@ -89,8 +89,10 @@ class Coincenter {
   BalancePortfolio getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                               CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
-  /// Single trade from 'startAmount' into 'toCurrency', on exchange named 'exchangeName'.
-  /// Options should be wisely chosen here to avoid mistakes.
+  /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency conversion
+  /// path and will launch several 'single' trades to reach that final goal. Example:
+  ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
+  ///    markets.
   MonetaryAmount trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
                        const PrivateExchangeName &privateExchangeName, const api::TradeOptions &tradeOptions);
 

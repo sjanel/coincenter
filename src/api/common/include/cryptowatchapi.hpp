@@ -40,7 +40,7 @@ class CryptowatchAPI : public ExchangeBase {
   /// Tells whether given currency code is a fiat currency or not.
   /// Fiat currencies are traditionnal currencies, such as EUR, USD, GBP, KRW, etc.
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
-  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode);
+  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return _fiatsCache.get().contains(currencyCode); }
 
   void updateCacheFile() const override;
 
@@ -62,19 +62,24 @@ class CryptowatchAPI : public ExchangeBase {
   struct AllPricesFunc {
     explicit AllPricesFunc(CurlHandle &curlHandle) : _curlHandle(curlHandle) {}
 
-    PricesPerMarketMap operator()(std::string_view exchangeName);
+    json operator()();
 
     CurlHandle &_curlHandle;
   };
 
-  void queryFiats();
+  struct FiatsFunc {
+    explicit FiatsFunc(CurlHandle &curlHandle) : _curlHandle(curlHandle) {}
+
+    Fiats operator()();
+
+    CurlHandle &_curlHandle;
+  };
+
   const CoincenterInfo &_config;
   CurlHandle _curlHandle;
-  Fiats _fiats;
-  TimePoint _lastUpdatedFiatsTime;
-  Clock::duration _fiatsUpdateFrequency;
+  CachedResult<FiatsFunc> _fiatsCache;
   CachedResult<SupportedExchangesFunc> _supportedExchanges;
-  CachedResult<AllPricesFunc, string> _allPricesCache;
+  CachedResult<AllPricesFunc> _allPricesCache;
 };
 }  // namespace api
 }  // namespace cct

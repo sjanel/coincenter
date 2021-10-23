@@ -31,14 +31,20 @@ void PublicTest(BinancePublic &binancePublic) {
 void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
-  EXPECT_NO_THROW(binancePrivate.queryDepositWallet("XLM"));
-  TradeOptions tradeOptions(TradeStrategy::kMaker, TradeMode::kSimulation, std::chrono::seconds(15));
-  MonetaryAmount smallFrom("13.567ADA");
-  EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));
+  auto currencies = binancePrivate.queryTradableCurrencies();
+  EXPECT_FALSE(currencies.empty());
+  EXPECT_NO_THROW(binancePrivate.queryDepositWallet(currencies.front().standardCode()));
+  TradeOptions tradeOptions(TradeMode::kSimulation);
+  if (currencies.contains(CurrencyCode("BNB"))) {
+    MonetaryAmount smallFrom("13.567ADA");
+    EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));
+  }
   MonetaryAmount bigFrom("13567.1234BNB");
-  EXPECT_NO_THROW(binancePrivate.trade(bigFrom, "ADA", tradeOptions));
+  EXPECT_NO_THROW(binancePrivate.trade(bigFrom, currencies.back().standardCode(), tradeOptions));
   EXPECT_LT(bigFrom, MonetaryAmount("13567.1234BNB"));
-  EXPECT_EQ(binancePrivate.queryWithdrawalFee("ETH"), binancePublic.queryWithdrawalFee("ETH"));
+
+  EXPECT_EQ(binancePrivate.queryWithdrawalFee(currencies.front().standardCode()),
+            binancePublic.queryWithdrawalFee(currencies.front().standardCode()));
 }
 }  // namespace
 

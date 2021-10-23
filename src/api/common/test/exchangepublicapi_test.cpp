@@ -27,7 +27,7 @@ class ExchangePublicTest : public ::testing::Test {
 };
 
 namespace {
-using Currencies = ExchangePublic::Currencies;
+using ConversionPath = ExchangePublic::ConversionPath;
 using MarketSet = ExchangePublic::MarketSet;
 }  // namespace
 
@@ -35,10 +35,13 @@ TEST_F(ExchangePublicTest, FindFastestConversionPath) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets())
       .Times(4)
       .WillRepeatedly(::testing::Return(MarketSet{{"BTC", "EUR"}, {"XLM", "EUR"}, {"ETH", "EUR"}, {"ETH", "BTC"}}));
-  EXPECT_EQ(exchangePublic.findFastestConversionPath(Market("BTC", "XLM")), Currencies({"BTC", "EUR", "XLM"}));
-  EXPECT_EQ(exchangePublic.findFastestConversionPath(Market("XLM", "ETH")), Currencies({"XLM", "EUR", "ETH"}));
-  EXPECT_EQ(exchangePublic.findFastestConversionPath(Market("ETH", "KRW")), Currencies({"ETH", "EUR", "KRW"}));
-  EXPECT_EQ(exchangePublic.findFastestConversionPath(Market("EOS", "KRW")), Currencies());
+  EXPECT_EQ(exchangePublic.findFastestConversionPath("BTC", "XLM"),
+            ConversionPath({Market{"BTC", "EUR"}, Market{"XLM", "EUR"}}));
+  EXPECT_EQ(exchangePublic.findFastestConversionPath("XLM", "ETH"),
+            ConversionPath({Market{"XLM", "EUR"}, Market{"ETH", "EUR"}}));
+  EXPECT_EQ(exchangePublic.findFastestConversionPath("ETH", "KRW"),
+            ConversionPath({Market{"ETH", "EUR"}, Market{"EUR", "KRW"}}));
+  EXPECT_EQ(exchangePublic.findFastestConversionPath("EOS", "KRW"), ConversionPath());
 }
 
 TEST_F(ExchangePublicTest, RetrieveMarket) {

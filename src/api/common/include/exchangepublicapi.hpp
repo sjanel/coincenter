@@ -83,12 +83,14 @@ class ExchangePublic : public ExchangeBase {
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
-  using Currencies = SmallVector<CurrencyCode, 4>;
+  using ConversionPath = SmallVector<Market, 3>;
 
   /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
-  /// of 'm.base()' towards 'm.quote()' currency code
-  /// @return ordered list of currency code, or empty list if conversion is not possible
-  Currencies findFastestConversionPath(Market conversionMarket, bool considerStableCoinsAsFiats = false);
+  /// of 'fromCurrencyCode' to 'toCurrencyCode'
+  /// @return ordered list of Market (in the order in which they are defined in the exchange),
+  ///         or empty list if conversion is not possible
+  ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+                                           bool considerStableCoinsAsFiats = false);
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 

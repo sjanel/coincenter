@@ -18,7 +18,7 @@ struct TradeInfo {
   CurrencyCode toCurrencyCode;
   Market m;
   TradeOptions options;
-  string userRef;  // Only used for Kraken, used to group orders queries context
+  string userRef;  // Used by Kraken for instance, used to group orders queries context
 };
 
 struct TradedAmounts {
