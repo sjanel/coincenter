@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_allfiles.hpp"
 #include "cct_json.hpp"
 #include "curlhandle.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 
@@ -67,23 +67,31 @@ string CurlHandle::query(std::string_view url, const CurlOptions &) {
 
 CurlHandle::~CurlHandle() {}
 
-TEST(FiatConverterTest, DirectConversion) {
-  FiatConverter converter(std::chrono::milliseconds(1), false);
-  double amount = 10;
+class FiatConverterTest : public ::testing::Test {
+ protected:
+  FiatConverterTest() : converter(std::chrono::milliseconds(1)) {}
+
+  virtual void SetUp() {}
+  virtual void TearDown() {}
+
+  FiatConverter converter;
+};
+
+TEST_F(FiatConverterTest, DirectConversion) {
+  const double amount = 10;
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "KRW"), amount));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "KRW"), amount * kKRW));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "USD"), amount * kUSD));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "GBP"), amount * kGBP));
-  EXPECT_ANY_THROW(converter.convert(amount, "EUR", "SUSHI"));
+  EXPECT_THROW(converter.convert(amount, "EUR", "SUSHI"), exception);
 }
 
-TEST(FiatConverterTest, DoubleConversion) {
-  FiatConverter converter(std::chrono::milliseconds(1), false);
-  double amount = 20'000'000;
+TEST_F(FiatConverterTest, DoubleConversion) {
+  const double amount = 20'000'000;
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "EUR"), amount / kKRW));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "USD"), (amount / kKRW) * kUSD));
   EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "GBP", "USD"), (amount / kGBP) * kUSD));
-  EXPECT_ANY_THROW(converter.convert(amount, "SUSHI", "EUR"));
+  EXPECT_THROW(converter.convert(amount, "SUSHI", "EUR"), exception);
 }
 
 }  // namespace cct

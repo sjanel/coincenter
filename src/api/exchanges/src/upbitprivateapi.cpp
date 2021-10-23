@@ -16,7 +16,6 @@
 #include "cct_nonce.hpp"
 #include "cct_toupperlower.hpp"
 #include "coincenterinfo.hpp"
-#include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "tradeoptions.hpp"

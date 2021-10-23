@@ -118,7 +118,7 @@ class CommandLineOptionsParser : private Opts {
         stream << std::endl << ' ' << currentGroup << std::endl;
       }
       string firstRowsStr(opt.fullName());
-      std::string_view shortName = opt.shortName();
+      string shortName = opt.shortName();
       if (!shortName.empty()) {
         firstRowsStr.push_back(',');
         firstRowsStr.push_back(' ');

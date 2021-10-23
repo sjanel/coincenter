@@ -4,19 +4,17 @@
 #include <fstream>
 #include <unordered_map>
 
+#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 namespace api {
 namespace {
-
-constexpr char kKrakenWithdrawInfoFile[] = ".krakenwithdrawinfo.json";
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   string method_url = KrakenPublic::kUrlBase;
@@ -94,7 +92,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
   // To save queries to Kraken site, let's check if there is recent cached data
-  json data = OpenJsonFile(kKrakenWithdrawInfoFile, FileNotFoundMode::kNoThrow, FileType::kData);
+  json data = kKrakenWithdrawInfo.readJson();
   if (!data.empty()) {
     using Clock = std::chrono::high_resolution_clock;
     using TimePoint = std::chrono::time_point<Clock>;
@@ -135,15 +133,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
   if (withdrawalFeesCsv.empty()) {
     log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
-    log::warn("Defaulted to hardcoded provided CSV file.");
-    string filePath(kDataPath);
-    filePath.push_back('/');
-    filePath.append(".krakenwithdrawalfees.csv");
-    std::ifstream file(filePath);
-    if (!file) {
-      throw exception("Unable to open " + filePath + " for reading");
-    }
-    withdrawalFeesCsv = string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    log::warn("Defaulted to hardcoded provided CSV file");
+    withdrawalFeesCsv = kKrakenWithdrawalFees.read();
   }
 
   std::size_t assetPos = std::string_view::npos;
@@ -448,7 +439,7 @@ void KrakenPublic::updateCacheFile() const {
       data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
       data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
     }
-    WriteJsonFile(kKrakenWithdrawInfoFile, data, FileType::kData);
+    kKrakenWithdrawInfo.write(data);
   }
 }
 

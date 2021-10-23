@@ -20,21 +20,26 @@ Supported exchanges are:
 | Bithumb  | [<img src="./resources/bithumblogo.svg" width="55">](https://www.bithumb.com/)  |
 | Huobi    |   [<img src="./resources/huobilogo.svg" width="160">](https://www.huobi.com/)   |
 | Kraken   |  [<img src="./resources/krakenlogo.svg" width="90">](https://www.kraken.com/)   |
-| Kucoin   |  [<img src="./resources/kucoinlogo.svg" width="150">](https://www.kucoin.com/)   |
+| Kucoin   |  [<img src="./resources/kucoinlogo.svg" width="150">](https://www.kucoin.com/)  |
 | Upbit    |   [<img src="./resources/upbitlogo.svg" width="135">](https://www.upbit.com/)   |
  
  *Table of Contents*
 - [coincenter](#coincenter)
 - [About](#about)
 - [Install](#install)
+  - [Use public docker image](#use-public-docker-image)
   - [Pre-requisites](#pre-requisites)
     - [Linux](#linux)
+      - [Debian / Ubuntu](#debian--ubuntu)
+      - [Alpine](#alpine)
     - [Windows](#windows)
   - [As an executable (CLI tool)](#as-an-executable-cli-tool)
   - [As a static library](#as-a-static-library)
   - [Build](#build)
     - [From source](#from-source)
     - [From Docker](#from-docker)
+      - [Build](#build-1)
+      - [Run](#run)
 - [Tests](#tests)
 - [Usage](#usage)
   - [Balance](#balance)
@@ -42,7 +47,7 @@ Supported exchanges are:
     - [Trade simulation](#trade-simulation)
   - [Check markets order book](#check-markets-order-book)
   - [Withdraw coin](#withdraw-coin)
-- [Configuration files](#configuration-files)
+- [Data files](#data-files)
   - [Secrets](#secrets)
   - [Exchange config](#exchange-config)
 - [Other examples](#other-examples)
@@ -72,7 +77,15 @@ All suggestions to improve the project are welcome (should it be bug fixing, sup
 If you don't want to build `coincenter` locally, you can just download the public docker image, corresponding to the latest version of branch `main`.
 
 ```
-docker run -t sjanel/coincenter ./coincenter -h
+docker run -t sjanel/coincenter -h
+```
+
+Of course, docker image does not contain any secrets (nor needed data and config directories).
+
+To bind your 'data' directory from host to the docker container, you can use `--mount` option:
+
+```
+docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data sjanel/coincenter
 ```
 
 ## Pre-requisites
@@ -84,14 +97,14 @@ You will need to install **OpenSSL** (min version 1.1.0), **cURL**, **cmake** an
 #### Debian / Ubuntu
 
 ```
-sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-10 gcc-10
+sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-10
 ```
 
 #### Alpine
 
 With `ninja` generator for instance:
 ```
-sudo apk update && sudo apk upgrade && sudo apk add gcc g++ libc-dev curl-dev bash cmake ninja git linux-headers
+sudo apk update && sudo apk upgrade && sudo apk add g++ libc-dev curl-dev cmake ninja git linux-headers
 ```
 
 You can refer to the provided `Dockerfile` for more information.
@@ -168,7 +181,9 @@ On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studi
 
 ### From Docker
 
-You can ship `coincenter` in a **Docker** image. It uses **Alpine** Linux distribution as base and multi stage build to reduce the image size.
+An always up to date **Docker** image is hosted in the public **Docker hub** registry with the name *sjanel/coincenter*, corresponding to latest successful build of `main` branch by the CI.
+
+You can create your own **Docker** image of `coincenter`. It uses **Alpine** Linux distribution as base and multi stage build to reduce the image size.
 Build options (all optional):
 
 CMake build mode
@@ -183,13 +198,13 @@ Activate Address Sanitizer
 #### Build
 
 ```
-docker build --build-arg BUILD_MODE=Release -t coincenter .
+docker build --build-arg BUILD_MODE=Release -t local-coincenter .
 ```
 
 #### Run
 
 ```
-docker run -ti -e "TERM=xterm-256color" coincenter:latest --help
+docker run -ti -e "TERM=xterm-256color" local-coincenter --help
 ```
 
 # Tests
@@ -250,22 +265,25 @@ Some exchanges require that external addresses are validated prior to their usag
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
  - External address is not taken as an input parameter, by instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
- - Then retrieved deposit address is validated in `config/.depositaddresses.json` which serves as a *postfolio* of trusted addresses
+ - Then retrieved deposit address is validated in `config/depositaddresses.json` which serves as a *portfolio* of trusted addresses
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
 coincenter --withdraw 10000xlm,bithumb-huobi
 ```
 
-# Configuration files
-Configuration files are all stored in the *config* directory 
+# Data files
+`coincenter` needs to have access to a `data` directory containing the following directories:
+- `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
+- `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
+- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. 
 
 ## Secrets
-*secret.json* holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
-`config/secret_test.json` shows the syntax.
+`secret/secret.json` holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
+`secret/secret_test.json` shows the syntax.
 
 ## Exchange config
-You can exclude currencies in the exchange configuration file (for instance: some unstable fiat currencies in binance).
+You can exclude currencies in the exchange configuration file `static/exchangeconfig.json` (for instance: some unstable fiat currencies in binance).
 
 # Other examples
 

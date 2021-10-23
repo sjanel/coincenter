@@ -63,5 +63,6 @@
 *-ut
 cscope*
 **/*secret.json
-data/.*
-config/.*
+data/secret
+data/cache
+data/static/exchangeconfig.json

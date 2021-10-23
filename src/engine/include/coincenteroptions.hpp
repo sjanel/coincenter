@@ -4,6 +4,7 @@
 #include <optional>
 #include <utility>
 
+#include "cct_allfiles.hpp"
 #include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
@@ -132,7 +133,7 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
        {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
                                                                          " Amount is gross, including fees. Address and tag will be retrieved"
                                                                          " automatically from destination exchange and should match an entry in '")
-                                                                        .append(Wallet::kDepositAddressesFilename)
+                                                                        .append(kDepositAddresses.name())
                                                                         .append("' file.")}, &OptValueType::withdraw},
        {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 

@@ -9,10 +9,9 @@ target_include_directories(coincenter_objects PUBLIC include)
 
 add_unit_test(
     balanceportfolio_test
-    src/balanceportfolio.cpp
-    src/currencycode.cpp
-    src/monetaryamount.cpp
     test/balanceportfolio_test.cpp
+    LIBRARIES
+    coincenter_objects
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
@@ -27,12 +26,10 @@ add_unit_test(
 
 add_unit_test(
     exchangeinfo_test
-    src/currencycode.cpp
-    src/exchangeinfo.cpp
-    src/monetaryamount.cpp
     test/exchangeinfo_test.cpp
     LIBRARIES
     nlohmann_json::nlohmann_json
+    coincenter_objects
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
@@ -47,9 +44,6 @@ add_unit_test(
 
 add_unit_test( 
     fiatconverter_test
-    src/currencycode.cpp
-    src/fiatconverter.cpp
-    src/monetaryamount.cpp
     test/fiatconverter_test.cpp
     LIBRARIES
     nlohmann_json::nlohmann_json
@@ -60,20 +54,18 @@ add_unit_test(
 
 add_unit_test(
     marketorderbook_test
-    src/currencycode.cpp
-    src/market.cpp
-    src/marketorderbook.cpp
-    src/monetaryamount.cpp
     test/marketorderbook_test.cpp
+    LIBRARIES
+    coincenter_objects
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
     monetaryamount_test
-    src/currencycode.cpp
-    src/monetaryamount.cpp
     test/monetaryamount_test.cpp
+    LIBRARIES
+    coincenter_objects
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )

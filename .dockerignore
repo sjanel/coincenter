@@ -2,6 +2,11 @@
 .cache
 .vscode
 .git
+.clangformat
+LICENSE
+*.md
 **/build*/
 **/*secret.json
+data/secret
+!data/secret/secret_test.json
 resources

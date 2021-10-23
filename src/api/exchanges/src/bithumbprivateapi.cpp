@@ -8,13 +8,13 @@
 
 #include "apikey.hpp"
 #include "bithumbpublicapi.hpp"
+#include "cct_allfiles.hpp"
 #include "cct_codec.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
 #include "coincenterinfo.hpp"
-#include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "tradeoptions.hpp"
@@ -22,8 +22,6 @@
 namespace cct {
 namespace api {
 namespace {
-
-constexpr char kNbDecimalsUnitsCacheFile[] = ".bithumbdecimalscache.json";
 
 /// Similar to CurlHandle::urlEncore, except that it does not convert '=' (Bithumb would complain if we did)
 string UrlEncode(std::string_view str) {
@@ -156,7 +154,7 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, _maxNbDecimalsUnitMap, bithumbPublic) {
-  json data = OpenJsonFile(kNbDecimalsUnitsCacheFile, FileNotFoundMode::kNoThrow, FileType::kData);
+  json data = kBithumbDecimalsCache.readJson();
   _maxNbDecimalsUnitMap.reserve(data.size());
   for (const auto& [currencyStr, nbDecimalsAndTimeData] : data.items()) {
     CurrencyCode currencyCode(currencyStr);
@@ -409,7 +407,7 @@ void BithumbPrivate::updateCacheFile() const {
         std::chrono::duration_cast<std::chrono::seconds>(nbDecimalsTimeValue.lastUpdatedTime.time_since_epoch())
             .count();
   }
-  WriteJsonFile(kNbDecimalsUnitsCacheFile, data, FileType::kData);
+  kBithumbDecimalsCache.write(data);
 }
 
 }  // namespace api

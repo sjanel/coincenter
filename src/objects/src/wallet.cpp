@@ -1,17 +1,17 @@
 #include "wallet.hpp"
 
+#include "cct_allfiles.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "jsonhelpers.hpp"
 
 namespace cct {
 
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.
 bool Wallet::IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
                                            std::string_view expectedAddress, std::string_view expectedTag) {
-  json data = OpenJsonFile(Wallet::kDepositAddressesFilename, FileNotFoundMode::kThrow, FileType::kConfig);
+  json data = kDepositAddresses.readJson();
   if (!data.contains(privateExchangeName.name())) {
-    log::warn("No deposit addresses found in {} for {}", Wallet::kDepositAddressesFilename, privateExchangeName.name());
+    log::warn("No deposit addresses found in {} for {}", kDepositAddresses.name(), privateExchangeName.name());
     return false;
   }
   const json &exchangeWallets = data[string(privateExchangeName.name())];
@@ -56,7 +56,7 @@ Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode curr
     : _privateExchangeName(privateExchangeName), _address(address), _tag(tag), _currency(currency) {
 #ifndef CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE
   if (!IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
-    throw exception("Incorrect wallet compared to the one stored in " + string(Wallet::kDepositAddressesFilename));
+    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddresses.name()));
   }
 #endif
 }
@@ -66,7 +66,7 @@ Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency,
     : _privateExchangeName(std::move(privateExchangeName)), _address(address), _tag(tag), _currency(currency) {
 #ifndef CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE
   if (!IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
-    throw exception("Incorrect wallet compared to the one stored in " + string(Wallet::kDepositAddressesFilename));
+    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddresses.name()));
   }
 #endif
 }

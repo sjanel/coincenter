@@ -9,7 +9,6 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "jsonhelpers.hpp"
 #include "monetaryamount.hpp"
 
 namespace cct {
