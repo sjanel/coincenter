@@ -44,6 +44,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
 
   ExchangePublic::WithdrawalFeeMap withdrawalFees = upbitPublic.queryWithdrawalFees();
   EXPECT_GT(withdrawalFees.size(), 10U);
+  // This unit test makes sure that static snapshot of upbit withdrawal fees looks up to date
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
   constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
@@ -65,6 +66,13 @@ void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
   EXPECT_TRUE(upbitPrivate.queryDepositWallet("XRP").hasDestinationTag());
   EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
   EXPECT_EQ(upbitPrivate.queryWithdrawalFee("ADA"), upbitPublic.queryWithdrawalFee("ADA"));
+
+  // Uncomment below code to print updated upbit withdrawal fees for static data of withdrawal fees of public API
+  // json d;
+  // for (const auto &c : upbitPrivate.queryTradableCurrencies()) {
+  //   d[string(c.standardStr())] = upbitPrivate.queryWithdrawalFee(c.standardCode()).amountStr();
+  // }
+  // std::cout << d.dump(2) << std::endl;
 }
 
 }  // namespace
