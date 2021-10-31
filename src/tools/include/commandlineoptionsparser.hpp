@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <bitset>
+#include <climits>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -12,8 +14,9 @@
 #include <string_view>
 #include <variant>
 
-#include "cct_flatset.hpp"
+#include "cct_mathhelpers.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "commandlineoption.hpp"
 
 namespace cct {
@@ -46,10 +49,12 @@ class CommandLineOptionsParser : private Opts {
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
-      : _commandLineOptionsWithValues(init.begin(), init.end()) {}
+      : CommandLineOptionsParser(std::span<const CommandLineOptionWithValue>(init.begin(), init.end())) {}
 
   explicit CommandLineOptionsParser(std::span<const CommandLineOptionWithValue> options)
-      : _commandLineOptionsWithValues(options.begin(), options.end()) {}
+      : _commandLineOptionsWithValues(options.begin(), options.end()) {
+    checkDuplicatesAndSort();
+  }
 
   CommandLineOptionsParser(const CommandLineOptionsParser&) = delete;
   CommandLineOptionsParser(CommandLineOptionsParser&&) = default;
@@ -57,15 +62,18 @@ class CommandLineOptionsParser : private Opts {
   CommandLineOptionsParser& operator=(CommandLineOptionsParser&&) = default;
 
   void insert(const CommandLineOptionWithValue& commandLineOptionWithValue) {
-    _commandLineOptionsWithValues.insert(commandLineOptionWithValue);
+    _commandLineOptionsWithValues.push_back(commandLineOptionWithValue);
+    checkDuplicatesAndSort();
   }
   void insert(CommandLineOptionWithValue&& commandLineOptionWithValue) {
-    _commandLineOptionsWithValues.insert(std::move(commandLineOptionWithValue));
+    _commandLineOptionsWithValues.push_back(std::move(commandLineOptionWithValue));
+    checkDuplicatesAndSort();
   }
 
   void merge(const CommandLineOptionsParser& o) {
     _commandLineOptionsWithValues.insert(o._commandLineOptionsWithValues.begin(),
                                          o._commandLineOptionsWithValues.end());
+    checkDuplicatesAndSort();
   }
 
   Opts parse(std::span<const char*> vargv) {
@@ -165,16 +173,64 @@ class CommandLineOptionsParser : private Opts {
  private:
   using callback_t = std::function<void(int, std::span<const char*>)>;
 
-  struct CompareCommandLineOptionWithValue {
-    bool operator()(const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) const {
-      return lhs.first < rhs.first;
-    }
-  };
-
-  using CommandLineOptionsWithValuesSet = FlatSet<CommandLineOptionWithValue, CompareCommandLineOptionWithValue>;
-
-  CommandLineOptionsWithValuesSet _commandLineOptionsWithValues;
+  vector<CommandLineOptionWithValue> _commandLineOptionsWithValues;
   std::map<CommandLineOption, callback_t> _callbacks;
+
+  /// TODO: make this check constexpr would be great (but it's actually not trivial at all)
+  void checkDuplicatesAndSort() {
+    checkShortNamesDuplicates();
+
+    // Check long names equality by sorting
+    const auto compareByLongName = [](const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) {
+      return lhs.first.fullName() < rhs.first.fullName();
+    };
+    std::sort(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(), compareByLongName);
+    const auto equiFunc = [&compareByLongName](const auto& lhs, const auto& rhs) {
+      return !compareByLongName(lhs, rhs) && !compareByLongName(rhs, lhs);
+    };
+    auto foundIt =
+        std::adjacent_find(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(), equiFunc);
+    if (foundIt != _commandLineOptionsWithValues.end()) {
+      // Some duplicate has been found - either with same short name character, or same full name option
+      ThrowDuplicatedOptionsException(foundIt->first.fullName(), std::next(foundIt)->first.fullName());
+    }
+
+    // Finally, sort the options by their natural ordering
+    std::sort(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
+              [](const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) {
+                return lhs.first < rhs.first;
+              });
+  }
+
+  void checkShortNamesDuplicates() const {
+    // Check short names equality with a hashmap of presence
+    std::bitset<ipow(2, CHAR_BIT)> charPresenceBmp;
+    for (const auto& [f, s] : _commandLineOptionsWithValues) {
+      if (f.hasShortName()) {
+        char c = f.shortNameChar();
+        if (charPresenceBmp[c]) {
+          ThrowDuplicatedOptionsException(c);
+        }
+        charPresenceBmp.set(c);
+      }
+    }
+  }
+
+  static void ThrowDuplicatedOptionsException(char shortName) {
+    string errMsg("Options with same short name '");
+    errMsg.push_back(shortName);
+    errMsg.append("' have been found");
+    throw InvalidArgumentException(std::move(errMsg));
+  }
+
+  static void ThrowDuplicatedOptionsException(std::string_view lhsName, std::string_view rhsName) {
+    string errMsg("Duplicated options '");
+    errMsg.append(lhsName);
+    errMsg.append("' and '");
+    errMsg.append(rhsName);
+    errMsg.append("' have been found");
+    throw InvalidArgumentException(std::move(errMsg));
+  }
 
 #ifdef _WIN32
   // MSVC compiler bug. Information here:

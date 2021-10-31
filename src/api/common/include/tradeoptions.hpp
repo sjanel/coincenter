@@ -29,35 +29,40 @@ class TradeOptions {
   static constexpr Clock::duration kDefaultEmergencyTime = std::chrono::seconds(2);
   static constexpr Clock::duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 
-  explicit TradeOptions(TradeStrategy tradeStrategy = TradeStrategy::kMaker,
-                        Clock::duration dur = kDefaultTradeDuration,
-                        Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
-                        Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates)
+  constexpr explicit TradeOptions(TradeStrategy tradeStrategy = TradeStrategy::kMaker,
+                                  Clock::duration dur = kDefaultTradeDuration,
+                                  Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
+                                  Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates)
       : TradeOptions(tradeStrategy, TradeMode::kReal, dur, emergencyBufferTime, minTimeBetweenPriceUpdates) {}
 
-  TradeOptions(TradeStrategy tradeStrategy, TradeMode tradeMode, Clock::duration dur,
-               Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
-               Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates);
+  constexpr TradeOptions(TradeStrategy tradeStrategy, TradeMode tradeMode, Clock::duration dur,
+                         Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
+                         Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates)
+      : _maxTradeTime(dur),
+        _emergencyBufferTime(emergencyBufferTime),
+        _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
+        _strategy(tradeStrategy),
+        _tradeMode(tradeMode) {}
 
   TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Clock::duration dur,
                Clock::duration emergencyBufferTime = kDefaultEmergencyTime,
                Clock::duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates);
 
-  Clock::duration maxTradeTime() const { return _maxTradeTime; }
+  constexpr Clock::duration maxTradeTime() const { return _maxTradeTime; }
 
-  Clock::duration emergencyBufferTime() const { return _emergencyBufferTime; }
+  constexpr Clock::duration emergencyBufferTime() const { return _emergencyBufferTime; }
 
-  Clock::duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
+  constexpr Clock::duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
 
-  TradeStrategy strategy() const { return _strategy; }
+  constexpr TradeStrategy strategy() const { return _strategy; }
 
-  TradeMode tradeMode() const { return _tradeMode; }
+  constexpr TradeMode tradeMode() const { return _tradeMode; }
 
-  bool isTakerStrategy() const { return _strategy == TradeStrategy::kTaker; }
+  constexpr bool isTakerStrategy() const { return _strategy == TradeStrategy::kTaker; }
 
-  bool isSimulation() const { return _tradeMode == TradeMode::kSimulation; }
+  constexpr bool isSimulation() const { return _tradeMode == TradeMode::kSimulation; }
 
-  void switchToTakerStrategy() { _strategy = TradeStrategy::kTaker; }
+  constexpr void switchToTakerStrategy() { _strategy = TradeStrategy::kTaker; }
 
   std::string_view strategyStr() const;
 

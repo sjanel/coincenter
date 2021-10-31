@@ -5,7 +5,7 @@
 namespace cct {
 namespace api {
 namespace {
-TradeStrategy StrategyFromStr(std::string_view strategyStr) {
+constexpr TradeStrategy StrategyFromStr(std::string_view strategyStr) {
   if (strategyStr == "maker") {
     return TradeStrategy::kMaker;
   }
@@ -18,14 +18,6 @@ TradeStrategy StrategyFromStr(std::string_view strategyStr) {
   throw exception("Unrecognized trade strategy " + string(strategyStr));
 }
 }  // namespace
-
-TradeOptions::TradeOptions(TradeStrategy tradeStrategy, TradeMode tradeMode, Clock::duration dur,
-                           Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates)
-    : _maxTradeTime(dur),
-      _emergencyBufferTime(emergencyBufferTime),
-      _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
-      _strategy(tradeStrategy),
-      _tradeMode(tradeMode) {}
 
 TradeOptions::TradeOptions(std::string_view strategyStr, TradeMode tradeMode, Clock::duration dur,
                            Clock::duration emergencyBufferTime, Clock::duration minTimeBetweenPriceUpdates)

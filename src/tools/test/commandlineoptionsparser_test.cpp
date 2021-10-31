@@ -6,23 +6,23 @@
 
 namespace cct {
 
+using Clock = std::chrono::high_resolution_clock;
+using TimePoint = std::chrono::time_point<Clock>;
+using Duration = Clock::duration;
+
+struct Opts {
+  string stringOpt{};
+  int intOpt{};
+  int int2Opt{};
+  bool boolOpt{};
+  std::optional<string> optStr{};
+  Duration timeOpt;
+};
+
+using ParserType = CommandLineOptionsParser<Opts>;
+
 class CommandLineOptionsParserTest : public ::testing::Test {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-  using Duration = Clock::duration;
-
-  struct Opts {
-    string stringOpt{};
-    int intOpt{};
-    int int2Opt{};
-    bool boolOpt{};
-    std::optional<string> optStr{};
-    Duration timeOpt;
-  };
-
-  using ParserType = CommandLineOptionsParser<Opts>;
-
   CommandLineOptionsParserTest()
       : _parser({{{{"General", 1}, "--opt1", 'o', "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
                  {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
@@ -112,6 +112,48 @@ TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit2) {
 
 TEST_F(CommandLineOptionsParserTest, DurationOptionThrowOnlyIntegral) {
   EXPECT_THROW(createOptions({"coincenter", "--opt5", "2.5min"}), InvalidArgumentException);
+}
+
+TEST(CommandLineOptionsParserTestDuplicates, DuplicateCheckOnShortNameAtInit) {
+  EXPECT_THROW(ParserType({{{{"General", 1}, "--opt1", 'o', "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
+                           {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
+                           {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
+                           {{{"Other", 2}, "--opt4", 'o', "", "Opt4 descr"}, &Opts::optStr},
+                           {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
+                           {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}),
+               InvalidArgumentException);
+}
+
+TEST(CommandLineOptionsParserTestDuplicates, DuplicateCheckOnShortNameAtInsert) {
+  ParserType parser({{{{"General", 1}, "--opt1", "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
+                     {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
+                     {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
+                     {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
+                     {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
+                     {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}});
+  EXPECT_THROW(parser.insert({{{"General", 1}, "--opt1", 'h', "<myValue>", "Opt1 descr"}, &Opts::stringOpt}),
+               InvalidArgumentException);
+}
+
+TEST(CommandLineOptionsParserTestDuplicates, DuplicateCheckOnLongNameAtInit) {
+  EXPECT_THROW(ParserType({{{{"General", 1}, "--opt1", 'o', "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
+                           {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
+                           {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
+                           {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
+                           {{{"Other", 2}, "--opt2", "", "Opt2 time unit"}, &Opts::timeOpt},
+                           {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}),
+               InvalidArgumentException);
+}
+
+TEST(CommandLineOptionsParserTestDuplicates, DuplicateCheckOnLongNameAtInsert) {
+  ParserType parser({{{{"General", 1}, "--opt1", "<myValue>", "Opt1 descr"}, &Opts::stringOpt},
+                     {{{"General", 1}, "--opt2", "", "Opt2 descr"}, &Opts::intOpt},
+                     {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
+                     {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
+                     {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
+                     {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}});
+  EXPECT_THROW(parser.insert({{{"General", 1}, "--opt3", "<myValue>", "Opt1 descr"}, &Opts::stringOpt}),
+               InvalidArgumentException);
 }
 
 }  // namespace cct
