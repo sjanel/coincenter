@@ -53,8 +53,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   url.append(method);
 
   json dataJson = json::parse(curlHandle.query(url, opts));
-  if (dataJson.contains("code") && dataJson["code"].get<std::string_view>() != "200000") {
-    throw exception("Error in Kucoin REST API response");
+  auto errCodeIt = dataJson.find("code");
+  if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
+    auto msgIt = dataJson.find("msg");
+    std::string errStr("Kucoin error: ");
+    if (msgIt != dataJson.end()) {
+      errStr.append(msgIt->get<std::string_view>());
+    } else {
+      errStr.append("unknown");
+    }
+    throw exception(std::move(errStr));
   }
   return dataJson["data"];
 }
