@@ -35,6 +35,10 @@ class CommandLineOption {
 
   string shortName() const;
 
+  char shortNameChar() const { return _shortName; }
+
+  bool hasShortName() const { return _shortName != '\0'; }
+
   bool operator<(const CommandLineOption& o) const;
 
  private:
