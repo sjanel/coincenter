@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "cct_allfiles.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
@@ -44,7 +44,7 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
           _curlHandle, _marketsCache),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          _name),
+          _name, config.dataDir()),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
           config, _curlHandle, config.exchangeInfo(_name), _marketsCache),
@@ -124,7 +124,8 @@ ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
 
 ExchangePublic::WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
-  json jsonData = kWithdrawFees.readJson();
+  File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfNotFound::kThrow);
+  json jsonData = withdrawFeesFile.readJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);

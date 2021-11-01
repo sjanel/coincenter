@@ -1,8 +1,8 @@
 #include "apikeysprovider.hpp"
 
-#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -57,13 +57,17 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
   return *keyNameIt;
 }
 
-APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(const PublicExchangeNames& exchangesWithoutSecrets,
+APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataDir,
+                                                          const PublicExchangeNames& exchangesWithoutSecrets,
                                                           bool allExchangesWithoutSecrets, settings::RunMode runMode) {
   APIKeysProvider::APIKeysMap map;
   if (allExchangesWithoutSecrets) {
     log::info("Not loading private keys, using only public exchanges");
   } else {
-    json jsonData = runMode == settings::RunMode::kProd ? kSecret.readJson() : kSecretTest.readJson();
+    std::string_view secretFileName = GetSecretFileName(runMode);
+    File secretsFile(dataDir, File::Type::kSecret, secretFileName,
+                     runMode == settings::RunMode::kProd ? File::IfNotFound::kNoThrow : File::IfNotFound::kThrow);
+    json jsonData = secretsFile.readJson();
     for (const auto& [platform, keyObj] : jsonData.items()) {
       if (std::find(exchangesWithoutSecrets.begin(), exchangesWithoutSecrets.end(), platform) !=
           exchangesWithoutSecrets.end()) {
@@ -85,8 +89,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(const PublicExchangeNa
       }
     }
     if (map.empty()) {
-      log::warn("No private api keys file '{}' found. Only public exchange queries will be supported",
-                GetSecretFileName(runMode));
+      log::warn("No private api keys file '{}' found. Only public exchange queries will be supported", secretFileName);
     }
   }
 

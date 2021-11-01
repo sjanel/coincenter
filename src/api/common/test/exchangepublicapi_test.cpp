@@ -12,14 +12,17 @@ namespace cct {
 namespace api {
 class ExchangePublicTest : public ::testing::Test {
  protected:
-  ExchangePublicTest() : exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
+  ExchangePublicTest()
+      : cryptowatchAPI(coincenterInfo),
+        fiatConverter(coincenterInfo.dataDir()),
+        exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
 
+  CoincenterInfo coincenterInfo;
   CryptowatchAPI cryptowatchAPI;
   FiatConverter fiatConverter;
-  CoincenterInfo coincenterInfo;
   MockExchangePublic exchangePublic;
 };
 

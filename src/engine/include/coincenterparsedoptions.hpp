@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cct_const.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -12,8 +13,7 @@ struct CoincenterCmdLineOptions;
 
 class CoincenterParsedOptions {
  public:
-  CoincenterParsedOptions() = default;
-
+  /// Parse arguments and store the overriden values in this object.
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
@@ -26,7 +26,7 @@ class CoincenterParsedOptions {
 
   Market marketForOrderBook;
   PublicExchangeNames orderBookExchanges;
-  int orderbookDepth{};
+  int orderbookDepth = 0;
   CurrencyCode orderbookCur;
 
   Market marketForConversionPath;
@@ -50,9 +50,16 @@ class CoincenterParsedOptions {
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
 
+  string dataDir = kDefaultDataDir;
+
   bool noProcess = false;
 
  protected:
+  /// Constructor to be called for programs extending the command line options of 'coincenter'.
+  /// Indeed, it's not possible to call the constructor with argv as it will contain some unknown arguments from higher
+  /// level program
+  CoincenterParsedOptions() = default;
+
   void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions, const char *programName);
 };
 }  // namespace cct

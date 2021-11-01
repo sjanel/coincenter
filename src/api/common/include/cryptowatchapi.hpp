@@ -12,6 +12,7 @@
 #include "market.hpp"
 
 namespace cct {
+class CoincenterInfo;
 namespace api {
 /// Public API connected to different exchanges, providing fast methods to retrieve huge amount of data.
 class CryptowatchAPI : public ExchangeBase {
@@ -19,7 +20,7 @@ class CryptowatchAPI : public ExchangeBase {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
-  explicit CryptowatchAPI(settings::RunMode runMode = settings::RunMode::kProd,
+  explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
                           Clock::duration fiatsUpdateFrequency = std::chrono::hours(6),
                           bool loadFromFileCacheAtInit = true);
 
@@ -67,7 +68,7 @@ class CryptowatchAPI : public ExchangeBase {
   };
 
   void queryFiats();
-
+  const CoincenterInfo &_config;
   CurlHandle _curlHandle;
   Fiats _fiats;
   TimePoint _lastUpdatedFiatsTime;

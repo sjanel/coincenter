@@ -4,9 +4,9 @@
 #include <fstream>
 #include <unordered_map>
 
-#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
@@ -68,6 +68,10 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
   return true;
 }
 
+File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
+  return File(dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfNotFound::kNoThrow);
+}
+
 }  // namespace
 
 KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
@@ -92,7 +96,7 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
   // To save queries to Kraken site, let's check if there is recent cached data
-  json data = kKrakenWithdrawInfo.readJson();
+  json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readJson();
   if (!data.empty()) {
     using Clock = std::chrono::high_resolution_clock;
     using TimePoint = std::chrono::time_point<Clock>;
@@ -134,7 +138,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
   if (withdrawalFeesCsv.empty()) {
     log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
     log::warn("Defaulted to hardcoded provided CSV file");
-    withdrawalFeesCsv = kKrakenWithdrawalFees.read();
+    withdrawalFeesCsv =
+        File(_config.dataDir(), File::Type::kCache, "krakenwithdrawalfees.csv", File::IfNotFound::kThrow).read();
   }
 
   std::size_t assetPos = std::string_view::npos;
@@ -439,7 +444,7 @@ void KrakenPublic::updateCacheFile() const {
       data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
       data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
     }
-    kKrakenWithdrawInfo.write(data);
+    GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).write(data);
   }
 }
 

@@ -13,7 +13,11 @@ namespace cct {
 namespace api {
 class KucoinAPI : public ::testing::Test {
  protected:
-  KucoinAPI() : kucoinPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
+  KucoinAPI()
+      : apiKeyProvider(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo.dataDir()),
+        cryptowatchAPI(coincenterInfo),
+        kucoinPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

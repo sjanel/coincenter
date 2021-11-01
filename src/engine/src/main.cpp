@@ -12,7 +12,8 @@ int main(int argc, const char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    cct::Coincenter coincenter(opts.noSecretsExchanges, opts.noSecretsForAll);
+    cct::Coincenter coincenter(opts.noSecretsExchanges, opts.noSecretsForAll, cct::settings::RunMode::kProd,
+                               opts.dataDir);
     coincenter.process(opts);
   } catch (...) {
     return EXIT_FAILURE;

@@ -3,14 +3,19 @@
 
 #include <gtest/gtest.h>
 
+#include "coincenterinfo.hpp"
+
 namespace cct {
 namespace api {
 
 class CryptowatchAPITest : public ::testing::Test {
  protected:
+  CryptowatchAPITest() : cryptowatchAPI(config) {}
+
   virtual void SetUp() {}
   virtual void TearDown() {}
 
+  CoincenterInfo config;
   CryptowatchAPI cryptowatchAPI;
 };
 

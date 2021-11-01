@@ -15,7 +15,7 @@
 #include "bithumbpublicapi.hpp"
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_smallvector.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
@@ -48,11 +48,11 @@ class Coincenter {
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
 
-  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd)
-      : Coincenter(PublicExchangeNames(), false, runMode) {}
+  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd, std::string_view dataDir = kDefaultDataDir)
+      : Coincenter(PublicExchangeNames(), false, runMode, dataDir) {}
 
   Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-             settings::RunMode runMode = settings::RunMode::kProd);
+             settings::RunMode runMode = settings::RunMode::kProd, std::string_view dataDir = kDefaultDataDir);
 
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;
@@ -128,7 +128,7 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  using ExchangeVector = SmallVector<Exchange, kTypicalNbPrivateAccounts>;
+  using ExchangeVector = vector<Exchange>;
 
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;

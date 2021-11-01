@@ -18,8 +18,10 @@ class KrakenAPI : public ::testing::Test {
   KrakenAPI()
       : coincenterProdInfo(settings::RunMode::kProd),
         coincenterTestInfo(settings::RunMode::kTest),
-        apiProdKeyProvider(coincenterProdInfo.getRunMode()),
-        apiTestKeyProvider(coincenterTestInfo.getRunMode()),
+        apiProdKeyProvider(coincenterProdInfo.dataDir(), coincenterProdInfo.getRunMode()),
+        apiTestKeyProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
+        fiatConverter(coincenterProdInfo.dataDir()),
+        cryptowatchAPI(coincenterProdInfo),
         krakenPublic(coincenterProdInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}

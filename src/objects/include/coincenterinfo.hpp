@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "apiquerytypeenum.hpp"
+#include "cct_const.hpp"
 #include "cct_run_modes.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -22,7 +23,8 @@ class CoincenterInfo {
   using Duration = std::chrono::high_resolution_clock::duration;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
-  explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd);
+  explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
+                          std::string_view dataDir = kDefaultDataDir);
 
   CoincenterInfo(const CoincenterInfo &) = delete;
   CoincenterInfo &operator=(const CoincenterInfo &) = delete;
@@ -56,6 +58,8 @@ class CoincenterInfo {
 
   settings::RunMode getRunMode() const { return _runMode; }
 
+  std::string_view dataDir() const { return _dataDir; }
+
   bool useMonitoring() const { return _useMonitoring; }
 
  private:
@@ -66,6 +70,7 @@ class CoincenterInfo {
   APICallUpdateFrequencyMap _apiCallUpdateFrequencyMap;
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
+  string _dataDir;
   bool _useMonitoring;
 };
 }  // namespace cct

@@ -154,7 +154,8 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = result["secondary_address"].get<std::string_view>();
   }
 
-  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag);
+  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
+           _exchangePublic.coincenterInfo().dataDir());
   log::info("Retrieved {}", w.str());
   return w;
 }

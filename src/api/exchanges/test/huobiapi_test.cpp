@@ -13,7 +13,11 @@ namespace cct {
 namespace api {
 class HuobiAPI : public ::testing::Test {
  protected:
-  HuobiAPI() : huobiPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
+  HuobiAPI()
+      : apiKeyProvider(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo.dataDir()),
+        cryptowatchAPI(coincenterInfo),
+        huobiPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
