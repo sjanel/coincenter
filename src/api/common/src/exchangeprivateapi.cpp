@@ -118,12 +118,10 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
         nextAction = NextAction::kNewOrderLimitPrice;
       }
       if (nextAction != NextAction::kWait) {
-        // Compute new volume (price is either not needed in taker order, or already recomputed)
-        volume = remFrom.currencyCode() == m.quote() ? MonetaryAmount(remFrom / price, m.base()) : remFrom;
         if (nextAction == NextAction::kPlaceMarketOrder) {
-          log::warn("Reaching emergency time, make a last order at market price");
           tradeInfo.options.switchToTakerStrategy();
-          price = _exchangePublic.computeAvgOrderPrice(m, remFrom, true /* isTakerStrategy */);
+          price = _exchangePublic.computeAvgOrderPrice(m, remFrom, tradeInfo.options.isTakerStrategy());
+          log::warn("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();
           log::info("Limit price changed from {} to {}, update order", lastPrice.str(), price.str());
@@ -131,6 +129,8 @@ MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurre
 
         lastPrice = price;
 
+        // Compute new volume (price is either not needed in taker order, or already recomputed)
+        volume = remFrom.currencyCode() == m.quote() ? MonetaryAmount(remFrom / price, m.base()) : remFrom;
         log::debug("Place new order {} at price {}", volume.str(), price.str());
         placeOrderInfo = placeOrder(remFrom, volume, price, tradeInfo);
 
