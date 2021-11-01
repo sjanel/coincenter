@@ -141,6 +141,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
   const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
+  const bool isSimulation = tradeInfo.options.isSimulation();
 
   price = binancePublic.sanitizePrice(m, price);
 
@@ -149,7 +150,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < sanitizedVol) {
     constexpr CurrencyCode kBinanceCoinCur("BNB");
-    if (m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
+    if (!isSimulation && m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
       // Use special Binance Dust transfer
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}",
                 kBinanceCoinCur.str());
@@ -180,7 +181,6 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placePostData.append("price", price.amountStr());
   }
 
-  const bool isSimulation = tradeInfo.options.isSimulation();
   const std::string_view methodName = isSimulation ? "api/v3/order/test" : "api/v3/order";
 
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost,
