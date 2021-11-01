@@ -12,8 +12,6 @@ struct CoincenterCmdLineOptions;
 
 class CoincenterParsedOptions {
  public:
-  CoincenterParsedOptions() = default;
-
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
@@ -49,6 +47,8 @@ class CoincenterParsedOptions {
 
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
+
+  string dataDir;
 
   bool noProcess = false;
 

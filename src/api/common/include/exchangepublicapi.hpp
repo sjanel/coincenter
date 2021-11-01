@@ -99,6 +99,8 @@ class ExchangePublic : public ExchangeBase {
 
   MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
 
+  const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
+
  protected:
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
                  const CoincenterInfo &coincenterInfo)

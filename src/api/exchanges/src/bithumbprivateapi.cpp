@@ -8,9 +8,9 @@
 
 #include "apikey.hpp"
 #include "bithumbpublicapi.hpp"
-#include "cct_allfiles.hpp"
 #include "cct_codec.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
@@ -145,6 +145,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   return methodName.starts_with("trade") ? dataJson : dataJson["data"];
 }
 
+File GetBithumbDecimalsCache(std::string_view dataDir) {
+  return File(dataDir, File::Type::kCache, "bithumbdecimalscache.json", File::IfNotFound::kNoThrow);
+}
+
 }  // namespace
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
@@ -154,7 +158,7 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, _maxNbDecimalsUnitMap, bithumbPublic) {
-  json data = kBithumbDecimalsCache.readJson();
+  json data = GetBithumbDecimalsCache(_config.dataDir()).readJson();
   _maxNbDecimalsUnitMap.reserve(data.size());
   for (const auto& [currencyStr, nbDecimalsAndTimeData] : data.items()) {
     CurrencyCode currencyCode(currencyStr);
@@ -202,7 +206,8 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
           : addressAndTag.end(),
       addressAndTag.end());
 
-  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag);
+  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
+           _exchangePublic.coincenterInfo().dataDir());
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -407,7 +412,7 @@ void BithumbPrivate::updateCacheFile() const {
         std::chrono::duration_cast<std::chrono::seconds>(nbDecimalsTimeValue.lastUpdatedTime.time_since_epoch())
             .count();
   }
-  kBithumbDecimalsCache.write(data);
+  GetBithumbDecimalsCache(_config.dataDir()).write(data);
 }
 
 }  // namespace api

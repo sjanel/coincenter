@@ -34,11 +34,11 @@ class FiatConverter {
   /// Creates a FiatConverter unable to perform live queries to free converter api loading frozen rates from
   /// 'data/kRatesFileName' file.
   /// Useful for unit tests to avoid querying the API.
-  FiatConverter() : FiatConverter(Clock::duration::max()) {}
+  explicit FiatConverter(std::string_view dataDir) : FiatConverter(dataDir, Clock::duration::max()) {}
 
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
-  explicit FiatConverter(Clock::duration ratesUpdateFrequency);
+  FiatConverter(std::string_view dataDir, Clock::duration ratesUpdateFrequency);
 
   FiatConverter(const FiatConverter &) = delete;
   FiatConverter &operator=(const FiatConverter &) = delete;
@@ -71,5 +71,6 @@ class FiatConverter {
   Clock::duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;
   string _apiKey;
+  string _dataDir;
 };
 }  // namespace cct

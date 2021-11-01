@@ -1,16 +1,18 @@
 #include "coincenterinfo.hpp"
 
-#include "cct_allfiles.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
 
 namespace {
-CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap() {
-  json jsonData = kCurrencyAcronymsTranslator.readJson();
+CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(std::string_view dataDir) {
+  File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
+                                      File::IfNotFound::kThrow);
+  json jsonData = currencyAcronymsTranslatorFile.readJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
@@ -19,8 +21,9 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
   return map;
 }
 
-CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
-  json jsonData = kStableCoins.readJson();
+CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
+  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfNotFound::kThrow);
+  json jsonData = stableCoinsFile.readJson();
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
@@ -29,7 +32,7 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap() {
   return ret;
 }
 
-CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
+CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap(std::string_view dataDir) {
   // clang-format off
   const json kDefaultConfig = R"(
   {
@@ -120,13 +123,15 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
   }
   )"_json;
   // clang-format on
-  json jsonData = kExchangeConfig.readJson();
+  static constexpr std::string_view kExchangeConfigFileName = "exchangeconfig.json";
+  File exchangeConfigFile(dataDir, File::Type::kStatic, kExchangeConfigFileName, File::IfNotFound::kNoThrow);
+  json jsonData = exchangeConfigFile.readJson();
   if (jsonData.empty()) {
     // Create a file with default values. User can then update them as he wishes.
     log::warn("No file {} found. Creating a default one which can be updated freely at your convenience.",
-              kExchangeConfig.name());
+              kExchangeConfigFileName);
     jsonData = kDefaultConfig;
-    kExchangeConfig.write(jsonData);
+    exchangeConfigFile.write(jsonData);
   } else {
     bool updateFileNeeded = false;
     for (const auto& [exchangeName, v] : kDefaultConfig.items()) {
@@ -136,7 +141,7 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
       }
     }
     if (updateFileNeeded) {
-      kExchangeConfig.write(jsonData);
+      exchangeConfigFile.write(jsonData);
     }
   }
   CoincenterInfo::ExchangeInfoMap map;
@@ -148,9 +153,9 @@ CoincenterInfo::ExchangeInfoMap ComputeExchangeInfoMap() {
 }
 }  // namespace
 
-CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
-    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap()),
-      _stableCoinsMap(ComputeStableCoinsMap()),
+CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataDir)
+    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(dataDir)),
+      _stableCoinsMap(ComputeStableCoinsMap(dataDir)),
       // TODO: make below values configurable, with default value in a json file
       _apiCallUpdateFrequencyMap{{api::QueryTypeEnum::kCurrencies, std::chrono::hours(4)},
                                  {api::QueryTypeEnum::kMarkets, std::chrono::hours(4)},
@@ -161,8 +166,9 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode)
                                  {api::QueryTypeEnum::kLastPrice, std::chrono::seconds(5)},
                                  {api::QueryTypeEnum::kDepositWallet, std::chrono::hours(12)},
                                  {api::QueryTypeEnum::kNbDecimalsUnitsBithumb, std::chrono::hours(96)}},
-      _exchangeInfoMap(ComputeExchangeInfoMap()),
+      _exchangeInfoMap(ComputeExchangeInfoMap(dataDir)),
       _runMode(runMode),
+      _dataDir(dataDir),
       _useMonitoring(_runMode == settings::RunMode::kProd) {}
 
 CurrencyCode CoincenterInfo::standardizeCurrencyCode(CurrencyCode currencyCode) const {

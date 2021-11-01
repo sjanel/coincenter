@@ -35,11 +35,11 @@ string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchange
 }  // namespace
 
 Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-                       settings::RunMode runMode)
-    : _coincenterInfo(runMode),
-      _cryptowatchAPI(runMode),
-      _fiatConverter(std::chrono::hours(8)),
-      _apiKeyProvider(exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
+                       settings::RunMode runMode, std::string_view dataDir)
+    : _coincenterInfo(runMode, dataDir),
+      _cryptowatchAPI(_coincenterInfo, runMode),
+      _fiatConverter(_coincenterInfo.dataDir(), std::chrono::hours(8)),
+      _apiKeyProvider(_coincenterInfo.dataDir(), exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
@@ -82,7 +82,9 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {
-          throw exception("Should not happen, unsupported platform " + string(exchangeName));
+          std::string err("Should not happen, unsupported platform ");
+          err.append(exchangeName);
+          throw exception(std::move(err));
         }
 
         _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,
@@ -92,6 +94,7 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
       _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic);
     }
   }
+  _exchanges.shrink_to_fit();
   _exchangeRetriever = ExchangeRetriever(_exchanges);
   _cexchangeRetriever = ConstExchangeRetriever(_exchanges);
 }

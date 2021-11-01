@@ -4,14 +4,13 @@
 #include <fstream>
 #include <streambuf>
 
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
 namespace {
-string FullFileName(std::string_view fileName, File::Type fileType) {
-  string fullFilePath(kDataDir);
+string FullFileName(std::string_view dataDir, std::string_view fileName, File::Type fileType) {
+  string fullFilePath(dataDir);
   switch (fileType) {
     case File::Type::kCache:
       fullFilePath.append("/cache/");
@@ -28,14 +27,16 @@ string FullFileName(std::string_view fileName, File::Type fileType) {
 }
 }  // namespace
 
+File::File(std::string_view dataDir, Type type, std::string_view name, IfNotFound ifNotFound)
+    : _filePath(FullFileName(dataDir, name, type)), _type(type), _ifNotFound(ifNotFound) {}
+
 string File::read() const {
-  string filePath = FullFileName(_name, _type);
-  log::debug("Opening file {} for reading", filePath);
+  log::debug("Opening file {} for reading", _filePath);
   string data;
-  if (_ifNotFound == IfNotFound::kThrow || std::filesystem::exists(filePath)) {
-    std::ifstream file(filePath);
+  if (_ifNotFound == IfNotFound::kThrow || std::filesystem::exists(_filePath)) {
+    std::ifstream file(_filePath);
     if (!file) {
-      throw exception("Unable to open " + filePath + " for reading");
+      throw exception("Unable to open " + _filePath + " for reading");
     }
     data = string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   }
@@ -51,11 +52,10 @@ json File::readJson() const {
 }
 
 void File::write(const json &data) const {
-  string filePath = FullFileName(_name, _type);
-  log::debug("Opening file {} for writing", filePath);
-  std::ofstream file(filePath);
+  log::debug("Opening file {} for writing", _filePath);
+  std::ofstream file(_filePath);
   if (!file) {
-    throw exception("Unable to open " + filePath + " for writing");
+    throw exception("Unable to open " + _filePath + " for writing");
   }
   file << data.dump(2);
 }

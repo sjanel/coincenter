@@ -15,14 +15,14 @@ class Wallet {
   /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
   /// not withdraw)
   Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
-         std::string_view tag);
+         std::string_view tag, std::string_view dataDir);
 
   /// Build a wallet with all information.
   /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
   /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
   /// not withdraw)
   Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, std::string_view address,
-         std::string_view tag);
+         std::string_view tag, std::string_view dataDir);
 
   const PrivateExchangeName &privateExchangeName() const { return _privateExchangeName; }
 
@@ -44,8 +44,9 @@ class Wallet {
   }
   bool operator!=(const Wallet &w) const { return !(*this == w); }
 
-  static bool IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
-                                            std::string_view expectedAddress, std::string_view expectedTag);
+  static bool IsAddressPresentInDepositFile(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
+                                            CurrencyCode currency, std::string_view expectedAddress,
+                                            std::string_view expectedTag);
 
  private:
   PrivateExchangeName _privateExchangeName;

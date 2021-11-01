@@ -13,7 +13,11 @@ namespace cct {
 namespace api {
 class BinanceAPI : public ::testing::Test {
  protected:
-  BinanceAPI() : binancePublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
+  BinanceAPI()
+      : apiKeyProvider(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo.dataDir()),
+        cryptowatchAPI(coincenterInfo),
+        binancePublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

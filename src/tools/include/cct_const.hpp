@@ -4,8 +4,9 @@
 #include <string_view>
 
 namespace cct {
-static constexpr char kDataDir[] = CCT_DATA_DIR;
+static constexpr char kDefaultDataDir[] = CCT_DATA_DIR;
 static constexpr char kVersion[] = CCT_VERSION;
+static constexpr std::string_view kDepositAddressesFileName = "depositaddresses.json";
 
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};
 

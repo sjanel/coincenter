@@ -1,7 +1,7 @@
 #include "fiatconverter.hpp"
 
-#include "cct_allfiles.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "curlhandle.hpp"
 
@@ -9,16 +9,25 @@ namespace cct {
 namespace {
 constexpr char kCurrencyConverterBaseUrl[] = "https://free.currconv.com/api/v7";
 
-string LoadCurrencyConverterAPIKey() {
+string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr char kDefaultCommunityKey[] = "b25453de7984135a084b";
+  /// File containing all validated external addresses.
+  /// It should be a json file with this format:
+  /// {
+  ///   "exchangeName1": {"BTC": "btcAddress", "XRP": "xrpAdress,xrpTag", "EOS": "eosAddress,eosTag"},
+  ///   "exchangeName2": {...}
+  /// }
+  /// In case crypto contains an additional "tag", "memo" or other, it will be placed after the ',' in the address
+  /// field.
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
-
-  json data = kThirdPartySecret.readJson();
+  static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
+  File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfNotFound::kNoThrow);
+  json data = thirdPartySecret.readJson();
   if (data.empty() || data["freecurrencyconverter"].get<std::string_view>() == kDefaultCommunityKey) {
-    log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecret.name());
+    log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecretFileName);
     log::warn("If you want to use extensively coincenter, please create your own key by going to");
     log::warn("https://free.currencyconverterapi.com/free-api-key and place it in");
-    log::warn("'config/thirdparty_secret.json' like this:");
+    log::warn("'{}/secret/{}' like this:", dataDir, kThirdPartySecretFileName);
     log::warn("  {\"freecurrencyconverter\": \"<YourKey>\"}");
     log::warn("Using default key provided as a demo to the community");
     return kDefaultCommunityKey;
@@ -26,20 +35,27 @@ string LoadCurrencyConverterAPIKey() {
   return data["freecurrencyconverter"];
 }
 
+constexpr std::string_view kRatesCacheFile = "ratescache.json";
+
+File GetRatesCacheFile(std::string_view dataDir) {
+  return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfNotFound::kNoThrow);
+}
+
 }  // namespace
 
-FiatConverter::FiatConverter(Clock::duration ratesUpdateFrequency)
-    : _ratesUpdateFrequency(ratesUpdateFrequency), _apiKey(LoadCurrencyConverterAPIKey()) {
-  json data = kRatesCache.readJson();
+FiatConverter::FiatConverter(std::string_view dataDir, Clock::duration ratesUpdateFrequency)
+    : _ratesUpdateFrequency(ratesUpdateFrequency), _apiKey(LoadCurrencyConverterAPIKey(dataDir)), _dataDir(dataDir) {
+  File ratesCacheFile = GetRatesCacheFile(_dataDir);
+  json data = ratesCacheFile.readJson();
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
     Market m(marketStr, '-');
     double rate = rateAndTimeData["rate"];
     int64_t timeepoch = rateAndTimeData["timeepoch"];
-    log::trace("Stored rate {} for market {} from {}", rate, marketStr.c_str(), kRatesCache.name());
+    log::trace("Stored rate {} for market {} from {}", rate, marketStr.c_str(), kRatesCacheFile);
     _pricesMap.insert_or_assign(m, PriceTimedValue{rate, TimePoint(std::chrono::seconds(timeepoch))});
   }
-  log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCache.name());
+  log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }
 
 void FiatConverter::updateCacheFile() const {
@@ -50,7 +66,7 @@ void FiatConverter::updateCacheFile() const {
     data[marketPairStr]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
   }
-  kRatesCache.write(data);
+  GetRatesCacheFile(_dataDir).write(data);
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {

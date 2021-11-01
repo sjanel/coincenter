@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include "cct_allfiles.hpp"
 #include "cct_json.hpp"
+#include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 
 namespace cct {
@@ -69,11 +69,12 @@ CurlHandle::~CurlHandle() {}
 
 class FiatConverterTest : public ::testing::Test {
  protected:
-  FiatConverterTest() : converter(std::chrono::milliseconds(1)) {}
+  FiatConverterTest() : converter(coincenterInfo.dataDir(), std::chrono::milliseconds(1)) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
 
+  CoincenterInfo coincenterInfo;
   FiatConverter converter;
 };
 

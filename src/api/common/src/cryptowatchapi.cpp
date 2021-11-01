@@ -2,11 +2,12 @@
 
 #include <cctype>
 
-#include "cct_allfiles.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_toupperlower.hpp"
+#include "coincenterinfo.hpp"
 
 namespace cct {
 namespace api {
@@ -32,16 +33,21 @@ const json& CollectResults(const json& dataJson) {
   }
   return dataJson["result"];
 }
+
+File GetFiatCacheFile(std::string_view dataDir) {
+  return File(dataDir, File::Type::kCache, "fiatcache.json", File::IfNotFound::kNoThrow);
+}
 }  // namespace
 
-CryptowatchAPI::CryptowatchAPI(settings::RunMode runMode, Clock::duration fiatsUpdateFrequency,
-                               bool loadFromFileCacheAtInit)
-    : _curlHandle(Clock::duration::zero(), runMode),
+CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode,
+                               Clock::duration fiatsUpdateFrequency, bool loadFromFileCacheAtInit)
+    : _config(config),
+      _curlHandle(Clock::duration::zero(), runMode),
       _fiatsUpdateFrequency(fiatsUpdateFrequency),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(10), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
-    json data = kFiatCache.readJson();
+    json data = GetFiatCacheFile(_config.dataDir()).readJson();
     if (!data.empty()) {
       int64_t timeepoch = data["timeepoch"];
       _lastUpdatedFiatsTime = TimePoint(std::chrono::seconds(timeepoch));
@@ -124,7 +130,8 @@ CryptowatchAPI::PricesPerMarketMap CryptowatchAPI::AllPricesFunc::operator()(std
 }
 
 void CryptowatchAPI::updateCacheFile() const {
-  json data = kFiatCache.readJson();
+  File fiatsCacheFile = GetFiatCacheFile(_config.dataDir());
+  json data = fiatsCacheFile.readJson();
   if (data.contains("timeepoch")) {
     int64_t lastTimeFileUpdated = data["timeepoch"];
     if (TimePoint(std::chrono::seconds(lastTimeFileUpdated)) > _lastUpdatedFiatsTime) {
@@ -137,7 +144,7 @@ void CryptowatchAPI::updateCacheFile() const {
   }
   data["timeepoch"] =
       std::chrono::duration_cast<std::chrono::seconds>(_lastUpdatedFiatsTime.time_since_epoch()).count();
-  kFiatCache.write(data);
+  fiatsCacheFile.write(data);
 }
 }  // namespace api
 }  // namespace cct

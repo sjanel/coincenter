@@ -13,7 +13,11 @@ namespace api {
 
 class UpbitAPI : public ::testing::Test {
  protected:
-  UpbitAPI() : upbitPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
+  UpbitAPI()
+      : apiKeyProvider(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo.dataDir()),
+        cryptowatchAPI(coincenterInfo),
+        upbitPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

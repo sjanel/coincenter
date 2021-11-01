@@ -13,7 +13,11 @@ namespace api {
 
 class BithumbAPI : public ::testing::Test {
  protected:
-  BithumbAPI() : bithumbPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
+  BithumbAPI()
+      : apiKeyProvider(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo.dataDir()),
+        cryptowatchAPI(coincenterInfo),
+        bithumbPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

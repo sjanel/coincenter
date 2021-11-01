@@ -1,17 +1,25 @@
 #include "wallet.hpp"
 
-#include "cct_allfiles.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_file.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
 
+namespace {
+File GetDepositAddressesFile(std::string_view dataDir) {
+  return File(dataDir, File::Type::kSecret, kDepositAddressesFileName, File::IfNotFound::kNoThrow);
+}
+}  // namespace
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.
-bool Wallet::IsAddressPresentInDepositFile(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
-                                           std::string_view expectedAddress, std::string_view expectedTag) {
-  json data = kDepositAddresses.readJson();
+bool Wallet::IsAddressPresentInDepositFile(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
+                                           CurrencyCode currency, std::string_view expectedAddress,
+                                           std::string_view expectedTag) {
+  File depositAddressesFile = GetDepositAddressesFile(dataDir);
+  json data = depositAddressesFile.readJson();
   if (!data.contains(privateExchangeName.name())) {
-    log::warn("No deposit addresses found in {} for {}", kDepositAddresses.name(), privateExchangeName.name());
+    log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, privateExchangeName.name());
     return false;
   }
   const json &exchangeWallets = data[string(privateExchangeName.name())];
@@ -52,21 +60,21 @@ bool Wallet::IsAddressPresentInDepositFile(const PrivateExchangeName &privateExc
 }
 
 Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
-               std::string_view tag)
+               std::string_view tag, [[maybe_unused]] std::string_view dataDir)
     : _privateExchangeName(privateExchangeName), _address(address), _tag(tag), _currency(currency) {
 #ifndef CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE
-  if (!IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
-    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddresses.name()));
+  if (!IsAddressPresentInDepositFile(dataDir, _privateExchangeName, currency, address, tag)) {
+    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddressesFileName));
   }
 #endif
 }
 
 Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, std::string_view address,
-               std::string_view tag)
+               std::string_view tag, [[maybe_unused]] std::string_view dataDir)
     : _privateExchangeName(std::move(privateExchangeName)), _address(address), _tag(tag), _currency(currency) {
 #ifndef CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE
-  if (!IsAddressPresentInDepositFile(_privateExchangeName, currency, address, tag)) {
-    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddresses.name()));
+  if (!IsAddressPresentInDepositFile(dataDir, _privateExchangeName, currency, address, tag)) {
+    throw exception("Incorrect wallet compared to the one stored in " + string(kDepositAddressesFileName));
   }
 #endif
 }

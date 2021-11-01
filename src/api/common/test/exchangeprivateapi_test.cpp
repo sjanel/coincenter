@@ -32,15 +32,17 @@ class MockExchangePrivate : public ExchangePrivate {
 class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest()
-      : exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
+      : cryptowatchAPI(coincenterInfo),
+        fiatConverter(coincenterInfo.dataDir()),
+        exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
         exchangePrivate(exchangePublic, coincenterInfo, APIKey("test", "testuser", "", "", "")) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
 
+  CoincenterInfo coincenterInfo;
   CryptowatchAPI cryptowatchAPI;
   FiatConverter fiatConverter;
-  CoincenterInfo coincenterInfo;
   MockExchangePublic exchangePublic;
   MockExchangePrivate exchangePrivate;
 

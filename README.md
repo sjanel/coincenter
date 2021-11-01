@@ -232,7 +232,7 @@ coincenter --balance kraken,bithumb --balance-cur eur
 ## Simple Trade
 
 It is possible to make a simple trade on one exchange by the command line handled automatically by the program, according to different strategies.
-Of course, this requires that your private keys for the considered exchange are well settled in the 'config/secret.json' file, and that your balance is adequate. 
+Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is adequate. 
 
 Possible strategies:
  - maker: Order placed at limit price (default) 
@@ -265,7 +265,7 @@ Some exchanges require that external addresses are validated prior to their usag
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
  - External address is not taken as an input parameter, by instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
- - Then retrieved deposit address is validated in `config/depositaddresses.json` which serves as a *portfolio* of trusted addresses
+ - Then retrieved deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
@@ -279,11 +279,11 @@ coincenter --withdraw 10000xlm,bithumb-huobi
 - `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. 
 
 ## Secrets
-`secret/secret.json` holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
-`secret/secret_test.json` shows the syntax.
+`<DataDir>/secret/secret.json` holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
+`<DataDir>/secret/secret_test.json` shows the syntax.
 
 ## Exchange config
-You can exclude currencies in the exchange configuration file `static/exchangeconfig.json` (for instance: some unstable fiat currencies in binance).
+You can exclude currencies in the exchange configuration file `<DataDir>/static/exchangeconfig.json` (for instance: some unstable fiat currencies in binance).
 
 # Other examples
 

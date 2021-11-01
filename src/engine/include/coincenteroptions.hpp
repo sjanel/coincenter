@@ -4,7 +4,7 @@
 #include <optional>
 #include <utility>
 
-#include "cct_allfiles.hpp"
+#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
@@ -21,6 +21,8 @@ struct CoincenterCmdLineOptions {
   void setLogFile() const;
 
   static void PrintVersion(const char* programName);
+
+  string dataDir = kDefaultDataDir;
 
   string logLevel;
   bool help = false;
@@ -54,19 +56,22 @@ struct CoincenterCmdLineOptions {
 };
 
 template <class OptValueType>
-inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser() {
+CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser() {
   constexpr int64_t defaultTradeTimeout =
       std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultTradeDuration).count();
   constexpr int64_t emergencyBufferTime =
       std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultEmergencyTime).count();
   constexpr int64_t minUpdatePriceTime =
       std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions::kDefaultMinTimeBetweenPriceUpdates).count();
-  const bool isSimulationModeByDefault = api::TradeOptions().isSimulation();
+  constexpr bool isSimulationModeByDefault = api::TradeOptions().isSimulation();
 
   // clang-format off
   return CommandLineOptionsParser<OptValueType>(
       {{{{"General", 1}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
        {{{"General", 1}, "--version", "", "Display program version"}, &OptValueType::version},
+       {{{"General", 1}, "--data", 'd', "<path/to/data>", string("Use given 'data' directory instead of the one chosen at build time '")
+                                                      .append(kDefaultDataDir).append("'")}, 
+                                                      &OptValueType::dataDir},
        {{{"General", 1}, "--loglevel", "<levelname>", "Sets the log level during all execution. "
                                                       "Possible values are: trace|debug|info|warning|error|critical|off"}, 
                                                       &OptValueType::logLevel},
@@ -133,7 +138,7 @@ inline CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptions
        {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
                                                                          " Amount is gross, including fees. Address and tag will be retrieved"
                                                                          " automatically from destination exchange and should match an entry in '")
-                                                                        .append(kDepositAddresses.name())
+                                                                        .append(kDepositAddressesFileName)
                                                                         .append("' file.")}, &OptValueType::withdraw},
        {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 

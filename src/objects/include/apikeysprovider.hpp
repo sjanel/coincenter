@@ -17,12 +17,12 @@ class APIKeysProvider {
  public:
   using KeyNames = SmallVector<string, kTypicalNbPrivateAccounts>;
 
-  explicit APIKeysProvider(settings::RunMode runMode = settings::RunMode::kProd)
-      : APIKeysProvider(PublicExchangeNames(), false, runMode) {}
+  explicit APIKeysProvider(std::string_view dataDir, settings::RunMode runMode = settings::RunMode::kProd)
+      : APIKeysProvider(dataDir, PublicExchangeNames(), false, runMode) {}
 
-  APIKeysProvider(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-                  settings::RunMode runMode = settings::RunMode::kProd)
-      : _apiKeysMap(ParseAPIKeys(exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode)) {}
+  APIKeysProvider(std::string_view dataDir, const PublicExchangeNames &exchangesWithoutSecrets,
+                  bool allExchangesWithoutSecrets, settings::RunMode runMode = settings::RunMode::kProd)
+      : _apiKeysMap(ParseAPIKeys(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode)) {}
 
   APIKeysProvider(const APIKeysProvider &) = delete;
   APIKeysProvider &operator=(const APIKeysProvider &) = delete;
@@ -40,8 +40,8 @@ class APIKeysProvider {
   using APIKeys = vector<APIKey>;
   using APIKeysMap = std::map<string, APIKeys, std::less<>>;
 
-  static APIKeysMap ParseAPIKeys(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-                                 settings::RunMode runMode);
+  static APIKeysMap ParseAPIKeys(std::string_view dataDir, const PublicExchangeNames &exchangesWithoutSecrets,
+                                 bool allExchangesWithoutSecrets, settings::RunMode runMode);
 
   APIKeysMap _apiKeysMap;
 };

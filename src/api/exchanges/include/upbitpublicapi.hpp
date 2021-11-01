@@ -70,11 +70,12 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    explicit WithdrawalFeesFunc(const string& name) : _name(name) {}
+    WithdrawalFeesFunc(const string& name, std::string_view dataDir) : _name(name), _dataDir(dataDir) {}
 
     WithdrawalFeeMap operator()();
 
     const string& _name;
+    string _dataDir;
   };
 
   struct AllOrderBooksFunc {
