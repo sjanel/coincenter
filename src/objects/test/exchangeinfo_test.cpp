@@ -4,28 +4,15 @@
 
 namespace cct {
 namespace {
-json CreateExchangeInfoJson() {
-  json ret = R"({
-                "asset": {
-                        "allexclude": "AUD,CAD",
-                        "withdrawexclude": "BTC,EUR"
-                },
-                "tradefees": {
-                        "maker": "0.16",
-                        "taker": "0.26"
-                },
-                "query": {
-                        "minpublicquerydelayms": 666,
-                        "minprivatequerydelayms": 450
-                }
-  })"_json;
-  return ret;
-}
+
+const CurrencyCode kExcludedCur[] = {CurrencyCode("AUD"), CurrencyCode("CAD")};
+const CurrencyCode kWithdrawExcludedCur[] = {CurrencyCode("BTC"), CurrencyCode("EUR")};
 }  // namespace
 
 class ExchangeInfoKrakenTest : public ::testing::Test {
  protected:
-  ExchangeInfoKrakenTest() : exchangeInfo("kraken", CreateExchangeInfoJson()) {}
+  ExchangeInfoKrakenTest()
+      : exchangeInfo("kraken", "0.16", "0.26", kExcludedCur, kWithdrawExcludedCur, 666, 450, false) {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 

@@ -3,6 +3,7 @@
 #include "apikeysprovider.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "kucoinprivateapi.hpp"
@@ -11,23 +12,7 @@
 
 namespace cct {
 namespace api {
-class KucoinAPI : public ::testing::Test {
- protected:
-  KucoinAPI()
-      : apiKeyProvider(coincenterInfo.dataDir()),
-        fiatConverter(coincenterInfo.dataDir()),
-        cryptowatchAPI(coincenterInfo),
-        kucoinPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterInfo;
-  APIKeysProvider apiKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  KucoinPublic kucoinPublic;
-};
+using KucoinAPI = TestAPI<KucoinPublic>;
 
 namespace {
 void PublicTest(KucoinPublic &kucoinPublic) {
@@ -55,7 +40,7 @@ void PrivateTest(KucoinPrivate &kucoinPrivate) {
 
 /// Place all in the same process to avoid double queries in the public API
 TEST_F(KucoinAPI, Main) {
-  PublicTest(kucoinPublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "kucoin";
   if (!apiKeyProvider.contains(exchangeName)) {
@@ -66,7 +51,7 @@ TEST_F(KucoinAPI, Main) {
   const APIKey &firstAPIKey =
       apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
 
-  KucoinPrivate kucoinPrivate(coincenterInfo, kucoinPublic, firstAPIKey);
+  KucoinPrivate kucoinPrivate(coincenterInfo, exchangePublic, firstAPIKey);
 
   PrivateTest(kucoinPrivate);
 }

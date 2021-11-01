@@ -155,7 +155,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
-           _exchangePublic.coincenterInfo().dataDir());
+           _exchangePublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }

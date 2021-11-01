@@ -4,6 +4,7 @@
 #include "bithumbprivateapi.hpp"
 #include "bithumbpublicapi.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "tradeoptions.hpp"
@@ -11,23 +12,7 @@
 namespace cct {
 namespace api {
 
-class BithumbAPI : public ::testing::Test {
- protected:
-  BithumbAPI()
-      : apiKeyProvider(coincenterInfo.dataDir()),
-        fiatConverter(coincenterInfo.dataDir()),
-        cryptowatchAPI(coincenterInfo),
-        bithumbPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterInfo;
-  APIKeysProvider apiKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  BithumbPublic bithumbPublic;
-};
+using BithumbAPI = TestAPI<BithumbPublic>;
 
 namespace {
 void PublicTest(BithumbPublic &bithumbPublic) {
@@ -78,7 +63,7 @@ void PrivateTest(BithumbPrivate &bithumbPrivate) {
 }  // namespace
 
 TEST_F(BithumbAPI, Public) {
-  PublicTest(bithumbPublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "bithumb";
   if (!apiKeyProvider.contains(exchangeName)) {
@@ -89,7 +74,7 @@ TEST_F(BithumbAPI, Public) {
   const APIKey &firstAPIKey =
       apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
 
-  BithumbPrivate bithumbPrivate(coincenterInfo, bithumbPublic, firstAPIKey);
+  BithumbPrivate bithumbPrivate(coincenterInfo, exchangePublic, firstAPIKey);
 
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   PrivateTest(bithumbPrivate);

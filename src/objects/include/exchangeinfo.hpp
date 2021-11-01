@@ -1,10 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <span>
 #include <string_view>
 
 #include "cct_flatset.hpp"
-#include "cct_json.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
 
@@ -16,7 +16,10 @@ class ExchangeInfo {
 
   enum struct FeeType { kMaker, kTaker };
 
-  ExchangeInfo(std::string_view exchangeNameStr, const json &exchangeData);
+  ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
+               std::span<const CurrencyCode> excludedAllCurrencies,
+               std::span<const CurrencyCode> excludedCurrenciesWithdraw, int minPublicQueryDelayMs,
+               int minPrivateQueryDelayMs, bool validateDepositAddressesInFile);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -37,11 +40,14 @@ class ExchangeInfo {
   /// Get the minimum time between two public api queries
   Clock::duration minPrivateQueryDelay() const { return _minPrivateQueryDelay; }
 
+  bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
+
  private:
   CurrencySet _excludedCurrenciesAll;         // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;  // Currencies unavailable for withdrawals
   Clock::duration _minPublicQueryDelay, _minPrivateQueryDelay;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
+  bool _validateDepositAddressesInFile;
 };
 }  // namespace cct

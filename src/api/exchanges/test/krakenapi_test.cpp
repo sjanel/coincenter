@@ -5,6 +5,7 @@
 #include "apikeysprovider.hpp"
 #include "cct_proxy.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "krakenprivateapi.hpp"
@@ -13,28 +14,7 @@
 
 namespace cct {
 namespace api {
-class KrakenAPI : public ::testing::Test {
- protected:
-  KrakenAPI()
-      : coincenterProdInfo(settings::RunMode::kProd),
-        coincenterTestInfo(settings::RunMode::kTest),
-        apiProdKeyProvider(coincenterProdInfo.dataDir(), coincenterProdInfo.getRunMode()),
-        apiTestKeyProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
-        fiatConverter(coincenterProdInfo.dataDir()),
-        cryptowatchAPI(coincenterProdInfo),
-        krakenPublic(coincenterProdInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterProdInfo;
-  CoincenterInfo coincenterTestInfo;
-  APIKeysProvider apiProdKeyProvider;
-  APIKeysProvider apiTestKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  KrakenPublic krakenPublic;
-};
+using KrakenAPI = TestAPI<KrakenPublic>;
 
 namespace {
 void PublicTest(KrakenPublic &krakenPublic) {
@@ -91,21 +71,21 @@ void PrivateTest(KrakenPrivate &krakenPrivate) {
 }  // namespace
 
 TEST_F(KrakenAPI, Main) {
-  PublicTest(krakenPublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "kraken";
 
-  if (!apiProdKeyProvider.contains(exchangeName)) {
+  if (!apiKeyProvider.contains(exchangeName)) {
     std::cerr << "Skip Kraken private API test as cannot find associated private key" << std::endl;
     return;
   }
 
   const APIKey &firstAPIKey =
-      apiProdKeyProvider.get(PrivateExchangeName(exchangeName, apiProdKeyProvider.getKeyNames(exchangeName).front()));
+      apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
 
   // The following test will target the proxy
   // To avoid matching the test case, you can simply provide production keys
-  KrakenPrivate krakenPrivate(coincenterProdInfo, krakenPublic, firstAPIKey);
+  KrakenPrivate krakenPrivate(coincenterInfo, exchangePublic, firstAPIKey);
   PrivateTest(krakenPrivate);
 }
 
@@ -123,7 +103,7 @@ TEST_F(KrakenAPI, PrivateEmptyBalance) {
 
     // The following test will target the proxy to ensure stable response
     // To avoid matching the test case, you can simply provide production keys
-    KrakenPrivate krakenPrivate(coincenterTestInfo, krakenPublic, firstAPIKey);
+    KrakenPrivate krakenPrivate(coincenterTestInfo, exchangePublic, firstAPIKey);
     EXPECT_TRUE(krakenPrivate.queryAccountBalance().empty());
   } else {
     log::info("Proxy not available.");

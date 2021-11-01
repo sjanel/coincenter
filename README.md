@@ -40,6 +40,10 @@ Supported exchanges are:
     - [From Docker](#from-docker)
       - [Build](#build-1)
       - [Run](#run)
+- [Configuration](#configuration)
+  - [Important files](#important-files)
+    - [secret/secret.json](#secretsecretjson)
+    - [static/exchangeconfig.json](#staticexchangeconfigjson)
 - [Tests](#tests)
 - [Usage](#usage)
   - [Balance](#balance)
@@ -47,9 +51,6 @@ Supported exchanges are:
     - [Trade simulation](#trade-simulation)
   - [Check markets order book](#check-markets-order-book)
   - [Withdraw coin](#withdraw-coin)
-- [Data files](#data-files)
-  - [Secrets](#secrets)
-  - [Exchange config](#exchange-config)
 - [Other examples](#other-examples)
   - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
   - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
@@ -134,7 +135,8 @@ Simply launch the help command for more information
 ```
 coincenter --help
 ```
-**Warning :** you will need to provide your API keys for some commands to work ([Configuration files](#configuration-files))
+
+**Warning :** you will need to provide your API keys for some commands to work ([Configuration](#configuration))
 
 ## As a static library
 
@@ -207,6 +209,89 @@ docker build --build-arg BUILD_MODE=Release -t local-coincenter .
 docker run -ti -e "TERM=xterm-256color" local-coincenter --help
 ```
 
+# Configuration
+
+At this step, there is an executable `coincenter`, but to unleash its full power it needs to have access to a special directory `data` which contains a tree of files as follows:
+
+- `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
+- `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
+- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs.
+
+## Important files
+
+### secret/secret.json
+
+Fill this file with your private keys for each of your account(s) in the exchanges. Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image or *git* commit. It is present in `.gitignore` and `.dockerignore` to avoid accidents. For additional security, always bind your keys to your private IP (some exchanges will force you to do it anyway).
+
+`<DataDir>/secret/secret_test.json` shows the syntax.
+
+For *Kucoin*, in addition of the `key` and `private` values, you will need to provide your `passphrase` as well.
+
+**Important**: `coincenter` supports several keys per exchange. If you have several keys for on exchange, let's say `jack` and `joe` for `kraken`, you will need to solve some ambiguity for some private commands to work, or if possible it will take the aggregation of all keys under this exchange.
+When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`. `trade` and `withdraw` need only one key.
+For `balance` however, if you provide only `kraken`, `coincenter` will automatically sum the balances of your two accounts.
+
+If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported).
+
+### static/exchangeconfig.json
+
+This json file should follow this specific format:
+```
+  - top level option:
+    - default:
+      - some option: default value
+      - another option: default value
+    - exchange:
+      - some exchange:
+        - some option: override value
+        - another option: default value
+      - another exchange:
+        - some option: override value
+```
+
+Currently, options are set from two ways:
+- Comma separated values are aggregated for each exchanges with the 'default' values (if present)
+- Single values are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if not present, uses a hardcoded default one (cf in the code).
+
+As an example, consider this file:
+```
+{
+  "asset": {
+    "default": {
+      "withdrawexclude": "BTC"
+    },
+    "exchange": {
+      "binance": {
+        "withdrawexclude": "BQX"
+      },
+      "kraken": {
+        "withdrawexclude": "EUR,KFEE"
+      }
+    }
+  },
+  "tradefees": {
+    "default": {
+      "maker": "0.1",
+    },
+    "exchange": {
+      "bithumb": {
+        "maker": "0.25",
+      }
+    }
+  }
+}
+```
+
+The chosen values will be:
+
+| Exchange | `asset/withdrawexclude` | `tradefees/maker` |
+| -------- | :---------------------: | :---------------: |
+| Binance  |        `BTC,BQX`        |       `0.1`       |
+| Kraken   |     `BTC,EUR,KFEE`      |       `0.1`       |
+| Bithumb  |          `BTC`          |      `0.25`       |
+
+Refer to the hardcoded default json example as a model in case of doubt.
+
 # Tests
 
 Tests are compiled only if `coincenter` is built as a main project by default. You can set `cmake` flag `CCT_ENABLE_TESTS` to 1 or 0 to change this behavior.
@@ -235,10 +320,10 @@ It is possible to make a simple trade on one exchange by the command line handle
 Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is adequate. 
 
 Possible strategies:
- - maker: Order placed at limit price (default) 
+ - `maker`: Order placed at limit price (default) 
           Price is continuously adjusted to limit price and will be cancelled at expired time if not fully matched (controlled with `--trade-timeout`)
- - taker: order placed at market price, should be matched immediately
- - adapt: same as maker, except that after `t + timeout - trade-emergency` time (`t` being the start time of the trade) remaining unmatched part is placed at market price to force the trade
+ - `taker`: order placed at market price, should be matched immediately
+ - `adapt`: same as maker, except that after `t + timeout - trade-emergency` time (`t` being the start time of the trade) remaining unmatched part is placed at market price to force the trade
 
 Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
           an emergency mode triggered before 2 seconds of the timeout of 15 seconds."
@@ -264,26 +349,13 @@ It is possible to withdraw coin with `coincenter` as well, in a synchronized mod
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
- - External address is not taken as an input parameter, by instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
- - Then retrieved deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
+ - External address is not taken as an input parameter, but instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
+ - By default (can be configured in `static/exchangeconfig.json`) deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
 coincenter --withdraw 10000xlm,bithumb-huobi
 ```
-
-# Data files
-`coincenter` needs to have access to a `data` directory containing the following directories:
-- `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
-- `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
-- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. 
-
-## Secrets
-`<DataDir>/secret/secret.json` holds your private keys. Keep it safe, secret and never commit / push it. It is present in `.gitignore` (and `.dockerignore`) to avoid mistakes.
-`<DataDir>/secret/secret_test.json` shows the syntax.
-
-## Exchange config
-You can exclude currencies in the exchange configuration file `<DataDir>/static/exchangeconfig.json` (for instance: some unstable fiat currencies in binance).
 
 # Other examples
 

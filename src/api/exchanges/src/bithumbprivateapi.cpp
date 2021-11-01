@@ -207,7 +207,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
       addressAndTag.end());
 
   Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
-           _exchangePublic.coincenterInfo().dataDir());
+           _exchangePublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }

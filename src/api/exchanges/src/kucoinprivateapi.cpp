@@ -162,7 +162,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = std::string_view();
   }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, dataDir);
+  Wallet w(privateExchangeName, currencyCode, address, tag, _kucoinPublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }
