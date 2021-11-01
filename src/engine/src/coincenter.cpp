@@ -38,8 +38,8 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
                        settings::RunMode runMode, std::string_view dataDir)
     : _coincenterInfo(runMode, dataDir),
       _cryptowatchAPI(_coincenterInfo, runMode),
-      _fiatConverter(_coincenterInfo.dataDir(), std::chrono::hours(8)),
-      _apiKeyProvider(_coincenterInfo.dataDir(), exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
+      _fiatConverter(dataDir, std::chrono::hours(8)),
+      _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),

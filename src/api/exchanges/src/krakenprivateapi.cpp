@@ -158,7 +158,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, dataDir);
+  Wallet w(privateExchangeName, currencyCode, address, tag, _exchangePublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }

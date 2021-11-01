@@ -3,6 +3,7 @@
 #include "apikeysprovider.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "huobiprivateapi.hpp"
@@ -11,23 +12,7 @@
 
 namespace cct {
 namespace api {
-class HuobiAPI : public ::testing::Test {
- protected:
-  HuobiAPI()
-      : apiKeyProvider(coincenterInfo.dataDir()),
-        fiatConverter(coincenterInfo.dataDir()),
-        cryptowatchAPI(coincenterInfo),
-        huobiPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterInfo;
-  APIKeysProvider apiKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  HuobiPublic huobiPublic;
-};
+using HuobiAPI = TestAPI<HuobiPublic>;
 
 namespace {
 void PublicTest(HuobiPublic &huobiPublic) {
@@ -56,7 +41,7 @@ void PrivateTest(HuobiPrivate &huobiPrivate) {
 
 /// Place all in the same process to avoid double queries in the public API
 TEST_F(HuobiAPI, Main) {
-  PublicTest(huobiPublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "huobi";
   if (!apiKeyProvider.contains(exchangeName)) {
@@ -67,7 +52,7 @@ TEST_F(HuobiAPI, Main) {
   const APIKey &firstAPIKey =
       apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
 
-  HuobiPrivate huobiPrivate(coincenterInfo, huobiPublic, firstAPIKey);
+  HuobiPrivate huobiPrivate(coincenterInfo, exchangePublic, firstAPIKey);
 
   PrivateTest(huobiPrivate);
 }

@@ -7,22 +7,15 @@
 #include "exchangename.hpp"
 
 namespace cct {
-
+class CoincenterInfo;
 class Wallet {
  public:
   /// Build a wallet with all information.
-  /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
-  /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
-  /// not withdraw)
   Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
-         std::string_view tag, std::string_view dataDir);
+         std::string_view tag, const CoincenterInfo &coincenterInfo);
 
-  /// Build a wallet with all information.
-  /// Wallet will be validated against the trusted deposit addresses stored in deposit address files,
-  /// unless CCT_DO_NOT_VALIDATE_DEPOSIT_ADDRESS_IN_FILE is set (controlled at build time, or for unit tests which do
-  /// not withdraw)
   Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, std::string_view address,
-         std::string_view tag, std::string_view dataDir);
+         std::string_view tag, const CoincenterInfo &coincenterInfo);
 
   const PrivateExchangeName &privateExchangeName() const { return _privateExchangeName; }
 

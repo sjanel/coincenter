@@ -14,12 +14,12 @@
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
+#include "exchangeinfomap.hpp"
 
 namespace cct {
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
-  using ExchangeInfoMap = std::map<string, ExchangeInfo, std::less<>>;
   using Duration = std::chrono::high_resolution_clock::duration;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 

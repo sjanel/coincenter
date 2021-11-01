@@ -119,7 +119,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = std::string_view();
   }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, dataDir);
+  Wallet w(privateExchangeName, currencyCode, address, tag, _huobiPublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }

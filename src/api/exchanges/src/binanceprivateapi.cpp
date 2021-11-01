@@ -100,8 +100,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   std::string_view address(result["address"].get<std::string_view>());
   std::string_view tag(result["tag"].get<std::string_view>());
   std::string_view url(result["url"].get<std::string_view>());
-  Wallet w(PrivateExchangeName(_public.name(), _apiKey.name()), currencyCode, address, tag,
-           _public.coincenterInfo().dataDir());
+  Wallet w(PrivateExchangeName(_public.name(), _apiKey.name()), currencyCode, address, tag, _public.coincenterInfo());
   log::info("Retrieved {} (URL: '{}')", w.str(), url);
   return w;
 }

@@ -2,6 +2,7 @@
 
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "tradeoptions.hpp"
@@ -10,24 +11,7 @@
 
 namespace cct {
 namespace api {
-
-class UpbitAPI : public ::testing::Test {
- protected:
-  UpbitAPI()
-      : apiKeyProvider(coincenterInfo.dataDir()),
-        fiatConverter(coincenterInfo.dataDir()),
-        cryptowatchAPI(coincenterInfo),
-        upbitPublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterInfo;
-  APIKeysProvider apiKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  UpbitPublic upbitPublic;
-};
+using UpbitAPI = TestAPI<UpbitPublic>;
 
 namespace {
 void PublicTest(UpbitPublic &upbitPublic) {
@@ -82,7 +66,7 @@ void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
 }  // namespace
 
 TEST_F(UpbitAPI, Public) {
-  PublicTest(upbitPublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "upbit";
 
@@ -96,8 +80,8 @@ TEST_F(UpbitAPI, Public) {
 
   // The following test will target the proxy
   // To avoid matching the test case, you can simply provide production keys
-  UpbitPrivate upbitPrivate(coincenterInfo, upbitPublic, firstAPIKey);
-  PrivateTest(upbitPrivate, upbitPublic);
+  UpbitPrivate upbitPrivate(coincenterInfo, exchangePublic, firstAPIKey);
+  PrivateTest(upbitPrivate, exchangePublic);
 }
 
 }  // namespace api

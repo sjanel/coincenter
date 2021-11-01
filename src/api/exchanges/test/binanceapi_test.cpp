@@ -5,29 +5,14 @@
 #include "binancepublicapi.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
-class BinanceAPI : public ::testing::Test {
- protected:
-  BinanceAPI()
-      : apiKeyProvider(coincenterInfo.dataDir()),
-        fiatConverter(coincenterInfo.dataDir()),
-        cryptowatchAPI(coincenterInfo),
-        binancePublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
-
-  virtual void SetUp() {}
-  virtual void TearDown() {}
-
-  CoincenterInfo coincenterInfo;
-  APIKeysProvider apiKeyProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  BinancePublic binancePublic;
-};
+using BinanceAPI = TestAPI<BinancePublic>;
 
 namespace {
 void PublicTest(BinancePublic &binancePublic) {
@@ -59,7 +44,7 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
 
 /// Place all in the same process to avoid double queries in the public API
 TEST_F(BinanceAPI, Main) {
-  PublicTest(binancePublic);
+  PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "binance";
   if (!apiKeyProvider.contains(exchangeName)) {
@@ -70,9 +55,9 @@ TEST_F(BinanceAPI, Main) {
   const APIKey &firstAPIKey =
       apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
 
-  BinancePrivate binancePrivate(coincenterInfo, binancePublic, firstAPIKey);
+  BinancePrivate binancePrivate(coincenterInfo, exchangePublic, firstAPIKey);
 
-  PrivateTest(binancePrivate, binancePublic);
+  PrivateTest(binancePrivate, exchangePublic);
 }
 
 }  // namespace api
