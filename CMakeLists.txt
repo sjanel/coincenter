@@ -26,7 +26,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
-option(CCT_BUILD_EXEC_INSTEAD_OF_LIB "Build an executable instead of a static library" ${MAIN_PROJECT})
+option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 
 set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter")

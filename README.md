@@ -11,8 +11,18 @@
 coincenter
 ==========
 
-A C++ library / CLI stand-alone program centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
+A C++ Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
 
+Main features:
+
+ - Market
+ - Orderbook
+ - Traded volume
+ - Last Price
+ - Balance
+ - Trade (in several flavors)
+ - Withdraw (with check at destination that funds are well received)
+  
 Supported exchanges are:
 | Exchange |                                      Link                                       |
 | -------- | :-----------------------------------------------------------------------------: |
@@ -26,23 +36,24 @@ Supported exchanges are:
  *Table of Contents*
 - [coincenter](#coincenter)
 - [About](#about)
-- [Install](#install)
-  - [Use public docker image](#use-public-docker-image)
-  - [Pre-requisites](#pre-requisites)
+- [Installation](#installation)
+  - [Public docker image](#public-docker-image)
+  - [Prerequisites](#prerequisites)
     - [Linux](#linux)
       - [Debian / Ubuntu](#debian--ubuntu)
       - [Alpine](#alpine)
     - [Windows](#windows)
-  - [As an executable (CLI tool)](#as-an-executable-cli-tool)
-  - [As a static library](#as-a-static-library)
   - [Build](#build)
-    - [From source](#from-source)
-    - [From Docker](#from-docker)
+    - [With cmake](#with-cmake)
+      - [cmake build options](#cmake-build-options)
+      - [As a static library](#as-a-static-library)
+    - [With Docker](#with-docker)
       - [Build](#build-1)
       - [Run](#run)
 - [Configuration](#configuration)
   - [Important files](#important-files)
     - [secret/secret.json](#secretsecretjson)
+      - [Handle several accounts per exchange](#handle-several-accounts-per-exchange)
     - [static/exchangeconfig.json](#staticexchangeconfigjson)
 - [Tests](#tests)
 - [Usage](#usage)
@@ -51,19 +62,15 @@ Supported exchanges are:
     - [Trade simulation](#trade-simulation)
   - [Check markets order book](#check-markets-order-book)
   - [Withdraw coin](#withdraw-coin)
-- [Other examples](#other-examples)
-  - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
-  - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
+  - [Other examples](#other-examples)
+    - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
+    - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
     - [Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy-in-simulation-mode)
-      - [Possible output](#possible-output)
-  - [Prints conversion paths](#prints-conversion-paths)
-    - [Possible output](#possible-output-1)
-  - [Prints all markets trading Stellar (XLM)](#prints-all-markets-trading-stellar-xlm)
-    - [Possible output](#possible-output-2)
-  - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
-    - [Possible output](#possible-output-3)
-  - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
-  - [Prints last price of Cardano in Bitcoin for all exchanges supporting it](#prints-last-price-of-cardano-in-bitcoin-for-all-exchanges-supporting-it)
+    - [Prints conversion paths](#prints-conversion-paths)
+    - [Prints all markets trading Stellar (XLM)](#prints-all-markets-trading-stellar-xlm)
+    - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
+    - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
+    - [Prints last price of Cardano in Bitcoin for all exchanges supporting it](#prints-last-price-of-cardano-in-bitcoin-for-all-exchanges-supporting-it)
 
 # About
 
@@ -71,9 +78,9 @@ This project is for **C++** and **crypto enthusiasts** providing an alternative 
 At the beginning, it started as a experimental project aiming to learn modern C++ (**C++17** and **C++20**), **cmake** and practice all aspects of large project development such as CI/CD, building and documentation.
 All suggestions to improve the project are welcome (should it be bug fixing, support of a new crypto exchange, feature addition / improvements or even technical aspects about the source code and best development practices).
 
-# Install
+# Installation
 
-## Use public docker image
+## Public docker image
 
 If you don't want to build `coincenter` locally, you can just download the public docker image, corresponding to the latest version of branch `main`.
 
@@ -81,7 +88,7 @@ If you don't want to build `coincenter` locally, you can just download the publi
 docker run -t sjanel/coincenter -h
 ```
 
-Of course, docker image does not contain any secrets (nor needed data and config directories).
+Docker image does not contain additional `data` directory needed by `coincenter` (see ([Configuration](#configuration)))
 
 To bind your 'data' directory from host to the docker container, you can use `--mount` option:
 
@@ -89,9 +96,13 @@ To bind your 'data' directory from host to the docker container, you can use `--
 docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data sjanel/coincenter
 ```
 
-## Pre-requisites
+## Prerequisites
 
-You will need to install **OpenSSL** (min version 1.1.0), **cURL**, **cmake** and a **C++20** compiler on your system.
+- **Git**
+- **C++** compiler supporting C++20 (gcc >= 10, clang >= 13, MSVC >= 19.28).
+- **CMake** >= 3.15
+- **curl** >= 7.58.0
+- **openssl** >= 1.1.0
 
 ### Linux
 
@@ -112,33 +123,43 @@ You can refer to the provided `Dockerfile` for more information.
 
 ### Windows
 
-On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install *cURL* and *OpenSSL*:
+On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install **curl** and **OpenSSL**:
 
 ```
 choco install curl openssl
 ```
 
-Then, locate where curl is installed (by default, should be in `C:\ProgramData\chocolatey\lib\curl\tools\curl-xxx`, let's note this `CURL_DIR`) and add both `CURL_DIR/lib` and `CURL_DIR/bin` in your `PATH`. From this step, **cURL** and **OpenSSL** can be found by `cmake` and will be linked statically to the executables.
+Then, locate where curl is installed (by default, should be in `C:\ProgramData\chocolatey\lib\curl\tools\curl-xxx`, let's note this `CURL_DIR`) and add both `CURL_DIR/lib` and `CURL_DIR/bin` in your `PATH`. From this step, **curl** and **OpenSSL** can be found by `cmake` and will be linked statically to the executables.
 
-## As an executable (CLI tool)
+## Build
 
-**coincenter** can be used as a stand-alone project which provides an executable able to perform most common exchange operations on supported exchanges:
- - Market
- - Orderbook
- - Traded volume
- - Last Price
- - Balance
- - Trade
- - Withdraw
+### With cmake
 
-Simply launch the help command for more information
+This is a **C++20** project. Today, it is only partially supported by the main compilers.
+
+Tested compilers:
+ - GCC version >= 10
+ - Clang version >= 13
+ - MSVC version >= 19.28
+
+Other compilers have not been tested yet.
+
+#### cmake build options
+
+| Option             | Default              | Description                                     |
+| ------------------ | -------------------- | ----------------------------------------------- |
+| `CCT_ENABLE_TESTS` | `ON` if main project | Build and launch unit tests                     |
+| `CCT_BUILD_EXEC`   | `ON` if main project | Build an executable instead of a static library |
+| `CCT_ENABLE_ASAN`  | `ON` if Debug mode   | Compile with AddressSanitizer                   |
+
+Example on Linux: to compile it in `Release` mode and `ninja` generator
 ```
-coincenter --help
+mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
 ```
 
-**Warning :** you will need to provide your API keys for some commands to work ([Configuration](#configuration))
+On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2019**, etc), or build it from command line, with generator `-G "Visual Studio 16 2019"`. Refer to the GitHub Windows workflow to have the detailed installation steps.
 
-## As a static library
+#### As a static library
 
 **coincenter** can also be used as a sub project, such as a trading bot for instance. It is the case by default if built as a sub-module in `cmake`.
 
@@ -159,31 +180,9 @@ Then, a static library named `coincenter` is defined and you can link it as usua
 target_link_libraries(<MyProgram> PRIVATE coincenter)
 ```
 
-## Build
+### With Docker
 
-### From source
-
-This is a C++20 project. Today, it is only partially supported by the main compilers.
-
-Tested compilers:
- - GCC version >= 10
- - Clang version >= 13
- - MSVC version >= 19.28
-
-Other compilers have not been tested yet.
-
-`coincenter` uses `cmake`.
-
-Example on Linux: to compile it in `Release` mode and `ninja` generator
-```
-mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
-```
-
-On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2019**, etc), or build it from command line, with generator `-G "Visual Studio 16 2019"`. Refer to the GitHub Windows workflow to have the detailed installation steps.
-
-### From Docker
-
-An always up to date **Docker** image is hosted in the public **Docker hub** registry with the name *sjanel/coincenter*, corresponding to latest successful build of `main` branch by the CI.
+A **Docker** image is hosted in the public **Docker hub** registry with the name *sjanel/coincenter*, corresponding to latest successful build of `main` branch by the CI.
 
 You can create your own **Docker** image of `coincenter`. It uses **Alpine** Linux distribution as base and multi stage build to reduce the image size.
 Build options (all optional):
@@ -211,7 +210,7 @@ docker run -ti -e "TERM=xterm-256color" local-coincenter --help
 
 # Configuration
 
-At this step, there is an executable `coincenter`, but to unleash its full power it needs to have access to a special directory `data` which contains a tree of files as follows:
+At this step, `coincenter` is built. To execute properly, it needs read/write access to a special directory `data` which contains a tree of files as follows:
 
 - `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
 - `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
@@ -221,22 +220,69 @@ At this step, there is an executable `coincenter`, but to unleash its full power
 
 ### secret/secret.json
 
-Fill this file with your private keys for each of your account(s) in the exchanges. Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image or *git* commit. It is present in `.gitignore` and `.dockerignore` to avoid accidents. For additional security, always bind your keys to your private IP (some exchanges will force you to do it anyway).
+Fill this file with your private keys for each of your account(s) in the exchanges. 
+Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image or *git* commit. 
+It is present in `.gitignore` and `.dockerignore` to avoid accidents. 
+For additional security, always bind your keys to your IP (some exchanges will force you to do it anyway).
 
 `<DataDir>/secret/secret_test.json` shows the syntax.
 
 For *Kucoin*, in addition of the `key` and `private` values, you will need to provide your `passphrase` as well.
 
-**Important**: `coincenter` supports several keys per exchange. If you have several keys for on exchange, let's say `jack` and `joe` for `kraken`, you will need to solve some ambiguity for some private commands to work, or if possible it will take the aggregation of all keys under this exchange.
-When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`. `trade` and `withdraw` need only one key.
-For `balance` however, if you provide only `kraken`, `coincenter` will automatically sum the balances of your two accounts.
+#### Handle several accounts per exchange
 
-If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported).
+`coincenter` supports several keys per exchange. In this case, `coincenter` will need additional information for some queries (`trade` and `withdraw` for instance) to select the desired exchange account for the command. Some queries, such as `balance`, work without specifying the account, but the behavior is different: all accounts will be aggregated (balance will be summed for the `balance` query). 
+
+Example:
+
+Let's say you have `jack` and `joe` accounts (the name of the keys in `secret.json` file) for `kraken`:
+```json
+{
+  "kraken": {
+    "jack": {
+      "key": "...",
+      "private": "..."
+    },
+    "joe": {
+      "key": "...",
+      "private": "..."
+    }
+  }
+}
+```
+
+When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`.
+
+| Command                                 | Explanation                                                                                              |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `coincenter -b kraken`                  | Sum of balances of 'jack' and 'joe' accounts of kraken                                                   |
+| `coincenter -b kraken_jack`             | Only balance of 'jack' account of kraken                                                                 |
+| `coincenter -t 1000usdt-sol,kraken`     | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' |
+| `coincenter -t 1000usdt-sol,kraken_joe` | **OK**: perform the trade on 'joe' account                                                               |
+
+If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported):
+```json
+{
+  "binance": {
+    "averell": {
+      "key": "...",
+      "private": "..."
+    }
+  }
+}
+```
+
+| Command                                      | Explanation                                              |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `coincenter -b binance`                      | Only one account in `binance`, this will print `averell` |
+| `coincenter -b binance_averell`              | Same as above                                            |
+| `coincenter -t 1000usdt-sol,binance`         | **OK**, no ambiguity                                     |
+| `coincenter -t 1000usdt-sol,binance_averell` | **OK** as well                                           |
 
 ### static/exchangeconfig.json
 
 This json file should follow this specific format:
-```
+```yaml
   - top level option:
     - default:
       - some option: default value
@@ -250,11 +296,11 @@ This json file should follow this specific format:
 ```
 
 Currently, options are set from two ways:
-- Comma separated values are aggregated for each exchanges with the 'default' values (if present)
-- Single values are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if not present, uses a hardcoded default one (cf in the code).
+- **Comma separated values** are aggregated for each exchange with the 'default' values (if present)
+- **Single values** are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if again not present, uses a hardcoded default one (cf in the code).
 
 As an example, consider this file:
-```
+```json
 {
   "asset": {
     "default": {
@@ -285,10 +331,10 @@ As an example, consider this file:
 The chosen values will be:
 
 | Exchange | `asset/withdrawexclude` | `tradefees/maker` |
-| -------- | :---------------------: | :---------------: |
-| Binance  |        `BTC,BQX`        |       `0.1`       |
-| Kraken   |     `BTC,EUR,KFEE`      |       `0.1`       |
-| Bithumb  |          `BTC`          |      `0.25`       |
+| -------- | ----------------------- | ----------------- |
+| Binance  | `BTC,BQX`               | `0.1`             |
+| Kraken   | `BTC,EUR,KFEE`          | `0.1`             |
+| Bithumb  | `BTC`                   | `0.25`            |
 
 Refer to the hardcoded default json example as a model in case of doubt.
 
@@ -316,8 +362,8 @@ coincenter --balance kraken,bithumb --balance-cur eur
 
 ## Simple Trade
 
-It is possible to make a simple trade on one exchange by the command line handled automatically by the program, according to different strategies.
-Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is adequate. 
+It is possible to make a simple trade on one market / exchange according to different strategies.
+Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is sufficient. When unnecessary, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
 
 Possible strategies:
  - `maker`: Order placed at limit price (default) 
@@ -332,6 +378,7 @@ coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-
 ```
 
 ### Trade simulation
+
 Some exchanges (Kraken and Binance for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `coincenter` thanks to `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
 ## Check markets order book
@@ -357,14 +404,14 @@ Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 coincenter --withdraw 10000xlm,bithumb-huobi
 ```
 
-# Other examples
+## Other examples
 
-## Get an overview of your portfolio in Korean Won
+### Get an overview of your portfolio in Korean Won
 ```
 coincenter -b --balance-cur krw
 ```
 
-## Trade 1000 euros to XRP on kraken with a maker strategy
+### Trade 1000 euros to XRP on kraken with a maker strategy
 ```
 coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60s
 ```
@@ -374,12 +421,12 @@ coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 6
 coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 1min --trade-sim
 ```
 
-#### Possible output
+Possible output
 ```
 **** Traded 999.99999999954052 EUR into 1221.7681748109101 XRP ****
 ```
 
-## Prints conversion paths
+### Prints conversion paths
 
 How to change Yearn Finance to Bitcoin on all exchanges
 
@@ -387,7 +434,7 @@ How to change Yearn Finance to Bitcoin on all exchanges
 coincenter -c yfi-btc
 ```
 
-### Possible output
+Possible output
 ```
 --------------------------------------
 | Exchange | Fastest conversion path |
@@ -400,12 +447,12 @@ coincenter -c yfi-btc
 --------------------------------------
 ```
 
-## Prints all markets trading Stellar (XLM)
+### Prints all markets trading Stellar (XLM)
 ```
 coincenter -m xlm
 ```
 
-### Possible output
+Possible output
 ```
 -------------------------------
 | Exchange | Markets with XLM |
@@ -429,12 +476,12 @@ coincenter -m xlm
 -------------------------------
 ```
 
-## Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
+### Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
 ```
 coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
 ```
 
-### Possible output
+Possible output
 ```
 --------------------------------------------------------------------------------------
 | Sellers of ETH (asks) | ETH price in KRW | ETH price in EUR | Buyers of ETH (bids) |
@@ -467,7 +514,7 @@ coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
 --------------------------------------------------------------------------------------
 ```
 
-## Prints last 24h traded volume for all exchanges supporting ETH-USDT market
+### Prints last 24h traded volume for all exchanges supporting ETH-USDT market
 
 ```
 coincenter --volume-day eth-usdt
@@ -485,7 +532,7 @@ Possible output:
 ----------------------------------------------
 ```
 
-## Prints last price of Cardano in Bitcoin for all exchanges supporting it
+### Prints last price of Cardano in Bitcoin for all exchanges supporting it
 
 ```
 coincenter --price ada-btc

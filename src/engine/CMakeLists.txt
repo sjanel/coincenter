@@ -1,6 +1,6 @@
 aux_source_directory(src ENGINE_SRC)
 
-if (CCT_BUILD_EXEC_INSTEAD_OF_LIB)
+if (CCT_BUILD_EXEC)
   add_executable (coincenter ${ENGINE_SRC})
 
   # Enable LTO with coincenter in Release mode
