@@ -45,7 +45,6 @@ TEST_F(CurlSetup, QueryKrakenSystemStatus) {
 #ifdef DEBUG
   opts.verbose = true;
 #endif
-  log::set_level(log::level::trace);
   string s = handle.query("https://api.kraken.com/0/public/SystemStatus", opts);
   EXPECT_TRUE(s.find("online") != string::npos || s.find("maintenance") != string::npos ||
               s.find("cancel_only") != string::npos || s.find("post_only") != string::npos);
