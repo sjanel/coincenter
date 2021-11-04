@@ -32,8 +32,6 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     return;
   }
 
-  log::set_level(log::level::info);
-
   cmdLineOptions.setLogLevel();
   cmdLineOptions.setLogFile();
 

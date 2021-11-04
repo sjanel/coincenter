@@ -72,8 +72,9 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"General", 1}, "--data", 'd', "<path/to/data>", string("Use given 'data' directory instead of the one chosen at build time '")
                                                       .append(kDefaultDataDir).append("'")}, 
                                                       &OptValueType::dataDir},
-       {{{"General", 1}, "--loglevel", "<levelname>", "Sets the log level during all execution. "
-                                                      "Possible values are: trace|debug|info|warning|error|critical|off"}, 
+       {{{"General", 1}, "--loglevel", 'v', "<levelname|0-6>", string("Sets the log level during all execution. "
+                                                      "Possible values are: \n(off|critical|error|warning|info|debug|trace) or "
+                                                      "(0-6) (default: ").append(log::level::to_string_view(log::get_level()).data()).append(")")}, 
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
        {{{"General", 1}, "--nosecrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"

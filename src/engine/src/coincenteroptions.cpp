@@ -16,18 +16,25 @@ void CoincenterCmdLineOptions::PrintVersion(const char* programName) {
 }
 
 void CoincenterCmdLineOptions::setLogLevel() const {
-  if (logLevel.empty()) {
-    log::set_level(log::level::info);
-  } else {
-    log::set_level(log::level::from_str(logLevel));
+  switch (logLevel.size()) {
+    case 0:
+      break;
+    case 1: {
+      const int levelInt = static_cast<int>(log::level::off) - (logLevel.front() - '0');
+      log::set_level(static_cast<log::level::level_enum>(levelInt));
+      break;
+    }
+    default:
+      log::set_level(log::level::from_str(logLevel));
+      break;
   }
 }
 
 void CoincenterCmdLineOptions::setLogFile() const {
   if (logFile) {
-    constexpr int max_size = 1048576 * 5;
-    constexpr int max_files = 10;
-    log::set_default_logger(log::rotating_logger_st("main", "log/log.txt", max_size, max_files));
+    constexpr int kMaxFileSize = 5 * 1024 * 1024;
+    constexpr int kMaxNbFiles = 10;
+    log::set_default_logger(log::rotating_logger_st("main", "log/log.txt", kMaxFileSize, kMaxNbFiles));
   }
 }
 
