@@ -151,7 +151,7 @@ class MonetaryAmount {
     return *this;
   }
 
-  MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div, CurrencyCode::kNeutral, 0); }
+  MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div); }
 
   MonetaryAmount operator/(MonetaryAmount div) const;
 

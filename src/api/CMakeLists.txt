@@ -4,7 +4,7 @@ FetchContent_Declare(
   jwt-cpp
   QUIET
   GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp
-  GIT_TAG        origin/master
+  GIT_TAG        v0.5.1
 )
 
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

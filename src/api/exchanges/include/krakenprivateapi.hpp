@@ -58,7 +58,7 @@ class KrakenPrivate : public ExchangePrivate {
     KrakenPublic& _exchangePublic;
   };
 
-  json queryOrdersData(Market m, CurrencyCode fromCurrencyCode, std::string_view userRef, const OrderId& orderId,
+  json queryOrdersData(Market m, CurrencyCode fromCurrencyCode, int64_t userRef, const OrderId& orderId,
                        QueryOrder queryOrder);
 
   OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo, QueryOrder queryOrder);

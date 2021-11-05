@@ -30,10 +30,10 @@ Sha256 ComputeSha256(std::string_view data) {
   return ret;
 }
 
-string ShaBin(ShaType shaType, std::string_view data, const char* secret) {
+string ShaBin(ShaType shaType, std::string_view data, std::string_view secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
-  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
+  HMAC_Init_ex(ctx.get(), secret.data(), static_cast<int>(secret.size()),
                shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
   HMAC_Update(ctx.get(), reinterpret_cast<const unsigned char*>(data.data()), data.size());
 
@@ -44,10 +44,10 @@ string ShaBin(ShaType shaType, std::string_view data, const char* secret) {
   return binData;
 }
 
-string ShaHex(ShaType shaType, std::string_view data, const char* secret) {
+string ShaHex(ShaType shaType, std::string_view data, std::string_view secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
 
-  HMAC_Init_ex(ctx.get(), secret, static_cast<int>(strlen(secret)),
+  HMAC_Init_ex(ctx.get(), secret.data(), static_cast<int>(secret.size()),
                shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(), nullptr);
   HMAC_Update(ctx.get(), reinterpret_cast<const unsigned char*>(data.data()), data.size());
 

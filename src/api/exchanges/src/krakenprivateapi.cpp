@@ -28,7 +28,7 @@ string PrivateSignature(const APIKey& apiKey, string data, const Nonce& nonce, s
   data.append(std::begin(nonce_postdata), std::end(nonce_postdata));
 
   // and compute HMAC
-  return B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, data, B64Decode(apiKey.privateKey()).c_str()));
+  return B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, data, B64Decode(apiKey.privateKey())));
 }
 
 template <class CurlPostDataT = CurlPostData>
@@ -281,7 +281,7 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo&
   return orderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(Market, CurrencyCode, std::string_view userRef, const OrderId& orderId,
+json KrakenPrivate::queryOrdersData(Market, CurrencyCode, int64_t userRef, const OrderId& orderId,
                                     QueryOrder queryOrder) {
   constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
