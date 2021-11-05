@@ -33,7 +33,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
       strToSign.append(opts.postdata.str());
     } else {
       strToSign.append(opts.postdata.toJson().dump());
-      opts.httpHeaders.push_back("Content-Type: application/json");
+      opts.httpHeaders.emplace_back("Content-Type: application/json");
       opts.postdataInJsonFormat = true;
     }
   }
@@ -55,12 +55,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   json dataJson = json::parse(curlHandle.query(url, opts));
   auto errCodeIt = dataJson.find("code");
   if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
+    std::string errStr("Kucoin error ");
+    errStr.append(errCodeIt->get<std::string_view>());
     auto msgIt = dataJson.find("msg");
-    std::string errStr("Kucoin error: ");
     if (msgIt != dataJson.end()) {
+      errStr.append(" - ");
       errStr.append(msgIt->get<std::string_view>());
-    } else {
-      errStr.append("unknown");
+    }
+    if (requestType == CurlOptions::RequestType::kDelete) {
+      log::warn("{} bypassed, object probably disappeared correctly", errStr);
+      dataJson.clear();
+      return dataJson;
     }
     throw exception(std::move(errStr));
   }
@@ -84,7 +89,7 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
   CurrencyCode cur = expectedAmount.currencyCode();
   json balanceCur =
       PrivateQuery(curlHandle, apiKey, CurlOptions::RequestType::kGet, "/api/v1/accounts", {{"currency", cur.str()}});
-  MonetaryAmount totalAvailableAmount(0, cur, 0);
+  MonetaryAmount totalAvailableAmount(0, cur);
   MonetaryAmount amountInTargetAccount = totalAvailableAmount;
   for (const json& balanceDetail : balanceCur) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
@@ -201,10 +206,12 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   volume = sanitizedVol;
 
+  std::string_view buyOrSell = fromCurrencyCode == m.base() ? "sell" : "buy";
+  std::string_view strategyType = isTakerStrategy ? "market" : "limit";
   CurlPostData placePostData{{"clientOid", Nonce_TimeSinceEpoch()},
-                             {"side", fromCurrencyCode == m.base() ? "sell" : "buy"},
+                             {"side", buyOrSell},
                              {"symbol", m.assetsPairStr('-')},
-                             {"type", isTakerStrategy ? "market" : "limit"},
+                             {"type", strategyType},
                              {"tradeType", "TRADE"},
                              {"size", volume.amountStr()}};
   if (!isTakerStrategy) {
@@ -236,13 +243,14 @@ OrderInfo KucoinPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo&
 
   // Fee is already deduced from the matched amount
   MonetaryAmount fromAmount, toAmount;
+  MonetaryAmount dealFunds(data["dealFunds"].get<std::string_view>(), m.quote());
   if (fromCurrencyCode == m.base()) {
     // sell
     fromAmount = matchedSize;
-    toAmount = MonetaryAmount(data["dealFunds"].get<std::string_view>(), m.quote());
+    toAmount = dealFunds;
   } else {
     // buy
-    fromAmount = MonetaryAmount(data["dealFunds"].get<std::string_view>(), m.quote());
+    fromAmount = dealFunds;
     toAmount = matchedSize;
   }
   return OrderInfo(TradedAmounts(fromAmount, toAmount), !data["isActive"].get<bool>());
