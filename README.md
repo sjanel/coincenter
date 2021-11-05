@@ -197,10 +197,10 @@ CMake build mode
 `BUILD_MODE` (default: Release)
 
 Compile and launch tests
-`TEST` (default: 0)
+`BUILD_TEST` (default: 0)
 
 Activate Address Sanitizer
-`ASAN` (default: 0)
+`BUILD_ASAN` (default: 0)
 
 #### Build
 

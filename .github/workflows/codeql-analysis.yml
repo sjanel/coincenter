@@ -56,21 +56,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install libssl-dev libcurl4-gnutls-dev ${{matrix.compiler}}
+          sudo apt install libssl-dev libcurl4-gnutls-dev ninja-build ${{matrix.compiler}}
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}}
+        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build . --config ${{matrix.buildmode}} -j 2
+        run: ninja
 
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 https://git.io/JvXDl

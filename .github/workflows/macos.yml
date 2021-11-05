@@ -13,14 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Prerequisites
+        run: brew install ninja
+
       - name: cmake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -GNinja
 
       - name: build
-        run: cmake --build build --parallel 2
+        working-directory: ${{github.workspace}}/build
+        run: ninja
 
       - name: Local Tests
-        run: ctest --test-dir build --output-on-failure --exclude-regex api_test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure --exclude-regex api_test
 
       - name: Public API Tests # Tries several times to avoid random timeout errors not coming from coincenter
-        run: ctest --test-dir build --output-on-failure --tests-regex api_test --repeat until-pass:10
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure --tests-regex api_test --repeat until-pass:10

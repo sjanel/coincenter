@@ -2,7 +2,7 @@
 FROM alpine AS base-env
 
 # Install base dependencies (especially run ones)
-RUN apk update && apk upgrade && apk add g++ libc-dev curl-dev
+RUN apk add g++ libc-dev curl-dev
 
 # Set default directory for application
 WORKDIR /app
@@ -11,7 +11,7 @@ WORKDIR /app
 FROM base-env as build
 
 # Install build tools
-RUN apk update && apk upgrade && apk add cmake ninja git linux-headers
+RUN apk add cmake ninja git linux-headers
 
 # Copy all files, excluding the ones in '.dockerignore' (WARNING: secrets should never be shipped in a Docker image!)
 COPY . .
@@ -21,17 +21,17 @@ WORKDIR /app/bin
 
 # Declare and set default values of following arguments
 ARG BUILD_MODE=Release
-ARG TEST=0
-ARG ASAN=0
+ARG BUILD_TEST=0
+ARG BUILD_ASAN=0
 
 # Create ninja file
-RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} -DCCT_ENABLE_TESTS=${TEST} -DCCT_ENABLE_ASAN=${ASAN} -GNinja ..
+RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} -DCCT_ENABLE_TESTS=${BUILD_TEST} -DCCT_ENABLE_ASAN=${BUILD_ASAN} -GNinja ..
 
 # Compile
 RUN ninja
 
 # Launch tests if requested
-RUN if [ "$TEST" = "1" -o "$TEST" = "ON" ]; then ctest -j 2 --output-on-failure; else echo "No tests"; fi
+RUN if [ "$BUILD_TEST" = "1" -o "$BUILD_TEST" = "ON" ]; then ctest -j 2 --output-on-failure; else echo "No tests"; fi
 
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
 FROM base-env
