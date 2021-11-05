@@ -394,7 +394,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   CurrencyExchange krakenCurrencyExchangeQuote = *lb;
   string krakenAssetPair(krakenCurrencyExchangeBase.altStr());
   krakenAssetPair.append(krakenCurrencyExchangeQuote.altStr());
-  json result = PublicQuery(_curlHandle, "Depth", {{"pair", krakenAssetPair}, {"count", std::to_string(count)}});
+  json result = PublicQuery(_curlHandle, "Depth", {{"pair", krakenAssetPair}, {"count", count}});
   const json& entry = result.front();
   const json& asks = entry["asks"];
   const json& bids = entry["bids"];

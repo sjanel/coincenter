@@ -11,19 +11,19 @@ namespace api {
 using OrderId = string;
 
 struct TradeInfo {
-  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, string &&uRef)
-      : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts), userRef(std::move(uRef)) {}
+  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, int64_t uRef)
+      : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts), userRef(uRef) {}
 
   CurrencyCode fromCurrencyCode;
   CurrencyCode toCurrencyCode;
   Market m;
   TradeOptions options;
-  string userRef;  // Used by Kraken for instance, used to group orders queries context
+  int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
 };
 
 struct TradedAmounts {
   TradedAmounts(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode)
-      : tradedFrom(0, fromCurrencyCode, 0), tradedTo(0, toCurrencyCode, 0) {}
+      : tradedFrom(0, fromCurrencyCode), tradedTo(0, toCurrencyCode) {}
 
   TradedAmounts(MonetaryAmount fromAmount, MonetaryAmount toAmount) : tradedFrom(fromAmount), tradedTo(toAmount) {}
 

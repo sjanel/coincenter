@@ -91,7 +91,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
   std::optional<MonetaryAmount> avgPrice = queryOrderBook(m).averagePrice();
   if (!avgPrice) {
     log::error("Empty order book for {} on {} cannot compute average price", m.str(), _name);
-    return MonetaryAmount(0, m.quote(), 0);
+    return MonetaryAmount(0, m.quote());
   }
   return *avgPrice;
 }

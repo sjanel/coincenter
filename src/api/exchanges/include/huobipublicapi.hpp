@@ -83,8 +83,7 @@ class HuobiPublic : public ExchangePublic {
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     struct MarketInfo {
-      MarketInfo() noexcept
-          : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode("USDT"), 0) {}
+      MarketInfo() noexcept : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT") {}
 
       VolAndPriNbDecimals volAndPriNbDecimals;
 

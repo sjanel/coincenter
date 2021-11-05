@@ -36,19 +36,22 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   Nonce nonce = Nonce_TimeSinceEpoch();
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), UpbitPublic::kUserAgent);
 
+  string key(apiKey.key());
   auto jsonWebToken = jwt::create()
                           .set_type("JWT")
-                          .set_payload_claim("access_key", jwt::claim(apiKey.key()))
+                          .set_payload_claim("access_key", jwt::claim(std::move(key)))
                           .set_payload_claim("nonce", jwt::claim(nonce));
 
   if (!opts.postdata.empty()) {
     string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.postdata.str());
 
-    jsonWebToken.set_payload_claim("query_hash", jwt::claim(queryHash))
+    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::move(queryHash)))
         .set_payload_claim("query_hash_alg", jwt::claim(string("SHA512")));
   }
 
-  string token = jsonWebToken.sign(jwt::algorithm::hs256{apiKey.privateKey()});
+  string privateKey(apiKey.privateKey());  // hs256 does not accept std::string_view, we need a copy...
+  string token = jsonWebToken.sign(jwt::algorithm::hs256{std::move(privateKey)});
+  privateKey.assign(privateKey.size(), '\0');
 
   opts.httpHeaders.emplace_back("Authorization: Bearer ").append(token);
 
@@ -295,7 +298,7 @@ bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) 
   /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
   /// confirmed with some tests. However, could change in the future.
   constexpr std::array<MonetaryAmount, 2> minOrderAmounts{
-      {MonetaryAmount(5000, "KRW", 0), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
+      {MonetaryAmount(5000, "KRW"), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
   bool orderIsTooSmall = false;
   for (MonetaryAmount minOrderAmount : minOrderAmounts) {
     if (volume.currencyCode() == minOrderAmount.currencyCode()) {

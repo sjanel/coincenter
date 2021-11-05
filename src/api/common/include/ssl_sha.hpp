@@ -18,9 +18,9 @@ Sha256 ComputeSha256(std::string_view data);
 
 enum class ShaType { kSha256, kSha512 };
 
-string ShaBin(ShaType shaType, std::string_view data, const char* secret);
+string ShaBin(ShaType shaType, std::string_view data, std::string_view secret);
 
-string ShaHex(ShaType shaType, std::string_view data, const char* secret);
+string ShaHex(ShaType shaType, std::string_view data, std::string_view secret);
 
 string ShaDigest(ShaType shaType, std::string_view data);
 

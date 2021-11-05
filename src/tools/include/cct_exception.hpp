@@ -82,8 +82,6 @@ class exception : public std::exception {
 
   exception& operator=(exception&&) noexcept = default;
 
-  ~exception() = default;
-
   const char* what() const noexcept override {
     return _info ? _info : (_storage.front() == '\0' ? _str.c_str() : _storage.data());
   }

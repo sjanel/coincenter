@@ -227,7 +227,7 @@ json BinancePublic::GlobalInfosFunc::operator()() {
 
 namespace {
 MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json& networkList) {
-  MonetaryAmount withdrawFee(0, cur, 0);
+  MonetaryAmount withdrawFee(0, cur);
   for (const json& networkListPart : networkList) {
     withdrawFee = std::max(withdrawFee, MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur));
   }

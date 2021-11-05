@@ -80,7 +80,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   MonetaryAmount pri(bidPrice);
 
   TradeOptions tradeOptions(TradeStrategy::kTaker);
-  TradeInfo tradeInfo(m.base(), m.quote(), m, tradeOptions, "MyTradeRef");
+  TradeInfo tradeInfo(m.base(), m.quote(), m, tradeOptions, 0);
 
   MonetaryAmount tradedTo("23004 EUR");
 
@@ -99,7 +99,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
 
   MonetaryAmount vol(from / pri, m.base());
   TradeOptions tradeOptions(TradeStrategy::kTaker);
-  TradeInfo tradeInfo(m.quote(), m.base(), m, tradeOptions, "MyTradeRef");
+  TradeInfo tradeInfo(m.quote(), m.base(), m, tradeOptions, 0);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
 

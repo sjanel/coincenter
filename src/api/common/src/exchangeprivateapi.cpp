@@ -18,7 +18,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (!optConvertedAmountEquiCurrency) {
         log::warn("Cannot convert {} into {} on {}", amount.currencyCode().str(), equiCurrency.str(),
                   _exchangePublic.name());
-        equivalentInMainCurrency = MonetaryAmount(0, equiCurrency, 0);
+        equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       } else {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       }
@@ -77,8 +77,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
 
-  TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options,
-                      std::to_string(static_cast<int32_t>(nbSecondsSinceEpoch)));
+  TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options, nbSecondsSinceEpoch);
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.isTakerStrategy());
   MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
