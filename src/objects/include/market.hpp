@@ -7,7 +7,7 @@
 namespace cct {
 /// Represents a tradable market from a currency pair.
 /// Could be a fiat / coin or a coin / coin couple (fiat / fiat couple is possible but probably not relevant).
-/// Important note: BTC/ETH != ETH/BTC. Use unary minus operator to reverse it.
+/// Important note: BTC/ETH != ETH/BTC. Use reverse() to reverse it.
 class Market {
  public:
   using TradableAssets = std::array<CurrencyCode, 2>;

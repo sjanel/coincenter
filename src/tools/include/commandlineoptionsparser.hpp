@@ -103,7 +103,7 @@ class CommandLineOptionsParser : private Opts {
   Opts parse(int argc, const char* argv[]) { return parse(std::span(argv, argc)); }
 
   template <typename StreamType>
-  void displayHelp(const char* programName, StreamType& stream) const {
+  void displayHelp(std::string_view programName, StreamType& stream) const {
     stream << "usage: " << programName << " <options>" << std::endl;
     if (_commandLineOptionsWithValues.empty()) {
       return;

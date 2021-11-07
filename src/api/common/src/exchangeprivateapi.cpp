@@ -15,12 +15,12 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
           _exchangePublic.convertAtAveragePrice(amount, equiCurrency);
       MonetaryAmount equivalentInMainCurrency;
-      if (!optConvertedAmountEquiCurrency) {
+      if (optConvertedAmountEquiCurrency) {
+        equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
+      } else {
         log::warn("Cannot convert {} into {} on {}", amount.currencyCode().str(), equiCurrency.str(),
                   _exchangePublic.name());
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
-      } else {
-        equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       }
       log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
       balancePortfolio.add(amount, equivalentInMainCurrency);

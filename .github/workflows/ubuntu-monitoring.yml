@@ -1,4 +1,4 @@
-name: Ubuntu
+name: Monitoring
 
 on:
   push:
@@ -11,28 +11,35 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [g++-11, clang++-13]
-        buildmode: [Debug, Release]
+        compiler: [g++-10]
+        buildmode: [Debug]
+        build-prometheus-from-source: [0, 1]
 
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v2
 
-      - name: Install dependencies
+      - name: Prerequisites
         run: |
-          sudo apt install libssl-dev libcurl4-gnutls-dev ninja-build
+          sudo apt install libssl-dev libcurl4-gnutls-dev ninja-build g++-10
 
-      - name: Install GCC
+      - name: Install prometheus-cpp
         run: |
-          sudo apt install ${{matrix.compiler}}
-        if: matrix.compiler == 'g++-10' || matrix.compiler == 'g++-11'
+          git clone https://github.com/jupp0r/prometheus-cpp.git
+          cd prometheus-cpp
+          git submodule init
+          git submodule update
 
-      - name: Install Clang
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 13
-        if: matrix.compiler == 'clang++-13'
+          mkdir _build
+          cd _build
+
+          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
+          ninja
+
+          ctest
+          sudo cmake --install .
+
+        if: matrix.build-prometheus-from-source == 0
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -40,7 +47,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -GNinja
 
       - name: Build
         working-directory: ${{github.workspace}}/build

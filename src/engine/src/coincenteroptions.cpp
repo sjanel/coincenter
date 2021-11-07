@@ -10,7 +10,7 @@
 
 namespace cct {
 
-void CoincenterCmdLineOptions::PrintVersion(const char* programName) {
+void CoincenterCmdLineOptions::PrintVersion(std::string_view programName) {
   std::cout << programName << " version " << kVersion << std::endl;
   std::cout << "compiled with " << CCT_COMPILER_VERSION << " on " << __DATE__ << " at " << __TIME__ << std::endl;
 }
@@ -32,8 +32,8 @@ void CoincenterCmdLineOptions::setLogLevel() const {
 
 void CoincenterCmdLineOptions::setLogFile() const {
   if (logFile) {
-    constexpr int kMaxFileSize = 5 * 1024 * 1024;
-    constexpr int kMaxNbFiles = 10;
+    static constexpr int kMaxFileSize = 5 * 1024 * 1024;
+    static constexpr int kMaxNbFiles = 10;
     log::set_default_logger(log::rotating_logger_st("main", "log/log.txt", kMaxFileSize, kMaxNbFiles));
   }
 }

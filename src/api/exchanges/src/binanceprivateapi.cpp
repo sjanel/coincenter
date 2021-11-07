@@ -22,6 +22,7 @@ constexpr int kNbOrderRequestsRetries = 15;
 void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
   Nonce nonce = Nonce_TimeSinceEpoch();
   postData.set("timestamp", nonce);
+  // Erase + append signature as it should be computed without the old signature itself
   postData.erase("signature");
   postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
 }

@@ -12,9 +12,14 @@ int main(int argc, const char* argv[]) {
       return EXIT_SUCCESS;
     }
 
+    cct::MonitoringInfo monitoringInfo(opts.programName(), opts.monitoring_address, opts.monitoring_port,
+                                       opts.monitoring_username, opts.monitoring_password);
+
     cct::Coincenter coincenter(opts.noSecretsExchanges, opts.noSecretsForAll, cct::settings::RunMode::kProd,
-                               opts.dataDir);
+                               opts.dataDir, std::move(monitoringInfo));
+
     coincenter.process(opts);
+
   } catch (...) {
     return EXIT_FAILURE;
   }

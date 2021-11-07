@@ -29,6 +29,7 @@
 #include "kucoinprivateapi.hpp"
 #include "kucoinpublicapi.hpp"
 #include "marketorderbooks.hpp"
+#include "monitoringinfo.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 
@@ -48,11 +49,11 @@ class Coincenter {
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
 
-  explicit Coincenter(settings::RunMode runMode = settings::RunMode::kProd, std::string_view dataDir = kDefaultDataDir)
-      : Coincenter(PublicExchangeNames(), false, runMode, dataDir) {}
+  Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
+      : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
 
   Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-             settings::RunMode runMode = settings::RunMode::kProd, std::string_view dataDir = kDefaultDataDir);
+             settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo);
 
   Coincenter(const Coincenter &) = delete;
   Coincenter &operator=(const Coincenter &) = delete;
@@ -131,6 +132,9 @@ class Coincenter {
 
  private:
   using ExchangeVector = vector<Exchange>;
+
+  void exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
+                            std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const;
 
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;

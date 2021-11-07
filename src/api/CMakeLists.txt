@@ -2,7 +2,6 @@ include(FetchContent)
 
 FetchContent_Declare(
   jwt-cpp
-  QUIET
   GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp
   GIT_TAG        v0.5.1
 )
@@ -21,6 +20,7 @@ add_library(coincenter_exchangeapi STATIC ${API_EXCHANGES_SRC} ${API_INTERFACE_S
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_tools)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_objects)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_apicommon)
+target_link_libraries(coincenter_exchangeapi PRIVATE coincenter_monitoring)
 target_link_libraries(coincenter_exchangeapi PRIVATE jwt-cpp)
 
 target_include_directories(coincenter_exchangeapi PUBLIC exchanges/include)

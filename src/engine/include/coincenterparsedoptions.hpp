@@ -1,6 +1,10 @@
 #pragma once
 
+#include <cstdint>
+#include <string_view>
+
 #include "cct_const.hpp"
+#include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -52,7 +56,14 @@ class CoincenterParsedOptions {
 
   string dataDir = kDefaultDataDir;
 
+  string monitoring_address;
+  string monitoring_username;
+  string monitoring_password;
+  uint16_t monitoring_port;
+
   bool noProcess = false;
+
+  std::string_view programName() const { return _programName; }
 
  protected:
   /// Constructor to be called for programs extending the command line options of 'coincenter'.
@@ -60,6 +71,9 @@ class CoincenterParsedOptions {
   /// level program
   CoincenterParsedOptions() = default;
 
-  void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions, const char *programName);
+  void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
+
+ private:
+  string _programName;
 };
 }  // namespace cct

@@ -4,6 +4,7 @@ aux_source_directory(src OBJECTS_SRC)
 add_library(coincenter_objects STATIC ${OBJECTS_SRC})
 target_link_libraries(coincenter_objects PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(coincenter_objects PRIVATE spdlog)
+target_link_libraries(coincenter_objects PUBLIC coincenter_monitoring)
 target_link_libraries(coincenter_objects PUBLIC coincenter_tools)
 target_include_directories(coincenter_objects PUBLIC include)
 

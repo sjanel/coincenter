@@ -5,6 +5,7 @@
 #include <execution>
 #include <span>
 
+#include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
@@ -35,8 +36,8 @@ string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchange
 }  // namespace
 
 Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-                       settings::RunMode runMode, std::string_view dataDir)
-    : _coincenterInfo(runMode, dataDir),
+                       settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
+    : _coincenterInfo(runMode, dataDir, monitoringInfo),
       _cryptowatchAPI(_coincenterInfo, runMode),
       _fiatConverter(dataDir, std::chrono::hours(8)),
       _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
@@ -206,11 +207,42 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
   SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> subRet(balanceExchanges.size());
   std::transform(std::execution::par, balanceExchanges.begin(), balanceExchanges.end(), subRet.begin(),
                  [equiCurrency](Exchange *e) { return e->apiPrivate().queryAccountBalance(equiCurrency); });
+
+  if (_coincenterInfo.useMonitoring()) {
+    exportBalanceMetrics(balanceExchanges, subRet, equiCurrency);
+  }
+
   BalancePortfolio ret;
   for (const BalancePortfolio &sub : subRet) {
-    ret.merge(sub);
+    ret.add(sub);
   }
   return ret;
+}
+
+void Coincenter::exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
+                                      std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const {
+  const int nbAccounts = selectedExchanges.size();
+  MetricKey key("metric_name=available_balance,metric_help=Available balance in the exchange account");
+  auto &metricGateway = _coincenterInfo.metricGateway();
+  for (int accountPos = 0; accountPos < nbAccounts; ++accountPos) {
+    const Exchange &exchange = *selectedExchanges[accountPos];
+    key.set("exchange", exchange.name());
+    key.set("account", exchange.keyName());
+    key.set("total", "no");
+    MonetaryAmount totalEquiAmount(0, equiCurrency);
+    for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balances[accountPos]) {
+      key.set("currency", amountWithEqui.amount.currencyCode().str());
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, amountWithEqui.amount.toDouble());
+      if (!equiCurrency.isNeutral()) {
+        totalEquiAmount += amountWithEqui.equi;
+      }
+    }
+    if (!equiCurrency.isNeutral()) {
+      key.set("total", "yes");
+      key.set("currency", equiCurrency.str());
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, totalEquiAmount.toDouble());
+    }
+  }
 }
 
 Coincenter::MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur,

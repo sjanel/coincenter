@@ -11,7 +11,6 @@ function(add_exchange_test name)
      coincenter_apicommon
      coincenter_exchangeapi
      coincenter_objects
-     coincenter_tools
    )
 endfunction()
 
