@@ -183,17 +183,15 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
 
 string CurlHandle::urlEncode(std::string_view url) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
-  string ret(url);
 
   using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;
 
-  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, ret.c_str(), static_cast<int>(url.size())));
+  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, url.data(), static_cast<int>(url.size())));
   const char *encodedChars = uniquePtr.get();
   if (!encodedChars) {
     throw std::bad_alloc();
   }
-  ret.assign(encodedChars, encodedChars + strlen(encodedChars));
-  return ret;
+  return encodedChars;
 }
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }

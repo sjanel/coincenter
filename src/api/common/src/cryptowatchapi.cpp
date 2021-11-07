@@ -67,8 +67,8 @@ std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, 
   string marketPrefix("market:");
   marketPrefix.append(exchangeName);
   marketPrefix.push_back(':');
-  // {"result":{"market:kraken:ethdai":1493.844,"market:kraken:etheur":1238.14, ...},
-  // "allowance":{"cost":0.015,"remaining":9.943,"upgrade":"For unlimited API access..."}}
+
+  std::lock_guard<std::mutex> guard(_pricesMutex);
 
   for (int marketPos = 0; marketPos < 2; ++marketPos) {
     string lowerStrMarket = m.assetsPairStr();

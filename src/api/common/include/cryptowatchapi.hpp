@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <mutex>
 #include <optional>
 #include <unordered_map>
 
@@ -21,17 +22,20 @@ class CryptowatchAPI : public ExchangeBase {
   using TimePoint = std::chrono::time_point<Clock>;
 
   explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
-                          Clock::duration fiatsUpdateFrequency = std::chrono::hours(6),
+                          Clock::duration fiatsUpdateFrequency = std::chrono::hours(96),
                           bool loadFromFileCacheAtInit = true);
 
   CryptowatchAPI(const CryptowatchAPI &) = delete;
   CryptowatchAPI &operator=(const CryptowatchAPI &) = delete;
 
-  CryptowatchAPI(CryptowatchAPI &&) noexcept = default;
+  CryptowatchAPI(CryptowatchAPI &&) noexcept = delete;
   CryptowatchAPI &operator=(CryptowatchAPI &&) = delete;
 
   /// Tells whether given exchange is supported by Cryptowatch.
-  bool queryIsExchangeSupported(const string &exchangeName) { return _supportedExchanges.get().contains(exchangeName); }
+  bool queryIsExchangeSupported(const string &exchangeName) {
+    std::lock_guard<std::mutex> guard(_exchangesMutex);
+    return _supportedExchanges.get().contains(exchangeName);
+  }
 
   /// Query the approximate price of market 'm' for exchange name 'exchangeName'.
   /// Data may not be up to date, but should respond quickly.
@@ -40,7 +44,10 @@ class CryptowatchAPI : public ExchangeBase {
   /// Tells whether given currency code is a fiat currency or not.
   /// Fiat currencies are traditionnal currencies, such as EUR, USD, GBP, KRW, etc.
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
-  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return _fiatsCache.get().contains(currencyCode); }
+  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode) {
+    std::lock_guard<std::mutex> guard(_fiatsMutex);
+    return _fiatsCache.get().contains(currencyCode);
+  }
 
   void updateCacheFile() const override;
 
@@ -77,6 +84,7 @@ class CryptowatchAPI : public ExchangeBase {
 
   const CoincenterInfo &_config;
   CurlHandle _curlHandle;
+  std::mutex _pricesMutex, _fiatsMutex, _exchangesMutex;
   CachedResult<FiatsFunc> _fiatsCache;
   CachedResult<SupportedExchangesFunc> _supportedExchanges;
   CachedResult<AllPricesFunc> _allPricesCache;
