@@ -55,7 +55,6 @@ add_unit_test(
 add_unit_test(
     curlhandle_test
     src/curlhandle.cpp
-    src/curloptions.cpp
     test/curlhandle_test.cpp
     LIBRARIES
     spdlog
@@ -64,9 +63,8 @@ add_unit_test(
 )
 
 add_unit_test(
-    curloptions_test
-    src/curloptions.cpp
-    test/curloptions_test.cpp
+    flatkeyvaluestring_test
+    test/flatkeyvaluestring_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
     LIBRARIES

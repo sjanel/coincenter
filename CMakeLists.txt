@@ -1,13 +1,13 @@
 cmake_minimum_required (VERSION 3.15)
 
-project(coincenter VERSION 3.2.0
+project(coincenter VERSION 3.3.0
                    DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
                    LANGUAGES CXX)
 
 # Use ccache if available
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
 ##
@@ -28,19 +28,14 @@ endif()
 option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
+option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
 
 set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter")
 
 if (EXISTS ${CCT_DATA_DIR})
-  message(STATUS "Using Data directory ${CCT_DATA_DIR}") 
-  set(CCT_SECRET_PATH "${CCT_DATA_DIR}/secret/secret.json")
-  if(EXISTS ${CCT_SECRET_PATH})
-    message(STATUS "Found secret file '${CCT_SECRET_PATH}'")
-  else()
-    message(STATUS "No secrets file found")
-  endif()
+  message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 else()
-  message(STATUS "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container") 
+  message(NOTICE "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container")
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -51,7 +46,7 @@ include(FetchContent)
 FetchContent_Declare(
   amadeusamc
   GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-  GIT_TAG        main
+  GIT_TAG        v2.1
 )
 
 FetchContent_MakeAvailable(amadeusamc)
@@ -60,7 +55,7 @@ if(CCT_ENABLE_TESTS)
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        master
+    GIT_TAG        release-1.11.0
   )
 
   FetchContent_MakeAvailable(googletest)
@@ -71,18 +66,45 @@ endif()
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
-  GIT_TAG        master
+  GIT_TAG        v3.10.4
 )
 
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.x
+  GIT_TAG        v1.9.2
 )
 
-FetchContent_MakeAvailable(json)
+FetchContent_MakeAvailable(json spdlog)
 
-FetchContent_MakeAvailable(spdlog)
+if (CCT_BUILD_PROMETHEUS_FROM_SRC)
+
+  # Disable Prometheus testing
+  set(ENABLE_TESTING OFF)
+
+  # Pull mode not used for the moment
+  set(ENABLE_PULL OFF)
+  
+  FetchContent_Declare(
+    prometheus-cpp
+    GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
+    GIT_TAG        v0.13.0
+  )
+
+  FetchContent_MakeAvailable(prometheus-cpp)
+
+  set(CCT_ENABLE_PROMETHEUS ON)
+else()
+
+  find_package(prometheus-cpp CONFIG)
+  if (prometheus-cpp_FOUND)
+    message(STATUS "Linking with prometheus-cpp")
+
+    set(CCT_ENABLE_PROMETHEUS ON)
+  else()
+    message(NOTICE "Unable to find local installation of prometheus-cpp, compiling without metric export support")
+  endif()
+endif()
 
 # Unit Tests 
 
@@ -173,9 +195,13 @@ endif()
 # Definition of project constants
 add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
+if (CCT_ENABLE_PROMETHEUS)
+  add_compile_definitions(CCT_ENABLE_PROMETHEUS)
+endif()
 
 # Link to sub folders CMakeLists.txt
 add_subdirectory(src/tools)
 add_subdirectory(src/objects)
+add_subdirectory(src/monitoring)
 add_subdirectory(src/api)
 add_subdirectory(src/engine)

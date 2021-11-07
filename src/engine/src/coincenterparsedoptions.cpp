@@ -1,6 +1,7 @@
 #include "coincenterparsedoptions.hpp"
 
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 
 #include "cct_log.hpp"
@@ -8,16 +9,18 @@
 #include "stringoptionparser.hpp"
 
 namespace cct {
-CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[]) {
+CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
+    : _programName(std::filesystem::path(argv[0]).filename().c_str()) {
   try {
     CommandLineOptionsParser<CoincenterCmdLineOptions> cmdLineOptionsParser =
         CreateCoincenterCommandLineOptionsParser<CoincenterCmdLineOptions>();
     CoincenterCmdLineOptions cmdLineOptions = cmdLineOptionsParser.parse(argc, argv);
+
     if (cmdLineOptions.help || argc == 1) {
-      cmdLineOptionsParser.displayHelp(argv[0], std::cout);
+      cmdLineOptionsParser.displayHelp(_programName, std::cout);
       noProcess = true;
     } else {
-      setFromOptions(cmdLineOptions, argv[0]);
+      setFromOptions(cmdLineOptions);
     }
   } catch (const InvalidArgumentException &e) {
     std::cerr << e.what() << std::endl;
@@ -25,9 +28,9 @@ CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[]) {
   }
 }
 
-void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions, const char *programName) {
+void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.version) {
-    CoincenterCmdLineOptions::PrintVersion(programName);
+    CoincenterCmdLineOptions::PrintVersion(_programName);
     noProcess = true;
     return;
   }
@@ -36,6 +39,17 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   cmdLineOptions.setLogFile();
 
   dataDir = cmdLineOptions.dataDir;
+
+  if (cmdLineOptions.useMonitoring) {
+    monitoring_username = std::move(cmdLineOptions.monitoring_username);
+    monitoring_address = std::move(cmdLineOptions.monitoring_address);
+    monitoring_password = std::move(cmdLineOptions.monitoring_password);
+    if (cmdLineOptions.monitoring_port < 0 ||
+        cmdLineOptions.monitoring_port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
+      throw InvalidArgumentException("Invalid port value");
+    }
+    monitoring_port = static_cast<uint16_t>(cmdLineOptions.monitoring_port);
+  }
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);

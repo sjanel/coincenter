@@ -6,6 +6,12 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 
+#ifdef CCT_ENABLE_PROMETHEUS
+#include "prometheusmetricgateway.hpp"
+#else
+#include "voidmetricgateway.hpp"
+#endif
+
 namespace cct {
 
 namespace {
@@ -32,9 +38,16 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
   return ret;
 }
 
+#ifdef CCT_ENABLE_PROMETHEUS
+using MetricGatewayType = PrometheusMetricGateway;
+#else
+using MetricGatewayType = VoidMetricGateway;
+#endif
+
 }  // namespace
 
-CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataDir)
+CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataDir,
+                               const MonitoringInfo& monitoringInfo)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(dataDir)),
       _stableCoinsMap(ComputeStableCoinsMap(dataDir)),
       // TODO: make below values configurable, with default value in a json file
@@ -50,7 +63,12 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataD
       _exchangeInfoMap(ComputeExchangeInfoMap(dataDir)),
       _runMode(runMode),
       _dataDir(dataDir),
-      _useMonitoring(_runMode == settings::RunMode::kProd) {}
+      _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
+                            ? new MetricGatewayType(monitoringInfo)
+                            : nullptr),
+      _monitoringInfo(monitoringInfo) {}
+
+CoincenterInfo::~CoincenterInfo() {}  // To have definition of MetricGateway
 
 CurrencyCode CoincenterInfo::standardizeCurrencyCode(CurrencyCode currencyCode) const {
   auto it = _currencyEquiAcronymMap.find(currencyCode);

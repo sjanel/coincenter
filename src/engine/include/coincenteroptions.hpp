@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include "cct_const.hpp"
@@ -16,11 +17,14 @@ namespace cct {
 struct CoincenterCmdLineOptions {
   using Duration = api::TradeOptions::Clock::duration;
 
+  static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
+  static constexpr int kDefaultMonitoringPort = 9090;                         // Prometheus default port
+
   void setLogLevel() const;
 
   void setLogFile() const;
 
-  static void PrintVersion(const char* programName);
+  static void PrintVersion(std::string_view programName);
 
   string dataDir = kDefaultDataDir;
 
@@ -29,6 +33,12 @@ struct CoincenterCmdLineOptions {
   bool version = false;
   bool logFile = false;
   std::optional<string> nosecrets;
+
+  string monitoring_address = string(kDefaultMonitoringIPAddress);
+  string monitoring_username;
+  string monitoring_password;
+  int monitoring_port = kDefaultMonitoringPort;
+  bool useMonitoring = false;
 
   string markets;
 
@@ -81,7 +91,19 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"General", 1}, "--nosecrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"
                                                        "If empty list of exchanges, it skips secrets load for all private exchanges"}, 
                                                        &OptValueType::nosecrets},
-
+       {{{"Monitoring", 1}, "--monitoring", "", "Progressively send metrics to external instance provided that it's correctly set up "
+                                                "(Prometheus by default). Refer to the README for more information"}, 
+                                                       &OptValueType::useMonitoring},
+       {{{"Monitoring", 1}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
+                                                          .append(std::to_string(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
+                                                         &OptValueType::monitoring_port},
+       {{{"Monitoring", 1}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
+                                                        .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 
+                                                         &OptValueType::monitoring_address},
+       {{{"Monitoring", 1}, "--monitoring-user", "<username>", "Specify username of metric gateway instance (default: none)"}, 
+                                                            &OptValueType::monitoring_username},
+       {{{"Monitoring", 1}, "--monitoring-pass", "<password>", "Specify password of metric gateway instance (default: none)"}, 
+                                                            &OptValueType::monitoring_password},
        {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
                                                                        &OptValueType::markets},
 
@@ -116,7 +138,8 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                    "Multi trade will first compute fastest path from cur1 to cur2 and "
                                                                    "if possible reach cur2 by launching multiple single trades.\n"
                                                                    "Options are same than for single trade, applied to each step trade.\n"
-                                                                   "If multi trade is used in conjonction with single trade, the latter is ignored."}, &OptValueType::trade_multi},
+                                                                   "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
+                                                                   &OptValueType::trade_multi},
        {{{"Trade", 4}, "--trade-strategy", "<maker|taker|adapt>", "Customize the strategy of the trade\n"
                                                                   " - 'maker': order placed at limit price (default), continuously "
                                                                   "adjusted to limit price\n"

@@ -2,7 +2,6 @@
 
 #include <ostream>
 
-#include "cct_flatset.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
@@ -16,35 +15,33 @@ class BalancePortfolio {
     MonetaryAmount equi;
   };
 
-  struct CompareMonetaryAmountWithEquivalentByCurrencyCode {
-    bool operator()(const MonetaryAmountWithEquivalent &lhs, const MonetaryAmountWithEquivalent &rhs) const {
-      return lhs.amount.currencyCode() < rhs.amount.currencyCode();
-    }
-  };
+ private:
+  using MonetaryAmountVec = vector<MonetaryAmountWithEquivalent>;
 
-  using MonetaryAmountSet = FlatSet<MonetaryAmountWithEquivalent, CompareMonetaryAmountWithEquivalentByCurrencyCode>;
+ public:
+  using const_iterator = MonetaryAmountVec::const_iterator;
+  using size_type = MonetaryAmountVec::size_type;
 
   /// Adds an amount in the `BalancePortfolio`.
   /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency
   void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency = MonetaryAmount());
 
-  void merge(const BalancePortfolio &o);
+  void add(const BalancePortfolio &o);
 
   MonetaryAmount getBalance(CurrencyCode currencyCode) const;
 
-  MonetaryAmountSet::const_iterator begin() const { return _monetaryAmountSet.begin(); }
-  MonetaryAmountSet::const_iterator end() const { return _monetaryAmountSet.end(); }
+  const_iterator begin() const { return _sortedAmounts.begin(); }
+  const_iterator end() const { return _sortedAmounts.end(); }
 
   void print(std::ostream &os) const;
 
-  bool empty() const noexcept { return _monetaryAmountSet.empty(); }
-  MonetaryAmountSet::size_type size() const noexcept { return _monetaryAmountSet.size(); }
+  bool empty() const noexcept { return _sortedAmounts.empty(); }
+
+  size_type size() const noexcept { return _sortedAmounts.size(); }
 
  private:
-  using MonetaryAmountVec = vector<MonetaryAmountWithEquivalent>;
-
   MonetaryAmountVec convertToSortedByAmountVector() const;
 
-  MonetaryAmountSet _monetaryAmountSet;
+  MonetaryAmountVec _sortedAmounts;
 };
 }  // namespace cct

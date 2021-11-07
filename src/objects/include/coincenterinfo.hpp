@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -15,8 +16,12 @@
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangeinfomap.hpp"
+#include "monitoringinfo.hpp"
 
 namespace cct {
+
+class AbstractMetricGateway;
+
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
@@ -24,13 +29,16 @@ class CoincenterInfo {
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
-                          std::string_view dataDir = kDefaultDataDir);
+                          std::string_view dataDir = kDefaultDataDir,
+                          const MonitoringInfo &monitoringInfo = MonitoringInfo());
 
   CoincenterInfo(const CoincenterInfo &) = delete;
   CoincenterInfo &operator=(const CoincenterInfo &) = delete;
 
-  CoincenterInfo(CoincenterInfo &&) = default;
-  CoincenterInfo &operator=(CoincenterInfo &&) = default;
+  CoincenterInfo(CoincenterInfo &&) = delete;
+  CoincenterInfo &operator=(CoincenterInfo &&) = delete;
+
+  ~CoincenterInfo();
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.
   /// Use this function to standardize names (will return BTC for the latter)
@@ -60,7 +68,12 @@ class CoincenterInfo {
 
   std::string_view dataDir() const { return _dataDir; }
 
-  bool useMonitoring() const { return _useMonitoring; }
+  bool useMonitoring() const { return _monitoringInfo.useMonitoring(); }
+
+  AbstractMetricGateway &metricGateway() const {
+    assert(useMonitoring());
+    return *_metricGatewayPtr;
+  }
 
  private:
   using APICallUpdateFrequencyMap = std::unordered_map<api::QueryTypeEnum, Duration>;
@@ -71,6 +84,7 @@ class CoincenterInfo {
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
   string _dataDir;
-  bool _useMonitoring;
+  std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
+  const MonitoringInfo &_monitoringInfo;
 };
 }  // namespace cct
