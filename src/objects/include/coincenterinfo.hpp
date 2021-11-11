@@ -75,6 +75,8 @@ class CoincenterInfo {
     return *_metricGatewayPtr;
   }
 
+  AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
+
  private:
   using APICallUpdateFrequencyMap = std::unordered_map<api::QueryTypeEnum, Duration>;
 

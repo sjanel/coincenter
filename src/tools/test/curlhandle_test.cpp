@@ -1,9 +1,7 @@
 #include "curlhandle.hpp"
 
-#include <curl/curl.h>
 #include <gtest/gtest.h>
 
-#include "cct_log.hpp"
 #include "cct_proxy.hpp"
 
 // #define DEBUG

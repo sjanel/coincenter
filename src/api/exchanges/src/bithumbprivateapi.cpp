@@ -153,7 +153,8 @@ File GetBithumbDecimalsCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(bithumbPublic, config, apiKey),
-      _curlHandle(config.exchangeInfo(bithumbPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(bithumbPublic.name()).minPrivateQueryDelay(),
+                  config.getRunMode()),
       _nbDecimalsRefreshTime(config.getAPICallUpdateFrequency(QueryTypeEnum::kNbDecimalsUnitsBithumb)),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),

@@ -52,7 +52,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 BithumbPublic::BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           _curlHandle),

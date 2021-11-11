@@ -12,12 +12,15 @@ Market::Market(std::string_view marketStrRep, char currencyCodeSep) {
   _assets.back() = std::string_view(marketStrRep.begin() + sepPos + 1, marketStrRep.end());
 }
 
-string Market::assetsPairStr(char sep) const {
+string Market::assetsPairStr(char sep, bool lowerCase) const {
   string ret(_assets.front().str());
   if (sep != 0) {
     ret.push_back(sep);
   }
   ret.append(_assets.back().str());
+  if (lowerCase) {
+    std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return tolower(c); });
+  }
   return ret;
 }
 

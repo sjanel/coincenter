@@ -76,7 +76,7 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
 
 KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           config.exchangeInfo(_name), _curlHandle),

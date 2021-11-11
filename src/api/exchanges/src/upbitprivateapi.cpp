@@ -72,7 +72,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
     : ExchangePrivate(upbitPublic, config, apiKey),
-      _curlHandle(config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic, config.exchangeInfo(_exchangePublic.name())),

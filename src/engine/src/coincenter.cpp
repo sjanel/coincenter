@@ -180,6 +180,9 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
                        optConversionRate);
     }
   }
+  if (_coincenterInfo.useMonitoring() && !ret.empty()) {
+    exportOrderbookMetrics(m, ret);
+  }
   return ret;
 }
 
@@ -242,6 +245,30 @@ void Coincenter::exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges
       key.set("currency", equiCurrency.str());
       metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, totalEquiAmount.toDouble());
     }
+  }
+}
+
+void Coincenter::exportOrderbookMetrics(Market m,
+                                        const MarketOrderBookConversionRates &marketOrderBookConversionRates) const {
+  MetricKey key("metric_name=orderbook_pri,metric_help=Best bids and asks prices");
+  string marketLowerCase = m.assetsPairStr('-', true);
+  auto &metricGateway = _coincenterInfo.metricGateway();
+  key.append("market", marketLowerCase);
+  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+    key.set("exchange", exchangeName);
+    key.set("side", "ask");
+    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.lowestAskPrice().toDouble());
+    key.set("side", "bid");
+    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.highestBidPrice().toDouble());
+  }
+  key.set("metric_name", "orderbook_vol");
+  key.set("metric_help", "Best bids and asks volumes");
+  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+    key.set("exchange", exchangeName);
+    key.set("side", "ask");
+    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.amountAtAskPrice().toDouble());
+    key.set("side", "bid");
+    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.amountAtBidPrice().toDouble());
   }
 }
 
@@ -363,16 +390,12 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
     string errMsg("It's currently not possible to withdraw ");
-    errMsg.append(currencyCode.str());
-    errMsg.append(" from ");
-    errMsg.append(fromPrivateExchangeName.str());
+    errMsg.append(currencyCode.str()).append(" from ").append(fromPrivateExchangeName.str());
     throw exception(std::move(errMsg));
   }
   if (!toExchange.canDeposit(currencyCode, currencyExchangeSets.back())) {
     string errMsg("It's currently not possible to deposit ");
-    errMsg.append(currencyCode.str());
-    errMsg.append(" to ");
-    errMsg.append(fromPrivateExchangeName.str());
+    errMsg.append(currencyCode.str()).append(" to ").append(fromPrivateExchangeName.str());
     throw exception(std::move(errMsg));
   }
 

@@ -64,7 +64,7 @@ class BinancePublic : public ExchangePublic {
    public:
     static constexpr auto kNbBaseURLs = std::distance(std::begin(kURLBases), std::end(kURLBases));
 
-    CommonInfo(const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
+    CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
 
     /// Get the Binance base URL providing the lowest response time thanks to periodic pings.
     std::string_view getBestBaseURL() { return _baseURLUpdater.get(); }
@@ -84,11 +84,10 @@ class BinancePublic : public ExchangePublic {
   struct ExchangeInfoFunc {
     using ExchangeInfoDataByMarket = std::unordered_map<Market, json>;
 
-    ExchangeInfoFunc(CoincenterInfo& config, CommonInfo& commonInfo) : _config(config), _commonInfo(commonInfo) {}
+    explicit ExchangeInfoFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
 
     ExchangeInfoDataByMarket operator()();
 
-    CoincenterInfo& _config;
     CommonInfo& _commonInfo;
   };
 

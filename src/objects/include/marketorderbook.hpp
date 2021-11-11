@@ -74,6 +74,12 @@ class MarketOrderBook {
   /// Get the lowest ask price that a seller is willing to sell
   MonetaryAmount lowestAskPrice() const { return priceAt(_lowestAskPricePos); }
 
+  /// Get the amount available at highest bid price
+  MonetaryAmount amountAtBidPrice() const { return amountAt(_highestBidPricePos); }
+
+  /// Get the amount available at lowest ask price
+  MonetaryAmount amountAtAskPrice() const { return amountAt(_lowestAskPricePos); }
+
   /// Compute average price as simple average of lowest ask price and highest bid price
   std::optional<MonetaryAmount> averagePrice() const;
 

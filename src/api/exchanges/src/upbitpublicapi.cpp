@@ -36,7 +36,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     _curlHandle, config.exchangeInfo(_name)),
       _tradableCurrenciesCache(

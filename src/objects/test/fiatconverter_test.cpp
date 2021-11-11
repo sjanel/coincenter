@@ -12,7 +12,7 @@ namespace cct {
 
 namespace {
 bool AreDoubleEqual(double lhs, double rhs) {
-  constexpr double kEpsilon = 0.000001;
+  static constexpr double kEpsilon = 0.000001;
   if (lhs < rhs) {
     return (rhs - lhs) < kEpsilon;
   }
@@ -24,7 +24,8 @@ constexpr double kUSD = 1.21;
 constexpr double kGBP = 0.88;
 }  // namespace
 
-CurlHandle::CurlHandle(Clock::duration d, settings::RunMode) : _handle(nullptr), _minDurationBetweenQueries(d) {}
+CurlHandle::CurlHandle(AbstractMetricGateway *, Clock::duration d, settings::RunMode)
+    : _handle(nullptr), _minDurationBetweenQueries(d) {}
 
 string CurlHandle::query(std::string_view url, const CurlOptions &) {
   json j;
