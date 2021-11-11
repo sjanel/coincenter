@@ -54,7 +54,7 @@ string B64Decode(std::string_view ascdata) {
   int bits_collected = 0;
   unsigned int accumulator = 0;
 
-  constexpr char kReverseTable[] = {
+  static constexpr char kReverseTable[] = {
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63, 52, 53, 54, 55,
       56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64, 64, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,

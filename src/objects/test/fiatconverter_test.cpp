@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
