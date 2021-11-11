@@ -18,7 +18,7 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
   }
   std::size_t endAmountPos = durationStr.find_first_of("hmnsu ");
   std::size_t startTimeUnit = durationStr.find_first_of("hmnsu");
-  constexpr char kInvalidTimeDurationUnitMsg[] =
+  static constexpr char kInvalidTimeDurationUnitMsg[] =
       "Cannot parse time duration. Accepted time units are 'h (hours), min (minutes), s (seconds), ms "
       "(milliseconds), us "
       "(microseconds) and ns "

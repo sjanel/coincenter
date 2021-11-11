@@ -199,9 +199,11 @@ if (CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
 endif()
 
-# Link to sub folders CMakeLists.txt
+# Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation 
+# (beware of cyclic dependencies)
+add_subdirectory(src/tech)
+add_subdirectory(src/monitoring)
 add_subdirectory(src/tools)
 add_subdirectory(src/objects)
-add_subdirectory(src/monitoring)
 add_subdirectory(src/api)
 add_subdirectory(src/engine)

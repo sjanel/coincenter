@@ -20,7 +20,6 @@ target_link_libraries(coincenter PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(coincenter PRIVATE spdlog)
 target_link_libraries(coincenter PUBLIC coincenter_exchangeapi)
 target_link_libraries(coincenter PUBLIC coincenter_objects)
-target_link_libraries(coincenter PUBLIC coincenter_tools)
 target_include_directories(coincenter PUBLIC include)
 
 set_target_properties(coincenter PROPERTIES 

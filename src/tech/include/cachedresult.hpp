@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "cachedresultvault.hpp"
-#include "cct_exception.hpp"
 #include "cct_hash.hpp"
 
 namespace cct {

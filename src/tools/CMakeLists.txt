@@ -1,11 +1,8 @@
 # Create tools lib
 aux_source_directory(src API_TOOLS_SRC)
 
-
 add_library(coincenter_tools STATIC ${API_TOOLS_SRC})
-target_link_libraries(coincenter_tools PUBLIC amc::amc)
-target_link_libraries(coincenter_tools PUBLIC nlohmann_json::nlohmann_json)
-target_link_libraries(coincenter_tools PUBLIC spdlog)
+target_link_libraries(coincenter_tools PUBLIC coincenter_tech)
 if (MSVC)
   # cURL may have been built with MingW64, allow following extensions to be understood by Visual Studio.
   # https://discourse.cmake.org/t/problem-with-findpackage-curl-required-and-precompiled-curl-7-68-0-for-windows/686/3
@@ -19,59 +16,10 @@ target_link_libraries(coincenter_tools PRIVATE CURL::libcurl)
 target_include_directories(coincenter_tools PUBLIC include)
 
 add_unit_test(
-    cct_exception_test
-    test/cct_exception_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
-
-add_unit_test(
-    commandlineoptionsparser_test
-    src/commandlineoption.cpp
-    test/commandlineoptionsparser_test.cpp
-)
-
-add_unit_test(
-    cct_mathhelpers_test
-    test/cct_mathhelpers_test.cpp
-)
-
-add_unit_test(
-    cct_nonce_test
-    src/cct_nonce.cpp
-    test/cct_nonce_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
-
-add_unit_test(
-    cachedresult_test
-    src/cachedresultvault.cpp
-    test/cachedresult_test.cpp
-    LIBRARIES
-    spdlog
-)
-
-add_unit_test(
     curlhandle_test
     src/curlhandle.cpp
     test/curlhandle_test.cpp
     LIBRARIES
-    spdlog
+    coincenter_tech
     CURL::libcurl
-    nlohmann_json::nlohmann_json
-)
-
-add_unit_test(
-    flatkeyvaluestring_test
-    test/flatkeyvaluestring_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-    LIBRARIES
-    nlohmann_json::nlohmann_json
-)
-
-add_unit_test(
-    cct_time_helpers_test
-    test/cct_time_helpers_test.cpp
 )

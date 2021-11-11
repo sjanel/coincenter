@@ -10,7 +10,7 @@
 
 namespace cct {
 CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
-    : _programName(std::filesystem::path(argv[0]).filename().c_str()) {
+    : _programName(std::filesystem::path(argv[0]).filename().string()) {
   try {
     CommandLineOptionsParser<CoincenterCmdLineOptions> cmdLineOptionsParser =
         CreateCoincenterCommandLineOptionsParser<CoincenterCmdLineOptions>();

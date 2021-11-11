@@ -8,7 +8,7 @@ endif()
 
 add_library(coincenter_monitoring STATIC ${MONITORING_SRC})
 target_link_libraries(coincenter_monitoring PRIVATE spdlog)
-target_link_libraries(coincenter_monitoring PUBLIC coincenter_tools)
+target_link_libraries(coincenter_monitoring PUBLIC coincenter_tech)
 target_include_directories(coincenter_monitoring PUBLIC include)
 
 if (CCT_ENABLE_PROMETHEUS)
