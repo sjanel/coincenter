@@ -10,6 +10,7 @@
 #include <thread>
 #include <utility>
 
+#include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_proxy.hpp"
@@ -24,8 +25,11 @@ size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 }
 }  // namespace
 
-CurlHandle::CurlHandle(Clock::duration minDurationBetweenQueries, settings::RunMode runMode)
-    : _handle(curl_easy_init()), _minDurationBetweenQueries(minDurationBetweenQueries) {
+CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration minDurationBetweenQueries,
+                       settings::RunMode runMode)
+    : _handle(curl_easy_init()),
+      _pMetricGateway(pMetricGateway),
+      _minDurationBetweenQueries(minDurationBetweenQueries) {
   if (!_handle) {
     throw std::bad_alloc();
   }
@@ -45,12 +49,14 @@ CurlHandle::CurlHandle(Clock::duration minDurationBetweenQueries, settings::RunM
 
 CurlHandle::CurlHandle(CurlHandle &&o) noexcept
     : _handle(std::exchange(o._handle, nullptr)),
+      _pMetricGateway(std::exchange(o._pMetricGateway, nullptr)),
       _minDurationBetweenQueries(o._minDurationBetweenQueries),
       _lastQueryTime(std::exchange(o._lastQueryTime, TimePoint())) {}
 
 CurlHandle &CurlHandle::operator=(CurlHandle &&o) noexcept {
   if (this != std::addressof(o)) {
     _handle = std::exchange(o._handle, nullptr);
+    _pMetricGateway = std::exchange(o._pMetricGateway, nullptr);
     _minDurationBetweenQueries = o._minDurationBetweenQueries;
     _lastQueryTime = std::exchange(o._lastQueryTime, TimePoint());
   }
@@ -102,7 +108,8 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, optsStr);
   }
 
-  log::info("{} {}{}{}", opts.requestTypeStr(), url, opts.postdata.empty() ? "" : " opts ", optsStr);
+  std::string_view requestTypeStr = opts.requestTypeStr();
+  log::info("{} {}{}{}", requestTypeStr, url, opts.postdata.empty() ? "" : " opts ", optsStr);
 
   curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
   curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
@@ -162,7 +169,16 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
       _lastQueryTime = t;
     }
   }
+
+  // Actually make the query
   const CURLcode res = curl_easy_perform(curl);  // Get reply
+
+  if (_pMetricGateway) {
+    MetricKey key("metric_name=http_request_count,metric_help=Counter of http requests");
+    key.append("verb", requestTypeStr);
+    _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement, key);
+  }
+
   if (log::get_level() <= log::level::trace) {
     // Avoid polluting the logs for large response which are more likely to be HTML
     const bool isJsonAnswer = out.starts_with('{') || out.starts_with('[');

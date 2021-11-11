@@ -43,7 +43,7 @@ class Market {
   bool operator!=(const Market& o) const { return !(*this == o); }
 
   string str() const { return assetsPairStr('-'); }
-  string assetsPairStr(char sep = 0) const;
+  string assetsPairStr(char sep = 0, bool lowerCase = false) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Market& m);
 

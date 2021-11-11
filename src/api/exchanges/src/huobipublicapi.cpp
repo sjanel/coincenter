@@ -42,7 +42,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 HuobiPublic::HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(_exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle),

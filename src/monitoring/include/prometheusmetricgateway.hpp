@@ -4,6 +4,7 @@
 #include <prometheus/registry.h>
 
 #include <memory>
+#include <mutex>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -15,7 +16,6 @@
 namespace cct {
 
 /// High performance Prometheus gateway implementation, caching the metrics as they come along in a HashMap.
-/// Not thread-safe
 class PrometheusMetricGateway : public AbstractMetricGateway {
  public:
   using Gateway = prometheus::Gateway;
@@ -43,6 +43,7 @@ class PrometheusMetricGateway : public AbstractMetricGateway {
   Gateway _gateway;
   std::shared_ptr<Registry> _registry;
   std::unordered_map<MetricKey, void *> _familiesMap;
+  std::mutex _familiesMapMutex;
   TimePoint _lastFlushedTime;
   int _checkFlushCounter;  // To decrease number of times flush check is done
 };

@@ -10,6 +10,8 @@
 
 namespace cct {
 
+class AbstractMetricGateway;
+
 /// RAII class safely managing a CURL handle.
 ///
 /// Aim of this class is to simplify curl library complexity usage, and abstracts it from client
@@ -26,7 +28,9 @@ class CurlHandle {
 
   /// Constructs a new CurlHandle.
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
-  explicit CurlHandle(Clock::duration minDurationBetweenQueries = Clock::duration::zero(),
+  /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
+  explicit CurlHandle(AbstractMetricGateway *pMetricGateway = nullptr,
+                      Clock::duration minDurationBetweenQueries = Clock::duration::zero(),
                       settings::RunMode runMode = settings::RunMode::kProd);
 
   CurlHandle(const CurlHandle &) = delete;
@@ -46,9 +50,11 @@ class CurlHandle {
  private:
   void checkHandleOrInit();
   void setUpProxy(const CurlOptions::ProxySettings &proxy);
+
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header
   void *_handle;
+  AbstractMetricGateway *_pMetricGateway;
   Clock::duration _minDurationBetweenQueries;
   TimePoint _lastQueryTime;
 };

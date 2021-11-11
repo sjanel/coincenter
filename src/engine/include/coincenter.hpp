@@ -136,6 +136,8 @@ class Coincenter {
   void exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
                             std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const;
 
+  void exportOrderbookMetrics(Market m, const MarketOrderBookConversionRates &marketOrderBookConversionRates) const;
+
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;
   api::CryptowatchAPI _cryptowatchAPI;

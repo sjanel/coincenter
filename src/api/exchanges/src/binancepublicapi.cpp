@@ -82,9 +82,9 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 
 BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("binance", fiatConverter, cryptowatchAPI, config),
-      _commonInfo(config.exchangeInfo(_name), config.getRunMode()),
+      _commonInfo(config, config.exchangeInfo(_name), config.getRunMode()),
       _exchangeInfoCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _commonInfo),
       _globalInfosCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault)),
@@ -102,9 +102,10 @@ BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverte
       _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
                    _commonInfo) {}
 
-BinancePublic::CommonInfo::CommonInfo(const ExchangeInfo& exchangeInfo, settings::RunMode runMode)
+BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
+                                      settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),
-      _curlHandle(_exchangeInfo.minPublicQueryDelay(), runMode),
+      _curlHandle(coincenterInfo.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), runMode),
       _baseURLUpdater(CachedResultOptions(std::chrono::hours(96))) {}
 
 std::string_view BinancePublic::CommonInfo::BaseURLUpdater::operator()() {

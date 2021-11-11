@@ -80,6 +80,7 @@ inline std::tuple<std::map<std::string, std::string>, string, string> ExtractDat
 
 void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const MetricKey& key, double v) {
   assert(key.contains("metric_name") && key.contains("metric_help"));
+  std::lock_guard<std::mutex> guard(_familiesMapMutex);
   auto foundIt = _familiesMap.find(key);
   switch (type) {
     case MetricType::kCounter: {
@@ -177,6 +178,7 @@ void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const Met
 }
 
 void PrometheusMetricGateway::createHistogram(const MetricKey& key, BucketBoundaries buckets) {
+  std::lock_guard<std::mutex> guard(_familiesMapMutex);
   if (_familiesMap.find(key) == _familiesMap.end()) {
     auto data = ExtractData(key);
     auto& builder = prometheus::BuildHistogram().Name(std::get<1>(data)).Help(std::get<2>(data)).Register(*_registry);
@@ -191,6 +193,7 @@ void PrometheusMetricGateway::createHistogram(const MetricKey& key, BucketBounda
 }
 
 void PrometheusMetricGateway::createSummary(const MetricKey& key, const MetricSummaryInfo& metricSummaryInfo) {
+  std::lock_guard<std::mutex> guard(_familiesMapMutex);
   if (_familiesMap.find(key) == _familiesMap.end()) {
     auto data = ExtractData(key);
     auto& builder = prometheus::BuildSummary().Name(std::get<1>(data)).Help(std::get<2>(data)).Register(*_registry);
