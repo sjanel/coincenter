@@ -1,9 +1,9 @@
 #pragma once
 
-#include <chrono>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
+#include "cct_time_helpers.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
 #include "tradeinfo.hpp"
@@ -18,9 +18,6 @@ class BithumbPublic;
 
 class BithumbPrivate : public ExchangePrivate {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
   struct NbDecimalsTimeValue {
     int8_t nbDecimals;
     TimePoint lastUpdatedTime;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cachedresult.hpp"
+#include "cct_time_helpers.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
 
@@ -15,7 +16,7 @@ class CryptowatchAPI;
 
 class BithumbPublic : public ExchangePublic {
  public:
-  BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
@@ -48,38 +49,43 @@ class BithumbPublic : public ExchangePublic {
   friend class BithumbPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(CoincenterInfo& config, CurlHandle& curlHandle) : _config(config), _curlHandle(curlHandle) {}
+    TradableCurrenciesFunc(const CoincenterInfo& config, CurlHandle& curlHandle)
+        : _config(config), _curlHandle(curlHandle) {}
 
     CurrencyExchangeFlatSet operator()();
 
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 
   struct WithdrawalFeesFunc {
+    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, Clock::duration minDurationBetweenQueries,
+                       settings::RunMode runMode)
+        : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
+
     WithdrawalFeeMap operator()();
 
     CurlHandle _curlHandle;
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+    AllOrderBooksFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBookMap operator()(int depth);
 
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+    OrderBookFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBook operator()(Market m, int depth);
 
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

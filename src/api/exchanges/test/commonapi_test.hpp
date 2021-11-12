@@ -28,7 +28,7 @@ class TestAPI : public ::testing::Test {
         coincenterTestInfo(settings::RunMode::kTest),
         apiKeyProvider(coincenterInfo.dataDir(), coincenterInfo.getRunMode()),
         apiTestKeyProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
-        fiatConverter(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo),
         cryptowatchAPI(coincenterInfo),
         exchangePublic(coincenterInfo, fiatConverter, cryptowatchAPI) {}
 

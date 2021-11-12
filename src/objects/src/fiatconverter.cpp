@@ -3,6 +3,7 @@
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
 #include "cct_json.hpp"
+#include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 
 namespace cct {
@@ -43,8 +44,11 @@ File GetRatesCacheFile(std::string_view dataDir) {
 
 }  // namespace
 
-FiatConverter::FiatConverter(std::string_view dataDir, Clock::duration ratesUpdateFrequency)
-    : _ratesUpdateFrequency(ratesUpdateFrequency), _apiKey(LoadCurrencyConverterAPIKey(dataDir)), _dataDir(dataDir) {
+FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Clock::duration ratesUpdateFrequency)
+    : _curlHandle(coincenterInfo.metricGatewayPtr(), ratesUpdateFrequency, coincenterInfo.getRunMode()),
+      _ratesUpdateFrequency(ratesUpdateFrequency),
+      _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
+      _dataDir(coincenterInfo.dataDir()) {
   File ratesCacheFile = GetRatesCacheFile(_dataDir);
   json data = ratesCacheFile.readJson();
   _pricesMap.reserve(data.size());

@@ -5,6 +5,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_json.hpp"
+#include "cct_time_helpers.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
@@ -27,7 +28,8 @@ class BinancePublic : public ExchangePublic {
 
   static constexpr char kUserAgent[] = "Binance C++ API Client";
 
-  BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
+                api::CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
@@ -92,6 +94,10 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct GlobalInfosFunc {
+    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, Clock::duration minDurationBetweenQueries,
+                    settings::RunMode runMode)
+        : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
+
     json operator()();
 
     CurlHandle _curlHandle;
@@ -122,11 +128,10 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CommonInfo& commonInfo) : _config(config), _commonInfo(commonInfo) {}
+    explicit OrderBookFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
 
     MarketOrderBook operator()(Market m, int depth = kDefaultDepth);
 
-    CoincenterInfo& _config;
     CommonInfo& _commonInfo;
   };
 

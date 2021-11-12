@@ -219,7 +219,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
   }
 
-  json placeOrderRes = PrivateQuery(_placeCancelOrder, _apiKey, "AddOrder", placePostData);
+  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, "AddOrder", placePostData);
   // {"error":[],"result":{"descr":{"order":"buy 24.69898116 XRPETH @ limit 0.0003239"},"txid":["OWBA44-TQZQ7-EEYSXA"]}}
   if (isSimulation) {
     // In simulation mode, there is no txid returned. If we arrived here (after CollectResults) we assume that the call
@@ -247,7 +247,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
 }
 
 OrderInfo KrakenPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  PrivateQuery(_placeCancelOrder, _apiKey, "CancelOrder", {{"txid", orderId}});
+  PrivateQuery(_curlHandle, _apiKey, "CancelOrder", {{"txid", orderId}});
   // {"error":[],"result":{"count":1}}
   return queryOrderInfo(orderId, tradeInfo, QueryOrder::kClosedThenOpened);
 }

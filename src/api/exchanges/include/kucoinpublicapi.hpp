@@ -31,7 +31,7 @@ class KucoinPublic : public ExchangePublic {
 
   static constexpr int kKucoinStandardOrderBookDefaultDepth = 20;
 
-  KucoinPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
@@ -90,8 +90,8 @@ class KucoinPublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
-    MarketsFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     struct MarketInfo {
       MonetaryAmount baseMinSize;
@@ -108,7 +108,6 @@ class KucoinPublic : public ExchangePublic {
 
     std::pair<MarketSet, MarketInfoMap> operator()();
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -125,12 +124,11 @@ class KucoinPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    OrderBookFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBook operator()(Market m, int depth);
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

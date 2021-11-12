@@ -71,7 +71,7 @@ CurlHandle::~CurlHandle() {}
 
 class FiatConverterTest : public ::testing::Test {
  protected:
-  FiatConverterTest() : converter(coincenterInfo.dataDir(), std::chrono::milliseconds(1)) {}
+  FiatConverterTest() : converter(coincenterInfo, std::chrono::milliseconds(1)) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

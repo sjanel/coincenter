@@ -13,6 +13,8 @@
 
 namespace cct {
 
+class CoincenterInfo;
+
 /// Service querying fiat currency exchange rates from a free API.
 ///
 /// Current chosen source is, for now:
@@ -34,11 +36,12 @@ class FiatConverter {
   /// Creates a FiatConverter unable to perform live queries to free converter api loading frozen rates from
   /// 'data/kRatesFileName' file.
   /// Useful for unit tests to avoid querying the API.
-  explicit FiatConverter(std::string_view dataDir) : FiatConverter(dataDir, Clock::duration::max()) {}
+  explicit FiatConverter(const CoincenterInfo &coincenterInfo)
+      : FiatConverter(coincenterInfo, Clock::duration::max()) {}
 
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
-  FiatConverter(std::string_view dataDir, Clock::duration ratesUpdateFrequency);
+  FiatConverter(const CoincenterInfo &coincenterInfo, Clock::duration ratesUpdateFrequency);
 
   FiatConverter(const FiatConverter &) = delete;
   FiatConverter &operator=(const FiatConverter &) = delete;

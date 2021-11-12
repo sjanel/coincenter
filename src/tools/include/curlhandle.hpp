@@ -26,12 +26,14 @@ class CurlHandle {
   // CurlHandle is trivially relocatable
   using trivially_relocatable = std::true_type;
 
+  /// Constructs a default CurlHandle without any min duration between queries nor support for metric collection.
+  CurlHandle() : CurlHandle(nullptr, Clock::duration::zero(), settings::RunMode::kProd) {}
+
   /// Constructs a new CurlHandle.
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
   /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
-  explicit CurlHandle(AbstractMetricGateway *pMetricGateway = nullptr,
-                      Clock::duration minDurationBetweenQueries = Clock::duration::zero(),
-                      settings::RunMode runMode = settings::RunMode::kProd);
+  CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration minDurationBetweenQueries,
+             settings::RunMode runMode);
 
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;

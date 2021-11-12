@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef CCT_DISABLE_SPDLOG
-#include <iostream>
 #include <string_view>
 #else
 #include <spdlog/spdlog.h>

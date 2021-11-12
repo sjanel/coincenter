@@ -50,14 +50,16 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 }  // namespace
 
-BithumbPublic::BithumbPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
+BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
+                             api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           _curlHandle),
       _withdrawalFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault)),
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
+          config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
           config, _curlHandle, config.exchangeInfo(_name)),
@@ -168,7 +170,7 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 }
 
 namespace {
-ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, CoincenterInfo& config,
+ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config,
                                                  const ExchangeInfo& exchangeInfo,
                                                  std::optional<Market> optM = std::nullopt,
                                                  std::optional<int> optDepth = std::nullopt) {

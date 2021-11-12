@@ -14,7 +14,7 @@ class ExchangePublicTest : public ::testing::Test {
  protected:
   ExchangePublicTest()
       : cryptowatchAPI(coincenterInfo),
-        fiatConverter(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo),
         exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
 
   virtual void SetUp() {}
