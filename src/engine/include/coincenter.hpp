@@ -48,6 +48,8 @@ class Coincenter {
   using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
+  using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
+  using ExchangeTickerMaps = std::pair<ExchangeRetriever::UniquePublicExchanges, Coincenter::MarketOrderBookMaps>;
 
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
       : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
@@ -65,6 +67,9 @@ class Coincenter {
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames);
+
+  /// Retrieve ticker information for given selected public exchanges, or all if empty.
+  ExchangeTickerMaps getTickerInformation(std::span<const PublicExchangeName> exchangeNames);
 
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
@@ -103,6 +108,8 @@ class Coincenter {
 
   void printMarkets(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
 
+  void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
+
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
 
   void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);
@@ -133,8 +140,14 @@ class Coincenter {
  private:
   using ExchangeVector = vector<Exchange>;
 
+  void processReadRequests(const CoincenterParsedOptions &opts);
+  void processWriteRequests(const CoincenterParsedOptions &opts);
+
   void exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
                             std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const;
+
+  void exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
+                           const MarketOrderBookMaps &marketOrderBookMaps) const;
 
   void exportOrderbookMetrics(Market m, const MarketOrderBookConversionRates &marketOrderBookConversionRates) const;
 

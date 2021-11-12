@@ -7,6 +7,7 @@
 
 #include "cct_const.hpp"
 #include "cct_string.hpp"
+#include "cct_time_helpers.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "tradeoptions.hpp"
@@ -15,10 +16,10 @@
 namespace cct {
 
 struct CoincenterCmdLineOptions {
-  using Duration = api::TradeOptions::Clock::duration;
+  using Duration = Clock::duration;
 
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
-  static constexpr int kDefaultMonitoringPort = 9090;                         // Prometheus default port
+  static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
 
   void setLogLevel() const;
 
@@ -33,6 +34,8 @@ struct CoincenterCmdLineOptions {
   bool version = false;
   bool logFile = false;
   std::optional<string> nosecrets;
+  CommandLineOptionalInt repeats;
+  Duration repeat_time = Duration::zero();
 
   string monitoring_address = string(kDefaultMonitoringIPAddress);
   string monitoring_username;
@@ -45,6 +48,8 @@ struct CoincenterCmdLineOptions {
   string orderbook;
   int orderbook_depth{};
   string orderbook_cur;
+
+  std::optional<string> ticker;
 
   string conversion_path;
 
@@ -89,21 +94,14 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                       &OptValueType::logLevel},
        {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
        {{{"General", 1}, "--nosecrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"
-                                                       "If empty list of exchanges, it skips secrets load for all private exchanges"}, 
+                                                       "If empty list of exchanges, it skips secrets load for all private exchanges"},
                                                        &OptValueType::nosecrets},
-       {{{"Monitoring", 1}, "--monitoring", "", "Progressively send metrics to external instance provided that it's correctly set up "
-                                                "(Prometheus by default). Refer to the README for more information"}, 
-                                                       &OptValueType::useMonitoring},
-       {{{"Monitoring", 1}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
-                                                          .append(std::to_string(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
-                                                         &OptValueType::monitoring_port},
-       {{{"Monitoring", 1}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
-                                                        .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 
-                                                         &OptValueType::monitoring_address},
-       {{{"Monitoring", 1}, "--monitoring-user", "<username>", "Specify username of metric gateway instance (default: none)"}, 
-                                                            &OptValueType::monitoring_username},
-       {{{"Monitoring", 1}, "--monitoring-pass", "<password>", "Specify password of metric gateway instance (default: none)"}, 
-                                                            &OptValueType::monitoring_password},
+       {{{"General", 1}, "--repeat", 'r', "[n]", "Indicates how many repeats to perform for mutable data (such as market data)\n"
+                                                 "Modifying requests such as trades and withdraws are not impacted by this option"
+                                                 "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
+                                                 &OptValueType::repeats},
+       {{{"General", 1}, "--repeat-time", "<time>", "Sets a delay between each repeat"},  
+                                                  &OptValueType::repeat_time},
        {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
                                                                        &OptValueType::markets},
 
@@ -114,6 +112,9 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Public queries", 2}, "--orderbook-cur", "<cur>", "If conversion of cur2 into cur is possible (for each exchange), "
                                                             "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
+       {{{"Public queries", 2}, "--ticker", "[exch1,...]", "Print ticker information for all markets for all exchanges,"
+                                                           "or only for specified ones"}, 
+                                                           &OptValueType::ticker},
        {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
                                                                                      "for given exchanges if possible"}, 
                                                           &OptValueType::conversion_path},
@@ -173,7 +174,20 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                         .append("' file.")}, &OptValueType::withdraw},
        {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 
-                                                                &OptValueType::withdraw_fee}});
+                                                                &OptValueType::withdraw_fee},
+       {{{"Monitoring", 6}, "--monitoring", "", "Progressively send metrics to external instance provided that it's correctly set up "
+                                                "(Prometheus by default). Refer to the README for more information"}, 
+                                                       &OptValueType::useMonitoring},
+       {{{"Monitoring", 6}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
+                                                          .append(std::to_string(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
+                                                         &OptValueType::monitoring_port},
+       {{{"Monitoring", 6}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
+                                                        .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 
+                                                         &OptValueType::monitoring_address},
+       {{{"Monitoring", 6}, "--monitoring-user", "<username>", "Specify username of metric gateway instance (default: none)"}, 
+                                                                &OptValueType::monitoring_username},
+       {{{"Monitoring", 6}, "--monitoring-pass", "<password>", "Specify password of metric gateway instance (default: none)"}, 
+                                                                &OptValueType::monitoring_password}});
   // clang-format on
 }
 }  // namespace cct

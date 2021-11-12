@@ -12,13 +12,15 @@ int main(int argc, const char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    cct::MonitoringInfo monitoringInfo(opts.programName(), opts.monitoring_address, opts.monitoring_port,
-                                       opts.monitoring_username, opts.monitoring_password);
+    cct::MonitoringInfo monitoringInfo(opts.useMonitoring, opts.programName(), opts.monitoring_address,
+                                       opts.monitoring_port, opts.monitoring_username, opts.monitoring_password);
 
     cct::Coincenter coincenter(opts.noSecretsExchanges, opts.noSecretsForAll, cct::settings::RunMode::kProd,
                                opts.dataDir, std::move(monitoringInfo));
 
     coincenter.process(opts);
+
+    coincenter.updateFileCaches();  // Write potentially updated cache data on disk at end of program
 
   } catch (...) {
     return EXIT_FAILURE;

@@ -45,7 +45,7 @@ File GetRatesCacheFile(std::string_view dataDir) {
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Clock::duration ratesUpdateFrequency)
-    : _curlHandle(coincenterInfo.metricGatewayPtr(), ratesUpdateFrequency, coincenterInfo.getRunMode()),
+    : _curlHandle(coincenterInfo.metricGatewayPtr(), Clock::duration::zero(), coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {

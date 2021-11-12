@@ -5,6 +5,7 @@
 
 #include "cct_const.hpp"
 #include "cct_string.hpp"
+#include "cct_time_helpers.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -17,6 +18,8 @@ struct CoincenterCmdLineOptions;
 
 class CoincenterParsedOptions {
  public:
+  using Duration = Clock::duration;
+
   /// Parse arguments and store the overriden values in this object.
   CoincenterParsedOptions(int argc, const char *argv[]);
 
@@ -29,6 +32,8 @@ class CoincenterParsedOptions {
   PublicExchangeNames marketsExchanges;
 
   Market marketForOrderBook;
+  bool tickerForAll = false;
+  PublicExchangeNames tickerExchanges;
   PublicExchangeNames orderBookExchanges;
   int orderbookDepth = 0;
   CurrencyCode orderbookCur;
@@ -60,8 +65,11 @@ class CoincenterParsedOptions {
   string monitoring_username;
   string monitoring_password;
   uint16_t monitoring_port;
+  bool useMonitoring = false;
 
   bool noProcess = false;
+  int repeats = 1;
+  Duration repeat_time = Duration::zero();
 
   std::string_view programName() const { return _programName; }
 

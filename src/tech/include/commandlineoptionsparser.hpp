@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <bitset>
+#include <cassert>
+#include <charconv>
 #include <climits>
 #include <functional>
 #include <iostream>
@@ -10,7 +12,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <sstream>
 #include <string_view>
 #include <variant>
 
@@ -36,6 +37,35 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 #endif
 
+/// Basically an extension of the std::optional class with an additional state.
+/// Indeed, we want to distinguish the presence of the option with its optional value.
+class CommandLineOptionalInt {
+ public:
+  enum class State : int8_t { kValueIsSet, kOptionPresent, kOptionNotPresent };
+
+  constexpr CommandLineOptionalInt() = default;
+
+  constexpr CommandLineOptionalInt(State state) : _state(state) {}
+
+  constexpr CommandLineOptionalInt(int value) : _value(value), _state(State::kValueIsSet) {}
+
+  int& operator*() {
+    assert(isSet());
+    return _value;
+  }
+  int operator*() const {
+    assert(isSet());
+    return _value;
+  }
+
+  bool isPresent() const { return _state == State::kOptionPresent || _state == State::kValueIsSet; }
+  bool isSet() const { return _state == State::kValueIsSet; }
+
+ private:
+  int _value = 0;
+  State _state = State::kOptionNotPresent;
+};
+
 /// Simple Command line options parser.
 /// Base taken from https://www.codeproject.com/Tips/5261900/Cplusplus-Lightweight-Parsing-Command-Line-Argumen
 /// with enhancements.
@@ -44,8 +74,8 @@ template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
   using Duration = CommandLineOption::Duration;
-  using OptionType =
-      std::variant<string Opts::*, std::optional<string> Opts::*, int Opts::*, bool Opts::*, Duration Opts::*>;
+  using OptionType = std::variant<string Opts::*, std::optional<string> Opts::*, int Opts::*,
+                                  CommandLineOptionalInt Opts::*, bool Opts::*, Duration Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -82,19 +112,19 @@ class CommandLineOptionsParser : private Opts {
       register_callback(arg.first, arg.second);
     }
 
-    int idxOpt = 0;
-    for (const char* argStr : vargv) {
-      if (argStr[0] == '-') {
-        const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
-                                             [argStr](const auto& opt) { return opt.first.matches(argStr); });
-        if (!knownOption) {
-          throw InvalidArgumentException("Unrecognized command-line option: " + string(argStr));
-        }
+    vargv = vargv.last(vargv.size() - 1U);  // skip first argument which is program name
+    const int vargvSize = vargv.size();
+    for (int idxOpt = 0; idxOpt < vargvSize; ++idxOpt) {
+      const char* argStr = vargv[idxOpt];
+      const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
+                                           [argStr](const auto& opt) { return opt.first.matches(argStr); });
+      if (!knownOption) {
+        throw InvalidArgumentException("Unrecognized command-line option: " + string(argStr));
       }
+
       for (auto& cbk : _callbacks) {
         cbk.second(idxOpt, vargv);
       }
-      ++idxOpt;
     }
 
     return static_cast<Opts>(*this);
@@ -171,10 +201,10 @@ class CommandLineOptionsParser : private Opts {
   }
 
  private:
-  using callback_t = std::function<void(int, std::span<const char*>)>;
+  using CallbackType = std::function<void(int&, std::span<const char*>)>;
 
   vector<CommandLineOptionWithValue> _commandLineOptionsWithValues;
-  std::map<CommandLineOption, callback_t> _callbacks;
+  std::map<CommandLineOption, CallbackType> _callbacks;
 
   /// TODO: make this check constexpr would be great (but it's actually not trivial at all)
   void checkDuplicatesAndSort() {
@@ -225,65 +255,87 @@ class CommandLineOptionsParser : private Opts {
 
   static void ThrowDuplicatedOptionsException(std::string_view lhsName, std::string_view rhsName) {
     string errMsg("Duplicated options '");
-    errMsg.append(lhsName);
-    errMsg.append("' and '");
-    errMsg.append(rhsName);
-    errMsg.append("' have been found");
+    errMsg.append(lhsName).append("' and '").append(rhsName).append("' have been found");
     throw InvalidArgumentException(std::move(errMsg));
+  }
+
+  static bool IsOptionValue(const char* argv) {
+    if (argv[0] != '-') {
+      return true;
+    }
+    char secondChar = argv[1];
+    return secondChar >= '0' && secondChar <= '9';
   }
 
 #ifdef _WIN32
   // MSVC compiler bug. Information here:
   // https://developercommunity.visualstudio.com/t/Cannot-compile-lambda-with-pointer-to-me/1416679
   struct VisitFunc {
-    VisitFunc(Opts* o, int i, std::span<const char*> a, const CommandLineOption& c)
+    VisitFunc(Opts* o, int& i, std::span<const char*> a, const CommandLineOption& c)
         : opts(o), idx(i), argv(a), commandLineOption(c) {}
 
     void operator()(bool Opts::*arg) const { opts->*arg = true; }
 
     void operator()(int Opts::*arg) const {
-      if (idx + 1 < static_cast<int>(argv.size())) {
-        std::stringstream value;
-        value << argv[idx + 1];
-        value >> opts->*arg;
+      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+        const char* beg = argv[idx + 1];
+        const char* end = beg + strlen(beg);
+        std::from_chars(beg, end, opts->*arg);
+        ++idx;
       } else {
         ThrowExpectingValueException(commandLineOption);
       }
     }
 
+    void operator()(CommandLineOptionalInt Opts::*arg) const {
+      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+        const char* beg = argv[idx + 1];
+        const char* end = beg + strlen(beg);
+        int value;
+        std::from_chars(beg, end, value);
+        opts->*arg = value;
+        ++idx;
+      } else {
+        opts->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+      }
+    }
+
     void operator()(string Opts::*arg) const {
-      if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
         opts->*arg = argv[idx + 1];
+        ++idx;
       } else {
         ThrowExpectingValueException(commandLineOption);
       }
     }
 
     void operator()(std::optional<string> Opts::*arg) const {
-      if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
         opts->*arg = argv[idx + 1];
+        ++idx;
       } else {
         opts->*arg = string();
       }
     }
 
     void operator()(Duration Opts::*arg) const {
-      if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
         opts->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
+        ++idx;
       } else {
         ThrowExpectingValueException(commandLineOption);
       }
     }
 
     Opts* opts;
-    int idx;
+    int& idx;
     std::span<const char*> argv;
     const CommandLineOption& commandLineOption;
   };
 #endif
 
   void register_callback(const CommandLineOption& commandLineOption, OptionType prop) {
-    _callbacks[commandLineOption] = [this, &commandLineOption, prop](int idx, std::span<const char*> argv) {
+    _callbacks[commandLineOption] = [this, &commandLineOption, prop](int& idx, std::span<const char*> argv) {
       if (commandLineOption.matches(argv[idx])) {
 #ifdef _WIN32
         std::visit(
@@ -292,32 +344,48 @@ class CommandLineOptionsParser : private Opts {
 #else
         std::visit(overloaded{
                        [this](bool Opts::*arg) { this->*arg = true; },
-                       [this, idx, argv, &commandLineOption](int Opts::*arg) {
-                         if (idx + 1 < static_cast<int>(argv.size())) {
-                           std::stringstream value;
-                           value << argv[idx + 1];
-                           value >> this->*arg;
+                       [this, &idx, argv, &commandLineOption](int Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+                           const char* beg = argv[idx + 1];
+                           const char* end = beg + strlen(beg);
+                           std::from_chars(beg, end, this->*arg);
+                           ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
                          }
                        },
-                       [this, idx, argv, &commandLineOption](string Opts::*arg) {
-                         if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+                       [this, &idx, argv](CommandLineOptionalInt Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+                           const char* beg = argv[idx + 1];
+                           const char* end = beg + strlen(beg);
+                           int value;
+                           std::from_chars(beg, end, value);
+                           this->*arg = value;
+                           ++idx;
+                         } else {
+                           this->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+                         }
+                       },
+                       [this, &idx, argv, &commandLineOption](string Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            this->*arg = argv[idx + 1];
+                           ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
                          }
                        },
-                       [this, idx, argv](std::optional<string> Opts::*arg) {
-                         if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+                       [this, &idx, argv](std::optional<string> Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            this->*arg = argv[idx + 1];
+                           ++idx;
                          } else {
                            this->*arg = string();
                          }
                        },
-                       [this, idx, argv, &commandLineOption](Duration Opts::*arg) {
-                         if (idx + 1U < argv.size() && argv[idx + 1][0] != '-') {
+                       [this, &idx, argv, &commandLineOption](Duration Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            this->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
+                           ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
                          }

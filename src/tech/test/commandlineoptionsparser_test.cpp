@@ -11,11 +11,12 @@ using TimePoint = std::chrono::time_point<Clock>;
 using Duration = Clock::duration;
 
 struct Opts {
-  string stringOpt{};
-  int intOpt{};
-  int int2Opt{};
-  bool boolOpt{};
-  std::optional<string> optStr{};
+  string stringOpt;
+  int intOpt = 0;
+  int int2Opt = 0;
+  bool boolOpt = false;
+  std::optional<string> optStr;
+  CommandLineOptionalInt optInt;
   Duration timeOpt;
 };
 
@@ -29,10 +30,11 @@ class CommandLineOptionsParserTest : public ::testing::Test {
                  {{{"Other", 2}, "--opt3", "", "Opt3 descr"}, &Opts::int2Opt},
                  {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
                  {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
+                 {{{"Monitoring", 3}, "--optInt", 'i', "", "Optional int"}, &Opts::optInt},
                  {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}) {}
 
   Opts createOptions(std::initializer_list<const char *> init) {
-    vector<const char *> opts = init;
+    vector<const char *> opts(init.begin(), init.end());
     return _parser.parse(opts);
   }
 
@@ -75,6 +77,30 @@ TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) {
   EXPECT_EQ(createOptions({"coincenter", "--help"}).optStr, std::nullopt);
+}
+
+TEST_F(CommandLineOptionsParserTest, OptIntNotEmpty) {
+  CommandLineOptionalInt optInt = createOptions({"coincenter", "--optInt", "-42", "--opt4", "2000 EUR, kraken"}).optInt;
+  EXPECT_EQ(*optInt, -42);
+  EXPECT_TRUE(optInt.isPresent());
+  EXPECT_TRUE(optInt.isSet());
+}
+
+TEST_F(CommandLineOptionsParserTest, OptIntPresent) {
+  CommandLineOptionalInt optInt = createOptions({"coincenter", "--optInt", "--opt1", "Opt1 value"}).optInt;
+  EXPECT_TRUE(optInt.isPresent());
+  EXPECT_FALSE(optInt.isSet());
+}
+
+TEST_F(CommandLineOptionsParserTest, OptIntPresent2) {
+  CommandLineOptionalInt optInt = createOptions({"coincenter", "--opt1", "Opt1 value", "--optInt"}).optInt;
+  EXPECT_TRUE(optInt.isPresent());
+  EXPECT_FALSE(optInt.isSet());
+}
+
+TEST_F(CommandLineOptionsParserTest, OptIntUnset) {
+  CommandLineOptionalInt optInt = createOptions({"coincenter", "--opt1", "Opt1 value"}).optInt;
+  EXPECT_FALSE(optInt.isPresent());
 }
 
 TEST_F(CommandLineOptionsParserTest, DurationOptionHours) {

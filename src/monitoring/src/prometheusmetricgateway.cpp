@@ -213,20 +213,22 @@ void PrometheusMetricGateway::createSummary(const MetricKey& key, const MetricSu
 }
 
 void PrometheusMetricGateway::flush() {
+  auto nowTime = Clock::now();
   int returnCode = _gateway.Push();
-  if (returnCode != kHTTPSuccessReturnCode) {
+  if (returnCode == kHTTPSuccessReturnCode) {
+    log::info("Flushed data to Prometheus in {} ms",
+              std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - nowTime).count());
+  } else {
     log::error("Unable to push metrics to Prometheus instance - Bad return code {}", returnCode);
   }
 }
 
 void PrometheusMetricGateway::checkFlush() {
-  if (++_checkFlushCounter == kCheckFlushCounter) {
+  if ((++_checkFlushCounter % kCheckFlushCounter) == 0) {
     auto nowTime = Clock::now();
     if (_lastFlushedTime + kPrometheusAutoFlushPeriod < nowTime) {
       flush();
       _lastFlushedTime = Clock::now();
-      log::info("Flushed data to Prometheus in {} ms",
-                std::chrono::duration_cast<std::chrono::milliseconds>(_lastFlushedTime - nowTime).count());
     }
   }
 }
