@@ -16,6 +16,8 @@ constexpr char kTestUrl[] = "https://live.cardeasexml.com/ultradns.php";
 
 class CurlSetup : public ::testing::Test {
  protected:
+  CurlSetup() : handle(nullptr, CurlHandle::Clock::duration::zero(), settings::RunMode::kProd) {}
+
   virtual void SetUp() {}
   virtual void TearDown() {}
 

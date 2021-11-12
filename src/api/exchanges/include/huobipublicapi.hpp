@@ -32,7 +32,7 @@ class HuobiPublic : public ExchangePublic {
 
   static constexpr int kHuobiStandardOrderBookDefaultDepth = 150;
 
-  HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
@@ -79,8 +79,8 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
-    MarketsFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     struct MarketInfo {
       MarketInfo() noexcept : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT") {}
@@ -103,7 +103,6 @@ class HuobiPublic : public ExchangePublic {
 
     std::pair<MarketSet, MarketInfoMap> operator()();
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -120,12 +119,11 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    OrderBookFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBook operator()(Market m, int depth);
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

@@ -34,7 +34,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 }  // namespace
 
-UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
+UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
@@ -47,9 +47,9 @@ UpbitPublic::UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, C
           _name, config.dataDir()),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          config, _curlHandle, config.exchangeInfo(_name), _marketsCache),
+          _curlHandle, config.exchangeInfo(_name), _marketsCache),
       _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _curlHandle, config.exchangeInfo(_name)),
       _tradedVolumeCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),

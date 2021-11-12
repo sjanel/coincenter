@@ -64,7 +64,6 @@ class KrakenPrivate : public ExchangePrivate {
   OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo, QueryOrder queryOrder);
 
   CurlHandle _curlHandle;
-  CurlHandle _placeCancelOrder;  // Kraken has no API limit on place / cancel order, hence a separate CurlHandle
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

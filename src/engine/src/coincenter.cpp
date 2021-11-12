@@ -39,7 +39,7 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
                        settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
     : _coincenterInfo(runMode, dataDir, monitoringInfo),
       _cryptowatchAPI(_coincenterInfo, runMode),
-      _fiatConverter(dataDir, std::chrono::hours(8)),
+      _fiatConverter(_coincenterInfo, std::chrono::hours(8)),
       _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
       _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),

@@ -33,7 +33,7 @@ class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest()
       : cryptowatchAPI(coincenterInfo),
-        fiatConverter(coincenterInfo.dataDir()),
+        fiatConverter(coincenterInfo),
         exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
         key("test", "testuser", "", "", ""),
         exchangePrivate(exchangePublic, coincenterInfo, key) {}

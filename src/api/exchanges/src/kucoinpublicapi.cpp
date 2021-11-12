@@ -38,7 +38,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 
 }  // namespace
 
-KucoinPublic::KucoinPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
+KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
+                           api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kucoin", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
@@ -46,12 +47,12 @@ KucoinPublic::KucoinPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _coincenterInfo),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    config, _curlHandle, _exchangeInfo),
+                    _curlHandle, _exchangeInfo),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
           _marketsCache, _curlHandle, _exchangeInfo),
       _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _curlHandle, _exchangeInfo),
       _tradedVolumeCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),

@@ -33,7 +33,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&&
 }
 
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,
-                           const ExchangeInfo::CurrencySet& excludedCurrencies, CoincenterInfo& config) {
+                           const ExchangeInfo::CurrencySet& excludedCurrencies, const CoincenterInfo& config) {
   if (krakenAltName.ends_with(".HOLD")) {
     // These are special tokens for holding
     log::trace("Discard {} which are special tokens for holding process", krakenAltName);
@@ -74,7 +74,7 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
 
 }  // namespace
 
-KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
+KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
@@ -82,14 +82,14 @@ KrakenPublic::KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter,
           config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          config),
+          config, config.exchangeInfo(_name).minPublicQueryDelay()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
           config, _tradableCurrenciesCache, _marketsCache, _curlHandle),
       _orderBookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, _curlHandle),
       _tickerCache(CachedResultOptions(std::min(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume),
                                                 config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice)),

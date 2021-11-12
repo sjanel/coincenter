@@ -15,7 +15,7 @@ class CryptowatchAPI;
 
 class UpbitPublic : public ExchangePublic {
  public:
-  UpbitPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
+  UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
@@ -79,25 +79,22 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo,
-                      CachedResult<MarketsFunc>& marketsCache)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo), _marketsCache(marketsCache) {}
+    AllOrderBooksFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo, CachedResult<MarketsFunc>& marketsCache)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo), _marketsCache(marketsCache) {}
 
     MarketOrderBookMap operator()(int depth);
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
     CachedResult<MarketsFunc>& _marketsCache;
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    OrderBookFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
+        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBook operator()(Market m, int depth);
 
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

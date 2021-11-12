@@ -39,7 +39,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 
 }  // namespace
 
-HuobiPublic::HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
+HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
+                         api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
@@ -47,12 +48,12 @@ HuobiPublic::HuobiPublic(CoincenterInfo& config, FiatConverter& fiatConverter, a
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    config, _curlHandle, _exchangeInfo),
+                    _curlHandle, _exchangeInfo),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
           _marketsCache, _curlHandle, _exchangeInfo),
       _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _curlHandle, _exchangeInfo),
       _tradedVolumeCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),

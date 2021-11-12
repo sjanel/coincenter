@@ -2,10 +2,10 @@
 
 #include "cachedresult.hpp"
 #include "cct_string.hpp"
+#include "cct_time_helpers.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
 #include "volumeandpricenbdecimals.hpp"
-
 namespace cct {
 
 class CoincenterInfo;
@@ -17,7 +17,7 @@ class TradeOptions;
 
 class KrakenPublic : public ExchangePublic {
  public:
-  KrakenPublic(CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
+  KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
@@ -57,12 +57,12 @@ class KrakenPublic : public ExchangePublic {
   friend class KrakenPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
+    TradableCurrenciesFunc(const CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
         : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     CurrencyExchangeFlatSet operator()();
 
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -71,17 +71,18 @@ class KrakenPublic : public ExchangePublic {
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
-    explicit WithdrawalFeesFunc(CoincenterInfo& config) : _config(config) {}
+    WithdrawalFeesFunc(const CoincenterInfo& config, Clock::duration minDurationBetweenQueries)
+        : _config(config), _curlHandle(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
 
     WithdrawalInfoMaps operator()();
 
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle _curlHandle;
   };
 
   struct MarketsFunc {
-    MarketsFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache, CurlHandle& curlHandle,
-                const ExchangeInfo& exchangeInfo)
+    MarketsFunc(const CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
+                CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _tradableCurrenciesCache(currenciesCache),
           _config(config),
           _curlHandle(curlHandle),
@@ -97,13 +98,13 @@ class KrakenPublic : public ExchangePublic {
     std::pair<MarketSet, MarketInfoMap> operator()();
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
+    AllOrderBooksFunc(const CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
                       CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
         : _tradableCurrenciesCache(currenciesCache),
           _marketsCache(marketsCache),
@@ -114,23 +115,19 @@ class KrakenPublic : public ExchangePublic {
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
-    CoincenterInfo& _config;
+    const CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 
   struct OrderBookFunc {
-    OrderBookFunc(CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
-                  CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
-        : _tradableCurrenciesCache(currenciesCache),
-          _marketsCache(marketsCache),
-          _config(config),
-          _curlHandle(curlHandle) {}
+    OrderBookFunc(CachedResult<TradableCurrenciesFunc>& currenciesCache, CachedResult<MarketsFunc>& marketsCache,
+                  CurlHandle& curlHandle)
+        : _tradableCurrenciesCache(currenciesCache), _marketsCache(marketsCache), _curlHandle(curlHandle) {}
 
     MarketOrderBook operator()(Market m, int count);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
-    CoincenterInfo& _config;
     CurlHandle& _curlHandle;
   };
 

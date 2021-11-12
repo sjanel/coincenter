@@ -80,27 +80,32 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 }
 }  // namespace
 
-BinancePublic::BinancePublic(CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("binance", fiatConverter, cryptowatchAPI, config),
-      _commonInfo(config, config.exchangeInfo(_name), config.getRunMode()),
+BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
+                             api::CryptowatchAPI& cryptowatchAPI)
+    : ExchangePublic("binance", fiatConverter, cryptowatchAPI, coincenterInfo),
+      _commonInfo(coincenterInfo, coincenterInfo.exchangeInfo(_name), coincenterInfo.getRunMode()),
       _exchangeInfoCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
+          CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _commonInfo),
-      _globalInfosCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault)),
-      _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
-      _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          _exchangeInfoCache, _marketsCache, _commonInfo),
+      _globalInfosCache(CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees),
+                                            _cachedResultVault),
+                        coincenterInfo.metricGatewayPtr(), _commonInfo._exchangeInfo.minPublicQueryDelay(),
+                        coincenterInfo.getRunMode()),
+      _marketsCache(
+          CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
+          _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
+      _allOrderBooksCache(CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks),
+                                              _cachedResultVault),
+                          _exchangeInfoCache, _marketsCache, _commonInfo),
       _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
+          CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _commonInfo),
-      _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
-          _commonInfo),
-      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
-                   _commonInfo) {}
+      _tradedVolumeCache(CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume),
+                                             _cachedResultVault),
+                         _commonInfo),
+      _tickerCache(
+          CachedResultOptions(coincenterInfo.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+          _commonInfo) {}
 
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
                                       settings::RunMode runMode)
