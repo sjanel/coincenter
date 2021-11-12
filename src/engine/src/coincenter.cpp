@@ -4,6 +4,7 @@
 #include <chrono>
 #include <execution>
 #include <span>
+#include <thread>
 
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
@@ -101,8 +102,32 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
 }
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
+  processWriteRequests(opts);
+  const int nbRepeats = opts.repeats;
+  for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
+    if (repeatPos != 0) {
+      std::this_thread::sleep_for(opts.repeat_time);
+    }
+    if (nbRepeats == -1) {
+      log::info("Processing read request {}/{}", repeatPos + 1, "\u221E");  // unicode char for infinity sign
+    } else {
+      log::info("Processing read request {}/{}", repeatPos + 1, nbRepeats);
+    }
+
+    processReadRequests(opts);
+  }
+}
+
+void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   if (opts.marketsCurrency != CurrencyCode()) {
     printMarkets(opts.marketsCurrency, opts.marketsExchanges);
+  }
+
+  if (opts.tickerForAll || !opts.tickerExchanges.empty()) {
+    log::info("Ticker information for {}",
+              ConstructAccumulatedExchangeNames(std::span<const PublicExchangeName>(opts.tickerExchanges)));
+    ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(opts.tickerExchanges);
+    printTickerInformation(exchangeTickerMaps);
   }
 
   if (opts.marketForOrderBook != Market()) {
@@ -139,17 +164,6 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     printBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
   }
 
-  if (!opts.startTradeAmount.isZero()) {
-    MonetaryAmount startAmount = opts.startTradeAmount;
-    trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
-  }
-
-  if (!opts.amountToWithdraw.isZero()) {
-    log::info("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
-              opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
-    withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
-  }
-
   if (opts.withdrawFeeCur != CurrencyCode()) {
     printWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
   }
@@ -161,8 +175,31 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   if (opts.lastPriceMarket != Market()) {
     printLastPrice(opts.lastPriceMarket, opts.lastPriceExchanges);
   }
+}
 
-  updateFileCaches();
+void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
+  if (!opts.startTradeAmount.isZero()) {
+    MonetaryAmount startAmount = opts.startTradeAmount;
+    trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+  }
+
+  if (!opts.amountToWithdraw.isZero()) {
+    log::info("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
+              opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
+    withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
+  }
+}
+
+Coincenter::ExchangeTickerMaps Coincenter::getTickerInformation(std::span<const PublicExchangeName> exchangeNames) {
+  ExchangeTickerMaps ret(_exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames), MarketOrderBookMaps());
+  ret.second.resize(ret.first.size());
+  std::transform(std::execution::par, ret.first.begin(), ret.first.end(), ret.second.begin(),
+                 [](api::ExchangePublic *e) { return e->queryAllApproximatedOrderBooks(1); });
+
+  if (_coincenterInfo.useMonitoring() && !ret.second.empty()) {
+    exportTickerMetrics(ret.first, ret.second);
+  }
+  return ret;
 }
 
 Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
@@ -248,9 +285,38 @@ void Coincenter::exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges
   }
 }
 
+void Coincenter::exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
+                                     const MarketOrderBookMaps &marketOrderBookMaps) const {
+  MetricKey key;
+  const int nbExchanges = exchanges.size();
+  auto &metricGateway = _coincenterInfo.metricGateway();
+  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
+    const api::ExchangePublic &e = *exchanges[exchangePos];
+    key.set("metric_name", "limit_price");
+    key.set("metric_help", "Best bids and asks prices");
+    key.set("exchange", e.name());
+    for (const auto &[m, marketOrderbook] : marketOrderBookMaps[exchangePos]) {
+      key.set("market", m.assetsPairStr('-', true));
+      key.set("side", "ask");
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.lowestAskPrice().toDouble());
+      key.set("side", "bid");
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.highestBidPrice().toDouble());
+    }
+    key.set("metric_name", "limit_volume");
+    key.set("metric_help", "Best bids and asks volumes");
+    for (const auto &[m, marketOrderbook] : marketOrderBookMaps[exchangePos]) {
+      key.set("market", m.assetsPairStr('-', true));
+      key.set("side", "ask");
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.amountAtAskPrice().toDouble());
+      key.set("side", "bid");
+      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.amountAtBidPrice().toDouble());
+    }
+  }
+}
+
 void Coincenter::exportOrderbookMetrics(Market m,
                                         const MarketOrderBookConversionRates &marketOrderBookConversionRates) const {
-  MetricKey key("metric_name=orderbook_pri,metric_help=Best bids and asks prices");
+  MetricKey key("metric_name=limit_pri,metric_help=Best bids and asks prices");
   string marketLowerCase = m.assetsPairStr('-', true);
   auto &metricGateway = _coincenterInfo.metricGateway();
   key.append("market", marketLowerCase);
@@ -261,7 +327,7 @@ void Coincenter::exportOrderbookMetrics(Market m,
     key.set("side", "bid");
     metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.highestBidPrice().toDouble());
   }
-  key.set("metric_name", "orderbook_vol");
+  key.set("metric_name", "limit_vol");
   key.set("metric_help", "Best bids and asks volumes");
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("exchange", exchangeName);
@@ -341,6 +407,21 @@ void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeNa
     ++exchangeIt;
   }
   vt.print(std::cout);
+}
+
+void Coincenter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const {
+  VariadicTable<std::string_view, string, string, string, string, string> vt(
+      {"Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume"});
+  const int nbExchanges = exchangeTickerMaps.first.size();
+  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
+    const api::ExchangePublic &e = *exchangeTickerMaps.first[exchangePos];
+    for (const auto &[m, marketOrderBook] : exchangeTickerMaps.second[exchangePos]) {
+      vt.addRow(e.name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
+                marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
+                marketOrderBook.amountAtAskPrice().str());
+    }
+  }
+  vt.print();
 }
 
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {

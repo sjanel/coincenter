@@ -109,7 +109,6 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   }
 
   std::string_view requestTypeStr = opts.requestTypeStr();
-  log::info("{} {}{}{}", requestTypeStr, url, opts.postdata.empty() ? "" : " opts ", optsStr);
 
   curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
   curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
@@ -160,7 +159,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     if (t < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
       const Clock::duration sleepingTime = _minDurationBetweenQueries - (t - _lastQueryTime);
-      log::trace("Wait {} ms before performing query",
+      log::debug("Wait {} ms before performing query",
                  std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
       _lastQueryTime = t + sleepingTime;
@@ -170,8 +169,13 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     }
   }
 
+  log::info("{} {}{}{}", requestTypeStr, url, opts.postdata.empty() ? "" : " opts ", optsStr);
+
   // Actually make the query
   const CURLcode res = curl_easy_perform(curl);  // Get reply
+  if (res != CURLE_OK) {
+    throw exception("Unexpected response from curl: Error " + std::to_string(res));
+  }
 
   if (_pMetricGateway) {
     MetricKey key("metric_name=http_request_count,metric_help=Counter of http requests");
@@ -191,9 +195,6 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     }
   }
 
-  if (res != CURLE_OK) {
-    throw exception("Unexpected response from curl: Error " + std::to_string(res));
-  }
   return out;
 }
 

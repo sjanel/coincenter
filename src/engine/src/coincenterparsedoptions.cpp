@@ -39,8 +39,18 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   cmdLineOptions.setLogFile();
 
   dataDir = cmdLineOptions.dataDir;
+  if (cmdLineOptions.repeats.isPresent()) {
+    if (cmdLineOptions.repeats.isSet()) {
+      repeats = *cmdLineOptions.repeats;
+    } else {
+      // infinite repeats
+      repeats = -1;
+    }
+  }
+  repeat_time = cmdLineOptions.repeat_time;
 
   if (cmdLineOptions.useMonitoring) {
+    useMonitoring = true;
     monitoring_username = std::move(cmdLineOptions.monitoring_username);
     monitoring_address = std::move(cmdLineOptions.monitoring_address);
     monitoring_password = std::move(cmdLineOptions.monitoring_password);
@@ -62,6 +72,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
     orderbookDepth = cmdLineOptions.orderbook_depth;
     orderbookCur = CurrencyCode(cmdLineOptions.orderbook_cur);
+  }
+
+  if (cmdLineOptions.ticker) {
+    StringOptionParser anyParser(*cmdLineOptions.ticker);
+    tickerExchanges = anyParser.getExchanges();
+    tickerForAll = tickerExchanges.empty();
   }
 
   if (!cmdLineOptions.conversion_path.empty()) {

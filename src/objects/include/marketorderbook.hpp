@@ -78,7 +78,7 @@ class MarketOrderBook {
   MonetaryAmount amountAtBidPrice() const { return amountAt(_highestBidPricePos); }
 
   /// Get the amount available at lowest ask price
-  MonetaryAmount amountAtAskPrice() const { return amountAt(_lowestAskPricePos); }
+  MonetaryAmount amountAtAskPrice() const { return -amountAt(_lowestAskPricePos); }
 
   /// Compute average price as simple average of lowest ask price and highest bid price
   std::optional<MonetaryAmount> averagePrice() const;

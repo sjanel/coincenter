@@ -15,15 +15,19 @@ A C++ Command Line Interface (CLI) / library centralizing several crypto currenc
 
 Main features:
 
+**Market Data**
  - Market
+ - Ticker
  - Orderbook
  - Traded volume
- - Last Price
+ - Last price
+
+**Private requests**
  - Balance
  - Trade (in several flavors)
  - Withdraw (with check at destination that funds are well received)
   
-Supported exchanges are:
+**Supported exchanges**
 | Exchange |                                      Link                                       |
 | -------- | :-----------------------------------------------------------------------------: |
 | Binance  | [<img src="./resources/binancelogo.svg" width="170">](https://www.binance.com/) |
@@ -49,6 +53,7 @@ Supported exchanges are:
     - [With cmake](#with-cmake)
       - [cmake build options](#cmake-build-options)
       - [As a static library](#as-a-static-library)
+    - [Build with monitoring support](#build-with-monitoring-support)
     - [With Docker](#with-docker)
       - [Build](#build-1)
       - [Run](#run)
@@ -59,13 +64,22 @@ Supported exchanges are:
     - [static/exchangeconfig.json](#staticexchangeconfigjson)
 - [Tests](#tests)
 - [Usage](#usage)
-  - [Balance](#balance)
-  - [Simple Trade](#simple-trade)
-  - [Multi Trade](#multi-trade)
-    - [Trade simulation](#trade-simulation)
-  - [Check markets order book](#check-markets-order-book)
-  - [Withdraw coin](#withdraw-coin)
-  - [Other examples](#other-examples)
+  - [Market data](#market-data)
+  - [Markets](#markets)
+    - [Ticker information](#ticker-information)
+    - [Order books](#order-books)
+    - [Last 24h traded volume](#last-24h-traded-volume)
+    - [Last price](#last-price)
+    - [Conversion path](#conversion-path)
+  - [Private requests](#private-requests)
+    - [Balance](#balance)
+    - [Simple Trade](#simple-trade)
+    - [Multi Trade](#multi-trade)
+      - [Trade simulation](#trade-simulation)
+    - [Withdraw coin](#withdraw-coin)
+  - [Monitoring options](#monitoring-options)
+    - [Repeat](#repeat)
+  - [Examples of use cases](#examples-of-use-cases)
     - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
     - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
     - [Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy-in-simulation-mode)
@@ -94,7 +108,7 @@ If you don't want to build `coincenter` locally, you can just download the publi
 docker run -t sjanel/coincenter -h
 ```
 
-Docker image does not contain additional `data` directory needed by `coincenter` (see ([Configuration](#configuration)))
+Docker image does not contain additional `data` directory needed by `coincenter` (see [Configuration](#configuration))
 
 To bind your 'data' directory from host to the docker container, you can use `--mount` option:
 
@@ -107,7 +121,7 @@ docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data 
 - **Git**
 - **C++** compiler supporting C++20 (gcc >= 10, clang >= 13, MSVC >= 19.28).
 - **CMake** >= 3.15
-- **curl** >= 7.58.0
+- **curl** >= 7.58.0 (it may work with an earlier version, it's just the minimum tested)
 - **openssl** >= 1.1.0
 
 ### Linux
@@ -186,6 +200,10 @@ Then, a static library named `coincenter` is defined and you can link it as usua
 target_link_libraries(<MyProgram> PRIVATE coincenter)
 ```
 
+### Build with monitoring support
+
+You can build `coincenter` with [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) if needed. If you have it installed on your machine, `cmake` will link coincenter with it. Otherwise you can still activate `cmake` flag `CCT_BUILD_PROMETHEUS_FROM_SRC` (default to OFF) to build it automatically from sources with `FetchContent`.
+
 ### With Docker
 
 A **Docker** image is hosted in the public **Docker hub** registry with the name *sjanel/coincenter*, corresponding to latest successful build of `main` branch by the CI.
@@ -201,6 +219,9 @@ Compile and launch tests
 
 Activate Address Sanitizer
 `BUILD_ASAN` (default: 0)
+
+Compile with [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) to support metric export to Prometheus
+`BUILD_WITH_PROMETHEUS` (default: 1)
 
 #### Build
 
@@ -282,7 +303,7 @@ If you have only one key per exchange, suffixing with the name is not necessary 
 | -------------------------------------------- | -------------------------------------------------------- |
 | `coincenter -b binance`                      | Only one account in `binance`, this will print `averell` |
 | `coincenter -b binance_averell`              | Same as above                                            |
-| `coincenter -t 1000usdt-sol,binance`         | **OK**, no ambiguity                                     |
+| `coincenter -t 1000usdt-sol,binance`         | **OK** as no ambiguity                                   |
 | `coincenter -t 1000usdt-sol,binance_averell` | **OK** as well                                           |
 
 ### static/exchangeconfig.json
@@ -306,6 +327,7 @@ Currently, options are set from two ways:
 - **Single values** are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if again not present, uses a hardcoded default one (cf in the code).
 
 As an example, consider this file:
+
 ```json
 {
   "asset": {
@@ -352,7 +374,75 @@ Note that exchanges API are also unit tested. If no private key is found, only p
 
 # Usage
 
-## Balance
+## Market data
+
+## Markets
+
+Use the `--markets` (or `-m`) command to list all markets trading a given currency. This is useful to check how you can trade your coin.
+Currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currency if they exist.
+
+**Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `--trade` option of `coincenter`)
+
+For instance: List all markets involving Etheureum in Huobi:
+```
+coincenter --markets eth,huobi
+```
+
+### Ticker information
+
+Retrieve ticker information for all markets of one, several or all exchanges with `--ticker [exchange1,exchange2,...]` option.
+List of exchanges should be given as lower case, comma separated. But it is optional, all exchanges are considered if not provided.
+
+Example: Print ticker information for kraken and huobi exchanges
+```
+coincenter --ticker kraken,huobi
+```
+
+### Order books
+
+Check market order books of a currency pair with `--orderbook` option. By default, chosen `depth` is `10`, can be configured with `--orderbook-depth`.
+Similarly to `--ticker` option, exchanges list is optional. If not provided, all exchanges will be queried and only the market order books from exchange with proposes this market are returned.
+
+In addition, for convenience, you can also specify a currency in which to convert the price if you are more familiar with it. For instance, you want to print the order book of BTC-KRW in Bithumb exchange, but as you are not familiar with Korean won, you want to convert to USD as well. `--orderbook-cur usd` is for this purpose.
+
+Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance
+```
+coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
+```
+
+### Last 24h traded volume
+
+Fast query last 24h traded volume with `--volume-day` option on one market on one, several or all exchanges (as usual, see above options).
+
+Example: Print last 24h traded volume on market XLM-BTC for all exchanges supporting it
+```
+coincenter --volume-day xlm-btc
+```
+
+### Last price
+
+Fast query last traded price with `--price` option on one market on one, several or all exchanges (as usual, see above options).
+
+Example: Print last price on market SOL-BTC for all exchanges supporting it
+```
+coincenter --price sol-btc
+```
+
+### Conversion path
+
+Option `--conversion-path` is used by `--multitrade` option (see [Multi trade](#multi-trade)) but may be used as stand-alone for information.
+From a starting currency to a destination currency, `coincenter` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
+
+It will print the result as an ordered list of markets for each exchange.
+
+**Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
+
+## Private requests
+
+These requests will require that you have your secret keys in `data/secret/secret.json` file, for each exchange used.
+You can check easily that it works correctly with the `--balance` option.
+
+### Balance
 
 Check your balance across supported exchanges at one glance!
 ```
@@ -360,13 +450,14 @@ coincenter --balance
 ```
 prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
 It is also possible to give a list of exchanges (comma separated) to print balance only on those ones.
-You can specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
+
+You can also specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
 For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*, launch:
 ```
 coincenter --balance kraken,bithumb --balance-cur eur
 ```
 
-## Simple Trade
+### Simple Trade
 
 A simple trade per market / exchange can be done in a user friendly way supporting 3 parameterized strategies.
 It is 'Simple' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange.
@@ -384,24 +475,15 @@ Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order wil
 coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
 ```
 
-## Multi Trade
+### Multi Trade
 
 If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC* market and have *AAA-BBB* and *BBB-CCC*, then it's possible with a multi trade by changing `--trade` into `--multitrade`. Options are the same than for a simple trade. `coincenter` starts by evaluating the shortest conversion path to reach *CCC* from *AAA* and then applies the single trades in the correct order to its final goal.
 
-### Trade simulation
+#### Trade simulation
 
 Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
-## Check markets order book
-
-Check one or several (one per given exchange) market order books with `--orderbook` option. By default, chosen `depth` is `10`, can be configured with `--orderbook-depth`.
-
-Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance:
-```
-coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
-```
-
-## Withdraw coin
+### Withdraw coin
 
 It is possible to withdraw coin with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination).
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
@@ -415,7 +497,23 @@ Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 coincenter --withdraw 10000xlm,bithumb-huobi
 ```
 
-## Other examples
+## Monitoring options
+
+`coincenter` can export metrics to an external instance of `Prometheus` thanks to its implementation of [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) client. Refer to [Build with monitoring support](#build-with-monitoring-support) section to know how to build `coincenter` with it.
+
+Currently, its support is experimental and in development for all major options of `coincenter` (private and market data requests).
+The metrics are exported in *push* mode to the gateway at each new query. You can configure the IP address, port, username and password (if any) thanks to command line options (refer to the help to see their names).
+
+### Repeat
+
+Most `coincenter` options are executed only once, and program is terminated after it.
+To continuously query the same option to export regular metrics to Prometheus, you can use `--repeat` option. It has no effect on "write" queries such as withdraws and trades, but is compatible with all read only options, including private requests (such as balance).
+
+Without a following numeric value, the command will repeat endlessly. You can fix a specific number of repeats by giving a number.
+
+Between each repeat you can set a waiting time with `--repeat-time` option which expects a time duration.
+
+## Examples of use cases
 
 ### Get an overview of your portfolio in Korean Won
 ```
