@@ -383,7 +383,7 @@ Currency is mandatory, but the list of exchanges is not. If no exchanges are pro
 
 **Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `--trade` option of `coincenter`)
 
-For instance: List all markets involving Etheureum in Huobi:
+For instance: List all markets involving Etheureum in huobi
 ```
 coincenter --markets eth,huobi
 ```

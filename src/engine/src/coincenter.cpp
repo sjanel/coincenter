@@ -108,10 +108,12 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
     if (repeatPos != 0) {
       std::this_thread::sleep_for(opts.repeat_time);
     }
-    if (nbRepeats == -1) {
-      log::info("Processing read request {}/{}", repeatPos + 1, "\u221E");  // unicode char for infinity sign
-    } else {
-      log::info("Processing read request {}/{}", repeatPos + 1, nbRepeats);
+    if (nbRepeats != 1) {
+      if (nbRepeats == -1) {
+        log::info("Processing read request {}/{}", repeatPos + 1, "\u221E");  // unicode char for infinity sign
+      } else {
+        log::info("Processing read request {}/{}", repeatPos + 1, nbRepeats);
+      }
     }
 
     processReadRequests(opts);

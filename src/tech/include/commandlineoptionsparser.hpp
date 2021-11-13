@@ -358,7 +358,7 @@ class CommandLineOptionsParser : private Opts {
                          if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            const char* beg = argv[idx + 1];
                            const char* end = beg + strlen(beg);
-                           int value;
+                           int value = 0;
                            std::from_chars(beg, end, value);
                            this->*arg = value;
                            ++idx;
