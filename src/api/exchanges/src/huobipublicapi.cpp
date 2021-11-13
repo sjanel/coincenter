@@ -286,9 +286,14 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
 
 MonetaryAmount HuobiPublic::sanitizePrice(Market m, MonetaryAmount pri) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
-  pri.truncate(marketInfoMap.find(m)->second.volAndPriNbDecimals.priNbDecimals);
-  return pri;
+  MonetaryAmount sanitizedPri = pri;
+  sanitizedPri.truncate(marketInfoMap.find(m)->second.volAndPriNbDecimals.priNbDecimals);
+  if (sanitizedPri != pri) {
+    log::warn("Sanitize price {} -> {}", pri.str(), sanitizedPri.str());
+  }
+  return sanitizedPri;
 }
+
 MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
                                            MonetaryAmount sanitizedPrice, bool isTakerOrder) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;

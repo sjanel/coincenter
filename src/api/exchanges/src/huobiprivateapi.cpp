@@ -124,16 +124,12 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount, MonetaryAmount volume, MonetaryAmount price,
+PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
-  if (tradeInfo.options.isSimulation()) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
-  }
 
   const Market m = tradeInfo.m;
   string lowerCaseMarket = tolower(m.assetsPairStr());
@@ -160,16 +156,27 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount, MonetaryAmount volume, M
 
   volume = sanitizedVol;
 
+  if (tradeInfo.options.isSimulation()) {
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
   CurlPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
-  if (!isTakerStrategy) {
+  if (isTakerStrategy) {
+    if (fromCurrencyCode == m.quote()) {
+      // For buy-market, Huobi asks for the buy value, not the volume. Extract from documentation:
+      // 'order size (for buy market order, it's order value)'
+      placePostData.set("amount", from.amountStr());
+    }
+  } else {
     placePostData.append("price", price.amountStr());
   }
-  // placePostData.append("source", "api");
   placePostData.append("symbol", lowerCaseMarket);
   placePostData.append("type", type);
+
   json result =
       PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/v1/order/orders/place", placePostData);
-  placeOrderInfo.orderId = result["data"].get<std::string_view>();
+  placeOrderInfo.orderId = result["data"];
   return placeOrderInfo;
 }
 
