@@ -290,7 +290,7 @@ void Coincenter::exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges
 void Coincenter::exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
                                      const MarketOrderBookMaps &marketOrderBookMaps) const {
   MetricKey key;
-  const int nbExchanges = exchanges.size();
+  const int nbExchanges = static_cast<int>(exchanges.size());
   auto &metricGateway = _coincenterInfo.metricGateway();
   for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
     const api::ExchangePublic &e = *exchanges[exchangePos];
@@ -442,11 +442,11 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
     if (conversionPath.empty()) {
       conversionPathStr = "--- Impossible ---";
     } else {
-      for (Market m : conversionPath) {
+      for (Market market : conversionPath) {
         if (!conversionPathStr.empty()) {
           conversionPathStr.push_back(',');
         }
-        conversionPathStr.append(m.assetsPairStr('-'));
+        conversionPathStr.append(market.assetsPairStr('-'));
       }
     }
     vt.addRow(e->name(), std::move(conversionPathStr));
