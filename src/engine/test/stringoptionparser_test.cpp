@@ -5,7 +5,7 @@
 namespace cct {
 
 TEST(StringOptionParserTest, GetExchanges) {
-  EXPECT_EQ(StringOptionParser("").getExchanges(), PublicExchangeNames());
+  EXPECT_TRUE(StringOptionParser("").getExchanges().empty());
   EXPECT_EQ(StringOptionParser("kraken,upbit").getExchanges(), PublicExchangeNames({"kraken", "upbit"}));
   EXPECT_EQ(StringOptionParser("huobi_user1").getExchanges(), PublicExchangeNames({"huobi_user1"}));
 }

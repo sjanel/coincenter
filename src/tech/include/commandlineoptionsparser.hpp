@@ -113,7 +113,7 @@ class CommandLineOptionsParser : private Opts {
     }
 
     vargv = vargv.last(vargv.size() - 1U);  // skip first argument which is program name
-    const int vargvSize = vargv.size();
+    const int vargvSize = static_cast<int>(vargv.size());
     for (int idxOpt = 0; idxOpt < vargvSize; ++idxOpt) {
       const char* argStr = vargv[idxOpt];
       const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),

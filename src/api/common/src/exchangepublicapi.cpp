@@ -21,21 +21,21 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
   std::optional<MarketOrderBookMap> optMarketOrderBook;
   for (Market m : conversionPath) {
     assert(m.canTrade(a.currencyCode()));
-    CurrencyCode fromCurrencyCode = a.currencyCode();
-    CurrencyCode toCurrencyCode = m.base() == a.currencyCode() ? m.quote() : m.base();
-    std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(fromCurrencyCode);
-    CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : fromCurrencyCode);
-    std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode);
-    CurrencyCode fiatToLikeCurCode = (optFiatLikeTo ? *optFiatLikeTo : toCurrencyCode);
-    const bool isFromFiatLike = optFiatLikeFrom || _cryptowatchApi.queryIsCurrencyCodeFiat(fromCurrencyCode);
-    const bool isToFiatLike = optFiatLikeTo || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
+    CurrencyCode mFromCurrencyCode = a.currencyCode();
+    CurrencyCode mToCurrencyCode = m.base() == a.currencyCode() ? m.quote() : m.base();
+    std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(mFromCurrencyCode);
+    CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
+    std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
+    CurrencyCode fiatToLikeCurCode = (optFiatLikeTo ? *optFiatLikeTo : mToCurrencyCode);
+    const bool isFromFiatLike = optFiatLikeFrom || _cryptowatchApi.queryIsCurrencyCodeFiat(mFromCurrencyCode);
+    const bool isToFiatLike = optFiatLikeTo || _cryptowatchApi.queryIsCurrencyCodeFiat(mToCurrencyCode);
     if (isFromFiatLike && isToFiatLike) {
       a = _fiatConverter.convert(MonetaryAmount(a, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
       if (canUseCryptoWatch) {
-        std::optional<double> rate = _cryptowatchApi.queryPrice(_name, Market(fromCurrencyCode, toCurrencyCode));
+        std::optional<double> rate = _cryptowatchApi.queryPrice(_name, Market(mFromCurrencyCode, mToCurrencyCode));
         if (rate) {
-          a = a.toNeutral() * MonetaryAmount(*rate, toCurrencyCode);
+          a = a.toNeutral() * MonetaryAmount(*rate, mToCurrencyCode);
           continue;
         }
       }

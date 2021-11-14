@@ -9,7 +9,7 @@ namespace cct {
 
 string BinToHex(std::span<const unsigned char> bindata) {
   static constexpr char kHexits[] = "0123456789abcdef";
-  const int s = bindata.size();
+  const int s = static_cast<int>(bindata.size());
   string ret(2 * s, 0);
   ret.reserve(2 * s);
   for (int i = 0; i < s; ++i) {
