@@ -97,7 +97,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                        "If empty list of exchanges, it skips secrets load for all private exchanges"},
                                                        &OptValueType::nosecrets},
        {{{"General", 1}, "--repeat", 'r', "[n]", "Indicates how many repeats to perform for mutable data (such as market data)\n"
-                                                 "Modifying requests such as trades and withdraws are not impacted by this option"
+                                                 "Modifying requests such as trades and withdraws are not impacted by this option. "
                                                  "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
                                                  &OptValueType::repeats},
        {{{"General", 1}, "--repeat-time", "<time>", "Sets a delay between each repeat"},  
