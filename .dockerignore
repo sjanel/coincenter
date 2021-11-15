@@ -9,4 +9,5 @@ LICENSE
 **/*secret.json
 data/secret
 !data/secret/secret_test.json
+monitoring
 resources

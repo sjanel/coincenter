@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    monitor: "coincenter"
+
+scrape_configs:
+  # A scrape configuration containing exactly one endpoint to scrape:
+  # Here it's Prometheus itself.
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "cct-prometheus"
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["0.0.0.0:9090"]
+
+    # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+    # Here we are defining the push gateway for ephemeral jobs :
+    # Jobs that don't stay alive, should put their metrics in the pushgateway
+  - job_name: "cct-pushgateway"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["cct-pushgateway:9091"]

@@ -1,0 +1,34 @@
+version: '3.2'
+services:
+
+  cct_pushgateway:
+    image: prom/pushgateway:v1.4.2
+    container_name: cct-pushgateway
+    ports:
+      - 9091:9091
+
+  cct_prometheus:
+    image: prom/prometheus:v2.31.1
+    container_name: cct-prometheus
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - cct_pushgateway
+    
+  cct_grafana:
+    user: "${UID}:${GID}"
+    image: grafana/grafana:8.2.4
+    container_name: cct-grafana
+    restart: unless-stopped
+    links:
+      - cct_prometheus:prometheus
+    volumes:
+      - type: bind
+        source: ./data/grafana
+        target: /var/lib/grafana
+    ports:
+    - 3000:3000
