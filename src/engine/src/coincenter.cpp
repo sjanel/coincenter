@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "abstractmetricgateway.hpp"
+#include "balanceperexchangeportfolio.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
@@ -214,7 +215,7 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
       std::optional<MonetaryAmount> optConversionRate =
           equiCurrencyCode == CurrencyCode::kNeutral
               ? std::nullopt
-              : e->convertAtAveragePrice(MonetaryAmount("1", m.quote()), equiCurrencyCode);
+              : e->convertAtAveragePrice(MonetaryAmount(1, m.quote()), equiCurrencyCode);
       ret.emplace_back(e->name(), MarketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m)),
                        optConversionRate);
     }
@@ -225,8 +226,8 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(
   return ret;
 }
 
-BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
-                                        CurrencyCode equiCurrency) {
+Coincenter::BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+                                                      CurrencyCode equiCurrency) {
   bool balanceForAll = privateExchangeNames.empty();
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
@@ -246,33 +247,31 @@ BalancePortfolio Coincenter::getBalance(std::span<const PrivateExchangeName> pri
     }
   }
 
-  SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> subRet(balanceExchanges.size());
-  std::transform(std::execution::par, balanceExchanges.begin(), balanceExchanges.end(), subRet.begin(),
-                 [equiCurrency](Exchange *e) { return e->apiPrivate().queryAccountBalance(equiCurrency); });
+  SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(balanceExchanges.size());
+  std::transform(std::execution::par, balanceExchanges.begin(), balanceExchanges.end(), balancePortfolios.begin(),
+                 [equiCurrency](Exchange *e) { return e->apiPrivate().getAccountBalance(equiCurrency); });
+
+  BalancePerExchange ret(balanceExchanges.size());
+  std::transform(balanceExchanges.begin(), balanceExchanges.end(), balancePortfolios.begin(), ret.begin(),
+                 [](const Exchange *e, const BalancePortfolio &b) { return std::make_pair(e, b); });
 
   if (_coincenterInfo.useMonitoring()) {
-    exportBalanceMetrics(balanceExchanges, subRet, equiCurrency);
+    exportBalanceMetrics(ret, equiCurrency);
   }
 
-  BalancePortfolio ret;
-  for (const BalancePortfolio &sub : subRet) {
-    ret.add(sub);
-  }
   return ret;
 }
 
-void Coincenter::exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
-                                      std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const {
-  const int nbAccounts = selectedExchanges.size();
+void Coincenter::exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const {
   MetricKey key("metric_name=available_balance,metric_help=Available balance in the exchange account");
   auto &metricGateway = _coincenterInfo.metricGateway();
-  for (int accountPos = 0; accountPos < nbAccounts; ++accountPos) {
-    const Exchange &exchange = *selectedExchanges[accountPos];
+  for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
+    const Exchange &exchange = *exchangePtr;
     key.set("exchange", exchange.name());
     key.set("account", exchange.keyName());
     key.set("total", "no");
     MonetaryAmount totalEquiAmount(0, equiCurrency);
-    for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balances[accountPos]) {
+    for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balancePortfolio) {
       key.set("currency", amountWithEqui.amount.currencyCode().str());
       metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, amountWithEqui.amount.toDouble());
       if (!equiCurrency.isNeutral()) {
@@ -429,8 +428,12 @@ void Coincenter::printTickerInformation(const ExchangeTickerMaps &exchangeTicker
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {
   log::info("Query balance from {}",
             ConstructAccumulatedExchangeNames(std::span<const PrivateExchangeName>(privateExchangeNames)));
-  BalancePortfolio portfolio = getBalance(privateExchangeNames, balanceCurrencyCode);
-  portfolio.print(std::cout);
+  BalancePerExchange balancePerExchange = getBalance(privateExchangeNames, balanceCurrencyCode);
+  BalancePerExchangePortfolio totalBalance;
+  for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
+    totalBalance.add(*exchangePtr, balancePortfolio);
+  }
+  totalBalance.print(std::cout);
 }
 
 void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {

@@ -4,7 +4,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "cachedresultvault.hpp"
 #include "cct_flatset.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -104,11 +103,14 @@ class ExchangePublic : public ExchangeBase {
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
  protected:
+  friend class ExchangePrivate;
+
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
                  const CoincenterInfo &coincenterInfo)
       : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi), _coincenterInfo(coincenterInfo) {}
 
   string _name;
+  CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
   CryptowatchAPI &_cryptowatchApi;
   const CoincenterInfo &_coincenterInfo;

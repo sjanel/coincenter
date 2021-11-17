@@ -30,7 +30,7 @@ void PublicTest(BinancePublic &binancePublic) {
 
 void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
-  EXPECT_NO_THROW(binancePrivate.queryAccountBalance());
+  EXPECT_NO_THROW(binancePrivate.getAccountBalance());
   auto currencies = binancePrivate.queryTradableCurrencies();
   EXPECT_FALSE(currencies.empty());
   EXPECT_NO_THROW(binancePrivate.queryDepositWallet(currencies.front().standardCode()));

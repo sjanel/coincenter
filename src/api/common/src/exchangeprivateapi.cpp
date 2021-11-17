@@ -6,6 +6,13 @@
 namespace cct {
 namespace api {
 
+BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
+  UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
+  BalancePortfolio balancePortfolio = queryAccountBalance(equiCurrency);
+  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
+  return balancePortfolio;
+}
+
 void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
   if (!amount.isZero()) {
     if (equiCurrency == CurrencyCode::kNeutral) {

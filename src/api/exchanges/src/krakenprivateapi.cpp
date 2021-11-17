@@ -100,7 +100,6 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 
     addBalance(balancePortfolio, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
   }
-  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
   return balancePortfolio;
 }
 

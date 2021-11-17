@@ -169,6 +169,9 @@ class MonetaryAmount {
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
   constexpr void truncate(int8_t maxNbDecimals) { sanitizeNbDecimals(maxNbDecimals); }
 
+  /// Get a std::string_view on the currency of this amount
+  constexpr std::string_view currencyStr() const { return _currencyCode.str(); }
+
   /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
   string amountStr() const;
 
