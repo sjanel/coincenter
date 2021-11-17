@@ -44,7 +44,7 @@ class ExchangePrivate : public ExchangeBase {
   /// Get a fast overview of the available assets on this exchange.
   /// @param equiCurrency (optional) if provided, attempt to convert each asset to given currency as an
   ///                     additional value information
-  virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) = 0;
+  BalancePortfolio getAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
@@ -85,7 +85,13 @@ class ExchangePrivate : public ExchangeBase {
 
  protected:
   ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
-      : ExchangeBase(), _exchangePublic(exchangePublic), _config(config), _apiKey(apiKey) {}
+      : ExchangeBase(),
+        _exchangePublic(exchangePublic),
+        _cachedResultVault(exchangePublic._cachedResultVault),
+        _config(config),
+        _apiKey(apiKey) {}
+
+  virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) = 0;
 
   /// Adds an amount to given BalancePortfolio.
   /// @param equiCurrency Asks conversion of given amount into this currency as well
@@ -122,6 +128,7 @@ class ExchangePrivate : public ExchangeBase {
   MonetaryAmount multiTrade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options);
 
   ExchangePublic &_exchangePublic;
+  CachedResultVault &_cachedResultVault;
   const CoincenterInfo &_config;
   const APIKey &_apiKey;
 };

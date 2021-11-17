@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ostream>
-
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
@@ -26,22 +24,23 @@ class BalancePortfolio {
   /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency
   void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency = MonetaryAmount());
 
-  void add(const BalancePortfolio &o);
-
-  MonetaryAmount getBalance(CurrencyCode currencyCode) const;
+  MonetaryAmount get(CurrencyCode currencyCode) const;
 
   const_iterator begin() const { return _sortedAmounts.begin(); }
   const_iterator end() const { return _sortedAmounts.end(); }
 
-  void print(std::ostream &os) const;
+  MonetaryAmountWithEquivalent front() const { return _sortedAmounts.front(); }
+  MonetaryAmountWithEquivalent back() const { return _sortedAmounts.back(); }
 
   bool empty() const noexcept { return _sortedAmounts.empty(); }
 
   size_type size() const noexcept { return _sortedAmounts.size(); }
 
- private:
-  MonetaryAmountVec convertToSortedByAmountVector() const;
+  void sortByDecreasingEquivalentAmount();
 
+  BalancePortfolio &operator+=(const BalancePortfolio &o);
+
+ private:
   MonetaryAmountVec _sortedAmounts;
 };
 }  // namespace cct

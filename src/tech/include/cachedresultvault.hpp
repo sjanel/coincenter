@@ -35,7 +35,7 @@ class CachedResultVault {
 
   void freezeAll();
 
-  void unfreezeAll();
+  void unfreezeAll() noexcept;
 
  private:
   using CachedResultPtrs = vector<CachedResultBase *>;

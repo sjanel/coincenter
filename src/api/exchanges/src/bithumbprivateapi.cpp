@@ -186,7 +186,6 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
       this->addBalance(balancePortfolio, amount, equiCurrency);
     }
   }
-  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
   return balancePortfolio;
 }
 
@@ -390,7 +389,7 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
     MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
     if (amountReceived == sentWithdrawInfo.netEmittedAmount()) {
       BalancePortfolio balancePortfolio = queryAccountBalance();
-      if (balancePortfolio.getBalance(currencyCode) >= sentWithdrawInfo.netEmittedAmount()) {
+      if (balancePortfolio.get(currencyCode) >= sentWithdrawInfo.netEmittedAmount()) {
         // Additional check to be sure money is available
         return true;
       }

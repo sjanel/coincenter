@@ -59,7 +59,7 @@ void PublicTest(KrakenPublic &krakenPublic) {
 
 void PrivateTest(KrakenPrivate &krakenPrivate) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
-  EXPECT_NO_THROW(krakenPrivate.queryAccountBalance());
+  EXPECT_NO_THROW(krakenPrivate.getAccountBalance());
   EXPECT_FALSE(krakenPrivate.queryDepositWallet("BCH").hasDestinationTag());
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.001BTC");
@@ -104,7 +104,7 @@ TEST_F(KrakenAPI, PrivateEmptyBalance) {
     // The following test will target the proxy to ensure stable response
     // To avoid matching the test case, you can simply provide production keys
     KrakenPrivate krakenPrivate(coincenterTestInfo, exchangePublic, firstAPIKey);
-    EXPECT_TRUE(krakenPrivate.queryAccountBalance().empty());
+    EXPECT_TRUE(krakenPrivate.getAccountBalance().empty());
   } else {
     log::info("Proxy not available.");
   }

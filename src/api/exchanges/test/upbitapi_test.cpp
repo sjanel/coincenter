@@ -50,7 +50,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
 
 void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
-  EXPECT_NO_THROW(upbitPrivate.queryAccountBalance());
+  EXPECT_NO_THROW(upbitPrivate.getAccountBalance());
   EXPECT_TRUE(upbitPrivate.queryDepositWallet("XRP").hasDestinationTag());
   EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
   EXPECT_EQ(upbitPrivate.queryWithdrawalFee("ADA"), upbitPublic.queryWithdrawalFee("ADA"));

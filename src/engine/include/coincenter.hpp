@@ -50,6 +50,7 @@ class Coincenter {
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
   using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
   using ExchangeTickerMaps = std::pair<ExchangeRetriever::UniquePublicExchanges, Coincenter::MarketOrderBookMaps>;
+  using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
       : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
@@ -92,8 +93,8 @@ class Coincenter {
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, std::span<const PublicExchangeName> exchangeNames);
 
   /// Query the private balance
-  BalancePortfolio getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
-                              CurrencyCode equiCurrency = CurrencyCode::kNeutral);
+  BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+                                CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency conversion
   /// path and will launch several 'single' trades to reach that final goal. Example:
@@ -143,8 +144,7 @@ class Coincenter {
   void processReadRequests(const CoincenterParsedOptions &opts);
   void processWriteRequests(const CoincenterParsedOptions &opts);
 
-  void exportBalanceMetrics(const ExchangeRetriever::SelectedExchanges &selectedExchanges,
-                            std::span<const BalancePortfolio> balances, CurrencyCode equiCurrency) const;
+  void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const;
 
   void exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
                            const MarketOrderBookMaps &marketOrderBookMaps) const;
