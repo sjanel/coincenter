@@ -12,9 +12,9 @@
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_time_helpers.hpp"
-#include "cct_variadictable.hpp"
 #include "coincenteroptions.hpp"
 #include "coincenterparsedoptions.hpp"
+#include "simpletable.hpp"
 #include "stringoptionparser.hpp"
 
 namespace cct {
@@ -399,30 +399,29 @@ void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeNa
   MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cur, exchangeNames);
   string marketsCol("Markets with ");
   marketsCol.append(cur.str());
-  VariadicTable<std::string_view, string> vt({"Exchange", marketsCol});
+  table::SimpleTable t("Exchange", std::move(marketsCol));
   auto exchangeIt = marketsPerExchange.begin();
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     for (const Market &m : *exchangeIt) {
-      vt.addRow(e->name(), m.str());
+      t.emplace_back(e->name(), m.str());
     }
     ++exchangeIt;
   }
-  vt.print(std::cout);
+  t.print();
 }
 
 void Coincenter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const {
-  VariadicTable<std::string_view, string, string, string, string, string> vt(
-      {"Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume"});
+  table::SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
   const int nbExchanges = exchangeTickerMaps.first.size();
   for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
     const api::ExchangePublic &e = *exchangeTickerMaps.first[exchangePos];
     for (const auto &[m, marketOrderBook] : exchangeTickerMaps.second[exchangePos]) {
-      vt.addRow(e.name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
-                marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
-                marketOrderBook.amountAtAskPrice().str());
+      t.emplace_back(e.name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
+                     marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
+                     marketOrderBook.amountAtAskPrice().str());
     }
   }
-  vt.print();
+  t.print();
 }
 
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {
@@ -433,12 +432,12 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
   for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
     totalBalance.add(*exchangePtr, balancePortfolio);
   }
-  totalBalance.print(std::cout);
+  totalBalance.print(std::cout, balancePerExchange.size() > 1);
 }
 
 void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  VariadicTable<std::string_view, string> vt({"Exchange", "Fastest conversion path"});
+  table::SimpleTable t("Exchange", "Fastest conversion path");
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     string conversionPathStr;
     api::ExchangePublic::ConversionPath conversionPath = e->findFastestConversionPath(m.base(), m.quote());
@@ -452,9 +451,9 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
         conversionPathStr.append(market.assetsPairStr('-'));
       }
     }
-    vt.addRow(e->name(), std::move(conversionPathStr));
+    t.emplace_back(e->name(), std::move(conversionPathStr));
   }
-  vt.print();
+  t.print();
 }
 
 MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
@@ -497,12 +496,12 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  withdrawFeePerExchange.begin(),
                  [currencyCode](Exchange *e) { return e->queryWithdrawalFee(currencyCode); });
-  VariadicTable<std::string_view, string> vt({"Exchange", "Withdraw fee"});
+  table::SimpleTable t("Exchange", "Withdraw fee");
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
-    vt.addRow(selectedExchanges[exchangePos++]->name(), withdrawFee.str());
+    t.emplace_back(selectedExchanges[exchangePos++]->name(), withdrawFee.str());
   }
-  vt.print();
+  t.print();
 }
 
 Coincenter::MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(
@@ -534,12 +533,12 @@ void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchan
   string headerTradedVolume("Last 24h ");
   headerTradedVolume.append(m.str());
   headerTradedVolume.append(" traded volume");
-  VariadicTable<std::string_view, string> vt({"Exchange", headerTradedVolume});
+  table::SimpleTable t("Exchange", std::move(headerTradedVolume));
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount tradedVolume : tradedVolumePerExchange) {
-    vt.addRow(selectedExchanges[exchangePos++]->name(), tradedVolume.str());
+    t.emplace_back(selectedExchanges[exchangePos++]->name(), tradedVolume.str());
   }
-  vt.print();
+  t.print();
 }
 
 void Coincenter::printLastPrice(Market m, std::span<const PublicExchangeName> exchangeNames) {
@@ -548,12 +547,12 @@ void Coincenter::printLastPrice(Market m, std::span<const PublicExchangeName> ex
   MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(m, exchangeNames);
   string headerLastPrice(m.str());
   headerLastPrice.append(" last price");
-  VariadicTable<std::string_view, string> vt({"Exchange", headerLastPrice});
+  table::SimpleTable t("Exchange", std::move(headerLastPrice));
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount lastPrice : lastPricePerExchange) {
-    vt.addRow(selectedExchanges[exchangePos++]->name(), lastPrice.str());
+    t.emplace_back(selectedExchanges[exchangePos++]->name(), lastPrice.str());
   }
-  vt.print();
+  t.print();
 }
 
 PublicExchangeNames Coincenter::getPublicExchangeNames() const {

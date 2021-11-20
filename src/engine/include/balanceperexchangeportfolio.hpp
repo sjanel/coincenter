@@ -15,7 +15,9 @@ class BalancePerExchangePortfolio {
   void add(const Exchange &exchange, const BalancePortfolio &balancePortfolio);
   void add(const Exchange &exchange, BalancePortfolio &&balancePortfolio);
 
-  void print(std::ostream &os) const;
+  /// Pretty print table of balance.
+  /// @param wide if true, all exchange amount will be printed as well
+  void print(std::ostream &os, bool wide) const;
 
  private:
   // +1 for total in first position
