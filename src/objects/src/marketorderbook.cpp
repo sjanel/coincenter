@@ -382,7 +382,7 @@ void MarketOrderBook::print(std::ostream& os) const {
   string h3("Buyers of ");
   h3.append(_market.base().str()).append(" (bids)");
 
-  table::SimpleTable t;
+  SimpleTable t;
   t.emplace_back(std::move(h1), std::move(h2), std::move(h3));
 
   for (int op = _orders.size(); op > 0; --op) {
@@ -407,7 +407,7 @@ void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, Mon
   string h4("Buyers of ");
   h4.append(_market.base().str()).append(" (bids)");
 
-  table::SimpleTable t;
+  SimpleTable t;
   t.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
 
   for (int op = _orders.size(); op > 0; --op) {

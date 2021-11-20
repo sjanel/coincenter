@@ -23,8 +23,8 @@ void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
   } else {
     CurrencyCode balanceCurrencyCode = total.front().equi.currencyCode();
     const bool countEqui = balanceCurrencyCode != CurrencyCode::kNeutral;
-    table::SimpleTable balanceTable;
-    table::Row header("Currency", "Total amount on selected");
+    SimpleTable balanceTable;
+    SimpleTable::Row header("Currency", "Total amount on selected");
 
     if (countEqui) {
       total.sortByDecreasingEquivalentAmount();
@@ -48,7 +48,7 @@ void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
     const int nbExchanges = _exchanges.size();
     for (const auto &[amount, equi] : total) {
       // Amounts impossible to convert have a zero value
-      table::Row r(amount.currencyStr(), amount.amountStr());
+      SimpleTable::Row r(amount.currencyStr(), amount.amountStr());
       if (countEqui) {
         r.emplace_back(equi.amountStr());
         totalSum += equi;
