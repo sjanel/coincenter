@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 
 namespace cct {
-namespace table {
 TEST(SimpleTable, DefaultConstructor) {
   SimpleTable t;
   EXPECT_TRUE(t.empty());
@@ -20,15 +19,15 @@ TEST(SimpleTable, OneLinePrint) {
 
 TEST(SimpleTable, SimplePrint) {
   SimpleTable t;
-  Row row1;
+  SimpleTable::Row row1;
   row1.emplace_back("Amount");
   row1.emplace_back("Currency");
   t.push_back(std::move(row1));
-  Row row2;
+  SimpleTable::Row row2;
   row2.emplace_back("123.45");
   row2.emplace_back("EUR");
   t.push_back(std::move(row2));
-  Row row3;
+  SimpleTable::Row row3;
   row3.emplace_back(65);
   row3.emplace_back("BTC");
   t.push_back(std::move(row3));
@@ -45,5 +44,4 @@ TEST(SimpleTable, SettingRowDirectly) {
   t.emplace_back(-67725634, "KEBAB", "-34.09");
   t.print(std::cout);
 }
-}  // namespace table
 }  // namespace cct

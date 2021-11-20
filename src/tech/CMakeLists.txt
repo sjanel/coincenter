@@ -58,5 +58,6 @@ add_unit_test(
 
 add_unit_test(
     simpletable_test
+    src/simpletable.cpp
     test/simpletable_test.cpp
 )

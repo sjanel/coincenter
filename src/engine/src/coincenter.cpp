@@ -399,7 +399,7 @@ void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeNa
   MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cur, exchangeNames);
   string marketsCol("Markets with ");
   marketsCol.append(cur.str());
-  table::SimpleTable t("Exchange", std::move(marketsCol));
+  SimpleTable t("Exchange", std::move(marketsCol));
   auto exchangeIt = marketsPerExchange.begin();
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     for (const Market &m : *exchangeIt) {
@@ -411,7 +411,7 @@ void Coincenter::printMarkets(CurrencyCode cur, std::span<const PublicExchangeNa
 }
 
 void Coincenter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const {
-  table::SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
+  SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
   const int nbExchanges = exchangeTickerMaps.first.size();
   for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
     const api::ExchangePublic &e = *exchangeTickerMaps.first[exchangePos];
@@ -437,7 +437,7 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
 
 void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  table::SimpleTable t("Exchange", "Fastest conversion path");
+  SimpleTable t("Exchange", "Fastest conversion path");
   for (api::ExchangePublic *e : _exchangeRetriever.retrieveUniquePublicExchanges(exchangeNames)) {
     string conversionPathStr;
     api::ExchangePublic::ConversionPath conversionPath = e->findFastestConversionPath(m.base(), m.quote());
@@ -496,7 +496,7 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Pu
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  withdrawFeePerExchange.begin(),
                  [currencyCode](Exchange *e) { return e->queryWithdrawalFee(currencyCode); });
-  table::SimpleTable t("Exchange", "Withdraw fee");
+  SimpleTable t("Exchange", "Withdraw fee");
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
     t.emplace_back(selectedExchanges[exchangePos++]->name(), withdrawFee.str());
@@ -533,7 +533,7 @@ void Coincenter::printLast24hTradedVolume(Market m, std::span<const PublicExchan
   string headerTradedVolume("Last 24h ");
   headerTradedVolume.append(m.str());
   headerTradedVolume.append(" traded volume");
-  table::SimpleTable t("Exchange", std::move(headerTradedVolume));
+  SimpleTable t("Exchange", std::move(headerTradedVolume));
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount tradedVolume : tradedVolumePerExchange) {
     t.emplace_back(selectedExchanges[exchangePos++]->name(), tradedVolume.str());
@@ -547,7 +547,7 @@ void Coincenter::printLastPrice(Market m, std::span<const PublicExchangeName> ex
   MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(m, exchangeNames);
   string headerLastPrice(m.str());
   headerLastPrice.append(" last price");
-  table::SimpleTable t("Exchange", std::move(headerLastPrice));
+  SimpleTable t("Exchange", std::move(headerLastPrice));
   decltype(selectedExchanges)::size_type exchangePos = 0;
   for (MonetaryAmount lastPrice : lastPricePerExchange) {
     t.emplace_back(selectedExchanges[exchangePos++]->name(), lastPrice.str());
