@@ -55,3 +55,8 @@ add_unit_test(
     cct_time_helpers_test
     test/cct_time_helpers_test.cpp
 )
+
+add_unit_test(
+    simpletable_test
+    test/simpletable_test.cpp
+)

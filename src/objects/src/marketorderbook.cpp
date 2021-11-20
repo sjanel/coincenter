@@ -7,7 +7,7 @@
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
-#include "cct_variadictable.hpp"
+#include "simpletable.hpp"
 
 namespace cct {
 
@@ -375,50 +375,53 @@ std::optional<MonetaryAmount> MarketOrderBook::convertQuoteAmountToBase(Monetary
 }
 
 void MarketOrderBook::print(std::ostream& os) const {
-  FixedCapacityVector<string, 3> cols;
-  cols.emplace_back("Sellers of ").append(_market.base().str()).append(" (asks)");
-  cols.emplace_back(_market.base().str()).append(" price in ").append(_market.quote().str());
-  cols.emplace_back("Buyers of ").append(_market.base().str()).append(" (bids)");
-  VariadicTable<string, string, string> vt(std::move(cols));
+  string h1("Sellers of ");
+  h1.append(_market.base().str()).append(" (asks)");
+  string h2(_market.base().str());
+  h2.append(" price in ").append(_market.quote().str());
+  string h3("Buyers of ");
+  h3.append(_market.base().str()).append(" (bids)");
+
+  table::SimpleTable t;
+  t.emplace_back(std::move(h1), std::move(h2), std::move(h3));
+
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
     if (_orders[pos].amount < 0) {
-      vt.addRow(amount.amountStr(), priceAt(pos).amountStr(), "");
+      t.emplace_back(amount.amountStr(), priceAt(pos).amountStr(), "");
     } else {
-      vt.addRow("", priceAt(pos).amountStr(), amount.amountStr());
+      t.emplace_back("", priceAt(pos).amountStr(), amount.amountStr());
     }
   }
-  vt.print(os);
+  t.print(os);
 }
 
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const {
-  FixedCapacityVector<string, 4> cols;
-  cols.emplace_back("Sellers of ").append(_market.base().str()).append(" (asks)");
-  cols.emplace_back(exchangeName)
-      .append(" ")
-      .append(_market.base().str())
-      .append(" price in ")
-      .append(_market.quote().str());
-  cols.emplace_back(exchangeName)
-      .append(" ")
-      .append(_market.base().str())
-      .append(" price in ")
-      .append(conversionPriceRate.currencyCode().str());
-  cols.emplace_back("Buyers of ").append(_market.base().str()).append(" (bids)");
-  VariadicTable<string, string, string, string> vt(std::move(cols));
+  string h1("Sellers of ");
+  h1.append(_market.base().str()).append(" (asks)");
+  string h2(exchangeName);
+  h2.append(" ").append(_market.base().str()).append(" price in ").append(_market.quote().str());
+  string h3(exchangeName);
+  h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate.currencyCode().str());
+  string h4("Buyers of ");
+  h4.append(_market.base().str()).append(" (bids)");
+
+  table::SimpleTable t;
+  t.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
+
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
     MonetaryAmount price = priceAt(pos);
     MonetaryAmount convertedPrice = price.toNeutral() * conversionPriceRate.toNeutral();
     if (_orders[pos].amount < 0) {
-      vt.addRow(amount.str(), price.amountStr(), convertedPrice.str(), "");
+      t.emplace_back(amount.str(), price.amountStr(), convertedPrice.str(), "");
     } else {
-      vt.addRow("", price.amountStr(), convertedPrice.str(), amount.str());
+      t.emplace_back("", price.amountStr(), convertedPrice.str(), amount.str());
     }
   }
-  vt.print(os);
+  t.print(os);
 }
 
 }  // namespace cct

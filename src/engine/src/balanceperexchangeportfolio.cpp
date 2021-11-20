@@ -1,7 +1,7 @@
 #include "balanceperexchangeportfolio.hpp"
 
 #include "cct_string.hpp"
-#include "cct_variadictable.hpp"
+#include "simpletable.hpp"
 
 namespace cct {
 void BalancePerExchangePortfolio::add(const Exchange &exchange, const BalancePortfolio &balancePortfolio) {
@@ -16,39 +16,53 @@ void BalancePerExchangePortfolio::add(const Exchange &exchange, BalancePortfolio
   _exchanges.push_back(std::addressof(exchange));
 }
 
-void BalancePerExchangePortfolio::print(std::ostream &os) const {
+void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
   BalancePortfolio total = _balances.front();
   if (total.empty()) {
     os << "No Balance to display" << std::endl;
   } else {
     CurrencyCode balanceCurrencyCode = total.front().equi.currencyCode();
     const bool countEqui = balanceCurrencyCode != CurrencyCode::kNeutral;
-    if (countEqui) {
-      FixedCapacityVector<string, 3> cols;
-      cols.emplace_back("Currency");
-      cols.emplace_back("Amount");
-      cols.emplace_back(balanceCurrencyCode.str()).append(" eq");
+    table::SimpleTable balanceTable;
+    table::Row header("Currency", "Total amount on selected");
 
+    if (countEqui) {
       total.sortByDecreasingEquivalentAmount();
 
-      VariadicTable<string, string, string> balanceTable(cols);
+      string balanceEqCur("Total ");
+      balanceEqCur.append(balanceCurrencyCode.str()).append(" eq");
+      header.emplace_back(std::move(balanceEqCur));
+    }
 
-      MonetaryAmount totalSum(0, balanceCurrencyCode);
-      for (const auto &[amount, equi] : total) {
-        // Amounts impossible to convert have a zero value
-        balanceTable.addRow(string(amount.currencyStr()), amount.amountStr(), equi.amountStr());
+    if (wide) {
+      for (const Exchange *e : _exchanges) {
+        string account(e->name());
+        account.push_back('_');
+        account.append(e->keyName());
+        header.emplace_back(std::move(account));
+      }
+    }
+    balanceTable.push_back(std::move(header));
+
+    MonetaryAmount totalSum(0, balanceCurrencyCode);
+    const int nbExchanges = _exchanges.size();
+    for (const auto &[amount, equi] : total) {
+      // Amounts impossible to convert have a zero value
+      table::Row r(amount.currencyStr(), amount.amountStr());
+      if (countEqui) {
+        r.emplace_back(equi.amountStr());
         totalSum += equi;
       }
-      balanceTable.print(os);
-      os << "* Total: " << totalSum << std::endl;
-    } else {
-      VariadicTable<string, string> balanceTable({"Currency", "Amount"});
-
-      for (const auto &[amount, equi] : total) {
-        // Amounts impossible to convert have a zero value
-        balanceTable.addRow(string(amount.currencyStr()), amount.amountStr());
+      if (wide) {
+        for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
+          r.emplace_back(_balances[1 + exchangePos].get(amount.currencyCode()).amountStr());
+        }
       }
-      balanceTable.print(os);
+      balanceTable.push_back(std::move(r));
+    }
+    balanceTable.print(os);
+    if (countEqui) {
+      os << "* Total: " << totalSum << std::endl;
     }
   }
 }
