@@ -33,8 +33,8 @@ File::File(std::string_view dataDir, Type type, std::string_view name, IfNotFoun
 string File::read() const {
   log::debug("Opening file {} for reading", _filePath);
   string data;
-  if (_ifNotFound == IfNotFound::kThrow || std::filesystem::exists(_filePath)) {
-    std::ifstream file(_filePath);
+  if (_ifNotFound == IfNotFound::kThrow || std::filesystem::exists(_filePath.c_str())) {
+    std::ifstream file(_filePath.c_str());
     if (!file) {
       throw exception("Unable to open " + _filePath + " for reading");
     }
@@ -53,7 +53,7 @@ json File::readJson() const {
 
 void File::write(const json &data) const {
   log::debug("Opening file {} for writing", _filePath);
-  std::ofstream file(_filePath);
+  std::ofstream file(_filePath.c_str());
   if (!file) {
     throw exception("Unable to open " + _filePath + " for writing");
   }

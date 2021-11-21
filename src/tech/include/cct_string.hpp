@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
+#include "fbstring.hpp"
 
 namespace cct {
-using std::string;
+using string = ::folly::fbstring;
 }

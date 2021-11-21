@@ -31,10 +31,12 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       isNeg = true;
       amountStr.remove_prefix(1);
     } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
-      throw exception("Parsing error, unexpected first char " + string(1, firstChar));
+      string ex("Parsing error, unexpected first char ");
+      ex.push_back(firstChar);
+      throw exception(std::move(ex));
     }
   }
-  std::size_t dotPos = amountStr.find_first_of('.');
+  std::size_t dotPos = amountStr.find('.');
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
   MonetaryAmount::AmountType decPart = 0, integerPart = 0;
@@ -71,7 +73,9 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       int8_t nbDigitsToRemove =
           static_cast<int8_t>(amountStr.size() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1);
       if (nbDigitsToRemove > nbDecimals) {
-        throw exception("Received amount string " + string(amountStr) + " whose integral part is too big");
+        string ex("Received amount string ");
+        ex.append(amountStr).append(" whose integral part is too big");
+        throw exception(std::move(ex));
       }
       log::trace("Received amount string '{}' too big for MonetaryAmount, truncating {} digits", amountStr,
                  nbDigitsToRemove);
@@ -402,12 +406,13 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
 string MonetaryAmount::amountStr() const {
   const int isNeg = static_cast<int>(_amount < 0);
   const int nbDigits = ndigits(_amount);
-  const int nbZerosToInsertFront = std::max(0, static_cast<int>(_nbDecimals + 1 - nbDigits));
 
   string ret(static_cast<size_t>(isNeg) + nbDigits, '-');
   std::to_chars(ret.data(), ret.data() + ret.size(), _amount);
 
-  ret.insert(ret.begin() + isNeg, nbZerosToInsertFront, '0');
+  if (_nbDecimals + 1 > nbDigits) {
+    ret.insert(ret.begin() + isNeg, _nbDecimals + 1 - nbDigits, '0');
+  }
 
   if (_nbDecimals > 0) {
     ret.insert(ret.end() - _nbDecimals, '.');

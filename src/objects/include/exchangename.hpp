@@ -6,6 +6,7 @@
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
 
@@ -38,6 +39,8 @@ class PrivateExchangeName {
 
   bool operator==(const PrivateExchangeName &o) const { return _nameWithKey == o._nameWithKey; }
   bool operator!=(const PrivateExchangeName &o) const { return !(*this == o); }
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   string _nameWithKey;

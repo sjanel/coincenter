@@ -6,6 +6,7 @@
 #include <prometheus/summary.h>
 
 #include <cassert>
+#include <string>
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
@@ -26,7 +27,7 @@ constexpr int kHTTPSuccessReturnCode = 200;
 constexpr Clock::duration kPrometheusAutoFlushPeriod = std::chrono::minutes(3);
 constexpr int kCheckFlushCounter = 20;
 
-string GetHostName() {
+std::string GetHostName() {
   char hostname[1024];
   if (::gethostname(hostname, sizeof(hostname))) {
     return {};
@@ -57,9 +58,9 @@ PrometheusMetricGateway::~PrometheusMetricGateway() {
 }
 
 namespace {
-using ExtractedDataFromMetricKey = std::tuple<std::map<std::string, std::string>, string, string>;
+using ExtractedDataFromMetricKey = std::tuple<std::map<std::string, std::string>, std::string, std::string>;
 
-inline std::tuple<std::map<std::string, std::string>, string, string> ExtractData(const MetricKey& key) {
+inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
   ExtractedDataFromMetricKey ret;
   std::string_view metricNameSV, metricHelpSV;
   for (const auto& [k, v] : key) {
@@ -68,11 +69,11 @@ inline std::tuple<std::map<std::string, std::string>, string, string> ExtractDat
     } else if (k == "metric_help") {
       metricHelpSV = v;
     } else {
-      std::get<0>(ret).insert_or_assign(string(k), string(v));
+      std::get<0>(ret).insert_or_assign(std::string(k), std::string(v));
     }
   }
-  std::get<1>(ret) = string(metricNameSV);
-  std::get<2>(ret) = string(metricHelpSV);
+  std::get<1>(ret) = std::string(metricNameSV);
+  std::get<2>(ret) = std::string(metricHelpSV);
   return ret;
 }
 

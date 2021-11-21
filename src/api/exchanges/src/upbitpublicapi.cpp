@@ -27,7 +27,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
   if (dataJson.contains("error")) {
     const long statusCode = dataJson["name"].get<long>();
     std::string_view msg = dataJson["message"].get<std::string_view>();
-    throw exception("error: " + std::to_string(statusCode) + " \"" + string(msg) + "\"");
+    throw exception("error: " + MonetaryAmount(statusCode).amountStr() + " \"" + string(msg) + "\"");
   }
   return dataJson;
 }
@@ -141,7 +141,7 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth
   ExchangePublic::MarketOrderBookMap ret;
   for (const json& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
-    std::size_t dashPos = marketStr.find_first_of('-');
+    std::size_t dashPos = marketStr.find('-');
     if (dashPos == std::string_view::npos) {
       log::error("Unable to parse order book json for market {}", marketStr);
       continue;

@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
 using InvalidArgumentException = std::invalid_argument;
@@ -40,6 +41,8 @@ class CommandLineOption {
   bool hasShortName() const { return _shortName != '\0'; }
 
   bool operator<(const CommandLineOption& o) const;
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   string _optionGroupName;

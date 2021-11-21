@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <charconv>
 #include <cstdint>
@@ -10,6 +11,7 @@
 #include "cct_hash.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
 
@@ -25,6 +27,8 @@ struct KeyValuePair {
 
   KeyValuePair(std::string_view k, IntegralType v) : key(k), val(v) {}
 
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
+
   std::string_view key;
   value_type val;
 };
@@ -36,7 +40,7 @@ class FlatKeyValueStringIterator {
   // It could be easily transformed into a Bi directional iterator but I did not find yet the need to iterate
   // backwards.
   using iterator_category = std::forward_iterator_tag;
-  using value_type = std::pair<std::string_view, std::string_view>;
+  using value_type = std::array<std::string_view, 2>;
   using difference_type = std::ptrdiff_t;
   using pointer = const value_type *;
   using reference = const value_type &;
@@ -44,22 +48,22 @@ class FlatKeyValueStringIterator {
   // Prefix increment, should be called on a valid iterator, otherwise undefined behavior
   FlatKeyValueStringIterator &operator++() {
     // Use .data() + size() method instead of end() iterators as they may nnot be implemented as pointers
-    if (_kv.second.data() + _kv.second.size() == _data.data() + _data.size()) {
+    if (_kv[1].data() + _kv[1].size() == _data.data() + _data.size()) {
       // end
-      _kv.first = std::string_view(_data.end(), _data.end());
+      _kv[0] = std::string_view(_data.end(), _data.end());
     } else {
       // There is a next key value pair
-      const char *start = _kv.second.data() + _kv.second.size() + 1;
+      const char *start = _kv[1].data() + _kv[1].size() + 1;
       const char *end = start + 1;
       while (*end != AssignmentChar) {
         ++end;
       }
-      _kv.first = std::string_view(start, end - start);
+      _kv[0] = std::string_view(start, end - start);
       start = end + 1;
       while (*end != '\0' && *end != KeyValuePairSep) {
         ++end;
       }
-      _kv.second = std::string_view(start, end - start);
+      _kv[1] = std::string_view(start, end - start);
     }
     return *this;
   }
@@ -67,7 +71,7 @@ class FlatKeyValueStringIterator {
   const value_type &operator*() const { return _kv; }
   const value_type *operator->() const { return &this->operator*(); }
 
-  bool operator==(const FlatKeyValueStringIterator &o) const { return _kv.first.data() == o._kv.first.data(); }
+  bool operator==(const FlatKeyValueStringIterator &o) const { return _kv[0].data() == o._kv[0].data(); }
   bool operator!=(const FlatKeyValueStringIterator &o) const { return !(*this == o); }
 
  private:
@@ -79,13 +83,12 @@ class FlatKeyValueStringIterator {
     std::size_t assignCharPos = _data.find(AssignmentChar);
     if (assignCharPos == std::string_view::npos) {
       // end
-      _kv.first = std::string_view(_data.end(), _data.end());
+      _kv[0] = std::string_view(_data.end(), _data.end());
     } else {
-      _kv.first = std::string_view(_data.begin(), _data.begin() + assignCharPos);
+      _kv[0] = std::string_view(_data.begin(), _data.begin() + assignCharPos);
       std::size_t nextKVCharSep = _data.find(KeyValuePairSep, assignCharPos + 1);
-      _kv.second =
-          std::string_view(_data.begin() + assignCharPos + 1,
-                           nextKVCharSep == std::string_view::npos ? _data.end() : _data.begin() + nextKVCharSep);
+      _kv[1] = std::string_view(_data.begin() + assignCharPos + 1,
+                                nextKVCharSep == std::string_view::npos ? _data.end() : _data.begin() + nextKVCharSep);
     }
   }
 
@@ -117,7 +120,6 @@ class FlatKeyValueString {
       : _data(std::move(o)) {}
 
   const_iterator begin() const { return const_iterator(_data); }
-
   const_iterator end() const { return const_iterator(_data, true); }
 
   /// Append a new URL option from given key value pair.
@@ -126,7 +128,7 @@ class FlatKeyValueString {
   template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
   void append(std::string_view key, T value) {
     char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
-    auto ret = std::to_chars(std::begin(buf), std::end(buf), value);
+    auto ret = std::to_chars(buf, std::end(buf), value);
     append(key, std::string_view(buf, ret.ptr));
   }
 
@@ -140,7 +142,7 @@ class FlatKeyValueString {
   template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
   void set(std::string_view key, T value) {
     char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
-    auto ret = std::to_chars(std::begin(buf), std::end(buf), value);
+    auto ret = std::to_chars(buf, std::end(buf), value);
     set(key, std::string_view(buf, ret.ptr));
   }
 
@@ -167,6 +169,8 @@ class FlatKeyValueString {
 
   bool operator==(const FlatKeyValueString &o) const { return _data == o._data; }
   bool operator<(const FlatKeyValueString &o) const { return _data < o._data; }
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   string _data;

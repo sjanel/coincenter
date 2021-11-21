@@ -8,8 +8,7 @@ PublicExchangeNames GetExchanges(std::string_view str) {
   PublicExchangeNames exchanges;
   if (!str.empty()) {
     std::size_t first, last;
-    for (first = 0, last = str.find_first_of(','); last != std::string_view::npos;
-         last = str.find_first_of(',', last + 1)) {
+    for (first = 0, last = str.find(','); last != std::string_view::npos; last = str.find(',', last + 1)) {
       exchanges.emplace_back(str.begin() + first, str.begin() + last);
       first = last + 1;
     }
@@ -33,7 +32,7 @@ PrivateExchangeNames StringOptionParser::getPrivateExchanges() const {
 StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() const {
   std::size_t commaPos = getNextCommaPos(0, false);
   std::string_view marketStr(_opt.begin(), commaPos == string::npos ? _opt.end() : _opt.begin() + commaPos);
-  std::size_t dashPos = marketStr.find_first_of('-');
+  std::size_t dashPos = marketStr.find('-');
   if (dashPos == std::string_view::npos) {
     throw std::invalid_argument("Expected a dash");
   }
@@ -54,7 +53,7 @@ StringOptionParser::MonetaryAmountExchanges StringOptionParser::getMonetaryAmoun
 
 StringOptionParser::MonetaryAmountCurrencyCodePrivateExchange
 StringOptionParser::getMonetaryAmountCurrencyCodePrivateExchange() const {
-  std::size_t dashPos = _opt.find_first_of('-');
+  std::size_t dashPos = _opt.find('-');
   if (dashPos == string::npos) {
     throw std::invalid_argument("Expected a dash");
   }
@@ -72,7 +71,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
   std::size_t commaPos = getNextCommaPos();
   MonetaryAmount amountToWithdraw(std::string_view(_opt.begin(), _opt.begin() + commaPos));
   std::string_view exchangeNames(_opt.begin() + commaPos + 1, _opt.end());
-  std::size_t dashPos = exchangeNames.find_first_of('-');
+  std::size_t dashPos = exchangeNames.find('-');
   if (dashPos == string::npos) {
     throw std::invalid_argument("Expected a dash");
   }
@@ -82,7 +81,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
 }
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
-  std::size_t commaPos = _opt.find_first_of(',', startPos);
+  std::size_t commaPos = _opt.find(',', startPos);
   if (commaPos == string::npos && throwIfNone) {
     throw std::invalid_argument("Expected a comma");
   }

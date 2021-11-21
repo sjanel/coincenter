@@ -55,7 +55,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   json dataJson = json::parse(curlHandle.query(url, opts));
   auto errCodeIt = dataJson.find("code");
   if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
-    std::string errStr("Kucoin error ");
+    string errStr("Kucoin error ");
     errStr.append(errCodeIt->get<std::string_view>());
     auto msgIt = dataJson.find("msg");
     if (msgIt != dataJson.end()) {
@@ -219,7 +219,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   }
   json result =
       PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/api/v1/orders", std::move(placePostData));
-  placeOrderInfo.orderId = result["orderId"].get<std::string_view>();
+  placeOrderInfo.orderId = string(result["orderId"].get<std::string_view>());
   return placeOrderInfo;
 }
 

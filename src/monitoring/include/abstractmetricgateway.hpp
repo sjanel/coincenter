@@ -25,6 +25,6 @@ class AbstractMetricGateway {
  protected:
   explicit AbstractMetricGateway(const MonitoringInfo& monitoringInfo) : _monitoringInfo(monitoringInfo) {}
 
-  MonitoringInfo _monitoringInfo;
+  const MonitoringInfo& _monitoringInfo;
 };
 }  // namespace cct

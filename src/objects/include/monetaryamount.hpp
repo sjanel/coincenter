@@ -6,6 +6,7 @@
 
 #include "cct_mathhelpers.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "currencycode.hpp"
 
 namespace cct {

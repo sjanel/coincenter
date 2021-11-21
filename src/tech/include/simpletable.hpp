@@ -9,6 +9,7 @@
 #include <variant>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
@@ -40,6 +41,8 @@ class SimpleTable {
     explicit Cell(IntegralType v) : _data(v) {}
 
     size_type size() const noexcept;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
 
    private:
     friend class Row;
@@ -77,6 +80,8 @@ class SimpleTable {
     value_type &operator[](size_type cellPos) { return _cells[cellPos]; }
     const value_type &operator[](size_type cellPos) const { return _cells[cellPos]; }
 
+    using trivially_relocatable = is_trivially_relocatable<vector<value_type>>::type;
+
    private:
     friend class SimpleTable;
 
@@ -112,6 +117,8 @@ class SimpleTable {
   void reserve(size_type s) { _rows.reserve(s); }
 
   void print(std::ostream &os = std::cout) const;
+
+  using trivially_relocatable = is_trivially_relocatable<vector<Row>>::type;
 
  private:
   vector<Row> _rows;

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.15)
 
-project(coincenter VERSION 3.3.0
+project(coincenter VERSION 3.4.0
                    DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
                    LANGUAGES CXX)
 
@@ -88,7 +88,7 @@ if (CCT_BUILD_PROMETHEUS_FROM_SRC)
   FetchContent_Declare(
     prometheus-cpp
     GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
-    GIT_TAG        v0.13.0
+    GIT_TAG        v1.0.0
   )
 
   FetchContent_MakeAvailable(prometheus-cpp)

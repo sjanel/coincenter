@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 
@@ -40,6 +41,9 @@ class Wallet {
   static bool IsAddressPresentInDepositFile(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
                                             CurrencyCode currency, std::string_view expectedAddress,
                                             std::string_view expectedTag);
+
+  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<PrivateExchangeName> &&
+                                                                 is_trivially_relocatable_v<string> >::type;
 
  private:
   PrivateExchangeName _privateExchangeName;

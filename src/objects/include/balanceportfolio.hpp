@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
@@ -39,6 +40,8 @@ class BalancePortfolio {
   void sortByDecreasingEquivalentAmount();
 
   BalancePortfolio &operator+=(const BalancePortfolio &o);
+
+  using trivially_relocatable = is_trivially_relocatable<MonetaryAmountVec>::type;
 
  private:
   MonetaryAmountVec _sortedAmounts;
