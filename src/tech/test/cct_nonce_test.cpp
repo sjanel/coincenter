@@ -27,7 +27,7 @@ TEST(NonceTest, LiteralDate) {
   EXPECT_LT(n1, n2);
 
   const std::regex dateRegex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}");
-  EXPECT_TRUE(std::regex_match(n1, dateRegex));
-  EXPECT_TRUE(std::regex_match(n2, dateRegex));
+  EXPECT_TRUE(std::regex_match(n1.begin(), n1.end(), dateRegex));
+  EXPECT_TRUE(std::regex_match(n2.begin(), n2.end(), dateRegex));
 }
 }  // namespace cct

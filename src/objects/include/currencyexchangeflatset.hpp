@@ -2,6 +2,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_flatset.hpp"
+#include "cct_type_traits.hpp"
 #include "currencyexchange.hpp"
 
 namespace cct {
@@ -53,7 +54,9 @@ class CurrencyExchangeFlatSet {
   const CurrencyExchange &getOrThrow(CurrencyCode standardCode) const {
     const_iterator it = find(standardCode);
     if (it == _set.end()) {
-      throw exception("Unknown " + string(standardCode.str()));
+      string ex("Unknown ");
+      ex.append(standardCode.str());
+      throw exception(std::move(ex));
     }
     return *it;
   }
@@ -68,6 +71,8 @@ class CurrencyExchangeFlatSet {
   std::pair<iterator, bool> emplace(Args &&...args) {
     return _set.emplace(std::forward<Args &&>(args)...);
   }
+
+  using trivially_relocatable = is_trivially_relocatable<SetType>::type;
 
  private:
   SetType _set;

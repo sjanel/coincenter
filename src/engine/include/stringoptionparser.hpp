@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -35,6 +36,8 @@ class StringOptionParser {
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
   CurrencyCodePublicExchanges getCurrencyCodePublicExchanges() const;
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;

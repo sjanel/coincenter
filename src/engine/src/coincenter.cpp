@@ -64,7 +64,9 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
     } else if (exchangeName == "upbit") {
       exchangePublic = std::addressof(_upbitPublic);
     } else {
-      throw exception("Should not happen, unsupported platform " + string(exchangeName));
+      string ex("Should not happen, unsupported platform ");
+      ex.append(exchangeName);
+      throw exception(std::move(ex));
     }
 
     const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
@@ -85,9 +87,9 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {
-          std::string err("Should not happen, unsupported platform ");
-          err.append(exchangeName);
-          throw exception(std::move(err));
+          string ex("Should not happen, unsupported platform ");
+          ex.append(exchangeName);
+          throw exception(std::move(ex));
         }
 
         _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,

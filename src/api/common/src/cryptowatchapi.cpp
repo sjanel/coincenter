@@ -28,8 +28,12 @@ string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& pos
 }
 
 const json& CollectResults(const json& dataJson) {
-  if (dataJson.contains("error") && !dataJson["error"].empty()) {
-    throw exception("Cryptowatch::query error: " + string(dataJson["error"].front()));
+  auto errIt = dataJson.find("error");
+  if (errIt != dataJson.end() && !errIt->empty()) {
+    std::string_view errMsg = errIt->front().get<std::string_view>();
+    string ex("Cryptowatch::query error: ");
+    ex.append(errMsg);
+    throw exception(std::move(ex));
   }
   return dataJson["result"];
 }

@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
 
@@ -23,6 +24,8 @@ class MonitoringInfo {
   uint16_t port() const { return _port; }
 
   bool useMonitoring() const { return _port != 0; }
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   string _jobName;

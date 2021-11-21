@@ -25,7 +25,7 @@ void CoincenterCmdLineOptions::setLogLevel() const {
       break;
     }
     default:
-      log::set_level(log::level::from_str(logLevel));
+      log::set_level(log::level::from_str(std::string(logLevel)));
       break;
   }
 }

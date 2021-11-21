@@ -56,7 +56,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   json jsonData = json::parse(std::move(ret));
   CurlHandle::Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
-         jsonData["error"].front() == "EAPI:Rate limit exceeded") {
+         jsonData["error"].front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
     log::error("Kraken private API rate limit exceeded");
     sleepingTime *= 2;
     log::debug("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
@@ -69,12 +69,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     ret = curlHandle.query(method_url, opts);
     jsonData = json::parse(std::move(ret));
   }
-  if (jsonData.contains("error") && !jsonData["error"].empty()) {
-    if (method == "CancelOrder" && jsonData["error"].front() == "EOrder:Unknown order") {
+  auto errorIt = jsonData.find("error");
+  if (errorIt != jsonData.end() && !errorIt->empty()) {
+    std::string_view msg = errorIt->front().get<std::string_view>();
+    if (method == "CancelOrder" && msg == "EOrder:Unknown order") {
       log::warn("Unknown order from Kraken CancelOrder. Assuming closed order");
       jsonData = "{\" error \":[],\" result \":{\" count \":1}}"_json;
     } else {
-      throw exception("Kraken private query error: " + string(jsonData["error"].front()));
+      string ex("Kraken private query error: ");
+      ex.append(msg);
+      throw exception(std::move(ex));
     }
   }
   return jsonData["result"];
@@ -133,8 +137,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       if (keyStr == "address") {
         address = valueStr;
       } else if (keyStr == "expiretm") {
-        if (valueStr != "0") {
-          log::error("{} wallet has an expire time of {}", _exchangePublic.name(), valueStr);
+        std::string_view expireTmValue = valueStr.get<std::string_view>();
+        if (expireTmValue != "0") {
+          log::error("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
         }
       } else if (keyStr == "new") {
         // Never used, it's ok, safely pass this
@@ -234,7 +239,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   std::string_view orderDescriptionStr = placeOrderRes["descr"]["order"].get<std::string_view>();
   std::string_view krakenTruncatedAmount(
       orderDescriptionStr.begin() + orderType.size() + 1,
-      orderDescriptionStr.begin() + orderDescriptionStr.find_first_of(' ', orderType.size() + 1));
+      orderDescriptionStr.begin() + orderDescriptionStr.find(' ', orderType.size() + 1));
   MonetaryAmount krakenVolume(krakenTruncatedAmount, m.base());
   log::debug("Kraken adjusted volume: {}", krakenVolume.str());
 

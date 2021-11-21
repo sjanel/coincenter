@@ -12,8 +12,8 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
       _excludedCurrenciesWithdrawal(excludedCurrenciesWithdraw.begin(), excludedCurrenciesWithdraw.end()),
       _minPublicQueryDelay(std::chrono::milliseconds(minPublicQueryDelayMs)),
       _minPrivateQueryDelay(std::chrono::milliseconds(minPrivateQueryDelayMs)),
-      _generalMakerRatio((MonetaryAmount("100") - MonetaryAmount(makerStr)) / 100),
-      _generalTakerRatio((MonetaryAmount("100") - MonetaryAmount(takerStr)) / 100),
+      _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
+      _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
       _validateDepositAddressesInFile(validateDepositAddressesInFile) {
   if (log::get_level() <= log::level::debug) {
     string excludedAssets(1, '[');

@@ -104,7 +104,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               std::size_t idxFirst = nbDecimalsMaxPos + strlen(kMagicKoreanString1);
               auto first = msg.begin() + idxFirst;
               std::string_view maxNbDecimalsStr(first, msg.begin() + msg.find(kMagicKoreanString2, idxFirst));
-              CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find_first_of(' ')));
+              CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));
               // I did not find the way via the API to get the maximum precision of Bithumb assets,
               // so I get them this way, by parsing the Korean error message of the response
               log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
@@ -139,7 +139,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
           }
         }
       }
-      throw exception(string("Bithumb::query error: ").append(statusCode).append(" \"").append(msg).append("\""));
+      string ex("Bithumb::query error: ");
+      ex.append(statusCode).append(" \"").append(msg).append("\"");
+      throw exception(std::move(ex));
     }
   }
   return methodName.starts_with("trade") ? dataJson : dataJson["data"];
@@ -196,13 +198,12 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   // {"currency": "QTUM","wallet_address": "QMFxxxXXXXxxxxXXXXXxxxx"}
   // {"currency":"EOS","wallet_address":"bithumbrecv1&memo=123456789"}
   std::string_view addressAndTag = result["wallet_address"].get<std::string_view>();
-  std::size_t tagPos = addressAndTag.find_first_of('&');
+  std::size_t tagPos = addressAndTag.find('&');
   std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
   std::string_view tag(
       tagPos != std::string_view::npos
           ? (addressAndTag.begin() +
-             std::min(addressAndTag.find_first_of('=', std::min(tagPos + 1, addressAndTag.size())) + 1U,
-                      addressAndTag.size()))
+             std::min(addressAndTag.find('=', std::min(tagPos + 1, addressAndTag.size())) + 1U, addressAndTag.size()))
           : addressAndTag.end(),
       addressAndTag.end());
 

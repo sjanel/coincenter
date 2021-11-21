@@ -23,7 +23,8 @@
 namespace cct {
 
 inline void ThrowExpectingValueException(const CommandLineOption& commandLineOption) {
-  throw InvalidArgumentException("Expecting a value for option: " + string(commandLineOption.fullName()));
+  static const string ex = "Expecting a value for option: " + string(commandLineOption.fullName());
+  throw InvalidArgumentException(ex.c_str());
 }
 
 #ifndef _WIN32
@@ -119,7 +120,8 @@ class CommandLineOptionsParser : private Opts {
       const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
                                            [argStr](const auto& opt) { return opt.first.matches(argStr); });
       if (!knownOption) {
-        throw InvalidArgumentException("Unrecognized command-line option: " + string(argStr));
+        static const string ex = "Unrecognized command-line option: " + string(argStr);
+        throw InvalidArgumentException(ex.c_str());
       }
 
       for (auto& cbk : _callbacks) {
@@ -247,16 +249,16 @@ class CommandLineOptionsParser : private Opts {
   }
 
   static void ThrowDuplicatedOptionsException(char shortName) {
-    string errMsg("Options with same short name '");
+    static string errMsg("Options with same short name '");
     errMsg.push_back(shortName);
     errMsg.append("' have been found");
-    throw InvalidArgumentException(std::move(errMsg));
+    throw InvalidArgumentException(errMsg.c_str());
   }
 
   static void ThrowDuplicatedOptionsException(std::string_view lhsName, std::string_view rhsName) {
-    string errMsg("Duplicated options '");
+    static string errMsg("Duplicated options '");
     errMsg.append(lhsName).append("' and '").append(rhsName).append("' have been found");
-    throw InvalidArgumentException(std::move(errMsg));
+    throw InvalidArgumentException(errMsg.c_str());
   }
 
   static bool IsOptionValue(const char* argv) {

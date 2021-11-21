@@ -57,8 +57,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
       }
       statusCode = dataJson["code"];
     }
-    const std::string_view errorMessage = dataJson["msg"].get<std::string_view>();
-    throw exception("error " + std::to_string(statusCode) + ", msg: " + string(errorMessage));
+    string ex("Error: ");
+    ex.append(MonetaryAmount(statusCode).amountStr());
+    ex.append(", msg: ");
+    ex.append(dataJson["msg"].get<std::string_view>());
+    throw exception(std::move(ex));
   }
   return dataJson;
 }

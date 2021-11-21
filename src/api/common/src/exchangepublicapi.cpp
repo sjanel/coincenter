@@ -173,7 +173,17 @@ Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
   if (!markets.contains(m)) {
     m = m.reverse();
     if (!markets.contains(m)) {
-      throw exception("Cannot trade " + string(c1.str()) + " into " + string(c2.str()) + " on " + _name);
+      string ex("Cannot find ");
+      ex.append(c1.str())
+          .append("-")
+          .append(c2.str())
+          .append(" nor ")
+          .append(c2.str())
+          .append("-")
+          .append(c1.str())
+          .append(" markets on ")
+          .append(_name);
+      throw exception(std::move(ex));
     }
   }
   return m;

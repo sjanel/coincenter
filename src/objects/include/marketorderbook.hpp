@@ -135,6 +135,8 @@ class MarketOrderBook {
   ///                            currency
   void print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const;
 
+  using trivially_relocatable = std::true_type;
+
  private:
   /// Represents a total amount of waiting orders at a given price.
   /// Note that currency is not stored in situ for memory footprint reasons, but it's not an issue as we can get it from
@@ -170,8 +172,8 @@ class MarketOrderBook {
 
     bool operator==(AmountPrice o) const { return amount == o.amount && price == o.price; }
 
-    AmountType amount{};
-    AmountType price{};
+    AmountType amount = 0;
+    AmountType price = 0;
   };
 
   using AmountPriceVector = SmallVector<AmountPrice, 20>;
@@ -207,4 +209,5 @@ class MarketOrderBook {
   int _lowestAskPricePos;
   bool _isArtificiallyExtended;
 };
+
 }  // namespace cct

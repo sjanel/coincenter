@@ -38,12 +38,16 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
   std::string_view platformStr = privateExchangeName.name();
   auto foundIt = _apiKeysMap.find(platformStr);
   if (foundIt == _apiKeysMap.end()) {
-    throw exception("Unable to retrieve private key for " + string(platformStr));
+    string ex("Unable to retrieve private key for ");
+    ex.append(platformStr);
+    throw exception(std::move(ex));
   }
   const APIKeys& apiKeys = foundIt->second;
   if (!privateExchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
-      throw exception("Specify name for " + string(platformStr) + " keys as you have several");
+      string ex("Specify name for ");
+      ex.append(platformStr).append(" keys as you have several");
+      throw exception(std::move(ex));
     }
     return apiKeys.front();
   }
@@ -51,8 +55,9 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     return apiKey.name() == privateExchangeName.keyName();
   });
   if (keyNameIt == apiKeys.end()) {
-    throw exception("Unable to retrieve private key for " + string(platformStr) + " named " +
-                    string(privateExchangeName.keyName()));
+    string ex("Unable to retrieve private key for ");
+    ex.append(platformStr).append(" named ").append(privateExchangeName.keyName());
+    throw exception(std::move(ex));
   }
   return *keyNameIt;
 }

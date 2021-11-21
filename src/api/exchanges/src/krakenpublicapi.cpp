@@ -26,8 +26,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&&
   CurlOptions opts(CurlOptions::RequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
   string ret = curlHandle.query(method_url, opts);
   json jsonData = json::parse(std::move(ret));
-  if (jsonData.contains("error") && !jsonData["error"].empty()) {
-    throw exception("Kraken public query error: " + string(jsonData["error"].front()));
+  auto errorIt = jsonData.find("error");
+  if (errorIt != jsonData.end() && !errorIt->empty()) {
+    std::string_view msg = errorIt->front().get<std::string_view>();
+    string ex("Kraken public query error: ");
+    ex.append(msg);
+    throw exception(std::move(ex));
   }
   return jsonData["result"];
 }
@@ -150,8 +154,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
   // Let's parse this CSV manually (it's not so difficult)
   WithdrawalInfoMaps ret;
-  for (std::size_t nextLinePos = withdrawalFeesCsv.find_first_of('\n'), lineBegPos = 0;;
-       nextLinePos = withdrawalFeesCsv.find_first_of('\n', lineBegPos)) {
+  for (std::size_t nextLinePos = withdrawalFeesCsv.find('\n'), lineBegPos = 0;;
+       nextLinePos = withdrawalFeesCsv.find('\n', lineBegPos)) {
     std::string_view line(std::next(withdrawalFeesCsv.begin(), lineBegPos),
                           nextLinePos == std::string_view::npos ? withdrawalFeesCsv.end()
                                                                 : std::next(withdrawalFeesCsv.begin(), nextLinePos));
@@ -164,8 +168,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
     CurrencyCode cur;
     std::string_view withdrawFeeMinStr[2];
-    for (std::size_t commaPos = line.find_first_of(','), fieldBegPos = 0, fieldPos = 0;;
-         commaPos = line.find_first_of(',', fieldBegPos), ++fieldPos) {
+    for (std::size_t commaPos = line.find(','), fieldBegPos = 0, fieldPos = 0;;
+         commaPos = line.find(',', fieldBegPos), ++fieldPos) {
       std::string_view field(std::next(line.begin(), fieldBegPos),
                              commaPos == std::string_view::npos ? line.end() : std::next(line.begin(), commaPos));
 

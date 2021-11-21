@@ -42,8 +42,12 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
     auto adjacentFindIt = std::adjacent_find(_orders.begin(), _orders.end(),
                                              [](AmountPrice lhs, AmountPrice rhs) { return lhs.price == rhs.price; });
     if (adjacentFindIt != _orders.end()) {
-      throw exception("Forbidden duplicate price " + std::to_string(adjacentFindIt->price) +
-                      " in the order book for market " + market.str());
+      string ex("Forbidden duplicate price ");
+      ex.append(MonetaryAmount(adjacentFindIt->price).amountStr());
+      ex.append(" in the order book for market ");
+      ex.append(market.str());
+
+      throw exception(std::move(ex));
     }
 
     auto highestBidPriceIt =

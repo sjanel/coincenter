@@ -35,10 +35,15 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
   CurlOptions opts(CurlOptions::RequestType::kGet);
   opts.userAgent = BinancePublic::kUserAgent;
   json dataJson = json::parse(curlHandle.query(url, opts));
-  if (dataJson.contains("code") && dataJson.contains("msg")) {
-    const int statusCode = dataJson["code"];  // "1100" for instance
-    const std::string_view errorMessage = dataJson["msg"].get<std::string_view>();
-    throw exception("error " + std::to_string(statusCode) + ", msg: " + string(errorMessage));
+  auto foundErrorIt = dataJson.find("code");
+  auto foundMsgIt = dataJson.find("msg");
+  if (foundErrorIt != dataJson.end() && foundMsgIt != dataJson.end()) {
+    const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
+    string ex("Error: ");
+    ex.append(MonetaryAmount(statusCode).amountStr());
+    ex.append(", msg: ");
+    ex.append(foundMsgIt->get<std::string_view>());
+    throw exception(std::move(ex));
   }
   return dataJson;
 }
@@ -67,7 +72,9 @@ template <class ExchangeInfoDataByMarket>
 const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market m) {
   auto it = exchangeInfoData.find(m);
   if (it == exchangeInfoData.end()) {
-    throw exception("Unable to retrieve market data " + m.str());
+    string ex("Unable to retrieve market data ");
+    ex.append(m.str());
+    throw exception(std::move(ex));
   }
   return it->second;
 }
@@ -266,7 +273,9 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     }
   }
-  throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
+  string ex("Unable to find withdrawal fee for ");
+  ex.append(currencyCode.str());
+  throw exception(std::move(ex));
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {

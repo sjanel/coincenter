@@ -27,24 +27,28 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
     throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
   }
   std::string_view timeAmountStr(durationStr.begin(), durationStr.begin() + endAmountPos);
-  int64_t timeAmount{};
+  int64_t timeAmount = 0;
   std::from_chars(timeAmountStr.data(), timeAmountStr.data() + timeAmountStr.size(), timeAmount);
   std::string_view timeUnitStr(durationStr.begin() + startTimeUnit, durationStr.end());
   if (timeUnitStr == "h") {
     return std::chrono::hours(timeAmount);
-  } else if (timeUnitStr == "min") {
-    return std::chrono::minutes(timeAmount);
-  } else if (timeUnitStr == "s") {
-    return std::chrono::seconds(timeAmount);
-  } else if (timeUnitStr == "ms") {
-    return std::chrono::milliseconds(timeAmount);
-  } else if (timeUnitStr == "us") {
-    return std::chrono::microseconds(timeAmount);
-  } else if (timeUnitStr == "ns") {
-    return std::chrono::nanoseconds(timeAmount);
-  } else {
-    throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
   }
+  if (timeUnitStr == "min") {
+    return std::chrono::minutes(timeAmount);
+  }
+  if (timeUnitStr == "s") {
+    return std::chrono::seconds(timeAmount);
+  }
+  if (timeUnitStr == "ms") {
+    return std::chrono::milliseconds(timeAmount);
+  }
+  if (timeUnitStr == "us") {
+    return std::chrono::microseconds(timeAmount);
+  }
+  if (timeUnitStr == "ns") {
+    return std::chrono::nanoseconds(timeAmount);
+  }
+  throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
 }
 
 bool CommandLineOption::matches(std::string_view optName) const {

@@ -32,12 +32,16 @@
 #define CCT_GCC_DISABLE_WARNING(warningName) CCT_DISABLE_WARNING(warningName)
 #endif
 
-#define CCT_COLD __attribute__((__cold__))
-#define CCT_HOT __attribute__((hot))
-#define CCT_NOINLINE __attribute__((__noinline__))
+#ifdef _MSC_VER
+#define CCT_ALWAYS_INLINE __forceinline
+#define CCT_NOINLINE __declspec(noinline)
+#elif defined(__GNUC__)
 #define CCT_ALWAYS_INLINE inline __attribute__((__always_inline__))
-#define CCT_NORETURN __attribute__((__noreturn__))
-#define CCT_PACKED __attribute__((__packed__))
+#define CCT_NOINLINE __attribute__((__noinline__))
+#else
+#define CCT_ALWAYS_INLINE inline
+#define CCT_NOINLINE
+#endif
 
 #define CCT_STRINGIFY(x) #x
 #define CCT_VER_STRING(major, minor, patch) CCT_STRINGIFY(major) "." CCT_STRINGIFY(minor) "." CCT_STRINGIFY(patch)
@@ -54,8 +58,4 @@
 #define CCT_COMPILER_VERSION CCT_COMPILER_NAME " " CCT_STRINGIFY(_MSC_FULL_VER)
 #else
 #error "Unknown compiler"
-#endif
-
-#ifndef NDEBUG
-#define CCT_DEBUG_MODE 1
 #endif

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "flatkeyvaluestring.hpp"
 
@@ -29,7 +30,10 @@ struct MetricSummaryInfo {
     double quantile;
     double error;
   };
+
   using Quantiles = vector<Quantile>;
+
+  using trivially_relocatable = is_trivially_relocatable<Quantiles>::type;
 
   Quantiles quantiles;
   std::chrono::milliseconds max_age = std::chrono::seconds{60};

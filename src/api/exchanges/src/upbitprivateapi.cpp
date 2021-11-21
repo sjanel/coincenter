@@ -33,25 +33,22 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   method_url.append("/v1/");
   method_url.append(method);
 
-  Nonce nonce = Nonce_TimeSinceEpoch();
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), UpbitPublic::kUserAgent);
 
-  string key(apiKey.key());
   auto jsonWebToken = jwt::create()
                           .set_type("JWT")
-                          .set_payload_claim("access_key", jwt::claim(std::move(key)))
-                          .set_payload_claim("nonce", jwt::claim(nonce));
+                          .set_payload_claim("access_key", jwt::claim(std::string(apiKey.key())))
+                          .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpoch())));
 
   if (!opts.postdata.empty()) {
     string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.postdata.str());
 
-    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::move(queryHash)))
-        .set_payload_claim("query_hash_alg", jwt::claim(string("SHA512")));
+    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash)))
+        .set_payload_claim("query_hash_alg", jwt::claim(std::string("SHA512")));
   }
 
-  string privateKey(apiKey.privateKey());  // hs256 does not accept std::string_view, we need a copy...
-  string token = jsonWebToken.sign(jwt::algorithm::hs256{std::move(privateKey)});
-  privateKey.assign(privateKey.size(), '\0');
+  // hs256 does not accept std::string_view, we need a copy...
+  string token = jsonWebToken.sign(jwt::algorithm::hs256{std::string(apiKey.privateKey())});
 
   opts.httpHeaders.emplace_back("Authorization: Bearer ").append(token);
 

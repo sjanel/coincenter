@@ -41,7 +41,7 @@ bool Wallet::IsAddressPresentInDepositFile(std::string_view dataDir, const Priva
       CurrencyCode currencyCode(currencyCodeStr);
       if (currencyCode == currency) {
         string addressAndTag = value;
-        std::size_t tagPos = addressAndTag.find_first_of(',');
+        std::size_t tagPos = addressAndTag.find(',');
         std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
         if (expectedAddress != address) {
           return false;
@@ -66,7 +66,7 @@ void ValidateDepositAddressIfNeeded(const PrivateExchangeName &privateExchangeNa
                                     const CoincenterInfo &coincenterInfo) {
   if (coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile() &&
       !Wallet::IsAddressPresentInDepositFile(coincenterInfo.dataDir(), privateExchangeName, currency, address, tag)) {
-    std::string errMsg("Incorrect wallet compared to the one stored in ");
+    string errMsg("Incorrect wallet compared to the one stored in ");
     errMsg.append(kDepositAddressesFileName);
     throw exception(std::move(errMsg));
   }
