@@ -69,7 +69,7 @@ class CoincenterParsedOptions {
 
   bool noProcess = false;
   int repeats = 1;
-  Duration repeat_time = Duration::zero();
+  Duration repeat_time;
 
   std::string_view programName() const { return _programName; }
 
