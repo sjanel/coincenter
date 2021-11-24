@@ -20,6 +20,7 @@ struct CoincenterCmdLineOptions {
 
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
+  static constexpr Duration kDefaultRepeatTime = std::chrono::seconds(1);
 
   void setLogLevel() const;
 
@@ -35,7 +36,7 @@ struct CoincenterCmdLineOptions {
   bool logFile = false;
   std::optional<string> nosecrets;
   CommandLineOptionalInt repeats;
-  Duration repeat_time = Duration::zero();
+  Duration repeat_time = kDefaultRepeatTime;
 
   string monitoring_address = string(kDefaultMonitoringIPAddress);
   string monitoring_username;
@@ -73,13 +74,16 @@ struct CoincenterCmdLineOptions {
 
 template <class OptValueType>
 CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser() {
-  constexpr int64_t defaultTradeTimeout =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().maxTradeTime()).count();
-  constexpr int64_t emergencyBufferTime =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().emergencyBufferTime()).count();
-  constexpr int64_t minUpdatePriceTime =
-      std::chrono::duration_cast<std::chrono::seconds>(api::TradeOptions().minTimeBetweenPriceUpdates()).count();
-  constexpr bool isSimulationModeByDefault = api::TradeOptions().isSimulation();
+  static constexpr api::TradeOptions kDefaultTradeOptions;
+  static constexpr int64_t defaultTradeTimeout =
+      std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.maxTradeTime()).count();
+  static constexpr int64_t emergencyBufferTime =
+      std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.emergencyBufferTime()).count();
+  static constexpr int64_t minUpdatePriceTime =
+      std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.minTimeBetweenPriceUpdates()).count();
+  static constexpr bool isSimulationModeByDefault = kDefaultTradeOptions.isSimulation();
+  static constexpr int64_t kDefaultRepeatDurationSeconds =
+      std::chrono::duration_cast<std::chrono::seconds>(CoincenterCmdLineOptions::kDefaultRepeatTime).count();
 
   // clang-format off
   return CommandLineOptionsParser<OptValueType>(
@@ -100,7 +104,8 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                  "Modifying requests such as trades and withdraws are not impacted by this option. "
                                                  "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
                                                  &OptValueType::repeats},
-       {{{"General", 1}, "--repeat-time", "<time>", "Sets a delay between each repeat"},  
+       {{{"General", 1}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
+                                                    .append(std::to_string(kDefaultRepeatDurationSeconds)).append("s)")},  
                                                   &OptValueType::repeat_time},
        {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
                                                                        &OptValueType::markets},
