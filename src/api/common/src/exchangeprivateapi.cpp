@@ -3,6 +3,8 @@
 #include <chrono>
 #include <thread>
 
+#include "cct_time_helpers.hpp"
+
 namespace cct {
 namespace api {
 
@@ -55,8 +57,6 @@ MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode to
     log::error("Cannot trade {} into {} on {}", initialAmount.str(), toCurrency.str(), _exchangePublic.name());
     return MonetaryAmount(0, toCurrency, 0);
   }
-
-  log::info(options.str());
   const int nbTrades = conversionPath.size();
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
@@ -75,21 +75,22 @@ MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode to
 
 MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode toCurrency, const TradeOptions &options,
                                             Market m) {
-  using Clock = TradeOptions::Clock;
-  using TimePoint = TradeOptions::TimePoint;
-
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrencyCode = from.currencyCode();
 
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
 
+  static constexpr Clock::duration kBufferTime = std::chrono::seconds(1);
+
   TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options, nbSecondsSinceEpoch);
 
-  MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.isTakerStrategy());
+  MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
   MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
 
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
+
+  log::info(options.str());
 
   // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
   const OrderId &orderId = placeOrderInfo.orderId;
@@ -97,9 +98,9 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
     log::debug("Order {} closed with traded amounts {}", orderId, placeOrderInfo.tradedAmounts().str());
     if (options.isSimulation()) {
       MonetaryAmount toAmount = fromCurrencyCode == m.quote() ? volume : volume.convertTo(price);
-      toAmount = _config.exchangeInfo(_exchangePublic.name())
-                     .applyFee(toAmount, options.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker
-                                                                   : ExchangeInfo::FeeType::kMaker);
+      ExchangeInfo::FeeType feeType =
+          options.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+      toAmount = _config.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
       from -= fromCurrencyCode == m.quote() ? volume.toNeutral() * price : volume;
       return toAmount;
     }
@@ -125,7 +126,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
     NextAction nextAction = NextAction::kWait;
 
     TimePoint t = Clock::now();
-    const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + options.emergencyBufferTime();
+    const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + kBufferTime;
     bool updatePriceNeeded = false;
     if (!reachedEmergencyTime && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
@@ -151,11 +152,10 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
           log::warn("Time out reached, stop from there");
           break;
         }
-        if (options.strategy() == TradeStrategy::kMakerThenTaker) {
-          log::info("Emergency time reached, force match as adapt strategy");
+        log::info("Emergency time reached, {} trade", options.timeoutActionStr());
+        if (options.placeMarketOrderAtTimeout()) {
           nextAction = NextAction::kPlaceMarketOrder;
         } else {
-          log::info("Emergency time reached, stop as maker strategy");
           break;
         }
       } else {
@@ -164,7 +164,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          price = _exchangePublic.computeAvgOrderPrice(m, remFrom, tradeInfo.options.isTakerStrategy());
+          price = _exchangePublic.computeAvgOrderPrice(m, remFrom, tradeInfo.options.priceStrategy());
           log::info("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();

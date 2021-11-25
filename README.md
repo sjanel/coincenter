@@ -73,7 +73,7 @@ Main features:
     - [Conversion path](#conversion-path)
   - [Private requests](#private-requests)
     - [Balance](#balance)
-    - [Simple Trade](#simple-trade)
+    - [Single Trade](#single-trade)
     - [Multi Trade](#multi-trade)
       - [Trade simulation](#trade-simulation)
     - [Withdraw coin](#withdraw-coin)
@@ -457,23 +457,23 @@ For instance, to print total balance on Kraken and Bithumb exchanges, with a sum
 coincenter --balance kraken,bithumb --balance-cur eur
 ```
 
-### Simple Trade
+### Single Trade
 
-A simple trade per market / exchange can be done in a user friendly way supporting 3 parameterized strategies.
-It is 'Simple' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange.
+A single trade per market / exchange can be done in a user friendly way supporting 3 parameterized strategies.
+It is 'single' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange.
 Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is sufficient. When unnecessary, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
 
-Possible strategies:
- - `maker`: Order placed at limit price (default) 
-          Price is continuously adjusted to limit price and will be cancelled at expired time if not fully matched (controlled with `--trade-timeout`)
+Possible order price strategies:
+ - `maker`: order placed at limit price and regularly updated to limit price (default)
  - `taker`: order placed at market price, should be matched immediately
- - `adapt`: same as maker, except that after `t + timeout - trade-emergency` time (`t` being the start time of the trade) remaining unmatched part is placed at market price to force the trade
+ - `nibble`: order price continuously set at limit price + (buy)/- (sell) 1. This is a hybrid mode between the above two methods, ensuring continuous partial matches of the order over time, but at a controlled price (market price can be dangerously low for some short periods of time with large sells)
 
-Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'adapt' strategy (maker then taker),
-          an emergency mode triggered before 2 seconds of the timeout of 15 seconds."
+Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute"
 ```
-coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy adapt --trade-emergency 2s --trade-timeout 15s
+coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy nibble --trade-timeout 1min
 ```
+
+You can also choose the behavior of the trade when timeout is reached, thanks to `--trade-timeout-match` option. By default, when the trade expires, the last unmatched order is cancelled. With above option, instead it places a last order at market price (should be matched immediately).
 
 ### Multi Trade
 

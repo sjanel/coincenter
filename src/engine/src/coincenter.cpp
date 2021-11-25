@@ -459,8 +459,7 @@ void Coincenter::printConversionPath(std::span<const PublicExchangeName> exchang
 }
 
 MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
-                                 const PrivateExchangeName &privateExchangeName,
-                                 const api::TradeOptions &tradeOptions) {
+                                 const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
   Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
   return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
 }

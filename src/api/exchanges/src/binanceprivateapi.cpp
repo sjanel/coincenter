@@ -7,7 +7,8 @@
 #include "binancepublicapi.hpp"
 #include "cct_nonce.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptions.hpp"
+#include "stringhelpers.hpp"
+#include "tradeinfo.hpp"
 
 namespace cct {
 namespace api {
@@ -165,7 +166,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
         throw exception("Unexpected dust transfer result");
       }
       const json& res = result["transferResult"].front();
-      placeOrderInfo.orderId = std::to_string(res["tranId"].get<std::size_t>());
+      SetChars(placeOrderInfo.orderId, res["tranId"].get<std::size_t>());
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {
@@ -193,7 +194,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
-  placeOrderInfo.orderId = std::to_string(result["orderId"].get<long>());
+  SetChars(placeOrderInfo.orderId, result["orderId"].get<size_t>());
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {

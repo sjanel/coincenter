@@ -14,7 +14,6 @@ namespace cct {
 class CoincenterInfo;
 
 namespace api {
-class TradeOptions;
 class UpbitPublic;
 
 class UpbitPrivate : public ExchangePrivate {

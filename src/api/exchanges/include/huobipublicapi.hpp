@@ -20,7 +20,6 @@ class FiatConverter;
 
 namespace api {
 class CryptowatchAPI;
-class TradeOptions;
 
 class HuobiPublic : public ExchangePublic {
  public:

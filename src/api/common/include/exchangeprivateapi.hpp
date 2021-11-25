@@ -18,10 +18,10 @@
 namespace cct {
 
 class CoincenterInfo;
+class TradeOptions;
 
 namespace api {
 class APIKey;
-class TradeOptions;
 
 class ExchangePrivate : public ExchangeBase {
  public:

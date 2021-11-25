@@ -61,3 +61,8 @@ add_unit_test(
     src/simpletable.cpp
     test/simpletable_test.cpp
 )
+
+add_unit_test(
+    stringhelpers_test
+    test/stringhelpers_test.cpp
+)

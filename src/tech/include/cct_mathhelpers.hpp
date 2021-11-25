@@ -111,6 +111,12 @@ constexpr int ndigits(T n) {
   }
 }
 
+/// Count the number of digits including the possible minus sign for negative integrals.
+template <SignedIntegral T>
+constexpr int nchars(T n) {
+  return ndigits(n) + static_cast<int>(n < 0);
+}
+
 /// Return the number of digits of given integral.
 /// Uses dichotomy for highest performance as possible.
 template <UnsignedIntegral T>
@@ -134,6 +140,12 @@ constexpr int ndigits(T n) {
                       : (n < 1000000000000000000UL ? (n < 100000000000000000UL ? 17 : 18)
                                                    : (n < 10000000000000000000UL ? 19 : 20)));
   }
+}
+
+/// Synonym of ndigits for unsigned types.
+template <UnsignedIntegral T>
+constexpr int nchars(T n) {
+  return ndigits(n);
 }
 
 }  // namespace cct

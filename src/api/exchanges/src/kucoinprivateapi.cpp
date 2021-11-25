@@ -8,7 +8,6 @@
 #include "cct_toupperlower.hpp"
 #include "kucoinpublicapi.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
