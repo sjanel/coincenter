@@ -1,5 +1,6 @@
 #include "huobiprivateapi.hpp"
 
+#include <charconv>
 #include <thread>
 
 #include "apikey.hpp"
@@ -8,7 +9,7 @@
 #include "cct_toupperlower.hpp"
 #include "huobipublicapi.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptions.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -83,7 +84,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPubli
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   string method = "/v1/account/accounts/";
-  method += std::to_string(_accountIdCache.get());
+  AppendChars(method, _accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, method);
   BalancePortfolio balancePortfolio;
@@ -257,21 +258,23 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/v1/dw/withdraw/api/create",
                              withdrawPostData);
-  int64_t withdrawId(result["data"].get<int64_t>());
-  return InitiatedWithdrawInfo(std::move(wallet), std::to_string(withdrawId), grossAmount);
+  string withdrawIdStr;
+  SetChars(withdrawIdStr, result["data"].get<int64_t>());
+  return InitiatedWithdrawInfo(std::move(wallet), std::move(withdrawIdStr), grossAmount);
 }
 
 SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   string lowerCaseCur = tolower(currencyCode.str());
-  std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
+  std::string_view withdrawIdStr = initiatedWithdrawInfo.withdrawId();
+  int64_t withdrawId;
+  std::from_chars(withdrawIdStr.data(), withdrawIdStr.data() + withdrawIdStr.size(), withdrawId);
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
-                                   {{"currency", lowerCaseCur}, {"from", withdrawId}, {"type", "withdraw"}});
+                                   {{"currency", lowerCaseCur}, {"from", withdrawIdStr}, {"type", "withdraw"}});
   MonetaryAmount netEmittedAmount;
   bool isWithdrawSent = false;
   for (const json& withdrawDetail : withdrawJson["data"]) {
-    int64_t withdrawDetailId(withdrawDetail["id"].get<int64_t>());
-    if (std::to_string(withdrawDetailId) == withdrawId) {
+    if (withdrawDetail["id"].get<int64_t>() == withdrawId) {
       std::string_view withdrawStatus = withdrawDetail["state"].get<std::string_view>();
       if (withdrawStatus == "verifying") {
         log::debug("Awaiting verification");

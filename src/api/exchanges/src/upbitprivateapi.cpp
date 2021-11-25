@@ -18,7 +18,6 @@
 #include "coincenterinfo.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptions.hpp"
 #include "upbitpublicapi.hpp"
 
 namespace cct {

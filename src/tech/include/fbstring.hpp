@@ -31,6 +31,7 @@
 
 #include "cct_config.hpp"
 #include "cct_type_traits.hpp"
+#include "unreachable.hpp"
 
 #define FOLLY_HAS_STRING_VIEW 1
 #define FOLLY_ALWAYS_INLINE CCT_ALWAYS_INLINE
@@ -108,13 +109,7 @@ FOLLY_GNU_DISABLE_WARNING("-Wshadow")
 namespace folly {
 
 [[noreturn]] FOLLY_ALWAYS_INLINE void assume_unreachable() {
-#if defined(__GNUC__)
-  __builtin_unreachable();
-#elif defined(_MSC_VER)
-  __assume(0);
-#else
-  exit (EXIT_FAILURE);
-#endif
+  ::cct::unreachable();
 }
 
 /**

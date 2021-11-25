@@ -36,10 +36,7 @@
 namespace cct {
 
 class CoincenterParsedOptions;
-
-namespace api {
 class TradeOptions;
-}  // namespace api
 
 class Coincenter {
  public:
@@ -101,7 +98,7 @@ class Coincenter {
   ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
   ///    markets.
   MonetaryAmount trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
-                       const PrivateExchangeName &privateExchangeName, const api::TradeOptions &tradeOptions);
+                       const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,

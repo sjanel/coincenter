@@ -10,6 +10,7 @@
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -185,7 +186,8 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
   }
   string urlOpts;
   if (optDepth) {
-    urlOpts = string("count=").append(std::to_string(*optDepth));
+    urlOpts.append("count=");
+    AppendChars(urlOpts, *optDepth);
   }
 
   json result = PublicQuery(curlHandle, "orderbook", base, quote, urlOpts);

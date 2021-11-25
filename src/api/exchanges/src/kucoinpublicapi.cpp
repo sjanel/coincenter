@@ -13,7 +13,7 @@
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
-#include "tradeoptions.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -214,7 +214,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
     depth = *lb;
   }
   string endpoint("api/v1/market/orderbook/level2_");
-  endpoint.append(std::to_string(depth));
+  AppendChars(endpoint, depth);
 
   json asksAndBids = PublicQuery(_curlHandle, endpoint, postData);
   const json& asks = asksAndBids["asks"];

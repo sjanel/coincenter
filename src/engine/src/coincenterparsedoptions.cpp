@@ -7,6 +7,7 @@
 #include "cct_log.hpp"
 #include "coincenteroptions.hpp"
 #include "stringoptionparser.hpp"
+#include "tradedefinitions.hpp"
 
 namespace cct {
 CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
@@ -104,11 +105,13 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
         anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
 
-    api::TradeMode tradeMode = cmdLineOptions.trade_sim ? api::TradeMode::kSimulation : api::TradeMode::kReal;
-    api::TradeType tradeType =
-        cmdLineOptions.trade_multi.empty() ? api::TradeType::kSingleTrade : api::TradeType::kMultiTradePossible;
-    tradeOptions = api::TradeOptions(cmdLineOptions.trade_strategy, tradeMode, cmdLineOptions.trade_timeout,
-                                     cmdLineOptions.trade_emergency, cmdLineOptions.trade_updateprice, tradeType);
+    TradeMode tradeMode = cmdLineOptions.trade_sim ? TradeMode::kSimulation : TradeMode::kReal;
+    TradeType tradeType = cmdLineOptions.trade_multi.empty() ? TradeType::kSingleTrade : TradeType::kMultiTradePossible;
+    TradeTimeoutAction timeoutAction =
+        cmdLineOptions.trade_timeout_match ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
+
+    tradeOptions = TradeOptions(cmdLineOptions.trade_price, timeoutAction, tradeMode, cmdLineOptions.trade_timeout,
+                                cmdLineOptions.trade_updateprice, tradeType);
   }
 
   if (!cmdLineOptions.withdraw.empty()) {

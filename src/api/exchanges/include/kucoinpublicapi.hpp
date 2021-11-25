@@ -21,7 +21,6 @@ class FiatConverter;
 
 namespace api {
 class CryptowatchAPI;
-class TradeOptions;
 
 class KucoinPublic : public ExchangePublic {
  public:

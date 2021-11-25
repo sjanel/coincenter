@@ -19,7 +19,6 @@ class FiatConverter;
 
 namespace api {
 class CryptowatchAPI;
-class TradeOptions;
 
 class BinancePublic : public ExchangePublic {
  public:

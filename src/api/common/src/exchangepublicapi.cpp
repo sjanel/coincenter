@@ -6,6 +6,7 @@
 #include "cct_smallset.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 namespace api {
@@ -155,16 +156,27 @@ MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount f
   return from.currencyCode() == m.base() ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
 }
 
-MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy, int depth) {
-  MarketOrderBook marketOrderBook = queryOrderBook(m, depth);
-  if (isTakerStrategy) {
-    std::optional<MonetaryAmount> optRet = marketOrderBook.computeAvgPriceForTakerAmount(from);
-    if (optRet) {
-      return *optRet;
+MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
+                                                    int depth) {
+  MarketOrderBook marketOrderBook = queryOrderBook(m, priceStrategy == TradePriceStrategy::kTaker ? depth : 1);
+  CurrencyCode marketCode = m.base();
+  switch (priceStrategy) {
+    case TradePriceStrategy::kTaker: {
+      std::optional<MonetaryAmount> optRet = marketOrderBook.computeAvgPriceForTakerAmount(from);
+      if (optRet) {
+        return *optRet;
+      }
+      log::error("{} is too big to be matched immediately on {}, return limit price instead", from.str(), m.str());
+      [[fallthrough]];
     }
-    log::error("{} is too big to be matched immediately on {}, return limit price instead", from.str(), m.str());
+    case TradePriceStrategy::kNibble:
+      marketCode = m.quote();
+      [[fallthrough]];
+    case TradePriceStrategy::kMaker:
+      return from.currencyCode() == marketCode ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
+    default:
+      unreachable();
   }
-  return from.currencyCode() == m.base() ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
 }
 
 Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {

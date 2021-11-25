@@ -14,7 +14,6 @@ namespace cct {
 class CoincenterInfo;
 
 namespace api {
-class TradeOptions;
 class KrakenPublic;
 
 class KrakenPrivate : public ExchangePrivate {

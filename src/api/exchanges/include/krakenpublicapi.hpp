@@ -13,7 +13,6 @@ class ExchangeInfo;
 
 namespace api {
 class CryptowatchAPI;
-class TradeOptions;
 
 class KrakenPublic : public ExchangePublic {
  public:

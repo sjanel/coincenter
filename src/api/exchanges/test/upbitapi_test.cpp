@@ -5,7 +5,6 @@
 #include "commonapi_test.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
-#include "tradeoptions.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 

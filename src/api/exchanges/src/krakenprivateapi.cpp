@@ -9,10 +9,11 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
+#include "cct_time_helpers.hpp"
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
 #include "ssl_sha.hpp"
-#include "tradeoptions.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -149,7 +150,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
           throw exception("Tag already set / unknown key information for " + string(currencyCode.str()));
         }
         if (valueStr.is_number_integer()) {
-          tag = std::to_string(static_cast<long>(valueStr));
+          SetChars(tag, static_cast<long>(valueStr));
         } else {
           tag = valueStr.get<string>();
         }
@@ -169,7 +170,6 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
 PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
-  using Clock = TradeOptions::Clock;
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();

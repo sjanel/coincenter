@@ -14,6 +14,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "tradedefinitions.hpp"
 
 namespace cct {
 
@@ -93,7 +94,8 @@ class ExchangePublic : public ExchangeBase {
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
 
-  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, bool isTakerStrategy, int depth = kDefaultDepth);
+  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
+                                      int depth = kDefaultDepth);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);

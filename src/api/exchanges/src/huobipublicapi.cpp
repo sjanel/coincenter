@@ -13,7 +13,6 @@
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
-#include "tradeoptions.hpp"
 
 namespace cct {
 namespace api {
@@ -264,7 +263,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
       lb = std::next(std::end(kAuthorizedDepths), -1);
       log::error("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else {
-      postData.append("depth", std::to_string(*lb));
+      postData.append("depth", *lb);
     }
   }
   json asksAndBids = PublicQuery(_curlHandle, "market/depth", postData);

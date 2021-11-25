@@ -10,6 +10,7 @@
 #include "cct_time_helpers.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
+#include "stringhelpers.hpp"
 #include "tradeoptions.hpp"
 #include "wallet.hpp"
 
@@ -59,11 +60,11 @@ struct CoincenterCmdLineOptions {
 
   string trade;
   string trade_multi;
-  string trade_strategy{api::TradeOptions().strategyStr()};
-  Duration trade_timeout{api::TradeOptions().maxTradeTime()};
-  Duration trade_emergency{api::TradeOptions().emergencyBufferTime()};
-  Duration trade_updateprice{api::TradeOptions().minTimeBetweenPriceUpdates()};
-  bool trade_sim{api::TradeOptions().isSimulation()};
+  string trade_price{TradeOptions().priceStrategyStr()};
+  bool trade_timeout_match = false;
+  Duration trade_timeout{TradeOptions().maxTradeTime()};
+  Duration trade_updateprice{TradeOptions().minTimeBetweenPriceUpdates()};
+  bool trade_sim{TradeOptions().isSimulation()};
 
   string withdraw;
   string withdraw_fee;
@@ -74,11 +75,9 @@ struct CoincenterCmdLineOptions {
 
 template <class OptValueType>
 CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser() {
-  static constexpr api::TradeOptions kDefaultTradeOptions;
+  static constexpr TradeOptions kDefaultTradeOptions;
   static constexpr int64_t defaultTradeTimeout =
       std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.maxTradeTime()).count();
-  static constexpr int64_t emergencyBufferTime =
-      std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.emergencyBufferTime()).count();
   static constexpr int64_t minUpdatePriceTime =
       std::chrono::duration_cast<std::chrono::seconds>(kDefaultTradeOptions.minTimeBetweenPriceUpdates()).count();
   static constexpr bool isSimulationModeByDefault = kDefaultTradeOptions.isSimulation();
@@ -105,7 +104,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                  "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
                                                  &OptValueType::repeats},
        {{{"General", 1}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
-                                                    .append(std::to_string(kDefaultRepeatDurationSeconds)).append("s)")},  
+                                                    .append(ToString<string>(kDefaultRepeatDurationSeconds)).append("s)")},  
                                                   &OptValueType::repeat_time},
        {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
                                                                        &OptValueType::markets},
@@ -146,25 +145,20 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                    "Options are same than for single trade, applied to each step trade.\n"
                                                                    "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
                                                                    &OptValueType::trade_multi},
-       {{{"Trade", 4}, "--trade-strategy", "<maker|taker|adapt>", "Customize the strategy of the trade\n"
-                                                                  " - 'maker': order placed at limit price (default), continuously "
-                                                                  "adjusted to limit price\n"
-                                                                  " - 'taker': order placed at market price (should be matched directly)\n"
-                                                                  " - 'adapt': same as maker, except that order will be updated"
-                                                                  " at market price before the timeout to make it eventually completely matched. "
-                                                                  "Useful for exchanges proposing cheaper maker than taker fees."}, 
-                                                                  &OptValueType::trade_strategy},
+       {{{"Trade", 4}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
+                                                                  " - 'maker': order price continuously set at limit price (default)\n"
+                                                                  " - 'nibble': order price continuously set at limit price + (buy)/- (sell) 1\n"
+                                                                  " - 'taker': order price will be at market price, expected to be matched directly"}, 
+                                                                  &OptValueType::trade_price},
        {{{"Trade", 4}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
-                                                .append(std::to_string(defaultTradeTimeout))
+                                                .append(ToString<string>(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 
                                                 &OptValueType::trade_timeout},
-       {{{"Trade", 4}, "--trade-emergency", "<time>", string("Adjust emergency buffer for the 'adapt' strategy (default: ")
-                                                   .append(std::to_string(emergencyBufferTime))
-                                                   .append("s). Remaining order will be switched from limit to market price "
-                                                   "after 'timeout - emergency' time to force completion of the trade")}, 
-                                                   &OptValueType::trade_emergency},
+       {{{"Trade", 4}, "--trade-timeout-match", "", "If after the timeout some amount is still not traded,\n"
+                                                    "force match by placing a remaining order at market price\n"}, 
+                                                    &OptValueType::trade_timeout_match},
        {{{"Trade", 4}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
-                                                    .append(std::to_string(minUpdatePriceTime))
+                                                    .append(ToString<string>(minUpdatePriceTime))
                                                     .append("s). Avoids cancelling / placing new orders too often with high volumes "
                                                     "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
        {{{"Trade", 4}, "--trade-sim", "", string("Activates simulation mode only (default: ")
@@ -184,7 +178,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                 "(Prometheus by default). Refer to the README for more information"}, 
                                                        &OptValueType::useMonitoring},
        {{{"Monitoring", 6}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
-                                                          .append(std::to_string(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
+                                                          .append(ToString<string>(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
                                                          &OptValueType::monitoring_port},
        {{{"Monitoring", 6}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
                                                         .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 

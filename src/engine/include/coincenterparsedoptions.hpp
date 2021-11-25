@@ -26,7 +26,7 @@ class CoincenterParsedOptions {
   MonetaryAmount startTradeAmount;
   CurrencyCode toTradeCurrency;
   PrivateExchangeName tradePrivateExchangeName;
-  api::TradeOptions tradeOptions;
+  TradeOptions tradeOptions;
 
   CurrencyCode marketsCurrency;
   PublicExchangeNames marketsExchanges;
