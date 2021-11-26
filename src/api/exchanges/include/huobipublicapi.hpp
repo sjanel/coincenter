@@ -23,9 +23,10 @@ class CryptowatchAPI;
 
 class HuobiPublic : public ExchangePublic {
  public:
-  static constexpr char kUrlBase[] = "https://api.huobi.pro";
+  static constexpr std::string_view kUrlBase = "https://api.huobi.pro";
 
-  static constexpr char kUrlAlt[] = "https://api-aws.huobi.pro";  // More optimized if coincenter is used within 'AWS'
+  // More optimized if coincenter is used within 'AWS'
+  static constexpr std::string_view kUrlAlt = "https://api-aws.huobi.pro";
 
   static constexpr char kUserAgent[] = "Huobi C++ API Client";
 

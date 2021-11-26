@@ -45,7 +45,7 @@ string UrlEncode(std::string_view str) {
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName,
                   BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
                   const CurlPostData& curlPostData) {
-  string methodUrl = BithumbPublic::kUrlBase;
+  string methodUrl(BithumbPublic::kUrlBase);
   methodUrl.push_back('/');
   methodUrl.append(methodName);
 

@@ -45,7 +45,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   opts.httpHeaders.emplace_back("KC-API-PASSPHRASE: ").append(passphrase);
   opts.httpHeaders.emplace_back("KC-API-KEY-VERSION: 2");
 
-  string url = KucoinPublic::kUrlBase;
+  string url(KucoinPublic::kUrlBase);
   url.append(method);
 
   json dataJson = json::parse(curlHandle.query(url, opts));

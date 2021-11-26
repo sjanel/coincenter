@@ -15,7 +15,7 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  string method_url = UpbitPublic::kUrlBase;
+  string method_url(UpbitPublic::kUrlBase);
   method_url.append("/v1/");
   method_url.append(endpoint);
 

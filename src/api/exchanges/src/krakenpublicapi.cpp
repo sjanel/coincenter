@@ -17,7 +17,7 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  string method_url = KrakenPublic::kUrlBase;
+  string method_url(KrakenPublic::kUrlBase);
   method_url.push_back('/');
   method_url.push_back(KrakenPublic::kVersion);
   method_url.append("/public/");
