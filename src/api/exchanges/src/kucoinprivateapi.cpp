@@ -5,9 +5,9 @@
 #include "apikey.hpp"
 #include "cct_codec.hpp"
 #include "cct_nonce.hpp"
-#include "cct_toupperlower.hpp"
 #include "kucoinpublicapi.hpp"
 #include "ssl_sha.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace api {
@@ -16,9 +16,6 @@ namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view method, CurlPostData&& postdata = CurlPostData()) {
-  const bool endpointWithParameters =
-      requestType == CurlOptions::RequestType::kGet || requestType == CurlOptions::RequestType::kDelete;
-
   CurlOptions opts(requestType, std::move(postdata));
 
   Nonce nonce = Nonce_TimeSinceEpoch();
@@ -27,7 +24,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   strToSign.append(method);
 
   if (!opts.postdata.empty()) {
-    if (endpointWithParameters) {
+    if (requestType == CurlOptions::RequestType::kGet || requestType == CurlOptions::RequestType::kDelete) {
       strToSign.push_back('?');
       strToSign.append(opts.postdata.str());
     } else {
@@ -76,7 +73,7 @@ void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount 
   log::info("Perform inner transfer of {} to {} account", amount.str(), toStr);
   PrivateQuery(curlHandle, apiKey, CurlOptions::RequestType::kPost, "/api/v2/accounts/inner-transfer",
                {{"clientOid", Nonce_TimeSinceEpoch()},  // Not really needed, but it's mandatory apparently
-                {"currency", amount.currencyCode().str()},
+                {"currency", amount.currencyStr()},
                 {"amount", amount.amountStr()},
                 {"from", fromStr},
                 {"to", toStr}});

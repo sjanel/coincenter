@@ -10,7 +10,7 @@
 namespace cct {
 /// constexpr and integral version of math.power.
 /// Taken from https://gist.github.com/orlp/3551590
-constexpr int64_t ipow(int64_t base, uint8_t exp) {
+constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
   constexpr uint8_t highest_bit_set[] = {0,   1,   2,   2,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   4,
                                          4,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,
                                          5,   5,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,   6,
@@ -69,15 +69,15 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) {
 }
 
 template <class T>
-concept SignedIntegral = std::integral<T> && std::is_signed<T>::value;
+concept SignedIntegral = std::integral<T> && std::is_signed_v<T>;
 
 template <class T>
-concept UnsignedIntegral = std::integral<T> && !SignedIntegral<T>;
+concept UnsignedIntegral = std::integral<T> && !std::is_signed_v<T>;
 
 /// Return the number of digits of given integral.
 /// Uses dichotomy for highest performance as possible.
 template <SignedIntegral T>
-constexpr int ndigits(T n) {
+constexpr int ndigits(T n) noexcept {
   if constexpr (std::is_same_v<T, int8_t>) {
     return n < 0 ? (n > -100 ? (n > -10 ? 1 : 2) : 3) : (n < 100 ? (n < 10 ? 1 : 2) : 3);
   } else if constexpr (std::is_same_v<T, int16_t>) {
@@ -113,14 +113,14 @@ constexpr int ndigits(T n) {
 
 /// Count the number of digits including the possible minus sign for negative integrals.
 template <SignedIntegral T>
-constexpr int nchars(T n) {
+constexpr int nchars(T n) noexcept {
   return ndigits(n) + static_cast<int>(n < 0);
 }
 
 /// Return the number of digits of given integral.
 /// Uses dichotomy for highest performance as possible.
 template <UnsignedIntegral T>
-constexpr int ndigits(T n) {
+constexpr int ndigits(T n) noexcept {
   if constexpr (std::is_same_v<T, uint8_t>) {
     return n < 100U ? (n < 10U ? 1 : 2) : 3;
   } else if constexpr (std::is_same_v<T, uint16_t>) {
@@ -144,7 +144,7 @@ constexpr int ndigits(T n) {
 
 /// Synonym of ndigits for unsigned types.
 template <UnsignedIntegral T>
-constexpr int nchars(T n) {
+constexpr int nchars(T n) noexcept {
   return ndigits(n);
 }
 

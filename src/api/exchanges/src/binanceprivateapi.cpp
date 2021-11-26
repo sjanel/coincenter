@@ -44,7 +44,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   if (binanceError(dataJson)) {
     int statusCode = dataJson["code"];  // "1100" for instance
     int nbRetries = 0;
-    CurlHandle::Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
+    Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
     while (++nbRetries < kNbOrderRequestsRetries && (statusCode == -2013 || statusCode == -2011)) {
       // Order does not exist : this may be possible when we query an order info too fast
       log::warn("Binance cannot find order yet");
@@ -161,7 +161,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
                 kBinanceCoinCur.str());
       json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost,
                                  binancePublic._commonInfo.getBestBaseURL(), "/sapi/v1/asset/dust",
-                                 {{"asset", from.currencyCode().str()}});
+                                 {{"asset", from.currencyStr()}});
       if (!result.contains("transferResult") || result["transferResult"].empty()) {
         throw exception("Unexpected dust transfer result");
       }
@@ -277,8 +277,7 @@ TradedAmounts BinancePrivate::parseTrades(Market m, CurrencyCode fromCurrencyCod
   } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
     detailTradedInfo.tradedTo -= fee;
   } else {
-    log::warn("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyCode().str(),
-              m.str());
+    log::warn("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
   }
   return detailTradedInfo;
 }

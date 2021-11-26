@@ -8,11 +8,11 @@
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "cct_toupperlower.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace api {

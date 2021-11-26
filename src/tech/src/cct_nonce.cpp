@@ -13,9 +13,7 @@ namespace cct {
 Nonce Nonce_TimeSinceEpoch() {
   const auto p1 = std::chrono::system_clock::now();
   uintmax_t msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(p1.time_since_epoch()).count();
-  Nonce ret;
-  SetChars(ret, msSinceEpoch);
-  return ret;
+  return ToString<Nonce>(msSinceEpoch);
 }
 
 Nonce Nonce_LiteralDate() {

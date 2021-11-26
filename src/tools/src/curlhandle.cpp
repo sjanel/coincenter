@@ -14,8 +14,8 @@
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "cct_mathhelpers.hpp"
 #include "cct_proxy.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 

@@ -78,7 +78,7 @@ TEST_F(CachedResultTest, GetCache) {
 }
 
 TEST_F(CachedResultTest, SetInCache) {
-  CachedResType::TimePoint t = CachedResType::Clock::now();
+  TimePoint t = Clock::now();
   cachedResult.set(42, t, 3, 4);
   EXPECT_EQ(cachedResult.get(3, 4), 42);
   EXPECT_EQ(cachedResult.get(3, 4), 42);
@@ -96,7 +96,7 @@ TEST_F(CachedResultTest, RetrieveFromCache) {
   RetrieveRetType ret = cachedResult.retrieve(-5, 3);
   ASSERT_NE(ret.first, nullptr);
   EXPECT_EQ(*ret.first, -2);
-  EXPECT_GT(ret.second, CachedResType::TimePoint());
+  EXPECT_GT(ret.second, TimePoint());
   EXPECT_EQ(cachedResult.retrieve(-4, 3), RetrieveRetType());
 }
 }  // namespace cct

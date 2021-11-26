@@ -61,6 +61,6 @@ The first time you launch grafana, you should access it with admin/admin credent
 - process_cpu_seconds_total
 - foobar_build_info
 
-## Labels
+## Labels
 Use labels to differentiate the characteristics of the thing that is being measured:
 currency="EOS" or "USD"...

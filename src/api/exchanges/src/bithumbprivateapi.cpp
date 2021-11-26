@@ -250,7 +250,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   MaxNbDecimalsUnitMap::const_iterator maxUnitNbDecimalsIt = _maxNbDecimalsUnitMap.find(m.base());
   int8_t nbMaxDecimalsUnits = std::numeric_limits<MonetaryAmount::AmountType>::digits10;
   if (maxUnitNbDecimalsIt != _maxNbDecimalsUnitMap.end() &&
-      maxUnitNbDecimalsIt->second.lastUpdatedTime + _nbDecimalsRefreshTime > TradeOptions::Clock::now()) {
+      maxUnitNbDecimalsIt->second.lastUpdatedTime + _nbDecimalsRefreshTime > Clock::now()) {
     nbMaxDecimalsUnits = maxUnitNbDecimalsIt->second.nbDecimals;
     volume.truncate(nbMaxDecimalsUnits);
   }

@@ -1,15 +1,10 @@
 #pragma once
 
-#include <chrono>
-
 #include "cct_vector.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 class CachedResultBase {
- public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
  protected:
   friend class CachedResultVault;
 

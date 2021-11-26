@@ -6,8 +6,8 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_toupperlower.hpp"
 #include "coincenterinfo.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace api {

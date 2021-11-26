@@ -15,10 +15,10 @@
 #include <string_view>
 #include <variant>
 
-#include "cct_mathhelpers.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "commandlineoption.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 
@@ -142,7 +142,7 @@ class CommandLineOptionsParser : private Opts {
     }
     stream << "Options:" << std::endl;
     int lenFirstRows = 0;
-    constexpr int kMaxCharLine = 140;
+    static constexpr int kMaxCharLine = 120;
     for (const auto& [opt, v] : _commandLineOptionsWithValues) {
       int lenRows = static_cast<int>(opt.fullName().size() + opt.valueDescription().size() + 1);
       int shortNameSize = static_cast<int>(opt.shortName().size());

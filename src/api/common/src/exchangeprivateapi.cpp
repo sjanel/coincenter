@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-#include "cct_time_helpers.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -27,8 +27,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       } else {
-        log::warn("Cannot convert {} into {} on {}", amount.currencyCode().str(), equiCurrency.str(),
-                  _exchangePublic.name());
+        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency.str(), _exchangePublic.name());
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
       log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
@@ -55,7 +54,7 @@ MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode to
       _exchangePublic.findFastestConversionPath(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
     log::error("Cannot trade {} into {} on {}", initialAmount.str(), toCurrency.str(), _exchangePublic.name());
-    return MonetaryAmount(0, toCurrency, 0);
+    return MonetaryAmount(0, toCurrency);
   }
   const int nbTrades = conversionPath.size();
   MonetaryAmount avAmount = from;

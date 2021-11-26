@@ -1,4 +1,4 @@
-#include "cct_time_helpers.hpp"
+#include "timehelpers.hpp"
 
 #include <gtest/gtest.h>
 
@@ -9,9 +9,9 @@ namespace cct {
 namespace time {
 
 TEST(TimeHelper, Basic) {
-  TimePoint t1 = GetTimePoint();
+  TimePoint t1 = Clock::now();
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  TimePoint t2 = GetTimePoint();
+  TimePoint t2 = Clock::now();
   TimeInUs res = GetTimeDiff<TimeInUs>(t1, t2);
   EXPECT_GE(res.count(), 1000);
   std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -4,10 +4,10 @@
 #include <string_view>
 #include <utility>
 
-#include "cct_run_modes.hpp"
 #include "cct_string.hpp"
 #include "curloptions.hpp"
-
+#include "runmodes.hpp"
+#include "timehelpers.hpp"
 namespace cct {
 
 class AbstractMetricGateway;
@@ -20,12 +20,6 @@ class AbstractMetricGateway;
 /// CurlHandle for faster similar queries.
 class CurlHandle {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
-  // CurlHandle is trivially relocatable
-  using trivially_relocatable = std::true_type;
-
   /// Constructs a default CurlHandle without any min duration between queries nor support for metric collection.
   CurlHandle() : CurlHandle(nullptr, Clock::duration::zero(), settings::RunMode::kProd) {}
 
@@ -41,13 +35,16 @@ class CurlHandle {
   CurlHandle(CurlHandle &&o) noexcept;
   CurlHandle &operator=(CurlHandle &&o) noexcept;
 
+  ~CurlHandle();
+
   string urlEncode(std::string_view url);
 
   string query(std::string_view url, const CurlOptions &opts);
 
   Clock::duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
-  ~CurlHandle();
+  // CurlHandle is trivially relocatable
+  using trivially_relocatable = std::true_type;
 
  private:
   void checkHandleOrInit();

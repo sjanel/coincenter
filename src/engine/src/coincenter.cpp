@@ -11,11 +11,11 @@
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
-#include "cct_time_helpers.hpp"
 #include "coincenteroptions.hpp"
 #include "coincenterparsedoptions.hpp"
 #include "simpletable.hpp"
 #include "stringoptionparser.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -274,7 +274,7 @@ void Coincenter::exportBalanceMetrics(const BalancePerExchange &balancePerExchan
     key.set("total", "no");
     MonetaryAmount totalEquiAmount(0, equiCurrency);
     for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balancePortfolio) {
-      key.set("currency", amountWithEqui.amount.currencyCode().str());
+      key.set("currency", amountWithEqui.amount.currencyStr());
       metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, amountWithEqui.amount.toDouble());
       if (!equiCurrency.isNeutral()) {
         totalEquiAmount += amountWithEqui.equi;

@@ -6,10 +6,10 @@
 #include "apikey.hpp"
 #include "cct_codec.hpp"
 #include "cct_nonce.hpp"
-#include "cct_toupperlower.hpp"
 #include "huobipublicapi.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace api {
