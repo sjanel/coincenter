@@ -5,11 +5,11 @@
 
 #include "apikey.hpp"
 #include "cct_const.hpp"
-#include "cct_run_modes.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "exchangename.hpp"
+#include "runmodes.hpp"
 
 namespace cct {
 namespace api {
@@ -27,8 +27,8 @@ class APIKeysProvider {
   APIKeysProvider(const APIKeysProvider &) = delete;
   APIKeysProvider &operator=(const APIKeysProvider &) = delete;
 
-  APIKeysProvider(APIKeysProvider &&) = default;
-  APIKeysProvider &operator=(APIKeysProvider &&) = default;
+  APIKeysProvider(APIKeysProvider &&) noexcept = default;
+  APIKeysProvider &operator=(APIKeysProvider &&) noexcept = default;
 
   KeyNames getKeyNames(std::string_view platform) const;
 

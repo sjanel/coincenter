@@ -1,4 +1,4 @@
-#include "cct_mathhelpers.hpp"
+#include "mathhelpers.hpp"
 
 #include <gtest/gtest.h>
 

@@ -22,8 +22,8 @@ add_unit_test(
 )
 
 add_unit_test(
-    cct_mathhelpers_test
-    test/cct_mathhelpers_test.cpp
+    mathhelpers_test
+    test/mathhelpers_test.cpp
 )
 
 add_unit_test(
@@ -52,11 +52,6 @@ add_unit_test(
 )
 
 add_unit_test(
-    cct_time_helpers_test
-    test/cct_time_helpers_test.cpp
-)
-
-add_unit_test(
     simpletable_test
     src/simpletable.cpp
     test/simpletable_test.cpp
@@ -65,4 +60,9 @@ add_unit_test(
 add_unit_test(
     stringhelpers_test
     test/stringhelpers_test.cpp
+)
+
+add_unit_test(
+    timehelpers_test
+    test/timehelpers_test.cpp
 )

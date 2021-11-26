@@ -16,7 +16,7 @@ constexpr char kTestUrl[] = "https://live.cardeasexml.com/ultradns.php";
 
 class CurlSetup : public ::testing::Test {
  protected:
-  CurlSetup() : handle(nullptr, CurlHandle::Clock::duration::zero(), settings::RunMode::kProd) {}
+  CurlSetup() : handle(nullptr, Clock::duration::zero(), settings::RunMode::kProd) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}
@@ -25,8 +25,7 @@ class CurlSetup : public ::testing::Test {
 };
 
 TEST_F(CurlSetup, BasicCurlTest) {
-  string out = handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet));
-  EXPECT_EQ(out, "POOL_UP");
+  EXPECT_EQ(handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet)), "POOL_UP");
 }
 
 TEST_F(CurlSetup, QueryKrakenTime) {

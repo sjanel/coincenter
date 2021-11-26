@@ -7,18 +7,16 @@
 
 #include "cct_const.hpp"
 #include "cct_string.hpp"
-#include "cct_time_helpers.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "stringhelpers.hpp"
+#include "timehelpers.hpp"
 #include "tradeoptions.hpp"
 #include "wallet.hpp"
 
 namespace cct {
 
 struct CoincenterCmdLineOptions {
-  using Duration = Clock::duration;
-
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = std::chrono::seconds(1);
@@ -119,8 +117,8 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Public queries", 2}, "--ticker", "[exch1,...]", "Print ticker information for all markets for all exchanges,"
                                                            "or only for specified ones"}, 
                                                            &OptValueType::ticker},
-       {{{"Public queries", 2}, "--conversion-path", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
-                                                                                     "for given exchanges if possible"}, 
+       {{{"Public queries", 2}, "--conversion", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
+                                                                                "for given exchanges if possible"}, 
                                                           &OptValueType::conversion_path},
        {{{"Public queries", 2}, "--volume-day", "<cur1-cur2[,exch1,...]>", "Print last 24h traded volume for market 'cur1'-'cur2' "
                                                                            "for all exchanges (or specified one)"}, 

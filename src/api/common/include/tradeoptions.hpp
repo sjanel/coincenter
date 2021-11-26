@@ -4,14 +4,12 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "timehelpers.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
 class TradeOptions {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
   static constexpr Clock::duration kDefaultTradeDuration = std::chrono::seconds(30);
   static constexpr Clock::duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 

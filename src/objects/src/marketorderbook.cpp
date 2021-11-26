@@ -407,7 +407,7 @@ void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, Mon
   string h2(exchangeName);
   h2.append(" ").append(_market.base().str()).append(" price in ").append(_market.quote().str());
   string h3(exchangeName);
-  h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate.currencyCode().str());
+  h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate.currencyStr());
   string h4("Buyers of ");
   h4.append(_market.base().str()).append(" (bids)");
 

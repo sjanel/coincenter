@@ -3,7 +3,7 @@
 #include <charconv>
 #include <concepts>
 
-#include "cct_mathhelpers.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 

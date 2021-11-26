@@ -14,10 +14,10 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
-#include "cct_toupperlower.hpp"
 #include "coincenterinfo.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
+#include "toupperlower.hpp"
 #include "upbitpublicapi.hpp"
 
 namespace cct {

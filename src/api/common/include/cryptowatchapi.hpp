@@ -7,10 +7,11 @@
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
-#include "cct_run_modes.hpp"
 #include "curlhandle.hpp"
 #include "exchangebase.hpp"
 #include "market.hpp"
+#include "runmodes.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 class CoincenterInfo;
@@ -18,9 +19,6 @@ namespace api {
 /// Public API connected to different exchanges, providing fast methods to retrieve huge amount of data.
 class CryptowatchAPI : public ExchangeBase {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
   explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
                           Clock::duration fiatsUpdateFrequency = std::chrono::hours(96),
                           bool loadFromFileCacheAtInit = true);

@@ -430,7 +430,7 @@ coincenter --price sol-btc
 
 ### Conversion path
 
-Option `--conversion-path` is used by `--multitrade` option (see [Multi trade](#multi-trade)) but may be used as stand-alone for information.
+Option `--conversion` is used by `--multitrade` option (see [Multi trade](#multi-trade)) but may be used as stand-alone for information.
 From a starting currency to a destination currency, `coincenter` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
 
 It will print the result as an ordered list of markets for each exchange.

@@ -5,12 +5,12 @@
 
 #include "cct_const.hpp"
 #include "cct_string.hpp"
-#include "cct_time_helpers.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "timehelpers.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct {

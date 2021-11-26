@@ -10,7 +10,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "cct_time_helpers.hpp"
+#include "timehelpers.hpp"
 
 #ifdef _WIN32  // for hostname
 #include <Winsock2.h>

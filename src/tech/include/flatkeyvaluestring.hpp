@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <concepts>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -125,10 +126,10 @@ class FlatKeyValueString {
   /// Append a new URL option from given key value pair.
   void append(std::string_view key, std::string_view value);
 
-  template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
-  void append(std::string_view key, T value) {
-    char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
-    auto ret = std::to_chars(buf, std::end(buf), value);
+  void append(std::string_view key, std::integral auto i) {
+    // + 1 for minus, +1 for additional partial ranges coverage
+    char buf[std::numeric_limits<decltype(i)>::digits10 + 2];
+    auto ret = std::to_chars(buf, std::end(buf), i);
     append(key, std::string_view(buf, ret.ptr));
   }
 
@@ -139,10 +140,10 @@ class FlatKeyValueString {
   /// Updates the value for given key, or append if not existing.
   void set(std::string_view key, std::string_view value);
 
-  template <class T, typename std::enable_if_t<std::is_integral_v<T>, bool> = true>
-  void set(std::string_view key, T value) {
-    char buf[std::numeric_limits<T>::digits10 + 2];  // + 1 for minus, +1 for additional partial ranges coverage
-    auto ret = std::to_chars(buf, std::end(buf), value);
+  void set(std::string_view key, std::integral auto i) {
+    // + 1 for minus, +1 for additional partial ranges coverage
+    char buf[std::numeric_limits<decltype(i)>::digits10 + 2];
+    auto ret = std::to_chars(buf, std::end(buf), i);
     set(key, std::string_view(buf, ret.ptr));
   }
 

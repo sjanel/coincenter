@@ -15,7 +15,7 @@
 #include "cct_config.hpp"
 #include "cct_hash.hpp"
 #include "cct_log.hpp"
-#include "cct_toupperlower.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 
@@ -58,7 +58,7 @@ class CurrencyCode {
   }
 
   /// Returns a 64 bits code
-  constexpr uint64_t code() const {
+  constexpr uint64_t code() const noexcept {
     uint64_t ret = _data[6];
     ret |= static_cast<uint64_t>(_data[5]) << 8;
     ret |= static_cast<uint64_t>(_data[4]) << 16;
@@ -69,14 +69,15 @@ class CurrencyCode {
     return ret;
   }
 
-  constexpr bool isNeutral() const { return _data.front() == '\0'; }
+  constexpr bool isNeutral() const noexcept { return _data.front() == '\0'; }
 
   void print(std::ostream &os) const { os << str(); }
 
-  constexpr bool operator<(CurrencyCode o) const { return code() < o.code(); }
-  constexpr bool operator<=(CurrencyCode o) const { return !(o < *this); }
-  constexpr bool operator>(CurrencyCode o) const { return o < *this; }
-  constexpr bool operator>=(CurrencyCode o) const { return !(*this < o); }
+  constexpr bool operator<(CurrencyCode o) const noexcept { return code() < o.code(); }
+  constexpr bool operator<=(CurrencyCode o) const noexcept { return !(o < *this); }
+  constexpr bool operator>(CurrencyCode o) const noexcept { return o < *this; }
+  constexpr bool operator>=(CurrencyCode o) const noexcept { return !(*this < o); }
+
   constexpr bool operator==(CurrencyCode o) const { return std::equal(_data.begin(), _data.end(), o._data.begin()); }
   constexpr bool operator!=(CurrencyCode o) const { return !(*this == o); }
 

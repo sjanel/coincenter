@@ -47,15 +47,15 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
   return dataJson;
 }
 
-CurlHandle::Clock::duration Ping(CurlHandle& curlHandle, std::string_view baseURL) {
-  CurlHandle::TimePoint t1 = CurlHandle::Clock::now();
+Clock::duration Ping(CurlHandle& curlHandle, std::string_view baseURL) {
+  TimePoint t1 = Clock::now();
   json sysTime = PublicQuery(curlHandle, baseURL, "time");
-  CurlHandle::TimePoint t2 = CurlHandle::Clock::now();
-  CurlHandle::Clock::duration ping = t2 - t1;
+  TimePoint t2 = Clock::now();
+  Clock::duration ping = t2 - t1;
   if (!sysTime.contains("serverTime")) {
     throw exception("Binance reply should contain system time information");
   }
-  CurlHandle::TimePoint binanceSysTimePoint(std::chrono::milliseconds(sysTime["serverTime"].get<uint64_t>()));
+  TimePoint binanceSysTimePoint(std::chrono::milliseconds(sysTime["serverTime"].get<uint64_t>()));
   if (t1 < binanceSysTimePoint && binanceSysTimePoint < t2) {
     log::debug("Your system clock is synchronized with Binance one");
   } else {
@@ -120,7 +120,7 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
       _baseURLUpdater(CachedResultOptions(std::chrono::hours(96))) {}
 
 std::string_view BinancePublic::CommonInfo::BaseURLUpdater::operator()() {
-  CurlHandle::Clock::duration pingDurations[kNbBaseURLs];
+  Clock::duration pingDurations[kNbBaseURLs];
   std::transform(std::execution::par, std::begin(_curlHandles), std::end(_curlHandles),
                  std::begin(BinancePublic::kURLBases), std::begin(pingDurations), Ping);
   int minPingDurationPos = static_cast<int>(std::min_element(std::begin(pingDurations), std::end(pingDurations)) -

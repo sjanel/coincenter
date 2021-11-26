@@ -6,8 +6,8 @@
 #include <iomanip>
 #include <numeric>
 
-#include "cct_mathhelpers.hpp"
 #include "cct_smallvector.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 namespace {
@@ -54,8 +54,8 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
       os << std::get<std::string_view>(_data);
       break;
     case 2: {
-      static constexpr int kBufSize = ndigits(std::numeric_limits<IntegralType>::max()) + 1;
-      std::array<char, kBufSize> buf;  // +1 for '-'
+      static constexpr int kBufSize = ndigits(std::numeric_limits<IntegralType>::max()) + 1;  // +1 for '-'
+      std::array<char, kBufSize> buf;
 
       if (auto [ptr, ec] = std::to_chars(buf.data(), buf.data() + kBufSize, std::get<IntegralType>(_data));
           ec == std::errc()) {

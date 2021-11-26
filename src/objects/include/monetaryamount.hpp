@@ -1,13 +1,14 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string_view>
 
-#include "cct_mathhelpers.hpp"
 #include "cct_string.hpp"
-#include "cct_type_traits.hpp"
 #include "currencycode.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 
@@ -17,7 +18,7 @@ namespace cct {
 /// opposed to double).
 /// In addition, it is light (only 16 bytes) and can be passed by copy instead of reference.
 ///
-/// It is easy and straightforward to use with implicit string constructor and partial constexpr support.
+/// It is easy and straightforward to use with string_view constructor and partial constexpr support.
 ///
 /// Examples: $50, -2.045 BTC.
 /// The integral value stored in the MonetaryAmount is multiplied by 10^'_nbDecimals'
@@ -30,12 +31,10 @@ class MonetaryAmount {
   constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a neutral currency
-  template <class IntegralType, typename std::enable_if_t<std::is_integral_v<IntegralType>, bool> = true>
-  constexpr explicit MonetaryAmount(IntegralType amount) noexcept : _amount(amount), _nbDecimals(0) {}
+  constexpr explicit MonetaryAmount(std::integral auto amount) noexcept : _amount(amount), _nbDecimals(0) {}
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a currency
-  template <class IntegralType, typename std::enable_if_t<std::is_integral_v<IntegralType>, bool> = true>
-  constexpr explicit MonetaryAmount(IntegralType amount, CurrencyCode currencyCode) noexcept
+  constexpr explicit MonetaryAmount(std::integral auto amount, CurrencyCode currencyCode) noexcept
       : _amount(amount), _currencyCode(currencyCode), _nbDecimals(0) {}
 
   /// Construct a new MonetaryAmount from a double.
@@ -116,9 +115,9 @@ class MonetaryAmount {
   constexpr bool operator!=(MonetaryAmount o) const { return !(*this == o); }
 
   /// True if amount is 0
-  constexpr bool isZero() const { return _amount == 0; }
+  constexpr bool isZero() const noexcept { return _amount == 0; }
 
-  MonetaryAmount operator-() const { return MonetaryAmount(-_amount, _currencyCode, _nbDecimals); }
+  MonetaryAmount operator-() const noexcept { return MonetaryAmount(-_amount, _currencyCode, _nbDecimals); }
 
   MonetaryAmount operator+(MonetaryAmount o) const;
 
@@ -165,10 +164,10 @@ class MonetaryAmount {
     return *this;
   }
 
-  constexpr MonetaryAmount toNeutral() const { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
+  constexpr MonetaryAmount toNeutral() const noexcept { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
-  constexpr void truncate(int8_t maxNbDecimals) { sanitizeNbDecimals(maxNbDecimals); }
+  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeNbDecimals(maxNbDecimals); }
 
   /// Get a std::string_view on the currency of this amount
   constexpr std::string_view currencyStr() const { return _currencyCode.str(); }
@@ -183,7 +182,7 @@ class MonetaryAmount {
  private:
   using UnsignedAmountType = uint64_t;
 
-  constexpr void simplify() {
+  constexpr void simplify() noexcept {
     if (_amount == 0) {
       _nbDecimals = 0;
     } else {
@@ -193,7 +192,7 @@ class MonetaryAmount {
     }
   }
 
-  constexpr void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) {
+  constexpr void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) noexcept {
     const int8_t nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
@@ -202,7 +201,7 @@ class MonetaryAmount {
     }
   }
 
-  constexpr bool isSane() const {
+  constexpr bool isSane() const noexcept {
     return _nbDecimals < std::numeric_limits<AmountType>::digits10 &&
            ndigits(_amount) <= std::numeric_limits<AmountType>::digits10;
   }
@@ -212,7 +211,7 @@ class MonetaryAmount {
   int8_t _nbDecimals;
 };
 
-static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size increase");
+static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small and fast to copy");
 
 inline MonetaryAmount operator*(MonetaryAmount::AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 

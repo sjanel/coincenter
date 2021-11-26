@@ -9,11 +9,11 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
-#include "cct_time_helpers.hpp"
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 namespace api {
@@ -55,7 +55,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
   string ret = curlHandle.query(method_url, opts);
   json jsonData = json::parse(std::move(ret));
-  CurlHandle::Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
+  Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
          jsonData["error"].front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
     log::error("Kraken private API rate limit exceeded");

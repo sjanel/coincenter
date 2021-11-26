@@ -11,12 +11,12 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cct_const.hpp"
-#include "cct_run_modes.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangeinfomap.hpp"
 #include "monitoringinfo.hpp"
+#include "runmodes.hpp"
 
 namespace cct {
 
