@@ -28,7 +28,7 @@ namespace {
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view method, CurlPostDataT&& curlPostData = CurlPostData()) {
-  string method_url = UpbitPublic::kUrlBase;
+  string method_url(UpbitPublic::kUrlBase);
   method_url.append("/v1/");
   method_url.append(method);
 

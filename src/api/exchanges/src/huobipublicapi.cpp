@@ -19,7 +19,7 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  string url = HuobiPublic::kUrlBase;
+  string url(HuobiPublic::kUrlBase);
   url.push_back('/');
   url.append(endpoint);
   if (!curlPostData.empty()) {

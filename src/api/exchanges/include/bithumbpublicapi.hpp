@@ -42,7 +42,7 @@ class BithumbPublic : public ExchangePublic {
 
   MonetaryAmount queryLastPrice(Market m) override;
 
-  static constexpr char kUrlBase[] = "https://api.bithumb.com";
+  static constexpr std::string_view kUrlBase = "https://api.bithumb.com";
   static constexpr char kUserAgent[] = "Bithumb C++ API Client";
 
  private:

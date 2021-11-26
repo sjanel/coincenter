@@ -24,7 +24,7 @@ class CryptowatchAPI;
 
 class KucoinPublic : public ExchangePublic {
  public:
-  static constexpr char kUrlBase[] = "https://api.kucoin.com";
+  static constexpr std::string_view kUrlBase = "https://api.kucoin.com";
 
   static constexpr char kUserAgent[] = "Kucoin C++ API Client";
 

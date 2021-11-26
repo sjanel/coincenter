@@ -239,13 +239,13 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::set(std::string_view k
   if (pos == string::npos) {
     append(key, value);
   } else {
-    pos += key.size() + 1;
-    std::size_t endPos = pos + 1;
-    const std::size_t ps = _data.size();
-    while (endPos < ps && _data[endPos] != KeyValuePairSep) {
-      ++endPos;
+    string::const_iterator first = _data.begin() + pos + key.size() + 1;
+    string::const_iterator last = first + 1;
+    string::const_iterator end = _data.end();
+    while (last != end && *last != KeyValuePairSep) {
+      ++last;
     }
-    _data.replace(pos, endPos - pos, value);
+    _data.replace(first, last, value);
   }
 }
 

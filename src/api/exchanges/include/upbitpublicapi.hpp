@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
@@ -41,7 +43,7 @@ class UpbitPublic : public ExchangePublic {
 
   MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
 
-  static constexpr char kUrlBase[] = "https://api.upbit.com";
+  static constexpr std::string_view kUrlBase = "https://api.upbit.com";
   static constexpr char kUserAgent[] = "Upbit C++ API Client";
 
  private:

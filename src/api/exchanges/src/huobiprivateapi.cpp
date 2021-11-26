@@ -18,7 +18,7 @@ namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
                   std::string_view method, const CurlPostData& postdata = CurlPostData()) {
-  string url = HuobiPublic::kUrlBase;
+  string url(HuobiPublic::kUrlBase);
   url.append(method);
 
   Nonce nonce = Nonce_LiteralDate();
@@ -31,7 +31,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   // Remove 'https://' (which is 8 chars) from URL base
   string paramsStr(opts.requestTypeStr());
   paramsStr.push_back('\n');
-  paramsStr.append(HuobiPublic::kUrlBase + 8);
+  paramsStr.append(
+      std::string_view(HuobiPublic::kUrlBase.data() + 8, HuobiPublic::kUrlBase.data() + HuobiPublic::kUrlBase.size()));
   paramsStr.push_back('\n');
   paramsStr.append(method);
   paramsStr.push_back('\n');

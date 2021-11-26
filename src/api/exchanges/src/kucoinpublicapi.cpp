@@ -20,7 +20,7 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  string url = KucoinPublic::kUrlBase;
+  string url(KucoinPublic::kUrlBase);
   url.push_back('/');
   url.append(endpoint);
   if (!curlPostData.empty()) {

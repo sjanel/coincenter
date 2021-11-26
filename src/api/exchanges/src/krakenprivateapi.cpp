@@ -42,7 +42,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   path.append("/private/");
   path.append(method);
 
-  string method_url = KrakenPublic::kUrlBase + path;
+  string method_url(KrakenPublic::kUrlBase);
+  method_url.append(path);
 
   CurlOptions opts(CurlOptions::RequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
   opts.userAgent = KrakenPublic::kUserAgent;

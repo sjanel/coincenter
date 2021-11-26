@@ -12,11 +12,11 @@
 namespace cct {
 namespace api {
 namespace {
-constexpr char kUrlBase[] = "https://api.cryptowat.ch";
+constexpr std::string_view kUrlBase = "https://api.cryptowat.ch";
 constexpr char kUserAgent[] = "Cryptowatch C++ API Client";
 
 string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  string method_url = kUrlBase;
+  string method_url(kUrlBase);
   method_url.push_back('/');
   method_url.append(method);
 

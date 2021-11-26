@@ -18,7 +18,7 @@ namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode::kNeutral, std::string_view urlOpts = "") {
-  string method_url = BithumbPublic::kUrlBase;
+  string method_url(BithumbPublic::kUrlBase);
   method_url.append("/public/");
   method_url.append(endpoint);
   method_url.push_back('/');
