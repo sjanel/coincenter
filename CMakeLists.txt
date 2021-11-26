@@ -43,22 +43,37 @@ set(CMAKE_CXX_STANDARD 20)
 # External dependencies (linked with FetchContent)
 include(FetchContent)
 
-FetchContent_Declare(
-  amadeusamc
-  GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-  GIT_TAG        v2.1
-)
+find_package(amc CONFIG)
 
-FetchContent_MakeAvailable(amadeusamc)
+if(amc_FOUND)
+  set(LINK_AMC FALSE)
+else()
+  message(STATUS "Could not find local installation of amc, fetching sources")
 
-if(CCT_ENABLE_TESTS)
+  set(LINK_AMC TRUE)
+
   FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        release-1.11.0
+    amadeusamc
+    GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
+    GIT_TAG        v2.2
   )
 
-  FetchContent_MakeAvailable(googletest)
+  FetchContent_MakeAvailable(amadeusamc)
+endif()
+
+if(CCT_ENABLE_TESTS)
+  find_package(GTest CONFIG)
+  if (NOT GTest_FOUND)
+    message(STATUS "Could not find local installation of Gtest, fetching sources")
+  
+    FetchContent_Declare(
+      googletest
+      GIT_REPOSITORY https://github.com/google/googletest.git
+      GIT_TAG        release-1.11.0
+    )
+
+    FetchContent_MakeAvailable(googletest)
+  endif()
 
   enable_testing()
 endif()
@@ -69,13 +84,20 @@ FetchContent_Declare(
   GIT_TAG        v3.10.4
 )
 
-FetchContent_Declare(
-  spdlog
-  GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.9.2
-)
+FetchContent_MakeAvailable(json)
 
-FetchContent_MakeAvailable(json spdlog)
+find_package(spdlog CONFIG)
+if (NOT spdlog_FOUND)
+  message(STATUS "Could not find local installation of spdlog, fetching sources")
+
+  FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.9.2
+  )
+
+  FetchContent_MakeAvailable(spdlog)
+endif()
 
 if (CCT_BUILD_PROMETHEUS_FROM_SRC)
 
@@ -167,8 +189,10 @@ function(add_unit_test name)
 
    if(CCT_ENABLE_TESTS)
      add_exe(${name} ${MY_UNPARSED_ARGUMENTS})
-     target_link_libraries(${name} PRIVATE gtest gmock gmock_main)
-     target_link_libraries(${name} PRIVATE amc::amc)
+     target_link_libraries(${name} PRIVATE GTest::gtest GTest::gmock GTest::gmock_main)
+     if (LINK_AMC)
+       target_link_libraries(${name} PRIVATE amc::amc)
+     endif()
      target_include_directories(${name} PRIVATE include)
      target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/tools/include)
 
