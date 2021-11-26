@@ -2,8 +2,10 @@
 aux_source_directory(src API_TECH_SRC)
 
 add_library(coincenter_tech STATIC ${API_TECH_SRC})
-target_link_libraries(coincenter_tech PUBLIC amc::amc)
 target_link_libraries(coincenter_tech PUBLIC nlohmann_json::nlohmann_json)
+if (LINK_AMC)
+  target_link_libraries(coincenter_tech PUBLIC amc::amc)
+endif()
 target_link_libraries(coincenter_tech PUBLIC spdlog)
 
 target_include_directories(coincenter_tech PUBLIC include)
