@@ -10,8 +10,8 @@
 
 namespace cct {
 
-using PublicExchangeName = string;
-using PublicExchangeNames = FixedCapacityVector<PublicExchangeName, kNbSupportedExchanges>;
+using ExchangeName = string;
+using PublicExchangeNames = FixedCapacityVector<ExchangeName, kNbSupportedExchanges>;
 
 class PrivateExchangeName {
  public:
@@ -48,4 +48,7 @@ class PrivateExchangeName {
 };
 
 using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
+
+inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName; }
+inline std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
 }  // namespace cct

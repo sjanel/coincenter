@@ -27,7 +27,7 @@ using Order = ExchangeRetriever::Order;
 TEST(ExchangeRetriever, Empty) {
   EXPECT_TRUE(ExchangeRetriever().exchanges().empty());
   PublicExchangeNames names;
-  EXPECT_TRUE(ExchangeRetriever().retrieveSelectedExchanges(Order::kInitial, names).empty());
+  EXPECT_TRUE(ExchangeRetriever().select(Order::kInitial, names).empty());
 }
 
 TEST(ExchangeRetriever, RetrieveUniqueCandidate) {
@@ -50,12 +50,11 @@ TEST(ExchangeRetriever, RetrieveSelectedExchangesInitialOrder) {
   ExchangeRetriever exchangeRetriever(kAllExchanges);
   EXPECT_FALSE(exchangeRetriever.exchanges().empty());
   PublicExchangeNames names{"kraken"};
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      exchangeRetriever.retrieveSelectedExchanges(Order::kInitial, names);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = exchangeRetriever.select(Order::kInitial, names);
   ASSERT_EQ(selectedExchanges.size(), 2U);
   EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
   EXPECT_EQ(selectedExchanges.back()->name(), "kraken");
-  selectedExchanges = exchangeRetriever.retrieveSelectedExchanges(Order::kInitial);
+  selectedExchanges = exchangeRetriever.select(Order::kInitial, PublicExchangeNames());
   ASSERT_EQ(selectedExchanges.size(), 3U);
   EXPECT_EQ(selectedExchanges[0]->name(), "kraken");
   EXPECT_EQ(selectedExchanges[1]->name(), "bithumb");
@@ -69,8 +68,7 @@ TEST(ExchangeRetriever, RetrieveSelectedExchangesSelectedOrder) {
                                     ExchangeTest(first, "user2")};
     ExchangeRetriever exchangeRetriever(kAllExchanges);
     PublicExchangeNames names{second, first};
-    ExchangeRetriever::SelectedExchanges selectedExchanges =
-        exchangeRetriever.retrieveSelectedExchanges(Order::kSelection, names);
+    ExchangeRetriever::SelectedExchanges selectedExchanges = exchangeRetriever.select(Order::kSelection, names);
     ASSERT_EQ(selectedExchanges.size(), 3U);
     EXPECT_EQ(selectedExchanges[0]->name(), second);
     EXPECT_EQ(selectedExchanges[1]->name(), first);
@@ -85,8 +83,7 @@ TEST(ExchangeRetriever, RetrieveAtMostOneAccountSelectedExchanges) {
                                     ExchangeTest(first, "user2")};
     ExchangeRetriever exchangeRetriever(kAllExchanges);
     PublicExchangeNames names{second, first};
-    ExchangeRetriever::UniquePublicSelectedExchanges selectedExchanges =
-        exchangeRetriever.retrieveAtMostOneAccountSelectedExchanges(names);
+    ExchangeRetriever::UniquePublicSelectedExchanges selectedExchanges = exchangeRetriever.selectOneAccount(names);
     ASSERT_EQ(selectedExchanges.size(), 2U);
     EXPECT_EQ(selectedExchanges.front()->name(), second);
     EXPECT_EQ(selectedExchanges.back()->name(), first);
@@ -99,7 +96,7 @@ TEST(ExchangeRetriever, RetrieveUniquePublicExchange) {
     ExchangeTest kAllExchanges[] = {ExchangeTest(first, "user1"), ExchangeTest(second, "user1")};
     ExchangeRetriever exchangeRetriever(kAllExchanges);
     PublicExchangeNames names{second, first};
-    ExchangeRetriever::UniquePublicExchanges selectedExchanges = exchangeRetriever.retrieveUniquePublicExchanges(names);
+    ExchangeRetriever::PublicExchangesVec selectedExchanges = exchangeRetriever.selectPublicExchanges(names);
     ASSERT_EQ(selectedExchanges.size(), 2U);
     EXPECT_EQ(selectedExchanges.front()->name(), second);
     EXPECT_EQ(selectedExchanges.back()->name(), first);

@@ -46,8 +46,9 @@ class Coincenter {
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
   using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
-  using ExchangeTickerMaps = std::pair<ExchangeRetriever::UniquePublicExchanges, Coincenter::MarketOrderBookMaps>;
+  using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, Coincenter::MarketOrderBookMaps>;
   using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
+  using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
 
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
       : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
@@ -64,34 +65,36 @@ class Coincenter {
   void process(const CoincenterParsedOptions &opts);
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
-  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, std::span<const PublicExchangeName> exchangeNames);
+  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, std::span<const ExchangeName> exchangeNames);
 
   /// Retrieve ticker information for given selected public exchanges, or all if empty.
-  ExchangeTickerMaps getTickerInformation(std::span<const PublicExchangeName> exchangeNames);
+  ExchangeTickerMaps getTickerInformation(std::span<const ExchangeName> exchangeNames);
 
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
-  MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const PublicExchangeName> exchangeNames,
+  MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const ExchangeName> exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
-  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m,
-                                                              std::span<const PublicExchangeName> exchangeNames);
+  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
 
   /// Retrieve the last price for exchanges supporting given market.
-  MonetaryAmountPerExchange getLastPricePerExchange(Market m, std::span<const PublicExchangeName> exchangeNames);
+  MonetaryAmountPerExchange getLastPricePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
 
   /// Retrieve all matching Exchange references trading currency, at most one per platform.
   UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode,
-                                                            std::span<const PublicExchangeName> exchangeNames);
+                                                            std::span<const ExchangeName> exchangeNames);
 
   /// Retrieve all matching Exchange references proposing market, at most one per platform.
-  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, std::span<const PublicExchangeName> exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, std::span<const ExchangeName> exchangeNames);
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                 CurrencyCode equiCurrency = CurrencyCode::kNeutral);
+
+  WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
+                                   CurrencyCode depositCurrency);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency conversion
   /// path and will launch several 'single' trades to reach that final goal. Example:
@@ -104,19 +107,21 @@ class Coincenter {
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName);
 
-  void printMarkets(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
+  void printMarkets(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
   void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
 
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
 
-  void printConversionPath(std::span<const PublicExchangeName> exchangeNames, Market m);
+  void printDepositInfo(const PrivateExchangeNames &privateExchangeNames, CurrencyCode depositCurrencyCode);
 
-  void printWithdrawFees(CurrencyCode currencyCode, std::span<const PublicExchangeName> exchangeNames);
+  void printConversionPath(std::span<const ExchangeName> exchangeNames, Market m);
 
-  void printLast24hTradedVolume(Market m, std::span<const PublicExchangeName> exchangeNames);
+  void printWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
-  void printLastPrice(Market m, std::span<const PublicExchangeName> exchangeNames);
+  void printLast24hTradedVolume(Market m, std::span<const ExchangeName> exchangeNames);
+
+  void printLastPrice(Market m, std::span<const ExchangeName> exchangeNames);
 
   PublicExchangeNames getPublicExchangeNames() const;
 

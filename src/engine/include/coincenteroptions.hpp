@@ -64,6 +64,7 @@ struct CoincenterCmdLineOptions {
   Duration trade_updateprice{TradeOptions().minTimeBetweenPriceUpdates()};
   bool trade_sim{TradeOptions().isSimulation()};
 
+  string deposit_info;
   string withdraw;
   string withdraw_fee;
 
@@ -163,13 +164,16 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                          .append(isSimulationModeByDefault ? "true" : "false")
                                          .append("). For some exchanges, API can even be queried in this "
                                          "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::trade_sim},
-
-       {{{"Withdraw crypto", 5}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
+       {{{"Withdraw and deposit", 5}, "--deposit-info", "<cur[,exch1,...]>", "Get deposit wallet information for given currency."
+                                                                             " If no exchange accounts are given, will query all of them by default"},
+                                                                             &OptValueType::deposit_info},
+       {{{"Withdraw and deposit", 5}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
                                                                          " Amount is gross, including fees. Address and tag will be retrieved"
                                                                          " automatically from destination exchange and should match an entry in '")
                                                                         .append(kDepositAddressesFileName)
-                                                                        .append("' file.")}, &OptValueType::withdraw},
-       {{{"Withdraw crypto", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
+                                                                        .append("' file.")}, 
+                                                                        &OptValueType::withdraw},
+       {{{"Withdraw and deposit", 5}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 
                                                                 &OptValueType::withdraw_fee},
        {{{"Monitoring", 6}, "--monitoring", "", "Progressively send metrics to external instance provided that it's correctly set up "

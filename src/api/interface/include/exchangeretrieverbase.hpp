@@ -21,7 +21,6 @@ class ExchangeRetrieverBase {
       std::conditional_t<std::is_const_v<ExchangeT>, std::add_const_t<typename ExchangeT::ExchangePublic>,
                          typename ExchangeT::ExchangePublic>;
   using PublicExchangesVec = FixedCapacityVector<ExchangePublicT *, kNbSupportedExchanges>;
-  using UniquePublicExchanges = PublicExchangesVec;
 
   ExchangeRetrieverBase() = default;
 
@@ -54,31 +53,26 @@ class ExchangeRetrieverBase {
 
   enum class Order { kInitial, kSelection };
 
-  /// Retrieve all selected exchange addresses matching given public names, or all if empty span is given.
-  /// Returned exchanges order can be controlled thanks to 'order' parameter:
-  ///  - 'kInitial'   : matching 'Exchanges' are returned according to their initial order (at creation of
-  ///                  'this' object)
-  ///  - 'kSelection' : matching 'Exchanges' are returned according to given 'exchangeNames' order,
-  ///                   or initial order if empty
-  SelectedExchanges retrieveSelectedExchanges(
-      Order order, std::span<const PublicExchangeName> exchangeNames = std::span<const PublicExchangeName>()) const {
+ private:
+  template <class Names, class Matcher>
+  SelectedExchanges select(Order order, const Names &names, Matcher matcher) const {
     SelectedExchanges ret;
-    if (exchangeNames.empty()) {
+    if (names.empty()) {
+      ret.reserve(_exchanges.size());
       std::transform(_exchanges.begin(), _exchanges.end(), std::back_inserter(ret),
                      [](ExchangeT &e) { return std::addressof(e); });
     } else {
       switch (order) {
         case Order::kInitial:
           for (ExchangeT &e : _exchanges) {
-            if (std::any_of(exchangeNames.begin(), exchangeNames.end(),
-                            [&e](const PublicExchangeName &exchangeName) { return e.name() == exchangeName; })) {
+            if (std::any_of(names.begin(), names.end(), [&e, &matcher](const auto &n) { return matcher(e, n); })) {
               ret.push_back(std::addressof(e));
             }
           }
           break;
         case Order::kSelection:
-          for (const PublicExchangeName &exchangeName : exchangeNames) {
-            auto nameMatch = [&exchangeName](ExchangeT &e) { return e.name() == exchangeName; };
+          for (const auto &n : names) {
+            auto nameMatch = [&n, &matcher](ExchangeT &e) { return matcher(e, n); };
             auto endIt = _exchanges.end();
             auto oldSize = ret.size();
             for (auto foundIt = std::find_if(_exchanges.begin(), endIt, nameMatch); foundIt != _exchanges.end();
@@ -86,8 +80,10 @@ class ExchangeRetrieverBase {
               ret.push_back(std::addressof(*foundIt));
             }
             if (ret.size() == oldSize) {
-              throw exception(
-                  string("Unable to find public exchange ").append(exchangeName).append(" in the exchange list"));
+              string ex("Unable to find ");
+              ex.append(ToString(n));
+              ex.append(" in the exchange list");
+              throw exception(std::move(ex));
             }
           }
           break;
@@ -99,14 +95,43 @@ class ExchangeRetrieverBase {
     return ret;
   }
 
+  template <class NameType>
+  struct Matcher {
+    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, PrivateExchangeName>);
+
+    bool operator()(const ExchangeT &e, const NameType &n) const {
+      if constexpr (std::is_same_v<NameType, ExchangeName>) {
+        return e.name() == n;
+      } else {
+        return e.matchesKeyNameWildcard(n);
+      }
+    }
+  };
+
+  template <class NamesContainerType>
+  using NameType = std::remove_cvref_t<decltype(*std::declval<NamesContainerType>().begin())>;
+
+ public:
+  /// Retrieve all selected exchange addresses matching given public names, or all if empty span is given.
+  /// Returned exchanges order can be controlled thanks to 'order' parameter:
+  ///  - 'kInitial'   : matching 'Exchanges' are returned according to their initial order (at creation of
+  ///                  'this' object)
+  ///  - 'kSelection' : matching 'Exchanges' are returned according to given 'exchangeNames' order,
+  ///                   or initial order if empty
+  template <class Names>
+  SelectedExchanges select(Order order, const Names &exchangeNames) const {
+    return select(order, exchangeNames, Matcher<NameType<Names>>());
+  }
+
   /// Among all 'Exchange's, retrieve at most one 'Exchange' per public echange matching public exchange names.
   /// Order of 'Exchange's will respect the same order as the 'exchangeNames' given in input.
   /// Examples
   ///   {"kraken_user1", "kucoin_user1"}                 -> {"kraken_user1", "kucoin_user1"}
   ///   {"kraken_user1", "kraken_user2", "kucoin_user1"} -> {"kraken_user1", "kucoin_user1"}
-  UniquePublicSelectedExchanges retrieveAtMostOneAccountSelectedExchanges(
-      std::span<const PublicExchangeName> exchangeNames) const {
-    auto selectedExchanges = retrieveSelectedExchanges(Order::kSelection, exchangeNames);
+  ///   {"huobi",        "kucoin_user1"}                 -> {"huobi_user1",  "kucoin_user1"}
+  template <class Names>
+  UniquePublicSelectedExchanges selectOneAccount(const Names &exchangeNames) const {
+    SelectedExchanges selectedExchanges = select(Order::kSelection, exchangeNames, Matcher<NameType<Names>>());
     UniquePublicSelectedExchanges ret;
     std::copy_if(selectedExchanges.begin(), selectedExchanges.end(), std::back_inserter(ret), [&ret](ExchangeT *e) {
       return std::none_of(ret.begin(), ret.end(), [e](ExchangeT *o) { return o->name() == e->name(); });
@@ -119,9 +144,11 @@ class ExchangeRetrieverBase {
   /// Examples
   ///   {"kraken_user1", "kucoin_user1"}                 -> {"kraken", "kucoin"}
   ///   {"kraken_user1", "kraken_user2", "kucoin_user1"} -> {"kraken", "kucoin"}
-  UniquePublicExchanges retrieveUniquePublicExchanges(std::span<const PublicExchangeName> exchangeNames) const {
-    auto selectedExchanges = retrieveAtMostOneAccountSelectedExchanges(exchangeNames);
-    UniquePublicExchanges selectedPublicExchanges;
+  ///   {"huobi",        "kucoin_user1"}                 -> {"huobi",  "kucoin"}
+  template <class Names>
+  PublicExchangesVec selectPublicExchanges(const Names &exchangeNames) const {
+    auto selectedExchanges = selectOneAccount(exchangeNames);
+    PublicExchangesVec selectedPublicExchanges;
     std::transform(selectedExchanges.begin(), selectedExchanges.end(), std::back_inserter(selectedPublicExchanges),
                    [](ExchangeT *e) { return std::addressof(e->apiPublic()); });
     return selectedPublicExchanges;
