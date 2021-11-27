@@ -3,7 +3,6 @@
 #include <curl/curl.h>
 
 #include <cassert>
-#include <charconv>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -15,7 +14,7 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_proxy.hpp"
-#include "mathhelpers.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 
@@ -177,9 +176,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   const CURLcode res = curl_easy_perform(curl);  // Get reply
   if (res != CURLE_OK) {
     string ex("Unexpected response from curl: Error ");
-    const int nbDigitsRes = ndigits(static_cast<int>(res));
-    ex.resize(ex.size() + nbDigitsRes);
-    std::to_chars(ex.data() + ex.length() - nbDigitsRes, ex.data() + ex.length(), static_cast<int>(res));
+    AppendString(ex, static_cast<int>(res));
     throw exception(std::move(ex));
   }
 

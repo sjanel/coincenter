@@ -1,6 +1,5 @@
 #include "binanceprivateapi.hpp"
 
-#include <charconv>
 #include <thread>
 
 #include "apikey.hpp"
@@ -166,7 +165,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
         throw exception("Unexpected dust transfer result");
       }
       const json& res = result["transferResult"].front();
-      SetChars(placeOrderInfo.orderId, res["tranId"].get<std::size_t>());
+      SetString(placeOrderInfo.orderId, res["tranId"].get<std::size_t>());
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {
@@ -194,7 +193,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
-  SetChars(placeOrderInfo.orderId, result["orderId"].get<size_t>());
+  SetString(placeOrderInfo.orderId, result["orderId"].get<size_t>());
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {
@@ -238,8 +237,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
     }
     result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
                           binancePublic._commonInfo.getBestBaseURL(), "api/v3/myTrades", myTradesOpts);
-    int64_t integralOrderId = 0;
-    std::from_chars(orderId.data(), orderId.data() + orderId.size(), integralOrderId);
+    int64_t integralOrderId = FromString<int64_t>(orderId);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
         orderInfo.tradedAmounts += parseTrades(m, fromCurrencyCode, tradeDetails);

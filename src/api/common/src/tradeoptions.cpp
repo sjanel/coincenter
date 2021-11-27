@@ -62,9 +62,9 @@ string TradeOptions::str() const {
   string ret(isSimulation() ? "Simulated " : "Real ");
   ret.append(priceStrategyStr());
   ret.append(" strategy, timeout of ");
-  AppendChars(ret, std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count());
+  AppendString(ret, std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count());
   ret.append("s, ").append(timeoutActionStr()).append(" at timeout, min time between two price updates of ");
-  AppendChars(ret, std::chrono::duration_cast<std::chrono::seconds>(_minTimeBetweenPriceUpdates).count());
+  AppendString(ret, std::chrono::duration_cast<std::chrono::seconds>(_minTimeBetweenPriceUpdates).count());
   ret.push_back('s');
   return ret;
 }

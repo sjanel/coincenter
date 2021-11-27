@@ -2,12 +2,13 @@
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <iomanip>
 #include <numeric>
 
 #include "cct_smallvector.hpp"
 #include "mathhelpers.hpp"
+#include "stringhelpers.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 namespace {
@@ -38,9 +39,9 @@ size_type SimpleTable::Cell::size() const noexcept {
     case 1:
       return static_cast<size_type>(std::get<std::string_view>(_data).size());
     case 2:
-      return static_cast<size_type>(ndigits(std::get<IntegralType>(_data)));
+      return static_cast<size_type>(nchars(std::get<IntegralType>(_data)));
     default:
-      return 0U;
+      unreachable();
   }
 }
 
@@ -53,16 +54,11 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
     case 1:
       os << std::get<std::string_view>(_data);
       break;
-    case 2: {
-      static constexpr int kBufSize = ndigits(std::numeric_limits<IntegralType>::max()) + 1;  // +1 for '-'
-      std::array<char, kBufSize> buf;
-
-      if (auto [ptr, ec] = std::to_chars(buf.data(), buf.data() + kBufSize, std::get<IntegralType>(_data));
-          ec == std::errc()) {
-        os << std::string_view(buf.data(), ptr);
-      }
+    case 2:
+      os << ToString<string>(std::get<IntegralType>(_data));
       break;
-    }
+    default:
+      unreachable();
   }
   os << ' ' << kColumnSep;
 }

@@ -1,6 +1,5 @@
 #include "huobiprivateapi.hpp"
 
-#include <charconv>
 #include <thread>
 
 #include "apikey.hpp"
@@ -85,7 +84,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPubli
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   string method = "/v1/account/accounts/";
-  AppendChars(method, _accountIdCache.get());
+  AppendString(method, _accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, method);
   BalancePortfolio balancePortfolio;
@@ -259,8 +258,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/v1/dw/withdraw/api/create",
                              withdrawPostData);
-  string withdrawIdStr;
-  SetChars(withdrawIdStr, result["data"].get<int64_t>());
+  string withdrawIdStr = ToString<string>(result["data"].get<int64_t>());
   return InitiatedWithdrawInfo(std::move(wallet), std::move(withdrawIdStr), grossAmount);
 }
 
@@ -268,8 +266,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   string lowerCaseCur = tolower(currencyCode.str());
   std::string_view withdrawIdStr = initiatedWithdrawInfo.withdrawId();
-  int64_t withdrawId;
-  std::from_chars(withdrawIdStr.data(), withdrawIdStr.data() + withdrawIdStr.size(), withdrawId);
+  int64_t withdrawId = FromString<int64_t>(withdrawIdStr);
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
                                    {{"currency", lowerCaseCur}, {"from", withdrawIdStr}, {"type", "withdraw"}});
   MonetaryAmount netEmittedAmount;

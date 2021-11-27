@@ -1,6 +1,6 @@
 #include "commandlineoption.hpp"
 
-#include <charconv>
+#include "stringhelpers.hpp"
 
 namespace cct {
 CommandLineOption::CommandLineOption(GroupNameAndPrio optionGroupName, std::string_view fullName, char shortName,
@@ -27,8 +27,7 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
     throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
   }
   std::string_view timeAmountStr(durationStr.begin(), durationStr.begin() + endAmountPos);
-  int64_t timeAmount = 0;
-  std::from_chars(timeAmountStr.data(), timeAmountStr.data() + timeAmountStr.size(), timeAmount);
+  int64_t timeAmount = FromString<int64_t>(timeAmountStr);
   std::string_view timeUnitStr(durationStr.begin() + startTimeUnit, durationStr.end());
   if (timeUnitStr == "h") {
     return std::chrono::hours(timeAmount);

@@ -41,7 +41,9 @@ TEST(SimpleTable, SettingRowDirectly) {
   t.emplace_back(1235, "EUR", "Nothing here");
   t.emplace_back("3456.78", "USD", 42);
   t.emplace_back("-677234.67", "SUSHI", -12);
-  t.emplace_back(-67725634, "KEBAB", "-34.09");
+  t.emplace_back(-677256340000, "KEBAB", "-34.09");
+  EXPECT_EQ(t[2].front().size(), 7U);
+  EXPECT_EQ(t.back().front().size(), 13U);
   t.print(std::cout);
 }
 }  // namespace cct

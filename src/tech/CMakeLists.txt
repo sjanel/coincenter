@@ -21,6 +21,8 @@ add_unit_test(
     commandlineoptionsparser_test
     src/commandlineoption.cpp
     test/commandlineoptionsparser_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
@@ -57,11 +59,15 @@ add_unit_test(
     simpletable_test
     src/simpletable.cpp
     test/simpletable_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
     stringhelpers_test
     test/stringhelpers_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
