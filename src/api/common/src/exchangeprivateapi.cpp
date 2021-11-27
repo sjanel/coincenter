@@ -99,7 +99,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
       MonetaryAmount toAmount = fromCurrencyCode == m.quote() ? volume : volume.convertTo(price);
       ExchangeInfo::FeeType feeType =
           options.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-      toAmount = _config.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
+      toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
       from -= fromCurrencyCode == m.quote() ? volume.toNeutral() * price : volume;
       return toAmount;
     }

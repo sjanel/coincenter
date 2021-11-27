@@ -45,13 +45,13 @@ File GetFiatCacheFile(std::string_view dataDir) {
 
 CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode,
                                Clock::duration fiatsUpdateFrequency, bool loadFromFileCacheAtInit)
-    : _config(config),
+    : _coincenterInfo(config),
       _curlHandle(config.metricGatewayPtr(), Clock::duration::zero(), runMode),
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), _curlHandle),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
-    json data = GetFiatCacheFile(_config.dataDir()).readJson();
+    json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readJson();
     if (!data.empty()) {
       const int64_t timeepoch = data["timeepoch"].get<int64_t>();
       const auto& fiatsFile = data["fiats"];
@@ -127,7 +127,7 @@ json CryptowatchAPI::AllPricesFunc::operator()() {
 }
 
 void CryptowatchAPI::updateCacheFile() const {
-  File fiatsCacheFile = GetFiatCacheFile(_config.dataDir());
+  File fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
   json data = fiatsCacheFile.readJson();
   auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
   auto timeEpochIt = data.find("timeepoch");

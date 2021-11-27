@@ -143,7 +143,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
     log::warn("Defaulted to hardcoded provided CSV file");
     withdrawalFeesCsv =
-        File(_config.dataDir(), File::Type::kCache, "krakenwithdrawalfees.csv", File::IfNotFound::kThrow).read();
+        File(_coincenterInfo.dataDir(), File::Type::kCache, "krakenwithdrawalfees.csv", File::IfNotFound::kThrow)
+            .read();
   }
 
   std::size_t assetPos = std::string_view::npos;
@@ -194,7 +195,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
           if (spacePos != std::string_view::npos) {
             field = field.substr(0, spacePos);
           }
-          cur = CurrencyCode(_config.standardizeCurrencyCode(field));
+          cur = CurrencyCode(_coincenterInfo.standardizeCurrencyCode(field));
         } else if (fieldPos == withdrawFeePos) {
           withdrawFeeMinStr[0] = field;
         } else if (fieldPos == minWithdrawAmountPos) {
@@ -255,10 +256,10 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
-    if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _config)) {
+    if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _coincenterInfo)) {
       continue;
     }
-    CurrencyCode standardCode(_config.standardizeCurrencyCode(altCodeStr));
+    CurrencyCode standardCode(_coincenterInfo.standardizeCurrencyCode(altCodeStr));
     CurrencyExchange newCurrency(standardCode, CurrencyCode(krakenAssetName), CurrencyCode(altCodeStr),
                                  CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable);
 
@@ -294,24 +295,24 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
       continue;
     }
     std::string_view krakenBaseStr = value["base"].get<std::string_view>();
-    CurrencyCode base(_config.standardizeCurrencyCode(krakenBaseStr));
+    CurrencyCode base(_coincenterInfo.standardizeCurrencyCode(krakenBaseStr));
     auto baseIt = currencies.find(base);
     if (baseIt == currencies.end()) {
       continue;
     }
     const CurrencyExchange& baseExchange = *baseIt;
-    if (!CheckCurrencyExchange(krakenBaseStr, baseExchange.altStr(), excludedCurrencies, _config)) {
+    if (!CheckCurrencyExchange(krakenBaseStr, baseExchange.altStr(), excludedCurrencies, _coincenterInfo)) {
       continue;
     }
 
     std::string_view krakenQuoteStr = value["quote"].get<std::string_view>();
-    CurrencyCode quote(_config.standardizeCurrencyCode(krakenQuoteStr));
+    CurrencyCode quote(_coincenterInfo.standardizeCurrencyCode(krakenQuoteStr));
     auto quoteIt = currencies.find(quote);
     if (quoteIt == currencies.end()) {
       continue;
     }
     const CurrencyExchange& quoteExchange = *quoteIt;
-    if (!CheckCurrencyExchange(krakenQuoteStr, quoteExchange.altStr(), excludedCurrencies, _config)) {
+    if (!CheckCurrencyExchange(krakenQuoteStr, quoteExchange.altStr(), excludedCurrencies, _coincenterInfo)) {
       continue;
     }
     auto mkIt = ret.first.emplace(base, quote).first;
@@ -364,8 +365,8 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
     }
 
     Market m = krakenAssetPairToStdMarketMap.find(krakenAssetPair)->second;
-    m = Market(CurrencyCode(_config.standardizeCurrencyCode(m.base().str())),
-               CurrencyCode(_config.standardizeCurrencyCode(m.quote().str())));
+    m = Market(CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.base().str())),
+               CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.quote().str())));
     //  a = ask array(<price>, <whole lot volume>, <lot volume>)
     //  b = bid array(<price>, <whole lot volume>, <lot volume>)
     const json& askDetails = assetPairDetails["a"];

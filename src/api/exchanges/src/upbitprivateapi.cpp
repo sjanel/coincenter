@@ -181,7 +181,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   if (fromCurrencyCode == m.quote()) {
     // For 'buy', from amount is fee excluded
     ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _config.exchangeInfo(_exchangePublic.name());
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
     if (isTakerStrategy) {
       from = exchangeInfo.applyFee(from, feeType);
     } else {

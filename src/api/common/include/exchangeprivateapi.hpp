@@ -88,7 +88,7 @@ class ExchangePrivate : public ExchangeBase {
       : ExchangeBase(),
         _exchangePublic(exchangePublic),
         _cachedResultVault(exchangePublic._cachedResultVault),
-        _config(config),
+        _coincenterInfo(config),
         _apiKey(apiKey) {}
 
   virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) = 0;
@@ -129,7 +129,7 @@ class ExchangePrivate : public ExchangeBase {
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault;
-  const CoincenterInfo &_config;
+  const CoincenterInfo &_coincenterInfo;
   const APIKey &_apiKey;
 };
 }  // namespace api

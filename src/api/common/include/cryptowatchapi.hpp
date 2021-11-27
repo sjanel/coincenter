@@ -81,7 +81,7 @@ class CryptowatchAPI : public ExchangeBase {
   };
 
   CachedResultVault _cachedResultVault;
-  const CoincenterInfo &_config;
+  const CoincenterInfo &_coincenterInfo;
   CurlHandle _curlHandle;
   std::mutex _pricesMutex, _fiatsMutex, _exchangesMutex;
   CachedResult<FiatsFunc> _fiatsCache;
