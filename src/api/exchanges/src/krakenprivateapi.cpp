@@ -131,7 +131,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
   PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
 
-  std::string_view dataDir = _exchangePublic.coincenterInfo().dataDir();
+  const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
+  const bool validateWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
+  std::string_view dataDir = coincenterInfo.dataDir();
 
   string address, tag;
   for (const json& depositDetail : res) {
@@ -157,14 +159,16 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         }
       }
     }
-    if (Wallet::IsAddressPresentInDepositFile(dataDir, privateExchangeName, currencyCode, address, tag)) {
+    if (!validateWallet || Wallet::ValidateWallet(dataDir, privateExchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
+    address.clear();
     tag.clear();
   }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, _exchangePublic.coincenterInfo());
+  Wallet w(std::move(privateExchangeName), currencyCode, std::move(address), std::move(tag),
+           _exchangePublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }
