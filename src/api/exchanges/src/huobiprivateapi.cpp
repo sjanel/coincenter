@@ -107,12 +107,14 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
                              {{"currency", lowerCaseCur}});
   std::string_view address, tag;
   PrivateExchangeName privateExchangeName(_huobiPublic.name(), _apiKey.name());
-  std::string_view dataDir = _huobiPublic.coincenterInfo().dataDir();
+  const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
+  std::string_view dataDir = coincenterInfo.dataDir();
+  const bool validateWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
   for (const json& depositDetail : result["data"]) {
     address = depositDetail["address"].get<std::string_view>();
     tag = depositDetail["addressTag"].get<std::string_view>();
 
-    if (Wallet::IsAddressPresentInDepositFile(dataDir, privateExchangeName, currencyCode, address, tag)) {
+    if (!validateWallet || Wallet::ValidateWallet(dataDir, privateExchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);

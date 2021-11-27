@@ -14,9 +14,8 @@ File GetDepositAddressesFile(std::string_view dataDir) {
 }
 }  // namespace
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.
-bool Wallet::IsAddressPresentInDepositFile(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
-                                           CurrencyCode currency, std::string_view expectedAddress,
-                                           std::string_view expectedTag) {
+bool Wallet::ValidateWallet(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
+                            CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag) {
   File depositAddressesFile = GetDepositAddressesFile(dataDir);
   json data = depositAddressesFile.readJson();
   if (!data.contains(privateExchangeName.name())) {
@@ -65,7 +64,7 @@ void ValidateDepositAddressIfNeeded(const PrivateExchangeName &privateExchangeNa
                                     std::string_view address, std::string_view tag,
                                     const CoincenterInfo &coincenterInfo) {
   if (coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile() &&
-      !Wallet::IsAddressPresentInDepositFile(coincenterInfo.dataDir(), privateExchangeName, currency, address, tag)) {
+      !Wallet::ValidateWallet(coincenterInfo.dataDir(), privateExchangeName, currency, address, tag)) {
     string errMsg("Incorrect wallet compared to the one stored in ");
     errMsg.append(kDepositAddressesFileName);
     throw exception(std::move(errMsg));
@@ -79,10 +78,13 @@ Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode curr
   ValidateDepositAddressIfNeeded(_privateExchangeName, currency, address, tag, coincenterInfo);
 }
 
-Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, std::string_view address,
-               std::string_view tag, const CoincenterInfo &coincenterInfo)
-    : _privateExchangeName(std::move(privateExchangeName)), _address(address), _tag(tag), _currency(currency) {
-  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, address, tag, coincenterInfo);
+Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, string &&address, string &&tag,
+               const CoincenterInfo &coincenterInfo)
+    : _privateExchangeName(std::move(privateExchangeName)),
+      _address(std::move(address)),
+      _tag(std::move(tag)),
+      _currency(currency) {
+  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, _address, _tag, coincenterInfo);
 }
 
 string Wallet::str() const {

@@ -153,17 +153,12 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   } else {
     result = result.front();
   }
-  PrivateExchangeName privateExchangeName(_kucoinPublic.name(), _apiKey.name());
+
   std::string_view address = result["address"].get<std::string_view>();
   std::string_view tag = result["memo"].get<std::string_view>();
-  std::string_view dataDir = _kucoinPublic.coincenterInfo().dataDir();
-  if (!Wallet::IsAddressPresentInDepositFile(dataDir, privateExchangeName, currencyCode, address, tag)) {
-    log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
-    address = std::string_view();
-    tag = std::string_view();
-  }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, _kucoinPublic.coincenterInfo());
+  Wallet w(PrivateExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode, address, tag,
+           _kucoinPublic.coincenterInfo());
   log::info("Retrieved {}", w.str());
   return w;
 }
