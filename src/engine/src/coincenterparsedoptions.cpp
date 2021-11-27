@@ -114,6 +114,11 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
                                 cmdLineOptions.trade_updateprice, tradeType);
   }
 
+  if (!cmdLineOptions.deposit_info.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.deposit_info);
+    std::tie(depositCurrency, depositInfoPrivateExchanges) = anyParser.getCurrencyPrivateExchanges();
+  }
+
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
     std::tie(amountToWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =

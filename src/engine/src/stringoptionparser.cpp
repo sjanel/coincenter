@@ -16,17 +16,29 @@ PublicExchangeNames GetExchanges(std::string_view str) {
   }
   return exchanges;
 }
-}  // namespace
 
-PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
-
-PrivateExchangeNames StringOptionParser::getPrivateExchanges() const {
-  PublicExchangeNames fullNames = GetExchanges(_opt);
+PrivateExchangeNames GetPrivateExchanges(std::string_view str) {
+  PublicExchangeNames fullNames = GetExchanges(str);
   PrivateExchangeNames ret;
   ret.reserve(fullNames.size());
   std::transform(fullNames.begin(), fullNames.end(), std::back_inserter(ret),
                  [](std::string_view exchangeName) { return PrivateExchangeName(exchangeName); });
   return ret;
+}
+}  // namespace
+
+PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
+
+PrivateExchangeNames StringOptionParser::getPrivateExchanges() const { return GetPrivateExchanges(_opt); }
+
+StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPrivateExchanges() const {
+  std::size_t commaPos = getNextCommaPos(0, false);
+  std::string_view curStr(_opt.data(), commaPos == string::npos ? _opt.size() : commaPos);
+  std::string_view exchangesStr;
+  if (commaPos != string::npos) {
+    exchangesStr = std::string_view(_opt.data() + commaPos + 1, _opt.data() + _opt.size());
+  }
+  return CurrencyPrivateExchanges(CurrencyCode(curStr), GetPrivateExchanges(exchangesStr));
 }
 
 StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() const {

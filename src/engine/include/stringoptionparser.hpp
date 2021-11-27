@@ -20,12 +20,15 @@ class StringOptionParser {
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
   using CurrencyCodePublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
+  using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
 
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
   PublicExchangeNames getExchanges() const;
 
   PrivateExchangeNames getPrivateExchanges() const;
+
+  CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;
 
   MarketExchanges getMarketExchanges() const;
 

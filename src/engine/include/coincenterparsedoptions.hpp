@@ -48,6 +48,9 @@ class CoincenterParsedOptions {
   bool noSecretsForAll = false;
   PublicExchangeNames noSecretsExchanges;
 
+  CurrencyCode depositCurrency;
+  PrivateExchangeNames depositInfoPrivateExchanges;
+
   MonetaryAmount amountToWithdraw;
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
   CurrencyCode withdrawFeeCur;

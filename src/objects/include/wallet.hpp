@@ -11,6 +11,9 @@ namespace cct {
 class CoincenterInfo;
 class Wallet {
  public:
+  /// Empty wallet
+  Wallet() noexcept = default;
+
   /// Build a wallet with all information.
   Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
          std::string_view tag, const CoincenterInfo &coincenterInfo);
