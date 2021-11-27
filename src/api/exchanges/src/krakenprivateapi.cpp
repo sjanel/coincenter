@@ -151,7 +151,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
           throw exception("Tag already set / unknown key information for " + string(currencyCode.str()));
         }
         if (valueStr.is_number_integer()) {
-          SetChars(tag, static_cast<long>(valueStr));
+          SetString(tag, static_cast<long>(valueStr));
         } else {
           tag = valueStr.get<string>();
         }

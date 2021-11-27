@@ -1,7 +1,6 @@
 #include "monetaryamount.hpp"
 
 #include <cassert>
-#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
@@ -11,6 +10,7 @@
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 namespace {
@@ -24,23 +24,26 @@ constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 /// @param heuristicRoundingFromDouble if true, more than 5 consecutive zeros or 9 in the decimals part will be rounded
 std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
                                                                     bool heuristicRoundingFromDouble = false) {
+  assert(!amountStr.empty());
+  char firstChar = amountStr.front();
   bool isNeg = false;
-  if (!amountStr.empty()) {
-    char firstChar = amountStr.front();
-    if (firstChar == '-') {
-      isNeg = true;
-      amountStr.remove_prefix(1);
-    } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
-      string ex("Parsing error, unexpected first char ");
-      ex.push_back(firstChar);
-      throw exception(std::move(ex));
-    }
+  if (firstChar == '-') {
+    isNeg = true;
+    amountStr.remove_prefix(1);
+  } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
+    string ex("Parsing error, unexpected first char ");
+    ex.push_back(firstChar);
+    throw exception(std::move(ex));
   }
+
   std::size_t dotPos = amountStr.find('.');
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
-  MonetaryAmount::AmountType decPart = 0, integerPart = 0;
-  if (dotPos != string::npos) {
+  MonetaryAmount::AmountType decPart, integerPart;
+  if (dotPos == string::npos) {
+    decPart = 0;
+    integerPart = FromString<MonetaryAmount::AmountType>(amountStr);
+  } else {
     while (amountStr.back() == '0') {
       amountStr.remove_suffix(1);
     }
@@ -82,10 +85,9 @@ std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_
       amountStr.remove_suffix(nbDigitsToRemove);
       nbDecimals -= nbDigitsToRemove;
     }
-    std::from_chars(amountStr.data() + dotPos + 1, amountStr.data() + amountStr.size(), decPart);
-    std::from_chars(amountStr.data(), amountStr.data() + dotPos, integerPart);
-  } else {
-    std::from_chars(amountStr.data(), amountStr.data() + amountStr.size(), integerPart);
+    std::string_view decPartStr = amountStr.substr(dotPos + 1);
+    decPart = decPartStr.empty() ? 0 : FromString<MonetaryAmount::AmountType>(decPartStr);
+    integerPart = FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.data(), amountStr.data() + dotPos));
   }
 
   MonetaryAmount::AmountType integralAmount = integerPart * ipow(10, nbDecimals) + decPart + roundingUpNinesDouble;

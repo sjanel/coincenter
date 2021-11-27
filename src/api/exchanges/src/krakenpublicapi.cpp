@@ -217,7 +217,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     } else {
       bool isFeeMap = true;
       for (std::string_view wStr : withdrawFeeMinStr) {
-        if (wStr != "*") {
+        if (!wStr.empty() && wStr.front() != '*') {
           MonetaryAmount amount(wStr, cur);
           auto& map = isFeeMap ? ret.first : ret.second;
           auto it = map.find(cur);

@@ -87,7 +87,6 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
           }
           map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"],
                                      std::move(passphrase));
-          log::info("Found key '{}' for platform {}", name, platform);
         } else {
           log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
         }
@@ -96,6 +95,32 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     if (map.empty()) {
       log::warn("No private api keys file '{}' found. Only public exchange queries will be supported", secretFileName);
     }
+  }
+
+  if (log::get_level() <= log::level::info) {
+    string foundKeysStr;
+    for (const auto& [platform, keys] : map) {
+      if (!foundKeysStr.empty()) {
+        foundKeysStr.append(" | ");
+      }
+      if (keys.size() > 1U) {
+        foundKeysStr.push_back('{');
+      }
+      bool firstKey = true;
+      for (const APIKey& key : keys) {
+        if (!firstKey) {
+          foundKeysStr.push_back(',');
+        }
+        foundKeysStr.append(key.name());
+        firstKey = false;
+      }
+      if (keys.size() > 1U) {
+        foundKeysStr.push_back('}');
+      }
+      foundKeysStr.push_back('@');
+      foundKeysStr.append(platform);
+    }
+    log::info("Loaded keys {}", foundKeysStr);
   }
 
   return map;

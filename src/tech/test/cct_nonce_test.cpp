@@ -2,9 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include <charconv>
 #include <regex>
 #include <thread>
+
+#include "stringhelpers.hpp"
 
 namespace cct {
 
@@ -13,11 +14,7 @@ TEST(NonceTest, TimeSinceEpoch) {
   std::this_thread::sleep_for(std::chrono::milliseconds(2));
   Nonce n2 = Nonce_TimeSinceEpoch();
   EXPECT_LT(n1, n2);
-
-  uint64_t iN1, iN2;
-  std::from_chars(n1.data(), n1.data() + n1.size(), iN1);
-  std::from_chars(n2.data(), n2.data() + n2.size(), iN2);
-  EXPECT_LT(iN1, iN2);
+  EXPECT_LT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
 }
 
 TEST(NonceTest, LiteralDate) {

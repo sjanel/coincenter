@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <bitset>
 #include <cassert>
-#include <charconv>
 #include <climits>
 #include <functional>
 #include <iostream>
@@ -19,6 +18,7 @@
 #include "cct_vector.hpp"
 #include "commandlineoption.hpp"
 #include "mathhelpers.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 
@@ -282,7 +282,7 @@ class CommandLineOptionsParser : private Opts {
       if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
         const char* beg = argv[idx + 1];
         const char* end = beg + strlen(beg);
-        std::from_chars(beg, end, opts->*arg);
+        opts->*arg = FromString<int>(std::string_view(beg, end));
         ++idx;
       } else {
         ThrowExpectingValueException(commandLineOption);
@@ -293,9 +293,7 @@ class CommandLineOptionsParser : private Opts {
       if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
         const char* beg = argv[idx + 1];
         const char* end = beg + strlen(beg);
-        int value;
-        std::from_chars(beg, end, value);
-        opts->*arg = value;
+        opts->*arg = FromString<int>(std::string_view(beg, end));
         ++idx;
       } else {
         opts->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
@@ -350,7 +348,7 @@ class CommandLineOptionsParser : private Opts {
                          if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            const char* beg = argv[idx + 1];
                            const char* end = beg + strlen(beg);
-                           std::from_chars(beg, end, this->*arg);
+                           this->*arg = FromString<int>(std::string_view(beg, end));
                            ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
@@ -360,9 +358,7 @@ class CommandLineOptionsParser : private Opts {
                          if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
                            const char* beg = argv[idx + 1];
                            const char* end = beg + strlen(beg);
-                           int value = 0;
-                           std::from_chars(beg, end, value);
-                           this->*arg = value;
+                           this->*arg = FromString<int>(std::string_view(beg, end));
                            ++idx;
                          } else {
                            this->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);

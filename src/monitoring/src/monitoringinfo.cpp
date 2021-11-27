@@ -9,7 +9,7 @@ MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std
   if (useMonitoring) {
     log::info("Monitoring config - Export to {}:{} user '{}', job name {}", address, port, username, jobName);
   } else {
-    log::info("No monitoring enabled");
+    log::info("Monitoring disabled");
   }
 }
 }  // namespace cct

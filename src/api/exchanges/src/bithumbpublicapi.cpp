@@ -187,7 +187,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
   string urlOpts;
   if (optDepth) {
     urlOpts.append("count=");
-    AppendChars(urlOpts, *optDepth);
+    AppendString(urlOpts, *optDepth);
   }
 
   json result = PublicQuery(curlHandle, "orderbook", base, quote, urlOpts);

@@ -214,7 +214,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
     depth = *lb;
   }
   string endpoint("api/v1/market/orderbook/level2_");
-  AppendChars(endpoint, depth);
+  AppendString(endpoint, depth);
 
   json asksAndBids = PublicQuery(_curlHandle, endpoint, postData);
   const json& asks = asksAndBids["asks"];

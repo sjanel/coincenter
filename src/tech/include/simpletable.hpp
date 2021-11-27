@@ -67,6 +67,9 @@ class SimpleTable {
     const_iterator begin() const noexcept { return _cells.begin(); }
     const_iterator end() const noexcept { return _cells.end(); }
 
+    const value_type &front() const { return _cells.front(); }
+    const value_type &back() const { return _cells.back(); }
+
     void push_back(const Cell &c) { _cells.push_back(c); }
     void push_back(Cell &&c) { _cells.push_back(std::move(c)); }
 
@@ -103,6 +106,9 @@ class SimpleTable {
   const_iterator begin() const { return _rows.begin(); }
   const_iterator end() const { return _rows.end(); }
 
+  const value_type &front() const { return _rows.front(); }
+  const value_type &back() const { return _rows.back(); }
+
   void push_back(const Row &row) { _rows.push_back(row); }
   void push_back(Row &&row) { _rows.push_back(std::move(row)); }
 
@@ -113,6 +119,8 @@ class SimpleTable {
 
   size_type size() const noexcept { return _rows.size(); }
   bool empty() const noexcept { return _rows.empty(); }
+
+  const value_type &operator[](size_type rowPos) const { return _rows[rowPos]; }
 
   void reserve(size_type s) { _rows.reserve(s); }
 

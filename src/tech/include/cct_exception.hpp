@@ -27,7 +27,7 @@ class exception : public std::exception {
       } catch (...) {
       }
     }
-    *std::begin(_storage) = '\0';
+    _storage.front() = '\0';
   }
 
   /// We cannot store a reference of a given string in an exception because of dangling reference problem.
@@ -49,12 +49,12 @@ class exception : public std::exception {
       log::critical(_str);
     } catch (...) {
     }
-    *std::begin(_storage) = '\0';
+    _storage.front() = '\0';
   }
 
   exception(const exception& o) noexcept : _info(o._info), _str() {
     if (_info) {
-      *std::begin(_storage) = '\0';
+      _storage.front() = '\0';
     } else if (o._storage.front() != '\0') {
       _storage = o._storage;
     } else {
