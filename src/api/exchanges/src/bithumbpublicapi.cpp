@@ -149,7 +149,7 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
-    CurrencyCode currencyCode(_config.standardizeCurrencyCode(asset));
+    CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(asset));
     CurrencyCode exchangeCode(asset);
     CurrencyExchange newCurrency(currencyCode, exchangeCode, exchangeCode,
                                  withdrawalDeposit["deposit_status"] == 1 ? CurrencyExchange::Deposit::kAvailable
@@ -254,11 +254,12 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
 }  // namespace
 
 ExchangePublic::MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()(int) {
-  return GetOrderbooks(_curlHandle, _config, _exchangeInfo);
+  return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
-  ExchangePublic::MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _config, _exchangeInfo, m, count);
+  ExchangePublic::MarketOrderBookMap marketOrderBookMap =
+      GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, m, count);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");

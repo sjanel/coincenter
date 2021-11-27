@@ -57,11 +57,11 @@ class KrakenPublic : public ExchangePublic {
 
   struct TradableCurrenciesFunc {
     TradableCurrenciesFunc(const CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+        : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     CurrencyExchangeFlatSet operator()();
 
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -71,11 +71,12 @@ class KrakenPublic : public ExchangePublic {
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
     WithdrawalFeesFunc(const CoincenterInfo& config, Clock::duration minDurationBetweenQueries)
-        : _config(config), _curlHandle(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
+        : _coincenterInfo(config),
+          _curlHandle(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
 
     WithdrawalInfoMaps operator()();
 
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle _curlHandle;
   };
 
@@ -83,7 +84,7 @@ class KrakenPublic : public ExchangePublic {
     MarketsFunc(const CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
                 CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _tradableCurrenciesCache(currenciesCache),
-          _config(config),
+          _coincenterInfo(config),
           _curlHandle(curlHandle),
           _exchangeInfo(exchangeInfo) {}
 
@@ -97,7 +98,7 @@ class KrakenPublic : public ExchangePublic {
     std::pair<MarketSet, MarketInfoMap> operator()();
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
@@ -107,14 +108,14 @@ class KrakenPublic : public ExchangePublic {
                       CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
         : _tradableCurrenciesCache(currenciesCache),
           _marketsCache(marketsCache),
-          _config(config),
+          _coincenterInfo(config),
           _curlHandle(curlHandle) {}
 
     MarketOrderBookMap operator()(int depth);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
   };
 

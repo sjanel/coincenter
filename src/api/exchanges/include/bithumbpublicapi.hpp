@@ -50,11 +50,11 @@ class BithumbPublic : public ExchangePublic {
 
   struct TradableCurrenciesFunc {
     TradableCurrenciesFunc(const CoincenterInfo& config, CurlHandle& curlHandle)
-        : _config(config), _curlHandle(curlHandle) {}
+        : _coincenterInfo(config), _curlHandle(curlHandle) {}
 
     CurrencyExchangeFlatSet operator()();
 
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
   };
 
@@ -70,22 +70,22 @@ class BithumbPublic : public ExchangePublic {
 
   struct AllOrderBooksFunc {
     AllOrderBooksFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+        : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBookMap operator()(int depth);
 
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };
 
   struct OrderBookFunc {
     OrderBookFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _config(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+        : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 
     MarketOrderBook operator()(Market m, int depth);
 
-    const CoincenterInfo& _config;
+    const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

@@ -159,7 +159,7 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, _maxNbDecimalsUnitMap, bithumbPublic) {
-  json data = GetBithumbDecimalsCache(_config.dataDir()).readJson();
+  json data = GetBithumbDecimalsCache(_coincenterInfo.dataDir()).readJson();
   _maxNbDecimalsUnitMap.reserve(data.size());
   for (const auto& [currencyStr, nbDecimalsAndTimeData] : data.items()) {
     CurrencyCode currencyCode(currencyStr);
@@ -241,7 +241,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   // Volume is gross amount if from amount is in quote currency, we should remove the fees
   if (fromCurrencyCode == m.quote()) {
     ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _config.exchangeInfo(_exchangePublic.name());
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
     volume = exchangeInfo.applyFee(volume, feeType);
   }
 
@@ -411,7 +411,7 @@ void BithumbPrivate::updateCacheFile() const {
         std::chrono::duration_cast<std::chrono::seconds>(nbDecimalsTimeValue.lastUpdatedTime.time_since_epoch())
             .count();
   }
-  GetBithumbDecimalsCache(_config.dataDir()).write(data);
+  GetBithumbDecimalsCache(_coincenterInfo.dataDir()).write(data);
 }
 
 }  // namespace api

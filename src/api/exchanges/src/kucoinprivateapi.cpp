@@ -135,7 +135,7 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   for (const json& balanceDetail : result) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(
-        _config.standardizeCurrencyCode(CurrencyCode(balanceDetail["currency"].get<std::string_view>())));
+        _coincenterInfo.standardizeCurrencyCode(CurrencyCode(balanceDetail["currency"].get<std::string_view>())));
     MonetaryAmount amount(balanceDetail["available"].get<std::string_view>(), currencyCode);
     log::debug("{} in account '{}' on {}", amount.str(), typeStr, _exchangePublic.name());
     this->addBalance(balancePortfolio, amount, equiCurrency);
