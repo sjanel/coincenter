@@ -4,9 +4,9 @@
 
 #include "apikey.hpp"
 #include "cct_codec.hpp"
-#include "cct_nonce.hpp"
 #include "kucoinpublicapi.hpp"
 #include "ssl_sha.hpp"
+#include "timestring.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {

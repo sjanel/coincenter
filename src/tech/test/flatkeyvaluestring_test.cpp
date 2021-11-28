@@ -12,7 +12,7 @@ using KvPairs = FlatKeyValueString<'&', '='>;
 TEST(CurlOptionsTest, DefaultConstructor) {
   KvPairs kvPairs;
   EXPECT_TRUE(kvPairs.empty());
-  EXPECT_STREQ(kvPairs.c_str(), "");
+  EXPECT_EQ(kvPairs.str(), "");
 }
 
 TEST(CurlOptionsTest, EmptyIterator) {
@@ -23,7 +23,7 @@ TEST(CurlOptionsTest, EmptyIterator) {
 TEST(CurlOptionsTest, SetEmpty) {
   KvPairs kvPairs;
   kvPairs.set("timestamp", "1621785125200");
-  EXPECT_STREQ(kvPairs.c_str(), "timestamp=1621785125200");
+  EXPECT_EQ(kvPairs.str(), "timestamp=1621785125200");
 }
 
 TEST(CurlOptionsTest, SetAndAppend) {
@@ -32,22 +32,22 @@ TEST(CurlOptionsTest, SetAndAppend) {
   kvPairs.append("de", "aX");
   EXPECT_EQ(kvPairs.get("def"), "");
   EXPECT_FALSE(kvPairs.empty());
-  EXPECT_STREQ(kvPairs.c_str(), "abc=666&de=aX");
+  EXPECT_EQ(kvPairs.str(), "abc=666&de=aX");
   kvPairs.set("abc", 777);
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX");
   kvPairs.set("def", "toto");
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX&def=toto");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=toto");
   kvPairs.set("def", "titi");
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX&def=titi");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi");
   EXPECT_EQ(kvPairs.get("def"), "titi");
   kvPairs.set("777", "yoplalepiege");
   EXPECT_TRUE(kvPairs.contains("777"));
   EXPECT_FALSE(kvPairs.contains("77"));
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX&def=titi&777=yoplalepiege");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege");
   kvPairs.set("d", "encoreplustricky");
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   kvPairs.set("d", "cestboncestfini");
-  EXPECT_STREQ(kvPairs.c_str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
   EXPECT_DEBUG_DEATH(kvPairs.append("777", "cestinterditca"), "");
 }
 

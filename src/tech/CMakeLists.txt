@@ -31,9 +31,9 @@ add_unit_test(
 )
 
 add_unit_test(
-    cct_nonce_test
-    src/cct_nonce.cpp
-    test/cct_nonce_test.cpp
+    timestring_test
+    src/timestring.cpp
+    test/timestring_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )

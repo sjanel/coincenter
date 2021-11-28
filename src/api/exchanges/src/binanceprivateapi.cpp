@@ -4,9 +4,9 @@
 
 #include "apikey.hpp"
 #include "binancepublicapi.hpp"
-#include "cct_nonce.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timestring.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {

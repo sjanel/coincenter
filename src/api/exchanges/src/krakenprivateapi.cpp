@@ -8,12 +8,12 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_nonce.hpp"
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
+#include "timestring.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {

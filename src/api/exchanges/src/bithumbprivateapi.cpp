@@ -12,11 +12,11 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_nonce.hpp"
 #include "coincenterinfo.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timestring.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct {

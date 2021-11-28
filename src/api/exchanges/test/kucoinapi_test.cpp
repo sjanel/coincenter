@@ -26,6 +26,7 @@ void PublicTest(KucoinPublic &kucoinPublic) {
   ExchangePublic::MarketSet markets = kucoinPublic.queryTradableMarkets();
   EXPECT_NO_THROW(kucoinPublic.queryLast24hVolume(markets.front()));
   EXPECT_NO_THROW(kucoinPublic.queryLastPrice(markets.back()));
+  EXPECT_NO_THROW(kucoinPublic.queryLastTrades(markets.front()));
 }
 
 void PrivateTest(KucoinPrivate &kucoinPrivate) {

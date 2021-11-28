@@ -38,7 +38,8 @@ class CurrencyExchange {
 
   bool isFiat() const { return _isFiat; }
 
-  bool operator<(const CurrencyExchange &o) const { return _standardCode < o._standardCode; }
+  auto operator<=>(const CurrencyExchange &o) const = default;
+
   bool operator==(const CurrencyExchange &o) const { return _standardCode == o._standardCode; }
   bool operator!=(const CurrencyExchange &o) const { return !(*this == o); }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <compare>
 #include <stdexcept>
 #include <string_view>
 
@@ -40,7 +41,7 @@ class CommandLineOption {
 
   bool hasShortName() const { return _shortName != '\0'; }
 
-  bool operator<(const CommandLineOption& o) const;
+  std::strong_ordering operator<=>(const CommandLineOption& o) const;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 

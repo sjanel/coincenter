@@ -160,6 +160,12 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     printLast24hTradedVolume(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
   }
 
+  if (opts.lastTradesMarket != Market()) {
+    LastTradesPerExchange lastTradesPerExchange =
+        getLastTradesPerExchange(opts.lastTradesMarket, opts.lastTradesExchanges, opts.nbLastTrades);
+    printLastTrades(opts.lastTradesMarket, lastTradesPerExchange);
+  }
+
   if (opts.lastPriceMarket != Market()) {
     printLastPrice(opts.lastPriceMarket, opts.lastPriceExchanges);
   }
@@ -546,13 +552,29 @@ void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const Ex
 
 Coincenter::MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(
     Market m, std::span<const ExchangeName> exchangeNames) {
-  log::info("Query last 24h traded volume from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  log::info("Query last 24h traded volume of {} pair on {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
   MonetaryAmountPerExchange tradedVolumePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  tradedVolumePerExchange.begin(), [m](Exchange *e) { return e->apiPublic().queryLast24hVolume(m); });
   return tradedVolumePerExchange;
+}
+
+Coincenter::LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m,
+                                                                       std::span<const ExchangeName> exchangeNames,
+                                                                       int nbLastTrades) {
+  log::info("Query {} last trades on {} volume from {}", nbLastTrades, m.str(),
+            ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
+
+  LastTradesPerExchange lastTradesPerExchange(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), lastTradesPerExchange.begin(),
+                 [m, nbLastTrades](Exchange *e) {
+                   return std::make_pair(static_cast<const Exchange *>(e),
+                                         e->apiPublic().queryLastTrades(m, nbLastTrades));
+                 });
+  return lastTradesPerExchange;
 }
 
 Coincenter::MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market m,
@@ -579,6 +601,54 @@ void Coincenter::printLast24hTradedVolume(Market m, std::span<const ExchangeName
     t.emplace_back(selectedExchanges[exchangePos++]->name(), tradedVolume.str());
   }
   t.print();
+}
+
+void Coincenter::printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) const {
+  for (const auto &[exchangePtr, lastTrades] : lastTradesPerExchange) {
+    string buyTitle(m.base().str());
+    buyTitle.append(" buys");
+    string sellTitle(m.base().str());
+    sellTitle.append(" sells");
+    string priceTitle("Price in ");
+    priceTitle.append(m.quote().str());
+
+    string title(exchangePtr->name());
+    title.append(" trades - UTC");
+
+    SimpleTable t(std::move(title), std::move(buyTitle), std::move(priceTitle), std::move(sellTitle));
+    std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, m.base()), MonetaryAmount(0, m.base())};
+    MonetaryAmount totalPrice(0, m.quote());
+    std::array<int, 2> nb{};
+    for (const PublicTrade &trade : lastTrades) {
+      if (trade.type() == PublicTrade::Type::kBuy) {
+        t.emplace_back(trade.timeStr(), trade.amount().amountStr(), trade.price().amountStr(), "");
+        totalAmounts[0] += trade.amount();
+        ++nb[0];
+      } else {
+        t.emplace_back(trade.timeStr(), "", trade.price().amountStr(), trade.amount().amountStr());
+        totalAmounts[1] += trade.amount();
+        ++nb[1];
+      }
+      totalPrice += trade.price();
+    }
+    if (nb[0] + nb[1] > 0) {
+      t.push_back(SimpleTable::Row::kDivider);
+      std::array<string, 2> summary;
+      for (int buyOrSell = 0; buyOrSell < 2; ++buyOrSell) {
+        summary[buyOrSell].append(totalAmounts[buyOrSell].str());
+        summary[buyOrSell].append(" (");
+        summary[buyOrSell].append(ToString<string>(nb[buyOrSell]));
+        summary[buyOrSell].push_back(' ');
+        summary[buyOrSell].append(buyOrSell == 0 ? "buys" : "sells");
+        summary[buyOrSell].push_back(')');
+      }
+
+      MonetaryAmount avgPrice = totalPrice / (nb[0] + nb[1]);
+      t.emplace_back("Summary", std::move(summary[0]), avgPrice.str(), std::move(summary[1]));
+    }
+
+    t.print();
+  }
 }
 
 void Coincenter::printLastPrice(Market m, std::span<const ExchangeName> exchangeNames) {

@@ -207,6 +207,25 @@ MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
+UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
+  json result =
+      PublicQuery(_curlHandle, "trades/ticks", {{"count", nbTrades}, {"market", m.reverse().assetsPairStr('-')}});
+  LastTradesVector ret;
+  ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
+  for (const json& detail : result) {
+    MonetaryAmount amount(detail["trade_volume"].get<double>(), m.base());
+    MonetaryAmount price(detail["trade_price"].get<double>(), m.quote());
+    int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
+    PublicTrade::Type tradeType =
+        detail["ask_bid"].get<std::string_view>() == "BID" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+
+    ret.emplace_back(tradeType, amount, price,
+                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+  }
+  std::sort(ret.begin(), ret.end());
+  return ret;
+}
+
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
   json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
   double lastPrice = result.front()["trade_price"].get<double>();

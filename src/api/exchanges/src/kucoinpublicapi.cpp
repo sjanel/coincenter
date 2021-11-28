@@ -269,6 +269,25 @@ MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(result["vol"].get<std::string_view>(), m.base());
 }
 
+KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
+  json result = PublicQuery(_curlHandle, "api/v1/market/histories", {{"symbol", m.assetsPairStr('-')}});
+  LastTradesVector ret;
+  ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
+  for (const json& detail : result) {
+    MonetaryAmount amount(detail["size"].get<std::string_view>(), m.base());
+    MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
+    // time is in nanoseconds
+    int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
+    PublicTrade::Type tradeType =
+        detail["side"].get<std::string_view>() == "buy" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+
+    ret.emplace_back(tradeType, amount, price,
+                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+  }
+  std::sort(ret.begin(), ret.end());
+  return ret;
+}
+
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market m) {
   json result = PublicQuery(_curlHandle, "api/v1/market/orderbook/level1", {{"symbol", m.assetsPairStr('-')}});
   return MonetaryAmount(result["price"].get<std::string_view>(), m.quote());

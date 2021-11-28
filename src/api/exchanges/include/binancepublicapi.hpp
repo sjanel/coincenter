@@ -54,6 +54,8 @@ class BinancePublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
 
+  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+
   MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
 
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);

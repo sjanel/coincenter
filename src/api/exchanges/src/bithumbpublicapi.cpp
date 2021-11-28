@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <ctime>
+#include <sstream>
+#include <string>
 
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
@@ -272,6 +275,33 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
   json result = PublicQuery(_curlHandle, "ticker", m.base(), m.quote());
   std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
   return MonetaryAmount(last24hVol, m.base());
+}
+
+namespace {
+PublicTrade::TimePoint EpochTime(const std::string& dateStr) {
+  std::istringstream ss(dateStr);
+  std::tm t{};
+  ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+  static constexpr std::chrono::system_clock::duration kKoreaUTCTime = std::chrono::hours(9);
+  return std::chrono::system_clock::from_time_t(std::mktime(&t)) - kKoreaUTCTime;
+}
+}  // namespace
+
+BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
+  json result = PublicQuery(_curlHandle, "transaction_history", m.base(), m.quote());
+  LastTradesVector ret;
+  for (const json& detail : result) {
+    MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), m.base());
+    MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
+    // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"
+    PublicTrade::Type tradeType =
+        detail["type"].get<std::string_view>() == "bid" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+
+    ret.emplace_back(tradeType, amount, price,
+                     EpochTime(std::string(detail["transaction_date"].get<std::string_view>())));
+  }
+  std::sort(ret.begin(), ret.end());
+  return ret;
 }
 
 }  // namespace api
