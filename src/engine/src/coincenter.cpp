@@ -21,18 +21,6 @@ namespace cct {
 
 namespace {
 
-template <class ExchangeNameT>
-string ConstructAccumulatedExchangeNames(std::span<const ExchangeNameT> exchangeNames) {
-  string exchangesStr(exchangeNames.empty() ? "all" : "");
-  for (const ExchangeNameT &exchangeName : exchangeNames) {
-    if (!exchangesStr.empty()) {
-      exchangesStr.push_back(',');
-    }
-    exchangesStr.append(ToString(exchangeName));
-  }
-  return exchangesStr;
-}
-
 template <class MainVec>
 void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
   // Erases from last to first to keep index consistent
@@ -137,8 +125,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (opts.tickerForAll || !opts.tickerExchanges.empty()) {
-    log::info("Ticker information for {}",
-              ConstructAccumulatedExchangeNames(std::span<const ExchangeName>(opts.tickerExchanges)));
+    log::info("Ticker information for {}", ConstructAccumulatedExchangeNames(opts.tickerExchanges));
     ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(opts.tickerExchanges);
     printTickerInformation(exchangeTickerMaps);
   }
@@ -148,25 +135,9 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     if (opts.orderbookDepth != 0) {
       depth = opts.orderbookDepth;
     }
-    Coincenter::MarketOrderBookConversionRates marketOrderBooksConversionRates =
+    MarketOrderBookConversionRates marketOrderBooksConversionRates =
         getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
-    int orderBookPos = 0;
-    for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
-      log::info("Order book of {} on {} requested{}{}", opts.marketForOrderBook.str(), exchangeName,
-                optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
-
-      if (optConversionRate) {
-        marketOrderBook.print(std::cout, exchangeName, *optConversionRate);
-      } else {
-        if (opts.orderbookCur != CurrencyCode::kNeutral) {
-          log::warn("Unable to convert {} into {} on {}", opts.marketForOrderBook.quote().str(),
-                    opts.orderbookCur.str(), exchangeName);
-        }
-        marketOrderBook.print(std::cout);
-      }
-
-      ++orderBookPos;
-    }
+    printMarketOrderBooks(marketOrderBooksConversionRates, opts.orderbookCur);
   }
 
   if (opts.marketForConversionPath != Market()) {
@@ -237,8 +208,10 @@ Coincenter::MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Marke
           equiCurrencyCode == CurrencyCode::kNeutral
               ? std::nullopt
               : e->convertAtAveragePrice(MonetaryAmount(1, m.quote()), equiCurrencyCode);
-      ret.emplace_back(e->name(), MarketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m)),
-                       optConversionRate);
+      log::info("Order book of {} on {} requested{}{}", m.str(), e->name(),
+                optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
+      MarketOrderBook marketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m));
+      ret.emplace_back(e->name(), std::move(marketOrderBook), optConversionRate);
     }
   }
   if (_coincenterInfo.useMonitoring() && !ret.empty()) {
@@ -458,9 +431,23 @@ void Coincenter::printTickerInformation(const ExchangeTickerMaps &exchangeTicker
   t.print();
 }
 
+void Coincenter::printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
+                                       CurrencyCode equiCurrencyCode) const {
+  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
+    if (optConversionRate) {
+      marketOrderBook.print(std::cout, exchangeName, *optConversionRate);
+    } else {
+      if (equiCurrencyCode != CurrencyCode::kNeutral) {
+        log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote().str(), equiCurrencyCode.str(),
+                  exchangeName);
+      }
+      marketOrderBook.print(std::cout);
+    }
+  }
+}
+
 void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode) {
-  log::info("Query balance from {}",
-            ConstructAccumulatedExchangeNames(std::span<const PrivateExchangeName>(privateExchangeNames)));
+  log::info("Query balance from {}", ConstructAccumulatedExchangeNames(privateExchangeNames));
   BalancePerExchange balancePerExchange = getBalance(privateExchangeNames, balanceCurrencyCode);
   BalancePerExchangePortfolio totalBalance;
   for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
@@ -471,7 +458,7 @@ void Coincenter::printBalance(const PrivateExchangeNames &privateExchangeNames, 
 
 void Coincenter::printDepositInfo(const PrivateExchangeNames &privateExchangeNames, CurrencyCode depositCurrencyCode) {
   log::info("Query {} deposit information from {}", depositCurrencyCode.str(),
-            ConstructAccumulatedExchangeNames(std::span<const PrivateExchangeName>(privateExchangeNames)));
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
   WalletPerExchange walletPerExchange = getDepositInfo(privateExchangeNames, depositCurrencyCode);
   string walletStr(depositCurrencyCode.str());
   walletStr.append(" address");
@@ -609,8 +596,7 @@ void Coincenter::printLastPrice(Market m, std::span<const ExchangeName> exchange
 }
 
 PublicExchangeNames Coincenter::getPublicExchangeNames() const {
-  std::span<const ExchangeName> exchangeNames;
-  auto uniquePublicExchanges = _cexchangeRetriever.selectPublicExchanges(exchangeNames);
+  auto uniquePublicExchanges = _cexchangeRetriever.selectPublicExchanges(std::span<const ExchangeName>());
   PublicExchangeNames ret;
   ret.reserve(uniquePublicExchanges.size());
   std::transform(std::begin(uniquePublicExchanges), std::end(uniquePublicExchanges), std::back_inserter(ret),

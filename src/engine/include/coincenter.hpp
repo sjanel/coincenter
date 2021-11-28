@@ -112,6 +112,9 @@ class Coincenter {
 
   void printMarkets(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
+  void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
+                             CurrencyCode equiCurrencyCode) const;
+
   void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
 
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);

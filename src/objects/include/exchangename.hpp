@@ -51,4 +51,16 @@ using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateA
 
 inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName; }
 inline std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
+
+template <class ExchangeNames>
+inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNames) {
+  string exchangesStr(exchangeNames.empty() ? "all" : "");
+  for (const auto &exchangeName : exchangeNames) {
+    if (!exchangesStr.empty()) {
+      exchangesStr.push_back(',');
+    }
+    exchangesStr.append(ToString(exchangeName));
+  }
+  return exchangesStr;
+}
 }  // namespace cct
