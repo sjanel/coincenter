@@ -111,7 +111,11 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   std::string_view address(result["address"].get<std::string_view>());
   std::string_view tag(result["tag"].get<std::string_view>());
   std::string_view url(result["url"].get<std::string_view>());
-  Wallet w(PrivateExchangeName(_public.name(), _apiKey.name()), currencyCode, address, tag, _public.coincenterInfo());
+  const CoincenterInfo& coincenterInfo = _public.coincenterInfo();
+  PrivateExchangeName privateExchangeName(_public.name(), _apiKey.name());
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
+  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {} (URL: '{}')", w.str(), url);
   return w;
 }
@@ -291,8 +295,8 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurlPostData withdrawPostData{
       {"coin", currencyCode.str()}, {"address", wallet.address()}, {"amount", grossAmount.amountStr()}};
-  if (wallet.hasDestinationTag()) {
-    withdrawPostData.append("addressTag", wallet.destinationTag());
+  if (wallet.hasTag()) {
+    withdrawPostData.append("addressTag", wallet.tag());
   }
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result =

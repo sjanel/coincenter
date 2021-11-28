@@ -13,6 +13,7 @@
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 
@@ -180,12 +181,18 @@ class FlatKeyValueString {
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::FlatKeyValueString(std::span<const KeyValuePair> init) {
   for (const KeyValuePair &kv : init) {
-    if (kv.val.index() == 0) {
-      append(kv.key, std::get<string>(kv.val));
-    } else if (kv.val.index() == 1) {
-      append(kv.key, std::get<std::string_view>(kv.val));
-    } else {
-      append(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
+    switch (kv.val.index()) {
+      case 0:
+        append(kv.key, std::get<string>(kv.val));
+        break;
+      case 1:
+        append(kv.key, std::get<std::string_view>(kv.val));
+        break;
+      case 2:
+        append(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
+        break;
+      default:
+        unreachable();
     }
   }
 }
@@ -254,7 +261,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(std::string_view
   std::size_t first = find(key);
   if (first != string::npos) {
     if (first != 0) {
-      --first;
+      --first;  // Remove separator char as well
     }
     std::size_t last = first + key.size() + 2;
     const std::size_t ps = _data.size();

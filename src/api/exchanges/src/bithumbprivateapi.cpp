@@ -204,9 +204,12 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
              std::min(addressAndTag.find('=', std::min(tagPos + 1, addressAndTag.size())) + 1U, addressAndTag.size()))
           : addressAndTag.end(),
       addressAndTag.end());
+  const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
+  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
-  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
-           _exchangePublic.coincenterInfo());
+  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -333,8 +336,8 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   MonetaryAmount netWithdrawAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{
       {"units", netWithdrawAmount.amountStr()}, {"currency", currencyCode.str()}, {"address", wallet.address()}};
-  if (wallet.hasDestinationTag()) {
-    withdrawPostData.append("destination", wallet.destinationTag());
+  if (wallet.hasTag()) {
+    withdrawPostData.append("destination", wallet.tag());
   }
   PrivateQuery(_curlHandle, _apiKey, "trade/btc_withdrawal", _maxNbDecimalsUnitMap, withdrawPostData);
   return InitiatedWithdrawInfo(std::move(wallet), "", grossAmount);

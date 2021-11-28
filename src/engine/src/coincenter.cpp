@@ -282,9 +282,9 @@ json Coincenter::getAllDepositInfo() {
       if (curExchange.canDeposit() && !curExchange.isFiat()) {
         Wallet w = e->apiPrivate().queryDepositWallet(curExchange.standardCode());
         string addressAndTag(w.address());
-        if (w.hasDestinationTag()) {
+        if (w.hasTag()) {
           addressAndTag.push_back(',');
-          addressAndTag.append(w.destinationTag());
+          addressAndTag.append(w.tag());
         }
         string curCodeStr(curExchange.standardCode().str());
         ret[privateExchangeNameStr][curCodeStr] = std::move(addressAndTag);
@@ -496,7 +496,7 @@ void Coincenter::printDepositInfo(const PrivateExchangeNames &privateExchangeNam
   walletStr.append(" address");
   SimpleTable t("Exchange", "Account", std::move(walletStr), "Destination Tag");
   for (const auto &[exchangePtr, wallet] : walletPerExchange) {
-    t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), wallet.address(), wallet.destinationTag());
+    t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), wallet.address(), wallet.tag());
   }
   t.print();
 }

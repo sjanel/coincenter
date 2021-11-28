@@ -108,13 +108,13 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view address, tag;
   PrivateExchangeName privateExchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
-  std::string_view dataDir = coincenterInfo.dataDir();
-  const bool validateWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   for (const json& depositDetail : result["data"]) {
     address = depositDetail["address"].get<std::string_view>();
     tag = depositDetail["addressTag"].get<std::string_view>();
 
-    if (!validateWallet || Wallet::ValidateWallet(dataDir, privateExchangeName, currencyCode, address, tag)) {
+    if (Wallet::ValidateWallet(walletCheck, privateExchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
@@ -122,7 +122,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = std::string_view();
   }
 
-  Wallet w(privateExchangeName, currencyCode, address, tag, _huobiPublic.coincenterInfo());
+  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -235,7 +235,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   for (const json& withdrawAddress : queryWithdrawAddressJson["data"]) {
     std::string_view address(withdrawAddress["address"].get<std::string_view>());
     std::string_view addressTag(withdrawAddress["addressTag"].get<std::string_view>());
-    if (address == wallet.address() && addressTag == wallet.destinationTag()) {
+    if (address == wallet.address() && addressTag == wallet.tag()) {
       huobiWithdrawAddressName = withdrawAddress["note"].get<std::string_view>();
       break;
     }
@@ -246,8 +246,8 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   log::info("Found stored {} withdraw address '{}'", _exchangePublic.name(), huobiWithdrawAddressName);
 
   CurlPostData withdrawPostData{{"address", wallet.address()}};
-  if (wallet.hasDestinationTag()) {
-    withdrawPostData.append("addr-tag", wallet.destinationTag());
+  if (wallet.hasTag()) {
+    withdrawPostData.append("addr-tag", wallet.tag());
   }
 
   MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(grossAmount.currencyCode()));

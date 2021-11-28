@@ -158,8 +158,12 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = result["secondary_address"].get<std::string_view>();
   }
 
-  Wallet w(PrivateExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag,
-           _exchangePublic.coincenterInfo());
+  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
+
+  const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
+  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -328,8 +332,8 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{
       {"currency", currencyCode.str()}, {"amount", netEmittedAmount.amountStr()}, {"address", wallet.address()}};
-  if (wallet.hasDestinationTag()) {
-    withdrawPostData.append("secondary_address", wallet.destinationTag());
+  if (wallet.hasTag()) {
+    withdrawPostData.append("secondary_address", wallet.tag());
   }
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "withdraws/coin", withdrawPostData);
   std::string_view withdrawId(result["uuid"].get<std::string_view>());
