@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <compare>
 #include <cstdint>
 #include <iostream>
 #include <iterator>
@@ -73,10 +74,7 @@ class CurrencyCode {
 
   void print(std::ostream &os) const { os << str(); }
 
-  constexpr bool operator<(CurrencyCode o) const noexcept { return code() < o.code(); }
-  constexpr bool operator<=(CurrencyCode o) const noexcept { return !(o < *this); }
-  constexpr bool operator>(CurrencyCode o) const noexcept { return o < *this; }
-  constexpr bool operator>=(CurrencyCode o) const noexcept { return !(*this < o); }
+  constexpr auto operator<=>(const CurrencyCode &) const = default;
 
   constexpr bool operator==(CurrencyCode o) const { return std::equal(_data.begin(), _data.end(), o._data.begin()); }
   constexpr bool operator!=(CurrencyCode o) const { return !(*this == o); }

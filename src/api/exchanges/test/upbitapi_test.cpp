@@ -45,6 +45,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
   EXPECT_NO_THROW(upbitPublic.queryLast24hVolume(markets.front()));
   EXPECT_NO_THROW(upbitPublic.queryLastPrice(markets.back()));
+  EXPECT_NO_THROW(upbitPublic.queryLastTrades(markets.front()));
 }
 
 void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {

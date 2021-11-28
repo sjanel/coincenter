@@ -16,7 +16,7 @@ File GetDepositAddressesFile(std::string_view dataDir) {
 bool Wallet::ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &privateExchangeName,
                             CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag) {
   if (!walletCheck.doCheck()) {
-    log::debug("No wallet validation from file");
+    log::debug("No wallet validation from file, consider OK");
     return true;
   }
   File depositAddressesFile = GetDepositAddressesFile(walletCheck.dataDir());

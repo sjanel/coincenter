@@ -331,6 +331,32 @@ MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
+HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
+  string lowerCaseAssets = tolower(m.assetsPairStr());
+  nbTrades = std::min(nbTrades, 2000);  // max authorized
+  nbTrades = std::max(nbTrades, 1);     // min authorized
+  json result = PublicQuery(_curlHandle, "market/history/trade",
+                            {{"symbol", std::string_view(lowerCaseAssets)}, {"size", nbTrades}});
+  LastTradesVector ret;
+  for (const json& detail : result) {
+    auto dataDetails = detail.find("data");
+    if (dataDetails != detail.end()) {
+      for (const json& detail2 : *dataDetails) {
+        MonetaryAmount amount(detail2["amount"].get<double>(), m.base());
+        MonetaryAmount price(detail2["price"].get<double>(), m.quote());
+        int64_t millisecondsSinceEpoch = detail2["ts"].get<int64_t>();
+        PublicTrade::Type tradeType =
+            detail2["direction"].get<std::string_view>() == "buy" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+
+        ret.emplace_back(tradeType, amount, price,
+                         PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+      }
+    }
+  }
+  std::sort(ret.begin(), ret.end());
+  return ret;
+}
+
 MonetaryAmount HuobiPublic::TickerFunc::operator()(Market m) {
   string lowerCaseAssets = tolower(m.assetsPairStr());
   json result = PublicQuery(_curlHandle, "market/trade", {{"symbol", std::string_view(lowerCaseAssets)}});

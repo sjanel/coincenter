@@ -47,6 +47,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
   EXPECT_NO_THROW(bithumbPublic.queryLast24hVolume(markets.front()));
   EXPECT_NO_THROW(bithumbPublic.queryLastPrice(markets.back()));
+  EXPECT_NO_THROW(bithumbPublic.queryLastTrades(markets.front()));
 }
 
 void PrivateTest(BithumbPrivate &bithumbPrivate) {

@@ -66,14 +66,14 @@ string CommandLineOption::shortName() const {
   return ret;
 }
 
-bool CommandLineOption::operator<(const CommandLineOption& o) const {
+std::strong_ordering CommandLineOption::operator<=>(const CommandLineOption& o) const {
   if (_prio != o._prio) {
-    return _prio < o._prio;
+    return _prio <=> o._prio;
   }
   if (_optionGroupName != o._optionGroupName) {
-    return _optionGroupName < o._optionGroupName;
+    return _optionGroupName <=> o._optionGroupName;
   }
-  return _fullName < o._fullName;
+  return _fullName <=> o._fullName;
 }
 
 }  // namespace cct

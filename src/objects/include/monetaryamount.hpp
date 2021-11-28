@@ -104,10 +104,7 @@ class MonetaryAmount {
   /// Assumption: 'step' should be strictly positive amount
   MonetaryAmount round(MonetaryAmount step, RoundType roundType) const;
 
-  bool operator<(MonetaryAmount o) const;
-  bool operator<=(MonetaryAmount o) const { return !(o < *this); }
-  bool operator>(MonetaryAmount o) const { return o < *this; }
-  bool operator>=(MonetaryAmount o) const { return !(*this < o); }
+  std::strong_ordering operator<=>(const MonetaryAmount &o) const;
 
   constexpr bool operator==(MonetaryAmount o) const {
     return _amount == o._amount && _nbDecimals == o._nbDecimals && _currencyCode == o._currencyCode;

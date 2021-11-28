@@ -60,6 +60,10 @@ class CoincenterParsedOptions {
   Market tradedVolumeMarket;
   PublicExchangeNames tradedVolumeExchanges;
 
+  Market lastTradesMarket;
+  PublicExchangeNames lastTradesExchanges;
+  int nbLastTrades;
+
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
 

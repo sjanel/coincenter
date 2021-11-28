@@ -58,7 +58,7 @@ class ExchangeRetrieverBase {
   SelectedExchanges select(Order order, const Names &names, Matcher matcher) const {
     SelectedExchanges ret;
     if (names.empty()) {
-      ret.reserve(_exchanges.size());
+      ret.reserve(static_cast<typename SelectedExchanges::size_type>(_exchanges.size()));
       std::transform(_exchanges.begin(), _exchanges.end(), std::back_inserter(ret),
                      [](ExchangeT &e) { return std::addressof(e); });
     } else {

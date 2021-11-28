@@ -58,6 +58,8 @@ class SimpleTable {
     using value_type = Cell;
     using const_iterator = vector<value_type>::const_iterator;
 
+    static const Row kDivider;
+
     template <class... Args>
     explicit Row(Args &&...args) {
       // Usage of C++17 fold expressions to make it possible to set a Row directly from a variadic input arguments
@@ -79,6 +81,8 @@ class SimpleTable {
     }
 
     size_type size() const noexcept { return _cells.size(); }
+
+    bool isDivider() const noexcept { return _cells.empty(); }
 
     value_type &operator[](size_type cellPos) { return _cells[cellPos]; }
     const value_type &operator[](size_type cellPos) const { return _cells[cellPos]; }

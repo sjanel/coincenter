@@ -204,20 +204,17 @@ MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) c
   return ret;
 }
 
-bool MonetaryAmount::operator<(MonetaryAmount o) const {
+std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const {
   if (CCT_UNLIKELY(_currencyCode != o._currencyCode)) {
     throw exception("Cannot compare amounts with different currency");
   }
   if (_nbDecimals == o._nbDecimals) {
-    return _amount < o._amount;
+    return _amount <=> o._amount;
   }
   AmountType lhsIntAmount = integerPart();
   AmountType rhsIntAmount = o.integerPart();
-  if (lhsIntAmount < rhsIntAmount) {
-    return true;
-  }
-  if (lhsIntAmount > rhsIntAmount) {
-    return false;
+  if (lhsIntAmount != rhsIntAmount) {
+    return lhsIntAmount <=> rhsIntAmount;
   }
   // Same integral part, so expanding one's number of decimals towards the other one is safe
   auto adjustDecimals = [](AmountType lhsAmount, AmountType rhsAmount, int8_t lhsNbD,
@@ -235,7 +232,7 @@ bool MonetaryAmount::operator<(MonetaryAmount o) const {
     return {lhsAmount, rhsAmount};
   };
   auto amounts = adjustDecimals(_amount, o._amount, _nbDecimals, o._nbDecimals);
-  return amounts.first < amounts.second;
+  return amounts.first <=> amounts.second;
 }
 
 MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {

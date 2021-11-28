@@ -21,6 +21,7 @@ Main features:
  - Orderbook
  - Traded volume
  - Last price
+ - Last trades
 
 **Private requests**
  - Balance
@@ -71,6 +72,7 @@ Main features:
     - [Order books](#order-books)
     - [Last 24h traded volume](#last-24h-traded-volume)
     - [Last price](#last-price)
+    - [Last trades](#last-trades)
     - [Conversion path](#conversion-path)
   - [Private requests](#private-requests)
     - [Balance](#balance)
@@ -429,6 +431,16 @@ Fast query last traded price with `--price` option on one market on one, several
 Example: Print last price on market SOL-BTC for all exchanges supporting it
 ```
 coincenter --price sol-btc
+```
+
+### Last trades
+
+Get a sorted list of last trades with `--last-trades` option on one market on one, several or all exchanges.
+You can specify the number of last trades to query (for exchanges supporting this option) with `--last-trades-n`.
+
+Example: Print the last 15 trades on DOT-USDT on Binance and Huobi
+```
+coincenter --last-trades dot-usdt,binance,huobi --last-trades-n 15
 ```
 
 ### Conversion path

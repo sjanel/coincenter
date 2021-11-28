@@ -32,12 +32,7 @@ class Market {
   bool canTrade(MonetaryAmount a) const { return canTrade(a.currencyCode()); }
   bool canTrade(CurrencyCode c) const { return base() == c || quote() == c; }
 
-  bool operator<(Market o) const {
-    return std::lexicographical_compare(_assets.begin(), _assets.end(), o._assets.begin(), o._assets.end());
-  }
-  bool operator<=(Market o) const { return !(o < *this); }
-  bool operator>(Market o) const { return o < *this; }
-  bool operator>=(Market o) const { return !(*this < o); }
+  auto operator<=>(const Market&) const = default;
 
   bool operator==(const Market& o) const { return std::equal(_assets.begin(), _assets.end(), o._assets.begin()); }
   bool operator!=(const Market& o) const { return !(*this == o); }

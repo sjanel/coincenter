@@ -23,6 +23,7 @@ class MockExchangePublic : public ExchangePublic {
   MOCK_METHOD(MarketOrderBookMap, queryAllApproximatedOrderBooks, (int depth), (override));
   MOCK_METHOD(MarketOrderBook, queryOrderBook, (Market m, int depth), (override));
   MOCK_METHOD(MonetaryAmount, queryLast24hVolume, (Market m), (override));
+  MOCK_METHOD(LastTradesVector, queryLastTrades, (Market m, int nbTrades), (override));
   MOCK_METHOD(MonetaryAmount, queryLastPrice, (Market m), (override));
 };
 }  // namespace api

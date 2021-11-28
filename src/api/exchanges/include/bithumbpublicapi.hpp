@@ -40,6 +40,8 @@ class BithumbPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
 
+  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+
   MonetaryAmount queryLastPrice(Market m) override;
 
   static constexpr std::string_view kUrlBase = "https://api.bithumb.com";

@@ -9,6 +9,7 @@
 #include "cct_string.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
+#include "exchangepublicapi.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
 #include "tradeoptions.hpp"
@@ -46,7 +47,7 @@ struct CoincenterCmdLineOptions {
   string markets;
 
   string orderbook;
-  int orderbook_depth{};
+  int orderbook_depth = 0;
   string orderbook_cur;
 
   std::optional<string> ticker;
@@ -72,6 +73,9 @@ struct CoincenterCmdLineOptions {
 
   string last24hTradedVolume;
   string lastPrice;
+
+  string lastTrades;
+  int nbLastTrades = api::ExchangePublic::kNbLastTradesDefault;
 };
 
 template <class OptValueType>
@@ -125,7 +129,14 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                           &OptValueType::conversion_path},
        {{{"Public queries", 2}, "--volume-day", "<cur1-cur2[,exch1,...]>", "Print last 24h traded volume for market 'cur1'-'cur2' "
                                                                            "for all exchanges (or specified one)"}, 
-                                                          &OptValueType::last24hTradedVolume},  
+                                                          &OptValueType::last24hTradedVolume},
+       {{{"Public queries", 2}, "--last-trades", "<cur1-cur2[,exch1,...]>", "Print last trades for market 'cur1'-'cur2' "
+                                                                            "for all exchanges (or specified one)"}, 
+                                                          &OptValueType::lastTrades},
+       {{{"Public queries", 2}, "--last-trades-n", "<n>", string("Change number of last trades to query (default: ").
+                                                            append(ToString<string>(api::ExchangePublic::kNbLastTradesDefault)).append(
+                                                          ")")}, 
+                                                          &OptValueType::nbLastTrades},  
        {{{"Public queries", 2}, "--price", 'p', "<cur1-cur2[,exch1,...]>", "Print last price for market 'cur1'-'cur2' "
                                                                            "for all exchanges (or specified one)"}, 
                                                           &OptValueType::lastPrice},                                      

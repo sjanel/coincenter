@@ -22,6 +22,7 @@
 #pragma once
 
 #include <atomic>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
@@ -2654,87 +2655,31 @@ inline bool operator!=(
 }
 
 template <typename E, class T, class A, class S>
-inline bool operator<(
+inline std::strong_ordering operator<=>(
     const basic_fbstring<E, T, A, S>& lhs,
     const basic_fbstring<E, T, A, S>& rhs) {
-  return lhs.compare(rhs) < 0;
+  const int cmp = lhs.compare(rhs);
+  if (cmp < 0) {
+    return std::strong_ordering::less;
+  }
+  if (cmp > 0) {
+    return std::strong_ordering::greater;
+  }
+  return std::strong_ordering::equal;
 }
 
 template <typename E, class T, class A, class S>
-inline bool operator<(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const typename basic_fbstring<E, T, A, S>::value_type* rhs) {
-  return lhs.compare(rhs) < 0;
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator<(
-    const typename basic_fbstring<E, T, A, S>::value_type* lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return rhs.compare(lhs) > 0;
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return rhs < lhs;
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>(
+inline std::strong_ordering operator<=>(
     const basic_fbstring<E, T, A, S>& lhs,
     const typename basic_fbstring<E, T, A, S>::value_type* rhs) {
-  return rhs < lhs;
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>(
-    const typename basic_fbstring<E, T, A, S>::value_type* lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return rhs < lhs;
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator<=(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return !(rhs < lhs);
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator<=(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const typename basic_fbstring<E, T, A, S>::value_type* rhs) {
-  return !(rhs < lhs);
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator<=(
-    const typename basic_fbstring<E, T, A, S>::value_type* lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return !(rhs < lhs);
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>=(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return !(lhs < rhs);
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>=(
-    const basic_fbstring<E, T, A, S>& lhs,
-    const typename basic_fbstring<E, T, A, S>::value_type* rhs) {
-  return !(lhs < rhs);
-}
-
-template <typename E, class T, class A, class S>
-inline bool operator>=(
-    const typename basic_fbstring<E, T, A, S>::value_type* lhs,
-    const basic_fbstring<E, T, A, S>& rhs) {
-  return !(lhs < rhs);
+  const int cmp = lhs.compare(rhs);
+  if (cmp < 0) {
+    return std::strong_ordering::less;
+  }
+  if (cmp > 0) {
+    return std::strong_ordering::greater;
+  }
+  return std::strong_ordering::equal;
 }
 
 // C++11 21.4.8.8

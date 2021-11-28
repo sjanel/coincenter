@@ -147,6 +147,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     std::tie(tradedVolumeMarket, tradedVolumeExchanges) = anyParser.getMarketExchanges();
   }
 
+  if (!cmdLineOptions.lastTrades.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.lastTrades);
+    std::tie(lastTradesMarket, lastTradesExchanges) = anyParser.getMarketExchanges();
+  }
+  nbLastTrades = cmdLineOptions.nbLastTrades;
+
   if (!cmdLineOptions.lastPrice.empty()) {
     StringOptionParser anyParser(cmdLineOptions.lastPrice);
     std::tie(lastPriceMarket, lastPriceExchanges) = anyParser.getMarketExchanges();

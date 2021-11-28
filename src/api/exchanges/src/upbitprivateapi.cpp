@@ -13,11 +13,11 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_nonce.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
+#include "timestring.hpp"
 #include "toupperlower.hpp"
 #include "upbitpublicapi.hpp"
 
@@ -85,7 +85,7 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   CurrencyExchangeFlatSet currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "status/wallet");
-  currencies.reserve(result.size());
+  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size()));
   for (const json& curDetails : result) {
     CurrencyCode cur(curDetails["currency"].get<std::string_view>());
     if (UpbitPublic::CheckCurrencyCode(cur, excludedCurrencies)) {

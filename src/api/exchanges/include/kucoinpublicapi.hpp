@@ -54,6 +54,8 @@ class KucoinPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
 
+  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+
   MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
 
   VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
@@ -73,7 +75,7 @@ class KucoinPublic : public ExchangePublic {
       explicit CurrencyInfo(CurrencyCode c) : currencyExchange(c, c, c) {}
       explicit CurrencyInfo(CurrencyExchange&& c) : currencyExchange(std::move(c)) {}
 
-      bool operator<(const CurrencyInfo& o) const { return currencyExchange < o.currencyExchange; }
+      auto operator<=>(const CurrencyInfo& o) const = default;
 
       CurrencyExchange currencyExchange;
       MonetaryAmount withdrawalMinSize;

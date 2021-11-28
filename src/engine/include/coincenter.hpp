@@ -45,6 +45,8 @@ class Coincenter {
   using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
   using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
+  using LastTradesPerExchange =
+      FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
   using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
   using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, Coincenter::MarketOrderBookMaps>;
   using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
@@ -78,6 +80,10 @@ class Coincenter {
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
+
+  /// Retrieve the last trades for each queried exchange
+  LastTradesPerExchange getLastTradesPerExchange(Market m, std::span<const ExchangeName> exchangeNames,
+                                                 int nbLastTrades);
 
   /// Retrieve the last price for exchanges supporting given market.
   MonetaryAmountPerExchange getLastPricePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
@@ -126,6 +132,8 @@ class Coincenter {
   void printWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
   void printLast24hTradedVolume(Market m, std::span<const ExchangeName> exchangeNames);
+
+  void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) const;
 
   void printLastPrice(Market m, std::span<const ExchangeName> exchangeNames);
 

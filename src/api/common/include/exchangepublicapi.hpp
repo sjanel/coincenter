@@ -14,6 +14,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "publictrade.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
@@ -26,11 +27,13 @@ class CryptowatchAPI;
 class ExchangePublic : public ExchangeBase {
  public:
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
+  static constexpr int kNbLastTradesDefault = 100;
 
   using MarketSet = FlatSet<Market>;
   using MarketOrderBookMap = std::unordered_map<Market, MarketOrderBook>;
   using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
   using WithdrawalFeeMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
+  using LastTradesVector = vector<PublicTrade>;
 
   ExchangePublic(const ExchangePublic &) = delete;
   ExchangePublic &operator=(const ExchangePublic &) = delete;
@@ -76,6 +79,9 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the total volume exchange on given market in the last 24 hours.
   virtual MonetaryAmount queryLast24hVolume(Market m) = 0;
+
+  /// Retrieve an ordered vector of recent last trades
+  virtual LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) = 0;
 
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market m) = 0;

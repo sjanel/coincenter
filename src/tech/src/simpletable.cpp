@@ -7,10 +7,14 @@
 
 #include "cct_smallvector.hpp"
 #include "mathhelpers.hpp"
-#include "stringhelpers.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
+
+/// A divider row is represented as an empty row.
+/// It will be treated specially in the print
+const SimpleTable::Row SimpleTable::Row::kDivider;
+
 namespace {
 constexpr char kColumnSep = '|';
 constexpr char kLineSep = '-';
@@ -55,7 +59,7 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
       os << std::get<std::string_view>(_data);
       break;
     case 2:
-      os << ToString<string>(std::get<IntegralType>(_data));
+      os << std::get<IntegralType>(_data);
       break;
     default:
       unreachable();
@@ -80,8 +84,11 @@ void SimpleTable::print(std::ostream &os) const {
   const size_type nbColumns = _rows.front().size();
   SmallVector<uint16_t, 8> maxWidthPerColumn(nbColumns, 0);
   for (const Row &r : _rows) {
-    for (size_type columnPos = 0; columnPos < nbColumns; ++columnPos) {
-      maxWidthPerColumn[columnPos] = std::max(maxWidthPerColumn[columnPos], static_cast<uint16_t>(r[columnPos].size()));
+    if (!r.isDivider()) {
+      for (size_type columnPos = 0; columnPos < nbColumns; ++columnPos) {
+        maxWidthPerColumn[columnPos] =
+            std::max(maxWidthPerColumn[columnPos], static_cast<uint16_t>(r[columnPos].size()));
+      }
     }
   }
   const size_type sumWidths = std::accumulate(maxWidthPerColumn.begin(), maxWidthPerColumn.end(), 0U);
@@ -92,7 +99,11 @@ void SimpleTable::print(std::ostream &os) const {
 
   bool printHeader = _rows.size() > 1U;
   for (const Row &r : _rows) {
-    r.print(os, maxWidthPerColumn);
+    if (r.isDivider()) {
+      os << lineSep << std::endl;
+    } else {
+      r.print(os, maxWidthPerColumn);
+    }
     if (printHeader) {
       os << lineSep << std::endl;
       printHeader = false;

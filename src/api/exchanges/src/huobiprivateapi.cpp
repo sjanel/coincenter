@@ -4,10 +4,10 @@
 
 #include "apikey.hpp"
 #include "cct_codec.hpp"
-#include "cct_nonce.hpp"
 #include "huobipublicapi.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timestring.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {
@@ -20,18 +20,20 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   string url(HuobiPublic::kUrlBase);
   url.append(method);
 
-  Nonce nonce = Nonce_LiteralDate();
+  Nonce nonce = Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S");
   string encodedNonce = curlHandle.urlEncode(nonce);
 
   CurlOptions opts(requestType);
   opts.userAgent = HuobiPublic::kUserAgent;
 
-  opts.httpHeaders.push_back("Content-Type: application/json");
+  opts.httpHeaders.emplace_back("Content-Type: application/json");
   // Remove 'https://' (which is 8 chars) from URL base
   string paramsStr(opts.requestTypeStr());
   paramsStr.push_back('\n');
-  paramsStr.append(
-      std::string_view(HuobiPublic::kUrlBase.data() + 8, HuobiPublic::kUrlBase.data() + HuobiPublic::kUrlBase.size()));
+  static constexpr std::string_view kHttpsString = "https://";
+  std::string_view urlBaseWithoutHttps(HuobiPublic::kUrlBase.begin() + kHttpsString.size(),
+                                       HuobiPublic::kUrlBase.end());
+  paramsStr.append(urlBaseWithoutHttps);
   paramsStr.push_back('\n');
   paramsStr.append(method);
   paramsStr.push_back('\n');
@@ -60,10 +62,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   url.append(signaturePostdata.str());
 
   json ret = json::parse(curlHandle.query(url, opts));
-  if (ret.contains("status") && ret["status"].get<std::string_view>() != "ok") {
+  auto statusIt = ret.find("status");
+  if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
     string errMsg("Error: ");
-    if (ret.contains("err-msg")) {
-      errMsg.append(ret["err-msg"].get<std::string_view>());
+    auto errIt = ret.find("err-msg");
+    if (errIt == ret.end()) {
+      errMsg.append("unknown");
+    } else {
+      errMsg.append(errIt->get<std::string_view>());
     }
     throw exception(std::move(errMsg));
   }

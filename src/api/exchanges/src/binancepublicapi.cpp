@@ -456,6 +456,26 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
+BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
+  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "trades",
+                            {{"symbol", m.assetsPairStr()}, {"limit", nbTrades}});
+
+  LastTradesVector ret;
+  ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
+  for (const json& detail : result) {
+    MonetaryAmount amount(detail["qty"].get<std::string_view>(), m.base());
+    MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
+    int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
+    PublicTrade::Type tradeType =
+        detail["isBuyerMaker"].get<bool>() ? PublicTrade::Type::kSell : PublicTrade::Type::kBuy;
+
+    ret.emplace_back(tradeType, amount, price,
+                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+  }
+  std::sort(ret.begin(), ret.end());
+  return ret;
+}
+
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market m) {
   json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "ticker/price",
                             {{"symbol", m.assetsPairStr()}});
