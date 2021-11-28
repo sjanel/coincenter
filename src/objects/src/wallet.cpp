@@ -4,7 +4,6 @@
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
 #include "cct_log.hpp"
-#include "coincenterinfo.hpp"
 
 namespace cct {
 
@@ -14,9 +13,13 @@ File GetDepositAddressesFile(std::string_view dataDir) {
 }
 }  // namespace
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.
-bool Wallet::ValidateWallet(std::string_view dataDir, const PrivateExchangeName &privateExchangeName,
+bool Wallet::ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &privateExchangeName,
                             CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag) {
-  File depositAddressesFile = GetDepositAddressesFile(dataDir);
+  if (!walletCheck.doCheck()) {
+    log::debug("No wallet validation from file");
+    return true;
+  }
+  File depositAddressesFile = GetDepositAddressesFile(walletCheck.dataDir());
   json data = depositAddressesFile.readJson();
   if (!data.contains(privateExchangeName.name())) {
     log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, privateExchangeName.name());
@@ -58,10 +61,8 @@ bool Wallet::ValidateWallet(std::string_view dataDir, const PrivateExchangeName 
 
 namespace {
 void ValidateDepositAddressIfNeeded(const PrivateExchangeName &privateExchangeName, CurrencyCode currency,
-                                    std::string_view address, std::string_view tag,
-                                    const CoincenterInfo &coincenterInfo) {
-  if (coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile() &&
-      !Wallet::ValidateWallet(coincenterInfo.dataDir(), privateExchangeName, currency, address, tag)) {
+                                    std::string_view address, std::string_view tag, WalletCheck walletCheck) {
+  if (!Wallet::ValidateWallet(walletCheck, privateExchangeName, currency, address, tag)) {
     string errMsg("Incorrect wallet compared to the one stored in ");
     errMsg.append(kDepositAddressesFileName);
     throw exception(std::move(errMsg));
@@ -70,18 +71,23 @@ void ValidateDepositAddressIfNeeded(const PrivateExchangeName &privateExchangeNa
 }  // namespace
 
 Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
-               std::string_view tag, const CoincenterInfo &coincenterInfo)
-    : _privateExchangeName(privateExchangeName), _address(address), _tag(tag), _currency(currency) {
-  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, address, tag, coincenterInfo);
+               std::string_view tag, WalletCheck walletCheck)
+    : _privateExchangeName(privateExchangeName),
+      _addressAndTag(address),
+      _tagPos(tag.empty() ? string::npos : address.size()),
+      _currency(currency) {
+  _addressAndTag.append(tag);
+  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, address, tag, walletCheck);
 }
 
-Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, string &&address, string &&tag,
-               const CoincenterInfo &coincenterInfo)
+Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, string &&address, std::string_view tag,
+               WalletCheck walletCheck)
     : _privateExchangeName(std::move(privateExchangeName)),
-      _address(std::move(address)),
-      _tag(std::move(tag)),
+      _addressAndTag(std::move(address)),
+      _tagPos(tag.empty() ? string::npos : _addressAndTag.size()),
       _currency(currency) {
-  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, _address, _tag, coincenterInfo);
+  _addressAndTag.append(tag);
+  ValidateDepositAddressIfNeeded(_privateExchangeName, currency, this->address(), tag, walletCheck);
 }
 
 string Wallet::str() const {
@@ -89,11 +95,11 @@ string Wallet::str() const {
   ret.append(" wallet of ");
   ret.append(_currency.str());
   ret.append(", address: [");
-  ret.append(_address);
+  ret.append(address());
   ret.push_back(']');
-  if (!_tag.empty()) {
+  if (hasTag()) {
     ret.append(" tag ");
-    ret.append(_tag);
+    ret.append(tag());
   }
   return ret;
 }

@@ -14,6 +14,7 @@
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace api {
@@ -132,9 +133,8 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  const bool validateWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
-  std::string_view dataDir = coincenterInfo.dataDir();
-
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   string address, tag;
   for (const json& depositDetail : res) {
     for (const auto& [keyStr, valueStr] : depositDetail.items()) {
@@ -159,7 +159,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         }
       }
     }
-    if (!validateWallet || Wallet::ValidateWallet(dataDir, privateExchangeName, currencyCode, address, tag)) {
+    if (Wallet::ValidateWallet(walletCheck, privateExchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
@@ -167,8 +167,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet w(std::move(privateExchangeName), currencyCode, std::move(address), std::move(tag),
-           _exchangePublic.coincenterInfo());
+  Wallet w(std::move(privateExchangeName), currencyCode, std::move(address), std::move(tag), walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -335,8 +334,8 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   string krakenWalletName(wallet.exchangeName());
   krakenWalletName.push_back('_');
   krakenWalletName.append(currencyCode.str());
-  std::transform(std::begin(krakenWalletName), std::end(krakenWalletName), krakenWalletName.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+  std::transform(krakenWalletName.begin(), krakenWalletName.end(), krakenWalletName.begin(),
+                 [](char c) { return tolower(c); });
 
   json withdrawData = PrivateQuery(
       _curlHandle, _apiKey, "Withdraw",

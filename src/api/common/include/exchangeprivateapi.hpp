@@ -83,12 +83,18 @@ class ExchangePrivate : public ExchangeBase {
     return _exchangePublic.queryWithdrawalFee(currencyCode);
   }
 
+  PrivateExchangeName createPrivateExchangeName() const {
+    return PrivateExchangeName(_exchangePublic.name(), _apiKey.name());
+  }
+
+  const ExchangeInfo &exchangeInfo() const { return _coincenterInfo.exchangeInfo(_exchangePublic.name()); }
+
  protected:
-  ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
+  ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &coincenterInfo, const APIKey &apiKey)
       : ExchangeBase(),
         _exchangePublic(exchangePublic),
         _cachedResultVault(exchangePublic._cachedResultVault),
-        _coincenterInfo(config),
+        _coincenterInfo(coincenterInfo),
         _apiKey(apiKey) {}
 
   virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) = 0;

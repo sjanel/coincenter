@@ -52,7 +52,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
 void PrivateTest(BithumbPrivate &bithumbPrivate) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(bithumbPrivate.getAccountBalance());
-  EXPECT_FALSE(bithumbPrivate.queryDepositWallet("ETH").hasDestinationTag());
+  EXPECT_FALSE(bithumbPrivate.queryDepositWallet("ETH").hasTag());
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("13.567XRP");
   EXPECT_NO_THROW(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions));

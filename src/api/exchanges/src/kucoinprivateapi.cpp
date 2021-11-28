@@ -157,8 +157,13 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view address = result["address"].get<std::string_view>();
   std::string_view tag = result["memo"].get<std::string_view>();
 
-  Wallet w(PrivateExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode, address, tag,
-           _kucoinPublic.coincenterInfo());
+  PrivateExchangeName privateExchangeName(_kucoinPublic.name(), _apiKey.name());
+
+  const CoincenterInfo& coincenterInfo = _kucoinPublic.coincenterInfo();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
+
+  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -258,8 +263,8 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 
   CurlPostData opts{
       {"currency", currencyCode.str()}, {"address", wallet.address()}, {"amount", netEmittedAmount.amountStr()}};
-  if (wallet.hasDestinationTag()) {
-    opts.append("memo", wallet.destinationTag());
+  if (wallet.hasTag()) {
+    opts.append("memo", wallet.tag());
   }
 
   json result =

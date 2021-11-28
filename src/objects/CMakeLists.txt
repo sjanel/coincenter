@@ -71,3 +71,12 @@ add_unit_test(
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
+
+add_unit_test(
+    wallet_test 
+    test/wallet_test.cpp 
+    LIBRARIES 
+    coincenter_objects 
+    DEFINITIONS 
+    CCT_DISABLE_SPDLOG
+)
