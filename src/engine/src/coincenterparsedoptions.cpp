@@ -99,14 +99,26 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     noSecretsForAll = noSecretsExchanges.empty();
   }
 
-  std::string_view tradeArgs = !cmdLineOptions.trade_multi.empty() ? cmdLineOptions.trade_multi : cmdLineOptions.trade;
+  std::string_view tradeArgs;
+  bool isMultiTrade = !cmdLineOptions.trade_multi.empty() || !cmdLineOptions.trade_multi_all.empty();
+  bool isTradeAll = !cmdLineOptions.trade_all.empty() || !cmdLineOptions.trade_multi_all.empty();
+  if (isMultiTrade) {
+    tradeArgs = isTradeAll ? cmdLineOptions.trade_multi_all : cmdLineOptions.trade_multi;
+  } else {
+    tradeArgs = isTradeAll ? cmdLineOptions.trade_all : cmdLineOptions.trade;
+  }
   if (!tradeArgs.empty()) {
     StringOptionParser anyParser(tradeArgs);
-    std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
-        anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
+    if (isTradeAll) {
+      std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeName) =
+          anyParser.getFromToCurrencyCodePrivateExchange();
+    } else {
+      std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
+          anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
+    }
 
     TradeMode tradeMode = cmdLineOptions.trade_sim ? TradeMode::kSimulation : TradeMode::kReal;
-    TradeType tradeType = cmdLineOptions.trade_multi.empty() ? TradeType::kSingleTrade : TradeType::kMultiTradePossible;
+    TradeType tradeType = isMultiTrade ? TradeType::kMultiTradePossible : TradeType::kSingleTrade;
     TradeTimeoutAction timeoutAction =
         cmdLineOptions.trade_timeout_match ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
 

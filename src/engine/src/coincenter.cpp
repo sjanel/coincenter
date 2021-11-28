@@ -195,6 +195,12 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
 }
 
 void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
+  // Trade all
+  if (opts.fromTradeCurrency != CurrencyCode()) {
+    tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+  }
+
+  // Trade
   if (!opts.startTradeAmount.isZero()) {
     MonetaryAmount startAmount = opts.startTradeAmount;
     trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
@@ -266,31 +272,6 @@ Coincenter::BalancePerExchange Coincenter::getBalance(std::span<const PrivateExc
     exportBalanceMetrics(ret, equiCurrency);
   }
 
-  return ret;
-}
-
-json Coincenter::getAllDepositInfo() {
-  PrivateExchangeNames privateExchangeNames;
-  ExchangeRetriever::SelectedExchanges depositInfoExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
-
-  json ret;
-  for (Exchange *e : depositInfoExchanges) {
-    PrivateExchangeName privateExchangeName(e->name(), e->keyName());
-    string privateExchangeNameStr(privateExchangeName.str());
-    for (const CurrencyExchange &curExchange : e->apiPrivate().queryTradableCurrencies()) {
-      if (curExchange.canDeposit() && !curExchange.isFiat()) {
-        Wallet w = e->apiPrivate().queryDepositWallet(curExchange.standardCode());
-        string addressAndTag(w.address());
-        if (w.hasTag()) {
-          addressAndTag.push_back(',');
-          addressAndTag.append(w.tag());
-        }
-        string curCodeStr(curExchange.standardCode().str());
-        ret[privateExchangeNameStr][curCodeStr] = std::move(addressAndTag);
-      }
-    }
-  }
   return ret;
 }
 
@@ -525,6 +506,13 @@ void Coincenter::printConversionPath(std::span<const ExchangeName> exchangeNames
 MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
                                  const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
   Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
+  return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
+}
+
+MonetaryAmount Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
+                                    const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
+  Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
+  MonetaryAmount startAmount = exchange.apiPrivate().getAccountBalance(fromCurrency).get(fromCurrency);
   return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
 }
 

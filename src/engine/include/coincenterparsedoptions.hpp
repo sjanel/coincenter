@@ -24,6 +24,7 @@ class CoincenterParsedOptions {
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
+  CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
   PrivateExchangeName tradePrivateExchangeName;
   TradeOptions tradeOptions;
