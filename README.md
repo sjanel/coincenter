@@ -25,6 +25,7 @@ Main features:
 **Private requests**
  - Balance
  - Trade (in several flavors)
+ - Deposit information (address & tag)
  - Withdraw (with check at destination that funds are well received)
   
 **Supported exchanges**
@@ -76,6 +77,7 @@ Main features:
     - [Single Trade](#single-trade)
     - [Multi Trade](#multi-trade)
       - [Trade simulation](#trade-simulation)
+    - [Deposit information](#deposit-information)
     - [Withdraw coin](#withdraw-coin)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
@@ -483,14 +485,24 @@ If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC
 
 Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
+### Deposit information
+
+You can retrieve one deposit address and tag from your accounts on a given currency provided that the exchange can receive it with `--deposit-info` option. It requires a currency code, and an optional list of exchanges (private or public names, see [Handle several accounts per exchange](#handle-several-accounts-per-exchange)). If no exchanges are given, program will query all accounts and retrieve the possible ones.
+
+If for a given exchange account a deposit address is not created yet, `coincenter` will create one automatically.
+
+Only one deposit address per currency / account is returned.
+
+**Important note**: only addresses which are validated against the `depositaddresses.json` file will be returned (unless option `validatedepositaddressesinfile` is set to `false` in `static/exchangeconfig.json` file). This file allows you to control addresses to which `coincenter` can send funds, even if you have more deposit addresses already configured.
+
 ### Withdraw coin
 
 It is possible to withdraw coin with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination).
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
- - External address is not taken as an input parameter, but instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange
- - By default (can be configured in `static/exchangeconfig.json`) deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
+ - External address is not taken as an input parameter, but instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange (see [Deposit information](#deposit-information))
+ - By default (can be configured in `static/exchangeconfig.json` with boolean value `validatedepositaddressesinfile`) deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
