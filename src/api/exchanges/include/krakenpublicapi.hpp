@@ -56,12 +56,17 @@ class KrakenPublic : public ExchangePublic {
   friend class KrakenPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(const CoincenterInfo& config, const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
-        : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchApi,
+                           const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
+        : _coincenterInfo(config),
+          _cryptowatchApi(cryptowatchApi),
+          _curlHandle(curlHandle),
+          _exchangeInfo(exchangeInfo) {}
 
     CurrencyExchangeFlatSet operator()();
 
     const CoincenterInfo& _coincenterInfo;
+    CryptowatchAPI& _cryptowatchApi;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

@@ -15,6 +15,7 @@
 #include "cct_log.hpp"
 #include "cct_nonce.hpp"
 #include "coincenterinfo.hpp"
+#include "cryptowatchapi.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "toupperlower.hpp"
@@ -72,7 +73,7 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _apiKey, upbitPublic, config.exchangeInfo(_exchangePublic.name())),
+          _curlHandle, _apiKey, config.exchangeInfo(_exchangePublic.name()), upbitPublic._cryptowatchApi),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
@@ -105,7 +106,10 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
       if (depositStatus == CurrencyExchange::Deposit::kUnavailable) {
         log::debug("{} cannot be deposited to Upbit", cur.str());
       }
-      currencies.insert(CurrencyExchange(cur, cur, cur, depositStatus, withdrawStatus));
+      currencies.insert(CurrencyExchange(cur, cur, cur, depositStatus, withdrawStatus,
+                                         _cryptowatchApi.queryIsCurrencyCodeFiat(cur)
+                                             ? CurrencyExchange::Type::kFiat
+                                             : CurrencyExchange::Type::kCrypto));
     }
   }
   log::info("Retrieved {} Upbit currencies", currencies.size());

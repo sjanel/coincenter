@@ -30,7 +30,9 @@ class BinancePublic : public ExchangePublic {
   BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                 api::CryptowatchAPI& cryptowatchAPI);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+  CurrencyExchangeFlatSet queryTradableCurrencies() override {
+    return queryTradableCurrencies(_globalInfosCache.get());
+  }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode standardCode) override {
     return *queryTradableCurrencies().find(standardCode);
@@ -60,6 +62,8 @@ class BinancePublic : public ExchangePublic {
 
  private:
   friend class BinancePrivate;
+
+  CurrencyExchangeFlatSet queryTradableCurrencies(const json& data) const;
 
   class CommonInfo {
    public:

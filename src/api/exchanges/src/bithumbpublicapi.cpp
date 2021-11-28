@@ -51,13 +51,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 }  // namespace
 
-BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
-                             api::CryptowatchAPI& cryptowatchAPI)
+BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
-          _curlHandle),
+          cryptowatchAPI, _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
@@ -154,9 +153,11 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
     CurrencyExchange newCurrency(currencyCode, exchangeCode, exchangeCode,
                                  withdrawalDeposit["deposit_status"] == 1 ? CurrencyExchange::Deposit::kAvailable
                                                                           : CurrencyExchange::Deposit::kUnavailable,
-                                 withdrawalDeposit["withdrawal_status"] == 1
-                                     ? CurrencyExchange::Withdraw::kAvailable
-                                     : CurrencyExchange::Withdraw::kUnavailable);
+                                 withdrawalDeposit["withdrawal_status"] == 1 ? CurrencyExchange::Withdraw::kAvailable
+                                                                             : CurrencyExchange::Withdraw::kUnavailable,
+                                 _cryptowatchAPI.queryIsCurrencyCodeFiat(currencyCode)
+                                     ? CurrencyExchange::Type::kFiat
+                                     : CurrencyExchange::Type::kCrypto);
     if (currencies.contains(newCurrency)) {
       log::error("Duplicated {}", newCurrency.str());
     } else {
@@ -165,7 +166,7 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
     }
   }
   currencies.emplace("KRW", "KRW", "KRW", CurrencyExchange::Deposit::kUnavailable,
-                     CurrencyExchange::Withdraw::kUnavailable);
+                     CurrencyExchange::Withdraw::kUnavailable, CurrencyExchange::Type::kFiat);
   log::info("Retrieved {} Bithumb currencies", currencies.size());
   return currencies;
 }

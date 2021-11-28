@@ -93,6 +93,8 @@ class Coincenter {
   BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                 CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
+  json getAllDepositInfo();
+
   WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                    CurrencyCode depositCurrency);
 

@@ -47,16 +47,16 @@ class UpbitPrivate : public ExchangePrivate {
 
  private:
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic,
-                           const ExchangeInfo& exchangeInfo)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic), _exchangeInfo(exchangeInfo) {}
+    TradableCurrenciesFunc(CurlHandle& curlHandle, const APIKey& apiKey, const ExchangeInfo& exchangeInfo,
+                           CryptowatchAPI& cryptowatchApi)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangeInfo(exchangeInfo), _cryptowatchApi(cryptowatchApi) {}
 
     CurrencyExchangeFlatSet operator()();
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
-    UpbitPublic& _exchangePublic;
     const ExchangeInfo& _exchangeInfo;
+    CryptowatchAPI& _cryptowatchApi;
   };
 
   struct DepositWalletFunc {

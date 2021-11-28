@@ -19,7 +19,7 @@ class BinancePrivate : public ExchangePrivate {
  public:
   BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
 
@@ -55,6 +55,17 @@ class BinancePrivate : public ExchangePrivate {
 
   TradedAmounts parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
 
+  struct TradableCurrenciesCache {
+    TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
+
+    CurrencyExchangeFlatSet operator()();
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    BinancePublic& _public;
+  };
+
   struct DepositWalletFunc {
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
@@ -89,6 +100,7 @@ class BinancePrivate : public ExchangePrivate {
   };
 
   CurlHandle _curlHandle;
+  CachedResult<TradableCurrenciesCache> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
   CachedResult<AllWithdrawFeesFunc> _allWithdrawFeesCache;
   CachedResult<WithdrawFeesFunc, CurrencyCode> _withdrawFeesCache;

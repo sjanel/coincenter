@@ -49,12 +49,13 @@ class BithumbPublic : public ExchangePublic {
   friend class BithumbPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(const CoincenterInfo& config, CurlHandle& curlHandle)
-        : _coincenterInfo(config), _curlHandle(curlHandle) {}
+    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchAPI, CurlHandle& curlHandle)
+        : _coincenterInfo(config), _cryptowatchAPI(cryptowatchAPI), _curlHandle(curlHandle) {}
 
     CurrencyExchangeFlatSet operator()();
 
     const CoincenterInfo& _coincenterInfo;
+    CryptowatchAPI& _cryptowatchAPI;
     CurlHandle& _curlHandle;
   };
 

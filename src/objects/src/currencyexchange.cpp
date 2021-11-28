@@ -8,16 +8,18 @@ CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode excha
       _altCode(altCode),
       _canDeposit(false),
       _canWithdraw(false),
-      _unknownDepositWithdrawalStatus(true) {}
+      _unknownDepositWithdrawalStatus(true),
+      _isFiat(false) {}
 
 CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode,
-                                   Deposit deposit, Withdraw withdraw)
+                                   Deposit deposit, Withdraw withdraw, Type type)
     : _standardCode(standardCode),
       _exchangeCode(exchangeCode),
       _altCode(altCode),
       _canDeposit(deposit == Deposit::kAvailable),
       _canWithdraw(withdraw == Withdraw::kAvailable),
-      _unknownDepositWithdrawalStatus(false) {}
+      _unknownDepositWithdrawalStatus(false),
+      _isFiat(type == Type::kFiat) {}
 
 string CurrencyExchange::str() const {
   string ret(_standardCode.str());

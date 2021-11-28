@@ -66,8 +66,8 @@ class KucoinPublic : public ExchangePublic {
   friend class KucoinPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(CurlHandle& curlHandle, const CoincenterInfo& coincenterInfo)
-        : _curlHandle(curlHandle), _coincenterInfo(coincenterInfo) {}
+    TradableCurrenciesFunc(CurlHandle& curlHandle, const CoincenterInfo& coincenterInfo, CryptowatchAPI& cryptowatchApi)
+        : _curlHandle(curlHandle), _coincenterInfo(coincenterInfo), _cryptowatchApi(cryptowatchApi) {}
 
     struct CurrencyInfo {
       explicit CurrencyInfo(CurrencyCode c) : currencyExchange(c, c, c) {}
@@ -86,6 +86,7 @@ class KucoinPublic : public ExchangePublic {
 
     CurlHandle& _curlHandle;
     const CoincenterInfo& _coincenterInfo;
+    CryptowatchAPI& _cryptowatchApi;
   };
 
   struct MarketsFunc {

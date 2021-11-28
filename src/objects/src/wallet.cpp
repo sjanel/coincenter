@@ -47,10 +47,7 @@ bool Wallet::ValidateWallet(std::string_view dataDir, const PrivateExchangeName 
         }
         std::string_view tag(tagPos == string::npos ? addressAndTag.end() : (addressAndTag.begin() + tagPos + 1),
                              addressAndTag.end());
-        if (expectedTag != tag) {
-          return false;
-        }
-        return true;
+        return expectedTag == tag;
       }
     }
   }

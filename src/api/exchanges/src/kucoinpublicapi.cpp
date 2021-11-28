@@ -45,7 +45,7 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
       _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _coincenterInfo),
+          _curlHandle, _coincenterInfo, cryptowatchAPI),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     _curlHandle, _exchangeInfo),
       _allOrderBooksCache(
@@ -72,7 +72,9 @@ KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurr
                          curDetail["isDepositEnabled"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
                                                                    : CurrencyExchange::Deposit::kUnavailable,
                          curDetail["isWithdrawEnabled"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
-                                                                    : CurrencyExchange::Withdraw::kUnavailable));
+                                                                    : CurrencyExchange::Withdraw::kUnavailable,
+                         _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
+                                                                      : CurrencyExchange::Type::kCrypto));
     currencyInfo.withdrawalMinFee = MonetaryAmount(curDetail["withdrawalMinFee"].get<std::string_view>(), cur);
     currencyInfo.withdrawalMinSize = MonetaryAmount(curDetail["withdrawalMinSize"].get<std::string_view>(), cur);
 
