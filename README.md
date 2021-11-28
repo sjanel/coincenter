@@ -75,6 +75,7 @@ Main features:
   - [Private requests](#private-requests)
     - [Balance](#balance)
     - [Single Trade](#single-trade)
+      - [Examples](#examples)
     - [Multi Trade](#multi-trade)
       - [Trade simulation](#trade-simulation)
     - [Deposit information](#deposit-information)
@@ -461,7 +462,7 @@ coincenter --balance kraken,bithumb --balance-cur eur
 
 ### Single Trade
 
-A single trade per market / exchange can be done in a user friendly way supporting 3 parameterized strategies.
+A single trade per market / exchange can be done in a user friendly way supporting 3 parameterized price choser strategies.
 It is 'single' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange.
 Of course, this requires that your private keys for the considered exchange are well settled in the `<DataDir>/secret/secret.json` file, and that your balance is sufficient. When unnecessary, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
 
@@ -470,9 +471,18 @@ Possible order price strategies:
  - `taker`: order placed at market price, should be matched immediately
  - `nibble`: order price continuously set at limit price + (buy)/- (sell) 1. This is a hybrid mode between the above two methods, ensuring continuous partial matches of the order over time, but at a controlled price (market price can be dangerously low for some short periods of time with large sells)
 
-Example: "Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute"
+Use command line option `--trade`, `--singletrade` or `-t` to make a single trade from a departure amount.
+If you want to simply sell all available amount from a given currency, you can use `--trade-all` option which takes a departure currency instead of an input amount.
+
+#### Examples
+Trade 0.5 BTC to euros on Kraken, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute
 ```
 coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy nibble --trade-timeout 1min
+```
+
+Trade all DOGE to USDT on Binance account with key name 'user1', with the 'taker' strategy, keeping default time out and cancel remaining untouched amount when trade expires
+```
+coincenter --trade-all doge-usdt,binance_user1 --trade-strategy taker
 ```
 
 You can also choose the behavior of the trade when timeout is reached, thanks to `--trade-timeout-match` option. By default, when the trade expires, the last unmatched order is cancelled. With above option, instead it places a last order at market price (should be matched immediately).
@@ -480,6 +490,8 @@ You can also choose the behavior of the trade when timeout is reached, thanks to
 ### Multi Trade
 
 If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC* market and have *AAA-BBB* and *BBB-CCC*, then it's possible with a multi trade by changing `--trade` into `--multitrade`. Options are the same than for a simple trade. `coincenter` starts by evaluating the shortest conversion path to reach *CCC* from *AAA* and then applies the single trades in the correct order to its final goal.
+
+Similarly to single trade, you can use command line option `--multitrade-all` when you want to sell all available amount from a currency.
 
 #### Trade simulation
 
