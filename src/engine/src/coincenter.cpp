@@ -269,36 +269,45 @@ Coincenter::BalancePerExchange Coincenter::getBalance(std::span<const PrivateExc
   return ret;
 }
 
+json Coincenter::getAllDepositInfo() {
+  PrivateExchangeNames privateExchangeNames;
+  ExchangeRetriever::SelectedExchanges depositInfoExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  json ret;
+  for (Exchange *e : depositInfoExchanges) {
+    PrivateExchangeName privateExchangeName(e->name(), e->keyName());
+    string privateExchangeNameStr(privateExchangeName.str());
+    for (const CurrencyExchange &curExchange : e->apiPrivate().queryTradableCurrencies()) {
+      if (curExchange.canDeposit() && !curExchange.isFiat()) {
+        Wallet w = e->apiPrivate().queryDepositWallet(curExchange.standardCode());
+        string addressAndTag(w.address());
+        if (w.hasDestinationTag()) {
+          addressAndTag.push_back(',');
+          addressAndTag.append(w.destinationTag());
+        }
+        string curCodeStr(curExchange.standardCode().str());
+        ret[privateExchangeNameStr][curCodeStr] = std::move(addressAndTag);
+      }
+    }
+  }
+  return ret;
+}
+
 Coincenter::WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                                          CurrencyCode depositCurrency) {
   ExchangeRetriever::SelectedExchanges depositInfoExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
-  ExchangeRetriever::PublicExchangesVec publicExchanges =
-      _exchangeRetriever.selectPublicExchanges(privateExchangeNames);
-
   /// Filter only on exchanges with can receive given currency
-  /// Tricky part: we have a list of private exchanges which can have duplicates of public exchanges.
-  /// We want to call 'queryTradableCurrencies' only once per public exchange.
-  /// 'canDepositCurrency' is indexed on public exchanges. 'depositInfoExchanges' on private exchanges.
-  /// Hence the erase loop below.
-  FixedCapacityVector<bool, kNbSupportedExchanges> canDepositCurrency(publicExchanges.size());
-  std::transform(std::execution::par, publicExchanges.begin(), publicExchanges.end(), canDepositCurrency.begin(),
-                 [depositCurrency](Exchange::ExchangePublic *e) {
-                   return e->queryTradableCurrencies().contains(depositCurrency);
-                 });
+  SmallVector<bool, kTypicalNbPrivateAccounts> canDepositCurrency(depositInfoExchanges.size());
+  // Do not call in parallel here because tradable currencies service could be queried from several identical public
+  // exchanges (when there are several accounts for one exchange)
+  std::transform(
+      depositInfoExchanges.begin(), depositInfoExchanges.end(), canDepositCurrency.begin(),
+      [depositCurrency](Exchange *e) { return e->apiPrivate().queryTradableCurrencies().contains(depositCurrency); });
 
-  FilterVector(publicExchanges, canDepositCurrency);
-  for (auto it = depositInfoExchanges.begin(); it != depositInfoExchanges.end();) {
-    if (std::find_if(publicExchanges.begin(), publicExchanges.end(), [it](Exchange::ExchangePublic *e) {
-          return (*it)->name() == e->name();
-        }) == publicExchanges.end()) {
-      /// This exchange cannot receive this currency - remove it to avoid errors for queryDepositWallet below
-      it = depositInfoExchanges.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  FilterVector(depositInfoExchanges, canDepositCurrency);
 
   SmallVector<Wallet, kTypicalNbPrivateAccounts> walletPerExchange(depositInfoExchanges.size());
   std::transform(std::execution::par, depositInfoExchanges.begin(), depositInfoExchanges.end(),

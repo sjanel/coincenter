@@ -12,13 +12,14 @@ class CurrencyExchange {
  public:
   enum class Deposit { kAvailable, kUnavailable };  // use scoped enums to ensure type checks and increase readability
   enum class Withdraw { kAvailable, kUnavailable };
+  enum class Type { kFiat, kCrypto };
 
   /// Constructs a CurrencyExchange with up to two alternative codes, with unknown withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode);
 
   /// Constructs a CurrencyExchange with up to two alternative codes, with known withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode, Deposit deposit,
-                   Withdraw withdraw);
+                   Withdraw withdraw, Type type);
 
   std::string_view standardStr() const { return _standardCode.str(); }
   std::string_view exchangeStr() const { return _exchangeCode.str(); }
@@ -35,6 +36,8 @@ class CurrencyExchange {
 
   bool unknownDepositWithdrawalStatus() const { return _unknownDepositWithdrawalStatus; }
 
+  bool isFiat() const { return _isFiat; }
+
   bool operator<(const CurrencyExchange &o) const { return _standardCode < o._standardCode; }
   bool operator==(const CurrencyExchange &o) const { return _standardCode == o._standardCode; }
   bool operator!=(const CurrencyExchange &o) const { return !(*this == o); }
@@ -46,6 +49,7 @@ class CurrencyExchange {
   bool _canDeposit;
   bool _canWithdraw;
   bool _unknownDepositWithdrawalStatus;
+  bool _isFiat;
 };
 
 }  // namespace cct

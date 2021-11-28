@@ -72,6 +72,9 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& bina
     : ExchangePrivate(binancePublic, config, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(binancePublic.name()).minPrivateQueryDelay(),
                   config.getRunMode()),
+      _tradableCurrenciesCache(
+          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
+          _curlHandle, _apiKey, binancePublic),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic),
@@ -82,7 +85,11 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& bina
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic) {}
 
-CurrencyExchangeFlatSet BinancePrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
+CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
+  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, _public._commonInfo.getBestBaseURL(),
+                             "sapi/v1/capital/config/getall");
+  return _public.queryTradableCurrencies(result);
+}
 
 BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);

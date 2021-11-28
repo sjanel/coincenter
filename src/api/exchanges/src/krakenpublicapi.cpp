@@ -83,7 +83,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
-          config.exchangeInfo(_name), _curlHandle),
+          cryptowatchAPI, config.exchangeInfo(_name), _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           config, config.exchangeInfo(_name).minPublicQueryDelay()),
@@ -261,7 +261,10 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
     }
     CurrencyCode standardCode(_coincenterInfo.standardizeCurrencyCode(altCodeStr));
     CurrencyExchange newCurrency(standardCode, CurrencyCode(krakenAssetName), CurrencyCode(altCodeStr),
-                                 CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable);
+                                 CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                                 _cryptowatchApi.queryIsCurrencyCodeFiat(standardCode)
+                                     ? CurrencyExchange::Type::kFiat
+                                     : CurrencyExchange::Type::kCrypto);
 
     if (currencies.contains(newCurrency)) {
       log::error("Duplicated {}", newCurrency.str());

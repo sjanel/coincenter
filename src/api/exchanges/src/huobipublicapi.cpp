@@ -88,7 +88,9 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
                                    depositAllowedStr == "allowed" ? CurrencyExchange::Deposit::kAvailable
                                                                   : CurrencyExchange::Deposit::kUnavailable,
                                    withdrawAllowedStr == "allowed" ? CurrencyExchange::Withdraw::kAvailable
-                                                                   : CurrencyExchange::Withdraw::kUnavailable);
+                                                                   : CurrencyExchange::Withdraw::kUnavailable,
+                                   _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
+                                                                                : CurrencyExchange::Type::kCrypto);
       if (currencies.contains(newCurrency)) {
         log::error("Duplicated {}", newCurrency.str());
       } else {

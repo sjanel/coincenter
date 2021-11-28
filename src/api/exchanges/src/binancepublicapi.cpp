@@ -131,10 +131,10 @@ std::string_view BinancePublic::CommonInfo::BaseURLUpdater::operator()() {
   return fastestBaseUrl;
 }
 
-CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies() {
+CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeFlatSet ret;
   const ExchangeInfo::CurrencySet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
-  for (const json& el : _globalInfosCache.get()) {
+  for (const json& el : data) {
     std::string_view coin = el["coin"].get<std::string_view>();
     if (coin.size() > CurrencyCode::kAcronymMaxLen) {
       continue;
@@ -147,9 +147,11 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies() {
     const json& networkListPart = el["networkList"].front();
     bool withdrawEnable = networkListPart["withdrawEnable"];
     bool depositEnable = networkListPart["depositEnable"];
+    bool isFiat = el["isLegalMoney"];
     ret.insert(CurrencyExchange(
         cur, cur, cur, depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
-        withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable));
+        withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable,
+        isFiat ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto));
   }
 
   log::info("Retrieved {} {} currencies", _name, ret.size());
