@@ -63,9 +63,22 @@ StringOptionParser::MonetaryAmountExchanges StringOptionParser::getMonetaryAmoun
       GetExchanges(std::string_view(_opt.begin() + startExchangesPos, _opt.end()))};
 }
 
+StringOptionParser::CurrencyCodeFromToPrivateExchange StringOptionParser::getFromToCurrencyCodePrivateExchange() const {
+  std::size_t dashPos = _opt.find('-', 1);
+  if (dashPos == string::npos) {
+    throw std::invalid_argument("Expected a dash");
+  }
+  CurrencyCode fromTradeCurrency(std::string_view(_opt.begin(), _opt.begin() + dashPos));
+  std::size_t commaPos = getNextCommaPos(dashPos + 1);
+  std::size_t startExchangesPos = commaPos == string::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
+  CurrencyCode toTradeCurrency(std::string_view(_opt.begin() + dashPos + 1, _opt.begin() + commaPos));
+  return std::make_tuple(fromTradeCurrency, toTradeCurrency,
+                         PrivateExchangeName(std::string_view(_opt.begin() + startExchangesPos, _opt.end())));
+}
+
 StringOptionParser::MonetaryAmountCurrencyCodePrivateExchange
 StringOptionParser::getMonetaryAmountCurrencyCodePrivateExchange() const {
-  std::size_t dashPos = _opt.find('-');
+  std::size_t dashPos = _opt.find('-', 1);
   if (dashPos == string::npos) {
     throw std::invalid_argument("Expected a dash");
   }
@@ -73,9 +86,8 @@ StringOptionParser::getMonetaryAmountCurrencyCodePrivateExchange() const {
   std::size_t commaPos = getNextCommaPos(dashPos + 1);
   std::size_t startExchangesPos = commaPos == string::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
   CurrencyCode toTradeCurrency(std::string_view(_opt.begin() + dashPos + 1, _opt.begin() + commaPos));
-  return MonetaryAmountCurrencyCodePrivateExchange{
-      startTradeAmount, toTradeCurrency,
-      PrivateExchangeName(std::string_view(_opt.begin() + startExchangesPos, _opt.end()))};
+  return std::make_tuple(startTradeAmount, toTradeCurrency,
+                         PrivateExchangeName(std::string_view(_opt.begin() + startExchangesPos, _opt.end())));
 }
 
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()

@@ -93,8 +93,6 @@ class Coincenter {
   BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                 CurrencyCode equiCurrency = CurrencyCode::kNeutral);
 
-  json getAllDepositInfo();
-
   WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                    CurrencyCode depositCurrency);
 
@@ -104,6 +102,9 @@ class Coincenter {
   ///    markets.
   MonetaryAmount trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
                        const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions);
+
+  MonetaryAmount tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
+                          const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,

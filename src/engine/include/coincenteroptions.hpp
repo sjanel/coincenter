@@ -57,7 +57,9 @@ struct CoincenterCmdLineOptions {
   string balance_cur{CurrencyCode::kNeutral.str()};
 
   string trade;
+  string trade_all;
   string trade_multi;
+  string trade_multi_all;
   string trade_price{TradeOptions().priceStrategyStr()};
   bool trade_timeout_match = false;
   Duration trade_timeout{TradeOptions().maxTradeTime()};
@@ -137,6 +139,8 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
 
        {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange.\n"
                                                                    "Order will be placed at limit price by default"}, &OptValueType::trade},
+       {{{"Trade", 4}, "--trade-all", "<cur1-cur2,exchange>", "Single trade from available amount from given currency on an exchange.\n"
+                                                              "Order will be placed at limit price by default"}, &OptValueType::trade_all},
        {{{"Trade", 4}, "--singletrade", "<amt cur1-cur2,exchange>", "Synonym for '--trade'"}, &OptValueType::trade},
        {{{"Trade", 4}, "--multitrade", "<amt cur1-cur2,exchange>", "Multi trade from given start amount on an exchange.\n"
                                                                    "Multi trade will first compute fastest path from cur1 to cur2 and "
@@ -144,6 +148,8 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                    "Options are same than for single trade, applied to each step trade.\n"
                                                                    "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
                                                                    &OptValueType::trade_multi},
+       {{{"Trade", 4}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
+                                                                   "Order will be placed at limit price by default"}, &OptValueType::trade_multi_all},
        {{{"Trade", 4}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
                                                                   " - 'maker': order price continuously set at limit price (default)\n"
                                                                   " - 'nibble': order price continuously set at limit price + (buy)/- (sell) 1\n"
