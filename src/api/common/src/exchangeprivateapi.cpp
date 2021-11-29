@@ -129,7 +129,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
     bool updatePriceNeeded = false;
     if (!reachedEmergencyTime && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      price = _exchangePublic.computeLimitOrderPrice(m, remFrom);
+      price = _exchangePublic.computeLimitOrderPrice(m, remFrom, options.priceStrategy());
       updatePriceNeeded =
           (fromCurrencyCode == m.base() && price < lastPrice) || (fromCurrencyCode == m.quote() && price > lastPrice);
     }

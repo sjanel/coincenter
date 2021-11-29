@@ -98,7 +98,7 @@ class ExchangePublic : public ExchangeBase {
   ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                                            bool considerStableCoinsAsFiats = false);
 
-  MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from);
+  MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy);
 
   MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
                                       int depth = kDefaultDepth);
