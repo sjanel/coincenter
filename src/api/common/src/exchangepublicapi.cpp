@@ -151,9 +151,20 @@ ExchangePublic::ConversionPath ExchangePublic::findFastestConversionPath(Currenc
   return ret;
 }
 
-MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from) {
-  MarketOrderBook marketOrderBook = queryOrderBook(m);
-  return from.currencyCode() == m.base() ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
+MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy) {
+  MarketOrderBook marketOrderBook = queryOrderBook(m, 1);
+  CurrencyCode marketCode = m.base();
+  switch (priceStrategy) {
+    case TradePriceStrategy::kTaker:
+      [[fallthrough]];
+    case TradePriceStrategy::kNibble:
+      marketCode = m.quote();
+      [[fallthrough]];
+    case TradePriceStrategy::kMaker:
+      return from.currencyCode() == marketCode ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
+    default:
+      unreachable();
+  }
 }
 
 MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
