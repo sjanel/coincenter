@@ -505,7 +505,7 @@ MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCur
 MonetaryAmount Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                     const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
   Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
-  MonetaryAmount startAmount = exchange.apiPrivate().getAccountBalance(fromCurrency).get(fromCurrency);
+  MonetaryAmount startAmount = exchange.apiPrivate().getAccountBalance().get(fromCurrency);
   return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
 }
 
