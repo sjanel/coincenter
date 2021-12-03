@@ -144,14 +144,23 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
       log::trace("Discard {} excluded by config", cur.str());
       continue;
     }
-    const json& networkListPart = el["networkList"].front();
-    bool withdrawEnable = networkListPart["withdrawEnable"];
-    bool depositEnable = networkListPart["depositEnable"];
     bool isFiat = el["isLegalMoney"];
-    ret.insert(CurrencyExchange(
-        cur, cur, cur, depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
-        withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable,
-        isFiat ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto));
+    const auto& networkList = el["networkList"];
+    if (networkList.size() > 1) {
+      log::debug("Several networks found for {}, considering only default network");
+    }
+    for (const json& networkDetail : networkList) {
+      bool isDefault = networkDetail["isDefault"].get<bool>();
+      if (isDefault) {
+        bool withdrawEnable = networkDetail["withdrawEnable"].get<bool>();
+        bool depositEnable = networkDetail["depositEnable"].get<bool>();
+        ret.emplace(cur, cur, cur,
+                    depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
+                    withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable,
+                    isFiat ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
+        break;
+      }
+    }
   }
 
   log::info("Retrieved {} {} currencies", _name, ret.size());

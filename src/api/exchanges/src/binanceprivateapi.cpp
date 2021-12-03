@@ -106,6 +106,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 }
 
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
+  // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
   json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, _public._commonInfo.getBestBaseURL(),
                              "sapi/v1/capital/deposit/address", {{"coin", currencyCode.str()}});
   std::string_view address(result["address"].get<std::string_view>());
