@@ -101,6 +101,7 @@ ExchangePublic::ConversionPath ExchangePublic::findFastestConversionPath(Currenc
   std::optional<CurrencyCode> optFiatFromStableCoin =
       considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode) : std::nullopt;
   const bool isToFiatLike = optFiatFromStableCoin || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
+
   MarketSet markets = queryTradableMarkets();
 
   CurrencyDirFastestPathComparator comp(_cryptowatchApi);

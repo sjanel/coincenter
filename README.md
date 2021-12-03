@@ -581,15 +581,15 @@ coincenter -c yfi-btc
 
 Possible output
 ```
---------------------------------------
-| Exchange | Fastest conversion path |
---------------------------------------
-| binance  | YFI-BTC                 |
-| bithumb  | YFI-KRW-BTC             |
-| huobi    | YFI-BTC                 |
-| kraken   | YFI-BTC                 |
-| upbit    | --- Impossible ---      |
---------------------------------------
+--------------------------------------------------
+| Exchange | Fastest conversion path for YFI-BTC |
+--------------------------------------------------
+| binance  | YFI-BTC                             |
+| bithumb  | YFI-KRW,BTC-KRW                     |
+| huobi    | YFI-BTC                             |
+| kraken   | YFI-BTC                             |
+| kucoin   | YFI-USDT,BTC-USDT                   |
+--------------------------------------------------
 ```
 
 ### Prints all markets trading Stellar (XLM)

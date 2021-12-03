@@ -33,13 +33,16 @@ class Coincenter {
   using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
   using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
-  using MonetaryAmountPerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
+  using MonetaryAmountPerExchange =
+      FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
   using LastTradesPerExchange =
       FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
   using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
   using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, Coincenter::MarketOrderBookMaps>;
   using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
   using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
+  using ConversionPathPerExchange =
+      FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::ConversionPath>, kNbSupportedExchanges>;
   using WithdrawFeePerExchange =
       FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 
@@ -93,6 +96,9 @@ class Coincenter {
   WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                    CurrencyCode depositCurrency);
 
+  /// Query the conversion paths for each public exchange requested
+  ConversionPathPerExchange getConversionPaths(Market m, std::span<const ExchangeName> exchangeNames);
+
   /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
   WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
@@ -112,24 +118,24 @@ class Coincenter {
 
   void printMarkets(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
 
-  void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
-                             CurrencyCode equiCurrencyCode) const;
+  static void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
+                                    CurrencyCode equiCurrencyCode);
 
-  void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
+  static void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
 
   void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
 
   void printDepositInfo(const PrivateExchangeNames &privateExchangeNames, CurrencyCode depositCurrencyCode);
 
-  void printConversionPath(std::span<const ExchangeName> exchangeNames, Market m);
+  static void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange);
 
-  void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) const;
+  static void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange);
 
-  void printLast24hTradedVolume(Market m, std::span<const ExchangeName> exchangeNames);
+  static void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange);
 
-  void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) const;
+  static void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange);
 
-  void printLastPrice(Market m, std::span<const ExchangeName> exchangeNames);
+  static void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange);
 
   PublicExchangeNames getPublicExchangeNames() const;
 
