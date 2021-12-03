@@ -9,29 +9,18 @@
 #include <utility>
 
 #include "apikeysprovider.hpp"
-#include "binanceprivateapi.hpp"
-#include "binancepublicapi.hpp"
-#include "bithumbprivateapi.hpp"
-#include "bithumbpublicapi.hpp"
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_vector.hpp"
+#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
+#include "exchangepool.hpp"
 #include "exchangeretriever.hpp"
 #include "fiatconverter.hpp"
-#include "huobiprivateapi.hpp"
-#include "huobipublicapi.hpp"
-#include "krakenprivateapi.hpp"
-#include "krakenpublicapi.hpp"
-#include "kucoinprivateapi.hpp"
-#include "kucoinpublicapi.hpp"
 #include "marketorderbooks.hpp"
 #include "monitoringinfo.hpp"
-#include "upbitprivateapi.hpp"
-#include "upbitpublicapi.hpp"
 
 namespace cct {
 
@@ -51,6 +40,8 @@ class Coincenter {
   using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, Coincenter::MarketOrderBookMaps>;
   using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
   using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
+  using WithdrawFeePerExchange =
+      FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
       : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
@@ -102,8 +93,11 @@ class Coincenter {
   WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                    CurrencyCode depositCurrency);
 
-  /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency conversion
-  /// path and will launch several 'single' trades to reach that final goal. Example:
+  /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
+  WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
+
+  /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
+  /// conversion path and will launch several 'single' trades to reach that final goal. Example:
   ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
   ///    markets.
   MonetaryAmount trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
@@ -129,7 +123,7 @@ class Coincenter {
 
   void printConversionPath(std::span<const ExchangeName> exchangeNames, Market m);
 
-  void printWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
+  void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) const;
 
   void printLast24hTradedVolume(Market m, std::span<const ExchangeName> exchangeNames);
 
@@ -142,8 +136,8 @@ class Coincenter {
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
 
-  std::span<Exchange> exchanges() { return _exchanges; }
-  std::span<const Exchange> exchanges() const { return _exchanges; }
+  ExchangePool &exchangePool() { return _exchangePool; }
+  const ExchangePool &exchangePool() const { return _exchangePool; }
 
   CoincenterInfo &coincenterInfo() { return _coincenterInfo; }
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
@@ -155,8 +149,6 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  using ExchangeVector = vector<Exchange>;
-
   void processReadRequests(const CoincenterParsedOptions &opts);
   void processWriteRequests(const CoincenterParsedOptions &opts);
 
@@ -173,25 +165,7 @@ class Coincenter {
   FiatConverter _fiatConverter;
   api::APIKeysProvider _apiKeyProvider;
 
-  // Public exchanges
-  api::BinancePublic _binancePublic;
-  api::BithumbPublic _bithumbPublic;
-  api::HuobiPublic _huobiPublic;
-  api::KrakenPublic _krakenPublic;
-  api::KucoinPublic _kucoinPublic;
-  api::UpbitPublic _upbitPublic;
-
-  // Private exchanges (based on provided keys)
-  // Use forward_list to guarantee validity of the iterators and pointers, as we give them to Exchange object as
-  // pointers
-  std::forward_list<api::BinancePrivate> _binancePrivates;
-  std::forward_list<api::BithumbPrivate> _bithumbPrivates;
-  std::forward_list<api::HuobiPrivate> _huobiPrivates;
-  std::forward_list<api::KrakenPrivate> _krakenPrivates;
-  std::forward_list<api::KucoinPrivate> _kucoinPrivates;
-  std::forward_list<api::UpbitPrivate> _upbitPrivates;
-
-  ExchangeVector _exchanges;
+  ExchangePool _exchangePool;
   ExchangeRetriever _exchangeRetriever;
   ConstExchangeRetriever _cexchangeRetriever;
 };

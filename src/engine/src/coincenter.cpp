@@ -39,66 +39,9 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
       _cryptowatchAPI(_coincenterInfo, runMode),
       _fiatConverter(_coincenterInfo, std::chrono::hours(8)),
       _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
-      _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _kucoinPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
-  for (std::string_view exchangeName : kSupportedExchanges) {
-    api::ExchangePublic *exchangePublic;
-    if (exchangeName == "binance") {
-      exchangePublic = std::addressof(_binancePublic);
-    } else if (exchangeName == "bithumb") {
-      exchangePublic = std::addressof(_bithumbPublic);
-    } else if (exchangeName == "huobi") {
-      exchangePublic = std::addressof(_huobiPublic);
-    } else if (exchangeName == "kraken") {
-      exchangePublic = std::addressof(_krakenPublic);
-    } else if (exchangeName == "kucoin") {
-      exchangePublic = std::addressof(_kucoinPublic);
-    } else if (exchangeName == "upbit") {
-      exchangePublic = std::addressof(_upbitPublic);
-    } else {
-      string ex("Should not happen, unsupported platform ");
-      ex.append(exchangeName);
-      throw exception(std::move(ex));
-    }
-
-    const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
-    if (canUsePrivateExchange) {
-      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
-        api::ExchangePrivate *exchangePrivate;
-        const api::APIKey &apiKey = _apiKeyProvider.get(PrivateExchangeName(exchangeName, keyName));
-        if (exchangeName == "binance") {
-          exchangePrivate = std::addressof(_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey));
-        } else if (exchangeName == "bithumb") {
-          exchangePrivate = std::addressof(_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey));
-        } else if (exchangeName == "huobi") {
-          exchangePrivate = std::addressof(_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey));
-        } else if (exchangeName == "kraken") {
-          exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
-        } else if (exchangeName == "kucoin") {
-          exchangePrivate = std::addressof(_kucoinPrivates.emplace_front(_coincenterInfo, _kucoinPublic, apiKey));
-        } else if (exchangeName == "upbit") {
-          exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
-        } else {
-          string ex("Should not happen, unsupported platform ");
-          ex.append(exchangeName);
-          throw exception(std::move(ex));
-        }
-
-        _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,
-                                *exchangePrivate);
-      }
-    } else {
-      _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic);
-    }
-  }
-  _exchanges.shrink_to_fit();
-  _exchangeRetriever = ExchangeRetriever(_exchanges);
-  _cexchangeRetriever = ConstExchangeRetriever(_exchanges);
-}
+      _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
+      _exchangeRetriever(_exchangePool.exchanges()),
+      _cexchangeRetriever(_exchangePool.exchanges()) {}
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
   processWriteRequests(opts);
@@ -153,7 +96,8 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (opts.withdrawFeeCur != CurrencyCode()) {
-    printWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
+    auto withdrawFeesPerExchange = getWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
+    printWithdrawFees(withdrawFeesPerExchange);
   }
 
   if (opts.tradedVolumeMarket != Market()) {
@@ -533,19 +477,22 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate());
 }
 
-void Coincenter::printWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames) {
+Coincenter::WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode,
+                                                               std::span<const ExchangeName> exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames);
 
-  using WithdrawFeePerExchange = FixedCapacityVector<MonetaryAmount, kNbSupportedExchanges>;
   WithdrawFeePerExchange withdrawFeePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  withdrawFeePerExchange.begin(),
-                 [currencyCode](Exchange *e) { return e->queryWithdrawalFee(currencyCode); });
+                 [currencyCode](Exchange *e) { return std::make_pair(e, e->queryWithdrawalFee(currencyCode)); });
+  return withdrawFeePerExchange;
+}
+
+void Coincenter::printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) const {
   SimpleTable t("Exchange", "Withdraw fee");
-  decltype(selectedExchanges)::size_type exchangePos = 0;
-  for (MonetaryAmount withdrawFee : withdrawFeePerExchange) {
-    t.emplace_back(selectedExchanges[exchangePos++]->name(), withdrawFee.str());
+  for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
+    t.emplace_back(e->name(), withdrawFee.str());
   }
   t.print();
 }
@@ -678,7 +625,8 @@ void Coincenter::updateFileCaches() const {
   log::debug("Store all cache files");
   _cryptowatchAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
-  std::for_each(_exchanges.begin(), _exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
+  auto exchanges = _exchangePool.exchanges();
+  std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
 }
 
 }  // namespace cct
