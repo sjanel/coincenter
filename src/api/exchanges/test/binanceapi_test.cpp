@@ -34,7 +34,11 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   EXPECT_NO_THROW(binancePrivate.getAccountBalance());
   auto currencies = binancePrivate.queryTradableCurrencies();
   EXPECT_FALSE(currencies.empty());
-  EXPECT_NO_THROW(binancePrivate.queryDepositWallet(currencies.front().standardCode()));
+  auto foundIt = std::find_if(currencies.begin(), currencies.end(),
+                              [](const CurrencyExchange &curExchange) { return curExchange.canDeposit(); });
+  if (foundIt != currencies.end()) {
+    EXPECT_NO_THROW(binancePrivate.queryDepositWallet(foundIt->standardCode()));
+  }
   TradeOptions tradeOptions(TradeMode::kSimulation);
   if (currencies.contains(CurrencyCode("BNB"))) {
     MonetaryAmount smallFrom("13.567ADA");
