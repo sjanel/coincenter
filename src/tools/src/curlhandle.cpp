@@ -181,7 +181,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   }
 
   if (_pMetricGateway) {
-    MetricKey key("metric_name=http_request_count,metric_help=Counter of http requests");
+    MetricKey key = CreateMetricKey("http_request_count", "Counter of http requests");
     key.append("verb", requestTypeStr);
     _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement, key);
   }

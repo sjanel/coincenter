@@ -64,9 +64,9 @@ inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
   ExtractedDataFromMetricKey ret;
   std::string_view metricNameSV, metricHelpSV;
   for (const auto& [k, v] : key) {
-    if (k == "metric_name") {
+    if (k == kMetricNameKey) {
       metricNameSV = v;
-    } else if (k == "metric_help") {
+    } else if (k == kMetricHelpKey) {
       metricHelpSV = v;
     } else {
       std::get<0>(ret).insert_or_assign(std::string(k), std::string(v));
@@ -80,7 +80,7 @@ inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
 }  // namespace
 
 void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const MetricKey& key, double v) {
-  assert(key.contains("metric_name") && key.contains("metric_help"));
+  assert(key.contains(kMetricNameKey) && key.contains(kMetricHelpKey));
   std::lock_guard<std::mutex> guard(_familiesMapMutex);
   auto foundIt = _familiesMap.find(key);
   switch (type) {
