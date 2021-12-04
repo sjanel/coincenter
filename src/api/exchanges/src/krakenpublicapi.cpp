@@ -23,7 +23,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&&
   method_url.append("/public/");
   method_url.append(method);
 
-  CurlOptions opts(CurlOptions::RequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
+  CurlOptions opts(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
   string ret = curlHandle.query(method_url, opts);
   json jsonData = json::parse(std::move(ret));
   auto errorIt = jsonData.find("error");
@@ -135,7 +135,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
   constexpr char kWithdrawalFeesCSVUrl[] =
       "https://drive.google.com/uc?export=download&id=1tkvmX25d3uV_SWS2NEyfRvrSO2t1P3PJ";
 
-  CurlOptions curlOptions(CurlOptions::RequestType::kGet);
+  CurlOptions curlOptions(HttpRequestType::kGet);
   curlOptions.followLocation = true;
   string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, curlOptions);
 

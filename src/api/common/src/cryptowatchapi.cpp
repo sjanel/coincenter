@@ -20,7 +20,7 @@ string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& pos
   method_url.push_back('/');
   method_url.append(method);
 
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   opts.userAgent = kUserAgent;
   opts.postdata = std::move(postData);
 

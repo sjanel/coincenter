@@ -35,7 +35,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     method_url.append(urlOpts);
   }
 
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   opts.userAgent = BithumbPublic::kUserAgent;
 
   json dataJson = json::parse(curlHandle.query(method_url, opts));
@@ -105,7 +105,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", opts);
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:

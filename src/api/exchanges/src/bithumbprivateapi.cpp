@@ -55,7 +55,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   strPost.append(curlPostData.str());
 
   // For Bithumb, we always use POST requests (even when read-only)
-  CurlOptions opts(CurlOptions::RequestType::kPost, CurlPostData(UrlEncode(strPost)));
+  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(strPost)));
 
   string strData;
   strData.reserve(100);

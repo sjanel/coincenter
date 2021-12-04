@@ -46,7 +46,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   string method_url(KrakenPublic::kUrlBase);
   method_url.append(path);
 
-  CurlOptions opts(CurlOptions::RequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
+  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
   opts.userAgent = KrakenPublic::kUserAgent;
 
   Nonce nonce = Nonce_TimeSinceEpoch();

@@ -32,9 +32,8 @@ class Coincenter {
              settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo);
 
   Coincenter(const Coincenter &) = delete;
-  Coincenter &operator=(const Coincenter &) = delete;
-
   Coincenter(Coincenter &&) = delete;
+  Coincenter &operator=(const Coincenter &) = delete;
   Coincenter &operator=(Coincenter &&) = delete;
 
   void process(const CoincenterParsedOptions &opts);

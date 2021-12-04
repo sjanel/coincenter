@@ -3,11 +3,19 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
+#include "curlmetrics.hpp"
 
 #define RETURN_IF_NO_MONITORING \
   if (!_pMetricsGateway) return
 
 namespace cct {
+
+MetricsExporter::MetricsExporter(AbstractMetricGateway *pMetricsGateway) : _pMetricsGateway(pMetricsGateway) {
+  if (_pMetricsGateway) {
+    createSummariesAndHistograms();
+  }
+}
+
 void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("available_balance", "Available balance in the exchange account");
@@ -119,6 +127,13 @@ void MetricsExporter::exportLastTradesMetrics(Market m, const LastTradesPerExcha
         _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, avgPrice.toDouble());
       }
     }
+  }
+}
+
+void MetricsExporter::createSummariesAndHistograms() {
+  for (const auto &[k, v] : CurlMetrics::kRequestDurationKeys) {
+    static constexpr double kRequestDurationBoundariesSeconds[] = {0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1};
+    _pMetricsGateway->createHistogram(v, kRequestDurationBoundariesSeconds);
   }
 }
 }  // namespace cct
