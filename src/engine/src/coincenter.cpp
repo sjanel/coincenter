@@ -73,20 +73,34 @@ ExchangeTickerMaps Coincenter::getTickerInformation(std::span<const ExchangeName
 MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, std::span<const ExchangeName> exchangeNames,
                                                                CurrencyCode equiCurrencyCode,
                                                                std::optional<int> depth) {
-  MarketOrderBookConversionRates ret;
-  for (api::ExchangePublic *e : _exchangeRetriever.selectPublicExchanges(exchangeNames)) {
-    // Do not check if market exists when exchange names are specified to save API call
-    if (!exchangeNames.empty() || e->queryTradableMarkets().contains(m)) {
-      std::optional<MonetaryAmount> optConversionRate =
-          equiCurrencyCode == CurrencyCode::kNeutral
-              ? std::nullopt
-              : e->convertAtAveragePrice(MonetaryAmount(1, m.quote()), equiCurrencyCode);
-      log::info("Order book of {} on {} requested{}{}", m.str(), e->name(),
-                optConversionRate ? " with conversion rate " : "", optConversionRate ? optConversionRate->str() : "");
-      MarketOrderBook marketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m));
-      ret.emplace_back(e->name(), std::move(marketOrderBook), optConversionRate);
+  log::info("Order book of {} on {} requested{}{}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames),
+            equiCurrencyCode != CurrencyCode() ? " with equi currency " : "",
+            equiCurrencyCode != CurrencyCode() ? equiCurrencyCode.str() : "");
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+  std::array<bool, kNbSupportedExchanges> isMarketTradable;
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
+                 [m](Exchange *e) { return e->apiPublic().queryTradableMarkets().contains(m); });
+
+  FilterVector(selectedExchanges, isMarketTradable);
+
+  MarketOrderBookConversionRates ret(selectedExchanges.size());
+  auto marketOrderBooksFunc = [m, equiCurrencyCode, depth](Exchange *e) {
+    api::ExchangePublic &publicExchange = e->apiPublic();
+    std::optional<MonetaryAmount> optConversionRate =
+        equiCurrencyCode == CurrencyCode::kNeutral
+            ? std::nullopt
+            : publicExchange.convertAtAveragePrice(MonetaryAmount(1, m.quote()), equiCurrencyCode);
+    MarketOrderBook marketOrderBook(depth ? publicExchange.queryOrderBook(m, *depth)
+                                          : publicExchange.queryOrderBook(m));
+    if (!optConversionRate && equiCurrencyCode != CurrencyCode::kNeutral) {
+      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote().str(), equiCurrencyCode.str(),
+                e->name());
     }
-  }
+    return std::make_tuple(e->name(), std::move(marketOrderBook), optConversionRate);
+  };
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 marketOrderBooksFunc);
+
   if (_coincenterInfo.useMonitoring() && !ret.empty()) {
     exportOrderbookMetrics(m, ret);
   }
@@ -318,7 +332,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     }
     MarketOrderBookConversionRates marketOrderBooksConversionRates =
         getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
-    PrintMarketOrderBooks(marketOrderBooksConversionRates, opts.orderbookCur);
+    PrintMarketOrderBooks(marketOrderBooksConversionRates);
   }
 
   if (opts.marketForConversionPath != Market()) {

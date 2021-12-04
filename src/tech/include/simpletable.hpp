@@ -42,6 +42,8 @@ class SimpleTable {
 
     size_type size() const noexcept;
 
+    void swap(Cell &o) noexcept { _data.swap(o._data); }
+
     using trivially_relocatable = is_trivially_relocatable<string>::type;
 
    private:
@@ -56,6 +58,7 @@ class SimpleTable {
   class Row {
    public:
     using value_type = Cell;
+    using iterator = vector<value_type>::iterator;
     using const_iterator = vector<value_type>::const_iterator;
 
     static const Row kDivider;
@@ -66,10 +69,16 @@ class SimpleTable {
       ([&](auto &&input) { _cells.emplace_back(std::forward<decltype(input)>(input)); }(std::forward<Args>(args)), ...);
     }
 
+    iterator begin() noexcept { return _cells.begin(); }
     const_iterator begin() const noexcept { return _cells.begin(); }
+
+    iterator end() noexcept { return _cells.end(); }
     const_iterator end() const noexcept { return _cells.end(); }
 
+    value_type &front() { return _cells.front(); }
     const value_type &front() const { return _cells.front(); }
+
+    value_type &back() { return _cells.back(); }
     const value_type &back() const { return _cells.back(); }
 
     void push_back(const Cell &c) { _cells.push_back(c); }
