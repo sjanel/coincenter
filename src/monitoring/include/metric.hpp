@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
@@ -24,6 +25,11 @@ enum class MetricOperation : int8_t { kIncrement, kDecrement, kSetCurrentTime, k
 //  - metric_name: name of the metric
 //  - metric_help: short helper description of the metric
 using MetricKey = FlatKeyValueString<',', '='>;
+
+static constexpr std::string_view kMetricNameKey = "metric_name";
+static constexpr std::string_view kMetricHelpKey = "metric_help";
+
+MetricKey CreateMetricKey(std::string_view name, std::string_view help);
 
 struct MetricSummaryInfo {
   struct Quantile {

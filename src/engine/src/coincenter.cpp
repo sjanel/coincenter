@@ -35,6 +35,7 @@ Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool 
       _cryptowatchAPI(_coincenterInfo, runMode),
       _fiatConverter(_coincenterInfo, std::chrono::hours(8)),
       _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
+      _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangeRetriever(_exchangePool.exchanges()),
       _cexchangeRetriever(_exchangePool.exchanges()) {}
@@ -67,9 +68,8 @@ ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNam
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
                  [](Exchange *e) { return std::make_pair(e, e->apiPublic().queryAllApproximatedOrderBooks(1)); });
 
-  if (_coincenterInfo.useMonitoring()) {
-    exportTickerMetrics(ret);
-  }
+  _metricsExporter.exportTickerMetrics(ret);
+
   return ret;
 }
 
@@ -104,9 +104,7 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
                  marketOrderBooksFunc);
 
-  if (_coincenterInfo.useMonitoring() && !ret.empty()) {
-    exportOrderbookMetrics(m, ret);
-  }
+  _metricsExporter.exportOrderbookMetrics(m, ret);
   return ret;
 }
 
@@ -132,9 +130,7 @@ BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> p
                  std::back_inserter(ret),
                  [](const Exchange *e, BalancePortfolio &&b) { return std::make_pair(e, std::move(b)); });
 
-  if (_coincenterInfo.useMonitoring()) {
-    exportBalanceMetrics(ret, equiCurrency);
-  }
+  _metricsExporter.exportBalanceMetrics(ret, equiCurrency);
 
   return ret;
 }
@@ -287,13 +283,15 @@ LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m, ExchangeNam
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
-  LastTradesPerExchange lastTradesPerExchange(selectedExchanges.size());
-  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), lastTradesPerExchange.begin(),
+  LastTradesPerExchange ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
                  [m, nbLastTrades](Exchange *e) {
                    return std::make_pair(static_cast<const Exchange *>(e),
                                          e->apiPublic().queryLastTrades(m, nbLastTrades));
                  });
-  return lastTradesPerExchange;
+
+  _metricsExporter.exportLastTradesMetrics(m, ret);
+  return ret;
 }
 
 MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames) {
@@ -390,80 +388,6 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
 
   if (!opts.amountToWithdraw.isZero()) {
     withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
-  }
-}
-
-void Coincenter::exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const {
-  MetricKey key("metric_name=available_balance,metric_help=Available balance in the exchange account");
-  auto &metricGateway = _coincenterInfo.metricGateway();
-  for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
-    const Exchange &exchange = *exchangePtr;
-    key.set("exchange", exchange.name());
-    key.set("account", exchange.keyName());
-    key.set("total", "no");
-    MonetaryAmount totalEquiAmount(0, equiCurrency);
-    for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balancePortfolio) {
-      key.set("currency", amountWithEqui.amount.currencyStr());
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, amountWithEqui.amount.toDouble());
-      if (!equiCurrency.isNeutral()) {
-        totalEquiAmount += amountWithEqui.equi;
-      }
-    }
-    if (!equiCurrency.isNeutral()) {
-      key.set("total", "yes");
-      key.set("currency", equiCurrency.str());
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, totalEquiAmount.toDouble());
-    }
-  }
-}
-
-void Coincenter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) const {
-  MetricKey key;
-  auto &metricGateway = _coincenterInfo.metricGateway();
-  for (const auto &[e, marketOrderBookMap] : marketOrderBookMaps) {
-    key.set("metric_name", "limit_price");
-    key.set("metric_help", "Best bids and asks prices");
-    key.set("exchange", e->name());
-    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStr('-', true));
-      key.set("side", "ask");
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.lowestAskPrice().toDouble());
-      key.set("side", "bid");
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.highestBidPrice().toDouble());
-    }
-    key.set("metric_name", "limit_volume");
-    key.set("metric_help", "Best bids and asks volumes");
-    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStr('-', true));
-      key.set("side", "ask");
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.amountAtAskPrice().toDouble());
-      key.set("side", "bid");
-      metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.amountAtBidPrice().toDouble());
-    }
-  }
-}
-
-void Coincenter::exportOrderbookMetrics(Market m,
-                                        const MarketOrderBookConversionRates &marketOrderBookConversionRates) const {
-  MetricKey key("metric_name=limit_pri,metric_help=Best bids and asks prices");
-  string marketLowerCase = m.assetsPairStr('-', true);
-  auto &metricGateway = _coincenterInfo.metricGateway();
-  key.append("market", marketLowerCase);
-  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
-    key.set("exchange", exchangeName);
-    key.set("side", "ask");
-    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.lowestAskPrice().toDouble());
-    key.set("side", "bid");
-    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.highestBidPrice().toDouble());
-  }
-  key.set("metric_name", "limit_vol");
-  key.set("metric_help", "Best bids and asks volumes");
-  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
-    key.set("exchange", exchangeName);
-    key.set("side", "ask");
-    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.amountAtAskPrice().toDouble());
-    key.set("side", "bid");
-    metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.amountAtBidPrice().toDouble());
   }
 }
 

@@ -12,6 +12,7 @@
 #include "exchangepool.hpp"
 #include "exchangeretriever.hpp"
 #include "fiatconverter.hpp"
+#include "metricsexporter.hpp"
 #include "monitoringinfo.hpp"
 #include "queryresulttypes.hpp"
 
@@ -109,19 +110,16 @@ class Coincenter {
 
  private:
   void processReadRequests(const CoincenterParsedOptions &opts);
+
   void processWriteRequests(const CoincenterParsedOptions &opts);
-
-  void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const;
-
-  void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) const;
-
-  void exportOrderbookMetrics(Market m, const MarketOrderBookConversionRates &marketOrderBookConversionRates) const;
 
   CurlInitRAII _curlInitRAII;
   CoincenterInfo _coincenterInfo;
   api::CryptowatchAPI _cryptowatchAPI;
   FiatConverter _fiatConverter;
   api::APIKeysProvider _apiKeyProvider;
+
+  MetricsExporter _metricsExporter;
 
   ExchangePool _exchangePool;
   ExchangeRetriever _exchangeRetriever;
