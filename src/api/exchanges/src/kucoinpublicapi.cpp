@@ -27,7 +27,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   opts.userAgent = KucoinPublic::kUserAgent;
   json dataJson = json::parse(curlHandle.query(url, opts));
   if (dataJson.contains("code") && dataJson["code"].get<std::string_view>() != "200000") {

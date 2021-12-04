@@ -375,12 +375,10 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
 }
 
 void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
-  // Trade all
   if (opts.fromTradeCurrency != CurrencyCode()) {
     tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
   }
 
-  // Trade
   if (!opts.startTradeAmount.isZero()) {
     MonetaryAmount startAmount = opts.startTradeAmount;
     trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);

@@ -3,10 +3,10 @@
 #include <string_view>
 #include <type_traits>
 
-#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "flatkeyvaluestring.hpp"
+#include "httprequesttype.hpp"
 
 namespace cct {
 
@@ -14,22 +14,18 @@ using CurlPostData = FlatKeyValueString<'&', '='>;
 
 class CurlOptions {
  public:
-  enum class RequestType { kGet, kPost, kDelete };
-
   template <class CurlPostDataT = CurlPostData>
-  explicit CurlOptions(RequestType requestType, CurlPostDataT &&ipostData = CurlPostDataT(), const char *ua = nullptr,
-                       const char *pUrl = nullptr, bool v = false)
+  explicit CurlOptions(HttpRequestType requestType, CurlPostDataT &&ipostData = CurlPostDataT(),
+                       const char *ua = nullptr, const char *pUrl = nullptr, bool v = false)
       : userAgent(ua),
         proxy(false, pUrl),
         postdata(std::forward<CurlPostDataT>(ipostData)),
         verbose(v),
         _requestType(requestType) {}
 
-  RequestType requestType() const { return _requestType; }
+  HttpRequestType requestType() const { return _requestType; }
 
-  std::string_view requestTypeStr() const {
-    return _requestType == RequestType::kGet ? "GET" : (_requestType == RequestType::kPost ? "POST" : "DELETE");
-  }
+  std::string_view requestTypeStr() const { return ToString(_requestType); }
 
   vector<string> httpHeaders;
 
@@ -48,7 +44,7 @@ class CurlOptions {
   bool followLocation = false;
 
  private:
-  RequestType _requestType;
+  HttpRequestType _requestType;
 };
 
 }  // namespace cct

@@ -10,7 +10,7 @@ class AbstractMetricGateway;
 
 class MetricsExporter {
  public:
-  explicit MetricsExporter(AbstractMetricGateway *pMetricsGateway) : _pMetricsGateway(pMetricsGateway) {}
+  explicit MetricsExporter(AbstractMetricGateway *pMetricsGateway);
 
   void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency);
 
@@ -21,6 +21,8 @@ class MetricsExporter {
   void exportLastTradesMetrics(Market m, const LastTradesPerExchange &lastTradesPerExchange);
 
  private:
+  void createSummariesAndHistograms();
+
   AbstractMetricGateway *_pMetricsGateway;
 };
 }  // namespace cct

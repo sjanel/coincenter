@@ -77,7 +77,7 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   string url = kCurrencyConverterBaseUrl;
   url.append("/convert?");
 
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   string qStr(m.assetsPairStr('_'));
   opts.postdata.append("q", qStr);
   opts.postdata.append("apiKey", _apiKey);

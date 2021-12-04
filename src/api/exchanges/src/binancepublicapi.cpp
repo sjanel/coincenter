@@ -31,7 +31,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   opts.userAgent = BinancePublic::kUserAgent;
   json dataJson = json::parse(curlHandle.query(url, opts));
   auto foundErrorIt = dataJson.find("code");
@@ -217,7 +217,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 
 json BinancePublic::GlobalInfosFunc::operator()() {
   constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
-  string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(CurlOptions::RequestType::kGet));
+  string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(HttpRequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
   constexpr std::string_view appBegJson = "application/json\">";
   string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();

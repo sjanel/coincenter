@@ -26,7 +26,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
   opts.userAgent = HuobiPublic::kUserAgent;
   json dataJson = json::parse(curlHandle.query(url, opts));
   bool returnData = dataJson.contains("data");

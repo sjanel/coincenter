@@ -14,7 +14,9 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_proxy.hpp"
+#include "curlmetrics.hpp"
 #include "stringhelpers.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -96,7 +98,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
 
   string modifiedURL(url);
   string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
-  if (opts.requestType() != CurlOptions::RequestType::kPost && !opts.postdata.empty()) {
+  if (opts.requestType() != HttpRequestType::kPost && !opts.postdata.empty()) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
     modifiedURL.append(opts.postdata.str());
@@ -123,10 +125,9 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   // Important! We should reset ALL fields of curl object at each call to query,
   // as it would be possible for a new query to read from a dangling reference form a previous
   // query.
-  curl_easy_setopt(curl, CURLOPT_POST, opts.requestType() == CurlOptions::RequestType::kPost);
-  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST,
-                   opts.requestType() == CurlOptions::RequestType::kDelete ? "DELETE" : nullptr);
-  if (opts.requestType() == CurlOptions::RequestType::kGet) {
+  curl_easy_setopt(curl, CURLOPT_POST, opts.requestType() == HttpRequestType::kPost);
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, opts.requestType() == HttpRequestType::kDelete ? "DELETE" : nullptr);
+  if (opts.requestType() == HttpRequestType::kGet) {
     // This is to force cURL to switch in a GET request
     // Useless to reset to 0 in other cases
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
@@ -173,6 +174,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   log::info("{} {}{}{}", requestTypeStr, url, opts.postdata.empty() ? "" : " opts ", optsStr);
 
   // Actually make the query
+  TimePoint t1 = Clock::now();
   const CURLcode res = curl_easy_perform(curl);  // Get reply
   if (res != CURLE_OK) {
     string ex("Unexpected response from curl: Error ");
@@ -181,9 +183,11 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   }
 
   if (_pMetricGateway) {
-    MetricKey key = CreateMetricKey("http_request_count", "Counter of http requests");
-    key.append("verb", requestTypeStr);
-    _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement, key);
+    _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
+                         CurlMetrics::kNbRequestsKeys.find(opts.requestType())->second);
+    _pMetricGateway->add(MetricType::kHistogram, MetricOperation::kObserve,
+                         CurlMetrics::kRequestDurationKeys.find(opts.requestType())->second,
+                         static_cast<double>(GetTimeFrom<std::chrono::milliseconds>(t1).count()) / 1000);
   }
 
   if (log::get_level() <= log::level::trace) {

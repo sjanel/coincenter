@@ -24,12 +24,10 @@ class CurlSetup : public ::testing::Test {
   CurlHandle handle;
 };
 
-TEST_F(CurlSetup, BasicCurlTest) {
-  EXPECT_EQ(handle.query(kTestUrl, CurlOptions(CurlOptions::RequestType::kGet)), "POOL_UP");
-}
+TEST_F(CurlSetup, BasicCurlTest) { EXPECT_EQ(handle.query(kTestUrl, CurlOptions(HttpRequestType::kGet)), "POOL_UP"); }
 
 TEST_F(CurlSetup, QueryKrakenTime) {
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
 #ifdef DEBUG
   opts.verbose = true;
 #endif
@@ -40,7 +38,7 @@ TEST_F(CurlSetup, QueryKrakenTime) {
 }
 
 TEST_F(CurlSetup, QueryKrakenSystemStatus) {
-  CurlOptions opts(CurlOptions::RequestType::kGet);
+  CurlOptions opts(HttpRequestType::kGet);
 #ifdef DEBUG
   opts.verbose = true;
 #endif
@@ -51,7 +49,7 @@ TEST_F(CurlSetup, QueryKrakenSystemStatus) {
 
 TEST_F(CurlSetup, ProxyMockTest) {
   if (IsProxyAvailable()) {
-    CurlOptions opts(CurlOptions::RequestType::kGet);
+    CurlOptions opts(HttpRequestType::kGet);
     opts.proxy._url = GetProxyURL();
 #ifdef DEBUG
     opts.verbose = true;

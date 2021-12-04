@@ -15,8 +15,8 @@ namespace api {
 
 namespace {
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::RequestType requestType,
-                  std::string_view method, const CurlPostData& postdata = CurlPostData()) {
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+                  const CurlPostData& postdata = CurlPostData()) {
   string url(HuobiPublic::kUrlBase);
   url.append(method);
 
@@ -45,7 +45,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, CurlOptions::Req
   signaturePostdata.append("SignatureVersion", "2");
   signaturePostdata.append("Timestamp", encodedNonce);
   if (!postdata.empty()) {
-    if (requestType == CurlOptions::RequestType::kGet) {
+    if (requestType == HttpRequestType::kGet) {
       signaturePostdata.append(postdata);
     } else {
       opts.postdataInJsonFormat = true;
@@ -92,7 +92,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   string method = "/v1/account/accounts/";
   AppendString(method, _accountIdCache.get());
   method.append("/balance");
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, method);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   BalancePortfolio balancePortfolio;
   for (const json& balanceDetail : result["data"]["list"]) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
@@ -109,7 +109,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = tolower(currencyCode.str());
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v2/account/deposit/address",
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
                              {{"currency", lowerCaseCur}});
   std::string_view address, tag;
   PrivateExchangeName privateExchangeName(_huobiPublic.name(), _apiKey.name());
@@ -183,8 +183,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   placePostData.append("symbol", lowerCaseMarket);
   placePostData.append("type", type);
 
-  json result =
-      PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/v1/order/orders/place", placePostData);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", placePostData);
   placeOrderInfo.orderId = result["data"];
   return placeOrderInfo;
 }
@@ -193,7 +192,7 @@ OrderInfo HuobiPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tra
   string endpoint = "/v1/order/orders/";
   endpoint.append(orderId);
   endpoint.append("/submitcancel");
-  PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, endpoint);
+  PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, endpoint);
   return queryOrderInfo(orderId, tradeInfo);
 }
 
@@ -204,7 +203,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& 
   string endpoint = "/v1/order/orders/";
   endpoint.append(orderId);
 
-  json res = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, endpoint);
+  json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
   const json& data = res["data"];
   // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is ambiguous
   // on this point). Let's handle both just to be sure.
@@ -235,7 +234,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   string lowerCaseCur = tolower(currencyCode.str());
 
-  json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet,
+  json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
                                                "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
   std::string_view huobiWithdrawAddressName;
   for (const json& withdrawAddress : queryWithdrawAddressJson["data"]) {
@@ -264,8 +263,8 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   // Strange to have the fee as input parameter of a withdraw...
   withdrawPostData.append("fee", fee.amountStr());
 
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kPost, "/v1/dw/withdraw/api/create",
-                             withdrawPostData);
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create", withdrawPostData);
   string withdrawIdStr = ToString<string>(result["data"].get<int64_t>());
   return InitiatedWithdrawInfo(std::move(wallet), std::move(withdrawIdStr), grossAmount);
 }
@@ -275,7 +274,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   string lowerCaseCur = tolower(currencyCode.str());
   std::string_view withdrawIdStr = initiatedWithdrawInfo.withdrawId();
   int64_t withdrawId = FromString<int64_t>(withdrawIdStr);
-  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
+  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                    {{"currency", lowerCaseCur}, {"from", withdrawIdStr}, {"type", "withdraw"}});
   MonetaryAmount netEmittedAmount;
   bool isWithdrawSent = false;
@@ -329,7 +328,7 @@ bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   string lowerCaseCur = tolower(currencyCode.str());
 
-  json depositJson = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/query/deposit-withdraw",
+  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                   {{"currency", lowerCaseCur}, {"type", "deposit"}});
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
   for (const json& depositDetail : depositJson["data"]) {
@@ -358,7 +357,7 @@ bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {
-  json result = PrivateQuery(_curlHandle, _apiKey, CurlOptions::RequestType::kGet, "/v1/account/accounts");
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts");
   for (const json& accDetails : result["data"]) {
     std::string_view state = accDetails["state"].get<std::string_view>();
     if (state == "working") {

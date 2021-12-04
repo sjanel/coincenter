@@ -19,7 +19,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
   method_url.append("/v1/");
   method_url.append(endpoint);
 
-  CurlOptions opts(CurlOptions::RequestType::kGet, std::move(postData));
+  CurlOptions opts(HttpRequestType::kGet, std::move(postData));
   opts.userAgent = UpbitPublic::kUserAgent;
 
   json dataJson = json::parse(curlHandle.query(method_url, opts));

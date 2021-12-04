@@ -8,6 +8,7 @@
 #include "curloptions.hpp"
 #include "runmodes.hpp"
 #include "timehelpers.hpp"
+
 namespace cct {
 
 class AbstractMetricGateway;
