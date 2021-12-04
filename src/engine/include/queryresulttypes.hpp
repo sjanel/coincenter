@@ -27,8 +27,8 @@ using MonetaryAmountPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 using LastTradesPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
-using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
-using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, MarketOrderBookMaps>;
+using ExchangeTickerMaps =
+    FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::MarketOrderBookMap>, kNbSupportedExchanges>;
 using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
 using ConversionPathPerExchange =

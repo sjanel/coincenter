@@ -58,19 +58,22 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   }
 }
 
-ExchangeTickerMaps Coincenter::getTickerInformation(std::span<const ExchangeName> exchangeNames) {
-  ExchangeTickerMaps ret(_exchangeRetriever.selectPublicExchanges(exchangeNames), MarketOrderBookMaps());
-  ret.second.resize(ret.first.size());
-  std::transform(std::execution::par, ret.first.begin(), ret.first.end(), ret.second.begin(),
-                 [](api::ExchangePublic *e) { return e->queryAllApproximatedOrderBooks(1); });
+ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNames) {
+  log::info("Ticker information for {}", ConstructAccumulatedExchangeNames(exchangeNames));
 
-  if (_coincenterInfo.useMonitoring() && !ret.second.empty()) {
-    exportTickerMetrics(ret.first, ret.second);
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  ExchangeTickerMaps ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [](Exchange *e) { return std::make_pair(e, e->apiPublic().queryAllApproximatedOrderBooks(1)); });
+
+  if (_coincenterInfo.useMonitoring()) {
+    exportTickerMetrics(ret);
   }
   return ret;
 }
 
-MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, std::span<const ExchangeName> exchangeNames,
+MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
                                                                CurrencyCode equiCurrencyCode,
                                                                std::optional<int> depth) {
   log::info("Order book of {} on {} requested{}{}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames),
@@ -165,7 +168,7 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName
   return ret;
 }
 
-ConversionPathPerExchange Coincenter::getConversionPaths(Market m, std::span<const ExchangeName> exchangeNames) {
+ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   ConversionPathPerExchange conversionPathPerExchange(selectedExchanges.size());
@@ -176,7 +179,7 @@ ConversionPathPerExchange Coincenter::getConversionPaths(Market m, std::span<con
   return conversionPathPerExchange;
 }
 
-MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur, std::span<const ExchangeName> exchangeNames) {
+MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur, ExchangeNameSpan exchangeNames) {
   log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MarketsPerExchange marketsPerExchange(selectedExchanges.size());
@@ -193,7 +196,7 @@ MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur, std::span
 }
 
 UniquePublicSelectedExchanges Coincenter::getExchangesTradingCurrency(CurrencyCode currencyCode,
-                                                                      std::span<const ExchangeName> exchangeNames) {
+                                                                      ExchangeNameSpan exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isCurrencyTradablePerExchange;
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
@@ -205,8 +208,7 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingCurrency(CurrencyCo
   return selectedExchanges;
 }
 
-UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m,
-                                                                    std::span<const ExchangeName> exchangeNames) {
+UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isMarketTradablePerExchange;
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
@@ -234,6 +236,8 @@ MonetaryAmount Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCu
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                                   const PrivateExchangeName &toPrivateExchangeName) {
+  log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
+            toPrivateExchangeName.str());
   Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);
   Exchange &toExchange = _exchangeRetriever.retrieveUniqueCandidate(toPrivateExchangeName);
   const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
@@ -256,8 +260,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate());
 }
 
-WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode,
-                                                   std::span<const ExchangeName> exchangeNames) {
+WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames);
 
@@ -268,8 +271,7 @@ WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode,
   return withdrawFeePerExchange;
 }
 
-MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m,
-                                                                        std::span<const ExchangeName> exchangeNames) {
+MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames) {
   log::info("Query last 24h traded volume of {} pair on {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
@@ -280,8 +282,7 @@ MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m
   return tradedVolumePerExchange;
 }
 
-LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m, std::span<const ExchangeName> exchangeNames,
-                                                           int nbLastTrades) {
+LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames, int nbLastTrades) {
   log::info("Query {} last trades on {} volume from {}", nbLastTrades, m.str(),
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
@@ -295,7 +296,7 @@ LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m, std::span<c
   return lastTradesPerExchange;
 }
 
-MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market m, std::span<const ExchangeName> exchangeNames) {
+MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames) {
   log::info("Query last price from {}", ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
@@ -320,7 +321,6 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (opts.tickerForAll || !opts.tickerExchanges.empty()) {
-    log::info("Ticker information for {}", ConstructAccumulatedExchangeNames(opts.tickerExchanges));
     ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(opts.tickerExchanges);
     PrintTickerInformation(exchangeTickerMaps);
   }
@@ -389,8 +389,6 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.amountToWithdraw.isZero()) {
-    log::info("Withdraw gross {} from {} to {} requested", opts.amountToWithdraw.str(),
-              opts.withdrawFromExchangeName.str(), opts.withdrawToExchangeName.str());
     withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
   }
 }
@@ -419,17 +417,14 @@ void Coincenter::exportBalanceMetrics(const BalancePerExchange &balancePerExchan
   }
 }
 
-void Coincenter::exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
-                                     const MarketOrderBookMaps &marketOrderBookMaps) const {
+void Coincenter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) const {
   MetricKey key;
-  const int nbExchanges = static_cast<int>(exchanges.size());
   auto &metricGateway = _coincenterInfo.metricGateway();
-  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-    const api::ExchangePublic &e = *exchanges[exchangePos];
+  for (const auto &[e, marketOrderBookMap] : marketOrderBookMaps) {
     key.set("metric_name", "limit_price");
     key.set("metric_help", "Best bids and asks prices");
-    key.set("exchange", e.name());
-    for (const auto &[m, marketOrderbook] : marketOrderBookMaps[exchangePos]) {
+    key.set("exchange", e->name());
+    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
       key.set("market", m.assetsPairStr('-', true));
       key.set("side", "ask");
       metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.lowestAskPrice().toDouble());
@@ -438,7 +433,7 @@ void Coincenter::exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
     }
     key.set("metric_name", "limit_volume");
     key.set("metric_help", "Best bids and asks volumes");
-    for (const auto &[m, marketOrderbook] : marketOrderBookMaps[exchangePos]) {
+    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
       key.set("market", m.assetsPairStr('-', true));
       key.set("side", "ask");
       metricGateway.add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderbook.amountAtAskPrice().toDouble());
