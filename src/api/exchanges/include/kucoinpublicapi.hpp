@@ -75,7 +75,7 @@ class KucoinPublic : public ExchangePublic {
       explicit CurrencyInfo(CurrencyCode c) : currencyExchange(c, c, c) {}
       explicit CurrencyInfo(CurrencyExchange&& c) : currencyExchange(std::move(c)) {}
 
-      auto operator<=>(const CurrencyInfo& o) const = default;
+      auto operator<=>(const CurrencyInfo& o) const { return currencyExchange <=> o.currencyExchange; }
 
       CurrencyExchange currencyExchange;
       MonetaryAmount withdrawalMinSize;

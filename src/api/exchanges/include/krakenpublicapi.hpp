@@ -32,9 +32,7 @@ class KrakenPublic : public ExchangePublic {
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
-    return _withdrawalFeesCache.get().first.find(currencyCode)->second;
-  }
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get(depth);
