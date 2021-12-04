@@ -20,11 +20,9 @@ void PrintMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange
 
 void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) {
   SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
-  const int nbExchanges = exchangeTickerMaps.first.size();
-  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-    const api::ExchangePublic &e = *exchangeTickerMaps.first[exchangePos];
-    for (const auto &[m, marketOrderBook] : exchangeTickerMaps.second[exchangePos]) {
-      t.emplace_back(e.name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
+  for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
+    for (const auto &[m, marketOrderBook] : marketOrderBookMap) {
+      t.emplace_back(e->name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
                      marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
                      marketOrderBook.amountAtAskPrice().str());
     }

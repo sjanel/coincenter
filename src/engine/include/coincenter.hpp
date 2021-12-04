@@ -20,6 +20,8 @@ namespace cct {
 class CoincenterParsedOptions;
 class TradeOptions;
 
+using ExchangeNameSpan = std::span<const ExchangeName>;
+
 class Coincenter {
  public:
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
@@ -37,33 +39,31 @@ class Coincenter {
   void process(const CoincenterParsedOptions &opts);
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
-  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, std::span<const ExchangeName> exchangeNames);
+  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, ExchangeNameSpan exchangeNames);
 
   /// Retrieve ticker information for given selected public exchanges, or all if empty.
-  ExchangeTickerMaps getTickerInformation(std::span<const ExchangeName> exchangeNames);
+  ExchangeTickerMaps getTickerInformation(ExchangeNameSpan exchangeNames);
 
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
-  MarketOrderBookConversionRates getMarketOrderBooks(Market m, std::span<const ExchangeName> exchangeNames,
+  MarketOrderBookConversionRates getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
-  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
+  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames);
 
   /// Retrieve the last trades for each queried exchange
-  LastTradesPerExchange getLastTradesPerExchange(Market m, std::span<const ExchangeName> exchangeNames,
-                                                 int nbLastTrades);
+  LastTradesPerExchange getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames, int nbLastTrades);
 
   /// Retrieve the last price for exchanges supporting given market.
-  MonetaryAmountPerExchange getLastPricePerExchange(Market m, std::span<const ExchangeName> exchangeNames);
+  MonetaryAmountPerExchange getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames);
 
   /// Retrieve all matching Exchange references trading currency, at most one per platform.
-  UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode,
-                                                            std::span<const ExchangeName> exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
   /// Retrieve all matching Exchange references proposing market, at most one per platform.
-  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, std::span<const ExchangeName> exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
@@ -73,10 +73,10 @@ class Coincenter {
                                    CurrencyCode depositCurrency);
 
   /// Query the conversion paths for each public exchange requested
-  ConversionPathPerExchange getConversionPaths(Market m, std::span<const ExchangeName> exchangeNames);
+  ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
 
   /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
-  WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
+  WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
   /// conversion path and will launch several 'single' trades to reach that final goal. Example:
@@ -113,8 +113,7 @@ class Coincenter {
 
   void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const;
 
-  void exportTickerMetrics(std::span<api::ExchangePublic *> exchanges,
-                           const MarketOrderBookMaps &marketOrderBookMaps) const;
+  void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) const;
 
   void exportOrderbookMetrics(Market m, const MarketOrderBookConversionRates &marketOrderBookConversionRates) const;
 
