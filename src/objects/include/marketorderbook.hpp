@@ -46,6 +46,8 @@ class MarketOrderBook {
 
   using AmountPerPriceVec = SmallVector<AmountAtPrice, 8>;
 
+  MarketOrderBook() = default;
+
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
   explicit MarketOrderBook(Market market, OrderBookLineSpan orderLines = OrderBookLineSpan(),
@@ -128,12 +130,9 @@ class MarketOrderBook {
   std::optional<MonetaryAmount> convertAtAvgPrice(MonetaryAmount amountInBaseOrQuote) const;
 
   /// Print the market order book to given stream.
-  void print(std::ostream& os) const;
-
-  /// Print the market order book to given stream.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
-  void print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const;
+  void print(std::ostream& os, std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
 
   using trivially_relocatable = std::true_type;
 
@@ -205,9 +204,9 @@ class MarketOrderBook {
   Market _market;
   VolAndPriNbDecimals _volAndPriNbDecimals;
   AmountPriceVector _orders;
-  int _highestBidPricePos;
-  int _lowestAskPricePos;
-  bool _isArtificiallyExtended;
+  int _highestBidPricePos = 0;
+  int _lowestAskPricePos = 0;
+  bool _isArtificiallyExtended = false;
 };
 
 }  // namespace cct

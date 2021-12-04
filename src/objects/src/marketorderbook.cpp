@@ -378,52 +378,42 @@ std::optional<MonetaryAmount> MarketOrderBook::convertQuoteAmountToBase(Monetary
   return std::optional<MonetaryAmount>();
 }
 
-void MarketOrderBook::print(std::ostream& os) const {
-  string h1("Sellers of ");
-  h1.append(_market.base().str()).append(" (asks)");
-  string h2(_market.base().str());
-  h2.append(" price in ").append(_market.quote().str());
-  string h3("Buyers of ");
-  h3.append(_market.base().str()).append(" (bids)");
-
-  SimpleTable t;
-  t.emplace_back(std::move(h1), std::move(h2), std::move(h3));
-
-  for (int op = _orders.size(); op > 0; --op) {
-    const int pos = op - 1;
-    MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
-    if (_orders[pos].amount < 0) {
-      t.emplace_back(amount.amountStr(), priceAt(pos).amountStr(), "");
-    } else {
-      t.emplace_back("", priceAt(pos).amountStr(), amount.amountStr());
-    }
-  }
-  t.print(os);
-}
-
-void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName, MonetaryAmount conversionPriceRate) const {
+void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
+                            std::optional<MonetaryAmount> conversionPriceRate) const {
   string h1("Sellers of ");
   h1.append(_market.base().str()).append(" (asks)");
   string h2(exchangeName);
   h2.append(" ").append(_market.base().str()).append(" price in ").append(_market.quote().str());
   string h3(exchangeName);
-  h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate.currencyStr());
+  if (conversionPriceRate) {
+    h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate->currencyStr());
+  }
   string h4("Buyers of ");
   h4.append(_market.base().str()).append(" (bids)");
 
   SimpleTable t;
-  t.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
+  if (conversionPriceRate) {
+    t.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
+  } else {
+    t.emplace_back(std::move(h1), std::move(h2), std::move(h4));
+  }
 
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
     MonetaryAmount price = priceAt(pos);
-    MonetaryAmount convertedPrice = price.toNeutral() * conversionPriceRate.toNeutral();
-    if (_orders[pos].amount < 0) {
-      t.emplace_back(amount.str(), price.amountStr(), convertedPrice.str(), "");
-    } else {
-      t.emplace_back("", price.amountStr(), convertedPrice.str(), amount.str());
+    SimpleTable::Row r(amount.str());
+    r.emplace_back(price.amountStr());
+    if (conversionPriceRate) {
+      MonetaryAmount convertedPrice = price.toNeutral() * conversionPriceRate->toNeutral();
+
+      r.emplace_back(convertedPrice.str());
     }
+    r.emplace_back("");
+    if (_orders[pos].amount > 0) {
+      r.front().swap(r.back());
+    }
+    t.push_back(std::move(r));
   }
   t.print(os);
 }

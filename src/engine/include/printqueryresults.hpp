@@ -7,8 +7,7 @@
 namespace cct {
 void PrintMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange);
 
-void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
-                           CurrencyCode equiCurrencyCode);
+void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates);
 
 void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
 

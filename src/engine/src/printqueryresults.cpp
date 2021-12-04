@@ -32,18 +32,9 @@ void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) {
   t.print();
 }
 
-void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
-                           CurrencyCode equiCurrencyCode) {
+void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates) {
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
-    if (optConversionRate) {
-      marketOrderBook.print(std::cout, exchangeName, *optConversionRate);
-    } else {
-      if (equiCurrencyCode != CurrencyCode::kNeutral) {
-        log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote().str(), equiCurrencyCode.str(),
-                  exchangeName);
-      }
-      marketOrderBook.print(std::cout);
-    }
+    marketOrderBook.print(std::cout, exchangeName, optConversionRate);
   }
 }
 
