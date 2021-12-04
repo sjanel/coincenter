@@ -129,6 +129,17 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
   }
 }
 
+MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+  const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
+  auto foundIt = withdrawalFeeMaps.find(currencyCode);
+  if (foundIt == withdrawalFeeMaps.end()) {
+    // Probably the CSV file provided by Kraken is not up to date... There is not much we can do here.
+    log::error("Unable to find {} withdrawal fee for {}", name(), currencyCode.str());
+    return MonetaryAmount(0, currencyCode);
+  }
+  return foundIt->second;
+}
+
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
   // Retrieve public file from Google Drive - Method found in
   // https://gist.github.com/tanaikech/f0f2d122e05bf5f971611258c22c110f

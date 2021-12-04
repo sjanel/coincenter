@@ -60,7 +60,8 @@ class Coincenter {
   MonetaryAmountPerExchange getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames);
 
   /// Retrieve all matching Exchange references trading currency, at most one per platform.
-  UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames,
+                                                            bool shouldBeWithdrawable);
 
   /// Retrieve all matching Exchange references proposing market, at most one per platform.
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);

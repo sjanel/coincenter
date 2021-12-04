@@ -192,12 +192,16 @@ MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur, ExchangeN
 }
 
 UniquePublicSelectedExchanges Coincenter::getExchangesTradingCurrency(CurrencyCode currencyCode,
-                                                                      ExchangeNameSpan exchangeNames) {
+                                                                      ExchangeNameSpan exchangeNames,
+                                                                      bool shouldBeWithdrawable) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isCurrencyTradablePerExchange;
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
-                 isCurrencyTradablePerExchange.begin(),
-                 [currencyCode](Exchange *e) { return e->queryTradableCurrencies().contains(currencyCode); });
+                 isCurrencyTradablePerExchange.begin(), [currencyCode, shouldBeWithdrawable](Exchange *e) {
+                   CurrencyExchangeFlatSet currencies = e->queryTradableCurrencies();
+                   auto foundIt = currencies.find(currencyCode);
+                   return foundIt != currencies.end() && (!shouldBeWithdrawable || foundIt->canWithdraw());
+                 });
 
   // Erases Exchanges which do not propose asked currency
   FilterVector(selectedExchanges, isCurrencyTradablePerExchange);
@@ -258,7 +262,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExcha
 
 WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
-  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames);
+  UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames, true);
 
   WithdrawFeePerExchange withdrawFeePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
