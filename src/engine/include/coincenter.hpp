@@ -1,17 +1,10 @@
 #pragma once
 
-#include <execution>
-#include <forward_list>
-#include <memory>
 #include <optional>
 #include <span>
 #include <string_view>
-#include <utility>
 
 #include "apikeysprovider.hpp"
-#include "cct_const.hpp"
-#include "cct_fixedcapacityvector.hpp"
-#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
@@ -19,8 +12,8 @@
 #include "exchangepool.hpp"
 #include "exchangeretriever.hpp"
 #include "fiatconverter.hpp"
-#include "marketorderbooks.hpp"
 #include "monitoringinfo.hpp"
+#include "queryresulttypes.hpp"
 
 namespace cct {
 
@@ -29,23 +22,6 @@ class TradeOptions;
 
 class Coincenter {
  public:
-  using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
-  using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
-  using MarketsPerExchange = FixedCapacityVector<api::ExchangePublic::MarketSet, kNbSupportedExchanges>;
-  using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
-  using MonetaryAmountPerExchange =
-      FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
-  using LastTradesPerExchange =
-      FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
-  using MarketOrderBookMaps = FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges>;
-  using ExchangeTickerMaps = std::pair<ExchangeRetriever::PublicExchangesVec, Coincenter::MarketOrderBookMaps>;
-  using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
-  using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
-  using ConversionPathPerExchange =
-      FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::ConversionPath>, kNbSupportedExchanges>;
-  using WithdrawFeePerExchange =
-      FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
-
   Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
       : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
 
@@ -115,29 +91,6 @@ class Coincenter {
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName);
-
-  void printMarkets(CurrencyCode currencyCode, std::span<const ExchangeName> exchangeNames);
-
-  static void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates,
-                                    CurrencyCode equiCurrencyCode);
-
-  static void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
-
-  void printBalance(const PrivateExchangeNames &privateExchangeNames, CurrencyCode balanceCurrencyCode);
-
-  void printDepositInfo(const PrivateExchangeNames &privateExchangeNames, CurrencyCode depositCurrencyCode);
-
-  static void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange);
-
-  static void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange);
-
-  static void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange);
-
-  static void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange);
-
-  static void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange);
-
-  PublicExchangeNames getPublicExchangeNames() const;
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
