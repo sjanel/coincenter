@@ -30,7 +30,7 @@ class CoincenterInfo {
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
                           std::string_view dataDir = kDefaultDataDir,
-                          const MonitoringInfo &monitoringInfo = MonitoringInfo());
+                          const MonitoringInfo &monitoringInfo = MonitoringInfo(), bool printQueryResults = true);
 
   CoincenterInfo(const CoincenterInfo &) = delete;
   CoincenterInfo &operator=(const CoincenterInfo &) = delete;
@@ -77,6 +77,8 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
+  bool printQueryResults() const { return _printQueryResults; }
+
  private:
   using APICallUpdateFrequencyMap = std::unordered_map<api::QueryTypeEnum, Duration>;
 
@@ -88,5 +90,6 @@ class CoincenterInfo {
   string _dataDir;
   std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
   const MonitoringInfo &_monitoringInfo;
+  bool _printQueryResults;
 };
 }  // namespace cct

@@ -2,8 +2,7 @@
 
 #include "cachedresultvault.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 /// RAII object whose lifetime triggers a special behavior of the CachedResults contained by the vault of this
 /// Exchange:
@@ -49,5 +48,4 @@ class ExchangeBase {
  protected:
   ExchangeBase() = default;
 };
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

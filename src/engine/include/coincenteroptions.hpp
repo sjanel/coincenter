@@ -34,6 +34,7 @@ struct CoincenterCmdLineOptions {
   bool help = false;
   bool version = false;
   bool logFile = false;
+  bool noPrint = false;
   std::optional<string> nosecrets;
   CommandLineOptionalInt repeats;
   Duration repeat_time = kDefaultRepeatTime;
@@ -96,14 +97,15 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"General", 1}, "--data", 'd', "<path/to/data>", string("Use given 'data' directory instead of the one chosen at build time '")
                                                       .append(kDefaultDataDir).append("'")}, 
                                                       &OptValueType::dataDir},
-       {{{"General", 1}, "--loglevel", 'v', "<levelname|0-6>", string("Sets the log level during all execution. "
+       {{{"General", 1}, "--log", 'v', "<levelname|0-6>", string("Sets the log level during all execution. "
                                                       "Possible values are: \n(off|critical|error|warning|info|debug|trace) or "
                                                       "(0-6) (default: ").append(log::level::to_string_view(log::get_level()).data()).append(")")}, 
                                                       &OptValueType::logLevel},
-       {{{"General", 1}, "--logfile", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
-       {{{"General", 1}, "--nosecrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"
-                                                       "If empty list of exchanges, it skips secrets load for all private exchanges"},
-                                                       &OptValueType::nosecrets},
+       {{{"General", 1}, "--log-file", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
+       {{{"General", 1}, "--no-print", "", "Do not print query results in standard output"}, &OptValueType::noPrint},
+       {{{"General", 1}, "--no-secrets", "[exch1,...]", "Even if present, do not load secrets and do not use private exchanges.\n"
+                                                        "If empty list of exchanges, it skips secrets load for all private exchanges"},
+                                                        &OptValueType::nosecrets},
        {{{"General", 1}, "--repeat", 'r', "[n]", "Indicates how many repeats to perform for mutable data (such as market data)\n"
                                                  "Modifying requests such as trades and withdraws are not impacted by this option. "
                                                  "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
@@ -122,7 +124,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                             "prints additional column converted to given asset"}, 
                                                                  &OptValueType::orderbook_cur},
        {{{"Public queries", 2}, "--ticker", "[exch1,...]", "Print ticker information for all markets for all exchanges,"
-                                                           "or only for specified ones"}, 
+                                                           " or only for specified ones"}, 
                                                            &OptValueType::ticker},
        {{{"Public queries", 2}, "--conversion", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
                                                                                 "for given exchanges if possible"}, 

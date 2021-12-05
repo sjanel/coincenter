@@ -8,6 +8,7 @@
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
+#include "exchangesecretsinfo.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "timehelpers.hpp"
@@ -46,8 +47,7 @@ class CoincenterParsedOptions {
   PrivateExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
 
-  bool noSecretsForAll = false;
-  PublicExchangeNames noSecretsExchanges;
+  ExchangeSecretsInfo exchangesSecretsInfo;
 
   CurrencyCode depositCurrency;
   PrivateExchangeNames depositInfoPrivateExchanges;
@@ -76,6 +76,7 @@ class CoincenterParsedOptions {
   bool useMonitoring = false;
 
   bool noProcess = false;
+  bool printQueryResults;
   int repeats = 1;
   Duration repeat_time;
 

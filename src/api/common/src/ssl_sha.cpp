@@ -9,8 +9,7 @@
 
 #include "cct_codec.hpp"
 
-namespace cct {
-namespace ssl {
+namespace cct::ssl {
 namespace {
 using HMACCtxUniquePtr = std::unique_ptr<HMAC_CTX, decltype([](HMAC_CTX* ptr) { HMAC_CTX_free(ptr); })>;
 
@@ -89,5 +88,4 @@ string ShaDigest(ShaType shaType, std::span<const string> data) {
   return EVPBinToHex(mdctx);
 }
 
-}  // namespace ssl
-}  // namespace cct
+}  // namespace cct::ssl

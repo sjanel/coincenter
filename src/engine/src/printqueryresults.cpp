@@ -5,8 +5,12 @@
 #include "simpletable.hpp"
 #include "stringhelpers.hpp"
 
+#define RETURN_IF_NO_PRINT \
+  if (!_doPrint) return
+
 namespace cct {
-void PrintMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange) {
+void QueryResultPrinter::printMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange) {
+  RETURN_IF_NO_PRINT;
   string marketsCol("Markets with ");
   marketsCol.append(cur.str());
   SimpleTable t("Exchange", std::move(marketsCol));
@@ -18,7 +22,8 @@ void PrintMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange
   t.print();
 }
 
-void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) {
+void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) {
+  RETURN_IF_NO_PRINT;
   SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
   for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
     for (const auto &[m, marketOrderBook] : marketOrderBookMap) {
@@ -30,13 +35,15 @@ void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) {
   t.print();
 }
 
-void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates) {
+void QueryResultPrinter::printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates) {
+  RETURN_IF_NO_PRINT;
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
     marketOrderBook.print(std::cout, exchangeName, optConversionRate);
   }
 }
 
-void PrintBalance(const BalancePerExchange &balancePerExchange) {
+void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchange) {
+  RETURN_IF_NO_PRINT;
   BalancePerExchangePortfolio totalBalance;
   for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
     totalBalance.add(*exchangePtr, balancePortfolio);
@@ -44,7 +51,9 @@ void PrintBalance(const BalancePerExchange &balancePerExchange) {
   totalBalance.print(std::cout, balancePerExchange.size() > 1);
 }
 
-void PrintDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange) {
+void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
+                                          const WalletPerExchange &walletPerExchange) {
+  RETURN_IF_NO_PRINT;
   string walletStr(depositCurrencyCode.str());
   walletStr.append(" address");
   SimpleTable t("Exchange", "Account", std::move(walletStr), "Destination Tag");
@@ -54,7 +63,8 @@ void PrintDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange 
   t.print();
 }
 
-void PrintConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) {
+void QueryResultPrinter::printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) {
+  RETURN_IF_NO_PRINT;
   string conversionPathStrHeader("Fastest conversion path for ");
   conversionPathStrHeader.append(m.assetsPairStr('-'));
   SimpleTable t("Exchange", std::move(conversionPathStrHeader));
@@ -73,7 +83,8 @@ void PrintConversionPath(Market m, const ConversionPathPerExchange &conversionPa
   t.print();
 }
 
-void PrintWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) {
+void QueryResultPrinter::printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) {
+  RETURN_IF_NO_PRINT;
   SimpleTable t("Exchange", "Withdraw fee");
   for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
     t.emplace_back(e->name(), withdrawFee.str());
@@ -81,7 +92,8 @@ void PrintWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) {
   t.print();
 }
 
-void PrintLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange) {
+void QueryResultPrinter::printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange) {
+  RETURN_IF_NO_PRINT;
   string headerTradedVolume("Last 24h ");
   headerTradedVolume.append(m.str());
   headerTradedVolume.append(" traded volume");
@@ -92,7 +104,8 @@ void PrintLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedV
   t.print();
 }
 
-void PrintLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) {
+void QueryResultPrinter::printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) {
+  RETURN_IF_NO_PRINT;
   for (const auto &[exchangePtr, lastTrades] : lastTradesPerExchange) {
     string buyTitle(m.base().str());
     buyTitle.append(" buys");
@@ -140,7 +153,8 @@ void PrintLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchang
   }
 }
 
-void PrintLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange) {
+void QueryResultPrinter::printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange) {
+  RETURN_IF_NO_PRINT;
   string headerLastPrice(m.str());
   headerLastPrice.append(" last price");
   SimpleTable t("Exchange", std::move(headerLastPrice));

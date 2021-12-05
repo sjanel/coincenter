@@ -9,20 +9,21 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "exchangename.hpp"
+#include "exchangesecretsinfo.hpp"
 #include "runmodes.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
+
 class APIKeysProvider {
  public:
   using KeyNames = SmallVector<string, kTypicalNbPrivateAccounts>;
 
   explicit APIKeysProvider(std::string_view dataDir, settings::RunMode runMode = settings::RunMode::kProd)
-      : APIKeysProvider(dataDir, PublicExchangeNames(), false, runMode) {}
+      : APIKeysProvider(dataDir, ExchangeSecretsInfo(), runMode) {}
 
-  APIKeysProvider(std::string_view dataDir, const PublicExchangeNames &exchangesWithoutSecrets,
-                  bool allExchangesWithoutSecrets, settings::RunMode runMode = settings::RunMode::kProd)
-      : _apiKeysMap(ParseAPIKeys(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode)) {}
+  APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
+                  settings::RunMode runMode = settings::RunMode::kProd)
+      : _apiKeysMap(ParseAPIKeys(dataDir, exchangeSecretsInfo, runMode)) {}
 
   APIKeysProvider(const APIKeysProvider &) = delete;
   APIKeysProvider &operator=(const APIKeysProvider &) = delete;
@@ -40,10 +41,9 @@ class APIKeysProvider {
   using APIKeys = vector<APIKey>;
   using APIKeysMap = std::map<string, APIKeys, std::less<>>;
 
-  static APIKeysMap ParseAPIKeys(std::string_view dataDir, const PublicExchangeNames &exchangesWithoutSecrets,
-                                 bool allExchangesWithoutSecrets, settings::RunMode runMode);
+  static APIKeysMap ParseAPIKeys(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
+                                 settings::RunMode runMode);
 
   APIKeysMap _apiKeysMap;
 };
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

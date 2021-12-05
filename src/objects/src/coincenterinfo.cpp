@@ -47,7 +47,7 @@ using MetricGatewayType = VoidMetricGateway;
 }  // namespace
 
 CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataDir,
-                               const MonitoringInfo& monitoringInfo)
+                               const MonitoringInfo& monitoringInfo, bool printQueryResults)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(dataDir)),
       _stableCoinsMap(ComputeStableCoinsMap(dataDir)),
       // TODO: make below values configurable, with default value in a json file
@@ -66,7 +66,8 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataD
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
-      _monitoringInfo(monitoringInfo) {}
+      _monitoringInfo(monitoringInfo),
+      _printQueryResults(printQueryResults) {}
 
 CoincenterInfo::~CoincenterInfo() {}  // To have definition of MetricGateway
 

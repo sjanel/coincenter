@@ -8,8 +8,7 @@
 #include "fiatconverter.hpp"
 #include "mock_exchangepublicapi.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 class ExchangePublicTest : public ::testing::Test {
  protected:
   ExchangePublicTest()
@@ -54,5 +53,4 @@ TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS"), exception);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

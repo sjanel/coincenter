@@ -5,8 +5,7 @@
 
 #include "mock_exchangepublicapi.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 class MockExchangePrivate : public ExchangePrivate {
  public:
   MockExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
@@ -112,5 +111,4 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   EXPECT_EQ(exchangePrivate.trade(from, m.base(), tradeOptions), tradedTo);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api
