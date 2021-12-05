@@ -73,7 +73,9 @@ class KucoinPublic : public ExchangePublic {
 
     struct CurrencyInfo {
       explicit CurrencyInfo(CurrencyCode c) : currencyExchange(c, c, c) {}
-      explicit CurrencyInfo(CurrencyExchange&& c) : currencyExchange(std::move(c)) {}
+
+      CurrencyInfo(CurrencyExchange&& c, MonetaryAmount wMS, MonetaryAmount wMF)
+          : currencyExchange(std::move(c)), withdrawalMinSize(wMS), withdrawalMinFee(wMF) {}
 
       auto operator<=>(const CurrencyInfo& o) const { return currencyExchange <=> o.currencyExchange; }
 

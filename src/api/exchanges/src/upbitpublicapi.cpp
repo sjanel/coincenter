@@ -14,15 +14,17 @@ namespace cct {
 namespace api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
+string GetMethodUrl(std::string_view endpoint) {
   string method_url(UpbitPublic::kUrlBase);
   method_url.append("/v1/");
   method_url.append(endpoint);
+  return method_url;
+}
 
-  CurlOptions opts(HttpRequestType::kGet, std::move(postData));
-  opts.userAgent = UpbitPublic::kUserAgent;
+json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
+  CurlOptions opts(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent);
 
-  json dataJson = json::parse(curlHandle.query(method_url, opts));
+  json dataJson = json::parse(curlHandle.query(GetMethodUrl(endpoint), opts));
   //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
   if (dataJson.contains("error")) {
     const long statusCode = dataJson["name"].get<long>();
@@ -71,8 +73,8 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(markets.size() / 2);
   for (Market m : markets) {
-    currencies.insert(CurrencyExchange(m.base(), m.base(), m.base()));
-    currencies.insert(CurrencyExchange(m.quote(), m.quote(), m.quote()));
+    currencies.emplace(m.base(), m.base(), m.base());
+    currencies.emplace(m.quote(), m.quote(), m.quote());
   }
   log::warn("Retrieved {} Upbit currencies with partial information", currencies.size());
   log::warn("Public API of Upbit does not provide deposit / withdrawal access");

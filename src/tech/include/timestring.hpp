@@ -16,7 +16,7 @@ using Nonce = string;
 string ToString(std::chrono::system_clock::time_point p, const char* format = "%Y-%m-%d %H:%M:%S");
 
 /// Create a Nonce as the number of milliseconds since Epoch time in string format.
-Nonce Nonce_TimeSinceEpoch();
+Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay = 0);
 
 /// Create a Nonce in litteral format.
 /// Example: '2021-06-01T14:44:13'

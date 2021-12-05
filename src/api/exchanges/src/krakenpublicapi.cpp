@@ -16,16 +16,18 @@ namespace cct {
 namespace api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
+string GetMethodUrl(std::string_view method) {
   string method_url(KrakenPublic::kUrlBase);
   method_url.push_back('/');
   method_url.push_back(KrakenPublic::kVersion);
   method_url.append("/public/");
   method_url.append(method);
+  return method_url;
+}
 
+json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   CurlOptions opts(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
-  string ret = curlHandle.query(method_url, opts);
-  json jsonData = json::parse(std::move(ret));
+  json jsonData = json::parse(curlHandle.query(GetMethodUrl(method), opts));
   auto errorIt = jsonData.find("error");
   if (errorIt != jsonData.end() && !errorIt->empty()) {
     std::string_view msg = errorIt->front().get<std::string_view>();
@@ -54,7 +56,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 
   // Kraken manages 2 versions of Augur, do not take first version into account to avoid issues of acronym names
   // between exchanges
-  constexpr bool kAvoidAugurV1AndKeepAugurV2 = true;
+  static constexpr bool kAvoidAugurV1AndKeepAugurV2 = true;
 
   if constexpr (kAvoidAugurV1AndKeepAugurV2) {
     if (krakenEntryCurrencyCode == "XREP") {
@@ -262,8 +264,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "Assets");
-  CurrencyExchangeFlatSet currencies;
-  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size()));
+  CurrencyExchangeVector currencies;
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
@@ -277,15 +278,12 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
                                      ? CurrencyExchange::Type::kFiat
                                      : CurrencyExchange::Type::kCrypto);
 
-    if (currencies.contains(newCurrency)) {
-      log::error("Duplicated {}", newCurrency.str());
-    } else {
-      log::debug("Retrieved Kraken Currency {}", newCurrency.str());
-      currencies.insert(std::move(newCurrency));
-    }
+    log::debug("Retrieved Kraken Currency {}", newCurrency.str());
+    currencies.push_back(std::move(newCurrency));
   }
-  log::info("Retrieved {} Kraken currencies", currencies.size());
-  return currencies;
+  CurrencyExchangeFlatSet ret(std::move(currencies));
+  log::info("Retrieved {} Kraken currencies", ret.size());
+  return ret;
 }
 
 std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {

@@ -18,7 +18,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
                   CurlPostData&& postdata = CurlPostData()) {
   CurlOptions opts(requestType, std::move(postdata));
 
-  Nonce nonce = Nonce_TimeSinceEpoch();
+  Nonce nonce = Nonce_TimeSinceEpochInMs();
   string strToSign = nonce;
   strToSign.append(opts.requestTypeStr());
   strToSign.append(method);
@@ -72,7 +72,7 @@ void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount 
                    std::string_view toStr) {
   log::info("Perform inner transfer of {} to {} account", amount.str(), toStr);
   PrivateQuery(curlHandle, apiKey, HttpRequestType::kPost, "/api/v2/accounts/inner-transfer",
-               {{"clientOid", Nonce_TimeSinceEpoch()},  // Not really needed, but it's mandatory apparently
+               {{"clientOid", Nonce_TimeSinceEpochInMs()},  // Not really needed, but it's mandatory apparently
                 {"currency", amount.currencyStr()},
                 {"amount", amount.amountStr()},
                 {"from", fromStr},
@@ -204,7 +204,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   std::string_view buyOrSell = fromCurrencyCode == m.base() ? "sell" : "buy";
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
-  CurlPostData placePostData{{"clientOid", Nonce_TimeSinceEpoch()},
+  CurlPostData placePostData{{"clientOid", Nonce_TimeSinceEpochInMs()},
                              {"side", buyOrSell},
                              {"symbol", m.assetsPairStr('-')},
                              {"type", strategyType},

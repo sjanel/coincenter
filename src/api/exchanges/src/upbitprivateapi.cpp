@@ -38,7 +38,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   auto jsonWebToken = jwt::create()
                           .set_type("JWT")
                           .set_payload_claim("access_key", jwt::claim(std::string(apiKey.key())))
-                          .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpoch())));
+                          .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpochInMs())));
 
   if (!opts.postdata.empty()) {
     string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.postdata.str());
@@ -83,9 +83,9 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
-  CurrencyExchangeFlatSet currencies;
+  CurrencyExchangeVector currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "status/wallet");
-  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size()));
+  currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() - excludedCurrencies.size()));
   for (const json& curDetails : result) {
     CurrencyCode cur(curDetails["currency"].get<std::string_view>());
     if (UpbitPublic::CheckCurrencyCode(cur, excludedCurrencies)) {
@@ -106,14 +106,14 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
       if (depositStatus == CurrencyExchange::Deposit::kUnavailable) {
         log::debug("{} cannot be deposited to Upbit", cur.str());
       }
-      currencies.insert(CurrencyExchange(cur, cur, cur, depositStatus, withdrawStatus,
-                                         _cryptowatchApi.queryIsCurrencyCodeFiat(cur)
-                                             ? CurrencyExchange::Type::kFiat
-                                             : CurrencyExchange::Type::kCrypto));
+      currencies.emplace_back(cur, cur, cur, depositStatus, withdrawStatus,
+                              _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
+                                                                           : CurrencyExchange::Type::kCrypto);
     }
   }
-  log::info("Retrieved {} Upbit currencies", currencies.size());
-  return currencies;
+  CurrencyExchangeFlatSet ret(std::move(currencies));
+  log::info("Retrieved {} Upbit currencies", ret.size());
+  return ret;
 }
 
 BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {

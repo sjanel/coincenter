@@ -16,6 +16,7 @@
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timehelpers.hpp"
 #include "timestring.hpp"
 #include "tradeoptions.hpp"
 
@@ -42,99 +43,163 @@ string UrlEncode(std::string_view str) {
   return ret;
 }
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName,
-                  BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
-                  const CurlPostData& curlPostData) {
+string GetMethodURL(std::string_view methodName) {
   string methodUrl(BithumbPublic::kUrlBase);
   methodUrl.push_back('/');
   methodUrl.append(methodName);
+  return methodUrl;
+}
 
+string GetStrPost(std::string_view methodName, const CurlPostData& curlPostData) {
   string strPost = "endpoint=/";
   strPost.append(methodName);
   strPost.push_back('&');
   strPost.append(curlPostData.str());
+  return strPost;
+}
 
+CurlOptions InitCurlOptions(std::string_view methodName, const CurlPostData& curlPostData) {
   // For Bithumb, we always use POST requests (even when read-only)
-  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(strPost)));
+  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(GetStrPost(methodName, curlPostData))));
+  opts.userAgent = BithumbPublic::kUserAgent;
+  return opts;
+}
 
+std::pair<string, Nonce> GetStrData(std::string_view methodName, const CurlOptions& opts) {
+  Nonce nonce = Nonce_TimeSinceEpochInMs();
   string strData;
-  strData.reserve(100);
+  strData.reserve(methodName.size() + 3 + opts.postdata.str().size() + nonce.size());
   strData.push_back('/');
   strData.append(methodName);
 
-  const char parChar = 1;
-  strData.push_back(parChar);
+  static constexpr char kParChar = 1;
+  strData.push_back(kParChar);
   strData.append(opts.postdata.str());
-  strData.push_back(parChar);
+  strData.push_back(kParChar);
 
-  Nonce nonce = Nonce_TimeSinceEpoch();
   strData.append(nonce.begin(), nonce.end());
+  return std::make_pair(std::move(strData), std::move(nonce));
+}
 
-  string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strData, apiKey.privateKey()));
+template <class StringVec>
+void SetHttpHeaders(StringVec& httpHeaders, const APIKey& apiKey, std::string_view signature, const Nonce& nonce) {
+  httpHeaders.clear();
+  httpHeaders.reserve(4U);
+  httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
+  httpHeaders.emplace_back("API-Sign: ").append(signature);
+  httpHeaders.emplace_back("API-Nonce: ").append(nonce);
+  httpHeaders.emplace_back("api-client-type: 1");
+}
 
-  opts.userAgent = BithumbPublic::kUserAgent;
+json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName, CurlOptions& opts) {
+  auto strDataAndNoncePair = GetStrData(methodName, opts);
 
-  opts.httpHeaders.reserve(4);
-  opts.httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
-  opts.httpHeaders.emplace_back("API-Sign: " + signature);
-  opts.httpHeaders.emplace_back("API-Nonce: " + nonce);
-  opts.httpHeaders.emplace_back("api-client-type: 1");
+  string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
 
-  json dataJson = json::parse(curlHandle.query(methodUrl, opts));
+  SetHttpHeaders(opts.httpHeaders, apiKey, signature, strDataAndNoncePair.second);
+  return json::parse(curlHandle.query(GetMethodURL(methodName), opts));
+}
+
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName,
+                  BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
+                  const CurlPostData& curlPostData) {
+  CurlOptions opts = InitCurlOptions(methodName, curlPostData);
+  json dataJson = PrivateQueryProcess(curlHandle, apiKey, methodName, opts);
 
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
   const bool isTradeQuery = methodName.starts_with("trade");
   const bool isInfoOpenedOrders = methodName == "info/orders";
   const bool isCancelQuery = methodName == "trade/cancel";
-  constexpr int kMaxNbRetries = 3;
+  constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
   while (dataJson.contains("status") && ++nbRetries < kMaxNbRetries) {
-    std::string_view statusCode = dataJson["status"].get<std::string_view>();  // "5300" for instance
-    if (statusCode != "0000") {                                                // "0000" stands for: request OK
+    // "5300" for instance. "0000" stands for: request OK
+    std::string_view statusCode = dataJson["status"].get<std::string_view>();
+    int64_t errorCode = FromString<int64_t>(statusCode);
+    if (errorCode != 0) {
       std::string_view msg;
-      if (dataJson.contains("message")) {
-        msg = dataJson["message"].get<std::string_view>();
-        if (statusCode == "5600") {
-          if (isTradeQuery) {
-            // too many decimals, you need to truncate
-            constexpr char kMagicKoreanString1[] = "수량은 소수점 ";
-            constexpr char kMagicKoreanString2[] = "자";
-            std::size_t nbDecimalsMaxPos = msg.find(kMagicKoreanString1);
-            if (nbDecimalsMaxPos != std::string_view::npos) {
-              std::size_t idxFirst = nbDecimalsMaxPos + strlen(kMagicKoreanString1);
-              auto first = msg.begin() + idxFirst;
-              std::string_view maxNbDecimalsStr(first, msg.begin() + msg.find(kMagicKoreanString2, idxFirst));
-              CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));
-              // I did not find the way via the API to get the maximum precision of Bithumb assets,
-              // so I get them this way, by parsing the Korean error message of the response
-              log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
-                        maxNbDecimalsStr);
-              int8_t maxNbDecimals = FromString<int8_t>(maxNbDecimalsStr);
-
-              using Clock = std::chrono::high_resolution_clock;
-
-              maxNbDecimalsPerCurrencyCodePlace.insert_or_assign(
-                  currencyCode, BithumbPrivate::NbDecimalsTimeValue{maxNbDecimals, Clock::now()});
-
-              // Perform a second time the query here with truncated decimals.
-              CurlPostData updatedPostData(curlPostData);
-              MonetaryAmount volume(opts.postdata.get("units"));
-              volume.truncate(maxNbDecimals);
-              if (volume.isZero()) {
-                return {};
+      auto messageIt = dataJson.find("message");
+      if (messageIt != dataJson.end()) {
+        msg = messageIt->get<std::string_view>();
+        switch (errorCode) {
+          case 5100: {
+            std::size_t requestTimePos = msg.find("Request Time");
+            if (requestTimePos != std::string_view::npos) {
+              // Bad Request.(Request Time:reqTime1638699638274/nowTime1638699977771)
+              static constexpr std::string_view kReqTime = "reqTime";
+              static constexpr std::string_view kNowTime = "nowTime";
+              std::size_t reqTimePos = msg.find(kReqTime, requestTimePos);
+              if (reqTimePos == std::string_view::npos) {
+                log::warn("Unable to parse Bithumb bad request msg {}", msg);
+              } else {
+                reqTimePos += kReqTime.size();
+                std::size_t nowTimePos = msg.find(kNowTime, reqTimePos);
+                if (nowTimePos == std::string_view::npos) {
+                  log::warn("Unable to parse Bithumb bad request msg {}", msg);
+                } else {
+                  nowTimePos += kNowTime.size();
+                  static constexpr std::string_view kAllDigits = "0123456789";
+                  std::size_t reqTimeEndPos = msg.find_first_not_of(kAllDigits, reqTimePos);
+                  std::size_t nowTimeEndPos = msg.find_first_not_of(kAllDigits, nowTimePos);
+                  if (nowTimeEndPos == std::string_view::npos) {
+                    nowTimeEndPos = msg.size();
+                  }
+                  std::string_view reqTimeStr(msg.begin() + reqTimePos, msg.begin() + reqTimeEndPos);
+                  std::string_view nowTimeStr(msg.begin() + nowTimePos, msg.begin() + nowTimeEndPos);
+                  int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
+                  int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
+                  log::error("Bithumb time is not synchronized with us (difference of {} s)",
+                             (reqTimeInt - nowTimeInt) / 1000);
+                  log::error("It can sometimes come from a bug in Bithumb, retry");
+                  dataJson = PrivateQueryProcess(curlHandle, apiKey, methodName, opts);
+                  continue;
+                }
               }
-              updatedPostData.set("units", volume.amountStr());
-              return PrivateQuery(curlHandle, apiKey, methodName, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
             }
+            break;
           }
-          if ((isInfoOpenedOrders || isCancelQuery) &&
-              msg.find("거래 진행중인 내역이 존재하지 않습니다") != string::npos) {
-            // This is not really an error, it means that order has been eaten or cancelled.
-            // Just return empty json in this case
-            log::info("Considering Bithumb order as closed as no data received from them");
-            dataJson.clear();
-            return dataJson;
-          }
+          case 5600:
+            if (isTradeQuery) {
+              // too many decimals, you need to truncate
+              constexpr char kMagicKoreanString1[] = "수량은 소수점 ";
+              constexpr char kMagicKoreanString2[] = "자";
+              std::size_t nbDecimalsMaxPos = msg.find(kMagicKoreanString1);
+              if (nbDecimalsMaxPos != std::string_view::npos) {
+                std::size_t idxFirst = nbDecimalsMaxPos + strlen(kMagicKoreanString1);
+                auto first = msg.begin() + idxFirst;
+                std::string_view maxNbDecimalsStr(first, msg.begin() + msg.find(kMagicKoreanString2, idxFirst));
+                CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));
+                // I did not find the way via the API to get the maximum precision of Bithumb assets,
+                // so I get them this way, by parsing the Korean error message of the response
+                log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
+                          maxNbDecimalsStr);
+                int8_t maxNbDecimals = FromString<int8_t>(maxNbDecimalsStr);
+
+                maxNbDecimalsPerCurrencyCodePlace.insert_or_assign(
+                    currencyCode, BithumbPrivate::NbDecimalsTimeValue{maxNbDecimals, Clock::now()});
+
+                // Perform a second time the query here with truncated decimals.
+                CurlPostData updatedPostData(curlPostData);
+                MonetaryAmount volume(opts.postdata.get("units"));
+                volume.truncate(maxNbDecimals);
+                if (volume.isZero()) {
+                  return {};
+                }
+                updatedPostData.set("units", volume.amountStr());
+                return PrivateQuery(curlHandle, apiKey, methodName, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
+              }
+            }
+            if ((isInfoOpenedOrders || isCancelQuery) &&
+                msg.find("거래 진행중인 내역이 존재하지 않습니다") != string::npos) {
+              // This is not really an error, it means that order has been eaten or cancelled.
+              // Just return empty json in this case
+              log::info("Considering Bithumb order as closed as no data received from them");
+              dataJson.clear();
+              return dataJson;
+            }
+            break;
+          default:
+            break;
         }
       }
       string ex("Bithumb::query error: ");
