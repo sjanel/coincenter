@@ -171,9 +171,6 @@ class FlatKeyValueString {
 
   auto operator<=>(const FlatKeyValueString &) const = default;
 
-  bool operator==(const FlatKeyValueString &o) const { return _data == o._data; }
-  bool operator!=(const FlatKeyValueString &o) const { return _data != o._data; }
-
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:

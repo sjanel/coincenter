@@ -6,8 +6,7 @@
 #include "exchangepublicapi.hpp"
 #include "fiatconverter.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 class MockExchangePublic : public ExchangePublic {
  public:
   MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
@@ -26,5 +25,4 @@ class MockExchangePublic : public ExchangePublic {
   MOCK_METHOD(LastTradesVector, queryLastTrades, (Market m, int nbTrades), (override));
   MOCK_METHOD(MonetaryAmount, queryLastPrice, (Market m), (override));
 };
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

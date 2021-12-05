@@ -34,9 +34,6 @@ class Market {
 
   auto operator<=>(const Market&) const = default;
 
-  bool operator==(const Market& o) const { return std::equal(_assets.begin(), _assets.end(), o._assets.begin()); }
-  bool operator!=(const Market& o) const { return !(*this == o); }
-
   string str() const { return assetsPairStr('-'); }
   string assetsPairStr(char sep = 0, bool lowerCase = false) const;
 

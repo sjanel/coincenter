@@ -49,6 +49,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     }
   }
   repeat_time = cmdLineOptions.repeat_time;
+  printQueryResults = !cmdLineOptions.noPrint;
 
   if (cmdLineOptions.useMonitoring) {
     useMonitoring = true;
@@ -95,8 +96,8 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (cmdLineOptions.nosecrets) {
     StringOptionParser anyParser(*cmdLineOptions.nosecrets);
-    noSecretsExchanges = anyParser.getExchanges();
-    noSecretsForAll = noSecretsExchanges.empty();
+
+    exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
   }
 
   std::string_view tradeArgs;

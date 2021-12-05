@@ -1,14 +1,11 @@
 #include "apikeysprovider.hpp"
 
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_string.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 std::string_view GetSecretFileName(settings::RunMode runMode) {
@@ -63,10 +60,10 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
 }
 
 APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataDir,
-                                                          const PublicExchangeNames& exchangesWithoutSecrets,
-                                                          bool allExchangesWithoutSecrets, settings::RunMode runMode) {
+                                                          const ExchangeSecretsInfo& exchangeSecretsInfo,
+                                                          settings::RunMode runMode) {
   APIKeysProvider::APIKeysMap map;
-  if (allExchangesWithoutSecrets) {
+  if (exchangeSecretsInfo.allExchangesWithoutSecrets()) {
     log::info("Not loading private keys, using only public exchanges");
   } else {
     std::string_view secretFileName = GetSecretFileName(runMode);
@@ -74,6 +71,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
                      runMode == settings::RunMode::kProd ? File::IfNotFound::kNoThrow : File::IfNotFound::kThrow);
     json jsonData = secretsFile.readJson();
     for (const auto& [platform, keyObj] : jsonData.items()) {
+      const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
       if (std::find(exchangesWithoutSecrets.begin(), exchangesWithoutSecrets.end(), platform) !=
           exchangesWithoutSecrets.end()) {
         log::info("Not loading {} private keys as requested", platform);
@@ -120,10 +118,11 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
       foundKeysStr.push_back('@');
       foundKeysStr.append(platform);
     }
-    log::info("Loaded keys {}", foundKeysStr);
+    if (!foundKeysStr.empty()) {
+      log::info("Loaded keys {}", foundKeysStr);
+    }
   }
 
   return map;
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

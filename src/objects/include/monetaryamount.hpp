@@ -35,7 +35,7 @@ class MonetaryAmount {
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a currency
   constexpr explicit MonetaryAmount(std::integral auto amount, CurrencyCode currencyCode) noexcept
-      : _amount(amount), _currencyCode(currencyCode), _nbDecimals(0) {}
+      : _amount(amount), _nbDecimals(0), _currencyCode(currencyCode) {}
 
   /// Construct a new MonetaryAmount from a double.
   /// Precision is calculated automatically.
@@ -44,7 +44,7 @@ class MonetaryAmount {
   /// Constructs a new MonetaryAmount from an integral representation which is already multiplied by given
   /// number of decimals
   constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
-      : _amount(amount), _currencyCode(currencyCode), _nbDecimals(nbDecimals) {
+      : _amount(amount), _nbDecimals(nbDecimals), _currencyCode(currencyCode) {
     simplify();
   }
 
@@ -62,7 +62,7 @@ class MonetaryAmount {
   /// Constructs a new MonetaryAmount from another MonetaryAmount and a new CurrencyCode.
   /// Use this constructor to change currency of an existing MonetaryAmount.
   constexpr MonetaryAmount(MonetaryAmount o, CurrencyCode newCurrencyCode)
-      : _amount(o._amount), _currencyCode(newCurrencyCode), _nbDecimals(o._nbDecimals) {}
+      : _amount(o._amount), _nbDecimals(o._nbDecimals), _currencyCode(newCurrencyCode) {}
 
   /// Get an integral representation of this MonetaryAmount multiplied by given number of decimals.
   /// If an overflow would occur for the resulting amount, return std::nullopt
@@ -106,15 +106,12 @@ class MonetaryAmount {
 
   std::strong_ordering operator<=>(const MonetaryAmount &o) const;
 
-  constexpr bool operator==(MonetaryAmount o) const {
-    return _amount == o._amount && _nbDecimals == o._nbDecimals && _currencyCode == o._currencyCode;
-  }
-  constexpr bool operator!=(MonetaryAmount o) const { return !(*this == o); }
+  constexpr bool operator==(const MonetaryAmount &o) const = default;
 
   /// True if amount is 0
   constexpr bool isZero() const noexcept { return _amount == 0; }
 
-  MonetaryAmount operator-() const noexcept { return MonetaryAmount(-_amount, _currencyCode, _nbDecimals); }
+  constexpr MonetaryAmount operator-() const noexcept { return MonetaryAmount(-_amount, _currencyCode, _nbDecimals); }
 
   MonetaryAmount operator+(MonetaryAmount o) const;
 
@@ -204,8 +201,8 @@ class MonetaryAmount {
   }
 
   AmountType _amount;
-  CurrencyCode _currencyCode;
   int8_t _nbDecimals;
+  CurrencyCode _currencyCode;
 };
 
 static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small and fast to copy");

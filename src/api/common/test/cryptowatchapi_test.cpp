@@ -5,8 +5,7 @@
 
 #include "coincenterinfo.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 class CryptowatchAPITest : public ::testing::Test {
  protected:
@@ -31,5 +30,4 @@ TEST_F(CryptowatchAPITest, IsFiatService) {
   EXPECT_FALSE(cryptowatchAPI.queryIsCurrencyCodeFiat("BTC"));
   EXPECT_FALSE(cryptowatchAPI.queryIsCurrencyCodeFiat("XRP"));
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

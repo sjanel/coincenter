@@ -7,8 +7,7 @@
 
 #include "cct_string.hpp"
 
-namespace cct {
-namespace ssl {
+namespace cct::ssl {
 
 //------------------------------------------------------------------------------
 // helper function to compute SHA256:
@@ -26,5 +25,4 @@ string ShaDigest(ShaType shaType, std::string_view data);
 
 string ShaDigest(ShaType shaType, std::span<const string> data);
 
-}  // namespace ssl
-}  // namespace cct
+}  // namespace cct::ssl

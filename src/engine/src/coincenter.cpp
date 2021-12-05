@@ -29,16 +29,16 @@ void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
 
 }  // namespace
 
-Coincenter::Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-                       settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
-    : _coincenterInfo(runMode, dataDir, monitoringInfo),
-      _cryptowatchAPI(_coincenterInfo, runMode),
+Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
+    : _coincenterInfo(coincenterInfo),
+      _cryptowatchAPI(_coincenterInfo, coincenterInfo.getRunMode()),
       _fiatConverter(_coincenterInfo, std::chrono::hours(8)),
-      _apiKeyProvider(dataDir, exchangesWithoutSecrets, allExchangesWithoutSecrets, runMode),
+      _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
       _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangeRetriever(_exchangePool.exchanges()),
-      _cexchangeRetriever(_exchangePool.exchanges()) {}
+      _cexchangeRetriever(_exchangePool.exchanges()),
+      _queryResultPrinter(_coincenterInfo.printQueryResults()) {}
 
 void Coincenter::process(const CoincenterParsedOptions &opts) {
   processWriteRequests(opts);
@@ -146,9 +146,8 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName
   SmallVector<bool, kTypicalNbPrivateAccounts> canDepositCurrency(depositInfoExchanges.size());
   // Do not call in parallel here because tradable currencies service could be queried from several identical public
   // exchanges (when there are several accounts for one exchange)
-  std::transform(
-      depositInfoExchanges.begin(), depositInfoExchanges.end(), canDepositCurrency.begin(),
-      [depositCurrency](Exchange *e) { return e->apiPrivate().queryTradableCurrencies().contains(depositCurrency); });
+  std::transform(depositInfoExchanges.begin(), depositInfoExchanges.end(), canDepositCurrency.begin(),
+                 [depositCurrency](Exchange *e) { return e->queryTradableCurrencies().contains(depositCurrency); });
 
   FilterVector(depositInfoExchanges, canDepositCurrency);
 
@@ -319,12 +318,12 @@ void Coincenter::updateFileCaches() const {
 void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   if (opts.marketsCurrency != CurrencyCode()) {
     MarketsPerExchange marketsPerExchange = getMarketsPerExchange(opts.marketsCurrency, opts.marketsExchanges);
-    PrintMarkets(opts.marketsCurrency, marketsPerExchange);
+    _queryResultPrinter.printMarkets(opts.marketsCurrency, marketsPerExchange);
   }
 
   if (opts.tickerForAll || !opts.tickerExchanges.empty()) {
     ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(opts.tickerExchanges);
-    PrintTickerInformation(exchangeTickerMaps);
+    _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
   }
 
   if (opts.marketForOrderBook != Market()) {
@@ -334,47 +333,47 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     }
     MarketOrderBookConversionRates marketOrderBooksConversionRates =
         getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
-    PrintMarketOrderBooks(marketOrderBooksConversionRates);
+    _queryResultPrinter.printMarketOrderBooks(marketOrderBooksConversionRates);
   }
 
   if (opts.marketForConversionPath != Market()) {
     ConversionPathPerExchange conversionPathPerExchange =
         getConversionPaths(opts.marketForConversionPath, opts.conversionPathExchanges);
-    PrintConversionPath(opts.marketForConversionPath, conversionPathPerExchange);
+    _queryResultPrinter.printConversionPath(opts.marketForConversionPath, conversionPathPerExchange);
   }
 
   if (opts.balanceForAll || !opts.balancePrivateExchanges.empty()) {
     BalancePerExchange balancePerExchange = getBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
-    PrintBalance(balancePerExchange);
+    _queryResultPrinter.printBalance(balancePerExchange);
   }
 
   if (opts.depositCurrency != CurrencyCode()) {
     WalletPerExchange walletPerExchange = getDepositInfo(opts.depositInfoPrivateExchanges, opts.depositCurrency);
 
-    PrintDepositInfo(opts.depositCurrency, walletPerExchange);
+    _queryResultPrinter.printDepositInfo(opts.depositCurrency, walletPerExchange);
   }
 
   if (opts.withdrawFeeCur != CurrencyCode()) {
     auto withdrawFeesPerExchange = getWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
-    PrintWithdrawFees(withdrawFeesPerExchange);
+    _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange);
   }
 
   if (opts.tradedVolumeMarket != Market()) {
     MonetaryAmountPerExchange tradedVolumePerExchange =
         getLast24hTradedVolumePerExchange(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
-    PrintLast24hTradedVolume(opts.tradedVolumeMarket, tradedVolumePerExchange);
+    _queryResultPrinter.printLast24hTradedVolume(opts.tradedVolumeMarket, tradedVolumePerExchange);
   }
 
   if (opts.lastTradesMarket != Market()) {
     LastTradesPerExchange lastTradesPerExchange =
         getLastTradesPerExchange(opts.lastTradesMarket, opts.lastTradesExchanges, opts.nbLastTrades);
-    PrintLastTrades(opts.lastTradesMarket, lastTradesPerExchange);
+    _queryResultPrinter.printLastTrades(opts.lastTradesMarket, lastTradesPerExchange);
   }
 
   if (opts.lastPriceMarket != Market()) {
     MonetaryAmountPerExchange lastPricePerExchange =
         getLastPricePerExchange(opts.lastPriceMarket, opts.lastPriceExchanges);
-    PrintLastPrice(opts.lastPriceMarket, lastPricePerExchange);
+    _queryResultPrinter.printLastPrice(opts.lastPriceMarket, lastPricePerExchange);
   }
 }
 

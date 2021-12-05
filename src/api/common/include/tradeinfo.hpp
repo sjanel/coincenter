@@ -5,8 +5,7 @@
 #include "monetaryamount.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 using OrderId = string;
 
@@ -65,5 +64,4 @@ struct PlaceOrderInfo {
   OrderId orderId;
 };
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

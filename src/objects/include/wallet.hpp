@@ -59,11 +59,7 @@ class Wallet {
 
   string str() const;
 
-  bool operator==(const Wallet &w) const {
-    return _currency == w._currency && _privateExchangeName == w._privateExchangeName &&
-           _addressAndTag == w._addressAndTag;
-  }
-  bool operator!=(const Wallet &w) const { return !(*this == w); }
+  bool operator==(const Wallet &w) const = default;
 
   static bool ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &privateExchangeName,
                              CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag);

@@ -14,6 +14,7 @@
 #include "fiatconverter.hpp"
 #include "metricsexporter.hpp"
 #include "monitoringinfo.hpp"
+#include "printqueryresults.hpp"
 #include "queryresulttypes.hpp"
 
 namespace cct {
@@ -25,11 +26,7 @@ using ExchangeNameSpan = std::span<const ExchangeName>;
 
 class Coincenter {
  public:
-  Coincenter(settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo)
-      : Coincenter(PublicExchangeNames(), false, runMode, dataDir, monitoringInfo) {}
-
-  Coincenter(const PublicExchangeNames &exchangesWithoutSecrets, bool allExchangesWithoutSecrets,
-             settings::RunMode runMode, std::string_view dataDir, const MonitoringInfo &monitoringInfo);
+  Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
   Coincenter(const Coincenter &) = delete;
   Coincenter(Coincenter &&) = delete;
@@ -99,7 +96,6 @@ class Coincenter {
   ExchangePool &exchangePool() { return _exchangePool; }
   const ExchangePool &exchangePool() const { return _exchangePool; }
 
-  CoincenterInfo &coincenterInfo() { return _coincenterInfo; }
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
   api::CryptowatchAPI &cryptowatchAPI() { return _cryptowatchAPI; }
@@ -113,8 +109,8 @@ class Coincenter {
 
   void processWriteRequests(const CoincenterParsedOptions &opts);
 
-  CurlInitRAII _curlInitRAII;
-  CoincenterInfo _coincenterInfo;
+  CurlInitRAII _curlInitRAII;  // Should be first
+  const CoincenterInfo &_coincenterInfo;
   api::CryptowatchAPI _cryptowatchAPI;
   FiatConverter _fiatConverter;
   api::APIKeysProvider _apiKeyProvider;
@@ -124,5 +120,6 @@ class Coincenter {
   ExchangePool _exchangePool;
   ExchangeRetriever _exchangeRetriever;
   ConstExchangeRetriever _cexchangeRetriever;
+  QueryResultPrinter _queryResultPrinter;
 };
 }  // namespace cct

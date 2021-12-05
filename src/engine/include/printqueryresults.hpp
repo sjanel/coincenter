@@ -5,23 +5,32 @@
 #include "queryresulttypes.hpp"
 
 namespace cct {
-void PrintMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange);
+class QueryResultPrinter {
+ public:
+  explicit QueryResultPrinter(bool doPrint) : _doPrint(doPrint) {}
 
-void PrintMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates);
+  void printMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange);
 
-void PrintTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
+  void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates);
 
-void PrintBalance(const BalancePerExchange &balancePerExchange);
+  void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
 
-void PrintDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange);
+  void printBalance(const BalancePerExchange &balancePerExchange);
 
-void PrintConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange);
+  void printDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange);
 
-void PrintWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange);
+  void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange);
 
-void PrintLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange);
+  void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange);
 
-void PrintLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange);
+  void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange);
 
-void PrintLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange);
+  void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange);
+
+  void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange);
+
+ private:
+  bool _doPrint;
+};
+
 }  // namespace cct
