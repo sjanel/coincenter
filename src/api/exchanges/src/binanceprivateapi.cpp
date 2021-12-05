@@ -20,7 +20,7 @@ namespace {
 constexpr int kNbOrderRequestsRetries = 15;
 
 void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
-  Nonce nonce = Nonce_TimeSinceEpoch();
+  Nonce nonce = Nonce_TimeSinceEpochInMs();
   postData.set("timestamp", nonce);
   // Erase + append signature as it should be computed without the old signature itself
   postData.erase("signature");

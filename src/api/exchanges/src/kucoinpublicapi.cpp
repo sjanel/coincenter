@@ -62,38 +62,38 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "api/v1/currencies");
-  CurrencyInfoSet currencyInfoSet;
-  currencyInfoSet.reserve(static_cast<uint32_t>(result.size()));
+  vector<CurrencyInfo> currencyInfos;
+  currencyInfos.reserve(static_cast<uint32_t>(result.size()));
   for (const json& curDetail : result) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
-    CurrencyInfo currencyInfo(
-        CurrencyExchange(cur, curStr, curStr,
-                         curDetail["isDepositEnabled"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
-                                                                   : CurrencyExchange::Deposit::kUnavailable,
-                         curDetail["isWithdrawEnabled"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
-                                                                    : CurrencyExchange::Withdraw::kUnavailable,
-                         _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
-                                                                      : CurrencyExchange::Type::kCrypto));
-    currencyInfo.withdrawalMinFee = MonetaryAmount(curDetail["withdrawalMinFee"].get<std::string_view>(), cur);
-    currencyInfo.withdrawalMinSize = MonetaryAmount(curDetail["withdrawalMinSize"].get<std::string_view>(), cur);
+    CurrencyExchange currencyExchange(
+        cur, curStr, curStr,
+        curDetail["isDepositEnabled"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
+                                                  : CurrencyExchange::Deposit::kUnavailable,
+        curDetail["isWithdrawEnabled"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
+                                                   : CurrencyExchange::Withdraw::kUnavailable,
+        _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
 
-    currencyInfoSet.insert(std::move(currencyInfo));
+    log::debug("Retrieved Kucoin Currency {}", currencyExchange.str());
+
+    currencyInfos.emplace_back(std::move(currencyExchange),
+                               MonetaryAmount(curDetail["withdrawalMinSize"].get<std::string_view>(), cur),
+                               MonetaryAmount(curDetail["withdrawalMinFee"].get<std::string_view>(), cur));
   }
-  currencyInfoSet.shrink_to_fit();
-  return currencyInfoSet;
+  CurrencyInfoSet ret(std::move(currencyInfos));
+  log::info("Retrieved {} Kucoin currencies", ret.size());
+  return CurrencyInfoSet(std::move(ret));
 }
 
 CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
   const TradableCurrenciesFunc::CurrencyInfoSet& currencyInfoSet = _tradableCurrenciesCache.get();
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(currencyInfoSet.size()));
-  for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : currencyInfoSet) {
-    const CurrencyExchange& newCurrency = curDetail.currencyExchange;
-    log::debug("Retrieved Kucoin Currency {}", newCurrency.str());
-    currencies.insert(newCurrency);
-  }
-  log::info("Retrieved {} Kucoin currencies", currencies.size());
+
+  std::transform(currencyInfoSet.begin(), currencyInfoSet.end(), std::inserter(currencies, currencies.end()),
+                 [](const auto& currencyInfo) { return currencyInfo.currencyExchange; });
+
   return currencies;
 }
 

@@ -10,9 +10,9 @@
 namespace cct {
 
 TEST(TimeStringTest, TimeSinceEpoch) {
-  Nonce n1 = Nonce_TimeSinceEpoch();
+  Nonce n1 = Nonce_TimeSinceEpochInMs();
   std::this_thread::sleep_for(std::chrono::milliseconds(2));
-  Nonce n2 = Nonce_TimeSinceEpoch();
+  Nonce n2 = Nonce_TimeSinceEpochInMs();
   EXPECT_LT(n1, n2);
   EXPECT_LT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
 }

@@ -34,10 +34,13 @@ string ToString(std::chrono::system_clock::time_point p, const char* format) {
   return buf;
 }
 
-Nonce Nonce_TimeSinceEpoch() {
+Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay) {
   const auto n = std::chrono::system_clock::now();
-  uintmax_t msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(n.time_since_epoch()).count();
-  return ToString<Nonce>(msSinceEpoch);
+  // The return type of 'count()' is platform dependent. Let's cast it to 'int64_t' which is enough to hold a number of
+  // milliseconds from epoch
+  int64_t msSinceEpoch =
+      static_cast<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(n.time_since_epoch()).count());
+  return ToString<Nonce>(msSinceEpoch + msDelay);
 }
 
 }  // namespace cct

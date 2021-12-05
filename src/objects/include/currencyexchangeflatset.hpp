@@ -7,6 +7,9 @@
 
 namespace cct {
 
+/// Helper type that can be used as input buffer for CurrencyExchangeFlatSet.
+using CurrencyExchangeVector = vector<CurrencyExchange>;
+
 /// CurrencyExchange FlatSet with possibility to query find / contains with standard CurrencyCode instead of
 /// CurrencyExchange.
 class CurrencyExchangeFlatSet {
@@ -22,6 +25,11 @@ class CurrencyExchangeFlatSet {
   using iterator = SetType::iterator;
   using const_iterator = SetType::const_iterator;
   using size_type = SetType::size_type;
+  using value_type = SetType::value_type;
+
+  CurrencyExchangeFlatSet() noexcept = default;
+
+  explicit CurrencyExchangeFlatSet(CurrencyExchangeVector &&vec) : _set(std::move(vec)) {}
 
   const CurrencyExchange &front() const { return _set.front(); }
   const CurrencyExchange &back() const { return _set.back(); }
@@ -64,8 +72,10 @@ class CurrencyExchangeFlatSet {
   bool contains(CurrencyCode standardCode) const { return find(standardCode) != end(); }
 
   std::pair<iterator, bool> insert(const CurrencyExchange &v) { return _set.insert(v); }
-
   std::pair<iterator, bool> insert(CurrencyExchange &&v) { return _set.insert(std::move(v)); }
+
+  iterator insert(const_iterator hint, const CurrencyExchange &v) { return _set.insert(hint, v); }
+  iterator insert(const_iterator hint, CurrencyExchange &&v) { return _set.insert(hint, std::move(v)); }
 
   template <class... Args>
   std::pair<iterator, bool> emplace(Args &&...args) {

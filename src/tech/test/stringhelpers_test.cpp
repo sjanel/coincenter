@@ -46,4 +46,19 @@ TEST(ToChar, UnsignedValue) {
   EXPECT_EQ(s, "901235");
   EXPECT_EQ(ToString<string>(630195439576U), "630195439576");
 }
+
+TEST(FromString, PositiveValue) {
+  EXPECT_EQ(FromString<int>("0"), 0);
+  EXPECT_EQ(FromString<int>("00"), 0);
+  EXPECT_EQ(FromString<int>("036"), 36);
+  EXPECT_EQ(FromString<int>("9105470"), 9105470);
+}
+
+TEST(FromString, NegativeValue) {
+  EXPECT_EQ(FromString<int>("-0"), 0);
+  EXPECT_EQ(FromString<int>("-00"), 0);
+  EXPECT_EQ(FromString<int>("-036"), -36);
+  EXPECT_EQ(FromString<int>("-9105470"), -9105470);
+}
+
 }  // namespace cct

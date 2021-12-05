@@ -49,7 +49,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
   opts.userAgent = KrakenPublic::kUserAgent;
 
-  Nonce nonce = Nonce_TimeSinceEpoch();
+  Nonce nonce = Nonce_TimeSinceEpochInMs();
   opts.postdata.append("nonce", std::string_view(nonce.begin(), nonce.end()));
   opts.httpHeaders.reserve(2);
   opts.httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
@@ -66,7 +66,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     std::this_thread::sleep_for(sleepingTime);
 
     // We need to update the nonce
-    nonce = Nonce_TimeSinceEpoch();
+    nonce = Nonce_TimeSinceEpochInMs();
     opts.postdata.set("nonce", std::string_view(nonce.begin(), nonce.end()));
     opts.httpHeaders.back() = "API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.str());
     ret = curlHandle.query(method_url, opts);

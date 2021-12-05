@@ -39,14 +39,19 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
   opts.userAgent = BithumbPublic::kUserAgent;
 
   json dataJson = json::parse(curlHandle.query(method_url, opts));
-  if (dataJson.contains("status")) {
-    std::string_view statusCode = dataJson["status"].get<std::string_view>();  // "5300" for instance
-    if (statusCode != "0000") {                                                // "0000" stands for: request OK
-      string msg;
-      if (dataJson.contains("message")) {
-        msg = dataJson["message"];
+  auto errorIt = dataJson.find("status");
+  if (errorIt != dataJson.end()) {
+    std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
+    if (statusCode != "0000") {                                      // "0000" stands for: request OK
+      string err("Bithumb error: ");
+      err.append(statusCode);
+      auto msgIt = dataJson.find("message");
+      if (msgIt != dataJson.end()) {
+        err.append(" \"");
+        err.append(msgIt->get<std::string_view>());
+        err.push_back('\"');
       }
-      throw exception("error: " + string(statusCode) + " \"" + msg + "\"");
+      throw exception(std::move(err));
     }
   }
   return dataJson["data"];
@@ -148,8 +153,8 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "assetsstatus", "all");
-  CurrencyExchangeFlatSet currencies;
-  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size() + 1));
+  CurrencyExchangeVector currencies;
+  currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(asset));
     CurrencyCode exchangeCode(asset);
@@ -161,17 +166,15 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
                                  _cryptowatchAPI.queryIsCurrencyCodeFiat(currencyCode)
                                      ? CurrencyExchange::Type::kFiat
                                      : CurrencyExchange::Type::kCrypto);
-    if (currencies.contains(newCurrency)) {
-      log::error("Duplicated {}", newCurrency.str());
-    } else {
-      log::debug("Retrieved Bithumb Currency {}", newCurrency.str());
-      currencies.insert(std::move(newCurrency));
-    }
+
+    log::debug("Retrieved Bithumb Currency {}", newCurrency.str());
+    currencies.push_back(std::move(newCurrency));
   }
-  currencies.emplace("KRW", "KRW", "KRW", CurrencyExchange::Deposit::kUnavailable,
-                     CurrencyExchange::Withdraw::kUnavailable, CurrencyExchange::Type::kFiat);
-  log::info("Retrieved {} Bithumb currencies", currencies.size());
-  return currencies;
+  currencies.emplace_back("KRW", "KRW", "KRW", CurrencyExchange::Deposit::kUnavailable,
+                          CurrencyExchange::Withdraw::kUnavailable, CurrencyExchange::Type::kFiat);
+  CurrencyExchangeFlatSet ret(std::move(currencies));
+  log::info("Retrieved {} Bithumb currencies", ret.size());
+  return ret;
 }
 
 namespace {
@@ -272,8 +275,19 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
 }
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
+  TimePoint t1 = Clock::now();
   json result = PublicQuery(_curlHandle, "ticker", m.base(), m.quote());
   std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
+  std::string_view bithumbTimestamp = result["date"].get<std::string_view>();
+  int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
+  int64_t t1Ms = std::chrono::duration_cast<TimeInMs>(t1.time_since_epoch()).count();
+  int64_t t2Ms = std::chrono::duration_cast<TimeInMs>(Clock::now().time_since_epoch()).count();
+  if (t1Ms < bithumbTimeMs && bithumbTimeMs < t2Ms) {
+    log::debug("Bithumb time is synchronized with us");
+  } else {
+    log::error("Bithumb time is not synchronized with us (Bithumb: {}, us: [{} - {}])", bithumbTimestamp, t1Ms, t2Ms);
+  }
+
   return MonetaryAmount(last24hVol, m.base());
 }
 

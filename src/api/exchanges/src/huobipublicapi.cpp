@@ -64,8 +64,7 @@ json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_cur
 
 CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
   const json& result = _tradableCurrenciesCache.get();
-  CurrencyExchangeFlatSet currencies;
-  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(result.size()));
+  CurrencyExchangeVector currencies;
   for (const json& curDetail : result) {
     std::string_view statusStr = curDetail["instStatus"].get<std::string_view>();
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
@@ -91,12 +90,10 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
                                                                    : CurrencyExchange::Withdraw::kUnavailable,
                                    _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
                                                                                 : CurrencyExchange::Type::kCrypto);
-      if (currencies.contains(newCurrency)) {
-        log::error("Duplicated {}", newCurrency.str());
-      } else {
-        log::debug("Retrieved Huobi Currency {}", newCurrency.str());
-        currencies.insert(std::move(newCurrency));
-      }
+
+      log::debug("Retrieved Huobi Currency {}", newCurrency.str());
+      currencies.push_back(std::move(newCurrency));
+
       foundChainWithSameName = true;
       break;
     }
@@ -104,8 +101,9 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       log::debug("Cannot find {} main chain in Huobi, discarding currency", cur.str());
     }
   }
-  log::info("Retrieved {} Huobi currencies", currencies.size());
-  return currencies;
+  CurrencyExchangeFlatSet ret(std::move(currencies));
+  log::info("Retrieved {} Huobi currencies", ret.size());
+  return ret;
 }
 
 std::pair<ExchangePublic::MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::MarketsFunc::operator()() {
