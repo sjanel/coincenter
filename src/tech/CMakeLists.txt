@@ -18,6 +18,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    cct_hash_test
+    test/cct_hash_test.cpp
+)
+
+add_unit_test(
     commandlineoptionsparser_test
     src/commandlineoption.cpp
     test/commandlineoptionsparser_test.cpp
