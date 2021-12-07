@@ -82,14 +82,14 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
 
   static constexpr Clock::duration kBufferTime = std::chrono::seconds(1);
 
+  log::info(options.str());
+
   TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options, nbSecondsSinceEpoch);
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
   MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
 
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
-
-  log::info(options.str());
 
   // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
   const OrderId &orderId = placeOrderInfo.orderId;
