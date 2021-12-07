@@ -26,7 +26,7 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
   if (endAmountPos == std::string_view::npos || startTimeUnit == std::string_view::npos) {
     throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
   }
-  std::string_view timeAmountStr(durationStr.begin(), durationStr.begin() + endAmountPos);
+  std::string_view timeAmountStr(durationStr.data(), endAmountPos);
   int64_t timeAmount = FromString<int64_t>(timeAmountStr);
   std::string_view timeUnitStr(durationStr.begin() + startTimeUnit, durationStr.end());
   if (timeUnitStr == "h") {

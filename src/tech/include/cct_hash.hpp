@@ -8,10 +8,10 @@
 #include <utility>
 
 namespace cct {
-inline std::size_t HashValue64(std::size_t x) {
+inline uint64_t HashValue64(uint64_t x) {
   // Murmur-inspired hashing.
-  const std::size_t kMul = 0x9ddfea08eb382d69ULL;
-  std::size_t b = x * kMul;
+  constexpr uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t b = x * kMul;
   b ^= (b >> 44);
   b *= kMul;
   b ^= (b >> 41);
@@ -19,38 +19,39 @@ inline std::size_t HashValue64(std::size_t x) {
   return b;
 }
 
-inline std::size_t HashCombine(std::size_t h1, std::size_t h2) {
+inline size_t HashCombine(size_t h1, size_t h2) {
   // Taken from boost::hash_combine
-  h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+  static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "HashCombine not defined for this size_t");
+  if constexpr (sizeof(size_t) == 4) {
+    h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+  } else if constexpr (sizeof(size_t) == 8) {
+    // see https://github.com/HowardHinnant/hash_append/issues/7
+    h1 ^= h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 4);
+  }
   return h1;
 }
 
-// recursive variadic template hash
-template <class T>
-std::size_t HashVar(const T& v) {
-  return std::hash<T>()(v);
-}
+class HashTuple {
+ public:
+  template <class Tuple>
+  size_t operator()(const Tuple& tuple) const {
+    return std::hash<size_t>()(std::apply([](const auto&... xs) { return (Component{xs}, ..., 0); }, tuple));
+  }
 
-template <class T, class... Args>
-std::size_t HashVar(T first, Args... args) {
-  return HashCombine(std::hash<T>()(first), HashVar(args...));
-}
+ private:
+  template <class T>
+  struct Component {
+    const T& value;
+
+#if defined(__clang__)
+    // Explicit constructor for this aggregate as clang does not implement CTAD yet (as of December 2021)
+    // More information here:
+    // https://stackoverflow.com/questions/70260994/automatic-template-deduction-c20-with-aggregate-type
+    explicit Component(const T& v) : value(v) {}
+#endif
+
+    size_t operator,(size_t n) const { return HashCombine(std::hash<T>()(value), n); }
+  };
+};
 
 }  // namespace cct
-
-namespace std {
-template <class... TT>
-struct hash<std::tuple<TT...>> {
-  size_t operator()(const std::tuple<TT...>& tup) const {
-    auto lazyHasher = [](size_t h, auto&&... values) {
-      auto lazyCombiner = [&h](auto&& val) {
-        h ^= std::hash<std::decay_t<decltype(val)>>{}(val) + 0Xeeffddcc + (h << 5) + (h >> 3);
-      };
-      (void)lazyCombiner;
-      (lazyCombiner(std::forward<decltype(values)>(values)), ...);
-      return h;
-    };
-    return std::apply(lazyHasher, std::tuple_cat(std::tuple(0), tup));
-  }
-};
-}  // namespace std

@@ -86,10 +86,10 @@ class CurrencyCode {
 std::ostream &operator<<(std::ostream &os, const CurrencyCode &c);
 }  // namespace cct
 
-/// Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key
+// Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key
 namespace std {
 template <>
 struct hash<cct::CurrencyCode> {
-  std::size_t operator()(const cct::CurrencyCode &c) const { return cct::HashValue64(c.code()); }
+  size_t operator()(const cct::CurrencyCode &c) const { return cct::HashValue64(c.code()); }
 };
 }  // namespace std

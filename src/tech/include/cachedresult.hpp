@@ -41,7 +41,7 @@ class CachedResult : public CachedResultBase {
  private:
   using TKey = std::tuple<std::remove_cvref_t<FuncTArgs>...>;
   using TValue = std::pair<ResultType, TimePoint>;
-  using MapType = std::unordered_map<TKey, TValue>;
+  using MapType = std::unordered_map<TKey, TValue, HashTuple>;
 
  public:
   template <class... TArgs>

@@ -47,8 +47,8 @@ class Market {
 namespace std {
 template <>
 struct hash<cct::Market> {
-  std::size_t operator()(const cct::Market& m) const {
-    return cct::HashCombine(std::hash<cct::CurrencyCode>{}(m.base()), std::hash<cct::CurrencyCode>{}(m.quote()));
+  size_t operator()(const cct::Market& m) const {
+    return cct::HashCombine(hash<cct::CurrencyCode>()(m.base()), hash<cct::CurrencyCode>()(m.quote()));
   }
 };
 }  // namespace std
