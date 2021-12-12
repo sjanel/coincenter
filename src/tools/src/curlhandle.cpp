@@ -23,8 +23,12 @@ namespace cct {
 namespace {
 
 size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-  reinterpret_cast<string *>(userp)->append(static_cast<const char *>(contents), size * nmemb);
-  return size * nmemb;
+  try {
+    reinterpret_cast<string *>(userp)->append(static_cast<const char *>(contents), size * nmemb);
+    return size * nmemb;
+  } catch (const std::bad_alloc &) {  // Do not throw exceptions in a function passed to a C library
+    return 0;                         // This will cause CURL to raise an error
+  }
 }
 }  // namespace
 
@@ -220,7 +224,7 @@ string CurlHandle::urlEncode(std::string_view url) {
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }
 
-CurlInitRAII::CurlInitRAII() : _ownResource(true) {
+CurlInitRAII::CurlInitRAII() {
   CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
   if (code != CURLE_OK) {
     std::ostringstream oss;
@@ -229,19 +233,6 @@ CurlInitRAII::CurlInitRAII() : _ownResource(true) {
   }
 }
 
-CurlInitRAII::CurlInitRAII(CurlInitRAII &&o) noexcept : _ownResource(std::exchange(o._ownResource, false)) {}
-
-CurlInitRAII &CurlInitRAII::operator=(CurlInitRAII &&o) noexcept {
-  if (this != &o) {
-    _ownResource = std::exchange(o._ownResource, false);
-  }
-  return *this;
-}
-
-CurlInitRAII::~CurlInitRAII() {
-  if (_ownResource) {
-    curl_global_cleanup();
-  }
-}
+CurlInitRAII::~CurlInitRAII() { curl_global_cleanup(); }
 
 }  // namespace cct
