@@ -59,19 +59,15 @@ class CurlHandle {
   TimePoint _lastQueryTime;
 };
 
-class CurlInitRAII {
- public:
+struct CurlInitRAII {
   CurlInitRAII();
 
   CurlInitRAII(const CurlInitRAII &) = delete;
   CurlInitRAII &operator=(const CurlInitRAII &) = delete;
 
-  CurlInitRAII(CurlInitRAII &&) noexcept;
-  CurlInitRAII &operator=(CurlInitRAII &&) noexcept;
+  CurlInitRAII(CurlInitRAII &&) = delete;
+  CurlInitRAII &operator=(CurlInitRAII &&) = delete;
 
   ~CurlInitRAII();
-
- private:
-  bool _ownResource;
 };
 }  // namespace cct
