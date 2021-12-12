@@ -27,7 +27,7 @@ class CoincenterParsedOptions {
   MonetaryAmount startTradeAmount;
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
-  PrivateExchangeName tradePrivateExchangeName;
+  PrivateExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 
   CurrencyCode marketsCurrency;

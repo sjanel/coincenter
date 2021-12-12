@@ -36,25 +36,28 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
   }
 }
 
-MonetaryAmount ExchangePrivate::trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options) {
-  MonetaryAmount initialAmount = from;
+TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options) {
   log::info("{} trade {} -> {} on {}_{} requested", options.isMultiTradeAllowed() ? "Multi" : "Single", from.str(),
             toCurrencyCode.str(), _exchangePublic.name(), keyName());
-  MonetaryAmount toAmt = options.isMultiTradeAllowed()
-                             ? multiTrade(from, toCurrencyCode, options)
-                             : singleTrade(from, toCurrencyCode, options,
-                                           _exchangePublic.retrieveMarket(from.currencyCode(), toCurrencyCode));
-  log::info("**** Traded {} into {} ****", (initialAmount - from).str(), toAmt.str());
-  return toAmt;
+  const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
+  log::debug(options.str(realOrderPlacedInSimulationMode));
+  TradedAmounts tradedAmounts = options.isMultiTradeAllowed()
+                                    ? multiTrade(from, toCurrencyCode, options)
+                                    : singleTrade(from, toCurrencyCode, options,
+                                                  _exchangePublic.retrieveMarket(from.currencyCode(), toCurrencyCode));
+  if (!options.isSimulation() || realOrderPlacedInSimulationMode) {
+    log::info("**** Traded {} into {} ****", tradedAmounts.tradedFrom.str(), tradedAmounts.tradedTo.str());
+  }
+  return tradedAmounts;
 }
 
-MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode toCurrency, const TradeOptions &options) {
-  MonetaryAmount initialAmount = from;
+TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options) {
   ExchangePublic::ConversionPath conversionPath =
       _exchangePublic.findFastestConversionPath(from.currencyCode(), toCurrency);
+  TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
-    log::error("Cannot trade {} into {} on {}", initialAmount.str(), toCurrency.str(), _exchangePublic.name());
-    return MonetaryAmount(0, toCurrency);
+    log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency.str(), _exchangePublic.name());
+    return tradedAmounts;
   }
   const int nbTrades = conversionPath.size();
   MonetaryAmount avAmount = from;
@@ -62,31 +65,30 @@ MonetaryAmount ExchangePrivate::multiTrade(MonetaryAmount &from, CurrencyCode to
     Market m = conversionPath[tradePos];
     toCurrency = avAmount.currencyCode() == m.base() ? m.quote() : m.base();
     log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(), toCurrency.str());
-    MonetaryAmount &stepFrom = tradePos == 0 ? from : avAmount;
-    MonetaryAmount tradedTo = singleTrade(stepFrom, toCurrency, options, m);
-    avAmount = tradedTo;
-    if (tradedTo.isZero()) {
+    TradedAmounts stepTradedAmounts = singleTrade(avAmount, toCurrency, options, m);
+    avAmount = stepTradedAmounts.tradedTo;
+    if (avAmount.isZero()) {
       break;
     }
+    if (tradePos == 0) {
+      tradedAmounts.tradedFrom = stepTradedAmounts.tradedFrom;
+    }
+    if (tradePos + 1 == nbTrades) {
+      tradedAmounts.tradedTo = stepTradedAmounts.tradedTo;
+    }
   }
-  return avAmount;
+  return tradedAmounts;
 }
 
-MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode toCurrency, const TradeOptions &options,
-                                            Market m) {
+TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
+                                           Market m) {
   const TimePoint timerStart = Clock::now();
-  const CurrencyCode fromCurrencyCode = from.currencyCode();
+  const CurrencyCode fromCurrency = from.currencyCode();
 
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
 
-  static constexpr Clock::duration kBufferTime = std::chrono::seconds(1);
-
-  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
-
-  log::info(options.str(placeSimulatedRealOrder));
-
-  TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options, nbSecondsSinceEpoch);
+  TradeInfo tradeInfo(fromCurrency, toCurrency, m, options, nbSecondsSinceEpoch);
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
 
@@ -96,14 +98,13 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
   const OrderId &orderId = placeOrderInfo.orderId;
   if (placeOrderInfo.isClosed()) {
     log::debug("Order {} closed with traded amounts {}", orderId, placeOrderInfo.tradedAmounts().str());
-    return placeOrderInfo.tradedAmounts().tradedTo;
+    return placeOrderInfo.tradedAmounts();
   }
 
-  MonetaryAmount remFrom = from;
   TimePoint lastPriceUpdateTime = Clock::now();
   MonetaryAmount lastPrice = price;
 
-  TradedAmounts totalTradedAmounts(fromCurrencyCode, toCurrency);
+  TradedAmounts totalTradedAmounts(fromCurrency, toCurrency);
   do {
     OrderInfo orderInfo = queryOrderInfo(orderId, tradeInfo);
     if (orderInfo.isClosed) {
@@ -116,21 +117,22 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
     NextAction nextAction = NextAction::kWait;
 
     TimePoint t = Clock::now();
-    const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + kBufferTime;
+
+    const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + std::chrono::seconds(1);
     bool updatePriceNeeded = false;
     if (!reachedEmergencyTime && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      price = _exchangePublic.computeLimitOrderPrice(m, remFrom, options.priceStrategy());
+      price = _exchangePublic.computeLimitOrderPrice(m, from, options.priceStrategy());
       updatePriceNeeded =
-          (fromCurrencyCode == m.base() && price < lastPrice) || (fromCurrencyCode == m.quote() && price > lastPrice);
+          (fromCurrency == m.base() && price < lastPrice) || (fromCurrency == m.quote() && price > lastPrice);
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
       // Cancel
       log::debug("Cancel order {}", orderId);
       OrderInfo cancelledOrderInfo = cancelOrder(orderId, tradeInfo);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
-      remFrom -= cancelledOrderInfo.tradedAmounts.tradedFrom;
-      if (remFrom.isZero()) {
+      from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
+      if (from.isZero()) {
         log::debug("Order {} matched with last traded amounts {} while cancelling", orderId,
                    cancelledOrderInfo.tradedAmounts.str());
         break;
@@ -154,7 +156,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          price = _exchangePublic.computeAvgOrderPrice(m, remFrom, tradeInfo.options.priceStrategy());
+          price = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceStrategy());
           log::info("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();
@@ -164,7 +166,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
         lastPrice = price;
 
         // Compute new volume (price is either not needed in taker order, or already recomputed)
-        placeOrderInfo = placeOrderProcess(remFrom, price, tradeInfo);
+        placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
         if (placeOrderInfo.isClosed()) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
@@ -175,8 +177,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
     }
   } while (true);
 
-  from -= totalTradedAmounts.tradedFrom;
-  return totalTradedAmounts.tradedTo;
+  return totalTradedAmounts;
 }
 
 WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange) {

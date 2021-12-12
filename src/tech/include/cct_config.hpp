@@ -59,3 +59,10 @@
 #else
 #error "Unknown compiler"
 #endif
+
+#if !defined(__clang__)
+// Explicit constructor for this aggregate as clang does not implement CTAD yet (as of December 2021)
+// More information here:
+// https://stackoverflow.com/questions/70260994/automatic-template-deduction-c20-with-aggregate-type
+#define CCT_CTAD_SUPPORT
+#endif

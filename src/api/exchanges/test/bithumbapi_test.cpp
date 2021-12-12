@@ -9,8 +9,7 @@
 #include "fiatconverter.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 using BithumbAPI = TestAPI<BithumbPublic>;
 
@@ -36,7 +35,7 @@ void PublicTest(BithumbPublic &bithumbPublic) {
   EXPECT_GT(withdrawalFees.size(), 10U);
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  const CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
+  static constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
   for (CurrencyCode code : kCurrencyCodesToTest) {
     if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
       EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
@@ -56,10 +55,9 @@ void PrivateTest(BithumbPrivate &bithumbPrivate) {
   EXPECT_FALSE(bithumbPrivate.queryDepositWallet("ETH").hasTag());
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("13.567XRP");
-  EXPECT_NO_THROW(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions));
+  EXPECT_GT(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions).tradedTo, MonetaryAmount(0, "KRW"));
   MonetaryAmount bigFrom("135670067.1234KRW");
-  EXPECT_NO_THROW(bithumbPrivate.trade(bigFrom, "ETH", tradeOptions));
-  EXPECT_LT(bigFrom, MonetaryAmount("13567.1234KRW"));
+  EXPECT_FALSE(bithumbPrivate.trade(bigFrom, "ETH", tradeOptions).tradedFrom.isZero());
 }
 }  // namespace
 
@@ -81,5 +79,4 @@ TEST_F(BithumbAPI, Public) {
   PrivateTest(bithumbPrivate);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

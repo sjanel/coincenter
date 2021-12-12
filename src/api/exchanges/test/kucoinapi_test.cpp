@@ -10,8 +10,7 @@
 #include "kucoinpublicapi.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 using KucoinAPI = TestAPI<KucoinPublic>;
 
 namespace {
@@ -34,8 +33,7 @@ void PrivateTest(KucoinPrivate &kucoinPrivate) {
   EXPECT_NO_THROW(kucoinPrivate.queryDepositWallet("XRP"));
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.1ETH");
-  EXPECT_NO_THROW(kucoinPrivate.trade(smallFrom, "BTC", tradeOptions));
-  EXPECT_EQ(smallFrom, MonetaryAmount("0ETH"));
+  EXPECT_EQ(kucoinPrivate.trade(smallFrom, "BTC", tradeOptions).tradedFrom, smallFrom);
 }
 }  // namespace
 
@@ -57,5 +55,4 @@ TEST_F(KucoinAPI, Main) {
   PrivateTest(kucoinPrivate);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

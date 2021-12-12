@@ -38,7 +38,9 @@ class MarketOrderBook {
   using OrderBookLineSpan = std::span<const OrderBookLine>;
 
   struct AmountAtPrice {
+#ifndef CCT_CTAD_SUPPORT
     AmountAtPrice(MonetaryAmount a, MonetaryAmount p) : amount(a), price(p) {}
+#endif
 
     MonetaryAmount amount;
     MonetaryAmount price;
@@ -137,7 +139,24 @@ class MarketOrderBook {
   ///                            currency
   void print(std::ostream& os, std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
 
-  using trivially_relocatable = std::true_type;
+ private:
+  struct AmountPrice {
+    using AmountType = int64_t;
+
+    AmountPrice() noexcept = default;
+
+    AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
+
+    bool operator==(const AmountPrice& o) const = default;
+
+    AmountType amount = 0;
+    AmountType price = 0;
+  };
+
+  using AmountPriceVector = SmallVector<AmountPrice, 20>;
+
+ public:
+  using trivially_relocatable = is_trivially_relocatable<AmountPriceVector>::type;
 
  private:
   using AmountType = MonetaryAmount::AmountType;
@@ -167,20 +186,6 @@ class MarketOrderBook {
   ///                 0.36          15
   ///                 0.35          20
   ///                 0.34          23
-  struct AmountPrice {
-    using AmountType = int64_t;
-
-    AmountPrice() noexcept = default;
-
-    AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
-
-    bool operator==(AmountPrice o) const { return amount == o.amount && price == o.price; }
-
-    AmountType amount = 0;
-    AmountType price = 0;
-  };
-
-  using AmountPriceVector = SmallVector<AmountPrice, 20>;
 
   MonetaryAmount amountAt(int pos) const {
     return MonetaryAmount(_orders[pos].amount, _market.base(), _volAndPriNbDecimals.volNbDecimals);

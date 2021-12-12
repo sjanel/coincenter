@@ -45,8 +45,8 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
     EXPECT_NO_THROW(binancePrivate.trade(smallFrom, "BNB", tradeOptions));
   }
   MonetaryAmount bigFrom("13567.1234BNB");
-  EXPECT_NO_THROW(binancePrivate.trade(bigFrom, currencies.back().standardCode(), tradeOptions));
-  EXPECT_LT(bigFrom, MonetaryAmount("13567.1234BNB"));
+  TradedAmounts tradedAmounts = binancePrivate.trade(bigFrom, currencies.back().standardCode(), tradeOptions);
+  EXPECT_EQ(tradedAmounts.tradedFrom, MonetaryAmount("13567.1234BNB"));
 
   EXPECT_EQ(binancePrivate.queryWithdrawalFee(currencies.front().standardCode()),
             binancePublic.queryWithdrawalFee(currencies.front().standardCode()));

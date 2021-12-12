@@ -16,8 +16,8 @@ class StringOptionParser {
  public:
   using MarketExchanges = std::pair<Market, PublicExchangeNames>;
   using MonetaryAmountExchanges = std::pair<MonetaryAmount, PublicExchangeNames>;
-  using CurrencyCodeFromToPrivateExchange = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeName>;
-  using MonetaryAmountCurrencyCodePrivateExchange = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeName>;
+  using CurrencyCodeFromToPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
+  using MonetaryAmountCurrencyCodePrivateExchanges = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeNames>;
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
   using CurrencyCodePublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
@@ -35,9 +35,9 @@ class StringOptionParser {
 
   MonetaryAmountExchanges getMonetaryAmountExchanges() const;
 
-  CurrencyCodeFromToPrivateExchange getFromToCurrencyCodePrivateExchange() const;
+  CurrencyCodeFromToPrivateExchanges getFromToCurrencyCodePrivateExchanges() const;
 
-  MonetaryAmountCurrencyCodePrivateExchange getMonetaryAmountCurrencyCodePrivateExchange() const;
+  MonetaryAmountCurrencyCodePrivateExchanges getMonetaryAmountCurrencyCodePrivateExchanges() const;
 
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
