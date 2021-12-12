@@ -192,6 +192,13 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   price = kucoinPublic.sanitizePrice(m, price);
 
+  if (fromCurrencyCode == m.quote()) {
+    // Buy - Kucoin requires that we deduce the fees in the given size
+    ExchangeInfo::FeeType feeType =
+        tradeInfo.options.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    volume = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(volume, feeType);
+  }
+
   MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(m, volume);
   if (volume < sanitizedVol) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
@@ -208,6 +215,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
                              {"side", buyOrSell},
                              {"symbol", m.assetsPairStr('-')},
                              {"type", strategyType},
+                             {"remark", "Placed by coincenter client"},
                              {"tradeType", "TRADE"},
                              {"size", volume.amountStr()}};
   if (!isTakerStrategy) {
