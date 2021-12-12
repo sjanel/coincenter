@@ -150,17 +150,20 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                 "converted to given currency, plus a total summary in this currency"}, 
                                                                 &OptValueType::balance_cur},
 
-       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2,exchange>", "Single trade from given start amount on an exchange.\n"
-                                                                   "Order will be placed at limit price by default"}, &OptValueType::trade},
-       {{{"Trade", 4}, "--trade-all", "<cur1-cur2,exchange>", "Single trade from available amount from given currency on an exchange.\n"
-                                                              "Order will be placed at limit price by default"}, &OptValueType::trade_all},
-       {{{"Trade", 4}, "--singletrade", "<amt cur1-cur2,exchange>", "Synonym for '--trade'"}, &OptValueType::trade},
-       {{{"Trade", 4}, "--multitrade", "<amt cur1-cur2,exchange>", "Multi trade from given start amount on an exchange.\n"
-                                                                   "Multi trade will first compute fastest path from cur1 to cur2 and "
-                                                                   "if possible reach cur2 by launching multiple single trades.\n"
-                                                                   "Options are same than for single trade, applied to each step trade.\n"
-                                                                   "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
-                                                                   &OptValueType::trade_multi},
+       {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2[,exch1,...]>", "Single trade from given start amount on a list of exchanges, "
+                                                                      "or all that have sufficient balance on cur1 if none provided.\n"
+                                                                      "Order will be placed at limit price by default"}, &OptValueType::trade},
+       {{{"Trade", 4}, "--trade-all", "<cur1-cur2[,exch1,...]>", "Single trade from available amount from given currency on a list of exchanges,"
+                                                                 " or all that have some balance on cur1 if none provided\n"
+                                                                 "Order will be placed at limit price by default"}, &OptValueType::trade_all},
+       {{{"Trade", 4}, "--singletrade", "<amt cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
+       {{{"Trade", 4}, "--multitrade", "<amt cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
+                                                                      " or all that have a sufficient balance on cur1 if none provided \n"
+                                                                      "Multi trade will first compute fastest path from cur1 to cur2 and "
+                                                                     "if possible reach cur2 by launching multiple single trades.\n"
+                                                                     "Options are same than for single trade, applied to each step trade.\n"
+                                                                     "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
+                                                                     &OptValueType::trade_multi},
        {{{"Trade", 4}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
                                                                    "Order will be placed at limit price by default"}, &OptValueType::trade_multi_all},
        {{{"Trade", 4}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"

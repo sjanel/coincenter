@@ -29,7 +29,7 @@ using LastTradesPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
 using ExchangeTickerMaps =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::MarketOrderBookMap>, kNbSupportedExchanges>;
-using BalancePerExchange = SmallVector<std::pair<const Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
+using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
 using ConversionPathPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::ConversionPath>, kNbSupportedExchanges>;

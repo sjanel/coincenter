@@ -10,8 +10,7 @@
 #include "huobipublicapi.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 using HuobiAPI = TestAPI<HuobiPublic>;
 
 namespace {
@@ -35,8 +34,7 @@ void PrivateTest(HuobiPrivate &huobiPrivate) {
   EXPECT_NO_THROW(huobiPrivate.queryDepositWallet("XRP"));
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.1ETH");
-  EXPECT_NO_THROW(huobiPrivate.trade(smallFrom, "BTC", tradeOptions));
-  EXPECT_EQ(smallFrom, MonetaryAmount("0ETH"));
+  EXPECT_EQ(huobiPrivate.trade(smallFrom, "BTC", tradeOptions).tradedFrom, smallFrom);
 }
 }  // namespace
 
@@ -58,5 +56,4 @@ TEST_F(HuobiAPI, Main) {
   PrivateTest(huobiPrivate);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

@@ -12,8 +12,7 @@
 #include "krakenpublicapi.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 using KrakenAPI = TestAPI<KrakenPublic>;
 
 namespace {
@@ -64,10 +63,9 @@ void PrivateTest(KrakenPrivate &krakenPrivate) {
   EXPECT_FALSE(krakenPrivate.queryDepositWallet("BCH").hasTag());
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.001BTC");
-  EXPECT_NO_THROW(krakenPrivate.trade(smallFrom, "EUR", tradeOptions));
+  EXPECT_EQ(krakenPrivate.trade(smallFrom, "EUR", tradeOptions).tradedFrom, smallFrom);
   MonetaryAmount stdFrom("100.1234EUR");
-  EXPECT_NO_THROW(krakenPrivate.trade(stdFrom, "BTC", tradeOptions));
-  EXPECT_LT(stdFrom, MonetaryAmount("50EUR"));
+  EXPECT_GT(krakenPrivate.trade(stdFrom, "BTC", tradeOptions).tradedTo, MonetaryAmount(0, "BTC"));
 }
 }  // namespace
 
@@ -110,5 +108,4 @@ TEST_F(KrakenAPI, PrivateEmptyBalance) {
     log::info("Proxy not available.");
   }
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

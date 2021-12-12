@@ -34,11 +34,9 @@ class CurrencyCode {
   constexpr CurrencyCode() noexcept : _data() {}
 
   /// Constructs a currency code from a static char array.
-  template <unsigned N, std::enable_if_t<N <= sizeof(AcronymType), bool> = true>
+  template <unsigned N, std::enable_if_t<N <= kAcronymMaxLen + 1, bool> = true>
   constexpr CurrencyCode(const char (&acronym)[N]) noexcept {
-    // Fill extra chars to 0 is important as we always read them for code generation
-    std::fill(std::transform(std::begin(acronym), std::end(acronym), _data.begin(), [](char c) { return toupper(c); }),
-              _data.end(), '\0');
+    set(acronym);
   }
 
   /// Constructs a currency code from given string.
@@ -49,8 +47,7 @@ class CurrencyCode {
       }
       acronym.remove_suffix(acronym.size() - _data.size());
     }
-    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return toupper(c); }),
-              _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
+    set(acronym);
   }
 
   /// Get a string view of this CurrencyCode, trimmed.
@@ -76,11 +73,15 @@ class CurrencyCode {
 
   constexpr auto operator<=>(const CurrencyCode &) const = default;
 
-  constexpr bool operator==(CurrencyCode o) const { return std::equal(_data.begin(), _data.end(), o._data.begin()); }
-  constexpr bool operator!=(CurrencyCode o) const { return !(*this == o); }
+  constexpr bool operator==(const CurrencyCode &) const = default;
 
  private:
   AcronymType _data;
+
+  constexpr inline void set(std::string_view acronym) {
+    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return toupper(c); }),
+              _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const CurrencyCode &c);

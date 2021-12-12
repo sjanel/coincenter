@@ -8,8 +8,7 @@
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 using UpbitAPI = TestAPI<UpbitPublic>;
 
 namespace {
@@ -84,5 +83,4 @@ TEST_F(UpbitAPI, Public) {
   PrivateTest(upbitPrivate, exchangePublic);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

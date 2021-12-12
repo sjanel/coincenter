@@ -202,8 +202,8 @@ inline std::optional<MonetaryAmount> ComputeAvgPrice(Market m,
   if (amountsPerPrice.size() == 1) {
     return amountsPerPrice.front().price;
   }
-  MonetaryAmount ret("0", m.quote());
-  MonetaryAmount totalAmount("0", m.base());
+  MonetaryAmount ret(0, m.quote());
+  MonetaryAmount totalAmount(0, m.base());
   for (const MarketOrderBook::AmountAtPrice& amountAtPrice : amountsPerPrice) {
     ret += amountAtPrice.amount.toNeutral() * amountAtPrice.price;
     totalAmount += amountAtPrice.amount;

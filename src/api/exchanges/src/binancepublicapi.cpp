@@ -147,7 +147,7 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
     bool isFiat = el["isLegalMoney"];
     const auto& networkList = el["networkList"];
     if (networkList.size() > 1) {
-      log::debug("Several networks found for {}, considering only default network");
+      log::debug("Several networks found for {}, considering only default network", cur.str());
     }
     for (const json& networkDetail : networkList) {
       bool isDefault = networkDetail["isDefault"].get<bool>();

@@ -31,6 +31,8 @@ TEST(CurrencyCodeTest, Equality) {
   EXPECT_EQ(sushi, sushi2);
   EXPECT_EQ(sushi2, sushi);
   EXPECT_NE(renbtc, doge2);
+  EXPECT_EQ(CurrencyCode("sol"), CurrencyCode("SOL"));
+  EXPECT_EQ(CurrencyCode("sol").code(), CurrencyCode("SOL").code());
 }
 
 TEST(CurrencyCodeTest, Comparison) {

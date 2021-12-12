@@ -63,10 +63,6 @@ inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
   return lhs.fromCurrencyCode == rhs.fromCurrencyCode && lhs.toCurrencyCode == rhs.toCurrencyCode && lhs.m == rhs.m;
 }
 
-inline bool operator==(const TradedAmounts &lhs, const TradedAmounts &rhs) {
-  return lhs.tradedFrom == rhs.tradedFrom && lhs.tradedTo == rhs.tradedTo;
-}
-
 inline bool operator==(const OrderInfo &lhs, const OrderInfo &rhs) {
   return lhs.isClosed == rhs.isClosed && lhs.tradedAmounts == rhs.tradedAmounts;
 }
@@ -91,7 +87,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
       .WillOnce(testing::Return(PlaceOrderInfo(OrderInfo(TradedAmounts(from, tradedTo), true))));
 
-  EXPECT_EQ(exchangePrivate.trade(from, m.quote(), tradeOptions), tradedTo);
+  EXPECT_EQ(exchangePrivate.trade(from, m.quote(), tradeOptions), TradedAmounts(from, tradedTo));
 }
 
 TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
@@ -110,7 +106,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
       .WillOnce(testing::Return(PlaceOrderInfo(OrderInfo(TradedAmounts(from, tradedTo), true))));
 
-  EXPECT_EQ(exchangePrivate.trade(from, m.base(), tradeOptions), tradedTo);
+  EXPECT_EQ(exchangePrivate.trade(from, m.base(), tradeOptions), TradedAmounts(from, tradedTo));
 }
 
 }  // namespace cct::api

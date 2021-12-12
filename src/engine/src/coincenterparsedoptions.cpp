@@ -111,11 +111,11 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   if (!tradeArgs.empty()) {
     StringOptionParser anyParser(tradeArgs);
     if (isTradeAll) {
-      std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeName) =
-          anyParser.getFromToCurrencyCodePrivateExchange();
+      std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
+          anyParser.getFromToCurrencyCodePrivateExchanges();
     } else {
-      std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeName) =
-          anyParser.getMonetaryAmountCurrencyCodePrivateExchange();
+      std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeNames) =
+          anyParser.getMonetaryAmountCurrencyCodePrivateExchanges();
     }
 
     TradeMode tradeMode = cmdLineOptions.trade_sim ? TradeMode::kSimulation : TradeMode::kReal;

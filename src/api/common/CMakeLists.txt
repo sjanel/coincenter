@@ -35,7 +35,7 @@ add_common_test(
   exchangeprivateapi_test
   src/exchangeprivateapi.cpp
   src/exchangepublicapi.cpp
-  src/tradeinfo.cpp
+  src/tradedamounts.cpp
   src/tradeoptions.cpp
   test/exchangeprivateapi_test.cpp
 )

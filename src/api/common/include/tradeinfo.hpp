@@ -3,6 +3,7 @@
 #include "cct_string.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "tradedamounts.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct::api {
@@ -18,26 +19,6 @@ struct TradeInfo {
   Market m;
   TradeOptions options;
   int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
-};
-
-struct TradedAmounts {
-  TradedAmounts(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode)
-      : tradedFrom(0, fromCurrencyCode), tradedTo(0, toCurrencyCode) {}
-
-  TradedAmounts(MonetaryAmount fromAmount, MonetaryAmount toAmount) : tradedFrom(fromAmount), tradedTo(toAmount) {}
-
-  TradedAmounts operator+(const TradedAmounts &o) const;
-  TradedAmounts &operator+=(const TradedAmounts &o) {
-    *this = *this + o;
-    return *this;
-  }
-
-  bool isZero() const { return tradedFrom.isZero() && tradedTo.isZero(); }
-
-  string str() const;
-
-  MonetaryAmount tradedFrom;  // In currency of 'from' amount
-  MonetaryAmount tradedTo;    // In the opposite currency
 };
 
 struct OrderInfo {

@@ -11,6 +11,7 @@
 #include "exchangebase.hpp"
 #include "exchangepublicapi.hpp"
 #include "market.hpp"
+#include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
@@ -54,11 +55,10 @@ class ExchangePrivate : public ExchangeBase {
   /// This function is necessarily a blocking call (synchronous) as it returns the converted amount.
   /// Because of this, it needs to expire at some point (and thus returning a non fully converted amount, or even 0 if
   /// nothing was traded).
-  /// @param from the starting amount from which conversion will be done.
-  ///             Will be modified containing the remaining (untraded) amount (0 if trade is complete)
+  /// @param from the starting amount from which conversion will be done
   /// @param toCurrencyCode the destination currency
-  /// @return converted net amount (fees deduced)
-  MonetaryAmount trade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options);
+  /// @return trade amounts (fees deduced)
+  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options);
 
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes (or hours with Bitcoin)
@@ -135,9 +135,9 @@ class ExchangePrivate : public ExchangeBase {
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                   const SentWithdrawInfo &sentWithdrawInfo) = 0;
 
-  MonetaryAmount singleTrade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
+  TradedAmounts singleTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
 
-  MonetaryAmount multiTrade(MonetaryAmount &from, CurrencyCode toCurrencyCode, const TradeOptions &options);
+  TradedAmounts multiTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options);
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault;

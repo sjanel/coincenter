@@ -33,13 +33,18 @@ TEST(StringOptionParserTest, GetMonetaryAmountExchanges) {
             StringOptionParser::MonetaryAmountExchanges(MonetaryAmount("-0.6509BTC"), PublicExchangeNames({"kraken"})));
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchange) {
-  EXPECT_EQ(StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyCodePrivateExchange(),
-            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchange(
-                MonetaryAmount("45.09ADA"), CurrencyCode("EUR"), PrivateExchangeName("bithumb")));
-  EXPECT_EQ(StringOptionParser("0.02btc-xlm,upbit_user1").getMonetaryAmountCurrencyCodePrivateExchange(),
-            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchange(
-                MonetaryAmount("0.02BTC"), CurrencyCode("XLM"), PrivateExchangeName("upbit", "user1")));
+TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchanges) {
+  EXPECT_EQ(
+      StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyCodePrivateExchanges(),
+      StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
+          MonetaryAmount("45.09ADA"), CurrencyCode("EUR"), PrivateExchangeNames(1, PrivateExchangeName("bithumb"))));
+  EXPECT_EQ(StringOptionParser("0.02btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyCodePrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
+                MonetaryAmount("0.02BTC"), CurrencyCode("XLM"),
+                PrivateExchangeNames({PrivateExchangeName("upbit", "user1"), PrivateExchangeName("binance")})));
+  EXPECT_EQ(StringOptionParser("2500.5 eur-sol").getMonetaryAmountCurrencyCodePrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
+                MonetaryAmount("2500.5 EUR"), CurrencyCode("SOL"), PrivateExchangeNames()));
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {

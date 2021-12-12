@@ -1,7 +1,6 @@
-#include "tradeinfo.hpp"
+#include "tradedamounts.hpp"
 
 namespace cct {
-namespace api {
 TradedAmounts TradedAmounts::operator+(const TradedAmounts &o) const {
   return TradedAmounts(tradedFrom + o.tradedFrom, tradedTo + o.tradedTo);
 }
@@ -13,5 +12,4 @@ string TradedAmounts::str() const {
   ret.append(tradedTo.str());
   return ret;
 }
-}  // namespace api
 }  // namespace cct

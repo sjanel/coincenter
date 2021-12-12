@@ -16,6 +16,7 @@
 #include "monitoringinfo.hpp"
 #include "printqueryresults.hpp"
 #include "queryresulttypes.hpp"
+#include "tradedamounts.hpp"
 
 namespace cct {
 
@@ -76,15 +77,19 @@ class Coincenter {
   /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
   WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
+  /// Trade a specified amount of a given currency into another one, using the market defined in the given exchanges.
+  /// If no exchange name is given, it will attempt to trade given amount on all exchanges with the sufficient balance.
+  /// If exactly one private exchange is given, balance will not be queried and trade will be launched without balance
+  /// check.
+  TradedAmounts trade(MonetaryAmount startAmount, CurrencyCode toCurrency,
+                      std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
   /// conversion path and will launch several 'single' trades to reach that final goal. Example:
   ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
   ///    markets.
-  MonetaryAmount trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
-                       const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions);
-
-  MonetaryAmount tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                          const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions);
+  TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
+                         std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,

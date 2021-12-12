@@ -128,7 +128,7 @@ BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> p
   ret.reserve(balanceExchanges.size());
   std::transform(balanceExchanges.begin(), balanceExchanges.end(), std::make_move_iterator(balancePortfolios.begin()),
                  std::back_inserter(ret),
-                 [](const Exchange *e, BalancePortfolio &&b) { return std::make_pair(e, std::move(b)); });
+                 [](Exchange *e, BalancePortfolio &&b) { return std::make_pair(e, std::move(b)); });
 
   _metricsExporter.exportBalanceMetrics(ret, equiCurrency);
 
@@ -220,17 +220,109 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m, Ex
   return selectedExchanges;
 }
 
-MonetaryAmount Coincenter::trade(MonetaryAmount &startAmount, CurrencyCode toCurrency,
-                                 const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
-  Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
-  return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
+namespace {
+using ExchangeAmountPair = std::pair<Exchange *, MonetaryAmount>;
+using ExchangeAmountPairVector = SmallVector<ExchangeAmountPair, kTypicalNbPrivateAccounts>;
+
+void FilterMarkets(ExchangeAmountPairVector &exchangeAmountPairVector, CurrencyCode fromCurrency,
+                   CurrencyCode toCurrency) {
+  // If multi trade is not allowed, we need to filter exchanges proposing this market
+  SmallVector<bool, kTypicalNbPrivateAccounts> canTradeExchanges(exchangeAmountPairVector.size());
+  Market m(fromCurrency, toCurrency);
+  std::transform(std::execution::par, exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
+                 canTradeExchanges.begin(), [m](auto &exchangeAmountPair) {
+                   if (exchangeAmountPair.second.isZero()) {
+                     return false;
+                   }
+                   api::ExchangePublic::MarketSet markets =
+                       exchangeAmountPair.first->apiPublic().queryTradableMarkets();
+                   return markets.contains(m) || markets.contains(m.reverse());
+                 });
+
+  FilterVector(exchangeAmountPairVector, canTradeExchanges);
 }
 
-MonetaryAmount Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                    const PrivateExchangeName &privateExchangeName, const TradeOptions &tradeOptions) {
-  Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeName);
-  MonetaryAmount startAmount = exchange.apiPrivate().getAccountBalance().get(fromCurrency);
-  return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
+ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurrency,
+                                                         const BalancePerExchange &balancePerExchange) {
+  // Retrieve amount per start amount currency for each exchange
+  ExchangeAmountPairVector exchangeAmountPairVector;
+  std::transform(balancePerExchange.begin(), balancePerExchange.end(), std::back_inserter(exchangeAmountPairVector),
+                 [fromCurrency](auto &exchangeBalancePair) {
+                   return std::make_pair(exchangeBalancePair.first, exchangeBalancePair.second.get(fromCurrency));
+                 });
+  return exchangeAmountPairVector;
+}
+
+TradedAmounts LaunchAndCollectTrades(ExchangeAmountPairVector::iterator first, ExchangeAmountPairVector::iterator last,
+                                     CurrencyCode fromCurrency, CurrencyCode toCurrency,
+                                     const TradeOptions &tradeOptions) {
+  SmallVector<TradedAmounts, kTypicalNbPrivateAccounts> tradeAmountsPerExchange(std::distance(first, last));
+  std::transform(std::execution::par, first, last, tradeAmountsPerExchange.begin(),
+                 [toCurrency, &tradeOptions](auto &exchangeBalancePair) {
+                   return exchangeBalancePair.first->apiPrivate().trade(exchangeBalancePair.second, toCurrency,
+                                                                        tradeOptions);
+                 });
+  return std::accumulate(tradeAmountsPerExchange.begin(), tradeAmountsPerExchange.end(),
+                         TradedAmounts(fromCurrency, toCurrency));
+}
+}  // namespace
+
+TradedAmounts Coincenter::trade(MonetaryAmount startAmount, CurrencyCode toCurrency,
+                                std::span<const PrivateExchangeName> privateExchangeNames,
+                                const TradeOptions &tradeOptions) {
+  if (privateExchangeNames.size() == 1) {
+    Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeNames.front());
+    return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
+  }
+
+  const CurrencyCode fromCurrency = startAmount.currencyCode();
+
+  // Retrieve amount per start amount currency for each exchange
+  ExchangeAmountPairVector exchangeAmountPairVector =
+      ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
+
+  if (!tradeOptions.isMultiTradeAllowed()) {
+    FilterMarkets(exchangeAmountPairVector, fromCurrency, toCurrency);
+  }
+
+  // Sort exchanges from largest to lowest available amount
+  std::sort(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
+            [](const ExchangeAmountPair &lhs, const ExchangeAmountPair &rhs) { return lhs.second > rhs.second; });
+
+  // Locate the point where there is enough available amount to trade for this currency
+  auto endAmountIt = exchangeAmountPairVector.begin();
+  MonetaryAmount totalAvailableAmount(0, fromCurrency);
+  for (auto endIt = exchangeAmountPairVector.end(); endAmountIt != endIt && totalAvailableAmount < startAmount;
+       ++endAmountIt) {
+    if (totalAvailableAmount + endAmountIt->second > startAmount) {
+      // Bound last amount to trade
+      endAmountIt->second = startAmount - totalAvailableAmount;
+    }
+    totalAvailableAmount += endAmountIt->second;
+  }
+
+  if (totalAvailableAmount < startAmount) {
+    log::warn("Not enough available amount to trade ({} < {})", totalAvailableAmount.str(), startAmount.str());
+    return TradedAmounts(fromCurrency, toCurrency);
+  }
+
+  /// We have enough total available amount. Launch all trades in parallel
+  return LaunchAndCollectTrades(exchangeAmountPairVector.begin(), endAmountIt, fromCurrency, toCurrency, tradeOptions);
+}
+
+TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
+                                   std::span<const PrivateExchangeName> privateExchangeNames,
+                                   const TradeOptions &tradeOptions) {
+  // Retrieve amount per start amount currency for each exchange
+  ExchangeAmountPairVector exchangeAmountPairVector =
+      ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
+
+  if (!tradeOptions.isMultiTradeAllowed()) {
+    FilterMarkets(exchangeAmountPairVector, fromCurrency, toCurrency);
+  }
+
+  return LaunchAndCollectTrades(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), fromCurrency,
+                                toCurrency, tradeOptions);
 }
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
@@ -379,12 +471,11 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
 
 void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
   if (opts.fromTradeCurrency != CurrencyCode()) {
-    tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+    tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }
 
   if (!opts.startTradeAmount.isZero()) {
-    MonetaryAmount startAmount = opts.startTradeAmount;
-    trade(startAmount, opts.toTradeCurrency, opts.tradePrivateExchangeName, opts.tradeOptions);
+    trade(opts.startTradeAmount, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }
 
   if (!opts.amountToWithdraw.isZero()) {
