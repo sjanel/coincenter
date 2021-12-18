@@ -45,7 +45,7 @@ class MonetaryAmount {
   /// number of decimals
   constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
       : _amount(amount), _nbDecimals(nbDecimals), _currencyCode(currencyCode) {
-    simplify();
+    sanitize();
   }
 
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
@@ -161,7 +161,7 @@ class MonetaryAmount {
   constexpr MonetaryAmount toNeutral() const noexcept { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
-  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeNbDecimals(maxNbDecimals); }
+  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitize(maxNbDecimals); }
 
   /// Get a std::string_view on the currency of this amount
   constexpr std::string_view currencyStr() const { return _currencyCode.str(); }
@@ -186,13 +186,13 @@ class MonetaryAmount {
     }
   }
 
-  constexpr void sanitizeNbDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) noexcept {
+  constexpr void sanitize(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) noexcept {
     const int8_t nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
       _nbDecimals -= nbDecimalsToTruncate;
-      simplify();
     }
+    simplify();
   }
 
   constexpr bool isSane() const noexcept {
