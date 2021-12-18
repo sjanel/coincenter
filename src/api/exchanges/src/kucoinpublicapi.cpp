@@ -239,11 +239,16 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
 MonetaryAmount KucoinPublic::sanitizePrice(Market m, MonetaryAmount pri) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
   const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
-  MonetaryAmount sanitizedPri = pri.round(marketInfo.priceIncrement, MonetaryAmount::RoundType::kNearest);
+  MonetaryAmount sanitizedPri = pri;
+  if (pri < marketInfo.priceIncrement) {
+    sanitizedPri = marketInfo.priceIncrement;
+  } else {
+    sanitizedPri = pri.round(marketInfo.priceIncrement, MonetaryAmount::RoundType::kNearest);
+  }
   if (sanitizedPri != pri) {
     log::debug("Sanitize price {} -> {}", pri.str(), sanitizedPri.str());
   }
-  return pri;
+  return sanitizedPri;
 }
 
 MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
