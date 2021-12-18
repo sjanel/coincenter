@@ -22,8 +22,8 @@ constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 /// Converts a string into a fixed precision integral containing both the integer and decimal part.
 /// @param amountStr the string to convert
 /// @param heuristicRoundingFromDouble if true, more than 5 consecutive zeros or 9 in the decimals part will be rounded
-std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
-                                                                    bool heuristicRoundingFromDouble = false) {
+inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
+                                                                           bool heuristicRoundingFromDouble = false) {
   assert(!amountStr.empty());
   char firstChar = amountStr.front();
   bool isNeg = false;
@@ -179,29 +179,29 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
 
 MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) const {
   AmountType lhsAmount = _amount;
-  AmountType rhsAmount = std::abs(step._amount);
-  assert(rhsAmount != 0);
+  AmountType rhsAmount = step._amount;
+  assert(rhsAmount > 0);
   int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, step._nbDecimals);
   AmountType epsilon = lhsAmount % rhsAmount;
   AmountType resAmount = lhsAmount - epsilon;
   if (epsilon != 0) {
     if (lhsAmount < 0) {
-      if (roundType == RoundType::kDown || (roundType == RoundType::kNearest &&
-                                            (-lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5))) {
+      if (resAmount >= std::numeric_limits<AmountType>::min() + rhsAmount &&  // Protection against overflow
+          (roundType == RoundType::kDown ||
+           (roundType == RoundType::kNearest &&
+            (-lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5)))) {
         resAmount -= rhsAmount;
       }
     } else {
-      if (roundType == RoundType::kUp || (roundType == RoundType::kNearest &&
-                                          (lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5))) {
+      if (resAmount <= std::numeric_limits<AmountType>::max() - rhsAmount &&  // Protection against overflow
+          (roundType == RoundType::kUp || (roundType == RoundType::kNearest &&
+                                           (lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5)))) {
         resAmount += rhsAmount;
       }
     }
   }
 
-  MonetaryAmount ret(resAmount, _currencyCode, resNbDecimals);
-  ret.simplify();
-  assert(ret.isSane());
-  return ret;
+  return MonetaryAmount(resAmount, _currencyCode, resNbDecimals);
 }
 
 std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const {
@@ -248,10 +248,7 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
     resAmount /= 10;
     --resNbDecimals;
   }
-  MonetaryAmount ret(resAmount, _currencyCode, resNbDecimals);
-  ret.simplify();
-  assert(ret.isSane());
-  return ret;
+  return MonetaryAmount(resAmount, _currencyCode, resNbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
@@ -280,10 +277,7 @@ MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
       }
     }
   }
-  MonetaryAmount ret(amount * mult, _currencyCode, nbDecimals);
-  ret.simplify();
-  assert(ret.isSane());
-  return ret;
+  return MonetaryAmount(amount * mult, _currencyCode, nbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
@@ -297,13 +291,11 @@ MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
   if (CCT_UNLIKELY(!_currencyCode.isNeutral() && !mult.currencyCode().isNeutral())) {
     throw exception("Cannot multiply two non neutral MonetaryAmounts");
   }
-  if (lhsNbDigits + rhsNbDigits > std::numeric_limits<AmountType>::digits10) {
-    log::trace("Reaching numeric limits of MonetaryAmount for {} * {}, truncate", _amount, mult._amount);
-  }
+
   while (lhsNbDigits + rhsNbDigits > std::numeric_limits<AmountType>::digits10) {
     // We need to truncate, choose the MonetaryAmount with the highest number of decimals in priority
     if (rhsNbDecimals == lhsNbDecimals && lhsNbDecimals == 0) {
-      log::warn("Cannot truncate decimal part, I need to truncate integral part");
+      log::warn("Cannot truncate decimal part, truncating integral part");
       if (lhsNbDigits < rhsNbDigits) {
         --rhsNbDigits;
         rhsAmount /= 10;
@@ -325,11 +317,8 @@ MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
       }
     }
   }
-  MonetaryAmount ret(lhsAmount * rhsAmount, resCurrency, lhsNbDecimals + rhsNbDecimals);
-  ret.sanitizeNbDecimals();
-  ret.simplify();
-  assert(ret.isSane());
-  return ret;
+
+  return MonetaryAmount(lhsAmount * rhsAmount, resCurrency, lhsNbDecimals + rhsNbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
@@ -395,11 +384,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     nbDecimals -= nbDigitsTruncate;
   }
 
-  MonetaryAmount ret(totalIntPart * negMult, resCurrency, nbDecimals);
-  ret.sanitizeNbDecimals();
-  ret.simplify();
-  assert(ret.isSane());
-  return ret;
+  return MonetaryAmount(totalIntPart * negMult, resCurrency, nbDecimals);
 }
 
 string MonetaryAmount::amountStr() const {

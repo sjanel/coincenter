@@ -208,7 +208,7 @@ TEST(MonetaryAmountTest, StepRounding) {
             MonetaryAmount("12.6 EUR"));
   EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("13 EUR"));
-  EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount("-0.5"), MonetaryAmount::RoundType::kNearest),
+  EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("12.5 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-23.5 EUR"));
@@ -256,6 +256,14 @@ TEST(MonetaryAmountTest, Truncate) {
   a.truncate(4);
   EXPECT_EQ(a, MonetaryAmount("0"));
   EXPECT_TRUE(a.isZero());
+  EXPECT_EQ(
+      MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode(), 18)
+          .round(MonetaryAmount(1, CurrencyCode(), 4), MonetaryAmount::RoundType::kNearest),
+      MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max() / ipow(10, 14) + 1L, CurrencyCode(), 4));
+  EXPECT_EQ(
+      MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::min(), CurrencyCode(), 18)
+          .round(MonetaryAmount(1, CurrencyCode(), 4), MonetaryAmount::RoundType::kDown),
+      MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::min() / ipow(10, 14) - 1L, CurrencyCode(), 4));
 }
 
 TEST(MonetaryAmountTest, PositiveAmountStr) {
