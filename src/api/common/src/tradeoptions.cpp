@@ -12,7 +12,7 @@ constexpr std::string_view kNibbleStr = "nibble";
 constexpr std::string_view kTakerStr = "taker";
 
 constexpr TradePriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
-  if (priceStrategyStr == kMakerStr) {
+  if (priceStrategyStr.empty() || priceStrategyStr == kMakerStr) {
     return TradePriceStrategy::kMaker;
   }
   if (priceStrategyStr == kNibbleStr) {
@@ -34,7 +34,10 @@ TradeOptions::TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction
       _mode(tradeMode),
       _type(tradeType) {}
 
-std::string_view TradeOptions::priceStrategyStr() const {
+std::string_view TradeOptions::priceStrategyStr(bool placeRealOrderInSimulationMode) const {
+  if (placeRealOrderInSimulationMode) {
+    return kMakerStr;
+  }
   switch (_priceStrategy) {
     case TradePriceStrategy::kMaker:
       return kMakerStr;
@@ -58,9 +61,14 @@ std::string_view TradeOptions::timeoutActionStr() const {
   }
 }
 
-string TradeOptions::str() const {
-  string ret(isSimulation() ? "Simulated " : "Real ");
-  ret.append(priceStrategyStr());
+string TradeOptions::str(bool placeRealOrderInSimulationMode) const {
+  string ret;
+  if (isSimulation()) {
+    ret.append(placeRealOrderInSimulationMode ? "Real (unmatchable) " : "Simulated ");
+  } else {
+    ret.append("Real ");
+  }
+  ret.append(priceStrategyStr(placeRealOrderInSimulationMode));
   ret.append(" strategy, timeout of ");
   AppendString(ret, std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count());
   ret.append("s, ").append(timeoutActionStr()).append(" at timeout, min time between two price updates of ");

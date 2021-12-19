@@ -46,10 +46,12 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view dataDir) {
 
     bool validateDepositAddressesInFile =
         withdrawTopLevelOption.getBottomUp<bool>(exchangeName, "validatedepositaddressesinfile", true);
+    bool placeSimulatedRealOrder = queryTopLevelOption.getBottomUp<bool>(exchangeName, "placesimulaterealorder");
 
-    map.insert_or_assign(string(exchangeName), ExchangeInfo(exchangeName, makerStr, takerStr, excludedAllCurrencies,
-                                                            excludedCurrenciesWithdraw, minPublicQueryDelayMs,
-                                                            minPrivateQueryDelayMs, validateDepositAddressesInFile));
+    map.insert_or_assign(string(exchangeName),
+                         ExchangeInfo(exchangeName, makerStr, takerStr, excludedAllCurrencies,
+                                      excludedCurrenciesWithdraw, minPublicQueryDelayMs, minPrivateQueryDelayMs,
+                                      validateDepositAddressesInFile, placeSimulatedRealOrder));
   }
 
   return map;

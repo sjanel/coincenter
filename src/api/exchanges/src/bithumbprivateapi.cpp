@@ -281,15 +281,11 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
-  const bool isSimulation = tradeInfo.options.isSimulation();
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isTakerStrategy =
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
-  if (isSimulation) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
-  }
 
   const Market m = tradeInfo.m;
 

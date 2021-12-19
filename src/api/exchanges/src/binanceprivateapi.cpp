@@ -154,7 +154,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
   const Market m = tradeInfo.m;
   const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(binancePublic.exchangeInfo().placeSimulateRealOrder());
   const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
   const bool isSimulation = tradeInfo.options.isSimulation();
 
@@ -164,7 +164,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
   if (volume < sanitizedVol) {
-    constexpr CurrencyCode kBinanceCoinCur("BNB");
+    static constexpr CurrencyCode kBinanceCoinCur("BNB");
     if (!isSimulation && m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
       // Use special Binance Dust transfer
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}",

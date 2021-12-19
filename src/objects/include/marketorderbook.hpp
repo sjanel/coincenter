@@ -129,6 +129,9 @@ class MarketOrderBook {
 
   std::optional<MonetaryAmount> convertAtAvgPrice(MonetaryAmount amountInBaseOrQuote) const;
 
+  MonetaryAmount getHighestTheoreticalPrice() const;
+  MonetaryAmount getLowestTheoreticalPrice() const;
+
   /// Print the market order book to given stream.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
@@ -137,6 +140,8 @@ class MarketOrderBook {
   using trivially_relocatable = std::true_type;
 
  private:
+  using AmountType = MonetaryAmount::AmountType;
+
   /// Represents a total amount of waiting orders at a given price.
   /// Note that currency is not stored in situ for memory footprint reasons, but it's not an issue as we can get it from
   /// the 'Market'. Also, the amount is an integral multiplied by the number of decimals stored in the 'Market'.

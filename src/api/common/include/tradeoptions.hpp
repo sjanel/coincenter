@@ -19,15 +19,6 @@ class TradeOptions {
 
   constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
 
-  constexpr TradeOptions(TradePriceStrategy tradeStrategy, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                         Clock::duration dur, Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType)
-      : _maxTradeTime(dur),
-        _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
-        _priceStrategy(tradeStrategy),
-        _timeoutAction(timeoutAction),
-        _mode(tradeMode),
-        _type(tradeType) {}
-
   TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                Clock::duration dur, Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType);
 
@@ -41,7 +32,9 @@ class TradeOptions {
 
   constexpr bool isMultiTradeAllowed() const { return _type == TradeType::kMultiTradePossible; }
 
-  constexpr bool isTakerStrategy() const { return _priceStrategy == TradePriceStrategy::kTaker; }
+  constexpr bool isTakerStrategy(bool placeRealOrderInSimulationMode) const {
+    return _priceStrategy == TradePriceStrategy::kTaker && (!isSimulation() || !placeRealOrderInSimulationMode);
+  }
 
   constexpr bool isSimulation() const { return _mode == TradeMode::kSimulation; }
 
@@ -49,13 +42,13 @@ class TradeOptions {
 
   constexpr void switchToTakerStrategy() { _priceStrategy = TradePriceStrategy::kTaker; }
 
-  std::string_view priceStrategyStr() const;
-
   std::string_view timeoutActionStr() const;
 
-  string str() const;
+  string str(bool placeRealOrderInSimulationMode) const;
 
  private:
+  std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
+
   Clock::duration _maxTradeTime = kDefaultTradeDuration;
   Clock::duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
   TradePriceStrategy _priceStrategy = TradePriceStrategy::kMaker;

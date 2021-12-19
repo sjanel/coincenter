@@ -87,7 +87,7 @@ class ExchangePrivate : public ExchangeBase {
     return PrivateExchangeName(_exchangePublic.name(), _apiKey.name());
   }
 
-  const ExchangeInfo &exchangeInfo() const { return _coincenterInfo.exchangeInfo(_exchangePublic.name()); }
+  const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
 
  protected:
   ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &coincenterInfo, const APIKey &apiKey)
@@ -103,9 +103,15 @@ class ExchangePrivate : public ExchangeBase {
   /// @param equiCurrency Asks conversion of given amount into this currency as well
   void addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency);
 
+  /// Return true if exchange supports simulated order (some exchanges such as Kraken or Binance for instance support
+  /// this query parameter)
+  virtual bool isSimulatedOrderSupported() const = 0;
+
   /// Place an order in mode fire and forget.
   /// When this method ends, order should be successfully placed in the exchange, or if not possible (for instance, too
   /// small volume) return a closed PlaceOrderInfo.
+  /// This method will not be called in simulation mode if the exchange does not support it (ie: when
+  /// isSimulatedOrderSupported == false)
   /// @param from the remaining from amount to trade
   virtual PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                     const TradeInfo &tradeInfo) = 0;
@@ -137,6 +143,12 @@ class ExchangePrivate : public ExchangeBase {
   CachedResultVault &_cachedResultVault;
   const CoincenterInfo &_coincenterInfo;
   const APIKey &_apiKey;
+
+ private:
+  PlaceOrderInfo placeOrderProcess(MonetaryAmount &from, MonetaryAmount price, const TradeInfo &tradeInfo);
+
+  PlaceOrderInfo computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
+                                                        const TradeInfo &tradeInfo) const;
 };
 }  // namespace api
 }  // namespace cct

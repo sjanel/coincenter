@@ -29,7 +29,8 @@ const json kDefaultConfig = R"(
   "query": {
     "default": {
       "minprivatequerydelayms": 1000,
-      "minpublicquerydelayms": 1000
+      "minpublicquerydelayms": 1000,
+      "placesimulaterealorder": false
     },
     "exchange": {
       "binance": {

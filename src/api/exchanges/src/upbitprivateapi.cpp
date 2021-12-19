@@ -172,8 +172,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
-  const bool isSimulation = tradeInfo.options.isSimulation();
+  const bool isTakerStrategy =
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   const Market m = tradeInfo.m;
 
   const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
@@ -182,10 +182,9 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   CurlPostData placePostData{{"market", m.reverse().assetsPairStr('-')}, {"side", askOrBid}, {"ord_type", orderType}};
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
-  if (isSimulation) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
-  }
+
+  volume = sanitizeVolume(volume, price);
+
   if (fromCurrencyCode == m.quote()) {
     // For 'buy', from amount is fee excluded
     ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
@@ -324,6 +323,21 @@ bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) 
     }
   }
   return orderIsTooSmall;
+}
+
+MonetaryAmount UpbitPrivate::sanitizeVolume(MonetaryAmount volume, MonetaryAmount price) const {
+  // Upbit can return this error for big trades:
+  // "최대매수금액 1000000000.0 KRW 보다 작은 주문을 입력해 주세요."
+  // It means that total value of the order should not exceed 1000000000 KRW.
+  // Let's adjust volume to avoid this issue.
+  static constexpr MonetaryAmount kMaximumOrderValue = MonetaryAmount(1000000000, CurrencyCode("KRW"));
+  MonetaryAmount ret = volume;
+  if (price.currencyCode() == kMaximumOrderValue.currencyCode() && volume.toNeutral() * price > kMaximumOrderValue) {
+    log::warn("{} / {} = {}", kMaximumOrderValue.str(), price.str(), (kMaximumOrderValue / price).str());
+    ret = MonetaryAmount(kMaximumOrderValue / price, volume.currencyCode());
+    log::warn("Order too big, decrease volume {} to {}", volume.str(), ret.str());
+  }
+  return ret;
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {

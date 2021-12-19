@@ -26,6 +26,8 @@ class HuobiPrivate : public ExchangePrivate {
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
  protected:
+  bool isSimulatedOrderSupported() const override { return false; }
+
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 

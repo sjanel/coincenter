@@ -30,6 +30,8 @@ class BinancePrivate : public ExchangePrivate {
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
 
  protected:
+  bool isSimulatedOrderSupported() const override { return true; }
+
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 

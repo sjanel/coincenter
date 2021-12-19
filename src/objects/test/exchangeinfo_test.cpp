@@ -12,7 +12,7 @@ const CurrencyCode kWithdrawExcludedCur[] = {CurrencyCode("BTC"), CurrencyCode("
 class ExchangeInfoKrakenTest : public ::testing::Test {
  protected:
   ExchangeInfoKrakenTest()
-      : exchangeInfo("kraken", "0.16", "0.26", kExcludedCur, kWithdrawExcludedCur, 666, 450, false) {}
+      : exchangeInfo("kraken", "0.16", "0.26", kExcludedCur, kWithdrawExcludedCur, 666, 450, false, false) {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 

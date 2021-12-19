@@ -143,7 +143,8 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const Market m = tradeInfo.m;
   string lowerCaseMarket = tolower(m.assetsPairStr());
 
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isTakerStrategy =
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   std::string_view type;
   if (isTakerStrategy) {
     type = fromCurrencyCode == m.base() ? "sell-market" : "buy-market";
@@ -164,11 +165,6 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   }
 
   volume = sanitizedVol;
-
-  if (tradeInfo.options.isSimulation()) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
-  }
 
   CurlPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
   if (isTakerStrategy) {
