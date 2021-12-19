@@ -6,6 +6,7 @@
 #include <optional>
 #include <string_view>
 
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "mathhelpers.hpp"
@@ -31,11 +32,15 @@ class MonetaryAmount {
   constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a neutral currency
-  constexpr explicit MonetaryAmount(std::integral auto amount) noexcept : _amount(amount), _nbDecimals(0) {}
+  constexpr explicit MonetaryAmount(std::integral auto amount) noexcept : _amount(amount), _nbDecimals(0) {
+    sanitizeIntegralPart();
+  }
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a currency
   constexpr explicit MonetaryAmount(std::integral auto amount, CurrencyCode currencyCode) noexcept
-      : _amount(amount), _nbDecimals(0), _currencyCode(currencyCode) {}
+      : _amount(amount), _nbDecimals(0), _currencyCode(currencyCode) {
+    sanitizeIntegralPart();
+  }
 
   /// Construct a new MonetaryAmount from a double.
   /// Precision is calculated automatically.
@@ -45,7 +50,8 @@ class MonetaryAmount {
   /// number of decimals
   constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
       : _amount(amount), _nbDecimals(nbDecimals), _currencyCode(currencyCode) {
-    sanitize();
+    sanitizeDecimals();
+    sanitizeIntegralPart();
   }
 
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
@@ -161,7 +167,7 @@ class MonetaryAmount {
   constexpr MonetaryAmount toNeutral() const noexcept { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
-  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitize(maxNbDecimals); }
+  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeDecimals(maxNbDecimals); }
 
   /// Get a std::string_view on the currency of this amount
   constexpr std::string_view currencyStr() const { return _currencyCode.str(); }
@@ -176,7 +182,9 @@ class MonetaryAmount {
  private:
   using UnsignedAmountType = uint64_t;
 
-  constexpr void simplify() noexcept {
+  static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
+
+  constexpr void simplifyDecimals() noexcept {
     if (_amount == 0) {
       _nbDecimals = 0;
     } else {
@@ -186,13 +194,22 @@ class MonetaryAmount {
     }
   }
 
-  constexpr void sanitize(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) noexcept {
+  constexpr void sanitizeDecimals(int8_t maxNbDecimals = std::numeric_limits<AmountType>::digits10 - 1) noexcept {
     const int8_t nbDecimalsToTruncate = _nbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
       _nbDecimals -= nbDecimalsToTruncate;
     }
-    simplify();
+    simplifyDecimals();
+  }
+
+  constexpr void sanitizeIntegralPart() {
+    if (_amount >= kMaxAmountFullNDigits) {
+      if (!std::is_constant_evaluated()) {
+        log::debug("Truncating last digit of integral part which is too big");
+      }
+      _amount /= 10;
+    }
   }
 
   constexpr bool isSane() const noexcept {
