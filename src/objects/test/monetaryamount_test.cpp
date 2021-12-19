@@ -163,6 +163,8 @@ TEST(MonetaryAmountTest, Divide) {
   EXPECT_EQ(MonetaryAmount("487.76 EUR") / MonetaryAmount("1300.5 EUR"), MonetaryAmount("0.3750557477893118"));
   EXPECT_THROW(MonetaryAmount("100") / MonetaryAmount("0.00000000000000001"), exception);
   EXPECT_EQ(MonetaryAmount("10") / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
+  EXPECT_EQ(MonetaryAmount("1000000000 KRW") / MonetaryAmount("922337203685477580 KRW"),
+            MonetaryAmount("0.00000000108420217"));
 }
 
 TEST(MonetaryAmountTest, Multiply) {

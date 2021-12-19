@@ -9,7 +9,6 @@
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
-#include "cct_log.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {
@@ -243,7 +242,6 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
   AmountType rhsAmount = o._amount;
   int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, o._nbDecimals);
   AmountType resAmount = lhsAmount + rhsAmount;
-  constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
   if (resAmount >= kMaxAmountFullNDigits || resAmount <= -kMaxAmountFullNDigits) {
     resAmount /= 10;
     --resNbDecimals;
@@ -325,12 +323,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   AmountType lhsAmount = _amount;
   AmountType rhsAmount = div._amount;
   assert(rhsAmount != 0);
-  int8_t lhsNbDecimals = _nbDecimals;
-  int8_t rhsNbDecimals = div._nbDecimals;
-  int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
   const int negMult = ((lhsAmount < 0 && rhsAmount > 0) || (lhsAmount > 0 && rhsAmount < 0)) ? -1 : 1;
-  UnsignedAmountType lhs = std::abs(lhsAmount);
-  UnsignedAmountType rhs = std::abs(rhsAmount);
   CurrencyCode resCurrency = CurrencyCode::kNeutral;
   if (!_currencyCode.isNeutral() && !div.currencyCode().isNeutral()) {
     if (CCT_UNLIKELY(_currencyCode != div.currencyCode())) {
@@ -345,13 +338,18 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   // Indeed, on 64 bits the unsigned integral type can hold one more digit than its signed counterpart.
   static_assert(std::numeric_limits<UnsignedAmountType>::digits10 > std::numeric_limits<AmountType>::digits10);
 
+  int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
   const int8_t lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
-  lhs *= ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(lhsNbDigitsToAdd));
-  lhsNbDecimals += lhsNbDigitsToAdd;
+  UnsignedAmountType lhs = static_cast<UnsignedAmountType>(std::abs(lhsAmount)) *
+                           ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(lhsNbDigitsToAdd));
+  UnsignedAmountType rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
+
+  int8_t lhsNbDecimals = _nbDecimals + lhsNbDigitsToAdd;
+
   lhsNbDigits += lhsNbDigitsToAdd;
 
   UnsignedAmountType totalIntPart = 0;
-  int8_t nbDecimals = lhsNbDecimals - rhsNbDecimals;
+  int8_t nbDecimals = lhsNbDecimals - div._nbDecimals;
   int8_t totalPartNbDigits;
   do {
     totalIntPart += lhs / rhs;  // Add integral part
