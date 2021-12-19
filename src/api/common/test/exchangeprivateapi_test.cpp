@@ -15,6 +15,8 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode equiCurrency), (override));
   MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode currencyCode), (override));
 
+  MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));
+
   MOCK_METHOD(PlaceOrderInfo, placeOrder,
               (MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo &tradeInfo),
               (override));
@@ -33,7 +35,7 @@ class ExchangePrivateTest : public ::testing::Test {
   ExchangePrivateTest()
       : cryptowatchAPI(coincenterInfo),
         fiatConverter(coincenterInfo),
-        exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo),
+        exchangePublic("kraken", fiatConverter, cryptowatchAPI, coincenterInfo),
         key("test", "testuser", "", "", ""),
         exchangePrivate(exchangePublic, coincenterInfo, key) {}
 

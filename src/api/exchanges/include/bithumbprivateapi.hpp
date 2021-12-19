@@ -36,6 +36,8 @@ class BithumbPrivate : public ExchangePrivate {
   void updateCacheFile() const override;
 
  protected:
+  bool isSimulatedOrderSupported() const override { return false; }
+
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 

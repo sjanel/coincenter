@@ -50,6 +50,7 @@ Main features:
     - [secret/secret.json](#secretsecretjson)
       - [Handle several accounts per exchange](#handle-several-accounts-per-exchange)
     - [static/exchangeconfig.json](#staticexchangeconfigjson)
+      - [Option descriptions](#option-descriptions)
 - [Tests](#tests)
 - [Usage](#usage)
   - [Market data](#market-data)
@@ -168,16 +169,16 @@ If you have only one key per exchange, suffixing with the name is not necessary 
 
 This json file should follow this specific format:
 ```yaml
-  - top level option:
+  - top_level_option:
     - default:
-      - some option: default value
-      - another option: default value
+      - some_option: default_value
+      - another_option: default_value
     - exchange:
-      - some exchange:
-        - some option: override value
-        - another option: default value
-      - another exchange:
-        - some option: override value
+      - some_exchange:
+        - some_option: override_value
+        - another_option: default_value
+      - another_exchange:
+        - some_option: override_value
 ```
 
 Currently, options are set from two ways:
@@ -223,6 +224,19 @@ The chosen values will be:
 | Bithumb  | `BTC`                   | `0.25`            |
 
 Refer to the hardcoded default json example as a model in case of doubt.
+
+#### Option descriptions
+
+| Module      | Name                               | Value                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------- | ---------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| *asset*     | **allexclude**                     | CSV coin acronyms (ex: "BTC,AUD")                                         | Exclude coins with these acronym from `coincenter`                                                                                                                                                                                                                                                                                                                                                                             |
+| *asset*     | **withdrawexclude**                | CSV coin acronyms (ex: "BTC,AUD")                                         | Make these coins unavailable for withdraw                                                                                                                                                                                                                                                                                                                                                                                      |
+| *query*     | **minprivatequerydelayms**         | Integer (in milliseconds)                                                 | Minimum time between two consecutive requests of private account                                                                                                                                                                                                                                                                                                                                                               |
+| *query*     | **minpublicquerydelayms**          | Integer (in milliseconds)                                                 | Minimum time between two consecutive requests of public account                                                                                                                                                                                                                                                                                                                                                                |
+| *query*     | **placesimulaterealorder**         | Boolean (`true` or `false`)                                               | If `true`, in trade simulation mode (with `--trade-sim`) exchanges which do not support simulated mode in place order will actually place a real order, with the following characteristics: <ul><li>trade strategy forced to `maker`</li><li>price will be changed to a maximum for a sell, to a minimum for a buy</li></ul> This will allow place of a 'real' order that cannot be matched in practice (if it is, lucky you!) |
+| *tradefees* | **maker**                          | String as decimal number representing a percentage (for instance, "0.15") | Trade fees occurring when a maker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
+| *tradefees* | **taker**                          | String as decimal number representing a percentage (for instance, "0.15") | Trade fees occurring when a taker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
+| *withdraw*  | **validatedepositaddressesinfile** | Boolean (`true` or `false`)                                               | If `true`, each withdraw will perform an additional validation check from a trusted list of "whitelisted" addresses in `depositaddresses.json` file. Withdraw will not be processed if destination wallet is not present in the file.                                                                                                                                                                                          |
 
 # Tests
 

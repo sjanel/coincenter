@@ -176,7 +176,8 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  const bool isTakerStrategy =
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   const bool isSimulation = tradeInfo.options.isSimulation();
   const Market m = tradeInfo.m;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);

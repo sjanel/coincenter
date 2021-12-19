@@ -19,7 +19,7 @@ class ExchangeInfo {
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                std::span<const CurrencyCode> excludedAllCurrencies,
                std::span<const CurrencyCode> excludedCurrenciesWithdraw, int minPublicQueryDelayMs,
-               int minPrivateQueryDelayMs, bool validateDepositAddressesInFile);
+               int minPrivateQueryDelayMs, bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -42,6 +42,12 @@ class ExchangeInfo {
 
   bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
 
+  // In simulation mode for trade, for exchanges which do not have a simulation parameter, place a real order.
+  // This real order price will have a limit price such that it should never be matched (if it is matched, lucky you!):
+  // - Minimum for a buy (for instance, 1 USD for BTC)
+  // - Maximum for a sell
+  bool placeSimulateRealOrder() const { return _placeSimulateRealOrder; }
+
  private:
   CurrencySet _excludedCurrenciesAll;         // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;  // Currencies unavailable for withdrawals
@@ -49,5 +55,6 @@ class ExchangeInfo {
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
   bool _validateDepositAddressesInFile;
+  bool _placeSimulateRealOrder;
 };
 }  // namespace cct

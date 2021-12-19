@@ -31,6 +31,8 @@ class UpbitPrivate : public ExchangePrivate {
   }
 
  protected:
+  bool isSimulatedOrderSupported() const override { return false; }
+
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
@@ -85,6 +87,8 @@ class UpbitPrivate : public ExchangePrivate {
 
   bool isOrderClosed(const json& orderJson) const;
   bool isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) const;
+
+  MonetaryAmount sanitizeVolume(MonetaryAmount volume, MonetaryAmount price) const;
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

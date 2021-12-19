@@ -82,29 +82,20 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
 
   static constexpr Clock::duration kBufferTime = std::chrono::seconds(1);
 
-  log::info(options.str());
+  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
+
+  log::info(options.str(placeSimulatedRealOrder));
 
   TradeInfo tradeInfo(fromCurrencyCode, toCurrency, m, options, nbSecondsSinceEpoch);
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
-  MonetaryAmount volume(fromCurrencyCode == m.quote() ? MonetaryAmount(from / price, m.base()) : from);
 
-  PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
+  PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
   // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
   const OrderId &orderId = placeOrderInfo.orderId;
   if (placeOrderInfo.isClosed()) {
     log::debug("Order {} closed with traded amounts {}", orderId, placeOrderInfo.tradedAmounts().str());
-    if (options.isSimulation()) {
-      MonetaryAmount toAmount = fromCurrencyCode == m.quote() ? volume : volume.convertTo(price);
-      ExchangeInfo::FeeType feeType =
-          options.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-      toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
-      from -= fromCurrencyCode == m.quote() ? volume.toNeutral() * price : volume;
-      return toAmount;
-    }
-
-    from -= placeOrderInfo.tradedAmounts().tradedFrom;
     return placeOrderInfo.tradedAmounts().tradedTo;
   }
 
@@ -173,9 +164,7 @@ MonetaryAmount ExchangePrivate::singleTrade(MonetaryAmount &from, CurrencyCode t
         lastPrice = price;
 
         // Compute new volume (price is either not needed in taker order, or already recomputed)
-        volume = remFrom.currencyCode() == m.quote() ? MonetaryAmount(remFrom / price, m.base()) : remFrom;
-        log::debug("Place new order {} at price {}", volume.str(), price.str());
-        placeOrderInfo = placeOrder(remFrom, volume, price, tradeInfo);
+        placeOrderInfo = placeOrderProcess(remFrom, price, tradeInfo);
 
         if (placeOrderInfo.isClosed()) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
@@ -224,6 +213,47 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
             initiatedWithdrawInfo.receivingWallet().privateExchangeName().str(),
             initiatedWithdrawInfo.receivingWallet().address());
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+}
+
+PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
+                                                  const TradeInfo &tradeInfo) {
+  Market m = tradeInfo.m;
+  const bool isSell = tradeInfo.fromCurrencyCode == m.base();
+  MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, m.base()));
+
+  if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
+    if (exchangeInfo().placeSimulateRealOrder()) {
+      MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(m);
+      price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
+    } else {
+      PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
+      from -= placeOrderInfo.tradedAmounts().tradedFrom;
+      return placeOrderInfo;
+    }
+  }
+  log::debug("Place new order {} at price {}", volume.str(), price.str());
+  PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
+  if (tradeInfo.options.isSimulation() && isSimulatedOrderSupported()) {
+    // Override the placeOrderInfo in simulation mode to centralize code which is same for all exchanges
+    // (and remove the need to implement the matching amount computation with fees for each exchange)
+    placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
+  }
+  from -= placeOrderInfo.tradedAmounts().tradedFrom;
+  return placeOrderInfo;
+}
+
+PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
+                                                                       const TradeInfo &tradeInfo) const {
+  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
+  Market m = tradeInfo.m;
+  const bool isSell = tradeInfo.fromCurrencyCode == m.base();
+  MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
+  ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+  toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)));
+  placeOrderInfo.setClosed();
+  return placeOrderInfo;
 }
 }  // namespace api
 }  // namespace cct

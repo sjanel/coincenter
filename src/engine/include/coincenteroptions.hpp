@@ -62,7 +62,7 @@ struct CoincenterCmdLineOptions {
   string trade_all;
   string trade_multi;
   string trade_multi_all;
-  string trade_price{TradeOptions().priceStrategyStr()};
+  string trade_price;
   bool trade_timeout_match = false;
   Duration trade_timeout{TradeOptions().maxTradeTime()};
   Duration trade_updateprice{TradeOptions().minTimeBetweenPriceUpdates()};

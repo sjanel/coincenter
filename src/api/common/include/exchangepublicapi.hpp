@@ -110,6 +110,8 @@ class ExchangePublic : public ExchangeBase {
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
+  const ExchangeInfo &exchangeInfo() const { return _coincenterInfo.exchangeInfo(name()); }
+
  protected:
   friend class ExchangePrivate;
 

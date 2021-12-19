@@ -174,10 +174,6 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
-  if (tradeInfo.options.isSimulation()) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
-  }
 
   if (!EnsureEnoughAmountIn(_curlHandle, _apiKey, from, "trade")) {
     placeOrderInfo.setClosed();
@@ -186,7 +182,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   const Market m = tradeInfo.m;
 
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy();
+  bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
 
   KucoinPublic& kucoinPublic = dynamic_cast<KucoinPublic&>(_exchangePublic);
 
@@ -204,17 +200,25 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   std::string_view buyOrSell = fromCurrencyCode == m.base() ? "sell" : "buy";
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
-  CurlPostData placePostData{{"clientOid", Nonce_TimeSinceEpochInMs()},
-                             {"side", buyOrSell},
-                             {"symbol", m.assetsPairStr('-')},
-                             {"type", strategyType},
-                             {"tradeType", "TRADE"},
-                             {"size", volume.amountStr()}};
+
+  CurlPostData params;
+  params.append("clientOid", Nonce_TimeSinceEpochInMs());
+  params.append("side", buyOrSell);
+  params.append("symbol", m.assetsPairStr('-'));
+  params.append("type", strategyType);
+  params.append("remark", "Placed by coincenter client");
+  params.append("tradeType", "TRADE");
+  params.append("size", volume.amountStr());
   if (!isTakerStrategy) {
-    placePostData.append("price", price.amountStr());
+    params.append("price", price.amountStr());
   }
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(placePostData));
-  placeOrderInfo.orderId = string(result["orderId"].get<std::string_view>());
+
+  // Add automatic cancelling just in case program unexpectedly stops
+  params.append("timeInForce", "GTT");  // Good until cancelled or time expires
+  params.append("cancelAfter", std::chrono::duration_cast<TimeInS>(tradeInfo.options.maxTradeTime()).count() + 1);
+
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params));
+  placeOrderInfo.orderId = std::move(result["orderId"]);
   return placeOrderInfo;
 }
 

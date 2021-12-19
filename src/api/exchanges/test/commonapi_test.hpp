@@ -13,7 +13,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view) {
   ExchangeInfoMap ret;
   for (std::string_view exchangeName : kSupportedExchanges) {
     ret.insert_or_assign(string(exchangeName), ExchangeInfo(exchangeName, "0.1", "0.1", std::span<const CurrencyCode>(),
-                                                            std::span<const CurrencyCode>(), 1000, 1000, false));
+                                                            std::span<const CurrencyCode>(), 1000, 1000, false, false));
   }
   return ret;
 }

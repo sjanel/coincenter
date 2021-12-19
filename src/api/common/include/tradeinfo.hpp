@@ -52,7 +52,7 @@ struct OrderInfo {
 struct PlaceOrderInfo {
   explicit PlaceOrderInfo(OrderInfo &&oInfo) : orderInfo(std::move(oInfo)) {}
 
-  PlaceOrderInfo(OrderInfo &&oInfo, string orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
+  PlaceOrderInfo(OrderInfo &&oInfo, OrderId orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
 
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.setClosed(); }
