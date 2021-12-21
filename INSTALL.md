@@ -81,14 +81,14 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
 `coincenter` uses various external open source libraries. 
 In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically. If you are building frequently `coincenter` you can install them to speed up its compilation.
 
-| Library                                                        | Description                                        |
-| -------------------------------------------------------------- | -------------------------------------------------- |
-| [amc](https://github.com/AmadeusITGroup/amc.git)               | High performance C++ containers (maintained by me) |
-| [googletest](https://github.com/google/googletest.git)         | Google Testing and Mocking Framework               |
-| [json](https://github.com/nlohmann/json)                       | JSON for Modern C++                                |
-| [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                           |
-| [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++           |
-| [jwt-cpp](https://github.com/Thalhammer/jwt-cpp)               | Creating and validating json web tokens in C++     |
+| Library                                                        | Description                                        | License              |
+| -------------------------------------------------------------- | -------------------------------------------------- | -------------------- |
+| [amc](https://github.com/AmadeusITGroup/amc.git)               | High performance C++ containers (maintained by me) | MIT                  |
+| [googletest](https://github.com/google/googletest.git)         | Google Testing and Mocking Framework               | BSD-3-Clause License |
+| [json](https://github.com/nlohmann/json)                       | JSON for Modern C++                                | MIT                  |
+| [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                           | MIT                  |
+| [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++           | MIT                  |
+| [jwt-cpp](https://github.com/Thalhammer/jwt-cpp)               | Creating and validating json web tokens in C++     | MIT                  |
 
 ### With cmake
 
