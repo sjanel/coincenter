@@ -9,10 +9,15 @@
   if (!_doPrint) return
 
 namespace cct {
-void QueryResultPrinter::printMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange) {
+void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
+                                      const MarketsPerExchange &marketsPerExchange) {
   RETURN_IF_NO_PRINT;
   string marketsCol("Markets with ");
-  marketsCol.append(cur.str());
+  marketsCol.append(cur1.str());
+  if (cur2 != CurrencyCode()) {
+    marketsCol.push_back('-');
+    marketsCol.append(cur2.str());
+  }
   SimpleTable t("Exchange", std::move(marketsCol));
   for (const auto &[e, markets] : marketsPerExchange) {
     for (const Market &m : markets) {

@@ -119,13 +119,31 @@ std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throw
 }
 
 StringOptionParser::CurrencyCodePublicExchanges StringOptionParser::getCurrencyCodePublicExchanges() const {
-  std::size_t commaPos = getNextCommaPos(0, false);
+  std::size_t firstCommaPos = getNextCommaPos(0, false);
   CurrencyCodePublicExchanges ret;
-  if (commaPos == string::npos) {
+  if (firstCommaPos == string::npos) {
     ret.first = CurrencyCode(_opt);
   } else {
-    ret.first = CurrencyCode(std::string_view(_opt.begin(), _opt.begin() + commaPos));
-    ret.second = GetExchanges(StrEnd(_opt, commaPos + 1));
+    ret.first = CurrencyCode(std::string_view(_opt.begin(), _opt.begin() + firstCommaPos));
+    ret.second = GetExchanges(StrEnd(_opt, firstCommaPos + 1));
+  }
+  return ret;
+}
+
+StringOptionParser::CurrencyCodesPublicExchanges StringOptionParser::getCurrencyCodesPublicExchanges() const {
+  std::size_t firstCommaPos = getNextCommaPos(0, false);
+  std::size_t dashPos = _opt.find('-', 1);
+  CurrencyCodesPublicExchanges ret;
+  if (firstCommaPos == string::npos) {
+    firstCommaPos = _opt.size();
+  } else {
+    std::get<2>(ret) = GetExchanges(StrEnd(_opt, firstCommaPos + 1));
+  }
+  if (dashPos == string::npos) {
+    std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), firstCommaPos));
+  } else {
+    std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), dashPos));
+    std::get<1>(ret) = CurrencyCode(std::string_view(_opt.begin() + dashPos + 1, _opt.begin() + firstCommaPos));
   }
   return ret;
 }

@@ -62,14 +62,30 @@ TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
 }
 
 TEST(StringOptionParserTest, GetCurrencyCodePublicExchanges) {
+  using CurrencyCodePublicExchanges = StringOptionParser::CurrencyCodePublicExchanges;
   EXPECT_EQ(StringOptionParser("btc").getCurrencyCodePublicExchanges(),
-            StringOptionParser::CurrencyCodePublicExchanges(CurrencyCode("BTC"), PublicExchangeNames()));
-  EXPECT_EQ(
-      StringOptionParser("eur,kraken_user1").getCurrencyCodePublicExchanges(),
-      StringOptionParser::CurrencyCodePublicExchanges(CurrencyCode("EUR"), PublicExchangeNames({"kraken_user1"})));
-  EXPECT_EQ(
-      StringOptionParser("eur,binance,huobi").getCurrencyCodePublicExchanges(),
-      StringOptionParser::CurrencyCodePublicExchanges(CurrencyCode("EUR"), PublicExchangeNames({"binance", "huobi"})));
+            CurrencyCodePublicExchanges("BTC", PublicExchangeNames()));
+  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyCodePublicExchanges(),
+            CurrencyCodePublicExchanges("EUR", PublicExchangeNames({"kraken_user1"})));
+  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyCodePublicExchanges(),
+            CurrencyCodePublicExchanges("EUR", PublicExchangeNames({"binance", "huobi"})));
+}
+
+TEST(StringOptionParserTest, GetCurrencyCodesPublicExchanges) {
+  using CurrencyCodesPublicExchanges = StringOptionParser::CurrencyCodesPublicExchanges;
+  EXPECT_EQ(StringOptionParser("btc").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("BTC", CurrencyCode(), PublicExchangeNames()));
+  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("EUR", CurrencyCode(), PublicExchangeNames({"kraken_user1"})));
+  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("EUR", CurrencyCode(), PublicExchangeNames({"binance", "huobi"})));
+
+  EXPECT_EQ(StringOptionParser("avax-btc").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("AVAX", "BTC", PublicExchangeNames()));
+  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("BTC", "EUR", PublicExchangeNames({"kraken_user1"})));
+  EXPECT_EQ(StringOptionParser("xlm-eur,binance,huobi").getCurrencyCodesPublicExchanges(),
+            CurrencyCodesPublicExchanges("XLM", "EUR", PublicExchangeNames({"binance", "huobi"})));
 }
 
 }  // namespace cct

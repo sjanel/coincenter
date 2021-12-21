@@ -55,6 +55,7 @@ Main features:
 - [Usage](#usage)
   - [Market data](#market-data)
   - [Markets](#markets)
+    - [Examples](#examples)
     - [Ticker information](#ticker-information)
     - [Order books](#order-books)
     - [Last 24h traded volume](#last-24h-traded-volume)
@@ -65,7 +66,7 @@ Main features:
     - [Balance](#balance)
     - [Single Trade](#single-trade)
       - [Single trade all](#single-trade-all)
-      - [Examples](#examples)
+      - [Examples](#examples-1)
     - [Multi Trade](#multi-trade)
       - [Multi trade all](#multi-trade-all)
       - [Trade simulation](#trade-simulation)
@@ -254,14 +255,22 @@ Note that exchanges API are also unit tested. If no private key is found, only p
 
 ## Markets
 
-Use the `--markets` (or `-m`) command to list all markets trading a given currency. This is useful to check how you can trade your coin.
-Currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currency if they exist.
+Use the `--markets` (or `-m`) command to list all markets trading a given currencies. This is useful to check how you can trade your coin.
+At least one currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currencies if they exist.
+
+One or two (in this case, querying existence of a market) currencies can be given, separated by a `-`.
 
 **Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `--trade` option of `coincenter`)
 
-For instance: List all markets involving Etheureum in huobi
+### Examples
+List all markets involving Ethereum in Huobi
 ```
 coincenter --markets eth,huobi
+```
+
+List exchanges where the pair AVAX-USDT is supported
+```
+coincenter -m avax-usdt
 ```
 
 ### Ticker information

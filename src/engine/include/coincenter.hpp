@@ -37,7 +37,7 @@ class Coincenter {
   void process(const CoincenterParsedOptions &opts);
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
-  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur, ExchangeNameSpan exchangeNames);
+  MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 
   /// Retrieve ticker information for given selected public exchanges, or all if empty.
   ExchangeTickerMaps getTickerInformation(ExchangeNameSpan exchangeNames);

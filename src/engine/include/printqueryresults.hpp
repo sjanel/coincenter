@@ -9,7 +9,7 @@ class QueryResultPrinter {
  public:
   explicit QueryResultPrinter(bool doPrint) : _doPrint(doPrint) {}
 
-  void printMarkets(CurrencyCode cur, const MarketsPerExchange &marketsPerExchange);
+  void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange);
 
   void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates);
 

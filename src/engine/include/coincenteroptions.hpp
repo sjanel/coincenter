@@ -113,8 +113,10 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"General", 1}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
                                                     .append(ToString<string>(kDefaultRepeatDurationSeconds)).append("s)")},  
                                                   &OptValueType::repeat_time},
-       {{{"Public queries", 2}, "--markets", 'm', "<cur[,exch1,...]>", "Print markets involving given currency for all exchanges, or only the specified ones."}, 
-                                                                       &OptValueType::markets},
+       {{{"Public queries", 2}, "--markets", 'm', "<cur1[-cur2][,exch1,...]>", "Print markets involving given currencies for all exchanges, "
+                                                                               "or only the specified ones. "
+                                                                               "Either a single currency or a full market can be specified."}, 
+                                                                                &OptValueType::markets},
 
        {{{"Public queries", 2}, "--orderbook", 'o', "<cur1-cur2[,exch1,...]>", "Print order book of currency pair for all exchanges offering "
                                                                                "this market, or only for specified exchanges."}, 
