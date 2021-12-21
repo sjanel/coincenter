@@ -30,7 +30,7 @@ class CoincenterParsedOptions {
   PrivateExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 
-  CurrencyCode marketsCurrency;
+  CurrencyCode marketsCurrency1, marketsCurrency2;
   PublicExchangeNames marketsExchanges;
 
   Market marketForOrderBook;

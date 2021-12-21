@@ -174,15 +174,21 @@ ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameS
   return conversionPathPerExchange;
 }
 
-MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur, ExchangeNameSpan exchangeNames) {
-  log::info("Query markets from {}", ConstructAccumulatedExchangeNames(exchangeNames));
+MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
+                                                     ExchangeNameSpan exchangeNames) {
+  string curStr(cur1.str());
+  if (cur2 != CurrencyCode()) {
+    curStr.push_back('-');
+    curStr.append(cur2.str());
+  }
+  log::info("Query markets with {} from {}", curStr, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MarketsPerExchange marketsPerExchange(selectedExchanges.size());
-  auto marketsWithCur = [cur](Exchange *e) {
+  auto marketsWithCur = [cur1, cur2](Exchange *e) {
     api::ExchangePublic::MarketSet markets = e->apiPublic().queryTradableMarkets();
     api::ExchangePublic::MarketSet ret;
     std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()),
-                 [cur](Market m) { return m.canTrade(cur); });
+                 [cur1, cur2](Market m) { return m.canTrade(cur1) && (cur2 == CurrencyCode() || m.canTrade(cur2)); });
     return std::make_pair(e, std::move(ret));
   };
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), marketsPerExchange.begin(),
@@ -408,9 +414,10 @@ void Coincenter::updateFileCaches() const {
 }
 
 void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
-  if (opts.marketsCurrency != CurrencyCode()) {
-    MarketsPerExchange marketsPerExchange = getMarketsPerExchange(opts.marketsCurrency, opts.marketsExchanges);
-    _queryResultPrinter.printMarkets(opts.marketsCurrency, marketsPerExchange);
+  if (opts.marketsCurrency1 != CurrencyCode()) {
+    MarketsPerExchange marketsPerExchange =
+        getMarketsPerExchange(opts.marketsCurrency1, opts.marketsCurrency2, opts.marketsExchanges);
+    _queryResultPrinter.printMarkets(opts.marketsCurrency1, opts.marketsCurrency2, marketsPerExchange);
   }
 
   if (opts.tickerForAll || !opts.tickerExchanges.empty()) {

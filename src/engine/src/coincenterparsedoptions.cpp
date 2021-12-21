@@ -65,7 +65,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
-    std::tie(marketsCurrency, marketsExchanges) = anyParser.getCurrencyCodePublicExchanges();
+    std::tie(marketsCurrency1, marketsCurrency2, marketsExchanges) = anyParser.getCurrencyCodesPublicExchanges();
   }
 
   if (!cmdLineOptions.orderbook.empty()) {

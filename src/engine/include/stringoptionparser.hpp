@@ -21,6 +21,7 @@ class StringOptionParser {
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
   using CurrencyCodePublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
+  using CurrencyCodesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, PublicExchangeNames>;
   using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
 
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
@@ -42,6 +43,8 @@ class StringOptionParser {
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
   CurrencyCodePublicExchanges getCurrencyCodePublicExchanges() const;
+
+  CurrencyCodesPublicExchanges getCurrencyCodesPublicExchanges() const;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
