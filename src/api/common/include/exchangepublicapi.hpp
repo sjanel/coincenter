@@ -106,6 +106,22 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);
 
+  /// Helper method to determine ordered Market from this exchange from a market string representation without currency
+  /// separator (for instance, "BTCEUR" should be guessed as a market with BTC as base currency, and EUR as price
+  /// currency)
+  /// @param marketStr the market string representation without separator
+  /// @param markets passed as non const reference for cache purposes, if the method is called in a loop.
+  ///                Give an empty market set at first call, markets will be retrieved only if necessary to avoid
+  ///                useless API calls.
+  std::optional<Market> determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
+                                                     CurrencyCode filterCur = CurrencyCode());
+
+  /// Helper method to retrieve a filtered market in the correct order from the exchange, according to optional filter
+  /// currencies. For base and quote currency of the returned market, it is possible to have a neutral currency, which
+  /// means that it has no constraints.
+  Market determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
+                                             CurrencyCode filterCur2 = CurrencyCode());
+
   MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }

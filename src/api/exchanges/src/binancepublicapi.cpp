@@ -232,8 +232,10 @@ json BinancePublic::GlobalInfosFunc::operator()() {
 
   sv = std::string_view(sv.begin() + startPos, sv.end());
 
+  const std::size_t svSize = sv.size();
+
   std::size_t endPos = 1;
-  for (int squareBracketCount = 1; squareBracketCount != 0; ++endPos) {
+  for (int squareBracketCount = 1; endPos < svSize && squareBracketCount != 0; ++endPos) {
     switch (sv[endPos]) {
       case '[':
         ++squareBracketCount;
@@ -476,10 +478,9 @@ BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbT
     MonetaryAmount amount(detail["qty"].get<std::string_view>(), m.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
     int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
-    PublicTrade::Type tradeType =
-        detail["isBuyerMaker"].get<bool>() ? PublicTrade::Type::kSell : PublicTrade::Type::kBuy;
+    TradeSide tradeSide = detail["isBuyerMaker"].get<bool>() ? TradeSide::kSell : TradeSide::kBuy;
 
-    ret.emplace_back(tradeType, amount, price,
+    ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::sort(ret.begin(), ret.end());

@@ -69,6 +69,11 @@ struct CoincenterCmdLineOptions {
   bool trade_sim{TradeOptions().isSimulation()};
 
   string deposit_info;
+
+  std::optional<string> opened_orders_info;
+  Duration orders_min_age{};
+  Duration orders_max_age{};
+
   string withdraw;
   string withdraw_fee;
 
@@ -151,7 +156,14 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Private queries", 3}, "--balance-cur", "<cur code>", "Print additional information with each asset "
                                                                 "converted to given currency, plus a total summary in this currency"}, 
                                                                 &OptValueType::balance_cur},
-
+       {{{"Private queries", 3}, "--orders-opened", "<cur1-cur2[,exch1,...]>", "Print opened orders with given selection criteria.\n"
+                                                               "All cur1, cur2 and exchanges are optional,"
+                                                               "returned opened orders will be filtered accordingly."}, 
+                                                                &OptValueType::opened_orders_info},
+       {{{"Private queries", 3}, "--orders-min-age", "<time>", "Only select orders with given minimum age.\n"}, 
+                                                                &OptValueType::orders_min_age},
+       {{{"Private queries", 3}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"}, 
+                                                                &OptValueType::orders_max_age},
        {{{"Trade", 4}, "--trade", 't', "<amt cur1-cur2[,exch1,...]>", "Single trade from given start amount on a list of exchanges, "
                                                                       "or all that have sufficient balance on cur1 if none provided.\n"
                                                                       "Order will be placed at limit price by default"}, &OptValueType::trade},

@@ -121,6 +121,64 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return w;
 }
 
+ExchangePrivate::OpenedOrders BinancePrivate::queryOpenedOrders(
+    const OpenedOrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params;
+  std::string_view cur1Str = openedOrdersConstraints.curStr1();
+  std::string_view cur2Str = openedOrdersConstraints.curStr2();
+  if (openedOrdersConstraints.isMarketDefined()) {
+    // Symbol (which corresponds to a market) is optional - however, it costs 40 credits if omitted
+    params.append("symbol", openedOrdersConstraints.market().assetsPairStr());
+  }
+  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
+                             "api/v3/openOrders", std::move(params));
+
+  vector<OpenedOrder> openedOrders;
+  ExchangePublic::MarketSet markets;
+  openedOrders.reserve(result.size());
+  for (const json& orderDetails : result) {
+    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
+    std::size_t cur1Pos = marketStr.find(cur1Str);
+    if (openedOrdersConstraints.isCur1Defined() && cur1Pos == std::string_view::npos) {
+      continue;
+    }
+    if (openedOrdersConstraints.isCur2Defined() && marketStr.find(cur2Str) == std::string_view::npos) {
+      continue;
+    }
+    int64_t millisecondsSinceEpoch = orderDetails["time"].get<int64_t>();
+
+    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    std::optional<Market> optMarket =
+        _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
+
+    CurrencyCode volumeCur;
+    CurrencyCode priceCur;
+
+    if (optMarket) {
+      volumeCur = optMarket->base();
+      priceCur = optMarket->quote();
+    } else {
+      continue;
+    }
+
+    MonetaryAmount matchedVolume(orderDetails["executedQty"].get<std::string_view>(), volumeCur);
+    MonetaryAmount originalVolume(orderDetails["origQty"].get<std::string_view>(), volumeCur);
+    MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    TradeSide side = orderDetails["side"].get<std::string_view>() == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
+
+    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+  }
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
+}
+
 ExchangePublic::WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, _exchangePublic._commonInfo.getBestBaseURL(),
                              "sapi/v1/asset/assetDetail");
@@ -285,7 +343,7 @@ TradedAmounts BinancePrivate::parseTrades(Market m, CurrencyCode fromCurrencyCod
   } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
     detailTradedInfo.tradedTo -= fee;
   } else {
-    log::warn("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
+    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
   }
   return detailTradedInfo;
 }

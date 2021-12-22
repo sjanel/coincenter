@@ -31,6 +31,7 @@ void PublicTest(KucoinPublic &kucoinPublic) {
 void PrivateTest(KucoinPrivate &kucoinPrivate) {
   EXPECT_NO_THROW(kucoinPrivate.getAccountBalance());
   EXPECT_NO_THROW(kucoinPrivate.queryDepositWallet("XRP"));
+  EXPECT_NO_THROW(kucoinPrivate.queryOpenedOrders(OpenedOrdersConstraints()));
   TradeOptions tradeOptions(TradeMode::kSimulation);
   MonetaryAmount smallFrom("0.1ETH");
   EXPECT_EQ(kucoinPrivate.trade(smallFrom, "BTC", tradeOptions).tradedFrom, smallFrom);

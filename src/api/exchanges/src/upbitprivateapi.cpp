@@ -168,6 +168,53 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
+ExchangePrivate::OpenedOrders UpbitPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params{{"state", "wait"}};
+
+  if (openedOrdersConstraints.isCur1Defined()) {
+    ExchangePublic::MarketSet markets;
+    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
+                                                                              openedOrdersConstraints.cur2());
+
+    if (filterMarket.base() != CurrencyCode() && filterMarket.quote() != CurrencyCode()) {
+      params.append("market", filterMarket.reverse().assetsPairStr('-'));
+    }
+  }
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "orders", std::move(params));
+
+  vector<OpenedOrder> openedOrders;
+  for (const json& orderDetails : data) {
+    std::string_view marketStr = orderDetails["market"].get<std::string_view>();
+    std::size_t dashPos = marketStr.find('-');
+    assert(dashPos != std::string_view::npos);
+    CurrencyCode priceCur(std::string_view(marketStr.data(), dashPos));
+    CurrencyCode volumeCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+
+    if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+      continue;
+    }
+
+    // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
+    OpenedOrder::TimePoint placedTime =
+        FromString(orderDetails["created_at"].get<string>().c_str(), "%Y-%m-%dT%H:%M:%S");
+    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    MonetaryAmount originalVolume(orderDetails["volume"].get<std::string_view>(), volumeCur);
+    MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
+    MonetaryAmount matchedVolume = originalVolume - remainingVolume;
+    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+
+    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+  }
+  openedOrders.shrink_to_fit();
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
+}
+
 PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);

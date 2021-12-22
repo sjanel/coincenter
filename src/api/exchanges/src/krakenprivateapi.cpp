@@ -172,6 +172,56 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
+ExchangePrivate::OpenedOrders KrakenPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+  json data = PrivateQuery(_curlHandle, _apiKey, "OpenOrders", {{"trades", "true"}});
+  auto openedPartIt = data.find("open");
+  vector<OpenedOrder> openedOrders;
+  if (openedPartIt != data.end()) {
+    ExchangePublic::MarketSet markets;
+
+    openedOrders.reserve(openedPartIt->size());
+    for (const auto& [orderIdStr, orderDetails] : openedPartIt->items()) {
+      std::string_view marketStr = orderDetails["descr"]["pair"].get<std::string_view>();
+
+      std::optional<Market> optMarket =
+          _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
+
+      CurrencyCode volumeCur;
+      CurrencyCode priceCur;
+
+      if (optMarket) {
+        volumeCur = optMarket->base();
+        priceCur = optMarket->quote();
+        if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+
+      MonetaryAmount originalVolume(orderDetails["vol"].get<std::string_view>(), volumeCur);
+      MonetaryAmount matchedVolume(orderDetails["vol_exec"].get<std::string_view>(), volumeCur);
+      MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+      TradeSide side =
+          orderDetails["descr"]["type"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+
+      int64_t secondsSinceEpoch = static_cast<int64_t>(orderDetails["opentm"].get<double>());
+
+      OpenedOrder::TimePoint placedTime{std::chrono::seconds(secondsSinceEpoch)};
+      if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+        continue;
+      }
+
+      openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+    }
+  }
+
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
+}
+
 PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
@@ -257,7 +307,6 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
 
 OrderInfo KrakenPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
   PrivateQuery(_curlHandle, _apiKey, "CancelOrder", {{"txid", orderId}});
-  // {"error":[],"result":{"count":1}}
   return queryOrderInfo(orderId, tradeInfo, QueryOrder::kClosedThenOpened);
 }
 
@@ -266,7 +315,7 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo&
   const CurrencyCode toCurrencyCode = tradeInfo.toCurrencyCode;
   const Market m = tradeInfo.m;
 
-  json ordersRes = queryOrdersData(m, fromCurrencyCode, tradeInfo.userRef, orderId, queryOrder);
+  json ordersRes = queryOrdersData(tradeInfo.userRef, orderId, queryOrder);
   const bool orderInOpenedPart = ordersRes.contains("open") && ordersRes["open"].contains(orderId);
   const json& orderJson = orderInOpenedPart ? ordersRes["open"][orderId] : ordersRes["closed"][orderId];
   MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), m.base());             // always in base currency
@@ -290,29 +339,20 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo&
   return orderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(Market, CurrencyCode, int64_t userRef, const OrderId& orderId,
-                                    QueryOrder queryOrder) {
-  constexpr int kNbMaxRetriesQueryOrders = 10;
+json KrakenPrivate::queryOrdersData(int64_t userRef, const OrderId& orderId, QueryOrder queryOrder) {
+  static constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
   CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};
-  const bool kOpenedFirst = queryOrder == QueryOrder::kOpenedThenClosed;
-  const std::string_view kFirstQueryFullName = kOpenedFirst ? "OpenOrders" : "ClosedOrders";
+  const bool isOpenedFirst = queryOrder == QueryOrder::kOpenedThenClosed;
+  const std::string_view firstQueryFullName = isOpenedFirst ? "OpenOrders" : "ClosedOrders";
   do {
-    json data = PrivateQuery(_curlHandle, _apiKey, kFirstQueryFullName, ordersPostData);
-    /*
-     {"error":[],"result":{"closed":{"OFA3RW-ZJ5OF-RLZ2N5":{"refid":null,"userref":1616887973,"status":"closed","reason":null,"opentm":1616887987.0551,"closetm":1616887987.0562,"starttm":0,"expiretm":1616888001,"descr":{"pair":"XRPETH","type":"buy","ordertype":"market","price":"0","price2":"0","leverage":"none","order":"buy
-     24.96099843 XRPETH @
-     market","close":""},"vol":"24.96099843","vol_exec":"24.96099843","cost":"0.0080124","fee":"0.0000208","price":"0.0003210","stopprice":"0.0000000000","limitprice":"0.0000000000","misc":"","oflags":"fciq","trades":["TLEW2Y-T6E5D-FFS5L6"]},"OWPCKX-UKXP4-7RSVOE":{"refid":null,"userref":1616887973,"status":"canceled","reason":"User
-     requested","opentm":1616887973.6032,"closetm":1616887986.248,"starttm":0,"expiretm":1616887988,"descr":{"pair":"XRPETH","type":"buy","ordertype":"limit","price":"0.0003205","price2":"0","leverage":"none","order":"buy
-     24.96099843 XRPETH @ limit
-     0.0003205","close":""},"vol":"24.96099843","vol_exec":"0.00000000","cost":"0.0000000000","fee":"0.0000000000","price":"0.0000000000","stopprice":"0.0000000000","limitprice":"0.0000000000","misc":"","oflags":"fciq"}},"count":2}}
-    */
-    const json& firstOrders = data[kOpenedFirst ? "open" : "closed"];
+    json data = PrivateQuery(_curlHandle, _apiKey, firstQueryFullName, ordersPostData);
+    const json& firstOrders = data[isOpenedFirst ? "open" : "closed"];
     bool foundOrder = firstOrders.contains(orderId);
     if (!foundOrder) {
-      const std::string_view kSecondQueryFullName = kOpenedFirst ? "ClosedOrders" : "OpenOrders";
-      data.update(PrivateQuery(_curlHandle, _apiKey, kSecondQueryFullName, ordersPostData));
-      const json& secondOrders = data[kOpenedFirst ? "closed" : "open"];
+      const std::string_view secondQueryFullName = isOpenedFirst ? "ClosedOrders" : "OpenOrders";
+      data.update(PrivateQuery(_curlHandle, _apiKey, secondQueryFullName, ordersPostData));
+      const json& secondOrders = data[isOpenedFirst ? "closed" : "open"];
       foundOrder = secondOrders.contains(orderId);
     }
 

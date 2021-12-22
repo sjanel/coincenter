@@ -22,7 +22,7 @@ namespace {
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode::kNeutral, std::string_view urlOpts = "") {
   string method_url(BithumbPublic::kUrlBase);
-  method_url.append("/public/");
+  method_url.append("public/");
   method_url.append(endpoint);
   method_url.push_back('/');
   method_url.append(base.str());
@@ -129,7 +129,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
     std::size_t nextCoinSep = s.find(kCoinSep, endP);
     if (nextRightOutFee > nextCoinSep) {
       // This means no withdraw fee data, probably 0 ?
-      ret.insert_or_assign(coinAcro, MonetaryAmount("0", coinAcro));
+      ret.insert_or_assign(coinAcro, MonetaryAmount(0, coinAcro));
       continue;
     }
     p = s.find(kFeeSep, endP);
@@ -141,7 +141,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
     std::string_view withdrawFee(s.begin() + p, s.begin() + endP);
     MonetaryAmount ma(withdrawFee, coinAcro);
     log::debug("Updated Bithumb withdrawal fees {}", ma.str());
-    ret.insert_or_assign(coinAcro, std::move(ma));
+    ret.insert_or_assign(std::move(coinAcro), std::move(ma));
   }
   if (ret.empty()) {
     log::error("Unable to parse Bithumb withdrawal fees, syntax might have changed");
@@ -308,10 +308,9 @@ BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), m.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
     // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"
-    PublicTrade::Type tradeType =
-        detail["type"].get<std::string_view>() == "bid" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+    TradeSide tradeSide = detail["type"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeType, amount, price,
+    ret.emplace_back(tradeSide, amount, price,
                      EpochTime(std::string(detail["transaction_date"].get<std::string_view>())));
   }
   std::sort(ret.begin(), ret.end());

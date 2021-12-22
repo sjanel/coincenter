@@ -26,6 +26,9 @@ class UpbitPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  OpenedOrders queryOpenedOrders(
+      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
     return _withdrawalFeesCache.get(currencyCode);
   }

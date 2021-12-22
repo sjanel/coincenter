@@ -27,11 +27,14 @@ class BithumbPrivate : public ExchangePrivate {
 
   BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override;
+  CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 
   BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
+
+  OpenedOrders queryOpenedOrders(
+      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
 
   void updateCacheFile() const override;
 

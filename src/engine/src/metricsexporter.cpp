@@ -109,7 +109,7 @@ void MetricsExporter::exportLastTradesMetrics(Market m, const LastTradesPerExcha
     std::array<MonetaryAmount, 2> totalPrices{MonetaryAmount(0, m.quote()), MonetaryAmount(0, m.quote())};
     std::array<int, 2> nb{};
     for (const PublicTrade &trade : lastTrades) {
-      const int buyOrSell = trade.type() == PublicTrade::Type::kBuy ? 0 : 1;
+      const int buyOrSell = trade.side() == TradeSide::kBuy ? 0 : 1;
 
       totalAmounts[buyOrSell] += trade.amount();
       ++nb[buyOrSell];

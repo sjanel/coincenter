@@ -75,7 +75,7 @@ TEST(MonetaryAmountTest, NoDecimals) {
 
   EXPECT_EQ(*MonetaryAmount("0.620089", krwCode).amount(nbDecimals), 0);
   EXPECT_EQ(*MonetaryAmount("-31415.0", krwCode).amount(nbDecimals), -31415);
-  EXPECT_EQ(*MonetaryAmount("3", krwCode).amount(nbDecimals), 3);
+  EXPECT_EQ(*MonetaryAmount(3, krwCode).amount(nbDecimals), 3);
 
   EXPECT_EQ(MonetaryAmount("35.620089", krwCode).amount(18), std::nullopt);
 }
@@ -162,7 +162,7 @@ TEST(MonetaryAmountTest, Divide) {
             MonetaryAmount("-0.18485890758358997"));
   EXPECT_EQ(MonetaryAmount("487.76 EUR") / MonetaryAmount("1300.5 EUR"), MonetaryAmount("0.3750557477893118"));
   EXPECT_THROW(MonetaryAmount("100") / MonetaryAmount("0.00000000000000001"), exception);
-  EXPECT_EQ(MonetaryAmount("10") / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
+  EXPECT_EQ(MonetaryAmount(10) / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
   EXPECT_EQ(MonetaryAmount("1000000000 KRW") / MonetaryAmount("922337203685477580 KRW"),
             MonetaryAmount("0.00000000108420217"));
 }
@@ -172,18 +172,18 @@ TEST(MonetaryAmountTest, Multiply) {
             MonetaryAmount("14.8785", CurrencyCode("ETH")));
   EXPECT_EQ(MonetaryAmount("79871.9000917457") * MonetaryAmount("-34.141590974"),
             MonetaryAmount("-2726953.66542788469"));
-  EXPECT_THROW(MonetaryAmount("1", "EUR") * MonetaryAmount("2", "ETH"), exception);
+  EXPECT_THROW(MonetaryAmount(1, "EUR") * MonetaryAmount(2, "ETH"), exception);
 }
 
 TEST(MonetaryAmountTest, Convert) {
-  EXPECT_EQ(MonetaryAmount("2", "ETH").convertTo(MonetaryAmount("1600", "EUR")), MonetaryAmount("3200", "EUR"));
+  EXPECT_EQ(MonetaryAmount(2, "ETH").convertTo(MonetaryAmount("1600", "EUR")), MonetaryAmount("3200", "EUR"));
   EXPECT_EQ(MonetaryAmount("1500", "EUR").convertTo(MonetaryAmount("0.0005", "ETH")), MonetaryAmount("0.75", "ETH"));
 }
 
 TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("804.62EUR"), MonetaryAmount("804.62", "EUR"));
   EXPECT_EQ(MonetaryAmount("-210.50 CAKE"), MonetaryAmount("-210.50", "CAKE"));
-  EXPECT_EQ(MonetaryAmount("05AUD"), MonetaryAmount("5", "AUD"));
+  EXPECT_EQ(MonetaryAmount("05AUD"), MonetaryAmount(5, "AUD"));
   EXPECT_EQ(MonetaryAmount("746REPV2"), MonetaryAmount("746", "REPV2"));
 }
 
@@ -199,7 +199,7 @@ TEST(MonetaryAmountTest, StepRounding) {
             MonetaryAmount("12.4 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kDown),
             MonetaryAmount("-23.5 EUR"));
-  EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kDown),
+  EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kDown),
             MonetaryAmount("-24 EUR"));
   EXPECT_EQ(MonetaryAmount("-927.47 EUR").round(MonetaryAmount("0.007"), MonetaryAmount::RoundType::kUp),
             MonetaryAmount("-927.465 EUR"));
@@ -208,17 +208,17 @@ TEST(MonetaryAmountTest, StepRounding) {
             MonetaryAmount("12.3 EUR"));
   EXPECT_EQ(MonetaryAmount("12.58 EUR").round(MonetaryAmount("0.1"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("12.6 EUR"));
-  EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kNearest),
+  EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("13 EUR"));
   EXPECT_EQ(MonetaryAmount("12.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("12.5 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-23.5 EUR"));
-  EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kNearest),
+  EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-24 EUR"));
-  EXPECT_EQ(MonetaryAmount("-23.6 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kNearest),
+  EXPECT_EQ(MonetaryAmount("-23.6 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-24 EUR"));
-  EXPECT_EQ(MonetaryAmount("-23.1 EUR").round(MonetaryAmount("1"), MonetaryAmount::RoundType::kNearest),
+  EXPECT_EQ(MonetaryAmount("-23.1 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-23 EUR"));
 }
 
@@ -256,7 +256,7 @@ TEST(MonetaryAmountTest, Truncate) {
   a.truncate(6);
   EXPECT_EQ(a, MonetaryAmount("0.000082"));
   a.truncate(4);
-  EXPECT_EQ(a, MonetaryAmount("0"));
+  EXPECT_EQ(a, MonetaryAmount());
   EXPECT_TRUE(a.isZero());
   EXPECT_EQ(
       MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode(), 18)
@@ -269,7 +269,7 @@ TEST(MonetaryAmountTest, Truncate) {
 }
 
 TEST(MonetaryAmountTest, PositiveAmountStr) {
-  EXPECT_EQ(MonetaryAmount("7").amountStr(), "7");
+  EXPECT_EQ(MonetaryAmount(7).amountStr(), "7");
   EXPECT_EQ(MonetaryAmount("9204.1260").amountStr(), "9204.126");
   EXPECT_EQ(MonetaryAmount("0.709").amountStr(), "0.709");
   EXPECT_EQ(MonetaryAmount("0.0").amountStr(), "0");

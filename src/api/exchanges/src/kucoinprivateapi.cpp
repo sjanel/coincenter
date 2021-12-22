@@ -168,6 +168,58 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
+ExchangePrivate::OpenedOrders KucoinPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params{{"status", "active"}, {"tradeType", "TRADE"}};
+
+  if (openedOrdersConstraints.isCur1Defined()) {
+    ExchangePublic::MarketSet markets;
+    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
+                                                                              openedOrdersConstraints.cur2());
+
+    if (filterMarket.base() != CurrencyCode() && filterMarket.quote() != CurrencyCode()) {
+      params.append("symbol", filterMarket.assetsPairStr('-'));
+    }
+  }
+  if (openedOrdersConstraints.isPlacedTimeDefined()) {
+    params.append("startAt", std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 openedOrdersConstraints.placedAfter().time_since_epoch())
+                                 .count());
+  }
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params));
+
+  vector<OpenedOrder> openedOrders;
+  for (const json& orderDetails : data["items"]) {
+    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();
+    std::size_t dashPos = marketStr.find('-');
+    assert(dashPos != std::string_view::npos);
+    CurrencyCode volumeCur(std::string_view(marketStr.data(), dashPos));
+    CurrencyCode priceCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+
+    if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+      continue;
+    }
+
+    int64_t millisecondsSinceEpoch = orderDetails["createdAt"].get<int64_t>();
+
+    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    MonetaryAmount originalVolume(orderDetails["size"].get<std::string_view>(), volumeCur);
+    MonetaryAmount matchedVolume(orderDetails["dealSize"].get<std::string_view>(), volumeCur);
+    MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    TradeSide side = orderDetails["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+
+    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+  }
+  openedOrders.shrink_to_fit();
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
+}
+
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);

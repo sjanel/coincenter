@@ -283,10 +283,9 @@ KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
     MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
     // time is in nanoseconds
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
-    PublicTrade::Type tradeType =
-        detail["side"].get<std::string_view>() == "buy" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+    TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeType, amount, price,
+    ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::sort(ret.begin(), ret.end());

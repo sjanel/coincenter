@@ -163,6 +163,22 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName
   return ret;
 }
 
+OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+                                                    const OpenedOrdersConstraints &openedOrdersConstraints) {
+  log::info("Query opened orders matching {} on {}", openedOrdersConstraints.str(),
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  OpenedOrdersPerExchange ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [openedOrdersConstraints](Exchange *e) {
+                   return std::make_pair(e, e->apiPrivate().queryOpenedOrders(openedOrdersConstraints));
+                 });
+
+  return ret;
+}
+
 ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
   log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
@@ -464,6 +480,13 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     WalletPerExchange walletPerExchange = getDepositInfo(opts.depositInfoPrivateExchanges, opts.depositCurrency);
 
     _queryResultPrinter.printDepositInfo(opts.depositCurrency, walletPerExchange);
+  }
+
+  if (opts.queryOpenedOrders) {
+    OpenedOrdersPerExchange openedOrdersPerExchange =
+        getOpenedOrders(opts.openedOrdersPrivateExchanges, opts.openedOrdersConstraints);
+
+    _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
   }
 
   if (opts.withdrawFeeCur != CurrencyCode()) {

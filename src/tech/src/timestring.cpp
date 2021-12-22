@@ -4,6 +4,8 @@
 
 #include <chrono>
 #include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "cct_exception.hpp"
 #include "stringhelpers.hpp"
@@ -32,6 +34,13 @@ string ToString(std::chrono::system_clock::time_point p, const char* format) {
   }
   buf.resize(bytesWritten);
   return buf;
+}
+
+std::chrono::system_clock::time_point FromString(const char* timeStr, const char* format) {
+  std::tm utc{};
+  std::stringstream ss{timeStr};
+  ss >> std::get_time(&utc, format);
+  return std::chrono::system_clock::from_time_t(std::mktime(&utc));  // TODO: fix issue of local time switch
 }
 
 Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay) {
