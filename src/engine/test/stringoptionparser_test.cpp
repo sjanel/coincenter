@@ -35,16 +35,16 @@ TEST(StringOptionParserTest, GetMonetaryAmountExchanges) {
 
 TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchanges) {
   EXPECT_EQ(
-      StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyCodePrivateExchanges(),
-      StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
+      StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyPrivateExchanges(),
+      StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
           MonetaryAmount("45.09ADA"), CurrencyCode("EUR"), PrivateExchangeNames(1, PrivateExchangeName("bithumb"))));
-  EXPECT_EQ(StringOptionParser("0.02btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyCodePrivateExchanges(),
-            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
+  EXPECT_EQ(StringOptionParser("0.02btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyPrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
                 MonetaryAmount("0.02BTC"), CurrencyCode("XLM"),
                 PrivateExchangeNames({PrivateExchangeName("upbit", "user1"), PrivateExchangeName("binance")})));
-  EXPECT_EQ(StringOptionParser("2500.5 eur-sol").getMonetaryAmountCurrencyCodePrivateExchanges(),
-            StringOptionParser::MonetaryAmountCurrencyCodePrivateExchanges(
-                MonetaryAmount("2500.5 EUR"), CurrencyCode("SOL"), PrivateExchangeNames()));
+  EXPECT_EQ(StringOptionParser("2500.5 eur-sol").getMonetaryAmountCurrencyPrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(MonetaryAmount("2500.5 EUR"),
+                                                                       CurrencyCode("SOL"), PrivateExchangeNames()));
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
@@ -61,31 +61,52 @@ TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
           MonetaryAmount("4.106ETH"), PrivateExchangeName("kraken", "user2"), PrivateExchangeName("huobi", "user3")));
 }
 
-TEST(StringOptionParserTest, GetCurrencyCodePublicExchanges) {
-  using CurrencyCodePublicExchanges = StringOptionParser::CurrencyCodePublicExchanges;
-  EXPECT_EQ(StringOptionParser("btc").getCurrencyCodePublicExchanges(),
-            CurrencyCodePublicExchanges("BTC", PublicExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyCodePublicExchanges(),
-            CurrencyCodePublicExchanges("EUR", PublicExchangeNames({"kraken_user1"})));
-  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyCodePublicExchanges(),
-            CurrencyCodePublicExchanges("EUR", PublicExchangeNames({"binance", "huobi"})));
+TEST(StringOptionParserTest, GetCurrencyPublicExchanges) {
+  using CurrencyPublicExchanges = StringOptionParser::CurrencyPublicExchanges;
+  EXPECT_EQ(StringOptionParser("btc").getCurrencyPublicExchanges(),
+            CurrencyPublicExchanges("BTC", PublicExchangeNames()));
+  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyPublicExchanges(),
+            CurrencyPublicExchanges("EUR", PublicExchangeNames({"kraken_user1"})));
+  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyPublicExchanges(),
+            CurrencyPublicExchanges("EUR", PublicExchangeNames({"binance", "huobi"})));
 }
 
 TEST(StringOptionParserTest, GetCurrencyCodesPublicExchanges) {
-  using CurrencyCodesPublicExchanges = StringOptionParser::CurrencyCodesPublicExchanges;
-  EXPECT_EQ(StringOptionParser("btc").getCurrencyCodesPublicExchanges(),
+  using CurrencyCodesPublicExchanges = StringOptionParser::CurrenciesPublicExchanges;
+  EXPECT_EQ(StringOptionParser("btc").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("BTC", CurrencyCode(), PublicExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyCodesPublicExchanges(),
+  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("EUR", CurrencyCode(), PublicExchangeNames({"kraken_user1"})));
-  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyCodesPublicExchanges(),
+  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("EUR", CurrencyCode(), PublicExchangeNames({"binance", "huobi"})));
 
-  EXPECT_EQ(StringOptionParser("avax-btc").getCurrencyCodesPublicExchanges(),
+  EXPECT_EQ(StringOptionParser("avax-btc").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("AVAX", "BTC", PublicExchangeNames()));
-  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrencyCodesPublicExchanges(),
+  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("BTC", "EUR", PublicExchangeNames({"kraken_user1"})));
-  EXPECT_EQ(StringOptionParser("xlm-eur,binance,huobi").getCurrencyCodesPublicExchanges(),
+  EXPECT_EQ(StringOptionParser("xlm-eur,binance,huobi").getCurrenciesPublicExchanges(),
             CurrencyCodesPublicExchanges("XLM", "EUR", PublicExchangeNames({"binance", "huobi"})));
+}
+
+TEST(StringOptionParserTest, GetCurrenciesPrivateExchanges) {
+  using CurrenciesPrivateExchanges = StringOptionParser::CurrenciesPrivateExchanges;
+  EXPECT_EQ(StringOptionParser("").getCurrenciesPrivateExchanges(false),
+            CurrenciesPrivateExchanges("", "", PrivateExchangeNames()));
+  EXPECT_EQ(
+      StringOptionParser("eur,kraken_user1").getCurrenciesPrivateExchanges(false),
+      CurrenciesPrivateExchanges("EUR", CurrencyCode(), PrivateExchangeNames({PrivateExchangeName("kraken_user1")})));
+  EXPECT_EQ(
+      StringOptionParser("eur,binance,huobi").getCurrenciesPrivateExchanges(false),
+      CurrenciesPrivateExchanges("EUR", CurrencyCode(),
+                                 PrivateExchangeNames({PrivateExchangeName("binance"), PrivateExchangeName("huobi")})));
+
+  EXPECT_EQ(StringOptionParser("avax-btc").getCurrenciesPrivateExchanges(),
+            CurrenciesPrivateExchanges("AVAX", "BTC", PrivateExchangeNames()));
+  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrenciesPrivateExchanges(),
+            CurrenciesPrivateExchanges("BTC", "EUR", PrivateExchangeNames({PrivateExchangeName("kraken_user1")})));
+  EXPECT_EQ(StringOptionParser("xlm-eur,binance,huobi").getCurrenciesPrivateExchanges(),
+            CurrenciesPrivateExchanges(
+                "XLM", "EUR", PrivateExchangeNames({PrivateExchangeName("binance"), PrivateExchangeName("huobi")})));
 }
 
 }  // namespace cct

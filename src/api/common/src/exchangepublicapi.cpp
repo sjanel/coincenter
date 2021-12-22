@@ -226,5 +226,97 @@ ExchangePublic::MarketPriceMap ExchangePublic::marketPriceMapFromMarketOrderBook
   return marketPriceMap;
 }
 
+std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
+                                                                   CurrencyCode filterCur) {
+  std::optional<Market> ret;
+  static constexpr int kMinimalCryptoAcronymLen = 3;
+
+  if (filterCur != CurrencyCode()) {
+    std::size_t firstCurLen;
+    std::string_view curStr = filterCur.str();
+    std::size_t curPos = marketStr.find(curStr);
+    if (curPos == 0) {
+      firstCurLen = curStr.size();
+    } else {
+      firstCurLen = marketStr.size() - curStr.size();
+    }
+    ret = Market(
+        _coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), firstCurLen)),
+        _coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.begin() + firstCurLen, marketStr.end())));
+  } else if (markets.empty() && marketStr.size() == 2 * kMinimalCryptoAcronymLen) {
+    // optim (to avoid possible queryTradableMarkets): there is no crypto currency acronym shorter than 3 chars - we
+    // can split the "symbol" string currencies with 3 chars each
+    ret = Market(_coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), kMinimalCryptoAcronymLen)),
+                 _coincenterInfo.standardizeCurrencyCode(
+                     std::string_view(marketStr.data() + kMinimalCryptoAcronymLen, kMinimalCryptoAcronymLen)));
+  } else {  // General case, we need to query the markets
+    if (markets.empty()) {
+      // Without any currency, and because "marketStr" is returned without hyphen, there is no easy way to guess the
+      // currencies so we need to compare with the markets that exist
+      markets = queryTradableMarkets();
+    }
+    const int symbolStrSize = static_cast<int>(marketStr.size());
+    for (int splitCurPos = kMinimalCryptoAcronymLen; splitCurPos < symbolStrSize; ++splitCurPos) {
+      ret = Market(_coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), splitCurPos)),
+                   _coincenterInfo.standardizeCurrencyCode(
+                       std::string_view(marketStr.data() + splitCurPos, symbolStrSize - splitCurPos)));
+      if (markets.contains(*ret)) {
+        break;
+      }
+      ret = ret->reverse();
+      if (markets.contains(*ret)) {
+        break;
+      }
+    }
+    if (ret->quote().size() < kMinimalCryptoAcronymLen) {
+      log::error("Cannot determine market for {}, skipping", marketStr);
+      ret = std::nullopt;
+    }
+  }
+  return ret;
+}
+
+Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
+                                                           CurrencyCode filterCur2) {
+  if (markets.empty()) {
+    markets = queryTradableMarkets();
+  }
+
+  Market ret;
+
+  auto tryAppendBaseCurrency = [&](CurrencyCode cur) {
+    if (cur != CurrencyCode()) {
+      auto firstMarketIt =
+          std::partition_point(markets.begin(), markets.end(), [cur](Market m) { return m.base() < cur; });
+      if (firstMarketIt != markets.end() && firstMarketIt->base() == cur) {
+        ret = Market(cur, CurrencyCode());
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto tryAppendQuoteCurrency = [&](CurrencyCode cur1, CurrencyCode cur2) {
+    ret = Market(cur1, cur2);
+    if (!markets.contains(ret)) {
+      log::warn("No market {} on {}, return empty list of opened orders", name(), ret.assetsPairStr('-'));
+      ret = Market(cur1, CurrencyCode());
+    }
+  };
+
+  if (tryAppendBaseCurrency(filterCur1)) {
+    if (filterCur2 != CurrencyCode()) {
+      tryAppendQuoteCurrency(filterCur1, filterCur2);
+    }
+  } else {
+    if (tryAppendBaseCurrency(filterCur2)) {
+      tryAppendQuoteCurrency(filterCur2, filterCur1);
+    } else {
+      log::warn("Cannot find {} among {} markets", filterCur1.str(), name());
+    }
+  }
+  return ret;
+}
+
 }  // namespace api
 }  // namespace cct

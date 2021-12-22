@@ -11,6 +11,7 @@
 #include "exchangesecretsinfo.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "openedordersconstraints.hpp"
 #include "timehelpers.hpp"
 #include "tradeoptions.hpp"
 
@@ -51,6 +52,10 @@ class CoincenterParsedOptions {
 
   CurrencyCode depositCurrency;
   PrivateExchangeNames depositInfoPrivateExchanges;
+
+  bool queryOpenedOrders = false;
+  PrivateExchangeNames openedOrdersPrivateExchanges;
+  OpenedOrdersConstraints openedOrdersConstraints;
 
   MonetaryAmount amountToWithdraw;
   PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;

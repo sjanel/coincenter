@@ -15,7 +15,7 @@ namespace api {
 using BinanceAPI = TestAPI<BinancePublic>;
 
 namespace {
-void PublicTest(BinancePublic &binancePublic) {
+ExchangePublic::MarketSet PublicTest(BinancePublic &binancePublic) {
   EXPECT_NO_THROW(binancePublic.queryOrderBook(Market("BTC", "USDT")));
   EXPECT_GT(binancePublic.queryAllApproximatedOrderBooks().size(), 20U);
   ExchangePublic::WithdrawalFeeMap withdrawFees = binancePublic.queryWithdrawalFees();
@@ -27,9 +27,11 @@ void PublicTest(BinancePublic &binancePublic) {
   EXPECT_NO_THROW(binancePublic.queryLast24hVolume(markets.front()));
   EXPECT_NO_THROW(binancePublic.queryLastPrice(markets.back()));
   EXPECT_NO_THROW(binancePublic.queryLastTrades(markets.front()));
+  return markets;
 }
 
-void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
+void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic,
+                 const ExchangePublic::MarketSet &markets) {
   // We cannot expect anything from the balance, it may be empty and this is a valid response.
   EXPECT_NO_THROW(binancePrivate.getAccountBalance());
   auto currencies = binancePrivate.queryTradableCurrencies();
@@ -39,6 +41,11 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
   if (foundIt != currencies.end()) {
     EXPECT_NO_THROW(binancePrivate.queryDepositWallet(foundIt->standardCode()));
   }
+  if (!markets.empty()) {
+    Market m = markets.front();
+    EXPECT_NO_THROW(binancePrivate.queryOpenedOrders(OpenedOrdersConstraints(m.base(), m.quote())));
+  }
+
   TradeOptions tradeOptions(TradeMode::kSimulation);
   if (currencies.contains(CurrencyCode("BNB"))) {
     MonetaryAmount smallFrom("13.567ADA");
@@ -55,7 +62,7 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic) {
 
 /// Place all in the same process to avoid double queries in the public API
 TEST_F(BinanceAPI, Main) {
-  PublicTest(exchangePublic);
+  ExchangePublic::MarketSet markets = PublicTest(exchangePublic);
 
   constexpr char exchangeName[] = "binance";
   if (!apiKeyProvider.contains(exchangeName)) {
@@ -68,7 +75,7 @@ TEST_F(BinanceAPI, Main) {
 
   BinancePrivate binancePrivate(coincenterInfo, exchangePublic, firstAPIKey);
 
-  PrivateTest(binancePrivate, exchangePublic);
+  PrivateTest(binancePrivate, exchangePublic, markets);
 }
 
 }  // namespace api

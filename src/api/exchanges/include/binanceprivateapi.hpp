@@ -25,6 +25,9 @@ class BinancePrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  OpenedOrders queryOpenedOrders(
+      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+
   WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }

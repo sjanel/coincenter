@@ -5,18 +5,19 @@
 
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
+
+/// Class representing an executed trade that happened on one exchange, not necessarily ours.
 class PublicTrade {
  public:
-  enum class Type : int8_t { kBuy, kSell };
-
   using TimePoint = std::chrono::system_clock::time_point;
 
-  PublicTrade(Type tradeType, MonetaryAmount amount, MonetaryAmount price, TimePoint time)
-      : _time(time), _amount(amount), _price(price), _type(tradeType) {}
+  PublicTrade(TradeSide side, MonetaryAmount amount, MonetaryAmount price, TimePoint time)
+      : _time(time), _amount(amount), _price(price), _side(side) {}
 
-  Type type() const { return _type; }
+  TradeSide side() const { return _side; }
 
   MonetaryAmount amount() const { return _amount; }
   MonetaryAmount price() const { return _price; }
@@ -33,6 +34,6 @@ class PublicTrade {
   TimePoint _time;
   MonetaryAmount _amount;
   MonetaryAmount _price;
-  Type _type;
+  TradeSide _side;
 };
 }  // namespace cct

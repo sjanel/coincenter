@@ -133,6 +133,63 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
+ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params;
+
+  ExchangePublic::MarketSet markets;
+
+  if (openedOrdersConstraints.isCur1Defined()) {
+    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
+                                                                              openedOrdersConstraints.cur2());
+
+    if (filterMarket.base() != CurrencyCode() && filterMarket.quote() != CurrencyCode()) {
+      params.append("symbol", tolower(filterMarket.assetsPairStr()));
+    }
+  }
+
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
+  vector<OpenedOrder> openedOrders;
+  for (const json& orderDetails : data["data"]) {
+    string marketStr = toupper(orderDetails["symbol"].get<std::string_view>());
+
+    std::optional<Market> optMarket =
+        _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
+
+    CurrencyCode volumeCur;
+    CurrencyCode priceCur;
+
+    if (optMarket) {
+      volumeCur = optMarket->base();
+      priceCur = optMarket->quote();
+      if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+        continue;
+      }
+    } else {
+      continue;
+    }
+
+    int64_t millisecondsSinceEpoch = orderDetails["created-at"].get<int64_t>();
+
+    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    MonetaryAmount originalVolume(orderDetails["amount"].get<std::string_view>(), volumeCur);
+    MonetaryAmount matchedVolume(orderDetails["filled-amount"].get<std::string_view>(), volumeCur);
+    MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    TradeSide side =
+        orderDetails["type"].get<std::string_view>().starts_with("buy") ? TradeSide::kBuy : TradeSide::kSell;
+
+    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+  }
+
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
+}
+
 PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
@@ -201,8 +258,8 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& 
 
   json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
   const json& data = res["data"];
-  // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is ambiguous
-  // on this point). Let's handle both just to be sure.
+  // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is
+  // ambiguous on this point). Let's handle both just to be sure.
   std::string_view filledAmount, filledCashAmount, filledFees;
   if (data.contains("field-amount")) {
     filledAmount = data["field-amount"].get<std::string_view>();

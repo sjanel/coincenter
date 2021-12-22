@@ -11,6 +11,8 @@
 #include "exchangebase.hpp"
 #include "exchangepublicapi.hpp"
 #include "market.hpp"
+#include "openedorder.hpp"
+#include "openedordersconstraints.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
@@ -27,6 +29,7 @@ class APIKey;
 class ExchangePrivate : public ExchangeBase {
  public:
   using WithdrawalFeeMap = ExchangePublic::WithdrawalFeeMap;
+  using OpenedOrders = FlatSet<OpenedOrder>;
 
   ExchangePrivate(const ExchangePrivate &) = delete;
   ExchangePrivate &operator=(const ExchangePrivate &) = delete;
@@ -50,11 +53,15 @@ class ExchangePrivate : public ExchangeBase {
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
 
+  /// Get opened orders filtered according to given constraints
+  virtual OpenedOrders queryOpenedOrders(
+      const OpenedOrdersConstraints &openedOrdersConstraints = OpenedOrdersConstraints()) = 0;
+
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.
   /// This function is necessarily a blocking call (synchronous) as it returns the converted amount.
-  /// Because of this, it needs to expire at some point (and thus returning a non fully converted amount, or even 0 if
-  /// nothing was traded).
+  /// Because of this, it needs to expire at some point (and thus returning a non fully converted amount, or even 0
+  /// if nothing was traded).
   /// @param from the starting amount from which conversion will be done
   /// @param toCurrencyCode the destination currency
   /// @return trade amounts (fees deduced)

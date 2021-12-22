@@ -12,6 +12,7 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
@@ -45,13 +46,13 @@ string UrlEncode(std::string_view str) {
 
 string GetMethodURL(std::string_view methodName) {
   string methodUrl(BithumbPublic::kUrlBase);
-  methodUrl.push_back('/');
   methodUrl.append(methodName);
   return methodUrl;
 }
 
 string GetStrPost(std::string_view methodName, const CurlPostData& curlPostData) {
   string strPost = "endpoint=/";
+  strPost.reserve(methodName.size() + 1U + curlPostData.str().size());
   strPost.append(methodName);
   strPost.push_back('&');
   strPost.append(curlPostData.str());
@@ -68,7 +69,7 @@ CurlOptions InitCurlOptions(std::string_view methodName, const CurlPostData& cur
 std::pair<string, Nonce> GetStrData(std::string_view methodName, const CurlOptions& opts) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
   string strData;
-  strData.reserve(methodName.size() + 3 + opts.postdata.str().size() + nonce.size());
+  strData.reserve(methodName.size() + 3U + opts.postdata.str().size() + nonce.size());
   strData.push_back('/');
   strData.append(methodName);
 
@@ -236,17 +237,13 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
   }
 }
 
-CurrencyExchangeFlatSet BithumbPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
-
 BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
   BalancePortfolio balancePortfolio;
   for (const auto& [key, value] : result.items()) {
-    constexpr std::string_view prefixKey = "available_";
-    if (key.starts_with(prefixKey)) {
-      std::string_view keyCurrencyCode(key);
-      keyCurrencyCode.remove_prefix(prefixKey.size());
-      CurrencyCode currencyCode(keyCurrencyCode);
+    static constexpr std::string_view kPrefixKey = "available_";
+    if (key.starts_with(kPrefixKey)) {
+      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixKey.size(), key.end()));
       MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
       this->addBalance(balancePortfolio, amount, equiCurrency);
     }
@@ -257,9 +254,6 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, "info/wallet_address", _maxNbDecimalsUnitMap,
                              {{"currency", currencyCode.str()}});
-  // {"currency": "XRP","wallet_address": "xXXXxXXXXXxxxXXXxxxXXX&dt=123456789"}
-  // {"currency": "QTUM","wallet_address": "QMFxxxXXXXxxxxXXXXXxxxx"}
-  // {"currency":"EOS","wallet_address":"bithumbrecv1&memo=123456789"}
   std::string_view addressAndTag = result["wallet_address"].get<std::string_view>();
   std::size_t tagPos = addressAndTag.find('&');
   std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
@@ -277,6 +271,81 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
+}
+
+ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
+    const OpenedOrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params;
+
+  SmallVector<CurrencyCode, 1> orderCurrencies;
+
+  if (openedOrdersConstraints.isCur1Defined()) {
+    ExchangePublic::MarketSet markets;
+    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
+                                                                              openedOrdersConstraints.cur2());
+
+    if (filterMarket.base() != CurrencyCode()) {
+      orderCurrencies.push_back(filterMarket.base());
+      if (filterMarket.quote() != CurrencyCode()) {
+        params.append("payment_currency", filterMarket.quote().str());
+      }
+    }
+  } else {
+    // Trick: let's use balance query to guess where we can search for opened orders,
+    // by looking at "is_use" amounts. The only drawback is that we need to make one query for each currency,
+    // but it's better than nothing.
+    json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
+    for (const auto& [key, value] : result.items()) {
+      static constexpr std::string_view kPrefixKey = "in_use_";
+      if (key.starts_with(kPrefixKey)) {
+        CurrencyCode cur(std::string_view(key.begin() + kPrefixKey.size(), key.end()));
+        if (cur != "KRW") {
+          MonetaryAmount amount(value.get<std::string_view>(), cur);
+          if (!amount.isZero()) {
+            orderCurrencies.push_back(cur);
+          }
+        }
+      }
+    }
+  }
+
+  vector<OpenedOrder> openedOrders;
+  if (openedOrdersConstraints.isPlacedTimeDefined()) {
+    params.append("after", std::chrono::duration_cast<std::chrono::milliseconds>(
+                               openedOrdersConstraints.placedAfter().time_since_epoch())
+                               .count());
+  }
+  if (orderCurrencies.size() > 1) {
+    log::info("Will make {} opened order requests", orderCurrencies.size());
+  }
+  for (CurrencyCode volumeCur : orderCurrencies) {
+    params.set("order_currency", volumeCur.str());
+    json result = PrivateQuery(_curlHandle, _apiKey, "info/orders", _maxNbDecimalsUnitMap, params);
+
+    openedOrders.reserve(openedOrders.size() + result.size());
+    for (const json& orderDetails : result) {
+      int64_t microsecondsSinceEpoch = FromString<int64_t>(orderDetails["order_date"].get<std::string_view>());
+
+      OpenedOrder::TimePoint placedTime{std::chrono::microseconds(microsecondsSinceEpoch)};
+      if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+        continue;
+      }
+
+      CurrencyCode priceCur(orderDetails["payment_currency"].get<std::string_view>());
+      MonetaryAmount originalVolume(orderDetails["units"].get<std::string_view>(), volumeCur);
+      MonetaryAmount remainingVolume(orderDetails["units_remaining"].get<std::string_view>(), volumeCur);
+      MonetaryAmount matchedVolume = originalVolume - remainingVolume;
+      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+      TradeSide side = orderDetails["type"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+
+      openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+    }
+  }
+
+  openedOrders.shrink_to_fit();
+  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
+            openedOrdersConstraints.str());
+  return OpenedOrders(std::move(openedOrders));
 }
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,

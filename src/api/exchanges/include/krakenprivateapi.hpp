@@ -26,6 +26,9 @@ class KrakenPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  OpenedOrders queryOpenedOrders(
+      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+
  protected:
   bool isSimulatedOrderSupported() const override { return true; }
 
@@ -59,8 +62,7 @@ class KrakenPrivate : public ExchangePrivate {
     KrakenPublic& _exchangePublic;
   };
 
-  json queryOrdersData(Market m, CurrencyCode fromCurrencyCode, int64_t userRef, const OrderId& orderId,
-                       QueryOrder queryOrder);
+  json queryOrdersData(int64_t userRef, const OrderId& orderId, QueryOrder queryOrder);
 
   OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo, QueryOrder queryOrder);
 

@@ -50,6 +50,8 @@ class CurrencyCode {
     set(acronym);
   }
 
+  constexpr std::size_t size() const { return std::find(_data.begin(), _data.end(), '\0') - _data.begin(); }
+
   /// Get a string view of this CurrencyCode, trimmed.
   constexpr std::string_view str() const {
     return std::string_view(_data.begin(), std::find(_data.begin(), _data.end(), '\0'));

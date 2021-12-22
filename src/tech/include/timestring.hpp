@@ -15,6 +15,9 @@ using Nonce = string;
 ///    'YYYY-MM-DD HH:MM:SS'
 string ToString(std::chrono::system_clock::time_point p, const char* format = "%Y-%m-%d %H:%M:%S");
 
+/// Parse a string representation of a given time point and return a time_point.
+std::chrono::system_clock::time_point FromString(const char* timeStr, const char* format = "%Y-%m-%d %H:%M:%S");
+
 /// Create a Nonce as the number of milliseconds since Epoch time in string format.
 Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay = 0);
 

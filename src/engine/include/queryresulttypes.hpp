@@ -19,19 +19,32 @@ namespace cct {
 class Exchange;
 
 using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
+
 using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
+
 using MarketsPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::MarketSet>, kNbSupportedExchanges>;
+
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
+
 using MonetaryAmountPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
+
 using LastTradesPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::LastTradesVector>, kNbSupportedExchanges>;
+
 using ExchangeTickerMaps =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::MarketOrderBookMap>, kNbSupportedExchanges>;
+
 using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
+
 using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
+
+using OpenedOrdersPerExchange =
+    SmallVector<std::pair<const Exchange *, api::ExchangePrivate::OpenedOrders>, kTypicalNbPrivateAccounts>;
+
 using ConversionPathPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::ConversionPath>, kNbSupportedExchanges>;
+
 using WithdrawFeePerExchange = FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 }  // namespace cct

@@ -456,10 +456,9 @@ KrakenPublic::LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
     MonetaryAmount price(det[0].get<std::string_view>(), m.quote());
     MonetaryAmount amount(det[1].get<std::string_view>(), m.base());
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
-    PublicTrade::Type tradeType =
-        det[3].get<std::string_view>() == "b" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+    TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeType, amount, price,
+    ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::sort(ret.begin(), ret.end());

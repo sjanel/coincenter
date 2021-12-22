@@ -5,9 +5,16 @@
 
 namespace cct {
 
+TEST(CurrencyCodeTest, Neutral) {
+  CurrencyCode neutral;
+  EXPECT_EQ("", neutral.str());
+  EXPECT_EQ(0U, neutral.size());
+}
+
 TEST(CurrencyCodeTest, Instantiate) {
   CurrencyCode eur = "EUR";
   EXPECT_EQ("EUR", eur.str());
+  EXPECT_EQ(3U, eur.size());
   EXPECT_EQ("KRW", CurrencyCode(std::string_view("KRW")).str());
 }
 

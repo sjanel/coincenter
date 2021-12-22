@@ -27,6 +27,7 @@ Main features:
  - Balance
  - Trade (in several flavors)
  - Deposit information (address & tag)
+ - Opened orders
  - Withdraw (with check at destination that funds are well received)
   
 **Supported exchanges**
@@ -71,6 +72,7 @@ Main features:
       - [Multi trade all](#multi-trade-all)
       - [Trade simulation](#trade-simulation)
     - [Deposit information](#deposit-information)
+    - [Opened orders](#opened-orders)
     - [Withdraw coin](#withdraw-coin)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
@@ -414,6 +416,21 @@ If for a given exchange account a deposit address is not created yet, `coincente
 Only one deposit address per currency / account is returned.
 
 **Important note**: only addresses which are validated against the `depositaddresses.json` file will be returned (unless option `validatedepositaddressesinfile` is set to `false` in `static/exchangeconfig.json` file). This file allows you to control addresses to which `coincenter` can send funds, even if you have more deposit addresses already configured.
+
+### Opened orders
+
+Use option `--orders-opened` to retrieve and print currently opened orders on your accounts. You can provide only one currency code, two currency codes separated with a `-`, and / or a list of exchanges on which to filter the orders. It is possible to not specify anything as well, in this case, all opened orders will be returned.
+
+Orders can be filtered according to placed time with options `--orders-min-age` and `--orders-max-age` specifying respectively the minimum and maximum age of the orders.
+
+Examples:
+```bash
+coincenter --orders-opened --orders-min-age 10min     # Retrieve all opened orders placed within the last 10 minutes
+coincenter --orders-opened kraken                     # Retrieve all opened orders on Kraken only
+coincenter --orders-opened eth --orders-max-age 1w    # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
+coincenter --orders-opened xlm-usdt                   # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
+coincenter --orders-opened btc-krw,upbit,bithumb      # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
+```
 
 ### Withdraw coin
 

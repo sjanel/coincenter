@@ -218,10 +218,9 @@ UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrade
     MonetaryAmount amount(detail["trade_volume"].get<double>(), m.base());
     MonetaryAmount price(detail["trade_price"].get<double>(), m.quote());
     int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
-    PublicTrade::Type tradeType =
-        detail["ask_bid"].get<std::string_view>() == "BID" ? PublicTrade::Type::kBuy : PublicTrade::Type::kSell;
+    TradeSide tradeSide = detail["ask_bid"].get<std::string_view>() == "BID" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeType, amount, price,
+    ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::sort(ret.begin(), ret.end());

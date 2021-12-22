@@ -16,13 +16,13 @@ class StringOptionParser {
  public:
   using MarketExchanges = std::pair<Market, PublicExchangeNames>;
   using MonetaryAmountExchanges = std::pair<MonetaryAmount, PublicExchangeNames>;
-  using CurrencyCodeFromToPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
-  using MonetaryAmountCurrencyCodePrivateExchanges = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeNames>;
+  using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
+  using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
+  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeNames>;
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
-  using CurrencyCodePublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
-  using CurrencyCodesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, PublicExchangeNames>;
-  using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
+  using CurrencyPublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
+  using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, PublicExchangeNames>;
 
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
@@ -30,21 +30,21 @@ class StringOptionParser {
 
   PrivateExchangeNames getPrivateExchanges() const;
 
-  CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;
-
   MarketExchanges getMarketExchanges() const;
+
+  CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;
 
   MonetaryAmountExchanges getMonetaryAmountExchanges() const;
 
-  CurrencyCodeFromToPrivateExchanges getFromToCurrencyCodePrivateExchanges() const;
+  CurrenciesPrivateExchanges getCurrenciesPrivateExchanges(bool currenciesShouldBeSet = true) const;
 
-  MonetaryAmountCurrencyCodePrivateExchanges getMonetaryAmountCurrencyCodePrivateExchanges() const;
+  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges() const;
 
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
-  CurrencyCodePublicExchanges getCurrencyCodePublicExchanges() const;
+  CurrencyPublicExchanges getCurrencyPublicExchanges() const;
 
-  CurrencyCodesPublicExchanges getCurrencyCodesPublicExchanges() const;
+  CurrenciesPublicExchanges getCurrenciesPublicExchanges() const;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 

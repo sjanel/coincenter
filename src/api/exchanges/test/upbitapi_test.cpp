@@ -33,7 +33,7 @@ void PublicTest(UpbitPublic &upbitPublic) {
   // This unit test makes sure that static snapshot of upbit withdrawal fees looks up to date
   EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
   EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
+  static constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
   for (CurrencyCode code : kCurrencyCodesToTest) {
     if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
       EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
@@ -51,6 +51,7 @@ void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
   // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
   EXPECT_NO_THROW(upbitPrivate.getAccountBalance());
   EXPECT_TRUE(upbitPrivate.queryDepositWallet("XRP").hasTag());
+  EXPECT_NO_THROW(upbitPrivate.queryOpenedOrders(OpenedOrdersConstraints()));
   EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
   EXPECT_EQ(upbitPrivate.queryWithdrawalFee("ADA"), upbitPublic.queryWithdrawalFee("ADA"));
 

@@ -65,7 +65,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
-    std::tie(marketsCurrency1, marketsCurrency2, marketsExchanges) = anyParser.getCurrencyCodesPublicExchanges();
+    std::tie(marketsCurrency1, marketsCurrency2, marketsExchanges) = anyParser.getCurrenciesPublicExchanges();
   }
 
   if (!cmdLineOptions.orderbook.empty()) {
@@ -112,10 +112,10 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     StringOptionParser anyParser(tradeArgs);
     if (isTradeAll) {
       std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
-          anyParser.getFromToCurrencyCodePrivateExchanges();
+          anyParser.getCurrenciesPrivateExchanges();
     } else {
       std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeNames) =
-          anyParser.getMonetaryAmountCurrencyCodePrivateExchanges();
+          anyParser.getMonetaryAmountCurrencyPrivateExchanges();
     }
 
     TradeMode tradeMode = cmdLineOptions.trade_sim ? TradeMode::kSimulation : TradeMode::kReal;
@@ -132,6 +132,18 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     std::tie(depositCurrency, depositInfoPrivateExchanges) = anyParser.getCurrencyPrivateExchanges();
   }
 
+  if (cmdLineOptions.opened_orders_info) {
+    StringOptionParser anyParser(*cmdLineOptions.opened_orders_info);
+
+    CurrencyCode cur1, cur2;
+    std::tie(cur1, cur2, openedOrdersPrivateExchanges) = anyParser.getCurrenciesPrivateExchanges(false);
+
+    queryOpenedOrders = true;
+    openedOrdersConstraints = OpenedOrdersConstraints(
+        cur1, cur2, std::chrono::duration_cast<OpenedOrdersConstraints::Duration>(cmdLineOptions.orders_min_age),
+        std::chrono::duration_cast<OpenedOrdersConstraints::Duration>(cmdLineOptions.orders_max_age));
+  }
+
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
     std::tie(amountToWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =
@@ -140,7 +152,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (!cmdLineOptions.withdraw_fee.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw_fee);
-    std::tie(withdrawFeeCur, withdrawFeeExchanges) = anyParser.getCurrencyCodePublicExchanges();
+    std::tie(withdrawFeeCur, withdrawFeeExchanges) = anyParser.getCurrencyPublicExchanges();
   }
 
   if (!cmdLineOptions.last24hTradedVolume.empty()) {

@@ -25,7 +25,7 @@ class MarketOrderBookTestCase1 : public ::testing::Test {
       : marketOrderBook(Market("ETH", "EUR"),
                         {OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), false),
                          OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), false),
-                         OrderBookLine(MonetaryAmount("0", "ETH"), MonetaryAmount("1301.50", "EUR"), false),
+                         OrderBookLine(MonetaryAmount(0, "ETH"), MonetaryAmount("1301.50", "EUR"), false),
                          OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), true),
                          OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), true),
                          OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"), true)}) {}
@@ -47,44 +47,43 @@ TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountBoughtImmediately) {
   EXPECT_EQ(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1302.5", "EUR")),
             MonetaryAmount("5.1809", "ETH"));
   EXPECT_EQ(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1300.75", "EUR")),
-            MonetaryAmount("0", "ETH"));
-  EXPECT_THROW(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1", "ETH")), exception);
+            MonetaryAmount(0, "ETH"));
+  EXPECT_THROW(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount(1, "ETH")), exception);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountSoldImmediately) {
   EXPECT_EQ(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1301", "EUR")),
             MonetaryAmount("0.24", "ETH"));
-  EXPECT_EQ(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1", "EUR")),
+  EXPECT_EQ(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount(1, "EUR")),
             MonetaryAmount("0.89", "ETH"));
   EXPECT_EQ(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1303.5", "EUR")),
-            MonetaryAmount("0", "ETH"));
-  EXPECT_THROW(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount("1", "ETH")), exception);
+            MonetaryAmount(0, "ETH"));
+  EXPECT_THROW(marketOrderBook.computeCumulAmountSoldImmediatelyAt(MonetaryAmount(1, "ETH")), exception);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeMinPriceAtWhichAmountWouldBeBoughtImmediately) {
-  EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("0", "ETH")),
+  EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount(0, "ETH")),
             MonetaryAmount("1301", "EUR"));
   EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("0.1", "ETH")),
             MonetaryAmount("1301", "EUR"));
   EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("0.3", "ETH")),
             MonetaryAmount("1300.5", "EUR"));
-  EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("1", "ETH")),
-            std::optional<MonetaryAmount>());
+  EXPECT_EQ(marketOrderBook.computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount(1, "ETH")), std::nullopt);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeMaxPriceAtWhichAmountWouldBeBoughtImmediately) {
-  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount("0", "ETH")),
+  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount(0, "ETH")),
             MonetaryAmount("1302", "EUR"));
-  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount("1", "ETH")),
+  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount(1, "ETH")),
             MonetaryAmount("1302", "EUR"));
-  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount("10", "ETH")),
+  EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount(10, "ETH")),
             MonetaryAmount("1303", "EUR"));
   EXPECT_EQ(marketOrderBook.computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount("100", "ETH")),
-            std::optional<MonetaryAmount>());
+            std::nullopt);
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerAmount) {
-  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("4", "ETH")), std::optional<MonetaryAmount>());
+  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount(4, "ETH")), std::nullopt);
   EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("0.24", "ETH")), MonetaryAmount("1301 EUR"));
   EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("1000 EUR")), MonetaryAmount("1302 EUR"));
   EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("5000 EUR")),
@@ -92,7 +91,7 @@ TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerAmount) {
 }
 
 TEST_F(MarketOrderBookTestCase1, MoreComplexListOfPricesComputations) {
-  EXPECT_EQ(marketOrderBook.computePricesAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount("4", "ETH")),
+  EXPECT_EQ(marketOrderBook.computePricesAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount(4, "ETH")),
             AmountAtPriceVec({AmountAtPrice(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR")),
                               AmountAtPrice(MonetaryAmount("2.5991", "ETH"), MonetaryAmount("1302.50", "EUR"))}));
   EXPECT_EQ(marketOrderBook.computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("0.24", "ETH")),
@@ -163,7 +162,7 @@ class MarketOrderBookTestCase3 : public ::testing::Test {
 
 TEST_F(MarketOrderBookTestCase3, Convert) {
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("600000", "XLM")), std::nullopt);
-  EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("3", "BTC")), std::nullopt);
+  EXPECT_EQ(marketOrderBook.convert(MonetaryAmount(3, "BTC")), std::nullopt);
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("42050", "XLM")), MonetaryAmount("0.2985131371", "BTC"));
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("1.5405478119", "BTC")),
             MonetaryAmount("216266.409928471248", "XLM"));

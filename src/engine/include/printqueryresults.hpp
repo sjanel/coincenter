@@ -9,25 +9,27 @@ class QueryResultPrinter {
  public:
   explicit QueryResultPrinter(bool doPrint) : _doPrint(doPrint) {}
 
-  void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange);
+  void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
 
-  void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates);
+  void printMarketOrderBooks(const MarketOrderBookConversionRates &marketOrderBooksConversionRates) const;
 
-  void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps);
+  void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
 
-  void printBalance(const BalancePerExchange &balancePerExchange);
+  void printBalance(const BalancePerExchange &balancePerExchange) const;
 
-  void printDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange);
+  void printDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange) const;
 
-  void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange);
+  void printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange) const;
 
-  void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange);
+  void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 
-  void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange);
+  void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) const;
 
-  void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange);
+  void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange) const;
 
-  void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange);
+  void printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) const;
+
+  void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange) const;
 
  private:
   bool _doPrint;
