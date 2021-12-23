@@ -230,22 +230,34 @@ namespace {
 using ExchangeAmountPair = std::pair<Exchange *, MonetaryAmount>;
 using ExchangeAmountPairVector = SmallVector<ExchangeAmountPair, kTypicalNbPrivateAccounts>;
 
+template <class FilterFunc>
+void Filter(ExchangeAmountPairVector &exchangeAmountPairVector, FilterFunc &func) {
+  SmallVector<bool, kTypicalNbPrivateAccounts> canTradeExchanges(exchangeAmountPairVector.size());
+  std::transform(std::execution::par, exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
+                 canTradeExchanges.begin(), func);
+  FilterVector(exchangeAmountPairVector, canTradeExchanges);
+}
+
+void FilterConversionPaths(ExchangeAmountPairVector &exchangeAmountPairVector, CurrencyCode fromCurrency,
+                           CurrencyCode toCurrency) {
+  auto filterFunc = [fromCurrency, toCurrency](auto &exchangeAmountPair) {
+    return !exchangeAmountPair.second.isZero() &&
+           !exchangeAmountPair.first->apiPublic().findFastestConversionPath(fromCurrency, toCurrency).empty();
+  };
+  Filter(exchangeAmountPairVector, filterFunc);
+}
+
 void FilterMarkets(ExchangeAmountPairVector &exchangeAmountPairVector, CurrencyCode fromCurrency,
                    CurrencyCode toCurrency) {
-  // If multi trade is not allowed, we need to filter exchanges proposing this market
-  SmallVector<bool, kTypicalNbPrivateAccounts> canTradeExchanges(exchangeAmountPairVector.size());
   Market m(fromCurrency, toCurrency);
-  std::transform(std::execution::par, exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
-                 canTradeExchanges.begin(), [m](auto &exchangeAmountPair) {
-                   if (exchangeAmountPair.second.isZero()) {
-                     return false;
-                   }
-                   api::ExchangePublic::MarketSet markets =
-                       exchangeAmountPair.first->apiPublic().queryTradableMarkets();
-                   return markets.contains(m) || markets.contains(m.reverse());
-                 });
-
-  FilterVector(exchangeAmountPairVector, canTradeExchanges);
+  auto filterFunc = [m](auto &exchangeAmountPair) {
+    if (exchangeAmountPair.second.isZero()) {
+      return false;
+    }
+    api::ExchangePublic::MarketSet markets = exchangeAmountPair.first->apiPublic().queryTradableMarkets();
+    return markets.contains(m) || markets.contains(m.reverse());
+  };
+  Filter(exchangeAmountPairVector, filterFunc);
 }
 
 ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurrency,
@@ -287,7 +299,9 @@ TradedAmounts Coincenter::trade(MonetaryAmount startAmount, CurrencyCode toCurre
   ExchangeAmountPairVector exchangeAmountPairVector =
       ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
 
-  if (!tradeOptions.isMultiTradeAllowed()) {
+  if (tradeOptions.isMultiTradeAllowed()) {
+    FilterConversionPaths(exchangeAmountPairVector, fromCurrency, toCurrency);
+  } else {
     FilterMarkets(exchangeAmountPairVector, fromCurrency, toCurrency);
   }
 
