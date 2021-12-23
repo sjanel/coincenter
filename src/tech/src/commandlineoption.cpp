@@ -12,23 +12,24 @@ CommandLineOption::CommandLineOption(GroupNameAndPrio optionGroupName, std::stri
       _prio(optionGroupName.second),
       _shortName(shortName) {}
 
-CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view durationStr) {
-  if (durationStr.find('.') != std::string_view::npos) {
-    throw InvalidArgumentException("Time amount should be an integral value");
+namespace {
+constexpr char kInvalidTimeDurationUnitMsg[] =
+    "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
+    "min (minutes), s (seconds), ms (milliseconds), us (microseconds) and ns (nanoseconds)'";
+
+CommandLineOption::Duration ToDuration(int64_t timeAmount, std::string_view timeUnitStr) {
+  if (timeUnitStr == "y") {
+    return std::chrono::years(timeAmount);
   }
-  std::size_t endAmountPos = durationStr.find_first_of("hmnsu ");
-  std::size_t startTimeUnit = durationStr.find_first_of("hmnsu");
-  static constexpr char kInvalidTimeDurationUnitMsg[] =
-      "Cannot parse time duration. Accepted time units are 'h (hours), min (minutes), s (seconds), ms "
-      "(milliseconds), us "
-      "(microseconds) and ns "
-      "(nanoseconds)'";
-  if (endAmountPos == std::string_view::npos || startTimeUnit == std::string_view::npos) {
-    throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
+  if (timeUnitStr == "mon") {
+    return std::chrono::months(timeAmount);
   }
-  std::string_view timeAmountStr(durationStr.data(), endAmountPos);
-  int64_t timeAmount = FromString<int64_t>(timeAmountStr);
-  std::string_view timeUnitStr(durationStr.begin() + startTimeUnit, durationStr.end());
+  if (timeUnitStr == "w") {
+    return std::chrono::weeks(timeAmount);
+  }
+  if (timeUnitStr == "d") {
+    return std::chrono::days(timeAmount);
+  }
   if (timeUnitStr == "h") {
     return std::chrono::hours(timeAmount);
   }
@@ -48,6 +49,51 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
     return std::chrono::nanoseconds(timeAmount);
   }
   throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
+}
+}  // namespace
+
+CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view durationStr) {
+  if (durationStr.find('.') != std::string_view::npos) {
+    throw InvalidArgumentException("Time amount should be an integral value");
+  }
+
+  const std::size_t s = durationStr.size();
+  static constexpr Duration kZeroDuration = std::chrono::seconds(0);
+  Duration ret{kZeroDuration};
+  for (std::size_t p = 0; p < s;) {
+    std::size_t intFirst = p;
+
+    while (p < s && durationStr[p] >= '0' && durationStr[p] <= '9') {
+      ++p;
+    }
+    if (intFirst == p) {
+      throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
+    }
+    std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + p);
+    int64_t timeAmount = FromString<int64_t>(timeAmountStr);
+
+    while (p < s && durationStr[p] == ' ') {
+      ++p;
+    }
+    std::size_t unitFirst = p;
+    while (p < s && durationStr[p] >= 'a' && durationStr[p] <= 'z') {
+      ++p;
+    }
+    if (unitFirst == p) {
+      throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
+    }
+    std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + p);
+    ret += ToDuration(timeAmount, timeUnitStr);
+    while (p < s && durationStr[p] == ' ') {
+      ++p;
+    }
+  }
+
+  if (ret == kZeroDuration) {
+    throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
+  }
+
+  return ret;
 }
 
 bool CommandLineOption::matches(std::string_view optName) const {
