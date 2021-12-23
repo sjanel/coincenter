@@ -100,12 +100,17 @@ TEST_F(CommandLineOptionsParserTest, OptIntUnset) {
   EXPECT_FALSE(optInt.isPresent());
 }
 
+TEST_F(CommandLineOptionsParserTest, DurationOptionDays) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "37d"}).timeOpt, std::chrono::days(37));
+}
+
 TEST_F(CommandLineOptionsParserTest, DurationOptionHours) {
   EXPECT_EQ(createOptions({"coincenter", "--opt5", "12h"}).timeOpt, std::chrono::hours(12));
 }
 
 TEST_F(CommandLineOptionsParserTest, DurationOptionMinutesSpace) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "45 min"}).timeOpt, std::chrono::minutes(45));
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "1h45 min"}).timeOpt,
+            std::chrono::hours(1) + std::chrono::minutes(45));
 }
 
 TEST_F(CommandLineOptionsParserTest, DurationOptionSeconds) {
@@ -125,8 +130,13 @@ TEST_F(CommandLineOptionsParserTest, DurationOptionNanoseconds) {
             std::chrono::nanoseconds(100000000000000L));
 }
 
+TEST_F(CommandLineOptionsParserTest, DurationOptionLongTime) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt5", "3y9mon2w5min"}).timeOpt,
+            std::chrono::years(3) + std::chrono::months(9) + std::chrono::weeks(2) + std::chrono::minutes(5));
+}
+
 TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit1) {
-  EXPECT_THROW(createOptions({"coincenter", "--opt5", "13mon"}), InvalidArgumentException);
+  EXPECT_THROW(createOptions({"coincenter", "--opt5", "13z"}), InvalidArgumentException);
 }
 
 TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit2) {
