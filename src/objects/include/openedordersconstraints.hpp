@@ -12,12 +12,9 @@ class OpenedOrdersConstraints {
   using TimePoint = std::chrono::system_clock::time_point;
   using Duration = std::chrono::system_clock::duration;
 
-  /// Build default OpenedOrderConstraints: no constraints, matches all opened orders.
-  OpenedOrdersConstraints() = default;
-
   /// Build OpenedOrderConstraints based on given currency(ies) and placed after time
-  explicit OpenedOrdersConstraints(CurrencyCode cur1, CurrencyCode cur2 = CurrencyCode(), Duration minAge = Duration(),
-                                   Duration maxAge = Duration());
+  explicit OpenedOrdersConstraints(CurrencyCode cur1 = CurrencyCode(), CurrencyCode cur2 = CurrencyCode(),
+                                   Duration minAge = Duration(), Duration maxAge = Duration());
 
   TimePoint placedAfter() const { return _placedAfter; }
 
@@ -53,8 +50,8 @@ class OpenedOrdersConstraints {
   string str() const;
 
  private:
-  TimePoint _placedBefore{};
-  TimePoint _placedAfter{};
+  TimePoint _placedBefore;
+  TimePoint _placedAfter;
   CurrencyCode _cur1;
   CurrencyCode _cur2;
 };
