@@ -23,9 +23,9 @@ target_link_libraries(coincenter PUBLIC coincenter_objects)
 target_include_directories(coincenter PUBLIC include)
 
 set_target_properties(coincenter PROPERTIES 
-                                    VERSION ${PROJECT_VERSION}
-                                    COMPILE_DEFINITIONS_DEBUG "JSON_DEBUG;JSON_SAFE;JSON_ISO_STRICT"
-                                    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+                                 VERSION ${PROJECT_VERSION}
+                                 COMPILE_DEFINITIONS_DEBUG "JSON_DEBUG;JSON_SAFE;JSON_ISO_STRICT"
+                                 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )    
 
 add_unit_test(
@@ -35,4 +35,14 @@ add_unit_test(
     LIBRARIES
     coincenter_objects
     coincenter_tools
+)
+
+add_unit_test(
+    commandlineoptionsparser_test
+    src/commandlineoption.cpp
+    test/commandlineoptionsparser_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+    LIBRARIES
+    coincenter_tech
 )

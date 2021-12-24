@@ -185,8 +185,7 @@ ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrders
     openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
   }
 
-  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
-            openedOrdersConstraints.str());
+  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return OpenedOrders(std::move(openedOrders));
 }
 

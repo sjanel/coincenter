@@ -217,8 +217,7 @@ ExchangePrivate::OpenedOrders KrakenPrivate::queryOpenedOrders(const OpenedOrder
     }
   }
 
-  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
-            openedOrdersConstraints.str());
+  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return OpenedOrders(std::move(openedOrders));
 }
 

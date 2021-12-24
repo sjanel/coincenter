@@ -53,8 +53,8 @@ class OpenedOrdersConstraints {
   string str() const;
 
  private:
-  TimePoint _placedBefore;
-  TimePoint _placedAfter;
+  TimePoint _placedBefore{};
+  TimePoint _placedAfter{};
   CurrencyCode _cur1;
   CurrencyCode _cur2;
 };

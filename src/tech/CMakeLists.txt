@@ -23,14 +23,6 @@ add_unit_test(
 )
 
 add_unit_test(
-    commandlineoptionsparser_test
-    src/commandlineoption.cpp
-    test/commandlineoptionsparser_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
-
-add_unit_test(
     mathhelpers_test
     test/mathhelpers_test.cpp
 )

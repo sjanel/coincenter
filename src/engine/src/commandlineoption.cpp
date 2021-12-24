@@ -58,8 +58,7 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
   }
 
   const std::size_t s = durationStr.size();
-  static constexpr Duration kZeroDuration = std::chrono::seconds(0);
-  Duration ret{kZeroDuration};
+  Duration ret{};
   for (std::size_t p = 0; p < s;) {
     std::size_t intFirst = p;
 
@@ -89,7 +88,7 @@ CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view du
     }
   }
 
-  if (ret == kZeroDuration) {
+  if (ret == Duration()) {
     throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
   }
 
