@@ -217,15 +217,15 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
+  static constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
   string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(HttpRequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
-  constexpr std::string_view appBegJson = "application/json\">";
+  static constexpr std::string_view appBegJson = "application/json\">";
   string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
   std::string_view sv(first, s.end());
   std::size_t reduxPos = sv.find("redux\":");
   std::size_t ssrStorePos = sv.find("ssrStore\":", reduxPos);
-  constexpr std::string_view kCryptoFeeStart = "cryptoFee\":";
+  static constexpr std::string_view kCryptoFeeStart = "cryptoFee\":";
   std::size_t cryptoFeePos = sv.find(kCryptoFeeStart, ssrStorePos);
 
   std::size_t startPos = cryptoFeePos + kCryptoFeeStart.size();
@@ -235,7 +235,8 @@ json BinancePublic::GlobalInfosFunc::operator()() {
   const std::size_t svSize = sv.size();
 
   std::size_t endPos = 1;
-  for (int squareBracketCount = 1; endPos < svSize && squareBracketCount != 0; ++endPos) {
+  int squareBracketCount = 1;
+  for (; endPos < svSize && squareBracketCount != 0; ++endPos) {
     switch (sv[endPos]) {
       case '[':
         ++squareBracketCount;
@@ -246,6 +247,9 @@ json BinancePublic::GlobalInfosFunc::operator()() {
       default:
         break;
     }
+  }
+  if (squareBracketCount != 0) {
+    throw exception("JSON parsing error from Binance cryptoFee scraper");
   }
 
   return json::parse(std::string_view(sv.begin(), sv.begin() + endPos));

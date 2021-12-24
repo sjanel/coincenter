@@ -210,8 +210,7 @@ ExchangePrivate::OpenedOrders UpbitPrivate::queryOpenedOrders(const OpenedOrders
     openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
   }
   openedOrders.shrink_to_fit();
-  log::info("Retrieved {} opened orders from {} matching {}", openedOrders.size(), _exchangePublic.name(),
-            openedOrdersConstraints.str());
+  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return OpenedOrders(std::move(openedOrders));
 }
 
