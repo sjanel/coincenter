@@ -10,13 +10,23 @@ TEST(StringOptionParserTest, GetExchanges) {
   EXPECT_EQ(StringOptionParser("huobi_user1").getExchanges(), PublicExchangeNames({"huobi_user1"}));
 }
 
-TEST(StringOptionParserTest, GetPrivateExchanges) {
-  EXPECT_EQ(StringOptionParser("").getPrivateExchanges(), PrivateExchangeNames());
-  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").getPrivateExchanges(),
-            PrivateExchangeNames({PrivateExchangeName("bithumb"), PrivateExchangeName("binance", "user1")}));
-  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").getPrivateExchanges(),
-            PrivateExchangeNames({PrivateExchangeName("binance", "user2"), PrivateExchangeName("bithumb"),
-                                  PrivateExchangeName("binance", "user1")}));
+TEST(StringOptionParserTest, GetCurrencyPrivateExchanges) {
+  EXPECT_EQ(StringOptionParser("").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode(), PrivateExchangeNames()));
+  EXPECT_EQ(StringOptionParser("eur").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode("EUR"), PrivateExchangeNames()));
+  EXPECT_EQ(StringOptionParser("kraken1").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode("kraken1"), PrivateExchangeNames()));
+  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode(), PrivateExchangeNames({PrivateExchangeName("bithumb"),
+                                                                 PrivateExchangeName("binance", "user1")})));
+  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode(), PrivateExchangeNames({PrivateExchangeName("binance", "user2"),
+                                                                 PrivateExchangeName("bithumb"),
+                                                                 PrivateExchangeName("binance", "user1")})));
+  EXPECT_EQ(StringOptionParser("krw,Bithumb,binance_user1").getCurrencyPrivateExchanges(),
+            std::make_pair(CurrencyCode("KRW"), PrivateExchangeNames({PrivateExchangeName("bithumb"),
+                                                                      PrivateExchangeName("binance", "user1")})));
 }
 
 TEST(StringOptionParserTest, GetMarketExchanges) {

@@ -89,9 +89,10 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (cmdLineOptions.balance) {
     StringOptionParser anyParser(*cmdLineOptions.balance);
-    balancePrivateExchanges = anyParser.getPrivateExchanges();
-    balanceForAll = balancePrivateExchanges.empty();
-    balanceCurrencyCode = CurrencyCode(cmdLineOptions.balance_cur);
+    std::tie(balanceCurrencyCode, balancePrivateExchanges) = anyParser.getCurrencyPrivateExchanges();
+    if (balancePrivateExchanges.empty()) {
+      balanceForAll = true;
+    }
   }
 
   if (cmdLineOptions.nosecrets) {

@@ -348,10 +348,11 @@ coincenter --balance
 prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
 It is also possible to give a list of exchanges (comma separated) to print balance only on those ones.
 
-You can also specify an additional currency to which all assets will be converted to have a nice estimation of your total balance with `--balance-cur <curAcronym>`.
+You can also specify a currency to which all assets will be converted (if possible) to have a nice estimation of your total balance.
+The currency acronym should be at the first position of the comma separated values, the next ones being the accounts.
 For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*, launch:
 ```
-coincenter --balance kraken,bithumb --balance-cur eur
+coincenter --balance eur,kraken,bithumb
 ```
 
 ### Single Trade
@@ -466,7 +467,7 @@ Between each repeat you can set a waiting time with `--repeat-time` option which
 
 ### Get an overview of your portfolio in Korean Won
 ```
-coincenter -b --balance-cur krw
+coincenter -b krw
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy
