@@ -110,7 +110,8 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
 
 BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
                                           CurrencyCode equiCurrency) {
-  log::info("Query balance from {}", ConstructAccumulatedExchangeNames(privateExchangeNames));
+  log::info("Query balance from {}{}{}", ConstructAccumulatedExchangeNames(privateExchangeNames),
+            equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency.str());
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
     log::warn("Consider {} instead of stable coin {} as equivalent currency", optEquiCur->str(), equiCurrency.str());

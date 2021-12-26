@@ -35,11 +35,16 @@ std::string_view StrBeforeComma(std::string_view opt, std::size_t startPos, std:
 std::string_view StrEnd(std::string_view opt, std::size_t startPos) {
   return std::string_view(opt.begin() + startPos, opt.end());
 }
+
+bool IsExchangeName(std::string_view str) {
+  string lowerStr = tolower(str);
+  return std::any_of(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), [&lowerStr](std::string_view ex) {
+    return lowerStr.starts_with(ex) && (lowerStr.size() == ex.size() || lowerStr[ex.size()] == '_');
+  });
+}
 }  // namespace
 
 PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
-
-PrivateExchangeNames StringOptionParser::getPrivateExchanges() const { return GetPrivateExchanges(_opt); }
 
 StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() const {
   std::size_t commaPos = getNextCommaPos(0, false);
@@ -56,12 +61,19 @@ StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() con
 }
 
 StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPrivateExchanges() const {
+  std::string_view exchangesStr = _opt;
+  std::string_view curStr;
   std::size_t commaPos = getNextCommaPos(0, false);
-  std::string_view curStr(_opt.data(), commaPos == string::npos ? _opt.size() : commaPos);
-  std::string_view exchangesStr;
-  if (commaPos != string::npos) {
-    exchangesStr = std::string_view(_opt.data() + commaPos + 1, _opt.data() + _opt.size());
+  std::string_view firstStr(_opt.data(), commaPos == string::npos ? _opt.size() : commaPos);
+  if (!firstStr.empty() && !IsExchangeName(firstStr)) {
+    curStr = firstStr;
+    if (firstStr.size() == _opt.size()) {
+      exchangesStr = std::string_view();
+    } else {
+      exchangesStr = std::string_view(_opt.begin() + commaPos + 1, _opt.end());
+    }
   }
+
   return CurrencyPrivateExchanges(CurrencyCode(curStr), GetPrivateExchanges(exchangesStr));
 }
 
@@ -80,8 +92,7 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
   std::size_t startExchangesPos = 0;
   if (dashPos == string::npos && commaPos == string::npos && !_opt.empty()) {
     // Ambiguity to resolve - we assume there is no crypto acronym with the same name as an exchange
-    if (std::find(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), std::string_view(_opt)) ==
-        std::end(kSupportedExchanges)) {
+    if (!IsExchangeName(_opt)) {
       fromTradeCurrency = CurrencyCode(_opt);
       startExchangesPos = _opt.size();
     }

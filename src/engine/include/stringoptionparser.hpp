@@ -28,8 +28,6 @@ class StringOptionParser {
 
   PublicExchangeNames getExchanges() const;
 
-  PrivateExchangeNames getPrivateExchanges() const;
-
   MarketExchanges getMarketExchanges() const;
 
   CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;

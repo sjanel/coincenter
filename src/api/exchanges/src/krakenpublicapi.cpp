@@ -135,7 +135,6 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
   auto foundIt = withdrawalFeeMaps.find(currencyCode);
   if (foundIt == withdrawalFeeMaps.end()) {
-    // Probably the CSV file provided by Kraken is not up to date... There is not much we can do here.
     log::error("Unable to find {} withdrawal fee for {}", name(), currencyCode.str());
     return MonetaryAmount(0, currencyCode);
   }
@@ -143,119 +142,48 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
-  // Retrieve public file from Google Drive - Method found in
-  // https://gist.github.com/tanaikech/f0f2d122e05bf5f971611258c22c110f
-  constexpr char kWithdrawalFeesCSVUrl[] =
-      "https://drive.google.com/uc?export=download&id=1tkvmX25d3uV_SWS2NEyfRvrSO2t1P3PJ";
+  static constexpr char kWithdrawalFeesUrl[] = "https://withdrawalfees.com/exchanges/kraken";
 
-  CurlOptions curlOptions(HttpRequestType::kGet);
-  curlOptions.followLocation = true;
-  string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesCSVUrl, curlOptions);
+  string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesUrl, CurlOptions(HttpRequestType::kGet));
 
-  if (withdrawalFeesCsv.empty()) {
-    log::warn("Kraken withdrawal fees CSV file cannot be retrieved dynamically. URL has maybe changed?");
-    log::warn("Defaulted to hardcoded provided CSV file");
-    withdrawalFeesCsv =
-        File(_coincenterInfo.dataDir(), File::Type::kCache, "krakenwithdrawalfees.csv", File::IfNotFound::kThrow)
-            .read();
-  }
+  static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
+  static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
 
-  std::size_t assetPos = std::string_view::npos;
-  std::size_t minWithdrawAmountPos = std::string_view::npos;
-  std::size_t withdrawFeePos = std::string_view::npos;
-
-  bool isFirstLine = true;
-
-  // Let's parse this CSV manually (it's not so difficult)
   WithdrawalInfoMaps ret;
-  for (std::size_t nextLinePos = withdrawalFeesCsv.find('\n'), lineBegPos = 0;;
-       nextLinePos = withdrawalFeesCsv.find('\n', lineBegPos)) {
-    std::string_view line(std::next(withdrawalFeesCsv.begin(), lineBegPos),
-                          nextLinePos == std::string_view::npos ? withdrawalFeesCsv.end()
-                                                                : std::next(withdrawalFeesCsv.begin(), nextLinePos));
-    if (line.empty()) {
-      break;
-    }
-    if (line.back() == 13) {  // Windows style 'CR' end of line to be removed
-      line.remove_suffix(1);
-    }
 
-    CurrencyCode cur;
-    std::string_view withdrawFeeMinStr[2];
-    for (std::size_t commaPos = line.find(','), fieldBegPos = 0, fieldPos = 0;;
-         commaPos = line.find(',', fieldBegPos), ++fieldPos) {
-      std::string_view field(std::next(line.begin(), fieldBegPos),
-                             commaPos == std::string_view::npos ? line.end() : std::next(line.begin(), commaPos));
+  std::size_t searchPos = 0;
+  while ((searchPos = withdrawalFeesCsv.find(kBeginWithdrawalFeeHtmlTag, searchPos)) != string::npos) {
+    auto parseNextFee = [&withdrawalFeesCsv](std::size_t& begPos) {
+      static constexpr std::string_view kBeginFeeHtmlTag = "<div class=fee>";
+      static constexpr std::string_view kEndHtmlTag = "</div>";
 
-      // Lines should look like this:
-      //  USDT,5,2.5
-      //  USDT (ERC20),5,2.5
-      //  USDT (OMNI),10,5
-      //  USDT (TRC20),2,1
-      // In case several variations of coins are present, just take the max for all as a defensive assumption.
+      begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos) + kBeginFeeHtmlTag.size();
+      assert(begPos != string::npos);
+      std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
+      assert(endPos != string::npos);
+      MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
+      begPos = endPos + kEndHtmlTag.size();
+      return ret;
+    };
 
-      if (isFirstLine) {
-        if (field == "Asset") {
-          assetPos = fieldPos;
-        } else if (field == "Minimum") {
-          minWithdrawAmountPos = fieldPos;
-        } else if (field == "Fee") {
-          withdrawFeePos = fieldPos;
-        }
-      } else {
-        if (fieldPos == assetPos) {
-          std::size_t spacePos = field.find_first_of(" (");
-          if (spacePos != std::string_view::npos) {
-            field = field.substr(0, spacePos);
-          }
-          cur = CurrencyCode(_coincenterInfo.standardizeCurrencyCode(field));
-        } else if (fieldPos == withdrawFeePos) {
-          withdrawFeeMinStr[0] = field;
-        } else if (fieldPos == minWithdrawAmountPos) {
-          withdrawFeeMinStr[1] = field;
-        }
-      }
+    // Locate withdrawal fee
+    searchPos += kBeginWithdrawalFeeHtmlTag.size();
+    MonetaryAmount withdrawalFee = parseNextFee(searchPos);
 
-      if (commaPos == std::string_view::npos) {
-        break;
-      }
-      fieldBegPos = commaPos + 1;
-    }
+    log::trace("Updated Kraken withdrawal fee {}", withdrawalFee.str());
+    ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
 
-    if (isFirstLine) {
-      isFirstLine = false;
-      if (assetPos == std::string_view::npos || minWithdrawAmountPos == std::string_view::npos ||
-          withdrawFeePos == std::string_view::npos) {
-        throw exception("Unable to parse Kraken withdrawal fees CSV, syntax has probably changed");
-      }
-    } else {
-      bool isFeeMap = true;
-      for (std::string_view wStr : withdrawFeeMinStr) {
-        if (!wStr.empty() && wStr.front() != '*') {
-          MonetaryAmount amount(wStr, cur);
-          auto& map = isFeeMap ? ret.first : ret.second;
-          auto it = map.find(cur);
-          if (it == map.end() || it->second < amount) {
-            log::trace("Updated Kraken {} {}", isFeeMap ? "withdrawal fee" : "min withdraw", amount.str());
-            if (it == map.end()) {
-              map.insert_or_assign(cur, amount);
-            } else {
-              it->second = amount;
-            }
-          }
-        }
-        isFeeMap = false;
-      }
-    }
+    // Locate min withdrawal
+    searchPos = withdrawalFeesCsv.find(kBeginMinWithdrawalHtmlTag, searchPos) + kBeginMinWithdrawalHtmlTag.size();
+    assert(searchPos != string::npos);
 
-    if (nextLinePos == std::string_view::npos) {
-      break;
-    }
-    lineBegPos = nextLinePos + 1;
+    MonetaryAmount minWithdrawal = parseNextFee(searchPos);
+
+    log::trace("Updated Kraken min withdrawal {}", minWithdrawal.str());
+    ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
   }
-  if (assetPos == std::string_view::npos || minWithdrawAmountPos == std::string_view::npos ||
-      withdrawFeePos == std::string_view::npos) {
-    throw exception("Unable to parse Kraken withdrawal fees CSV, syntax or URL has probably changed");
+  if (ret.first.empty() || ret.second.empty()) {
+    throw exception("Unable to parse Kraken withdrawal fees");
   }
 
   log::info("Updated Kraken withdraw infos for {} coins", ret.first.size());
@@ -288,14 +216,6 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
 
 std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "AssetPairs");
-  /*
-    "ADAAUD":{"altname":"ADAAUD","wsname":"ADA/AUD","aclass_base":"currency","base":"ADA",
-    "aclass_quote":"currency","quote":"ZAUD","lot":"unit","pair_decimals":5,"lot_decimals":8,
-    "lot_multiplier":1,"leverage_buy":[],"leverage_sell":[],
-    "fees":[[0,0.26],[50000,0.24],[100000,0.22],[250000,0.2],[500000,0.18],[1000000,0.16],[2500000,0.14],[5000000,0.12],[10000000,0.1]],
-    "fees_maker":[[0,0.16],[50000,0.14],[100000,0.12],[250000,0.1],[500000,0.08],[1000000,0.06],[2500000,0.04],[5000000,0.02],[10000000,0]],
-    "fee_volume_currency":"ZUSD","margin_call":80,"margin_stop":40,"ordermin":"25"}
-  */
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
   ret.second.reserve(result.size());
