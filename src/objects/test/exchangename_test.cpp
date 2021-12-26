@@ -8,13 +8,15 @@ namespace cct {
 TEST(ExchangeName, NoKeyName) {
   EXPECT_EQ(PrivateExchangeName("binance").str(), "binance");
   EXPECT_EQ(PrivateExchangeName("kraken").name(), "kraken");
+  EXPECT_EQ(PrivateExchangeName("Kraken").name(), "kraken");
   EXPECT_EQ(PrivateExchangeName("bithumb").keyName(), "");
 }
 
 TEST(ExchangeName, SimpleKeyName) {
-  EXPECT_EQ(PrivateExchangeName("binance_user1").str(), "binance_user1");
+  EXPECT_EQ(PrivateExchangeName("Binance_user1").str(), "binance_user1");
   EXPECT_EQ(PrivateExchangeName("kraken_user2").name(), "kraken");
   EXPECT_EQ(PrivateExchangeName("kraken_user3").keyName(), "user3");
+  EXPECT_EQ(PrivateExchangeName("kraken_USER3").keyName(), "USER3");
 }
 
 TEST(ExchangeName, ComplexKeyName) {
