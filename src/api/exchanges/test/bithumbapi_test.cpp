@@ -65,7 +65,7 @@ void PrivateTest(BithumbPrivate &bithumbPrivate) {
 TEST_F(BithumbAPI, Public) {
   PublicTest(exchangePublic);
 
-  constexpr char exchangeName[] = "bithumb";
+  static constexpr std::string_view exchangeName = "bithumb";
   if (!apiKeyProvider.contains(exchangeName)) {
     std::cerr << "Skip Bithumb private API test as cannot find associated private key" << std::endl;
     return;

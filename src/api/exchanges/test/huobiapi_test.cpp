@@ -43,14 +43,14 @@ void PrivateTest(HuobiPrivate &huobiPrivate) {
 TEST_F(HuobiAPI, Main) {
   PublicTest(exchangePublic);
 
-  constexpr char exchangeName[] = "huobi";
-  if (!apiKeyProvider.contains(exchangeName)) {
+  static constexpr std::string_view kExchangeName = "huobi";
+  if (!apiKeyProvider.contains(kExchangeName)) {
     std::cerr << "Skip Huobi private API test as cannot find associated private key" << std::endl;
     return;
   }
 
   const APIKey &firstAPIKey =
-      apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
+      apiKeyProvider.get(PrivateExchangeName(kExchangeName, apiKeyProvider.getKeyNames(kExchangeName).front()));
 
   HuobiPrivate huobiPrivate(coincenterInfo, exchangePublic, firstAPIKey);
 

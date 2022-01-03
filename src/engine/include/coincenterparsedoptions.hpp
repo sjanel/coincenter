@@ -72,7 +72,7 @@ class CoincenterParsedOptions {
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
 
-  string dataDir = kDefaultDataDir;
+  string dataDir;
 
   string monitoring_address;
   string monitoring_username;

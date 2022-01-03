@@ -162,11 +162,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
           case 5600:
             if (isTradeQuery) {
               // too many decimals, you need to truncate
-              constexpr char kMagicKoreanString1[] = "수량은 소수점 ";
-              constexpr char kMagicKoreanString2[] = "자";
+              static constexpr std::string_view kMagicKoreanString1 = "수량은 소수점 ";
+              static constexpr std::string_view kMagicKoreanString2 = "자";
               std::size_t nbDecimalsMaxPos = msg.find(kMagicKoreanString1);
               if (nbDecimalsMaxPos != std::string_view::npos) {
-                std::size_t idxFirst = nbDecimalsMaxPos + strlen(kMagicKoreanString1);
+                std::size_t idxFirst = nbDecimalsMaxPos + kMagicKoreanString1.size();
                 auto first = msg.begin() + idxFirst;
                 std::string_view maxNbDecimalsStr(first, msg.begin() + msg.find(kMagicKoreanString2, idxFirst));
                 CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));

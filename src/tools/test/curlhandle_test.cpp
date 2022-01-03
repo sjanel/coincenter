@@ -11,7 +11,7 @@
 
 namespace cct {
 namespace {
-constexpr char kTestUrl[] = "https://live.cardeasexml.com/ultradns.php";
+constexpr std::string_view kTestUrl = "https://live.cardeasexml.com/ultradns.php";
 }
 
 class CurlSetup : public ::testing::Test {

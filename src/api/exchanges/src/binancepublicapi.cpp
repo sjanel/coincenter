@@ -217,8 +217,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  static constexpr char kInfoFeeUrl[] = "https://www.binance.com/en/fee/cryptoFee";
-  string s = _curlHandle.query(kInfoFeeUrl, CurlOptions(HttpRequestType::kGet));
+  string s = _curlHandle.query("https://www.binance.com/en/fee/cryptoFee", CurlOptions(HttpRequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
   static constexpr std::string_view appBegJson = "application/json\">";
   string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
