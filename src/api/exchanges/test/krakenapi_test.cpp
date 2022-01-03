@@ -68,12 +68,12 @@ void PrivateTest(KrakenPrivate &krakenPrivate) {
   MonetaryAmount stdFrom("100.1234EUR");
   EXPECT_GT(krakenPrivate.trade(stdFrom, "BTC", tradeOptions).tradedTo, MonetaryAmount(0, "BTC"));
 }
+
+constexpr std::string_view exchangeName = "kraken";
 }  // namespace
 
 TEST_F(KrakenAPI, Main) {
   PublicTest(exchangePublic);
-
-  constexpr char exchangeName[] = "kraken";
 
   if (!apiKeyProvider.contains(exchangeName)) {
     std::cerr << "Skip Kraken private API test as cannot find associated private key" << std::endl;
@@ -91,8 +91,6 @@ TEST_F(KrakenAPI, Main) {
 
 TEST_F(KrakenAPI, PrivateEmptyBalance) {
   if (IsProxyAvailable()) {
-    constexpr char exchangeName[] = "kraken";
-
     if (!apiTestKeyProvider.contains(exchangeName)) {
       std::cerr << "Skip Kraken private API test as cannot find associated private key" << std::endl;
       return;

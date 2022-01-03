@@ -8,10 +8,9 @@
 
 namespace cct {
 namespace {
-constexpr char kCurrencyConverterBaseUrl[] = "https://free.currconv.com/api/v7";
 
 string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
-  static constexpr char kDefaultCommunityKey[] = "b25453de7984135a084b";
+  static constexpr std::string_view kDefaultCommunityKey = "b25453de7984135a084b";
   /// File containing all validated external addresses.
   /// It should be a json file with this format:
   /// {
@@ -31,7 +30,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
     log::warn("'{}/secret/{}' like this:", dataDir, kThirdPartySecretFileName);
     log::warn("  {\"freecurrencyconverter\": \"<YourKey>\"}");
     log::warn("Using default key provided as a demo to the community");
-    return kDefaultCommunityKey;
+    return string(kDefaultCommunityKey);
   }
   return data["freecurrencyconverter"];
 }
@@ -74,8 +73,7 @@ void FiatConverter::updateCacheFile() const {
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
-  string url = kCurrencyConverterBaseUrl;
-  url.append("/convert?");
+  string url = "https://free.currconv.com/api/v7/convert?";
 
   CurlOptions opts(HttpRequestType::kGet);
   string qStr(m.assetsPairStr('_'));

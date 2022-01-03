@@ -42,14 +42,14 @@ void PrivateTest(KucoinPrivate &kucoinPrivate) {
 TEST_F(KucoinAPI, Main) {
   PublicTest(exchangePublic);
 
-  constexpr char exchangeName[] = "kucoin";
-  if (!apiKeyProvider.contains(exchangeName)) {
+  static constexpr std::string_view kExchangeName = "kucoin";
+  if (!apiKeyProvider.contains(kExchangeName)) {
     std::cerr << "Skip Kucoin private API test as cannot find associated private key" << std::endl;
     return;
   }
 
   const APIKey &firstAPIKey =
-      apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
+      apiKeyProvider.get(PrivateExchangeName(kExchangeName, apiKeyProvider.getKeyNames(kExchangeName).front()));
 
   KucoinPrivate kucoinPrivate(coincenterInfo, exchangePublic, firstAPIKey);
 

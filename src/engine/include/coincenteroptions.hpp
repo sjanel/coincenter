@@ -18,6 +18,8 @@
 namespace cct {
 
 struct CoincenterCmdLineOptions {
+  CoincenterCmdLineOptions() : dataDir(kDefaultDataDir) {}
+
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = std::chrono::seconds(1);
@@ -28,7 +30,7 @@ struct CoincenterCmdLineOptions {
 
   static void PrintVersion(std::string_view programName);
 
-  string dataDir = kDefaultDataDir;
+  string dataDir;
 
   string logLevel;
   bool help = false;

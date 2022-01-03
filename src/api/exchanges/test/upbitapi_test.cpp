@@ -68,15 +68,15 @@ void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
 TEST_F(UpbitAPI, Public) {
   PublicTest(exchangePublic);
 
-  static constexpr char exchangeName[] = "upbit";
+  static constexpr std::string_view kExchangeName = "upbit";
 
-  if (!apiKeyProvider.contains(exchangeName)) {
+  if (!apiKeyProvider.contains(kExchangeName)) {
     std::cerr << "Skip Upbit private API test as cannot find associated private key" << std::endl;
     return;
   }
 
   const APIKey &firstAPIKey =
-      apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
+      apiKeyProvider.get(PrivateExchangeName(kExchangeName, apiKeyProvider.getKeyNames(kExchangeName).front()));
 
   // The following test will target the proxy
   // To avoid matching the test case, you can simply provide production keys

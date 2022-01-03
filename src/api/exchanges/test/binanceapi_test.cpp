@@ -64,7 +64,7 @@ void PrivateTest(BinancePrivate &binancePrivate, BinancePublic &binancePublic,
 TEST_F(BinanceAPI, Main) {
   ExchangePublic::MarketSet markets = PublicTest(exchangePublic);
 
-  constexpr char exchangeName[] = "binance";
+  static constexpr std::string_view exchangeName = "binance";
   if (!apiKeyProvider.contains(exchangeName)) {
     std::cerr << "Skip Binance private API test as cannot find associated private key" << std::endl;
     return;

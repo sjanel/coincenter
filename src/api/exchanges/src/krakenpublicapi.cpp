@@ -142,9 +142,8 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
-  static constexpr char kWithdrawalFeesUrl[] = "https://withdrawalfees.com/exchanges/kraken";
-
-  string withdrawalFeesCsv = _curlHandle.query(kWithdrawalFeesUrl, CurlOptions(HttpRequestType::kGet));
+  CurlOptions opts(HttpRequestType::kGet);
+  string withdrawalFeesCsv = _curlHandle.query("https://withdrawalfees.com/exchanges/kraken", opts);
 
   static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
   static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
