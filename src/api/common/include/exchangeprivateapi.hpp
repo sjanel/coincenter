@@ -53,6 +53,10 @@ class ExchangePrivate : public ExchangeBase {
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
 
+  /// Tells whether this API has the capability to generate deposit address.
+  /// If not, user should first create manually the deposit address on the website of the exchange.
+  virtual bool canGenerateDepositAddress() const = 0;
+
   /// Get opened orders filtered according to given constraints
   virtual OpenedOrders queryOpenedOrders(
       const OpenedOrdersConstraints &openedOrdersConstraints = OpenedOrdersConstraints()) = 0;

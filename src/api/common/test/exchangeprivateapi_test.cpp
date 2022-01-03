@@ -14,6 +14,7 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
   MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode equiCurrency), (override));
   MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode currencyCode), (override));
+  MOCK_METHOD(bool, canGenerateDepositAddress, (), (const override));
   MOCK_METHOD(OpenedOrders, queryOpenedOrders, (const OpenedOrdersConstraints &openedOrdersConstraints), (override));
 
   MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));

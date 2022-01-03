@@ -140,7 +140,9 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       log::warn("No deposit address found for {}, generating a new one", currencyCode.str());
       generateDepositAddressNeeded = true;
     } else {
-      throw exception("error: " + string(name) + "msg = " + string(msg));
+      string err("error: ");
+      err.append(name).append(", msg: ").append(msg);
+      throw exception(std::move(err));
     }
   }
   if (generateDepositAddressNeeded) {

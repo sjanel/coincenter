@@ -113,7 +113,6 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json res = PrivateQuery(_curlHandle, _apiKey, "DepositMethods", {{"asset", krakenCurrency.altStr()}});
-  // [ { "fee": "0.0000000000", "gen-address": true, "limit": false, "method": "Bitcoin"}]
   if (res.empty()) {
     throw exception("No deposit method found on Kraken for " + string(currencyCode.str()));
   }
@@ -122,12 +121,13 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       PrivateQuery(_curlHandle, _apiKey, "DepositAddresses", {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
     // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
-    log::warn("No deposit address found on {} for {}, creating a new one...", _exchangePublic.name(),
-              currencyCode.str());
+    log::warn("No deposit address found on {} for {}, creating a new one", _exchangePublic.name(), currencyCode.str());
     res = PrivateQuery(_curlHandle, _apiKey, "DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
-      throw exception("Cannot create a new deposit address on Kraken for " + string(currencyCode.str()));
+      string err("Cannot create a new deposit address on Kraken for ");
+      err.append(currencyCode.str());
+      throw exception(std::move(err));
     }
   }
   PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());

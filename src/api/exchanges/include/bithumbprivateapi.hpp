@@ -33,6 +33,8 @@ class BithumbPrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  bool canGenerateDepositAddress() const override { return false; }
+
   OpenedOrders queryOpenedOrders(
       const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
 

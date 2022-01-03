@@ -25,6 +25,8 @@ class BinancePrivate : public ExchangePrivate {
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
+  bool canGenerateDepositAddress() const override { return true; }
+
   OpenedOrders queryOpenedOrders(
       const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
 

@@ -1,83 +1,14 @@
-#include <gtest/gtest.h>
-
-#include "apikeysprovider.hpp"
 #include "bithumbprivateapi.hpp"
 #include "bithumbpublicapi.hpp"
-#include "coincenterinfo.hpp"
 #include "commonapi_test.hpp"
-#include "cryptowatchapi.hpp"
-#include "fiatconverter.hpp"
-#include "tradeoptions.hpp"
 
 namespace cct::api {
 
-using BithumbAPI = TestAPI<BithumbPublic>;
-
 namespace {
-void PublicTest(BithumbPublic &bithumbPublic) {
-  ExchangePublic::MarketSet markets = bithumbPublic.queryTradableMarkets();
-  CurrencyExchangeFlatSet currencies = bithumbPublic.queryTradableCurrencies();
-
-  EXPECT_GT(markets.size(), 10U);
-  EXPECT_FALSE(currencies.empty());
-  EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
-                          [](const CurrencyExchange &currency) { return currency.standardCode().str() == "BTC"; }));
-  EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
-                          [](const CurrencyExchange &currency) { return currency.standardCode().str() == "KRW"; }));
-
-  EXPECT_GT(bithumbPublic.queryAllApproximatedOrderBooks(1).size(), 10U);
-  ExchangePublic::MarketPriceMap marketPriceMap = bithumbPublic.queryAllPrices();
-  EXPECT_GT(marketPriceMap.size(), 10U);
-  EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
-  EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
-
-  ExchangePublic::WithdrawalFeeMap withdrawalFees = bithumbPublic.queryWithdrawalFees();
-  EXPECT_GT(withdrawalFees.size(), 10U);
-  EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
-  EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  static constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
-  for (CurrencyCode code : kCurrencyCodesToTest) {
-    if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
-      EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
-    }
-  }
-
-  MarketOrderBook marketOrderBook = bithumbPublic.queryOrderBook(*std::next(markets.begin(), 2));
-  EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
-  EXPECT_NO_THROW(bithumbPublic.queryLast24hVolume(markets.front()));
-  EXPECT_NO_THROW(bithumbPublic.queryLastPrice(markets.back()));
-  EXPECT_NO_THROW(bithumbPublic.queryLastTrades(markets.front()));
-}
-
-void PrivateTest(BithumbPrivate &bithumbPrivate) {
-  // We cannot expect anything from the balance, it may be empty and this is a valid response.
-  EXPECT_NO_THROW(bithumbPrivate.getAccountBalance());
-  EXPECT_FALSE(bithumbPrivate.queryDepositWallet("ETH").hasTag());
-  EXPECT_NO_THROW(bithumbPrivate.queryOpenedOrders(OpenedOrdersConstraints("ETH")));
-  TradeOptions tradeOptions(TradeMode::kSimulation);
-  MonetaryAmount smallFrom("13.567XRP");
-  EXPECT_GT(bithumbPrivate.trade(smallFrom, "KRW", tradeOptions).tradedTo, MonetaryAmount(0, "KRW"));
-  MonetaryAmount bigFrom("135670067.1234KRW");
-  EXPECT_FALSE(bithumbPrivate.trade(bigFrom, "ETH", tradeOptions).tradedFrom.isZero());
-}
+using BithumbAPI = TestAPI<BithumbPublic, BithumbPrivate>;
+BithumbAPI testAPI;
 }  // namespace
 
-TEST_F(BithumbAPI, Public) {
-  PublicTest(exchangePublic);
-
-  static constexpr std::string_view exchangeName = "bithumb";
-  if (!apiKeyProvider.contains(exchangeName)) {
-    std::cerr << "Skip Bithumb private API test as cannot find associated private key" << std::endl;
-    return;
-  }
-
-  const APIKey &firstAPIKey =
-      apiKeyProvider.get(PrivateExchangeName(exchangeName, apiKeyProvider.getKeyNames(exchangeName).front()));
-
-  BithumbPrivate bithumbPrivate(coincenterInfo, exchangePublic, firstAPIKey);
-
-  // We cannot expect anything from the balance, it may be empty and this is a valid response.
-  PrivateTest(bithumbPrivate);
-}
+CCT_TEST_ALL(BithumbAPI, testAPI);
 
 }  // namespace cct::api
