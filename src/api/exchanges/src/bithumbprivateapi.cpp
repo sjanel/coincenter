@@ -111,6 +111,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   const bool isTradeQuery = methodName.starts_with("trade");
   const bool isInfoOpenedOrders = methodName == "info/orders";
   const bool isCancelQuery = methodName == "trade/cancel";
+  const bool isDepositInfo = methodName == "info/wallet_address";
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
   while (dataJson.contains("status") && ++nbRetries < kMaxNbRetries) {
@@ -198,6 +199,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               dataJson.clear();
               return dataJson;
             }
+            if (isDepositInfo && msg.find("잘못된 접근입니다.") != string::npos) {
+              dataJson["wallet_address"] = "";
+              return dataJson;
+            }
             break;
           default:
             break;
@@ -255,6 +260,12 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   json result = PrivateQuery(_curlHandle, _apiKey, "info/wallet_address", _maxNbDecimalsUnitMap,
                              {{"currency", currencyCode.str()}});
   std::string_view addressAndTag = result["wallet_address"].get<std::string_view>();
+  if (addressAndTag.empty()) {
+    string err("Bithumb wallet is not created for ");
+    err.append(currencyCode.str());
+    err.append(", it should be done with the UI first (no way to do it via API).");
+    throw exception(std::move(err));
+  }
   std::size_t tagPos = addressAndTag.find('&');
   std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
   std::string_view tag(

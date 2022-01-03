@@ -1,87 +1,14 @@
-#include <gtest/gtest.h>
-
-#include "apikeysprovider.hpp"
-#include "coincenterinfo.hpp"
 #include "commonapi_test.hpp"
-#include "cryptowatchapi.hpp"
-#include "fiatconverter.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 
 namespace cct::api {
-using UpbitAPI = TestAPI<UpbitPublic>;
 
 namespace {
-void PublicTest(UpbitPublic &upbitPublic) {
-  ExchangePublic::MarketSet markets = upbitPublic.queryTradableMarkets();
-  CurrencyExchangeFlatSet currencies = upbitPublic.queryTradableCurrencies();
-
-  EXPECT_GT(markets.size(), 10U);
-  EXPECT_FALSE(currencies.empty());
-  EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
-                          [](const CurrencyExchange &currency) { return currency.standardCode().str() == "BTC"; }));
-  EXPECT_TRUE(std::any_of(currencies.begin(), currencies.end(),
-                          [](const CurrencyExchange &currency) { return currency.standardCode().str() == "KRW"; }));
-
-  ExchangePublic::MarketPriceMap marketPriceMap = upbitPublic.queryAllPrices();
-  EXPECT_GT(marketPriceMap.size(), 10U);
-  EXPECT_TRUE(marketPriceMap.contains(*markets.begin()));
-  EXPECT_TRUE(marketPriceMap.contains(*std::next(markets.begin())));
-
-  ExchangePublic::WithdrawalFeeMap withdrawalFees = upbitPublic.queryWithdrawalFees();
-  EXPECT_GT(withdrawalFees.size(), 10U);
-  // This unit test makes sure that static snapshot of upbit withdrawal fees looks up to date
-  EXPECT_TRUE(withdrawalFees.contains(markets.begin()->base()));
-  EXPECT_TRUE(withdrawalFees.contains(std::next(markets.begin(), 1)->base()));
-  static constexpr CurrencyCode kCurrencyCodesToTest[] = {"BAT", "ETH", "BTC", "XRP"};
-  for (CurrencyCode code : kCurrencyCodesToTest) {
-    if (currencies.contains(code) && currencies.find(code)->canWithdraw()) {
-      EXPECT_FALSE(withdrawalFees.find(code)->second.isZero());
-    }
-  }
-
-  MarketOrderBook marketOrderBook = upbitPublic.queryOrderBook(*std::next(markets.begin(), 2));
-  EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
-  EXPECT_NO_THROW(upbitPublic.queryLast24hVolume(markets.front()));
-  EXPECT_NO_THROW(upbitPublic.queryLastPrice(markets.back()));
-  EXPECT_NO_THROW(upbitPublic.queryLastTrades(markets.front()));
-}
-
-void PrivateTest(UpbitPrivate &upbitPrivate, UpbitPublic &upbitPublic) {
-  // We cannot expect anything from the balance, it may be empty if you are poor and this is a valid response.
-  EXPECT_NO_THROW(upbitPrivate.getAccountBalance());
-  EXPECT_FALSE(upbitPrivate.queryDepositWallet("ETH").hasTag());
-  EXPECT_NO_THROW(upbitPrivate.queryOpenedOrders(OpenedOrdersConstraints()));
-  EXPECT_NO_THROW(upbitPrivate.queryTradableCurrencies());
-  EXPECT_EQ(upbitPrivate.queryWithdrawalFee("ADA"), upbitPublic.queryWithdrawalFee("ADA"));
-
-  // Uncomment below code to print updated upbit withdrawal fees for static data of withdrawal fees of public API
-  // json d;
-  // for (const auto &c : upbitPrivate.queryTradableCurrencies()) {
-  //   d[string(c.standardStr())] = upbitPrivate.queryWithdrawalFee(c.standardCode()).amountStr();
-  // }
-  // std::cout << d.dump(2) << std::endl;
-}
-
+using UpbitAPI = TestAPI<UpbitPublic, UpbitPrivate>;
+UpbitAPI testAPI;
 }  // namespace
 
-TEST_F(UpbitAPI, Public) {
-  PublicTest(exchangePublic);
-
-  static constexpr std::string_view kExchangeName = "upbit";
-
-  if (!apiKeyProvider.contains(kExchangeName)) {
-    std::cerr << "Skip Upbit private API test as cannot find associated private key" << std::endl;
-    return;
-  }
-
-  const APIKey &firstAPIKey =
-      apiKeyProvider.get(PrivateExchangeName(kExchangeName, apiKeyProvider.getKeyNames(kExchangeName).front()));
-
-  // The following test will target the proxy
-  // To avoid matching the test case, you can simply provide production keys
-  UpbitPrivate upbitPrivate(coincenterInfo, exchangePublic, firstAPIKey);
-  PrivateTest(upbitPrivate, exchangePublic);
-}
+CCT_TEST_ALL(UpbitAPI, testAPI);
 
 }  // namespace cct::api
