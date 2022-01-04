@@ -112,12 +112,16 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::averagePrice() const {
-  if (_orders.empty()) {
-    return std::optional<MonetaryAmount>();
+  switch (_orders.size()) {
+    case 0U:
+      return std::nullopt;
+    case 1U:
+      return MonetaryAmount(_orders.front().price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
+    default:
+      // std::midpoint computes safely the average of two values (without overflow)
+      return MonetaryAmount(std::midpoint(_orders[_lowestAskPricePos].price, _orders[_highestBidPricePos].price),
+                            _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
-  // std::midpoint computes safely the average of two values (without overflow)
-  return MonetaryAmount(std::midpoint(_orders[_lowestAskPricePos].price, _orders[_highestBidPricePos].price),
-                        _market.quote(), _volAndPriNbDecimals.priNbDecimals);
 }
 
 MonetaryAmount MarketOrderBook::computeCumulAmountBoughtImmediatelyAt(MonetaryAmount p) const {
