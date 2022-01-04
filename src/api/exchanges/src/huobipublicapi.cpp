@@ -127,6 +127,11 @@ std::pair<ExchangePublic::MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> Hu
       log::trace("Trading is {} for market {}-{}", apiTradingStr, baseAsset, quoteAsset);
       continue;
     }
+    std::string_view stateStr = marketDetails["state"].get<std::string_view>();
+    if (stateStr != "online") {  // Possible values are [online，pre-online,offline,suspend]
+      log::trace("Trading is {} for market {}-{}", stateStr, baseAsset, quoteAsset);
+      continue;
+    }
     if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
