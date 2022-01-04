@@ -70,7 +70,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 }  // namespace
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
-    : ExchangePrivate(upbitPublic, config, apiKey),
+    : ExchangePrivate(config, upbitPublic, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(),
                   config.getRunMode()),
       _tradableCurrenciesCache(

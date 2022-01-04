@@ -69,7 +69,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 }  // namespace
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
-    : ExchangePrivate(binancePublic, config, apiKey),
+    : ExchangePrivate(config, binancePublic, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(binancePublic.name()).minPrivateQueryDelay(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
