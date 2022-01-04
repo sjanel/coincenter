@@ -97,7 +97,7 @@ class ExchangePrivate : public ExchangeBase {
   const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
 
  protected:
-  ExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &coincenterInfo, const APIKey &apiKey)
+  ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic, const APIKey &apiKey)
       : ExchangeBase(),
         _exchangePublic(exchangePublic),
         _cachedResultVault(exchangePublic._cachedResultVault),

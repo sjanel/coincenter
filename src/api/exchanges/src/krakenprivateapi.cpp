@@ -89,7 +89,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 }  // namespace
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
-    : ExchangePrivate(krakenPublic, config, apiKey),
+    : ExchangePrivate(config, krakenPublic, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),

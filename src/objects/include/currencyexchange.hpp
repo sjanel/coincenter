@@ -43,6 +43,8 @@ class CurrencyExchange {
   bool operator==(const CurrencyExchange &o) const { return _standardCode == o._standardCode; }
   bool operator!=(const CurrencyExchange &o) const { return !(*this == o); }
 
+  operator CurrencyCode() const { return _standardCode; }
+
  private:
   CurrencyCode _standardCode;
   CurrencyCode _exchangeCode;

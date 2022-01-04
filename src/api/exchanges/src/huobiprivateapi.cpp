@@ -80,7 +80,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 }  // namespace
 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPublic, const APIKey& apiKey)
-    : ExchangePrivate(huobiPublic, config, apiKey),
+    : ExchangePrivate(config, huobiPublic, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(huobiPublic.name()).minPrivateQueryDelay(),
                   config.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),

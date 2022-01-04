@@ -9,7 +9,7 @@ namespace cct::api {
 class MockExchangePrivate : public ExchangePrivate {
  public:
   MockExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
-      : ExchangePrivate(exchangePublic, config, apiKey) {}
+      : ExchangePrivate(config, exchangePublic, apiKey) {}
 
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
   MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode equiCurrency), (override));

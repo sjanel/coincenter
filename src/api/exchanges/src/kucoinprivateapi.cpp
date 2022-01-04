@@ -122,7 +122,7 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 }  // namespace
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinPublic, const APIKey& apiKey)
-    : ExchangePrivate(kucoinPublic, config, apiKey),
+    : ExchangePrivate(config, kucoinPublic, apiKey),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(kucoinPublic.name()).minPrivateQueryDelay(),
                   config.getRunMode()),
       _depositWalletsCache(
@@ -155,7 +155,8 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   std::string_view address = result["address"].get<std::string_view>();
-  std::string_view tag = result["memo"].get<std::string_view>();
+  auto memoIt = result.find("memo");
+  std::string_view tag = (memoIt != result.end() && !memoIt->is_null()) ? memoIt->get<std::string_view>() : "";
 
   PrivateExchangeName privateExchangeName(_kucoinPublic.name(), _apiKey.name());
 
