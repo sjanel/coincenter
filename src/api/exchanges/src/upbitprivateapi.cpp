@@ -28,7 +28,7 @@ namespace {
 
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
-                  CurlPostDataT&& curlPostData = CurlPostData()) {
+                  CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   string method_url(UpbitPublic::kUrlBase);
   method_url.append("/v1/");
   method_url.append(method);
@@ -53,15 +53,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.httpHeaders.emplace_back("Authorization: Bearer ").append(token);
 
   json dataJson = json::parse(curlHandle.query(method_url, opts));
-  if (dataJson.contains("error")) {
-    const json& errorPart = dataJson["error"];
-    if (errorPart.contains("name")) {
-      throw exception(errorPart["name"].get<std::string_view>());
+  if (throwIfError) {
+    auto errorIt = dataJson.find("error");
+    if (errorIt != dataJson.end()) {
+      if (errorIt->contains("name")) {
+        throw exception((*errorIt)["name"].get<std::string_view>());
+      }
+      if (errorIt->contains("message")) {
+        throw exception((*errorIt)["message"].get<std::string_view>());
+      }
+      throw exception("Unknown Upbit API error message");
     }
-    if (errorPart.contains("message")) {
-      throw exception(errorPart["message"].get<std::string_view>());
-    }
-    throw exception("Unknown Upbit API error message");
   }
   return dataJson;
 }
@@ -129,13 +131,13 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurlPostData postdata{{"currency", currencyCode.str()}};
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "deposits/coin_address", postdata);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "deposits/coin_address", postdata, false);
   bool generateDepositAddressNeeded = false;
   if (result.contains("error")) {
     std::string_view name = result["error"]["name"].get<std::string_view>();
     std::string_view msg = result["error"]["message"].get<std::string_view>();
     if (name == "coin_address_not_found") {
-      log::warn("No deposit address found for {}, generating a new one...", currencyCode.str());
+      log::warn("No deposit address found for {}, generating a new one", currencyCode.str());
       generateDepositAddressNeeded = true;
     } else {
       throw exception("error: " + string(name) + "msg = " + string(msg));
@@ -147,7 +149,19 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     if (genCoinAddressResult.contains("success")) {
       log::info("Successfully generated address");
     }
-    result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "deposits/coin_address", postdata);
+    std::chrono::seconds sleepingTime(1);
+    static constexpr int kNbMaxRetries = 8;
+    int nbRetries = 0;
+    do {
+      if (nbRetries > 0) {
+        log::info("Waiting {} s for address to be generated...",
+                  std::chrono::duration_cast<std::chrono::seconds>(sleepingTime).count());
+      }
+      std::this_thread::sleep_for(sleepingTime);
+      result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "deposits/coin_address", postdata);
+      sleepingTime *= 2;
+      ++nbRetries;
+    } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
   }
   if (result["deposit_address"].is_null()) {
     throw exception("Deposit address for " + string(currencyCode.str()) + " is undefined");
@@ -412,8 +426,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
 
   std::string_view state(result["state"].get<std::string_view>());
-  string stateUpperStr;
-  std::transform(state.begin(), state.end(), std::back_inserter(stateUpperStr), [](char c) { return toupper(c); });
+  string stateUpperStr = toupper(state);
   log::debug("{} withdrawal status {}", _exchangePublic.name(), state);
   // state values: {'submitting', 'submitted', 'almost_accepted', 'rejected', 'accepted', 'processing', 'done',
   // 'canceled'}
@@ -435,9 +448,7 @@ bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
     if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
       std::string_view depositState(trx["state"].get<std::string_view>());
       log::debug("Deposit state {}", depositState);
-      string depositStateUpperStr;
-      std::transform(depositState.begin(), depositState.end(), std::back_inserter(depositStateUpperStr),
-                     [](char c) { return toupper(c); });
+      string depositStateUpperStr = toupper(depositState);
       if (depositStateUpperStr == "ACCEPTED") {
         return true;
       }
