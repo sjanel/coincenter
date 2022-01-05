@@ -11,7 +11,7 @@
 coincenter
 ==========
 
-A C++ Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
+Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
 
 Main features:
 
@@ -47,16 +47,13 @@ Main features:
 - [About](#about)
 - [Installation](#installation)
 - [Configuration](#configuration)
-  - [Important files](#important-files)
-    - [secret/secret.json](#secretsecretjson)
-      - [Handle several accounts per exchange](#handle-several-accounts-per-exchange)
-    - [static/exchangeconfig.json](#staticexchangeconfigjson)
-      - [Option descriptions](#option-descriptions)
 - [Tests](#tests)
 - [Usage](#usage)
-  - [Market data](#market-data)
-  - [Markets](#markets)
-    - [Examples](#examples)
+  - [General](#general)
+    - [Logging](#logging)
+  - [Public requests](#public-requests)
+    - [Markets](#markets)
+      - [Examples](#examples)
     - [Ticker information](#ticker-information)
     - [Order books](#order-books)
     - [Last 24h traded volume](#last-24h-traded-volume)
@@ -64,6 +61,7 @@ Main features:
     - [Last trades](#last-trades)
     - [Conversion path](#conversion-path)
   - [Private requests](#private-requests)
+    - [How to target keys on exchanges](#how-to-target-keys-on-exchanges)
     - [Balance](#balance)
     - [Single Trade](#single-trade)
       - [Single trade all](#single-trade-all)
@@ -101,147 +99,7 @@ See [INSTALL.md](INSTALL.md)
 
 # Configuration
 
-At this step, `coincenter` is built. To execute properly, it needs read/write access to a special directory `data` which contains a tree of files as follows:
-
-- `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
-- `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
-- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs.
-
-## Important files
-
-### secret/secret.json
-
-Fill this file with your private keys for each of your account(s) in the exchanges. 
-Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image or *git* commit. 
-It is present in `.gitignore` and `.dockerignore` to avoid accidents. 
-For additional security, always bind your keys to your IP (some exchanges will force you to do it anyway).
-
-`<DataDir>/secret/secret_test.json` shows the syntax.
-
-For *Kucoin*, in addition of the `key` and `private` values, you will need to provide your `passphrase` as well.
-
-#### Handle several accounts per exchange
-
-`coincenter` supports several keys per exchange. In this case, `coincenter` will need additional information for some queries (`trade` and `withdraw` for instance) to select the desired exchange account for the command. Some queries, such as `balance`, work without specifying the account, but the behavior is different: all accounts will be aggregated (balance will be summed for the `balance` query). 
-
-Example:
-
-Let's say you have `jack` and `joe` accounts (the name of the keys in `secret.json` file) for `kraken`:
-```json
-{
-  "kraken": {
-    "jack": {
-      "key": "...",
-      "private": "..."
-    },
-    "joe": {
-      "key": "...",
-      "private": "..."
-    }
-  }
-}
-```
-
-When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`.
-
-| Command                                 | Explanation                                                                                              |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `coincenter -b kraken`                  | Sum of balances of 'jack' and 'joe' accounts of kraken                                                   |
-| `coincenter -b kraken_jack`             | Only balance of 'jack' account of kraken                                                                 |
-| `coincenter -t 1000usdt-sol,kraken`     | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' |
-| `coincenter -t 1000usdt-sol,kraken_joe` | **OK**: perform the trade on 'joe' account                                                               |
-
-If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported):
-```json
-{
-  "binance": {
-    "averell": {
-      "key": "...",
-      "private": "..."
-    }
-  }
-}
-```
-
-| Command                                      | Explanation                                              |
-| -------------------------------------------- | -------------------------------------------------------- |
-| `coincenter -b binance`                      | Only one account in `binance`, this will print `averell` |
-| `coincenter -b binance_averell`              | Same as above                                            |
-| `coincenter -t 1000usdt-sol,binance`         | **OK** as no ambiguity                                   |
-| `coincenter -t 1000usdt-sol,binance_averell` | **OK** as well                                           |
-
-### static/exchangeconfig.json
-
-This json file should follow this specific format:
-```yaml
-  - top_level_option:
-    - default:
-      - some_option: default_value
-      - another_option: default_value
-    - exchange:
-      - some_exchange:
-        - some_option: override_value
-        - another_option: default_value
-      - another_exchange:
-        - some_option: override_value
-```
-
-Currently, options are set from two ways:
-- **Comma separated values** are aggregated for each exchange with the 'default' values (if present)
-- **Single values** are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if again not present, uses a hardcoded default one (cf in the code).
-
-As an example, consider this file:
-
-```json
-{
-  "asset": {
-    "default": {
-      "withdrawexclude": "BTC"
-    },
-    "exchange": {
-      "binance": {
-        "withdrawexclude": "BQX"
-      },
-      "kraken": {
-        "withdrawexclude": "EUR,KFEE"
-      }
-    }
-  },
-  "tradefees": {
-    "default": {
-      "maker": "0.1",
-    },
-    "exchange": {
-      "bithumb": {
-        "maker": "0.25",
-      }
-    }
-  }
-}
-```
-
-The chosen values will be:
-
-| Exchange | `asset/withdrawexclude` | `tradefees/maker` |
-| -------- | ----------------------- | ----------------- |
-| Binance  | `BTC,BQX`               | `0.1`             |
-| Kraken   | `BTC,EUR,KFEE`          | `0.1`             |
-| Bithumb  | `BTC`                   | `0.25`            |
-
-Refer to the hardcoded default json example as a model in case of doubt.
-
-#### Option descriptions
-
-| Module      | Name                               | Value                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ----------- | ---------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| *asset*     | **allexclude**                     | CSV coin acronyms (ex: "BTC,AUD")                                         | Exclude coins with these acronym from `coincenter`                                                                                                                                                                                                                                                                                                                                                                             |
-| *asset*     | **withdrawexclude**                | CSV coin acronyms (ex: "BTC,AUD")                                         | Make these coins unavailable for withdraw                                                                                                                                                                                                                                                                                                                                                                                      |
-| *query*     | **minprivatequerydelayms**         | Integer (in milliseconds)                                                 | Minimum time between two consecutive requests of private account                                                                                                                                                                                                                                                                                                                                                               |
-| *query*     | **minpublicquerydelayms**          | Integer (in milliseconds)                                                 | Minimum time between two consecutive requests of public account                                                                                                                                                                                                                                                                                                                                                                |
-| *query*     | **placesimulaterealorder**         | Boolean (`true` or `false`)                                               | If `true`, in trade simulation mode (with `--trade-sim`) exchanges which do not support simulated mode in place order will actually place a real order, with the following characteristics: <ul><li>trade strategy forced to `maker`</li><li>price will be changed to a maximum for a sell, to a minimum for a buy</li></ul> This will allow place of a 'real' order that cannot be matched in practice (if it is, lucky you!) |
-| *tradefees* | **maker**                          | String as decimal number representing a percentage (for instance, "0.15") | Trade fees occurring when a maker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
-| *tradefees* | **taker**                          | String as decimal number representing a percentage (for instance, "0.15") | Trade fees occurring when a taker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
-| *withdraw*  | **validatedepositaddressesinfile** | Boolean (`true` or `false`)                                               | If `true`, each withdraw will perform an additional validation check from a trusted list of "whitelisted" addresses in `depositaddresses.json` file. Withdraw will not be processed if destination wallet is not present in the file.                                                                                                                                                                                          |
+See [CONFIG.md](CONFIG.md)
 
 # Tests
 
@@ -251,11 +109,15 @@ Note that exchanges API are also unit tested. If no private key is found, only p
 
 # Usage
 
+## General
+
+### Logging
+
 `coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging. You can use `--log <log-level>` to change the log level of the entire execution, and `--log-file` to log to rotating files.
 
-## Market data
+## Public requests
 
-## Markets
+### Markets
 
 Use the `--markets` (or `-m`) command to list all markets trading a given currencies. This is useful to check how you can trade your coin.
 At least one currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currencies if they exist.
@@ -264,7 +126,7 @@ One or two (in this case, querying existence of a market) currencies can be give
 
 **Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `--trade` option of `coincenter`)
 
-### Examples
+#### Examples
 List all markets involving Ethereum in Huobi
 ```
 coincenter --markets eth,huobi
@@ -339,6 +201,64 @@ It will print the result as an ordered list of markets for each exchange.
 These requests will require that you have your secret keys in `data/secret/secret.json` file, for each exchange used.
 You can check easily that it works correctly with the `--balance` option.
 
+### How to target keys on exchanges
+
+`coincenter` supports several keys per exchange. Here are both ways to target exchange(s) for `coincenter`:
+ - **`exchange`** matches **all** keys on exchange `exchange`
+ - **`exchange_keyname`** matches **only** `keyname` on exchange `exchange`
+  
+All options use this pattern, but they will behave differently if several keys are matched for one exchange. For instance:
+ - Balance will sum all balance for matching accounts
+ - Trade and multi trade will share the amount to be trade accross the matching exchanges, depending on the amount available on each (see [Single trade](#single-trade)).
+
+Example:
+
+Let's say you have `jack` and `joe` accounts (the name of the keys in `secret.json` file) for `kraken`:
+```json
+{
+  "kraken": {
+    "jack": {
+      "key": "...",
+      "private": "..."
+    },
+    "joe": {
+      "key": "...",
+      "private": "..."
+    }
+  }
+}
+```
+
+When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`.
+
+| Command                                 | Explanation                                                                                                           |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `coincenter -b kraken`                  | Sum of balances of 'jack' and 'joe' accounts of kraken                                                                |
+| `coincenter -b kraken_jack`             | Only balance of 'jack' account of kraken                                                                              |
+| `coincenter -t 1000usdt-sol,kraken`     | `coincenter` will trade a total of 1000 USDT from 'jack' and/or 'joe' (see [Single trade](#single-trade))             |
+| `coincenter -t 1000usdt-sol,kraken_joe` | Perform the trade on 'joe' account only                                                                               |
+|                                         |
+| `coincenter -w 1btc,kraken-binance`     | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' for withdraw |
+
+If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported):
+```json
+{
+  "binance": {
+    "averell": {
+      "key": "...",
+      "private": "..."
+    }
+  }
+}
+```
+
+| Command                                      | Explanation                                              |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `coincenter -b binance`                      | Only one account in `binance`, this will print `averell` |
+| `coincenter -b binance_averell`              | Same as above                                            |
+| `coincenter -t 1000usdt-sol,binance`         | **OK** as no ambiguity                                   |
+| `coincenter -t 1000usdt-sol,binance_averell` | **OK** as well                                           |
+
 ### Balance
 
 Check your balance across supported exchanges at one glance!
@@ -358,7 +278,7 @@ coincenter --balance eur,kraken,bithumb
 ### Single Trade
 
 A single trade per market / exchange can be done in a user friendly way supporting 3 parameterized price choser strategies.
-It is 'single' in the sense that trade is made in one step (see ([Multi Trade](#multi-trade))), in an existing market of provided exchange(s) Similarly to other options, list of exchanges is optional. If empty, all exchanges having some balance for given start amount may be considered. Then, exchanges are sorted in decreasing order of available amounts, and are selected until total available reaches the desired one.
+It is 'single' in the sense that trade is made in one step (see [Multi Trade](#multi-trade)), in an existing market of provided exchange(s) Similarly to other options, list of exchanges is optional. If empty, all exchanges having some balance for given start amount may be considered. Then, exchanges are sorted in decreasing order of available amounts, and are selected until total available reaches the desired one.
 
 Example:
 Trade 1 BTC to USDT on all exchanges supporting BTC-USDT market and having some available BTC.

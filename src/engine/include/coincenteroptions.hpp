@@ -99,7 +99,6 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
   // clang-format off
   return CommandLineOptionsParser<OptValueType>(
       {{{{"General", 10}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
-       {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
        {{{"General", 10}, "--data", 'd', "<path/to/data>", string("Use given 'data' directory instead of the one chosen at build time '")
                                                       .append(kDefaultDataDir).append("'")}, 
                                                       &OptValueType::dataDir},
@@ -119,6 +118,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"General", 10}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
                                                     .append(ToString<string>(kDefaultRepeatDurationSeconds)).append("s)")},  
                                                   &OptValueType::repeat_time},
+       {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
        {{{"Public queries", 20}, "--markets", 'm', "<cur1[-cur2][,exch1,...]>", "Print markets involving given currencies for all exchanges, "
                                                                                "or only the specified ones. "
                                                                                "Either a single currency or a full market can be specified."}, 
@@ -171,33 +171,33 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Trade", 40}, "--trade-all", "<cur1-cur2[,exch1,...]>", "Single trade from available amount from given currency on a list of exchanges,"
                                                                  " or all that have some balance on cur1 if none provided\n"
                                                                  "Order will be placed at limit price by default"}, &OptValueType::trade_all},
-       {{{"Trade", 40}, "--singletrade", "<amt cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
-       {{{"Trade", 40}, "--multitrade", "<amt cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
+       {{{"Trade", 41}, "--singletrade", "<amt cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
+       {{{"Trade", 42}, "--multitrade", "<amt cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
                                                                       " or all that have a sufficient balance on cur1 if none provided \n"
                                                                       "Multi trade will first compute fastest path from cur1 to cur2 and "
                                                                      "if possible reach cur2 by launching multiple single trades.\n"
                                                                      "Options are same than for single trade, applied to each step trade.\n"
                                                                      "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
                                                                      &OptValueType::trade_multi},
-       {{{"Trade", 40}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
+       {{{"Trade", 42}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
                                                                    "Order will be placed at limit price by default"}, &OptValueType::trade_multi_all},
-       {{{"Trade", 40}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
+       {{{"Trade", 43}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
                                                                   " - 'maker': order price continuously set at limit price (default)\n"
                                                                   " - 'nibble': order price continuously set at limit price + (buy)/- (sell) 1\n"
                                                                   " - 'taker': order price will be at market price, expected to be matched directly"}, 
                                                                   &OptValueType::trade_price},
-       {{{"Trade", 40}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
+       {{{"Trade", 43}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
                                                 .append(ToString<string>(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 
                                                 &OptValueType::trade_timeout},
-       {{{"Trade", 40}, "--trade-timeout-match", "", "If after the timeout some amount is still not traded,\n"
+       {{{"Trade", 43}, "--trade-timeout-match", "", "If after the timeout some amount is still not traded,\n"
                                                     "force match by placing a remaining order at market price\n"}, 
                                                     &OptValueType::trade_timeout_match},
-       {{{"Trade", 40}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
+       {{{"Trade", 43}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
                                                     .append(ToString<string>(minUpdatePriceTime))
                                                     .append("s). Avoids cancelling / placing new orders too often with high volumes "
                                                     "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
-       {{{"Trade", 40}, "--trade-sim", "", string("Activates simulation mode only (default: ")
+       {{{"Trade", 44}, "--trade-sim", "", string("Activates simulation mode only (default: ")
                                          .append(isSimulationModeByDefault ? "true" : "false")
                                          .append("). For some exchanges, API can even be queried in this "
                                          "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::trade_sim},
