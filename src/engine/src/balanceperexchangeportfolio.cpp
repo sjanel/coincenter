@@ -22,7 +22,7 @@ void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
     os << "No Balance to display" << std::endl;
   } else {
     CurrencyCode balanceCurrencyCode = total.front().equi.currencyCode();
-    const bool countEqui = balanceCurrencyCode != CurrencyCode::kNeutral;
+    const bool countEqui = !balanceCurrencyCode.isNeutral();
     SimpleTable balanceTable;
     SimpleTable::Row header("Currency", "Total amount on selected");
 

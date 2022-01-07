@@ -3,22 +3,40 @@
 #include "cct_string.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "orderid.hpp"
 #include "tradedamounts.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct::api {
 
-using OrderId = string;
+struct OrderRef {
+  OrderRef(std::string_view idStr, int64_t nbSecondsSinceEpoch, Market market, TradeSide s)
+      : id(idStr), userRef(nbSecondsSinceEpoch), m(market), side(s) {}
+
+  CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
+  CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
+
+  string id;
+  int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
+  Market m;
+  TradeSide side;
+};
 
 struct TradeInfo {
-  TradeInfo(CurrencyCode fromCur, CurrencyCode toCur, Market market, const TradeOptions &opts, int64_t uRef)
-      : fromCurrencyCode(fromCur), toCurrencyCode(toCur), m(market), options(opts), userRef(uRef) {}
+#ifndef CCT_CTAD_SUPPORT
+  TradeInfo(int64_t nbSecondsSinceEpoch, Market market, TradeSide s, const TradeOptions &opts)
+      : userRef(nbSecondsSinceEpoch), m(market), side(s), options(opts) {}
+#endif
 
-  CurrencyCode fromCurrencyCode;
-  CurrencyCode toCurrencyCode;
-  Market m;
-  TradeOptions options;
+  CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
+  CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
+
+  OrderRef createOrderRef(std::string_view id) const { return OrderRef(id, userRef, m, side); }
+
   int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
+  Market m;
+  TradeSide side;
+  TradeOptions options;
 };
 
 struct OrderInfo {
@@ -40,6 +58,8 @@ struct PlaceOrderInfo {
 
   TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
   const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
+
+  using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 
   OrderInfo orderInfo;
   OrderId orderId;

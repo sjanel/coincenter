@@ -49,6 +49,7 @@ TEST(CurlOptionsTest, SetAndAppend) {
   kvPairs.set("d", "cestboncestfini");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
   EXPECT_DEBUG_DEATH(kvPairs.append("777", "cestinterditca"), "");
+  EXPECT_DEBUG_DEATH(kvPairs.append("newKey", "="), "");
 }
 
 TEST(CurlOptionsTest, Erase) {
@@ -67,7 +68,9 @@ class CurlOptionsCase1 : public ::testing::Test {
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"}, {"777", "encoredutravail?"}, {"hola", "quetal"}};
+  KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},
+                  {"hola", "quetal"},   {"array1", "val1,,"}, {"array2", ",val1,val2,value,"},
+                  {"emptyArray", ","}};
 };
 
 TEST_F(CurlOptionsCase1, Get) {
@@ -75,6 +78,10 @@ TEST_F(CurlOptionsCase1, Get) {
   EXPECT_EQ(kvPairs.get("price"), "357.78");
   EXPECT_EQ(kvPairs.get("777"), "encoredutravail?");
   EXPECT_EQ(kvPairs.get("hola"), "quetal");
+  EXPECT_EQ(kvPairs.get("array1"), "val1,,");
+  EXPECT_EQ(kvPairs.get("array2"), ",val1,val2,value,");
+  EXPECT_EQ(kvPairs.get("emptyArray"), ",");
+
   EXPECT_EQ(kvPairs.get("laipas"), "");
 }
 
@@ -98,10 +105,22 @@ TEST_F(CurlOptionsCase1, Iterator) {
         EXPECT_EQ(k, "hola");
         EXPECT_EQ(v, "quetal");
         break;
+      case 4:
+        EXPECT_EQ(k, "array1");
+        EXPECT_EQ(v, "val1,,");
+        break;
+      case 5:
+        EXPECT_EQ(k, "array2");
+        EXPECT_EQ(v, ",val1,val2,value,");
+        break;
+      case 6:
+        EXPECT_EQ(k, "emptyArray");
+        EXPECT_EQ(v, ",");
+        break;
     }
     ++i;
   }
-  EXPECT_EQ(i, 4);
+  EXPECT_EQ(i, 7);
 }
 
 TEST_F(CurlOptionsCase1, ConvertToJson) {
@@ -111,6 +130,30 @@ TEST_F(CurlOptionsCase1, ConvertToJson) {
   EXPECT_EQ(jsonData["price"].get<std::string_view>(), "357.78");
   EXPECT_EQ(jsonData["777"].get<std::string_view>(), "encoredutravail?");
   EXPECT_EQ(jsonData["hola"].get<std::string_view>(), "quetal");
+  EXPECT_FALSE(jsonData["hola"].is_array());
+
+  auto arrayIt = jsonData.find("array1");
+  EXPECT_NE(arrayIt, jsonData.end());
+  EXPECT_TRUE(arrayIt->is_array());
+  EXPECT_EQ(arrayIt->size(), 2U);
+
+  EXPECT_EQ((*arrayIt)[0], "val1");
+  EXPECT_EQ((*arrayIt)[1], "");
+
+  arrayIt = jsonData.find("array2");
+  EXPECT_NE(arrayIt, jsonData.end());
+  EXPECT_TRUE(arrayIt->is_array());
+  EXPECT_EQ(arrayIt->size(), 4U);
+
+  EXPECT_EQ((*arrayIt)[0], "");
+  EXPECT_EQ((*arrayIt)[1], "val1");
+  EXPECT_EQ((*arrayIt)[2], "val2");
+  EXPECT_EQ((*arrayIt)[3], "value");
+
+  arrayIt = jsonData.find("emptyArray");
+  EXPECT_NE(arrayIt, jsonData.end());
+  EXPECT_TRUE(arrayIt->is_array());
+  EXPECT_TRUE(arrayIt->empty());
 }
 
 TEST_F(CurlOptionsCase1, AppendIntegralValues) {
@@ -127,7 +170,9 @@ TEST_F(CurlOptionsCase1, SetIntegralValues) {
   EXPECT_EQ(kvPairs.get("price1"), "42");
   kvPairs.set("777", -666);
   EXPECT_EQ(kvPairs.get("777"), "-666");
-  EXPECT_EQ(kvPairs.str(), "units=0.11176&price=357.78&777=-666&hola=quetal&price1=42");
+  EXPECT_EQ(
+      kvPairs.str(),
+      "units=0.11176&price=357.78&777=-666&hola=quetal&array1=val1,,&array2=,val1,val2,value,&emptyArray=,&price1=42");
   int8_t s = -116;
   kvPairs.set("testu", s);
   EXPECT_EQ(kvPairs.get("testu"), "-116");

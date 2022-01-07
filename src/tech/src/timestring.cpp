@@ -49,7 +49,7 @@ Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay) {
   // milliseconds from epoch
   int64_t msSinceEpoch =
       static_cast<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(n.time_since_epoch()).count());
-  return ToString<Nonce>(msSinceEpoch + msDelay);
+  return ToString(msSinceEpoch + msDelay);
 }
 
 }  // namespace cct

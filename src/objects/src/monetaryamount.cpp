@@ -324,7 +324,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   AmountType rhsAmount = div._amount;
   assert(rhsAmount != 0);
   const int negMult = ((lhsAmount < 0 && rhsAmount > 0) || (lhsAmount > 0 && rhsAmount < 0)) ? -1 : 1;
-  CurrencyCode resCurrency = CurrencyCode::kNeutral;
+  CurrencyCode resCurrency;
   if (!_currencyCode.isNeutral() && !div.currencyCode().isNeutral()) {
     if (CCT_UNLIKELY(_currencyCode != div.currencyCode())) {
       throw exception("Cannot divide two non neutral MonetaryAmounts of different currency");

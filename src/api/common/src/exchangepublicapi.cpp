@@ -231,7 +231,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
   std::optional<Market> ret;
   static constexpr int kMinimalCryptoAcronymLen = 3;
 
-  if (filterCur != CurrencyCode()) {
+  if (!filterCur.isNeutral()) {
     std::size_t firstCurLen;
     std::string_view curStr = filterCur.str();
     std::size_t curPos = marketStr.find(curStr);
@@ -285,7 +285,7 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
   Market ret;
 
   auto tryAppendBaseCurrency = [&](CurrencyCode cur) {
-    if (cur != CurrencyCode()) {
+    if (!cur.isNeutral()) {
       auto firstMarketIt =
           std::partition_point(markets.begin(), markets.end(), [cur](Market m) { return m.base() < cur; });
       if (firstMarketIt != markets.end() && firstMarketIt->base() == cur) {
@@ -299,20 +299,20 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
   auto tryAppendQuoteCurrency = [&](CurrencyCode cur1, CurrencyCode cur2) {
     ret = Market(cur1, cur2);
     if (!markets.contains(ret)) {
-      log::warn("No market {} on {}, return empty list of opened orders", name(), ret.assetsPairStr('-'));
+      log::debug("No market {} on {}", name(), ret.assetsPairStr('-'));
       ret = Market(cur1, CurrencyCode());
     }
   };
 
   if (tryAppendBaseCurrency(filterCur1)) {
-    if (filterCur2 != CurrencyCode()) {
+    if (!filterCur2.isNeutral()) {
       tryAppendQuoteCurrency(filterCur1, filterCur2);
     }
   } else {
     if (tryAppendBaseCurrency(filterCur2)) {
       tryAppendQuoteCurrency(filterCur2, filterCur1);
     } else {
-      log::warn("Cannot find {} among {} markets", filterCur1.str(), name());
+      log::debug("Cannot find {} among {} markets", filterCur1.str(), name());
     }
   }
   return ret;

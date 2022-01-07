@@ -175,10 +175,10 @@ class TestAPI {
 
   void testOpenedOrders(Market m) {
     if (exchangePrivatePtr.get()) {
-      ExchangePrivate::OpenedOrders baseOpenedOrders =
-          exchangePrivatePtr.get()->queryOpenedOrders(OpenedOrdersConstraints(m.base()));
+      ExchangePrivate::Orders baseOpenedOrders =
+          exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
       if (!baseOpenedOrders.empty()) {
-        const OpenedOrder &openedOrder = baseOpenedOrders.front();
+        const Order &openedOrder = baseOpenedOrders.front();
         EXPECT_TRUE(openedOrder.market().canTrade(m.base()));
         EXPECT_LT(openedOrder.matchedVolume(), openedOrder.originalVolume());
       }
@@ -219,13 +219,13 @@ class TestAPI {
   }
 };
 
-#define CCT_TEST_ALL(TestAPIType, testAPI)                                                           \
-  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }                                  \
-  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }                                        \
-  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); }                          \
-  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }                                        \
-  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }                            \
-  TEST(TestAPIType##Test, OpenedOrders) { testAPI.testOpenedOrders(testAPI.sampleMarkets.front()); } \
+#define CCT_TEST_ALL(TestAPIType, testAPI)                                                     \
+  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }                            \
+  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }                                  \
+  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); }                    \
+  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }                                  \
+  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }                      \
+  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(testAPI.sampleMarkets.front()); } \
   TEST(TestAPIType##Test, Trade) { testAPI.testTrade(testAPI.sampleMarkets.front()); }
 }  // namespace api
 }  // namespace cct

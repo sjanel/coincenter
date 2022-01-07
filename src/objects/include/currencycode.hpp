@@ -28,8 +28,6 @@ class CurrencyCode {
 
   using AcronymType = std::array<char, kAcronymMaxLen>;  // warning: not null terminated
 
-  static const CurrencyCode kNeutral;
-
   /// Constructs a neutral currency code.
   constexpr CurrencyCode() noexcept : _data() {}
 
@@ -86,7 +84,10 @@ class CurrencyCode {
   }
 };
 
-std::ostream &operator<<(std::ostream &os, const CurrencyCode &c);
+inline std::ostream &operator<<(std::ostream &os, const CurrencyCode &c) {
+  c.print(os);
+  return os;
+}
 }  // namespace cct
 
 // Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key

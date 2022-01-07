@@ -2,28 +2,33 @@
 
 #include <chrono>
 #include <compare>
+#include <string_view>
 
+#include "cct_string.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "orderid.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
-class OpenedOrder {
+
+class Order {
  public:
   using TimePoint = std::chrono::system_clock::time_point;
 
-  OpenedOrder(MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price, TimePoint placedTime,
-              TradeSide side)
-      : _placedTime(placedTime),
-        _matchedVolume(matchedVolume),
-        _remainingVolume(remainingVolume),
-        _price(price),
-        _side(side) {}
+  Order(std::string_view id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
+        TimePoint placedTime, TradeSide side);
+
+  Order(OrderId &&id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
+        TimePoint placedTime, TradeSide side);
 
   MonetaryAmount originalVolume() const { return _matchedVolume + _remainingVolume; }
   MonetaryAmount matchedVolume() const { return _matchedVolume; }
   MonetaryAmount remainingVolume() const { return _remainingVolume; }
   MonetaryAmount price() const { return _price; }
+
+  OrderId &id() { return _id; }
+  const OrderId &id() const { return _id; }
 
   TimePoint placedTime() const { return _placedTime; }
 
@@ -36,10 +41,13 @@ class OpenedOrder {
   Market market() const { return Market(_matchedVolume.currencyCode(), _price.currencyCode()); }
 
   /// default ordering by place time first, then matched volume, etc
-  auto operator<=>(const OpenedOrder &) const = default;
+  auto operator<=>(const Order &) const = default;
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   TimePoint _placedTime;
+  OrderId _id;  // exchange internal id, format specific to each exchange
   MonetaryAmount _matchedVolume;
   MonetaryAmount _remainingVolume;
   MonetaryAmount _price;

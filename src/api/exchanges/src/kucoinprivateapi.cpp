@@ -169,7 +169,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-ExchangePrivate::OpenedOrders KucoinPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+ExchangePrivate::Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params{{"status", "active"}, {"tradeType", "TRADE"}};
 
   if (openedOrdersConstraints.isCur1Defined()) {
@@ -177,19 +177,19 @@ ExchangePrivate::OpenedOrders KucoinPrivate::queryOpenedOrders(const OpenedOrder
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 
-    if (filterMarket.base() != CurrencyCode() && filterMarket.quote() != CurrencyCode()) {
+    if (filterMarket.isDefined()) {
       params.append("symbol", filterMarket.assetsPairStr('-'));
     }
   }
-  if (openedOrdersConstraints.isPlacedTimeDefined()) {
+  if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
     params.append("startAt", std::chrono::duration_cast<std::chrono::milliseconds>(
                                  openedOrdersConstraints.placedAfter().time_since_epoch())
                                  .count());
   }
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params));
 
-  vector<OpenedOrder> openedOrders;
-  for (const json& orderDetails : data["items"]) {
+  Orders openedOrders;
+  for (json& orderDetails : data["items"]) {
     std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
     assert(dashPos != std::string_view::npos);
@@ -202,8 +202,13 @@ ExchangePrivate::OpenedOrders KucoinPrivate::queryOpenedOrders(const OpenedOrder
 
     int64_t millisecondsSinceEpoch = orderDetails["createdAt"].get<int64_t>();
 
-    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    string id = std::move(orderDetails["id"].get_ref<string&>());
+    if (!openedOrdersConstraints.validateOrderId(id)) {
       continue;
     }
 
@@ -213,17 +218,32 @@ ExchangePrivate::OpenedOrders KucoinPrivate::queryOpenedOrders(const OpenedOrder
     MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
     TradeSide side = orderDetails["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
   }
+  std::sort(openedOrders.begin(), openedOrders.end());
   openedOrders.shrink_to_fit();
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
-  return OpenedOrders(std::move(openedOrders));
+  return openedOrders;
+}
+
+void KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  if (openedOrdersConstraints.isMarketOnlyDependent() || openedOrdersConstraints.noConstraints()) {
+    CurlPostData params;
+    if (openedOrdersConstraints.isMarketDefined()) {
+      params.append("symbol", openedOrdersConstraints.market().assetsPairStr('-'));
+    }
+    PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
+    return;
+  }
+  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+    cancelOrderProcess(o.id());
+  }
 }
 
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
 
@@ -274,18 +294,22 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   return placeOrderInfo;
 }
 
-OrderInfo KucoinPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  string endpoint = "/api/v1/orders/";
-  endpoint.append(orderId);
-  PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
-  return queryOrderInfo(orderId, tradeInfo);
+OrderInfo KucoinPrivate::cancelOrder(const OrderRef& orderRef) {
+  cancelOrderProcess(orderRef.id);
+  return queryOrderInfo(orderRef);
 }
 
-OrderInfo KucoinPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const Market m = tradeInfo.m;
+void KucoinPrivate::cancelOrderProcess(const OrderId& id) {
+  string endpoint("/api/v1/orders/");
+  endpoint.append(id);
+  PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
+}
+
+OrderInfo KucoinPrivate::queryOrderInfo(const OrderRef& orderRef) {
+  const CurrencyCode fromCurrencyCode(orderRef.fromCur());
+  const Market m = orderRef.m;
   string endpoint = "/api/v1/orders/";
-  endpoint.append(orderId);
+  endpoint.append(orderRef.id);
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
 

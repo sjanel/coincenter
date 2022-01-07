@@ -77,8 +77,8 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
                                                                CurrencyCode equiCurrencyCode,
                                                                std::optional<int> depth) {
   log::info("Order book of {} on {} requested{}{}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames),
-            equiCurrencyCode != CurrencyCode() ? " with equi currency " : "",
-            equiCurrencyCode != CurrencyCode() ? equiCurrencyCode.str() : "");
+            equiCurrencyCode.isNeutral() ? "" : " with equi currency ",
+            equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode.str());
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
@@ -90,13 +90,13 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
   auto marketOrderBooksFunc = [m, equiCurrencyCode, depth](Exchange *e) {
     api::ExchangePublic &publicExchange = e->apiPublic();
     std::optional<MonetaryAmount> optConversionRate =
-        equiCurrencyCode == CurrencyCode::kNeutral
+        equiCurrencyCode.isNeutral()
             ? std::nullopt
             : publicExchange.convertAtAveragePrice(MonetaryAmount(1, m.quote()), equiCurrencyCode);
     MarketOrderBook marketOrderBook(depth ? publicExchange.queryOrderBook(m, *depth)
                                           : publicExchange.queryOrderBook(m));
-    if (!optConversionRate && equiCurrencyCode != CurrencyCode::kNeutral) {
-      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote().str(), equiCurrencyCode.str(),
+    if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
+      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quoteStr(), equiCurrencyCode.str(),
                 e->name());
     }
     return std::make_tuple(e->name(), std::move(marketOrderBook), optConversionRate);
@@ -165,19 +165,29 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName
 }
 
 OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
-                                                    const OpenedOrdersConstraints &openedOrdersConstraints) {
+                                                    const OrdersConstraints &openedOrdersConstraints) {
   log::info("Query opened orders matching {} on {}", openedOrdersConstraints.str(),
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges selectedExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
   OpenedOrdersPerExchange ret(selectedExchanges.size());
-  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
-                 [openedOrdersConstraints](Exchange *e) {
-                   return std::make_pair(e, e->apiPrivate().queryOpenedOrders(openedOrdersConstraints));
-                 });
+  std::transform(
+      std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+      [&](Exchange *e) { return std::make_pair(e, e->apiPrivate().queryOpenedOrders(openedOrdersConstraints)); });
 
   return ret;
+}
+
+void Coincenter::cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+                              const OrdersConstraints &ordersConstraints) {
+  log::info("Cancel opened orders matching {} on {}", ordersConstraints.str(),
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  std::for_each(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
+                [&](Exchange *e) { e->apiPrivate().cancelOpenedOrders(ordersConstraints); });
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
@@ -194,7 +204,7 @@ ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameS
 MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
                                                      ExchangeNameSpan exchangeNames) {
   string curStr(cur1.str());
-  if (cur2 != CurrencyCode()) {
+  if (!cur2.isNeutral()) {
     curStr.push_back('-');
     curStr.append(cur2.str());
   }
@@ -205,7 +215,7 @@ MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur1, Currency
     api::ExchangePublic::MarketSet markets = e->apiPublic().queryTradableMarkets();
     api::ExchangePublic::MarketSet ret;
     std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()),
-                 [cur1, cur2](Market m) { return m.canTrade(cur1) && (cur2 == CurrencyCode() || m.canTrade(cur2)); });
+                 [cur1, cur2](Market m) { return m.canTrade(cur1) && (cur2.isNeutral() || m.canTrade(cur2)); });
     return std::make_pair(e, std::move(ret));
   };
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), marketsPerExchange.begin(),
@@ -445,7 +455,7 @@ void Coincenter::updateFileCaches() const {
 }
 
 void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
-  if (opts.marketsCurrency1 != CurrencyCode()) {
+  if (!opts.marketsCurrency1.isNeutral()) {
     MarketsPerExchange marketsPerExchange =
         getMarketsPerExchange(opts.marketsCurrency1, opts.marketsCurrency2, opts.marketsExchanges);
     _queryResultPrinter.printMarkets(opts.marketsCurrency1, opts.marketsCurrency2, marketsPerExchange);
@@ -456,7 +466,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
   }
 
-  if (opts.marketForOrderBook != Market()) {
+  if (!opts.marketForOrderBook.isNeutral()) {
     std::optional<int> depth;
     if (opts.orderbookDepth != 0) {
       depth = opts.orderbookDepth;
@@ -466,7 +476,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     _queryResultPrinter.printMarketOrderBooks(marketOrderBooksConversionRates);
   }
 
-  if (opts.marketForConversionPath != Market()) {
+  if (!opts.marketForConversionPath.isNeutral()) {
     ConversionPathPerExchange conversionPathPerExchange =
         getConversionPaths(opts.marketForConversionPath, opts.conversionPathExchanges);
     _queryResultPrinter.printConversionPath(opts.marketForConversionPath, conversionPathPerExchange);
@@ -477,7 +487,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     _queryResultPrinter.printBalance(balancePerExchange);
   }
 
-  if (opts.depositCurrency != CurrencyCode()) {
+  if (!opts.depositCurrency.isNeutral()) {
     WalletPerExchange walletPerExchange = getDepositInfo(opts.depositInfoPrivateExchanges, opts.depositCurrency);
 
     _queryResultPrinter.printDepositInfo(opts.depositCurrency, walletPerExchange);
@@ -490,24 +500,28 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
     _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
   }
 
-  if (opts.withdrawFeeCur != CurrencyCode()) {
+  if (opts.cancelOpenedOrders) {
+    cancelOrders(opts.cancelOpenedOrdersPrivateExchanges, opts.cancelOpenedOrdersConstraints);
+  }
+
+  if (!opts.withdrawFeeCur.isNeutral()) {
     auto withdrawFeesPerExchange = getWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
     _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange);
   }
 
-  if (opts.tradedVolumeMarket != Market()) {
+  if (!opts.tradedVolumeMarket.isNeutral()) {
     MonetaryAmountPerExchange tradedVolumePerExchange =
         getLast24hTradedVolumePerExchange(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
     _queryResultPrinter.printLast24hTradedVolume(opts.tradedVolumeMarket, tradedVolumePerExchange);
   }
 
-  if (opts.lastTradesMarket != Market()) {
+  if (!opts.lastTradesMarket.isNeutral()) {
     LastTradesPerExchange lastTradesPerExchange =
         getLastTradesPerExchange(opts.lastTradesMarket, opts.lastTradesExchanges, opts.nbLastTrades);
     _queryResultPrinter.printLastTrades(opts.lastTradesMarket, lastTradesPerExchange);
   }
 
-  if (opts.lastPriceMarket != Market()) {
+  if (!opts.lastPriceMarket.isNeutral()) {
     MonetaryAmountPerExchange lastPricePerExchange =
         getLastPricePerExchange(opts.lastPriceMarket, opts.lastPriceExchanges);
     _queryResultPrinter.printLastPrice(opts.lastPriceMarket, lastPricePerExchange);
@@ -515,7 +529,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
 }
 
 void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
-  if (opts.fromTradeCurrency != CurrencyCode()) {
+  if (!opts.fromTradeCurrency.isNeutral()) {
     tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }
 

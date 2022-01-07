@@ -22,14 +22,15 @@ class UpbitPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
   bool canGenerateDepositAddress() const override { return true; }
 
-  OpenedOrders queryOpenedOrders(
-      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+  Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+
+  void cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
     return _withdrawalFeesCache.get(currencyCode);
@@ -41,9 +42,9 @@ class UpbitPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  OrderInfo cancelOrder(const OrderRef& orderRef) override;
 
-  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 

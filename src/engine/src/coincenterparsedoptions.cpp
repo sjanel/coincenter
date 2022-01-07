@@ -29,6 +29,19 @@ CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
   }
 }
 
+namespace {
+std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
+                                                                     std::string_view orderRequestStr) {
+  auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
+  return std::make_pair(
+      OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
+                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_min_age),
+                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_max_age),
+                        OrdersConstraints::OrderIdSet(StringOptionParser(cmdLineOptions.orders_ids).getCSVValues())),
+      std::get<2>(currenciesPrivateExchangesTuple));
+}
+}  // namespace
+
 void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.version) {
     CoincenterCmdLineOptions::PrintVersion(_programName);
@@ -134,15 +147,15 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   }
 
   if (cmdLineOptions.opened_orders_info) {
-    StringOptionParser anyParser(*cmdLineOptions.opened_orders_info);
-
-    CurrencyCode cur1, cur2;
-    std::tie(cur1, cur2, openedOrdersPrivateExchanges) = anyParser.getCurrenciesPrivateExchanges(false);
-
+    std::tie(openedOrdersConstraints, openedOrdersPrivateExchanges) =
+        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.opened_orders_info);
     queryOpenedOrders = true;
-    openedOrdersConstraints = OpenedOrdersConstraints(
-        cur1, cur2, std::chrono::duration_cast<OpenedOrdersConstraints::Duration>(cmdLineOptions.orders_min_age),
-        std::chrono::duration_cast<OpenedOrdersConstraints::Duration>(cmdLineOptions.orders_max_age));
+  }
+
+  if (cmdLineOptions.cancel_opened_orders) {
+    std::tie(cancelOpenedOrdersConstraints, cancelOpenedOrdersPrivateExchanges) =
+        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.cancel_opened_orders);
+    cancelOpenedOrders = true;
   }
 
   if (!cmdLineOptions.withdraw.empty()) {

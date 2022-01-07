@@ -18,7 +18,6 @@ add_unit_test(
 
 add_unit_test(
     currencycode_test
-    src/currencycode.cpp
     test/currencycode_test.cpp
     LIBRARIES
     coincenter_tech
@@ -66,6 +65,15 @@ add_unit_test(
 add_unit_test(
     monetaryamount_test
     test/monetaryamount_test.cpp
+    LIBRARIES
+    coincenter_objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    ordersconstraints_test
+    test/ordersconstraints_test.cpp
     LIBRARIES
     coincenter_objects
     DEFINITIONS

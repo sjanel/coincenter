@@ -20,13 +20,12 @@ namespace api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
-                 CurrencyCode quote = CurrencyCode::kNeutral, std::string_view urlOpts = "") {
+                 CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string method_url(BithumbPublic::kUrlBase);
-  method_url.append("public/");
   method_url.append(endpoint);
   method_url.push_back('/');
   method_url.append(base.str());
-  if (quote != CurrencyCode::kNeutral) {
+  if (!quote.isNeutral()) {
     method_url.push_back('_');
     method_url.append(quote.str());
   }
@@ -152,7 +151,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "assetsstatus", "all");
+  json result = PublicQuery(_curlHandle, "/public/assetsstatus", "all");
   CurrencyExchangeVector currencies;
   currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
@@ -185,7 +184,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
   ExchangePublic::MarketOrderBookMap ret;
   // all seems to work as default for all public methods
   CurrencyCode base("all");
-  CurrencyCode quote(CurrencyCode::kNeutral);
+  CurrencyCode quote;
   const bool singleMarketQuote = optM.has_value();
   if (optM) {
     base = optM->base();
@@ -197,7 +196,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
     AppendString(urlOpts, *optDepth);
   }
 
-  json result = PublicQuery(curlHandle, "orderbook", base, quote, urlOpts);
+  json result = PublicQuery(curlHandle, "/public/orderbook", base, quote, urlOpts);
 
   // Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
   // anymore
@@ -276,7 +275,7 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
   TimePoint t1 = Clock::now();
-  json result = PublicQuery(_curlHandle, "ticker", m.base(), m.quote());
+  json result = PublicQuery(_curlHandle, "/public/ticker", m.base(), m.quote());
   std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
   std::string_view bithumbTimestamp = result["date"].get<std::string_view>();
   int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
@@ -302,7 +301,7 @@ PublicTrade::TimePoint EpochTime(const std::string& dateStr) {
 }  // namespace
 
 BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
-  json result = PublicQuery(_curlHandle, "transaction_history", m.base(), m.quote());
+  json result = PublicQuery(_curlHandle, "/public/transaction_history", m.base(), m.quote());
   LastTradesVector ret;
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), m.base());

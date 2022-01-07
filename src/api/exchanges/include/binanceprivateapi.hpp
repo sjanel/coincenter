@@ -21,14 +21,15 @@ class BinancePrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
   bool canGenerateDepositAddress() const override { return true; }
 
-  OpenedOrders queryOpenedOrders(
-      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+  Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+
+  void cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
@@ -40,13 +41,9 @@ class BinancePrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override {
-    return queryOrder(orderId, tradeInfo, true);
-  }
+  OrderInfo cancelOrder(const OrderRef& orderRef) override { return queryOrder(orderRef, true); }
 
-  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override {
-    return queryOrder(orderId, tradeInfo, false);
-  }
+  OrderInfo queryOrderInfo(const OrderRef& orderRef) override { return queryOrder(orderRef, false); }
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -56,11 +53,13 @@ class BinancePrivate : public ExchangePrivate {
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
-  OrderInfo queryOrder(const OrderId& orderId, const TradeInfo& tradeInfo, bool isCancel);
+  OrderInfo queryOrder(const OrderRef& orderRef, bool isCancel);
 
   TradedAmounts queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
 
   TradedAmounts parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
+
+  bool checkMarketAppendSymbol(Market m, CurlPostData& params);
 
   struct TradableCurrenciesCache {
     TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)

@@ -14,7 +14,7 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
   RETURN_IF_NO_PRINT;
   string marketsCol("Markets with ");
   marketsCol.append(cur1.str());
-  if (cur2 != CurrencyCode()) {
+  if (!cur2.isNeutral()) {
     marketsCol.push_back('-');
     marketsCol.append(cur2.str());
   }
@@ -71,11 +71,13 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
 
 void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange) const {
   RETURN_IF_NO_PRINT;
-  SimpleTable t("Exchange", "Account", "Placed time", "Side", "Price", "Matched Amount", "Remaining Amount");
+  SimpleTable t("Exchange", "Account", "Exchange Id", "Placed time", "Side", "Price", "Matched Amount",
+                "Remaining Amount");
   for (const auto &[exchangePtr, openedOrders] : openedOrdersPerExchange) {
-    for (const OpenedOrder &openedOrder : openedOrders) {
-      t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.placedTimeStr(), openedOrder.sideStr(),
-                     openedOrder.price().str(), openedOrder.matchedVolume().str(), openedOrder.remainingVolume().str());
+    for (const Order &openedOrder : openedOrders) {
+      t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.id(), openedOrder.placedTimeStr(),
+                     openedOrder.sideStr(), openedOrder.price().str(), openedOrder.matchedVolume().str(),
+                     openedOrder.remainingVolume().str());
     }
   }
   t.print();
@@ -127,12 +129,12 @@ void QueryResultPrinter::printLast24hTradedVolume(Market m,
 void QueryResultPrinter::printLastTrades(Market m, const LastTradesPerExchange &lastTradesPerExchange) const {
   RETURN_IF_NO_PRINT;
   for (const auto &[exchangePtr, lastTrades] : lastTradesPerExchange) {
-    string buyTitle(m.base().str());
+    string buyTitle(m.baseStr());
     buyTitle.append(" buys");
-    string sellTitle(m.base().str());
+    string sellTitle(m.baseStr());
     sellTitle.append(" sells");
     string priceTitle("Price in ");
-    priceTitle.append(m.quote().str());
+    priceTitle.append(m.quoteStr());
 
     string title(exchangePtr->name());
     title.append(" trades - UTC");
@@ -159,7 +161,7 @@ void QueryResultPrinter::printLastTrades(Market m, const LastTradesPerExchange &
       for (int buyOrSell = 0; buyOrSell < 2; ++buyOrSell) {
         summary[buyOrSell].append(totalAmounts[buyOrSell].str());
         summary[buyOrSell].append(" (");
-        summary[buyOrSell].append(ToString<string>(nb[buyOrSell]));
+        summary[buyOrSell].append(ToString(nb[buyOrSell]));
         summary[buyOrSell].push_back(' ');
         summary[buyOrSell].append(buyOrSell == 0 ? "buys" : "sells");
         summary[buyOrSell].push_back(')');

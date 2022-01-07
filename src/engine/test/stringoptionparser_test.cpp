@@ -119,4 +119,10 @@ TEST(StringOptionParserTest, GetCurrenciesPrivateExchanges) {
                 "XLM", "EUR", PrivateExchangeNames({PrivateExchangeName("binance"), PrivateExchangeName("huobi")})));
 }
 
+TEST(StringOptionParserTest, CSVValues) {
+  EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<string>());
+  EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<string>{{"val1"}});
+  EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<string>({{"val1"}, {"value"}}));
+}
+
 }  // namespace cct
