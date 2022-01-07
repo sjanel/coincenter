@@ -13,6 +13,7 @@
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
+#include "cct_vector.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
@@ -25,7 +26,7 @@ struct KeyValuePair {
 
   KeyValuePair(std::string_view k, const char *v) : key(k), val(std::string_view(v)) {}
 
-  KeyValuePair(std::string_view k, string v) : key(k), val(std::move(v)) {}
+  KeyValuePair(std::string_view k, string &&v) : key(k), val(std::move(v)) {}
 
   KeyValuePair(std::string_view k, IntegralType v) : key(k), val(v) {}
 
@@ -49,7 +50,7 @@ class FlatKeyValueStringIterator {
 
   // Prefix increment, should be called on a valid iterator, otherwise undefined behavior
   FlatKeyValueStringIterator &operator++() {
-    // Use .data() + size() method instead of end() iterators as they may nnot be implemented as pointers
+    // Use .data() + size() method instead of end() iterators as they may not be implemented as pointers
     if (_kv[1].data() + _kv[1].size() == _data.data() + _data.size()) {
       // end
       _kv[0] = std::string_view(_data.end(), _data.end());
@@ -105,11 +106,14 @@ class FlatKeyValueStringIterator {
 /// String Key / Value pairs flattened in a single string.
 /// It can be used to store URL parameters for instance, or as an optimized key for a map / hashmap based on a list of
 /// key value pairs.
+/// A value can be simulated as an array of elements separated by AssignmentChar, useful for json conversion
 template <char KeyValuePairSep, char AssignmentChar>
 class FlatKeyValueString {
  public:
   using iterator = FlatKeyValueStringIterator<KeyValuePairSep, AssignmentChar>;
   using const_iterator = iterator;
+
+  static constexpr char kArrayElemSepChar = ',';
 
   FlatKeyValueString() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
@@ -124,7 +128,13 @@ class FlatKeyValueString {
   const_iterator begin() const { return const_iterator(_data); }
   const_iterator end() const { return const_iterator(_data, true); }
 
-  /// Append a new URL option from given key value pair.
+  /// Append a new value for a key.
+  /// Key should not already be present.
+  /// If you wish to convert value to array (for json conversion), you can end each value with a ','.
+  /// Examples:
+  ///   "val": value is a single string
+  ///   "val,": value is an array of a single string
+  ///   "val1,val2,": value is an array of two values val1 and val2
   void append(std::string_view key, std::string_view value);
 
   void append(std::string_view key, std::integral auto i) {
@@ -167,6 +177,10 @@ class FlatKeyValueString {
 
   std::string_view str() const noexcept { return _data; }
 
+  /// Converts to a json document.
+  /// Values ending with a ',' will be considered as arrays.
+  /// In this case, sub array values are comma separated values.
+  /// Limitation: all json values will be decoded as strings.
   json toJson() const;
 
   auto operator<=>(const FlatKeyValueString &) const = default;
@@ -198,9 +212,12 @@ FlatKeyValueString<KeyValuePairSep, AssignmentChar>::FlatKeyValueString(std::spa
 
 template <char KeyValuePairSep, char AssignmentChar>
 void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(std::string_view key, std::string_view value) {
-  assert(!key.empty() && !value.empty());
-  assert(key.find(KeyValuePairSep) == std::string_view::npos && key.find(AssignmentChar) == std::string_view::npos);
-  assert(value.find(KeyValuePairSep) == std::string_view::npos && value.find(AssignmentChar) == std::string_view::npos);
+  assert(!key.empty());
+  assert(!value.empty());
+  assert(key.find(KeyValuePairSep) == std::string_view::npos);
+  assert(key.find(AssignmentChar) == std::string_view::npos);
+  assert(value.find(KeyValuePairSep) == std::string_view::npos);
+  assert(value.find(AssignmentChar) == std::string_view::npos);
   assert(!contains(key));
   if (!_data.empty()) {
     _data.push_back(KeyValuePairSep);
@@ -213,7 +230,6 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(std::string_vie
 template <char KeyValuePairSep, char AssignmentChar>
 void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyValueString &o) {
   if (!o._data.empty()) {
-    assert(o._data.find(AssignmentChar) <= o._data.find(KeyValuePairSep));  // added string should not have base
     if (!_data.empty()) {
       _data.push_back(KeyValuePairSep);
     }
@@ -238,9 +254,12 @@ std::size_t FlatKeyValueString<KeyValuePairSep, AssignmentChar>::find(std::strin
 
 template <char KeyValuePairSep, char AssignmentChar>
 void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::set(std::string_view key, std::string_view value) {
-  assert(!key.empty() && !value.empty());
-  assert(key.find(KeyValuePairSep) == std::string_view::npos && key.find(AssignmentChar) == std::string_view::npos);
-  assert(value.find(KeyValuePairSep) == std::string_view::npos && value.find(AssignmentChar) == std::string_view::npos);
+  assert(!key.empty());
+  assert(!value.empty());
+  assert(key.find(KeyValuePairSep) == std::string_view::npos);
+  assert(key.find(AssignmentChar) == std::string_view::npos);
+  assert(value.find(KeyValuePairSep) == std::string_view::npos);
+  assert(value.find(AssignmentChar) == std::string_view::npos);
   std::size_t pos = find(key);
   if (pos == string::npos) {
     append(key, value);
@@ -295,7 +314,25 @@ template <char KeyValuePairSep, char AssignmentChar>
 json FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJson() const {
   json ret;
   for (const auto &[key, val] : *this) {
-    ret.emplace(key, val);
+    auto valSize = val.size();
+    bool valIsArray = valSize != 0 && val.back() == kArrayElemSepChar;
+    if (valIsArray) {
+      vector<string> arrayValues;
+      if (valSize != 1U) {  // Check empty array case
+        for (std::size_t arrayValBeg = 0;;) {
+          std::size_t arrayValSepPos = val.find(kArrayElemSepChar, arrayValBeg);
+          arrayValues.emplace_back(std::string_view(val.begin() + arrayValBeg, val.begin() + arrayValSepPos));
+          if (arrayValSepPos + 1U == valSize) {
+            break;
+          }
+          arrayValBeg = arrayValSepPos + 1;
+        }
+      }
+
+      ret.emplace(key, std::move(arrayValues));
+    } else {
+      ret.emplace(key, val);
+    }
   }
   return ret;
 }

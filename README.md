@@ -25,9 +25,10 @@ Main features:
 
 **Private requests**
  - Balance
- - Trade (in several flavors)
+ - Trade (buy & sell in several flavors)
  - Deposit information (address & tag)
  - Opened orders
+ - Cancel opened orders
  - Withdraw (with check at destination that funds are well received)
   
 **Supported exchanges**
@@ -71,6 +72,7 @@ Main features:
       - [Trade simulation](#trade-simulation)
     - [Deposit information](#deposit-information)
     - [Opened orders](#opened-orders)
+    - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
@@ -344,14 +346,30 @@ Use option `--orders-opened` to retrieve and print currently opened orders on yo
 
 Orders can be filtered according to placed time with options `--orders-min-age` and `--orders-max-age` specifying respectively the minimum and maximum age of the orders.
 
+Finally, they can also be filtered by their ID, thanks to `--orders-id` option. Give a list of comma separated string Ids.
+
 Examples:
 ```bash
-coincenter --orders-opened --orders-min-age 10min     # Retrieve all opened orders placed within the last 10 minutes
-coincenter --orders-opened kraken                     # Retrieve all opened orders on Kraken only
-coincenter --orders-opened eth --orders-max-age 1w    # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
-coincenter --orders-opened xlm-usdt                   # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
-coincenter --orders-opened btc-krw,upbit,bithumb      # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
+coincenter --orders-opened --orders-min-age 10min            # Retrieve all opened orders placed within the last 10 minutes
+coincenter --orders-opened kraken                            # Retrieve all opened orders on Kraken only
+coincenter --orders-opened eth --orders-max-age 1w           # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
+coincenter --orders-opened xlm-usdt                          # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
+coincenter --orders-opened btc-krw,upbit,bithumb             # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
+coincenter --orders-opened binance_joe --orders-id OID1,OID2 # Check if 'OID1' and 'OID2' are still opened on 'joe' account on Binance
 ```
+
+### Cancel opened orders
+
+Opened orders can be cancelled with `--orders-cancel` option, with the same filter arguments as opened orders option above. 
+**Beware**, no filtering options matches all opened orders, so this command:
+```bash
+coincenter --orders-cancel
+```
+will cancel all opened orders on all available exchanges. You can first check the current open orders and order cancellations by ID:
+```bash
+coincenter --orders-cancel --orders-id OID1
+```
+cancels order Id OID1 only, on the exchange where it is found on (no error is raised if no such opened order has this ID).
 
 ### Withdraw coin
 

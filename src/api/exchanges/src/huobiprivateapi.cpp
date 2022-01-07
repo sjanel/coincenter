@@ -16,7 +16,7 @@ namespace api {
 namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
-                  const CurlPostData& postdata = CurlPostData()) {
+                  CurlPostData&& postdata = CurlPostData()) {
   string url(HuobiPublic::kUrlBase);
   url.append(method);
 
@@ -46,10 +46,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   signaturePostdata.append("Timestamp", encodedNonce);
   if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet) {
-      signaturePostdata.append(postdata);
+      signaturePostdata.append(std::move(postdata));
     } else {
       opts.postdataInJsonFormat = true;
-      opts.postdata = postdata;
+      opts.postdata = std::move(postdata);
     }
   }
 
@@ -133,7 +133,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrdersConstraints& openedOrdersConstraints) {
+ExchangePrivate::Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
 
   ExchangePublic::MarketSet markets;
@@ -142,13 +142,13 @@ ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrders
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 
-    if (filterMarket.base() != CurrencyCode() && filterMarket.quote() != CurrencyCode()) {
+    if (filterMarket.isDefined()) {
       params.append("symbol", tolower(filterMarket.assetsPairStr()));
     }
   }
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
-  vector<OpenedOrder> openedOrders;
+  Orders openedOrders;
   for (const json& orderDetails : data["data"]) {
     string marketStr = toupper(orderDetails["symbol"].get<std::string_view>());
 
@@ -170,8 +170,14 @@ ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrders
 
     int64_t millisecondsSinceEpoch = orderDetails["created-at"].get<int64_t>();
 
-    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    int64_t idInt = orderDetails["id"].get<int64_t>();
+    string id = ToString(idInt);
+    if (!openedOrdersConstraints.validateOrderId(id)) {
       continue;
     }
 
@@ -182,17 +188,53 @@ ExchangePrivate::OpenedOrders HuobiPrivate::queryOpenedOrders(const OpenedOrders
     TradeSide side =
         orderDetails["type"].get<std::string_view>().starts_with("buy") ? TradeSide::kBuy : TradeSide::kSell;
 
-    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+  }
+  std::sort(openedOrders.begin(), openedOrders.end());
+  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
+  return openedOrders;
+}
+
+void HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  if (openedOrdersConstraints.isOrderIdOnlyDependent()) {
+    batchCancel(openedOrdersConstraints.orderIdSet());
+    return;
+  }
+  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+
+  vector<OrderId> orderIds;
+  orderIds.reserve(openedOrders.size());
+  std::transform(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
+                 std::back_inserter(orderIds), [](Order&& order) -> OrderId&& { return std::move(order.id()); });
+  batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
+}
+
+void HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
+  string csvOrderIdValues;
+
+  int nbOrderIdPerRequest = 0;
+  static constexpr std::string_view kBatchCancelEndpoint = "/v1/order/orders/batchcancel";
+  for (const OrderId& orderId : orderIdSet) {
+    csvOrderIdValues.append(orderId);
+    csvOrderIdValues.push_back(CurlPostData::kArrayElemSepChar);
+    if (++nbOrderIdPerRequest == 50) {  // max 50 per request
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint,
+                   {{"order-ids", std::move(csvOrderIdValues)}});
+      csvOrderIdValues.clear();
+      nbOrderIdPerRequest = 0;
+    }
   }
 
-  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
-  return OpenedOrders(std::move(openedOrders));
+  if (nbOrderIdPerRequest > 0) {
+    PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint,
+                 {{"order-ids", std::move(csvOrderIdValues)}});
+  }
 }
 
 PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
 
@@ -235,25 +277,30 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   placePostData.append("symbol", lowerCaseMarket);
   placePostData.append("type", type);
 
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", placePostData);
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", std::move(placePostData));
   placeOrderInfo.orderId = result["data"];
   return placeOrderInfo;
 }
 
-OrderInfo HuobiPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
+void HuobiPrivate::cancelOrderProcess(const OrderId& id) {
   string endpoint = "/v1/order/orders/";
-  endpoint.append(orderId);
+  endpoint.append(id);
   endpoint.append("/submitcancel");
   PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, endpoint);
-  return queryOrderInfo(orderId, tradeInfo);
 }
 
-OrderInfo HuobiPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
-  const Market m = tradeInfo.m;
+OrderInfo HuobiPrivate::cancelOrder(const OrderRef& orderRef) {
+  cancelOrderProcess(orderRef.id);
+  return queryOrderInfo(orderRef);
+}
+
+OrderInfo HuobiPrivate::queryOrderInfo(const OrderRef& orderRef) {
+  const CurrencyCode fromCurrencyCode = orderRef.fromCur();
+  const CurrencyCode toCurrencyCode = orderRef.toCur();
+  const Market m = orderRef.m;
   string endpoint = "/v1/order/orders/";
-  endpoint.append(orderId);
+  endpoint.append(orderRef.id);
 
   json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
   const json& data = res["data"];
@@ -315,9 +362,9 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   // Strange to have the fee as input parameter of a withdraw...
   withdrawPostData.append("fee", fee.amountStr());
 
-  json result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create", withdrawPostData);
-  string withdrawIdStr = ToString<string>(result["data"].get<int64_t>());
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
+                             std::move(withdrawPostData));
+  string withdrawIdStr = ToString(result["data"].get<int64_t>());
   return InitiatedWithdrawInfo(std::move(wallet), std::move(withdrawIdStr), grossAmount);
 }
 

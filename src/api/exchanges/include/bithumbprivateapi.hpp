@@ -35,8 +35,9 @@ class BithumbPrivate : public ExchangePrivate {
 
   bool canGenerateDepositAddress() const override { return false; }
 
-  OpenedOrders queryOpenedOrders(
-      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+  Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+
+  void cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
   void updateCacheFile() const override;
 
@@ -46,9 +47,9 @@ class BithumbPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  OrderInfo cancelOrder(const OrderRef& orderRef) override;
 
-  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -73,6 +74,8 @@ class BithumbPrivate : public ExchangePrivate {
     MaxNbDecimalsUnitMap& _maxNbDecimalsUnitMap;
     BithumbPublic& _exchangePublic;
   };
+
+  void cancelOrderProcess(const OrderRef& orderRef);
 
   CurlHandle _curlHandle;
   MaxNbDecimalsUnitMap _maxNbDecimalsUnitMap;

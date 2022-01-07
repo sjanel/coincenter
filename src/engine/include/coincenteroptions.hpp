@@ -72,6 +72,8 @@ struct CoincenterCmdLineOptions {
   string deposit_info;
 
   std::optional<string> opened_orders_info;
+  std::optional<string> cancel_opened_orders;
+  string orders_ids;
   Duration orders_min_age{};
   Duration orders_max_age{};
 
@@ -116,7 +118,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                  "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},  
                                                  &OptValueType::repeats},
        {{{"General", 10}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
-                                                    .append(ToString<string>(kDefaultRepeatDurationSeconds)).append("s)")},  
+                                                    .append(ToString(kDefaultRepeatDurationSeconds)).append("s)")},  
                                                   &OptValueType::repeat_time},
        {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
        {{{"Public queries", 20}, "--markets", 'm', "<cur1[-cur2][,exch1,...]>", "Print markets involving given currencies for all exchanges, "
@@ -144,7 +146,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                             "for all exchanges (or specified one)"}, 
                                                           &OptValueType::lastTrades},
        {{{"Public queries", 20}, "--last-trades-n", "<n>", string("Change number of last trades to query (default: ").
-                                                            append(ToString<string>(api::ExchangePublic::kNbLastTradesDefault)).append(
+                                                            append(ToString(api::ExchangePublic::kNbLastTradesDefault)).append(
                                                           ")")}, 
                                                           &OptValueType::nbLastTrades},  
        {{{"Public queries", 20}, "--price", 'p', "<cur1-cur2[,exch1,...]>", "Print last price for market 'cur1'-'cur2' "
@@ -157,15 +159,21 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                   "in this case a total amount will be printed in this currency "
                                                                   "if conversion is possible."}, 
                                                                   &OptValueType::balance},
-       {{{"Private queries", 30}, "--orders-opened", "<cur1-cur2[,exch1,...]>", "Print opened orders with given selection criteria.\n"
+       {{{"Private queries", 31}, "--orders-opened", "<cur1-cur2[,exch1,...]>", "Print opened orders matching selection criteria.\n"
                                                                "All cur1, cur2 and exchanges are optional, "
                                                                "returned opened orders will be filtered accordingly."}, 
                                                                 &OptValueType::opened_orders_info},
-       {{{"Private queries", 31}, "--orders-min-age", "<time>", "Only select orders with given minimum age.\n"}, 
+       {{{"Private queries", 32}, "--orders-cancel", "<cur1-cur2[,exch1,...]>", "Cancel opened orders matching selection criteria.\n"
+                                                               "All cur1, cur2 and exchanges are optional."}, 
+                                                                &OptValueType::cancel_opened_orders},
+       {{{"Private queries", 34}, "--orders-id", "<id1,...>", "Only select orders with given ID.\n"
+                                                              "One or several IDs can be given, should be comma separated."}, 
+                                                              &OptValueType::orders_ids},
+       {{{"Private queries", 35}, "--orders-min-age", "<time>", "Only select orders with given minimum age.\n"}, 
                                                                 &OptValueType::orders_min_age},
-       {{{"Private queries", 31}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"}, 
+       {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"}, 
                                                                 &OptValueType::orders_max_age},
-       {{{"Trade", 40}, "--trade", 't', "<amt cur1-cur2[,exch1,...]>", "Single trade from given start amount on a list of exchanges, "
+        {{{"Trade", 40}, "--trade", 't', "<amt cur1-cur2[,exch1,...]>", "Single trade from given start amount on a list of exchanges, "
                                                                       "or all that have sufficient balance on cur1 if none provided.\n"
                                                                       "Order will be placed at limit price by default"}, &OptValueType::trade},
        {{{"Trade", 40}, "--trade-all", "<cur1-cur2[,exch1,...]>", "Single trade from available amount from given currency on a list of exchanges,"
@@ -187,14 +195,14 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                   " - 'taker': order price will be at market price, expected to be matched directly"}, 
                                                                   &OptValueType::trade_price},
        {{{"Trade", 43}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
-                                                .append(ToString<string>(defaultTradeTimeout))
+                                                .append(ToString(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 
                                                 &OptValueType::trade_timeout},
        {{{"Trade", 43}, "--trade-timeout-match", "", "If after the timeout some amount is still not traded,\n"
                                                     "force match by placing a remaining order at market price\n"}, 
                                                     &OptValueType::trade_timeout_match},
        {{{"Trade", 43}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
-                                                    .append(ToString<string>(minUpdatePriceTime))
+                                                    .append(ToString(minUpdatePriceTime))
                                                     .append("s). Avoids cancelling / placing new orders too often with high volumes "
                                                     "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
        {{{"Trade", 44}, "--trade-sim", "", string("Activates simulation mode only (default: ")
@@ -217,7 +225,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                 "(Prometheus by default). Refer to the README for more information"}, 
                                                        &OptValueType::useMonitoring},
        {{{"Monitoring", 60}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
-                                                          .append(ToString<string>(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
+                                                          .append(ToString(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
                                                          &OptValueType::monitoring_port},
        {{{"Monitoring", 60}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
                                                         .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 

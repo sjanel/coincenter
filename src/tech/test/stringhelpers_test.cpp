@@ -11,7 +11,7 @@ TEST(ToChar, Zero) {
   EXPECT_EQ(s, "0");
   SetString(s, 0);
   EXPECT_EQ(s, "0");
-  EXPECT_EQ(ToString<string>(0), "0");
+  EXPECT_EQ(ToString(0), "0");
 }
 
 TEST(ToChar, PositiveValue) {
@@ -22,7 +22,7 @@ TEST(ToChar, PositiveValue) {
   EXPECT_EQ(s, "I am a string 429");
   SetString(s, 902);
   EXPECT_EQ(s, "902");
-  EXPECT_EQ(ToString<string>(98124), "98124");
+  EXPECT_EQ(ToString(98124), "98124");
 }
 
 TEST(ToChar, NegativeValue) {
@@ -33,7 +33,7 @@ TEST(ToChar, NegativeValue) {
   EXPECT_EQ(s, "I will hold some negative value -293486-9830346445");
   SetString(s, -13);
   EXPECT_EQ(s, "-13");
-  EXPECT_EQ(ToString<string>(-123467), "-123467");
+  EXPECT_EQ(ToString(-123467), "-123467");
 }
 
 TEST(ToChar, UnsignedValue) {
@@ -44,7 +44,7 @@ TEST(ToChar, UnsignedValue) {
   EXPECT_EQ(s, "I am a string 73818446744073709551615");
   SetString(s, 901235U);
   EXPECT_EQ(s, "901235");
-  EXPECT_EQ(ToString<string>(630195439576U), "630195439576");
+  EXPECT_EQ(ToString(630195439576U), "630195439576");
 }
 
 TEST(FromString, PositiveValue) {

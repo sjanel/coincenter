@@ -1,9 +1,11 @@
 #include "binanceprivateapi.hpp"
 
 #include <thread>
+#include <unordered_map>
 
 #include "apikey.hpp"
 #include "binancepublicapi.hpp"
+#include "cct_smallvector.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
@@ -31,7 +33,6 @@ template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view baseURL,
                   std::string_view method, CurlPostDataT&& curlPostData = CurlPostData()) {
   string url(baseURL);
-  url.push_back('/');
   url.append(method);
 
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), BinancePublic::kUserAgent);
@@ -87,14 +88,14 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& bina
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, _public._commonInfo.getBestBaseURL(),
-                             "sapi/v1/capital/config/getall");
+                             "/sapi/v1/capital/config/getall");
   return _public.queryTradableCurrencies(result);
 }
 
 BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                             "api/v3/account");
+                             "/api/v3/account");
   BalancePortfolio balancePortfolio;
   for (const json& balance : result["balances"]) {
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
@@ -108,7 +109,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, _public._commonInfo.getBestBaseURL(),
-                             "sapi/v1/capital/deposit/address", {{"coin", currencyCode.str()}});
+                             "/sapi/v1/capital/deposit/address", {{"coin", currencyCode.str()}});
   std::string_view address(result["address"].get<std::string_view>());
   std::string_view tag(result["tag"].get<std::string_view>());
   std::string_view url(result["url"].get<std::string_view>());
@@ -121,20 +122,33 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return w;
 }
 
-ExchangePrivate::OpenedOrders BinancePrivate::queryOpenedOrders(
-    const OpenedOrdersConstraints& openedOrdersConstraints) {
+bool BinancePrivate::checkMarketAppendSymbol(Market m, CurlPostData& params) {
+  ExchangePublic::MarketSet markets = _exchangePublic.queryTradableMarkets();
+  if (!markets.contains(m)) {
+    m = m.reverse();
+    if (!markets.contains(m)) {
+      return false;
+    }
+  }
+  params.append("symbol", m.assetsPairStr());
+  return true;
+}
+
+ExchangePrivate::Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  Orders openedOrders;
   CurlPostData params;
-  std::string_view cur1Str = openedOrdersConstraints.curStr1();
-  std::string_view cur2Str = openedOrdersConstraints.curStr2();
   if (openedOrdersConstraints.isMarketDefined()) {
-    // Symbol (which corresponds to a market) is optional - however, it costs 40 credits if omitted
-    params.append("symbol", openedOrdersConstraints.market().assetsPairStr());
+    // Symbol (which corresponds to a market) is optional - however, it costs 40 credits if omitted and should exist
+    if (!checkMarketAppendSymbol(openedOrdersConstraints.market(), params)) {
+      return openedOrders;
+    }
   }
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                             "api/v3/openOrders", std::move(params));
+                             "/api/v3/openOrders", std::move(params));
 
-  vector<OpenedOrder> openedOrders;
+  std::string_view cur1Str = openedOrdersConstraints.curStr1();
+  std::string_view cur2Str = openedOrdersConstraints.curStr2();
   ExchangePublic::MarketSet markets;
   openedOrders.reserve(result.size());
   for (const json& orderDetails : result) {
@@ -148,7 +162,7 @@ ExchangePrivate::OpenedOrders BinancePrivate::queryOpenedOrders(
     }
     int64_t millisecondsSinceEpoch = orderDetails["time"].get<int64_t>();
 
-    OpenedOrder::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -166,21 +180,68 @@ ExchangePrivate::OpenedOrders BinancePrivate::queryOpenedOrders(
       continue;
     }
 
+    int64_t orderId = orderDetails["orderId"].get<int64_t>();
+    string id = ToString(orderId);
+    if (!openedOrdersConstraints.validateOrderId(id)) {
+      continue;
+    }
+
     MonetaryAmount matchedVolume(orderDetails["executedQty"].get<std::string_view>(), volumeCur);
     MonetaryAmount originalVolume(orderDetails["origQty"].get<std::string_view>(), volumeCur);
     MonetaryAmount remainingVolume = originalVolume - matchedVolume;
     MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
     TradeSide side = orderDetails["side"].get<std::string_view>() == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
 
-    openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
   }
+  std::sort(openedOrders.begin(), openedOrders.end());
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
-  return OpenedOrders(std::move(openedOrders));
+  return openedOrders;
+}
+
+void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  CurlPostData params;
+  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
+  bool isMarketDefined = openedOrdersConstraints.isMarketDefined();
+  bool canUseCancelAllEndpoint = openedOrdersConstraints.isAtMostMarketDependent();
+  if (isMarketDefined) {
+    if (!checkMarketAppendSymbol(openedOrdersConstraints.market(), params)) {
+      return;
+    }
+    if (canUseCancelAllEndpoint) {
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, binancePublic._commonInfo.getBestBaseURL(),
+                   "/api/v3/openOrders", std::move(params));
+      return;
+    }
+  }
+
+  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+
+  using OrdersByMarketMap = std::unordered_map<Market, SmallVector<Order, 3>>;
+  OrdersByMarketMap ordersByMarketMap;
+  std::for_each(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
+                [&ordersByMarketMap](Order&& o) { ordersByMarketMap[o.market()].push_back(std::move(o)); });
+  for (const auto& [market, orders] : ordersByMarketMap) {
+    if (!isMarketDefined) {
+      params.set("symbol", market.assetsPairStr());
+    }
+    if (orders.size() > 1 && canUseCancelAllEndpoint) {
+      params.erase("orderid");
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, binancePublic._commonInfo.getBestBaseURL(),
+                   "/api/v3/openOrders", params);
+    } else {
+      for (const Order& order : orders) {
+        params.set("orderid", order.id());
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, binancePublic._commonInfo.getBestBaseURL(),
+                     "/api/v3/orders", params);
+      }
+    }
+  }
 }
 
 ExchangePublic::WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, _exchangePublic._commonInfo.getBestBaseURL(),
-                             "sapi/v1/asset/assetDetail");
+                             "/sapi/v1/asset/assetDetail");
   WithdrawalFeeMap ret;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
     if (withdrawFeeDetails["withdrawStatus"].get<bool>()) {
@@ -193,7 +254,7 @@ ExchangePublic::WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()
 
 MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, _exchangePublic._commonInfo.getBestBaseURL(),
-                             "sapi/v1/asset/assetDetail", {{"asset", currencyCode.str()}});
+                             "/sapi/v1/asset/assetDetail", {{"asset", currencyCode.str()}});
   if (!result.contains(currencyCode.str())) {
     throw exception("Unable to find asset information in assetDetail query to Binance");
   }
@@ -207,8 +268,8 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
 PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
   const Market m = tradeInfo.m;
   const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(binancePublic.exchangeInfo().placeSimulateRealOrder());
@@ -253,7 +314,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placePostData.append("price", price.amountStr());
   }
 
-  const std::string_view methodName = isSimulation ? "api/v3/order/test" : "api/v3/order";
+  const std::string_view methodName = isSimulation ? "/api/v3/order/test" : "/api/v3/order";
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, binancePublic._commonInfo.getBestBaseURL(),
                              methodName, placePostData);
@@ -275,16 +336,16 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   return placeOrderInfo;
 }
 
-OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tradeInfo, bool isCancel) {
-  const CurrencyCode fromCurrencyCode = tradeInfo.fromCurrencyCode;
-  const CurrencyCode toCurrencyCode = tradeInfo.toCurrencyCode;
-  const Market m = tradeInfo.m;
+OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, bool isCancel) {
+  const Market m = orderRef.m;
+  const CurrencyCode fromCurrencyCode = orderRef.side == TradeSide::kSell ? m.base() : m.quote();
+  const CurrencyCode toCurrencyCode = orderRef.side == TradeSide::kBuy ? m.base() : m.quote();
   const HttpRequestType requestType = isCancel ? HttpRequestType::kDelete : HttpRequestType::kGet;
   const string assetsStr = m.assetsPairStr();
   const std::string_view assets(assetsStr);
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result = PrivateQuery(_curlHandle, _apiKey, requestType, binancePublic._commonInfo.getBestBaseURL(),
-                             "api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
+                             "/api/v3/order", {{"symbol", assets}, {"orderId", orderRef.id}});
   const std::string_view status = result["status"].get<std::string_view>();
   bool isClosed = false;
   bool queryClosedOrder = false;
@@ -292,7 +353,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
     isClosed = true;
     queryClosedOrder = true;
   } else if (status == "REJECTED" || status == "EXPIRED") {
-    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, status);
+    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderRef.id, status);
     isClosed = true;
   }
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
@@ -303,8 +364,8 @@ OrderInfo BinancePrivate::queryOrder(const OrderId& orderId, const TradeInfo& tr
       myTradesOpts.append("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
     }
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                          "api/v3/myTrades", myTradesOpts);
-    int64_t integralOrderId = FromString<int64_t>(orderId);
+                          "/api/v3/myTrades", myTradesOpts);
+    int64_t integralOrderId = FromString<int64_t>(orderRef.id);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
         orderInfo.tradedAmounts += parseTrades(m, fromCurrencyCode, tradeDetails);
@@ -356,7 +417,7 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   }
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, binancePublic._commonInfo.getBestBaseURL(),
-                             "sapi/v1/capital/withdraw/apply", withdrawPostData);
+                             "/sapi/v1/capital/withdraw/apply", withdrawPostData);
   std::string_view withdrawId(result["id"].get<std::string_view>());
   return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
 }
@@ -366,7 +427,7 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json withdrawStatus =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                   "sapi/v1/capital/withdraw/history", {{"coin", currencyCode.str()}});
+                   "/sapi/v1/capital/withdraw/history", {{"coin", currencyCode.str()}});
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
   MonetaryAmount netEmittedAmount;
   bool isWithdrawSent = false;
@@ -419,7 +480,7 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json depositStatus =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
-                   "sapi/v1/capital/deposit/hisrec", {{"coin", currencyCode.str()}});
+                   "/sapi/v1/capital/deposit/hisrec", {{"coin", currencyCode.str()}});
   for (const json& depositDetail : depositStatus) {
     std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
     if (depositAddress == initiatedWithdrawInfo.receivingWallet().address()) {

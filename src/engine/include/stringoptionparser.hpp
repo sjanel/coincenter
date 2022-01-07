@@ -44,6 +44,8 @@ class StringOptionParser {
 
   CurrenciesPublicExchanges getCurrenciesPublicExchanges() const;
 
+  vector<string> getCSVValues() const;
+
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  protected:

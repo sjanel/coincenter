@@ -5,6 +5,7 @@
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "mathhelpers.hpp"
 
 namespace cct {
@@ -18,10 +19,9 @@ inline void ToChars(char *last, SizeType s, std::integral auto i) {
 }
 }  // namespace details
 
-template <class StringType>
-StringType ToString(std::integral auto i) {
+string ToString(std::integral auto i) {
   const int nbDigitsInt = nchars(i);
-  StringType s(nbDigitsInt, '0');
+  string s(nbDigitsInt, '0');
   details::ToChars(s.data() + nbDigitsInt, nbDigitsInt, i);
   return s;
 }

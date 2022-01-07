@@ -395,15 +395,15 @@ MonetaryAmount MarketOrderBook::getLowestTheoreticalPrice() const {
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
                             std::optional<MonetaryAmount> conversionPriceRate) const {
   string h1("Sellers of ");
-  h1.append(_market.base().str()).append(" (asks)");
+  h1.append(_market.baseStr()).append(" (asks)");
   string h2(exchangeName);
-  h2.append(" ").append(_market.base().str()).append(" price in ").append(_market.quote().str());
+  h2.append(" ").append(_market.baseStr()).append(" price in ").append(_market.quoteStr());
   string h3(exchangeName);
   if (conversionPriceRate) {
-    h3.append(" ").append(_market.base().str()).append(" price in ").append(conversionPriceRate->currencyStr());
+    h3.append(" ").append(_market.baseStr()).append(" price in ").append(conversionPriceRate->currencyStr());
   }
   string h4("Buyers of ");
-  h4.append(_market.base().str()).append(" (bids)");
+  h4.append(_market.baseStr()).append(" (bids)");
 
   SimpleTable t;
   if (conversionPriceRate) {
@@ -414,7 +414,7 @@ void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
 
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
-    MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode::kNeutral, _volAndPriNbDecimals.volNbDecimals);
+    MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode(), _volAndPriNbDecimals.volNbDecimals);
     MonetaryAmount price = priceAt(pos);
     SimpleTable::Row r(amount.str());
     r.emplace_back(price.amountStr());

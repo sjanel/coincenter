@@ -17,7 +17,7 @@ BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
 
 void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
   if (!amount.isZero()) {
-    if (equiCurrency == CurrencyCode::kNeutral) {
+    if (equiCurrency.isNeutral()) {
       log::debug("{} Balance {}", _exchangePublic.name(), amount.str());
       balancePortfolio.add(amount);
     } else {
@@ -84,11 +84,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
                                            Market m) {
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrency = from.currencyCode();
+  TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;
 
   const auto nbSecondsSinceEpoch =
       std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
 
-  TradeInfo tradeInfo(fromCurrency, toCurrency, m, options, nbSecondsSinceEpoch);
+  TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, options);
 
   MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
 
@@ -101,12 +102,14 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
     return placeOrderInfo.tradedAmounts();
   }
 
+  OrderRef orderRef(orderId, nbSecondsSinceEpoch, m, side);
+
   TimePoint lastPriceUpdateTime = Clock::now();
   MonetaryAmount lastPrice = price;
 
   TradedAmounts totalTradedAmounts(fromCurrency, toCurrency);
   do {
-    OrderInfo orderInfo = queryOrderInfo(orderId, tradeInfo);
+    OrderInfo orderInfo = queryOrderInfo(orderRef);
     if (orderInfo.isClosed) {
       totalTradedAmounts += orderInfo.tradedAmounts;
       log::debug("Order {} closed with last traded amounts {}", orderId, orderInfo.tradedAmounts.str());
@@ -124,12 +127,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
       // Let's see if we need to change the price if limit price has changed.
       price = _exchangePublic.computeLimitOrderPrice(m, from, options.priceStrategy());
       updatePriceNeeded =
-          (fromCurrency == m.base() && price < lastPrice) || (fromCurrency == m.quote() && price > lastPrice);
+          (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
       // Cancel
       log::debug("Cancel order {}", orderId);
-      OrderInfo cancelledOrderInfo = cancelOrder(orderId, tradeInfo);
+      OrderInfo cancelledOrderInfo = cancelOrder(orderRef);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
       from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
       if (from.isZero()) {
@@ -219,7 +222,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
                                                   const TradeInfo &tradeInfo) {
   Market m = tradeInfo.m;
-  const bool isSell = tradeInfo.fromCurrencyCode == m.base();
+  const bool isSell = tradeInfo.side == TradeSide::kSell;
   MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, m.base()));
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
@@ -247,8 +250,7 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
                                                                        const TradeInfo &tradeInfo) const {
   const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  Market m = tradeInfo.m;
-  const bool isSell = tradeInfo.fromCurrencyCode == m.base();
+  const bool isSell = tradeInfo.side == TradeSide::kSell;
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
   ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
   toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);

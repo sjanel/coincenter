@@ -48,8 +48,7 @@ class KrakenPublic : public ExchangePublic {
 
   void updateCacheFile() const override;
 
-  static constexpr std::string_view kUrlBase = "https://api.kraken.com";
-  static constexpr char kVersion = '0';
+  static constexpr std::string_view kUrlBase = "https://api.kraken.com/0";
   static constexpr char kUserAgent[] = "Kraken C++ API Client";
 
  private:

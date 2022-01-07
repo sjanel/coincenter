@@ -111,7 +111,7 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
       toTradeCurrency = CurrencyCode(StrBeforeComma(_opt, dashPos + 1, commaPos));
     }
   }
-  if (currenciesShouldBeSet && (fromTradeCurrency == CurrencyCode() || toTradeCurrency == CurrencyCode())) {
+  if (currenciesShouldBeSet && (fromTradeCurrency.isNeutral() || toTradeCurrency.isNeutral())) {
     throw std::invalid_argument("Expected a dash");
   }
   return std::make_tuple(fromTradeCurrency, toTradeCurrency, GetPrivateExchanges(StrEnd(_opt, startExchangesPos)));
@@ -181,4 +181,26 @@ StringOptionParser::CurrenciesPublicExchanges StringOptionParser::getCurrenciesP
   }
   return ret;
 }
+
+vector<string> StringOptionParser::getCSVValues() const {
+  std::size_t pos = 0;
+  vector<string> ret;
+  if (!_opt.empty()) {
+    do {
+      std::size_t nextCommaPos = getNextCommaPos(pos, false);
+      if (nextCommaPos == string::npos) {
+        nextCommaPos = _opt.size();
+      }
+      if (pos != nextCommaPos) {
+        ret.emplace_back(std::string_view(_opt.begin() + pos, _opt.begin() + nextCommaPos));
+      }
+      if (nextCommaPos == _opt.size()) {
+        break;
+      }
+      pos = nextCommaPos + 1;
+    } while (true);
+  }
+  return ret;
+}
+
 }  // namespace cct

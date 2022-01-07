@@ -44,38 +44,29 @@ string UrlEncode(std::string_view str) {
   return ret;
 }
 
-string GetMethodURL(std::string_view methodName) {
+string GetMethodURL(std::string_view endpoint) {
   string methodUrl(BithumbPublic::kUrlBase);
-  methodUrl.append(methodName);
+  methodUrl.append(endpoint);
   return methodUrl;
 }
 
-string GetStrPost(std::string_view methodName, const CurlPostData& curlPostData) {
-  string strPost = "endpoint=/";
-  strPost.reserve(methodName.size() + 1U + curlPostData.str().size());
-  strPost.append(methodName);
+string GetStrPost(std::string_view endpoint, std::string_view curlPostDataStr) {
+  string strPost("endpoint=");
+  strPost.reserve(strPost.size() + endpoint.size() + 1U + curlPostDataStr.size());
+  strPost.append(endpoint);
   strPost.push_back('&');
-  strPost.append(curlPostData.str());
+  strPost.append(curlPostDataStr);
   return strPost;
 }
 
-CurlOptions InitCurlOptions(std::string_view methodName, const CurlPostData& curlPostData) {
-  // For Bithumb, we always use POST requests (even when read-only)
-  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(GetStrPost(methodName, curlPostData))));
-  opts.userAgent = BithumbPublic::kUserAgent;
-  return opts;
-}
-
-std::pair<string, Nonce> GetStrData(std::string_view methodName, const CurlOptions& opts) {
+std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
-  string strData;
-  strData.reserve(methodName.size() + 3U + opts.postdata.str().size() + nonce.size());
-  strData.push_back('/');
-  strData.append(methodName);
+  string strData(endpoint);
+  strData.reserve(strData.size() + 2U + postDataStr.size() + nonce.size());
 
   static constexpr char kParChar = 1;
   strData.push_back(kParChar);
-  strData.append(opts.postdata.str());
+  strData.append(postDataStr);
   strData.push_back(kParChar);
 
   strData.append(nonce.begin(), nonce.end());
@@ -92,26 +83,27 @@ void SetHttpHeaders(StringVec& httpHeaders, const APIKey& apiKey, std::string_vi
   httpHeaders.emplace_back("api-client-type: 1");
 }
 
-json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName, CurlOptions& opts) {
-  auto strDataAndNoncePair = GetStrData(methodName, opts);
+json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint, CurlOptions& opts) {
+  auto strDataAndNoncePair = GetStrData(endpoint, opts.postdata.str());
 
   string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
 
   SetHttpHeaders(opts.httpHeaders, apiKey, signature, strDataAndNoncePair.second);
-  return json::parse(curlHandle.query(GetMethodURL(methodName), opts));
+  return json::parse(curlHandle.query(GetMethodURL(endpoint), opts));
 }
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view methodName,
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                   BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
                   const CurlPostData& curlPostData) {
-  CurlOptions opts = InitCurlOptions(methodName, curlPostData);
-  json dataJson = PrivateQueryProcess(curlHandle, apiKey, methodName, opts);
+  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(GetStrPost(endpoint, curlPostData.str()))),
+                   BithumbPublic::kUserAgent);
+  json dataJson = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
 
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
-  const bool isTradeQuery = methodName.starts_with("trade");
-  const bool isInfoOpenedOrders = methodName == "info/orders";
-  const bool isCancelQuery = methodName == "trade/cancel";
-  const bool isDepositInfo = methodName == "info/wallet_address";
+  const bool isTradeQuery = endpoint.starts_with("/trade");
+  const bool isInfoOpenedOrders = endpoint == "/info/orders";
+  const bool isCancelQuery = endpoint == "/trade/cancel";
+  const bool isDepositInfo = endpoint == "/info/wallet_address";
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
   while (dataJson.contains("status") && ++nbRetries < kMaxNbRetries) {
@@ -153,7 +145,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                   log::error("Bithumb time is not synchronized with us (difference of {} s)",
                              (reqTimeInt - nowTimeInt) / 1000);
                   log::error("It can sometimes come from a bug in Bithumb, retry");
-                  dataJson = PrivateQueryProcess(curlHandle, apiKey, methodName, opts);
+                  dataJson = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
                   continue;
                 }
               }
@@ -188,7 +180,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                   return {};
                 }
                 updatedPostData.set("units", volume.amountStr());
-                return PrivateQuery(curlHandle, apiKey, methodName, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
+                return PrivateQuery(curlHandle, apiKey, endpoint, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
               }
             }
             if ((isInfoOpenedOrders || isCancelQuery) &&
@@ -213,7 +205,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
       throw exception(std::move(ex));
     }
   }
-  return methodName.starts_with("trade") ? dataJson : dataJson["data"];
+  return isTradeQuery ? dataJson : dataJson["data"];
 }
 
 File GetBithumbDecimalsCache(std::string_view dataDir) {
@@ -243,7 +235,7 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
 }
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
-  json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
   BalancePortfolio balancePortfolio;
   for (const auto& [key, value] : result.items()) {
     static constexpr std::string_view kPrefixKey = "available_";
@@ -257,7 +249,7 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 }
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  json result = PrivateQuery(_curlHandle, _apiKey, "info/wallet_address", _maxNbDecimalsUnitMap,
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/wallet_address", _maxNbDecimalsUnitMap,
                              {{"currency", currencyCode.str()}});
   std::string_view addressAndTag = result["wallet_address"].get<std::string_view>();
   if (addressAndTag.empty()) {
@@ -284,8 +276,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return w;
 }
 
-ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
-    const OpenedOrdersConstraints& openedOrdersConstraints) {
+ExchangePrivate::Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
 
   SmallVector<CurrencyCode, 1> orderCurrencies;
@@ -295,17 +286,17 @@ ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 
-    if (filterMarket.base() != CurrencyCode()) {
+    if (!filterMarket.base().isNeutral()) {
       orderCurrencies.push_back(filterMarket.base());
-      if (filterMarket.quote() != CurrencyCode()) {
-        params.append("payment_currency", filterMarket.quote().str());
+      if (!filterMarket.quote().isNeutral()) {
+        params.append("payment_currency", filterMarket.quoteStr());
       }
     }
   } else {
     // Trick: let's use balance query to guess where we can search for opened orders,
     // by looking at "is_use" amounts. The only drawback is that we need to make one query for each currency,
     // but it's better than nothing.
-    json result = PrivateQuery(_curlHandle, _apiKey, "info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
+    json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", _maxNbDecimalsUnitMap, {{"currency", "all"}});
     for (const auto& [key, value] : result.items()) {
       static constexpr std::string_view kPrefixKey = "in_use_";
       if (key.starts_with(kPrefixKey)) {
@@ -320,8 +311,8 @@ ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
     }
   }
 
-  vector<OpenedOrder> openedOrders;
-  if (openedOrdersConstraints.isPlacedTimeDefined()) {
+  Orders openedOrders;
+  if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
     params.append("after", std::chrono::duration_cast<std::chrono::milliseconds>(
                                openedOrdersConstraints.placedAfter().time_since_epoch())
                                .count());
@@ -331,14 +322,19 @@ ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
   }
   for (CurrencyCode volumeCur : orderCurrencies) {
     params.set("order_currency", volumeCur.str());
-    json result = PrivateQuery(_curlHandle, _apiKey, "info/orders", _maxNbDecimalsUnitMap, params);
+    json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", _maxNbDecimalsUnitMap, params);
 
     openedOrders.reserve(openedOrders.size() + result.size());
-    for (const json& orderDetails : result) {
+    for (json& orderDetails : result) {
       int64_t microsecondsSinceEpoch = FromString<int64_t>(orderDetails["order_date"].get<std::string_view>());
 
-      OpenedOrder::TimePoint placedTime{std::chrono::microseconds(microsecondsSinceEpoch)};
+      Order::TimePoint placedTime{std::chrono::microseconds(microsecondsSinceEpoch)};
       if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
+        continue;
+      }
+
+      string id = std::move(orderDetails["order_id"].get_ref<string&>());
+      if (!openedOrdersConstraints.validateOrderId(id)) {
         continue;
       }
 
@@ -349,34 +345,41 @@ ExchangePrivate::OpenedOrders BithumbPrivate::queryOpenedOrders(
       MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
       TradeSide side = orderDetails["type"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
-      openedOrders.emplace_back(matchedVolume, remainingVolume, price, placedTime, side);
+      openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
     }
   }
-
+  std::sort(openedOrders.begin(), openedOrders.end());
   openedOrders.shrink_to_fit();
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
-  return OpenedOrders(std::move(openedOrders));
+  return openedOrders;
+}
+
+void BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  // No faster way to cancel several orders at once with Bithumb, doing a simple for loop
+  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+    cancelOrderProcess(OrderRef(o.id(), 0 /*userRef, unused*/, o.market(), o.side()));
+  }
 }
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   const bool isTakerStrategy =
       tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCurrencyCode);
-  const CurrencyCode toCurrencyCode(tradeInfo.toCurrencyCode);
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
 
   const Market m = tradeInfo.m;
 
   // It seems Bithumb uses "standard" currency codes, no need to translate them
-  CurlPostData placePostData{{"order_currency", m.base().str()}, {"payment_currency", m.quote().str()}};
+  CurlPostData placePostData{{"order_currency", m.baseStr()}, {"payment_currency", m.quoteStr()}};
   const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
 
-  string methodName = "trade/";
+  string endpoint("/trade/");
   if (isTakerStrategy) {
-    methodName.append(fromCurrencyCode == m.base() ? "market_sell" : "market_buy");
+    endpoint.append(fromCurrencyCode == m.base() ? "market_sell" : "market_buy");
   } else {
-    methodName.append("place");
+    endpoint.append("place");
     placePostData.append("type", orderType);
     placePostData.append("price", price.amountStr());
   }
@@ -405,11 +408,11 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   placePostData.append("units", volume.amountStr());
 
-  json result = PrivateQuery(_curlHandle, _apiKey, methodName, _maxNbDecimalsUnitMap, placePostData);
+  json result = PrivateQuery(_curlHandle, _apiKey, endpoint, _maxNbDecimalsUnitMap, placePostData);
   //{"status" : "0000","order_id" : "1428646963419"}
   if (result.contains("order_id")) {
     placeOrderInfo.orderId = result["order_id"];
-    placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo);
+    placeOrderInfo.orderInfo = queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId));
   } else {
     log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
               toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
@@ -419,37 +422,40 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   return placeOrderInfo;
 }
 
-OrderInfo BithumbPrivate::cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode = tradeInfo.fromCurrencyCode;
-  const Market m = tradeInfo.m;
-  const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
-
-  PrivateQuery(_curlHandle, _apiKey, "trade/cancel", _maxNbDecimalsUnitMap,
-               {{"order_currency", m.base().str()},
-                {"payment_currency", m.quote().str()},
-                {"type", orderType},
-                {"order_id", orderId}});
-
-  return queryOrderInfo(orderId, tradeInfo);
+OrderInfo BithumbPrivate::cancelOrder(const OrderRef& orderRef) {
+  cancelOrderProcess(orderRef);
+  return queryOrderInfo(orderRef);
 }
 
-OrderInfo BithumbPrivate::queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode = tradeInfo.fromCurrencyCode;
-  const CurrencyCode toCurrencyCode = tradeInfo.toCurrencyCode;
-  const Market m = tradeInfo.m;
-  const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
+namespace {
+CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view id) {
+  CurlPostData ret;
+  ret.append("order_currency", m.baseStr());
+  ret.append("payment_currency", m.quoteStr());
+  ret.append("type", side == TradeSide::kSell ? "ask" : "bid");
+  ret.append("order_id", id);
+  return ret;
+}
+}  // namespace
 
-  CurlPostData postData{{"order_currency", m.base().str()},
-                        {"payment_currency", m.quote().str()},
-                        {"type", orderType},
-                        {"order_id", orderId}};
-  json result = PrivateQuery(_curlHandle, _apiKey, "info/orders", _maxNbDecimalsUnitMap, postData);
+void BithumbPrivate::cancelOrderProcess(const OrderRef& orderRef) {
+  PrivateQuery(_curlHandle, _apiKey, "/trade/cancel", _maxNbDecimalsUnitMap,
+               OrderInfoPostData(orderRef.m, orderRef.side, orderRef.id));
+}
 
-  const bool isClosed = result.empty() || result.front()["order_id"] != orderId;
+OrderInfo BithumbPrivate::queryOrderInfo(const OrderRef& orderRef) {
+  const Market m = orderRef.m;
+  const CurrencyCode fromCurrencyCode = orderRef.fromCur();
+  const CurrencyCode toCurrencyCode = orderRef.toCur();
+
+  CurlPostData postData = OrderInfoPostData(m, orderRef.side, orderRef.id);
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", _maxNbDecimalsUnitMap, postData);
+
+  const bool isClosed = result.empty() || result.front()["order_id"] != orderRef.id;
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (isClosed) {
     postData.erase("type");
-    result = PrivateQuery(_curlHandle, _apiKey, "info/order_detail", _maxNbDecimalsUnitMap, postData);
+    result = PrivateQuery(_curlHandle, _apiKey, "/info/order_detail", _maxNbDecimalsUnitMap, postData);
 
     for (const json& contractDetail : result["contract"]) {
       MonetaryAmount tradedVol(contractDetail["units"].get<std::string_view>(), m.base());  // always in base currency
@@ -479,19 +485,19 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   if (wallet.hasTag()) {
     withdrawPostData.append("destination", wallet.tag());
   }
-  PrivateQuery(_curlHandle, _apiKey, "trade/btc_withdrawal", _maxNbDecimalsUnitMap, withdrawPostData);
+  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal", _maxNbDecimalsUnitMap, withdrawPostData);
   return InitiatedWithdrawInfo(std::move(wallet), "", grossAmount);
 }
 
 SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurlPostData checkWithdrawPostData{{"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}};
-  constexpr std::string_view kSearchGbs[] = {"3", "5"};
+  static constexpr std::string_view kSearchGbs[] = {"3", "5"};
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   for (std::string_view searchGb : kSearchGbs) {
     checkWithdrawPostData.set("searchGb", searchGb);
     json trxList =
-        PrivateQuery(_curlHandle, _apiKey, "info/user_transactions", _maxNbDecimalsUnitMap, checkWithdrawPostData);
+        PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", _maxNbDecimalsUnitMap, checkWithdrawPostData);
     for (const json& trx : trxList) {
       assert(trx["order_currency"].get<std::string_view>() == currencyCode);
       std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
@@ -525,7 +531,7 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   CurlPostData checkDepositPostData{
       {"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}, {"searchGb", "4"}};
   json trxList =
-      PrivateQuery(_curlHandle, _apiKey, "info/user_transactions", _maxNbDecimalsUnitMap, checkDepositPostData);
+      PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", _maxNbDecimalsUnitMap, checkDepositPostData);
   for (const json& trx : trxList) {
     assert(trx["order_currency"].get<std::string_view>() == currencyCode);
     MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);

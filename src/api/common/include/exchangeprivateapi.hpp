@@ -5,14 +5,15 @@
 #include "apikey.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresultvault.hpp"
-#include "cct_flatset.hpp"
+#include "cct_vector.hpp"
 #include "curlhandle.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
 #include "exchangepublicapi.hpp"
 #include "market.hpp"
-#include "openedorder.hpp"
-#include "openedordersconstraints.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
@@ -29,7 +30,7 @@ class APIKey;
 class ExchangePrivate : public ExchangeBase {
  public:
   using WithdrawalFeeMap = ExchangePublic::WithdrawalFeeMap;
-  using OpenedOrders = FlatSet<OpenedOrder>;
+  using Orders = vector<Order>;
 
   ExchangePrivate(const ExchangePrivate &) = delete;
   ExchangePrivate &operator=(const ExchangePrivate &) = delete;
@@ -48,7 +49,7 @@ class ExchangePrivate : public ExchangeBase {
   /// Get a fast overview of the available assets on this exchange.
   /// @param equiCurrency (optional) if provided, attempt to convert each asset to given currency as an
   ///                     additional value information
-  BalancePortfolio getAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral);
+  BalancePortfolio getAccountBalance(CurrencyCode equiCurrency = CurrencyCode());
 
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
@@ -58,8 +59,10 @@ class ExchangePrivate : public ExchangeBase {
   virtual bool canGenerateDepositAddress() const = 0;
 
   /// Get opened orders filtered according to given constraints
-  virtual OpenedOrders queryOpenedOrders(
-      const OpenedOrdersConstraints &openedOrdersConstraints = OpenedOrdersConstraints()) = 0;
+  virtual Orders queryOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+
+  /// Cancel all opened orders on the exchange that matches given constraints
+  virtual void cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.
@@ -108,7 +111,7 @@ class ExchangePrivate : public ExchangeBase {
         _coincenterInfo(coincenterInfo),
         _apiKey(apiKey) {}
 
-  virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) = 0;
+  virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) = 0;
 
   /// Adds an amount to given BalancePortfolio.
   /// @param equiCurrency Asks conversion of given amount into this currency as well
@@ -130,11 +133,11 @@ class ExchangePrivate : public ExchangeBase {
   /// Cancel given order id and return its possible matched amounts.
   /// When this methods ends, order should be successfully cancelled and its matched parts returned definitely (trade
   /// automaton will not come back on this order later on)
-  virtual OrderInfo cancelOrder(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
+  virtual OrderInfo cancelOrder(const OrderRef &orderRef) = 0;
 
   /// Query an order and return and 'OrderInfo' with its matched parts and if it is closed or not (closed means that its
   /// status and matched parts will not evolve in the future).
-  virtual OrderInfo queryOrderInfo(const OrderId &orderId, const TradeInfo &tradeInfo) = 0;
+  virtual OrderInfo queryOrderInfo(const OrderRef &orderRef) = 0;
 
   /// Orders a withdraw in mode fire and forget.
   virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&wallet) = 0;

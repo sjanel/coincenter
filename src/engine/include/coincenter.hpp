@@ -14,7 +14,7 @@
 #include "fiatconverter.hpp"
 #include "metricsexporter.hpp"
 #include "monitoringinfo.hpp"
-#include "openedordersconstraints.hpp"
+#include "ordersconstraints.hpp"
 #include "printqueryresults.hpp"
 #include "queryresulttypes.hpp"
 #include "tradedamounts.hpp"
@@ -67,13 +67,18 @@ class Coincenter {
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
-                                CurrencyCode equiCurrency = CurrencyCode::kNeutral);
+                                CurrencyCode equiCurrency = CurrencyCode());
 
   WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
                                    CurrencyCode depositCurrency);
 
+  /// Get opened orders on given list of exchanges following given order constraints
   OpenedOrdersPerExchange getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
-                                          const OpenedOrdersConstraints &openedOrdersConstraints);
+                                          const OrdersConstraints &openedOrdersConstraints);
+
+  /// Cancel orders on given list of exchanges following given constraints.
+  void cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+                    const OrdersConstraints &ordersConstraints);
 
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);

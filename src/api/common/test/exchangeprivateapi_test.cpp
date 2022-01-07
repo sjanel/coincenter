@@ -12,24 +12,21 @@ class MockExchangePrivate : public ExchangePrivate {
       : ExchangePrivate(config, exchangePublic, apiKey) {}
 
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
-  MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode equiCurrency), (override));
-  MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode currencyCode), (override));
+  MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode), (override));
+  MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode), (override));
   MOCK_METHOD(bool, canGenerateDepositAddress, (), (const override));
-  MOCK_METHOD(OpenedOrders, queryOpenedOrders, (const OpenedOrdersConstraints &openedOrdersConstraints), (override));
+  MOCK_METHOD(Orders, queryOpenedOrders, (const OrdersConstraints &), (override));
+  MOCK_METHOD(void, cancelOpenedOrders, (const OrdersConstraints &), (override));
 
   MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));
 
-  MOCK_METHOD(PlaceOrderInfo, placeOrder,
-              (MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price, const TradeInfo &tradeInfo),
+  MOCK_METHOD(PlaceOrderInfo, placeOrder, (MonetaryAmount, MonetaryAmount, MonetaryAmount, const TradeInfo &),
               (override));
-  MOCK_METHOD(OrderInfo, cancelOrder, (const OrderId &orderId, const TradeInfo &tradeInfo), (override));
-  MOCK_METHOD(OrderInfo, queryOrderInfo, (const OrderId &orderId, const TradeInfo &tradeInfo), (override));
-  MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount grossAmount, Wallet &&wallet), (override));
-  MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &initiatedWithdrawInfo),
-              (override));
-  MOCK_METHOD(bool, isWithdrawReceived,
-              (const InitiatedWithdrawInfo &initiatedWithdrawInfo, const SentWithdrawInfo &sentWithdrawInfo),
-              (override));
+  MOCK_METHOD(OrderInfo, cancelOrder, (const OrderRef &), (override));
+  MOCK_METHOD(OrderInfo, queryOrderInfo, (const OrderRef &), (override));
+  MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount, Wallet &&), (override));
+  MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &), (override));
+  MOCK_METHOD(bool, isWithdrawReceived, (const InitiatedWithdrawInfo &, const SentWithdrawInfo &), (override));
 };
 
 class ExchangePrivateTest : public ::testing::Test {
@@ -61,9 +58,7 @@ namespace {
 using MarketSet = ExchangePublic::MarketSet;
 }  // namespace
 
-inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
-  return lhs.fromCurrencyCode == rhs.fromCurrencyCode && lhs.toCurrencyCode == rhs.toCurrencyCode && lhs.m == rhs.m;
-}
+inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) { return lhs.m == rhs.m && lhs.side == rhs.side; }
 
 inline bool operator==(const OrderInfo &lhs, const OrderInfo &rhs) {
   return lhs.isClosed == rhs.isClosed && lhs.tradedAmounts == rhs.tradedAmounts;
@@ -79,7 +74,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   MonetaryAmount pri(bidPrice);
 
   TradeOptions tradeOptions(TradePriceStrategy::kTaker);
-  TradeInfo tradeInfo(m.base(), m.quote(), m, tradeOptions, 0);
+  TradeInfo tradeInfo(0, m, TradeSide::kSell, tradeOptions);
 
   MonetaryAmount tradedTo("23004 EUR");
 
@@ -98,7 +93,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
 
   MonetaryAmount vol(from / pri, m.base());
   TradeOptions tradeOptions(TradePriceStrategy::kTaker);
-  TradeInfo tradeInfo(m.quote(), m.base(), m, tradeOptions, 0);
+  TradeInfo tradeInfo(0, m, TradeSide::kBuy, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
 

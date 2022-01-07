@@ -21,14 +21,15 @@ class HuobiPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode::kNeutral) override;
+  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
   bool canGenerateDepositAddress() const override { return true; }
 
-  OpenedOrders queryOpenedOrders(
-      const OpenedOrdersConstraints& openedOrdersConstraints = OpenedOrdersConstraints()) override;
+  Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+
+  void cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
  protected:
   bool isSimulatedOrderSupported() const override { return false; }
@@ -36,9 +37,11 @@ class HuobiPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  OrderInfo cancelOrder(const OrderRef& orderRef) override;
 
-  OrderInfo queryOrderInfo(const OrderId& orderId, const TradeInfo& tradeInfo) override;
+  void batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet);
+
+  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -48,6 +51,8 @@ class HuobiPrivate : public ExchangePrivate {
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
+  void cancelOrderProcess(const OrderId& id);
+
   struct AccountIdFunc {
     AccountIdFunc(CurlHandle& curlHandle, const APIKey& apiKey) : _curlHandle(curlHandle), _apiKey(apiKey) {}
 
