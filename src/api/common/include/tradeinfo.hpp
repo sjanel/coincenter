@@ -10,13 +10,13 @@
 namespace cct::api {
 
 struct OrderRef {
-  OrderRef(std::string_view idStr, int64_t nbSecondsSinceEpoch, Market market, TradeSide s)
-      : id(idStr), userRef(nbSecondsSinceEpoch), m(market), side(s) {}
+  OrderRef(const OrderId &orderId, int64_t nbSecondsSinceEpoch, Market market, TradeSide s)
+      : id(orderId), userRef(nbSecondsSinceEpoch), m(market), side(s) {}
 
   CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
   CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
 
-  string id;
+  const OrderId &id;
   int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
   Market m;
   TradeSide side;
@@ -31,7 +31,7 @@ struct TradeInfo {
   CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
   CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
 
-  OrderRef createOrderRef(std::string_view id) const { return OrderRef(id, userRef, m, side); }
+  OrderRef createOrderRef(const OrderId &orderId) const { return OrderRef(orderId, userRef, m, side); }
 
   int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
   Market m;
