@@ -9,6 +9,6 @@ using HuobiAPI = TestAPI<HuobiPublic, HuobiPrivate>;
 HuobiAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(HuobiAPI, testAPI);
+CCT_TEST_ALL(HuobiAPI, testAPI)
 
 }  // namespace cct::api

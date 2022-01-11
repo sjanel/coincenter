@@ -90,7 +90,7 @@ class Coincenter {
   /// If no exchange name is given, it will attempt to trade given amount on all exchanges with the sufficient balance.
   /// If exactly one private exchange is given, balance will not be queried and trade will be launched without balance
   /// check.
-  TradedAmounts trade(MonetaryAmount startAmount, CurrencyCode toCurrency,
+  TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                       std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency

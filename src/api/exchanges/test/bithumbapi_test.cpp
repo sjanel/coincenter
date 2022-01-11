@@ -9,6 +9,6 @@ using BithumbAPI = TestAPI<BithumbPublic, BithumbPrivate>;
 BithumbAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(BithumbAPI, testAPI);
+CCT_TEST_ALL(BithumbAPI, testAPI)
 
 }  // namespace cct::api

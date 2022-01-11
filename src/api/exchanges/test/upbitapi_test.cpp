@@ -9,6 +9,6 @@ using UpbitAPI = TestAPI<UpbitPublic, UpbitPrivate>;
 UpbitAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(UpbitAPI, testAPI);
+CCT_TEST_ALL(UpbitAPI, testAPI)
 
 }  // namespace cct::api

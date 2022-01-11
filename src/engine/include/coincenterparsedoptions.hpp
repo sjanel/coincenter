@@ -28,6 +28,7 @@ class CoincenterParsedOptions {
   MonetaryAmount startTradeAmount;
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
+  bool isPercentageTrade = false;
   PrivateExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 

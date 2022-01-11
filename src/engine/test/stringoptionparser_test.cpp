@@ -44,17 +44,31 @@ TEST(StringOptionParserTest, GetMonetaryAmountExchanges) {
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchanges) {
-  EXPECT_EQ(
-      StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyPrivateExchanges(),
-      StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
-          MonetaryAmount("45.09ADA"), CurrencyCode("EUR"), PrivateExchangeNames(1, PrivateExchangeName("bithumb"))));
-  EXPECT_EQ(StringOptionParser("0.02btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyPrivateExchanges(),
+  EXPECT_EQ(StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyPrivateExchanges(),
             StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
-                MonetaryAmount("0.02BTC"), CurrencyCode("XLM"),
+                MonetaryAmount("45.09ADA"), false, CurrencyCode("EUR"),
+                PrivateExchangeNames(1, PrivateExchangeName("bithumb"))));
+  EXPECT_EQ(StringOptionParser("0.02 btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyPrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
+                MonetaryAmount("0.02BTC"), false, CurrencyCode("XLM"),
                 PrivateExchangeNames({PrivateExchangeName("upbit", "user1"), PrivateExchangeName("binance")})));
   EXPECT_EQ(StringOptionParser("2500.5 eur-sol").getMonetaryAmountCurrencyPrivateExchanges(),
-            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(MonetaryAmount("2500.5 EUR"),
+            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(MonetaryAmount("2500.5 EUR"), false,
                                                                        CurrencyCode("SOL"), PrivateExchangeNames()));
+  EXPECT_EQ(
+      StringOptionParser("17%eur-sol,kraken").getMonetaryAmountCurrencyPrivateExchanges(),
+      StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
+          MonetaryAmount("17EUR"), true, CurrencyCode("sol"), PrivateExchangeNames(1, PrivateExchangeName("kraken"))));
+  EXPECT_EQ(StringOptionParser("50.035%btc-KRW,upbit,bithumb_user2").getMonetaryAmountCurrencyPrivateExchanges(),
+            StringOptionParser::MonetaryAmountCurrencyPrivateExchanges(
+                MonetaryAmount("50.035 BTC"), true, CurrencyCode("KRW"),
+                PrivateExchangeNames({PrivateExchangeName("upbit"), PrivateExchangeName("bithumb", "user2")})));
+}
+
+TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchangesValidity) {
+  EXPECT_NO_THROW(StringOptionParser("100 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges());
+  EXPECT_THROW(StringOptionParser("-1 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), std::invalid_argument);
+  EXPECT_THROW(StringOptionParser("100.2% eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), std::invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
@@ -120,9 +134,9 @@ TEST(StringOptionParserTest, GetCurrenciesPrivateExchanges) {
 }
 
 TEST(StringOptionParserTest, CSVValues) {
-  EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<string>());
-  EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<string>{{"val1"}});
-  EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<string>({{"val1"}, {"value"}}));
+  EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<std::string_view>());
+  EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<std::string_view>{{"val1"}});
+  EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<std::string_view>({{"val1"}, {"value"}}));
 }
 
 }  // namespace cct

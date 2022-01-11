@@ -9,6 +9,6 @@ using KrakenAPI = TestAPI<KrakenPublic, KrakenPrivate>;
 KrakenAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(KrakenAPI, testAPI);
+CCT_TEST_ALL(KrakenAPI, testAPI)
 
 }  // namespace cct::api
