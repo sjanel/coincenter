@@ -306,7 +306,9 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
 
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
+    if (!bidVol.isZero() && !askVol.isZero()) {
+      ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
+    }
   }
 
   log::info("Retrieved ticker information from {} markets", ret.size());
