@@ -55,7 +55,7 @@ else()
   FetchContent_Declare(
     amadeusamc
     GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-    GIT_TAG        v2.3.0
+    GIT_TAG        v2.4.0
   )
 
   FetchContent_MakeAvailable(amadeusamc)

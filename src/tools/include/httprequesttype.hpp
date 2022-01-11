@@ -8,7 +8,6 @@
 namespace cct {
 enum class HttpRequestType : int8_t { kGet, kPost, kDelete };
 
-// TODO: avoid code duplication below
 static constexpr HttpRequestType kAllHttpRequestsTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
                                                             HttpRequestType::kDelete};
 

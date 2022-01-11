@@ -85,11 +85,7 @@ class OrdersConstraints {
   CurrencyCode cur1() const { return _cur1; }
   CurrencyCode cur2() const { return _cur2; }
 
-  bool validateOrderId(std::string_view orderId) const {
-    // TODO: avoid string instantation when FlatSet accepts transparent comparator
-    // See https://github.com/AmadeusITGroup/amc/issues/40
-    return !isOrderIdDefined() || _ordersIdSet.contains(string(orderId));
-  }
+  bool validateOrderId(std::string_view orderId) const { return !isOrderIdDefined() || _ordersIdSet.contains(orderId); }
 
   const OrderIdSet &orderIdSet() const { return _ordersIdSet; }
 
