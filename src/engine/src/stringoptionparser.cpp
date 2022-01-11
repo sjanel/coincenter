@@ -29,7 +29,8 @@ PrivateExchangeNames GetPrivateExchanges(std::string_view str) {
 }
 
 std::string_view StrBeforeComma(std::string_view opt, std::size_t startPos, std::size_t commaPos) {
-  return std::string_view(opt.begin() + startPos, commaPos == string::npos ? opt.end() : opt.begin() + commaPos);
+  return std::string_view(opt.begin() + startPos,
+                          commaPos == std::string_view::npos ? opt.end() : opt.begin() + commaPos);
 }
 
 std::string_view StrEnd(std::string_view opt, std::size_t startPos) {
@@ -48,12 +49,13 @@ PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchang
 
 StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() const {
   std::size_t commaPos = getNextCommaPos(0, false);
-  std::string_view marketStr(_opt.begin(), commaPos == string::npos ? _opt.end() : _opt.begin() + commaPos);
+  std::string_view marketStr(_opt.begin(), commaPos == std::string_view::npos ? _opt.end() : _opt.begin() + commaPos);
   std::size_t dashPos = marketStr.find('-');
   if (dashPos == std::string_view::npos) {
     throw std::invalid_argument("Expected a dash");
   }
-  std::size_t startExchangesPos = commaPos == string::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
+  std::size_t startExchangesPos =
+      commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
 
   return MarketExchanges{Market(CurrencyCode(std::string_view(marketStr.begin(), marketStr.begin() + dashPos)),
                                 CurrencyCode(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()))),
@@ -64,7 +66,7 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
   std::string_view exchangesStr = _opt;
   std::string_view curStr;
   std::size_t commaPos = getNextCommaPos(0, false);
-  std::string_view firstStr(_opt.data(), commaPos == string::npos ? _opt.size() : commaPos);
+  std::string_view firstStr(_opt.data(), commaPos == std::string_view::npos ? _opt.size() : commaPos);
   if (!firstStr.empty() && !IsExchangeName(firstStr)) {
     curStr = firstStr;
     if (firstStr.size() == _opt.size()) {
@@ -79,7 +81,8 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
 
 StringOptionParser::MonetaryAmountExchanges StringOptionParser::getMonetaryAmountExchanges() const {
   std::size_t commaPos = getNextCommaPos(0, false);
-  std::size_t startExchangesPos = commaPos == string::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
+  std::size_t startExchangesPos =
+      commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
   return MonetaryAmountExchanges{MonetaryAmount(StrBeforeComma(_opt, 0, commaPos)),
                                  GetExchanges(StrEnd(_opt, startExchangesPos))};
 }
@@ -87,10 +90,10 @@ StringOptionParser::MonetaryAmountExchanges StringOptionParser::getMonetaryAmoun
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(
     bool currenciesShouldBeSet) const {
   std::size_t dashPos = _opt.find('-', 1);
-  std::size_t commaPos = getNextCommaPos(dashPos == string::npos ? 0 : dashPos + 1, false);
+  std::size_t commaPos = getNextCommaPos(dashPos == std::string_view::npos ? 0 : dashPos + 1, false);
   CurrencyCode fromTradeCurrency, toTradeCurrency;
   std::size_t startExchangesPos = 0;
-  if (dashPos == string::npos && commaPos == string::npos && !_opt.empty()) {
+  if (dashPos == std::string_view::npos && commaPos == std::string_view::npos && !_opt.empty()) {
     // Ambiguity to resolve - we assume there is no crypto acronym with the same name as an exchange
     if (!IsExchangeName(_opt)) {
       fromTradeCurrency = CurrencyCode(_opt);
@@ -98,13 +101,13 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
     }
   } else {
     // no ambiguity
-    if (commaPos == string::npos) {
+    if (commaPos == std::string_view::npos) {
       commaPos = _opt.size();
       startExchangesPos = commaPos;
     } else {
       startExchangesPos = commaPos + 1;
     }
-    if (dashPos == string::npos) {
+    if (dashPos == std::string_view::npos) {
       fromTradeCurrency = CurrencyCode(std::string_view(_opt.data(), commaPos));
     } else {
       fromTradeCurrency = CurrencyCode(std::string_view(_opt.data(), dashPos));
@@ -119,15 +122,38 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
 
 StringOptionParser::MonetaryAmountCurrencyPrivateExchanges
 StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges() const {
-  std::size_t dashPos = _opt.find('-', 1);
-  if (dashPos == string::npos) {
+  std::size_t dashPos = _opt.find('-');
+  if (dashPos == std::string_view::npos) {
     throw std::invalid_argument("Expected a dash");
   }
-  MonetaryAmount startTradeAmount(std::string_view(_opt.data(), dashPos));
+  if (dashPos == 0) {
+    throw std::invalid_argument("Cannot start with a negative amount");
+  }
+  std::size_t pos = 1;
+  while (pos < dashPos && ((_opt[pos] >= '0' && _opt[pos] <= '9') || _opt[pos] == '.')) {
+    ++pos;
+  }
+  std::string_view startAmountStr(_opt.data(), pos);
+  while (pos < dashPos && _opt[pos] == ' ') {
+    ++pos;
+  }
+  bool isPercentage = pos < dashPos && _opt[pos] == '%';
+  if (isPercentage) {
+    do {
+      ++pos;
+    } while (pos < dashPos && _opt[pos] == ' ');
+  }
+  std::string_view startCurStr(_opt.begin() + pos, _opt.begin() + dashPos);
+  MonetaryAmount startAmount(startAmountStr, startCurStr);
+  if (isPercentage && startAmount.toNeutral() > MonetaryAmount(100)) {
+    throw std::invalid_argument("A percentage cannot be larger than 100");
+  }
   std::size_t commaPos = getNextCommaPos(dashPos + 1, false);
-  std::size_t startExchangesPos = commaPos == string::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
+  std::size_t startExchangesPos =
+      commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
   CurrencyCode toTradeCurrency(StrBeforeComma(_opt, dashPos + 1, commaPos));
-  return std::make_tuple(startTradeAmount, toTradeCurrency, GetPrivateExchanges(StrEnd(_opt, startExchangesPos)));
+  return std::make_tuple(startAmount, isPercentage, toTradeCurrency,
+                         GetPrivateExchanges(StrEnd(_opt, startExchangesPos)));
 }
 
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()
@@ -136,7 +162,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
   MonetaryAmount amountToWithdraw(std::string_view(_opt.begin(), _opt.begin() + commaPos));
   std::string_view exchangeNames = StrEnd(_opt, commaPos + 1);
   std::size_t dashPos = exchangeNames.find('-');
-  if (dashPos == string::npos) {
+  if (dashPos == std::string_view::npos) {
     throw std::invalid_argument("Expected a dash");
   }
   return MonetaryAmountFromToPrivateExchange{
@@ -146,7 +172,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
   std::size_t commaPos = _opt.find(',', startPos);
-  if (commaPos == string::npos && throwIfNone) {
+  if (commaPos == std::string_view::npos && throwIfNone) {
     throw std::invalid_argument("Expected a comma");
   }
   return commaPos;
@@ -155,7 +181,7 @@ std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throw
 StringOptionParser::CurrencyPublicExchanges StringOptionParser::getCurrencyPublicExchanges() const {
   std::size_t firstCommaPos = getNextCommaPos(0, false);
   CurrencyPublicExchanges ret;
-  if (firstCommaPos == string::npos) {
+  if (firstCommaPos == std::string_view::npos) {
     ret.first = CurrencyCode(_opt);
   } else {
     ret.first = CurrencyCode(std::string_view(_opt.begin(), _opt.begin() + firstCommaPos));
@@ -168,12 +194,12 @@ StringOptionParser::CurrenciesPublicExchanges StringOptionParser::getCurrenciesP
   std::size_t firstCommaPos = getNextCommaPos(0, false);
   std::size_t dashPos = _opt.find('-', 1);
   CurrenciesPublicExchanges ret;
-  if (firstCommaPos == string::npos) {
+  if (firstCommaPos == std::string_view::npos) {
     firstCommaPos = _opt.size();
   } else {
     std::get<2>(ret) = GetExchanges(StrEnd(_opt, firstCommaPos + 1));
   }
-  if (dashPos == string::npos) {
+  if (dashPos == std::string_view::npos) {
     std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), firstCommaPos));
   } else {
     std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), dashPos));
@@ -182,17 +208,17 @@ StringOptionParser::CurrenciesPublicExchanges StringOptionParser::getCurrenciesP
   return ret;
 }
 
-vector<string> StringOptionParser::getCSVValues() const {
+vector<std::string_view> StringOptionParser::getCSVValues() const {
   std::size_t pos = 0;
-  vector<string> ret;
+  vector<std::string_view> ret;
   if (!_opt.empty()) {
     do {
       std::size_t nextCommaPos = getNextCommaPos(pos, false);
-      if (nextCommaPos == string::npos) {
+      if (nextCommaPos == std::string_view::npos) {
         nextCommaPos = _opt.size();
       }
       if (pos != nextCommaPos) {
-        ret.emplace_back(std::string_view(_opt.begin() + pos, _opt.begin() + nextCommaPos));
+        ret.emplace_back(_opt.begin() + pos, _opt.begin() + nextCommaPos);
       }
       if (nextCommaPos == _opt.size()) {
         break;

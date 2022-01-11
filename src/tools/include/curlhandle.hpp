@@ -60,7 +60,7 @@ class CurlHandle {
 };
 
 struct CurlInitRAII {
-  CurlInitRAII();
+  [[nodiscard]] CurlInitRAII();
 
   CurlInitRAII(const CurlInitRAII &) = delete;
   CurlInitRAII &operator=(const CurlInitRAII &) = delete;

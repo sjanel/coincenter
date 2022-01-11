@@ -33,11 +33,17 @@ namespace {
 std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
                                                                      std::string_view orderRequestStr) {
   auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
+  auto orderIdViewVector = StringOptionParser(cmdLineOptions.orders_ids).getCSVValues();
+  vector<OrderId> orderIds;
+  orderIds.reserve(orderIdViewVector.size());
+  for (std::string_view orderIdView : orderIdViewVector) {
+    orderIds.emplace_back(orderIdView);
+  }
   return std::make_pair(
       OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
                         std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_min_age),
                         std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_max_age),
-                        OrdersConstraints::OrderIdSet(StringOptionParser(cmdLineOptions.orders_ids).getCSVValues())),
+                        OrdersConstraints::OrderIdSet(std::move(orderIds))),
       std::get<2>(currenciesPrivateExchangesTuple));
 }
 }  // namespace
@@ -128,7 +134,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
       std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
           anyParser.getCurrenciesPrivateExchanges();
     } else {
-      std::tie(startTradeAmount, toTradeCurrency, tradePrivateExchangeNames) =
+      std::tie(startTradeAmount, isPercentageTrade, toTradeCurrency, tradePrivateExchangeNames) =
           anyParser.getMonetaryAmountCurrencyPrivateExchanges();
     }
 

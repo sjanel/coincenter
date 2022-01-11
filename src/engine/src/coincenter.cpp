@@ -312,10 +312,11 @@ TradedAmounts LaunchAndCollectTrades(ExchangeAmountPairVector::iterator first, E
 }
 }  // namespace
 
-TradedAmounts Coincenter::trade(MonetaryAmount startAmount, CurrencyCode toCurrency,
+TradedAmounts Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                                 std::span<const PrivateExchangeName> privateExchangeNames,
                                 const TradeOptions &tradeOptions) {
-  if (privateExchangeNames.size() == 1) {
+  if (privateExchangeNames.size() == 1 && !isPercentageTrade) {
+    // In this special case we don't need to call the balance - call trade directly
     Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeNames.front());
     return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
   }
@@ -337,24 +338,30 @@ TradedAmounts Coincenter::trade(MonetaryAmount startAmount, CurrencyCode toCurre
             [](const ExchangeAmountPair &lhs, const ExchangeAmountPair &rhs) { return lhs.second > rhs.second; });
 
   // Locate the point where there is enough available amount to trade for this currency
-  auto endAmountIt = exchangeAmountPairVector.begin();
-  MonetaryAmount totalAvailableAmount(0, fromCurrency);
-  for (auto endIt = exchangeAmountPairVector.end(); endAmountIt != endIt && totalAvailableAmount < startAmount;
-       ++endAmountIt) {
-    if (totalAvailableAmount + endAmountIt->second > startAmount) {
-      // Bound last amount to trade
-      endAmountIt->second = startAmount - totalAvailableAmount;
+  MonetaryAmount currentTotalAmount(0, fromCurrency);
+
+  if (isPercentageTrade) {
+    MonetaryAmount totalAvailableAmount =
+        std::accumulate(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), currentTotalAmount,
+                        [](MonetaryAmount tot, const auto &p) { return tot + p.second; });
+    startAmount = (totalAvailableAmount * startAmount.toNeutral()) / 100;
+  }
+  auto it = exchangeAmountPairVector.begin();
+  for (auto endIt = exchangeAmountPairVector.end(); it != endIt && currentTotalAmount < startAmount; ++it) {
+    if (currentTotalAmount + it->second > startAmount) {
+      // Cap last amount such that total start trade on all exchanges reaches exactly 'startAmount'
+      it->second = startAmount - currentTotalAmount;
     }
-    totalAvailableAmount += endAmountIt->second;
+    currentTotalAmount += it->second;
   }
 
-  if (totalAvailableAmount < startAmount) {
-    log::warn("Not enough available amount to trade ({} < {})", totalAvailableAmount.str(), startAmount.str());
+  if (currentTotalAmount < startAmount) {
+    log::warn("Not enough available amount to trade ({} < {})", currentTotalAmount.str(), startAmount.str());
     return TradedAmounts(fromCurrency, toCurrency);
   }
 
   /// We have enough total available amount. Launch all trades in parallel
-  return LaunchAndCollectTrades(exchangeAmountPairVector.begin(), endAmountIt, fromCurrency, toCurrency, tradeOptions);
+  return LaunchAndCollectTrades(exchangeAmountPairVector.begin(), it, fromCurrency, toCurrency, tradeOptions);
 }
 
 TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
@@ -534,7 +541,8 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.startTradeAmount.isZero()) {
-    trade(opts.startTradeAmount, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
+    trade(opts.startTradeAmount, opts.isPercentageTrade, opts.toTradeCurrency, opts.tradePrivateExchangeNames,
+          opts.tradeOptions);
   }
 
   if (!opts.amountToWithdraw.isZero()) {

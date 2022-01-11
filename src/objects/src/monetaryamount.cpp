@@ -340,8 +340,8 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
 
   int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
   const int8_t lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
-  UnsignedAmountType lhs = static_cast<UnsignedAmountType>(std::abs(lhsAmount)) *
-                           ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(lhsNbDigitsToAdd));
+  UnsignedAmountType lhs =
+      static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow(10, static_cast<uint8_t>(lhsNbDigitsToAdd));
   UnsignedAmountType rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
 
   int8_t lhsNbDecimals = _nbDecimals + lhsNbDigitsToAdd;

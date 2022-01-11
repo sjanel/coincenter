@@ -65,8 +65,9 @@ Main features:
     - [How to target keys on exchanges](#how-to-target-keys-on-exchanges)
     - [Balance](#balance)
     - [Single Trade](#single-trade)
+      - [Options](#options)
       - [Single trade all](#single-trade-all)
-      - [Examples](#examples-1)
+      - [Examples with explanation](#examples-with-explanation)
     - [Multi Trade](#multi-trade)
       - [Multi trade all](#multi-trade-all)
       - [Trade simulation](#trade-simulation)
@@ -279,20 +280,14 @@ coincenter --balance eur,kraken,bithumb
 
 ### Single Trade
 
-A single trade per market / exchange can be done in a user friendly way supporting 3 parameterized price choser strategies.
+A single trade per market / exchange can be done in a simple way supporting 3 parameterized price choser strategies.
 It is 'single' in the sense that trade is made in one step (see [Multi Trade](#multi-trade)), in an existing market of provided exchange(s) Similarly to other options, list of exchanges is optional. If empty, all exchanges having some balance for given start amount may be considered. Then, exchanges are sorted in decreasing order of available amounts, and are selected until total available reaches the desired one.
 
-Example:
-Trade 1 BTC to USDT on all exchanges supporting BTC-USDT market and having some available BTC.
-| Exchange        | Amount  | Considered amount for trade |
-| --------------- | ------- | --------------------------- |
-| exchange1_user1 | 0.1 BTC | 0 BTC                       |
-| exchange1_user2 | 0.2 BTC | **0.1 BTC**                 |
-| exchange2_user1 | 0.3 BTC | **0.3 BTC**                 |
-| exchange3_user1 | 0.6 BTC | **0.6 BTC**                 |
-| exchange4_user1 | 0 BTC   | 0 BTC                       |
+Given start amount can be absolute, or relative with the `%` character. In the latter case, the total start amount will be computed from the total available amounts of the matching exchanges. Percentages should not be larger than `100` and may be decimal numbers.
 
-If only one private exchange is given, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
+If only one private exchange is given and start amount is absolute, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
+
+#### Options
 
 Possible order price strategies:
  - `maker`: order placed at limit price and regularly updated to limit price (default)
@@ -305,16 +300,44 @@ Use command line option `--trade`, `--singletrade` or `-t` to make a single trad
 
 If you want to simply sell all available amount from a given currency, you can use `--trade-all` option which takes a departure currency instead of an input amount. This command will ask to trade all available amount for all considered exchanges - use with care!
 
-#### Examples
-Trade 0.5 BTC to euros on all Kraken accounts, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute
+#### Examples with explanation
+```
+coincenter -t 1btc-usdt
+```
+Trade 1 BTC to USDT on all exchanges supporting BTC-USDT market and having some available BTC.
+| Exchange        | Amount  | Considered amount for trade |
+| --------------- | ------- | --------------------------- |
+| exchange1_user1 | 0.1 BTC | 0 BTC                       |
+| exchange1_user2 | 0.2 BTC | **0.1 BTC**                 |
+| exchange2_user1 | 0.3 BTC | **0.3 BTC**                 |
+| exchange3_user1 | 0.6 BTC | **0.6 BTC**                 |
+| exchange4_user1 | 0 BTC   | 0 BTC                       |
+
+
+```
+coincenter -t 66.6%xlm-btc,kraken,huobi
+```
+Among all available XLM amount on all accounts on Kraken and Huobi, launch trades with a total of 66.6 % of starting XLM.
+| Exchange      | Amount      | Considered amount for trade |
+| ------------- | ----------- | --------------------------- |
+| kraken_user1  | **50 XLM**  | 0 XLM                       |
+| kraken_user2  | **250 XLM** | **99.6 XLM**                |
+| huobi_user1   | **300 XLM** | **300 XLM**                 |
+| bithumb_user1 | 100 XLM     |                             |
+| upbit_user1   | 15000 XLM   |                             |
+
+There is a total of `600` XLM available on all accounts of Kraken and Huobi, trading a total of 66.6 % of them: `399.6` XLM. 
+Prioritize the accounts with the largest amount of XLM first.
+
 ```
 coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy nibble --trade-timeout 1min
 ```
+Trade 0.5 BTC to euros on all Kraken accounts, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute
 
-Trade all DOGE to USDT on Binance account with key name 'user1' and all Huobi accounts, with the 'taker' strategy, keeping default time out and cancel remaining untouched amount when trade expires
 ```
 coincenter --trade-all doge-usdt,binance_user1,huobi --trade-strategy taker
 ```
+Trade all DOGE to USDT on Binance account with key name 'user1' and all Huobi accounts, with the 'taker' strategy, keeping default time out and cancel remaining untouched amount when trade expires
 
 You can also choose the behavior of the trade when timeout is reached, thanks to `--trade-timeout-match` option. By default, when the trade expires, the last unmatched order is cancelled. With above option, instead it places a last order at market price (should be matched immediately).
 

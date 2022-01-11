@@ -9,6 +9,6 @@ using BinanceAPI = TestAPI<BinancePublic, BinancePrivate>;
 BinanceAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(BinanceAPI, testAPI);
+CCT_TEST_ALL(BinanceAPI, testAPI)
 
 }  // namespace cct::api

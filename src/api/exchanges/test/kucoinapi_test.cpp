@@ -9,6 +9,6 @@ using KucoinAPI = TestAPI<KucoinPublic, KucoinPrivate>;
 KucoinAPI testAPI;
 }  // namespace
 
-CCT_TEST_ALL(KucoinAPI, testAPI);
+CCT_TEST_ALL(KucoinAPI, testAPI)
 
 }  // namespace cct::api

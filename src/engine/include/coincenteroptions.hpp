@@ -173,14 +173,18 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                 &OptValueType::orders_min_age},
        {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"}, 
                                                                 &OptValueType::orders_max_age},
-        {{{"Trade", 40}, "--trade", 't', "<amt cur1-cur2[,exch1,...]>", "Single trade from given start amount on a list of exchanges, "
-                                                                      "or all that have sufficient balance on cur1 if none provided.\n"
-                                                                      "Order will be placed at limit price by default"}, &OptValueType::trade},
+        {{{"Trade", 40}, "--trade", 't', "<amt[%]cur1-cur2[,exch1,...]>", 
+                "Single trade from given start amount on a list of exchanges, "
+                "or all that have sufficient balance on cur1 if none provided.\n"
+                "Amount can be given as a percentage - in this case the desired percentage "
+                "of available amount on matching exchanges will be traded.\n"
+                "Orders will be placed prioritizing accounts with largest amounts, at limit price by default."}, 
+                &OptValueType::trade},
        {{{"Trade", 40}, "--trade-all", "<cur1-cur2[,exch1,...]>", "Single trade from available amount from given currency on a list of exchanges,"
                                                                  " or all that have some balance on cur1 if none provided\n"
                                                                  "Order will be placed at limit price by default"}, &OptValueType::trade_all},
-       {{{"Trade", 41}, "--singletrade", "<amt cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
-       {{{"Trade", 42}, "--multitrade", "<amt cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
+       {{{"Trade", 41}, "--singletrade", "<amt[%]cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
+       {{{"Trade", 42}, "--multitrade", "<amt[%]cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
                                                                       " or all that have a sufficient balance on cur1 if none provided \n"
                                                                       "Multi trade will first compute fastest path from cur1 to cur2 and "
                                                                      "if possible reach cur2 by launching multiple single trades.\n"

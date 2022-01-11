@@ -3,7 +3,6 @@
 #include <string_view>
 #include <utility>
 
-#include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
@@ -18,7 +17,7 @@ class StringOptionParser {
   using MonetaryAmountExchanges = std::pair<MonetaryAmount, PublicExchangeNames>;
   using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
   using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
-  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, CurrencyCode, PrivateExchangeNames>;
+  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, PrivateExchangeNames>;
   using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, PrivateExchangeName, PrivateExchangeName>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
   using CurrencyPublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
@@ -44,13 +43,11 @@ class StringOptionParser {
 
   CurrenciesPublicExchanges getCurrenciesPublicExchanges() const;
 
-  vector<string> getCSVValues() const;
-
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
+  vector<std::string_view> getCSVValues() const;
 
  protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;
 
-  string _opt;
+  std::string_view _opt;
 };
 }  // namespace cct
