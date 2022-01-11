@@ -95,14 +95,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
-  // Capture by const ref is possible as we use same 'placeOrderInfo' in this method
-  const OrderId &orderId = placeOrderInfo.orderId;
   if (placeOrderInfo.isClosed()) {
-    log::debug("Order {} closed with traded amounts {}", orderId, placeOrderInfo.tradedAmounts().str());
+    log::debug("Order {} closed with traded amounts {}", placeOrderInfo.orderId, placeOrderInfo.tradedAmounts().str());
     return placeOrderInfo.tradedAmounts();
   }
 
-  OrderRef orderRef(orderId, nbSecondsSinceEpoch, m, side);
+  OrderRef orderRef(placeOrderInfo.orderId, nbSecondsSinceEpoch, m, side);
 
   TimePoint lastPriceUpdateTime = Clock::now();
   MonetaryAmount lastPrice = price;
@@ -112,7 +110,7 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
     OrderInfo orderInfo = queryOrderInfo(orderRef);
     if (orderInfo.isClosed) {
       totalTradedAmounts += orderInfo.tradedAmounts;
-      log::debug("Order {} closed with last traded amounts {}", orderId, orderInfo.tradedAmounts.str());
+      log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId, orderInfo.tradedAmounts.str());
       break;
     }
 
@@ -131,12 +129,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
       // Cancel
-      log::debug("Cancel order {}", orderId);
+      log::debug("Cancel order {}", placeOrderInfo.orderId);
       OrderInfo cancelledOrderInfo = cancelOrder(orderRef);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
       from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
       if (from.isZero()) {
-        log::debug("Order {} matched with last traded amounts {} while cancelling", orderId,
+        log::debug("Order {} matched with last traded amounts {} while cancelling", placeOrderInfo.orderId,
                    cancelledOrderInfo.tradedAmounts.str());
         break;
       }
@@ -173,7 +171,8 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
         if (placeOrderInfo.isClosed()) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
-          log::debug("Order {} closed with last traded amounts {}", orderId, placeOrderInfo.tradedAmounts().str());
+          log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId,
+                     placeOrderInfo.tradedAmounts().str());
           break;
         }
       }
