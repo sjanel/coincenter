@@ -15,16 +15,15 @@ namespace api {
 namespace {
 
 string GetMethodUrl(std::string_view endpoint) {
-  string method_url(UpbitPublic::kUrlBase);
-  method_url.append("/v1/");
-  method_url.append(endpoint);
-  return method_url;
+  string methodUrl(UpbitPublic::kUrlBase);
+  methodUrl.append("/v1/");
+  methodUrl.append(endpoint);
+  return methodUrl;
 }
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  CurlOptions opts(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent);
-
-  json dataJson = json::parse(curlHandle.query(GetMethodUrl(endpoint), opts));
+  json dataJson = json::parse(curlHandle.query(
+      GetMethodUrl(endpoint), CurlOptions(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent)));
   //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
   if (dataJson.contains("error")) {
     const long statusCode = dataJson["name"].get<long>();

@@ -16,39 +16,36 @@ namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
                   CurlPostData&& postdata = CurlPostData()) {
-  CurlOptions opts(requestType, std::move(postdata));
-
-  Nonce nonce = Nonce_TimeSinceEpochInMs();
-  string strToSign = nonce;
-  strToSign.append(opts.requestTypeStr());
+  string strToSign(Nonce_TimeSinceEpochInMs());
+  auto nonceSize = strToSign.size();
+  strToSign.append(ToString(requestType));
   strToSign.append(method);
 
-  if (!opts.postdata.empty()) {
+  CurlOptions::PostDataFormat postdataFormat = CurlOptions::PostDataFormat::kString;
+  if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet || requestType == HttpRequestType::kDelete) {
       strToSign.push_back('?');
-      strToSign.append(opts.postdata.str());
+      strToSign.append(postdata.str());
     } else {
-      strToSign.append(opts.postdata.toJson().dump());
-      opts.httpHeaders.emplace_back("Content-Type: application/json");
-      opts.postdataInJsonFormat = true;
+      strToSign.append(postdata.toJson().dump());
+      postdataFormat = CurlOptions::PostDataFormat::kJson;
     }
   }
 
   string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
   string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
 
-  opts.userAgent = KucoinPublic::kUserAgent;
-
-  opts.httpHeaders.emplace_back("KC-API-KEY: ").append(apiKey.key());
-  opts.httpHeaders.emplace_back("KC-API-SIGN: ").append(signature);
-  opts.httpHeaders.emplace_back("KC-API-TIMESTAMP: ").append(nonce);
-  opts.httpHeaders.emplace_back("KC-API-PASSPHRASE: ").append(passphrase);
-  opts.httpHeaders.emplace_back("KC-API-KEY-VERSION: 2");
+  CurlOptions opts(requestType, std::move(postdata), KucoinPublic::kUserAgent, postdataFormat);
+  opts.appendHttpHeader("KC-API-KEY", apiKey.key());
+  opts.appendHttpHeader("KC-API-SIGN", signature);
+  opts.appendHttpHeader("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
+  opts.appendHttpHeader("KC-API-PASSPHRASE", passphrase);
+  opts.appendHttpHeader("KC-API-KEY-VERSION", 2);
 
   string url(KucoinPublic::kUrlBase);
   url.append(method);
 
-  json dataJson = json::parse(curlHandle.query(url, opts));
+  json dataJson = json::parse(curlHandle.query(url, std::move(opts)));
   auto errCodeIt = dataJson.find("code");
   if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
     string errStr("Kucoin error ");

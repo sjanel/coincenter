@@ -49,7 +49,7 @@ class CurlHandle {
 
  private:
   void checkHandleOrInit();
-  void setUpProxy(const CurlOptions::ProxySettings &proxy);
+  void setUpProxy(const char *proxyUrl, bool reset);
 
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header

@@ -52,6 +52,18 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
   EXPECT_DEBUG_DEATH(kvPairs.append("newKey", "="), "");
 }
 
+TEST(FlatKeyValueStringTest, Prepend) {
+  KvPairs kvPairs;
+  kvPairs.prepend("statue", "liberty");
+  EXPECT_EQ(kvPairs.str(), "statue=liberty");
+  kvPairs.prepend("city", "New York City");
+  EXPECT_EQ(kvPairs.str(), "city=New York City&statue=liberty");
+  kvPairs.prepend("state", "New York");
+  EXPECT_EQ(kvPairs.str(), "state=New York&city=New York City&statue=liberty");
+  kvPairs.prepend("Postal Code", 10015);
+  EXPECT_EQ(kvPairs.str(), "Postal Code=10015&state=New York&city=New York City&statue=liberty");
+}
+
 TEST(FlatKeyValueStringTest, Erase) {
   KvPairs kvPairs{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
   kvPairs.erase("rm");
@@ -66,6 +78,39 @@ TEST(FlatKeyValueStringTest, Erase) {
   EXPECT_EQ(kvPairs.str(), "tata=abc");
   kvPairs.erase("tata");
   EXPECT_TRUE(kvPairs.empty());
+}
+
+TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
+  using namespace std::literals;
+
+  using ExoticKeyValuePair = FlatKeyValueString<'\0', ':'>;
+  ExoticKeyValuePair kvPairs{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
+  EXPECT_EQ(kvPairs.str(), std::string_view("abc:354\0tata:abc\0rm:xX\0huhu:haha"sv));
+  kvPairs.set("rm", "Yy3");
+  EXPECT_EQ(kvPairs.str(), std::string_view("abc:354\0tata:abc\0rm:Yy3\0huhu:haha"sv));
+  kvPairs.erase("abc");
+  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0rm:Yy3\0huhu:haha"sv));
+  kvPairs.erase("rm");
+  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha"sv));
+  kvPairs.append("&newField", "&&newValue&&");
+  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
+
+  int kvPairPos = 0;
+  for (const auto &[k, v] : kvPairs) {
+    const char *kvPairPtr = k.data();
+    switch (kvPairPos++) {
+      case 0:
+        ASSERT_STREQ(kvPairPtr, "tata:abc");
+        break;
+      case 1:
+        ASSERT_STREQ(kvPairPtr, "huhu:haha");
+        break;
+      case 2:
+        ASSERT_STREQ(kvPairPtr, "&newField:&&newValue&&");
+        break;
+    }
+  }
+  EXPECT_EQ(kvPairPos, 3);
 }
 
 TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(), json()); }
@@ -95,7 +140,7 @@ TEST_F(CurlOptionsCase1, Get) {
 TEST_F(CurlOptionsCase1, Iterator) {
   int i = 0;
   for (const auto &[k, v] : kvPairs) {
-    switch (i) {
+    switch (i++) {
       case 0:
         EXPECT_EQ(k, "units");
         EXPECT_EQ(v, "0.11176");
@@ -125,7 +170,6 @@ TEST_F(CurlOptionsCase1, Iterator) {
         EXPECT_EQ(v, ",");
         break;
     }
-    ++i;
   }
   EXPECT_EQ(i, 7);
 }

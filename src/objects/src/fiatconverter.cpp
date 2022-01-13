@@ -75,15 +75,13 @@ void FiatConverter::updateCacheFile() const {
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   string url = "https://free.currconv.com/api/v7/convert?";
 
-  CurlOptions opts(HttpRequestType::kGet);
   string qStr(m.assetsPairStr('_'));
-  opts.postdata.append("q", qStr);
-  opts.postdata.append("apiKey", _apiKey);
+  CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
 
-  url.append(opts.postdata.str());
-  opts.postdata.clear();
+  url.append(opts.getPostData().str());
+  opts.getPostData().clear();
 
-  json data = json::parse(_curlHandle.query(url, opts), nullptr, false /* allow exceptions */);
+  json data = json::parse(_curlHandle.query(url, std::move(opts)), nullptr, false /* allow exceptions */);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
     log::error("No JSON data received from fiat currency converter service");

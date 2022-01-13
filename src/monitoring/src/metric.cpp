@@ -4,11 +4,9 @@
 
 namespace cct {
 MetricKey CreateMetricKey(std::string_view name, std::string_view help) {
-  string s("metric_name=");
-  s.reserve(s.size() + name.size() + help.size() + 13U);
-  s.append(name);
-  s.append(",metric_help=");
-  s.append(help);
-  return MetricKey(std::move(s));
+  MetricKey key;
+  key.append(kMetricNameKey, name);
+  key.append(kMetricHelpKey, help);
+  return key;
 }
 }  // namespace cct

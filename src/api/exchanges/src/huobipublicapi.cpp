@@ -25,9 +25,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(HttpRequestType::kGet);
-  opts.userAgent = HuobiPublic::kUserAgent;
-  json dataJson = json::parse(curlHandle.query(url, opts));
+  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
   bool returnData = dataJson.contains("data");
   if (!returnData && !dataJson.contains("tick")) {
     throw exception("No data for Huobi public endpoint");

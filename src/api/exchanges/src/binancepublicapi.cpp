@@ -30,9 +30,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(HttpRequestType::kGet);
-  opts.userAgent = BinancePublic::kUserAgent;
-  json dataJson = json::parse(curlHandle.query(url, opts));
+  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
   auto foundErrorIt = dataJson.find("code");
   auto foundMsgIt = dataJson.find("msg");
   if (foundErrorIt != dataJson.end() && foundMsgIt != dataJson.end()) {

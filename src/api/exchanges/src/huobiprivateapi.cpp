@@ -15,6 +15,21 @@ namespace api {
 
 namespace {
 
+string BuildParamStr(HttpRequestType requestType, std::string_view method, std::string_view postDataStr) {
+  static constexpr std::string_view kUrlBaseWithoutHttps(
+      HuobiPublic::kUrlBase.begin() + std::string_view("https://").size(), HuobiPublic::kUrlBase.end());
+
+  string paramsStr(ToString(requestType));
+  paramsStr.reserve(paramsStr.size() + kUrlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U);
+  paramsStr.push_back('\n');
+  paramsStr.append(kUrlBaseWithoutHttps);
+  paramsStr.push_back('\n');
+  paramsStr.append(method);
+  paramsStr.push_back('\n');
+  paramsStr.append(postDataStr);
+  return paramsStr;
+}
+
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
                   CurlPostData&& postdata = CurlPostData()) {
   string url(HuobiPublic::kUrlBase);
@@ -23,45 +38,33 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   Nonce nonce = Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S");
   string encodedNonce = curlHandle.urlEncode(nonce);
 
-  CurlOptions opts(requestType);
-  opts.userAgent = HuobiPublic::kUserAgent;
-
-  opts.httpHeaders.emplace_back("Content-Type: application/json");
-  // Remove 'https://' (which is 8 chars) from URL base
-  string paramsStr(opts.requestTypeStr());
-  paramsStr.push_back('\n');
-  static constexpr std::string_view kHttpsString = "https://";
-  std::string_view urlBaseWithoutHttps(HuobiPublic::kUrlBase.begin() + kHttpsString.size(),
-                                       HuobiPublic::kUrlBase.end());
-  paramsStr.append(urlBaseWithoutHttps);
-  paramsStr.push_back('\n');
-  paramsStr.append(method);
-  paramsStr.push_back('\n');
-
   CurlPostData signaturePostdata;
 
   signaturePostdata.append("AccessKeyId", apiKey.key());
   signaturePostdata.append("SignatureMethod", "HmacSHA256");
-  signaturePostdata.append("SignatureVersion", "2");
-  signaturePostdata.append("Timestamp", encodedNonce);
+  signaturePostdata.append("SignatureVersion", 2);
+  signaturePostdata.append("Timestamp", std::move(encodedNonce));
+
+  CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet) {
       signaturePostdata.append(std::move(postdata));
+      // After a move, an object has unspecified state, but is valid. Let's call clear() to force it to be empty.
+      postdata.clear();
     } else {
-      opts.postdataInJsonFormat = true;
-      opts.postdata = std::move(postdata);
+      postDataFormat = CurlOptions::PostDataFormat::kJson;
     }
   }
 
-  paramsStr.append(signaturePostdata.str());
-
-  string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, paramsStr, apiKey.privateKey())));
+  string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(
+      ssl::ShaType::kSha256, BuildParamStr(requestType, method, signaturePostdata.str()), apiKey.privateKey())));
 
   signaturePostdata.append("Signature", sig);
   url.push_back('?');
   url.append(signaturePostdata.str());
 
-  json ret = json::parse(curlHandle.query(url, opts));
+  json ret = json::parse(
+      curlHandle.query(url, CurlOptions(requestType, std::move(postdata), HuobiPublic::kUserAgent, postDataFormat)));
   auto statusIt = ret.find("status");
   if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
     string errMsg("Error: ");

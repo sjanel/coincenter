@@ -21,23 +21,21 @@ namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
-  string method_url(BithumbPublic::kUrlBase);
-  method_url.append(endpoint);
-  method_url.push_back('/');
-  method_url.append(base.str());
+  string methodUrl(BithumbPublic::kUrlBase);
+  methodUrl.append(endpoint);
+  methodUrl.push_back('/');
+  methodUrl.append(base.str());
   if (!quote.isNeutral()) {
-    method_url.push_back('_');
-    method_url.append(quote.str());
+    methodUrl.push_back('_');
+    methodUrl.append(quote.str());
   }
   if (!urlOpts.empty()) {
-    method_url.push_back('?');
-    method_url.append(urlOpts);
+    methodUrl.push_back('?');
+    methodUrl.append(urlOpts);
   }
 
-  CurlOptions opts(HttpRequestType::kGet);
-  opts.userAgent = BithumbPublic::kUserAgent;
-
-  json dataJson = json::parse(curlHandle.query(method_url, opts));
+  json dataJson =
+      json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
   auto errorIt = dataJson.find("status");
   if (errorIt != dataJson.end()) {
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
@@ -109,8 +107,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  CurlOptions opts(HttpRequestType::kGet);
-  string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", opts);
+  string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //

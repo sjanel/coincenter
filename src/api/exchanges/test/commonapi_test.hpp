@@ -15,11 +15,19 @@
 
 namespace cct {
 
+/// For API tests, standard exchange config is not loaded, we have a dummy one instead.
 ExchangeInfoMap ComputeExchangeInfoMap(std::string_view) {
   ExchangeInfoMap ret;
   for (std::string_view exchangeName : kSupportedExchanges) {
-    ret.insert_or_assign(string(exchangeName), ExchangeInfo(exchangeName, "0.1", "0.1", std::span<const CurrencyCode>(),
-                                                            std::span<const CurrencyCode>(), 1000, 1000, false, false));
+    static constexpr bool kValidateDepositAddressesInFile = false;
+    static constexpr bool kPlaceSimulatedRealOrder = false;
+    static constexpr int kMinPublicDelayMs = 1000;
+    static constexpr int kMinPrivateDelayMs = 1000;
+
+    ret.insert_or_assign(
+        string(exchangeName),
+        ExchangeInfo(exchangeName, "0.1", "0.1", std::span<const CurrencyCode>(), std::span<const CurrencyCode>(),
+                     kMinPublicDelayMs, kMinPrivateDelayMs, kValidateDepositAddressesInFile, kPlaceSimulatedRealOrder));
   }
   return ret;
 }
