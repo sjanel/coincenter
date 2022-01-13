@@ -25,38 +25,10 @@ namespace cct {
 namespace api {
 namespace {
 
-/// Similar to CurlHandle::urlEncore, except that it does not convert '=' (Bithumb would complain if we did)
-string UrlEncode(std::string_view str) {
-  const int s = static_cast<int>(str.size());
-  string ret(3 * s, 0);
-  char* it = ret.data();
-  for (int i = 0; i < s; ++i) {
-    unsigned char c = str[i];
-    if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '@' || c == '.' ||
-        c == '=' || c == '\\' || c == '-' || c == '_' || c == ':' || c == '&') {
-      *it++ = c;
-    } else {
-      sprintf(it, "%%%02X", c);
-      it += 3;
-    }
-  }
-  ret.resize(it - ret.data());
-  return ret;
-}
-
 string GetMethodURL(std::string_view endpoint) {
   string methodUrl(BithumbPublic::kUrlBase);
   methodUrl.append(endpoint);
   return methodUrl;
-}
-
-string GetStrPost(std::string_view endpoint, std::string_view curlPostDataStr) {
-  string strPost("endpoint=");
-  strPost.reserve(strPost.size() + endpoint.size() + 1U + curlPostDataStr.size());
-  strPost.append(endpoint);
-  strPost.push_back('&');
-  strPost.append(curlPostDataStr);
-  return strPost;
 }
 
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
@@ -73,30 +45,29 @@ std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view 
   return std::make_pair(std::move(strData), std::move(nonce));
 }
 
-template <class StringVec>
-void SetHttpHeaders(StringVec& httpHeaders, const APIKey& apiKey, std::string_view signature, const Nonce& nonce) {
-  httpHeaders.clear();
-  httpHeaders.reserve(4U);
-  httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
-  httpHeaders.emplace_back("API-Sign: ").append(signature);
-  httpHeaders.emplace_back("API-Nonce: ").append(nonce);
-  httpHeaders.emplace_back("api-client-type: 1");
+void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, std::string_view signature, const Nonce& nonce) {
+  opts.clearHttpHeaders();
+  opts.appendHttpHeader("API-Key", apiKey.key());
+  opts.appendHttpHeader("API-Sign", signature);
+  opts.appendHttpHeader("API-Nonce", nonce);
+  opts.appendHttpHeader("api-client-type", 1);
 }
 
 json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint, CurlOptions& opts) {
-  auto strDataAndNoncePair = GetStrData(endpoint, opts.postdata.str());
+  auto strDataAndNoncePair = GetStrData(endpoint, opts.getPostData().str());
 
   string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
 
-  SetHttpHeaders(opts.httpHeaders, apiKey, signature, strDataAndNoncePair.second);
+  SetHttpHeaders(opts, apiKey, signature, strDataAndNoncePair.second);
   return json::parse(curlHandle.query(GetMethodURL(endpoint), opts));
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                   BithumbPrivate::MaxNbDecimalsUnitMap& maxNbDecimalsPerCurrencyCodePlace,
                   const CurlPostData& curlPostData) {
-  CurlOptions opts(HttpRequestType::kPost, CurlPostData(UrlEncode(GetStrPost(endpoint, curlPostData.str()))),
-                   BithumbPublic::kUserAgent);
+  CurlPostData postdata(curlPostData);
+  postdata.prepend("endpoint", endpoint);
+  CurlOptions opts(HttpRequestType::kPost, postdata.urlEncodeExceptDelimiters(), BithumbPublic::kUserAgent);
   json dataJson = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
 
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
@@ -174,7 +145,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
                 // Perform a second time the query here with truncated decimals.
                 CurlPostData updatedPostData(curlPostData);
-                MonetaryAmount volume(opts.postdata.get("units"));
+                MonetaryAmount volume(opts.getPostData().get("units"));
                 volume.truncate(maxNbDecimals);
                 if (volume.isZero()) {
                   return {};

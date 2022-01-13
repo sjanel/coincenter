@@ -13,15 +13,11 @@ namespace cct {
 namespace api {
 namespace {
 string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  string method_url("https://api.cryptowat.ch");
-  method_url.push_back('/');
-  method_url.append(method);
-
-  CurlOptions opts(HttpRequestType::kGet);
-  opts.userAgent = "Cryptowatch C++ API Client";
-  opts.postdata = std::move(postData);
-
-  return curlHandle.query(method_url, opts);
+  string methodUrl("https://api.cryptowat.ch");
+  methodUrl.push_back('/');
+  methodUrl.append(method);
+  return curlHandle.query(methodUrl,
+                          CurlOptions(HttpRequestType::kGet, std::move(postData), "Cryptowatch C++ API Client"));
 }
 
 const json& CollectResults(const json& dataJson) {

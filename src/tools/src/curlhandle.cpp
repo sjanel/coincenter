@@ -63,7 +63,7 @@ CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration mi
 
   if (IsProxyRequested(runMode)) {
     if (IsProxyAvailable()) {
-      setUpProxy(CurlOptions::ProxySettings(false, GetProxyURL()));
+      setUpProxy(GetProxyURL(), false);
     } else {
       throw std::runtime_error("Requesting proxy usage without any available proxy.");
     }
@@ -98,14 +98,14 @@ void CurlHandle::checkHandleOrInit() {
 /**
  * Should function remove proxy for subsequent calls when option is off ? not useful for now
  */
-void CurlHandle::setUpProxy(const CurlOptions::ProxySettings &proxy) {
-  if (proxy._url || proxy._reset) {
-    log::info("Setting proxy to {} reset = {} ?", proxy._url, proxy._reset);
+void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
+  if (proxyUrl || reset) {
+    log::info("Setting proxy to {} reset = {} ?", proxyUrl, reset);
     checkHandleOrInit();
     CURL *curl = reinterpret_cast<CURL *>(_handle);
-    CurlSetLogIfError(curl, CURLOPT_PROXY, proxy._url);  // Default of nullptr
+    CurlSetLogIfError(curl, CURLOPT_PROXY, proxyUrl);  // Default of nullptr
     CurlSetLogIfError(curl, CURLOPT_CAINFO, GetProxyCAInfo());
-    CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxy._url ? 0L : 1L);
+    CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxyUrl ? 0L : 1L);
   }
 }
 
@@ -114,26 +114,27 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   // General option settings.
-  const char *optsStr = opts.postdata.c_str();
+  const CurlPostData &postData = opts.getPostData();
+  const char *optsStr = postData.c_str();
 
   string modifiedURL(url);
   string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
-  if (opts.requestType() != HttpRequestType::kPost && !opts.postdata.empty()) {
+  if (opts.requestType() != HttpRequestType::kPost && !postData.empty()) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
-    modifiedURL.append(opts.postdata.str());
+    modifiedURL.append(postData.str());
     CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, "");
   } else {
-    if (opts.postdataInJsonFormat && !opts.postdata.empty()) {
-      jsonBuf = opts.postdata.toJson().dump();
+    if (opts.isPostDataInJsonFormat() && !postData.empty()) {
+      jsonBuf = postData.toJson().dump();
       optsStr = jsonBuf.c_str();
     }
     CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
   }
 
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
-  CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.userAgent);
-  CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.followLocation);
+  CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
+  CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.isFollowLocation());
 
 #ifdef _WIN32
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
@@ -151,10 +152,15 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     CurlSetLogIfError(curl, CURLOPT_HTTPGET, 1);
   }
 
-  CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.verbose ? 1L : 0L);
+  CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
   curl_slist *curlListPtr = nullptr, *oldCurlListPtr = nullptr;
-  for (const string &header : opts.httpHeaders) {
-    curlListPtr = curl_slist_append(curlListPtr, header.c_str());
+  for (const auto &[httpHeaderKey, httpHeaderValue] : opts.getHttpHeaders()) {
+    // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
+    // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
+    // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
+    // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
+    // guaranteed to be null-terminated since C++11)
+    curlListPtr = curl_slist_append(curlListPtr, httpHeaderKey.data());
     if (!curlListPtr) {
       curl_slist_free_all(oldCurlListPtr);
       throw std::bad_alloc();
@@ -169,7 +175,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   string out;
   CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &out);
 
-  setUpProxy(opts.proxy);
+  setUpProxy(opts.getProxyUrl(), opts.isProxyReset());
 
   if (_minDurationBetweenQueries != Clock::duration::zero()) {
     // Check last request time

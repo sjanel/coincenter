@@ -36,8 +36,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   url.append(method);
 
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), BinancePublic::kUserAgent);
-  SetNonceAndSignature(apiKey, opts.postdata);
-  opts.httpHeaders.emplace_back("X-MBX-APIKEY: ").append(apiKey.key());
+  opts.appendHttpHeader("X-MBX-APIKEY", apiKey.key());
+  SetNonceAndSignature(apiKey, opts.getPostData());
 
   json dataJson = json::parse(curlHandle.query(url, opts));
   auto binanceError = [](const json& j) { return j.contains("code") && j.contains("msg"); };
@@ -51,7 +51,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       sleepingTime = (3 * sleepingTime) / 2;
       log::trace("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
-      SetNonceAndSignature(apiKey, opts.postdata);
+      SetNonceAndSignature(apiKey, opts.getPostData());
       dataJson = json::parse(curlHandle.query(url, opts));
       if (!binanceError(dataJson)) {
         return dataJson;

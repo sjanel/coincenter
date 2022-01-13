@@ -39,19 +39,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   string path(std::string_view(KrakenPublic::kUrlBase.end() - 2, KrakenPublic::kUrlBase.end()));  // Take /<Version>
   path.append(method);
 
-  string method_url(KrakenPublic::kUrlBase);
-  method_url.append(method);
+  string methodUrl(KrakenPublic::kUrlBase);
+  methodUrl.append(method);
 
-  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
-  opts.userAgent = KrakenPublic::kUserAgent;
+  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData), KrakenPublic::kUserAgent);
 
   Nonce nonce = Nonce_TimeSinceEpochInMs();
-  opts.postdata.append("nonce", std::string_view(nonce.begin(), nonce.end()));
-  opts.httpHeaders.reserve(2);
-  opts.httpHeaders.emplace_back("API-Key: ").append(apiKey.key());
-  opts.httpHeaders.emplace_back("API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.str()));
+  opts.getPostData().append("nonce", nonce);
+  opts.appendHttpHeader("API-Key", apiKey.key());
+  opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
 
-  string ret = curlHandle.query(method_url, opts);
+  string ret = curlHandle.query(methodUrl, opts);
   json jsonData = json::parse(std::move(ret));
   Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
@@ -63,9 +61,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
     // We need to update the nonce
     nonce = Nonce_TimeSinceEpochInMs();
-    opts.postdata.set("nonce", std::string_view(nonce.begin(), nonce.end()));
-    opts.httpHeaders.back() = "API-Sign: " + PrivateSignature(apiKey, path, nonce, opts.postdata.str());
-    ret = curlHandle.query(method_url, opts);
+    opts.getPostData().set("nonce", nonce);
+    opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
+    ret = curlHandle.query(methodUrl, opts);
     jsonData = json::parse(std::move(ret));
   }
   auto errorIt = jsonData.find("error");
@@ -287,7 +285,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
   }
 
-  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, "/private/AddOrder", placePostData);
+  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, "/private/AddOrder", std::move(placePostData));
   // {"error":[],"result":{"descr":{"order":"buy 24.69898116 XRPETH @ limit 0.0003239"},"txid":["OWBA44-TQZQ7-EEYSXA"]}}
   if (isSimulation) {
     // In simulation mode, there is no txid returned. If we arrived here (after CollectResults) we assume that the call
@@ -404,9 +402,8 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
-  CurlPostData checkWithdrawPostData{{"asset", krakenCurrency.altStr()}};
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", checkWithdrawPostData);
+  json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", {{"asset", krakenCurrency.altStr()}});
   for (const json& trx : trxList) {
     std::string_view withdrawId = trx["refid"].get<std::string_view>();
     if (withdrawId == initiatedWithdrawInfo.withdrawId()) {
@@ -427,8 +424,7 @@ bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
                                        const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
-  CurlPostData checkDepositPostData{{"asset", krakenCurrency.altStr()}};
-  json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", checkDepositPostData);
+  json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", {{"asset", krakenCurrency.altStr()}});
   for (const json& trx : trxList) {
     std::string_view status(trx["status"].get<std::string_view>());
     if (status != "Success") {

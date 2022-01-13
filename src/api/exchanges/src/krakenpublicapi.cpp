@@ -18,14 +18,14 @@ namespace api {
 namespace {
 
 string GetMethodUrl(std::string_view method) {
-  string method_url(KrakenPublic::kUrlBase);
-  method_url.append(method);
-  return method_url;
+  string methodUrl(KrakenPublic::kUrlBase);
+  methodUrl.append(method);
+  return methodUrl;
 }
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  CurlOptions opts(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent);
-  json jsonData = json::parse(curlHandle.query(GetMethodUrl(method), opts));
+  json jsonData = json::parse(curlHandle.query(
+      GetMethodUrl(method), CurlOptions(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent)));
   auto errorIt = jsonData.find("error");
   if (errorIt != jsonData.end() && !errorIt->empty()) {
     std::string_view msg = errorIt->front().get<std::string_view>();
@@ -145,8 +145,8 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {
-  CurlOptions opts(HttpRequestType::kGet);
-  string withdrawalFeesCsv = _curlHandle1.query("https://withdrawalfees.com/exchanges/kraken", opts);
+  string withdrawalFeesCsv =
+      _curlHandle1.query("https://withdrawalfees.com/exchanges/kraken", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
   static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
@@ -194,8 +194,8 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource2() {
-  CurlOptions opts(HttpRequestType::kGet);
-  string withdrawalFeesCsv = _curlHandle2.query("https://www.cryptofeesaver.com/exchanges/fees/kraken", opts);
+  string withdrawalFeesCsv =
+      _curlHandle2.query("https://www.cryptofeesaver.com/exchanges/fees/kraken", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Kraken Deposit & Withdrawal fees</h2>";
 

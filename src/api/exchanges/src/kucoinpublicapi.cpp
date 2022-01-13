@@ -27,9 +27,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     url.push_back('?');
     url.append(curlPostData.str());
   }
-  CurlOptions opts(HttpRequestType::kGet);
-  opts.userAgent = KucoinPublic::kUserAgent;
-  json dataJson = json::parse(curlHandle.query(url, opts));
+  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
   if (dataJson.contains("code") && dataJson["code"].get<std::string_view>() != "200000") {
     throw exception("Error in Kucoin REST API response");
   }
