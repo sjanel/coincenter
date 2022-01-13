@@ -70,18 +70,23 @@ class KrakenPublic : public ExchangePublic {
     const ExchangeInfo& _exchangeInfo;
   };
 
-  struct WithdrawalFeesFunc {
+  class WithdrawalFeesFunc {
+   public:
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
-    WithdrawalFeesFunc(const CoincenterInfo& config, Clock::duration minDurationBetweenQueries)
-        : _coincenterInfo(config),
-          _curlHandle(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
+    WithdrawalFeesFunc(const CoincenterInfo& config, Clock::duration minDurationBetweenQueries);
 
     WithdrawalInfoMaps operator()();
 
+   private:
+    WithdrawalInfoMaps updateFromSource1();
+    WithdrawalInfoMaps updateFromSource2();
+
     const CoincenterInfo& _coincenterInfo;
-    CurlHandle _curlHandle;
+    // Use different curl handles as it is not from Kraken official REST API.
+    // There are two of them such that second one may be used in case of failure of the first one
+    CurlHandle _curlHandle1, _curlHandle2;
   };
 
   struct MarketsFunc {
