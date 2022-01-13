@@ -1,6 +1,7 @@
 #include "krakenpublicapi.hpp"
 
 #include <cassert>
+#include <cctype>
 #include <fstream>
 #include <unordered_map>
 
@@ -77,6 +78,12 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
 
 }  // namespace
 
+KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& config,
+                                                     Clock::duration minDurationBetweenQueries)
+    : _coincenterInfo(config),
+      _curlHandle1(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()),
+      _curlHandle2(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
+
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
@@ -98,7 +105,6 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                                                 config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice)),
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
-  // To save queries to Kraken site, let's check if there is recent cached data
   json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readJson();
   if (!data.empty()) {
     using Clock = std::chrono::high_resolution_clock;
@@ -138,9 +144,9 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   return foundIt->second;
 }
 
-KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
+KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {
   CurlOptions opts(HttpRequestType::kGet);
-  string withdrawalFeesCsv = _curlHandle.query("https://withdrawalfees.com/exchanges/kraken", opts);
+  string withdrawalFeesCsv = _curlHandle1.query("https://withdrawalfees.com/exchanges/kraken", opts);
 
   static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
   static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
@@ -153,8 +159,9 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
       static constexpr std::string_view kBeginFeeHtmlTag = "<div class=fee>";
       static constexpr std::string_view kEndHtmlTag = "</div>";
 
-      begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos) + kBeginFeeHtmlTag.size();
+      begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos);
       assert(begPos != string::npos);
+      begPos += kBeginFeeHtmlTag.size();
       std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
       assert(endPos != string::npos);
       MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
@@ -166,7 +173,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     searchPos += kBeginWithdrawalFeeHtmlTag.size();
     MonetaryAmount withdrawalFee = parseNextFee(searchPos);
 
-    log::trace("Updated Kraken withdrawal fee {}", withdrawalFee.str());
+    log::trace("Updated Kraken withdrawal fee {} from first source", withdrawalFee.str());
     ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
 
     // Locate min withdrawal
@@ -175,14 +182,88 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 
     MonetaryAmount minWithdrawal = parseNextFee(searchPos);
 
-    log::trace("Updated Kraken min withdrawal {}", minWithdrawal.str());
+    log::trace("Updated Kraken min withdrawal {} from first source", minWithdrawal.str());
     ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
+  }
+  if (ret.first.empty() || ret.second.empty()) {
+    log::error("Unable to parse Kraken withdrawal fees from first source");
+  } else {
+    log::info("Updated Kraken withdraw infos for {} coins from first source", ret.first.size());
+  }
+  return ret;
+}
+
+KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource2() {
+  CurlOptions opts(HttpRequestType::kGet);
+  string withdrawalFeesCsv = _curlHandle2.query("https://www.cryptofeesaver.com/exchanges/fees/kraken", opts);
+
+  static constexpr std::string_view kBeginTableTitle = "Kraken Deposit & Withdrawal fees</h2>";
+
+  std::size_t begPos = withdrawalFeesCsv.find(kBeginTableTitle);
+  WithdrawalInfoMaps ret;
+  if (begPos != string::npos) {
+    static constexpr std::string_view kBeginTable = "<table class=";
+    begPos = withdrawalFeesCsv.find(kBeginTable, begPos + kBeginTableTitle.size());
+    if (begPos != string::npos) {
+      static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<th scope=\"row\" class=\"align";
+
+      std::size_t searchPos = begPos + kBeginTable.size();
+      while ((searchPos = withdrawalFeesCsv.find(kBeginWithdrawalFeeHtmlTag, searchPos)) != string::npos) {
+        auto parseNextFee = [&withdrawalFeesCsv](std::size_t& begPos) {
+          static constexpr std::string_view kBeginFeeHtmlTag = "<td class=\"align-middle align-right\">";
+          static constexpr std::string_view kEndHtmlTag = "</td>";
+
+          // Skip one column
+          for (int colPos = 0; colPos < 2; ++colPos) {
+            begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos);
+            assert(begPos != string::npos);
+            begPos += kBeginFeeHtmlTag.size();
+          }
+          // Scan until next non space char
+          while (begPos < withdrawalFeesCsv.size() &&
+                 std::isspace(static_cast<unsigned char>(withdrawalFeesCsv[begPos]))) {
+            ++begPos;
+          }
+          std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
+          std::size_t endHtmlTagPos = endPos;
+          assert(endPos != string::npos);
+          while (endPos > begPos && std::isspace(static_cast<unsigned char>(withdrawalFeesCsv[endPos - 1]))) {
+            --endPos;
+          }
+          MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
+          begPos = endHtmlTagPos + kEndHtmlTag.size();
+          return ret;
+        };
+
+        // Locate withdrawal fee
+        searchPos += kBeginWithdrawalFeeHtmlTag.size();
+        MonetaryAmount withdrawalFee = parseNextFee(searchPos);
+
+        log::trace("Updated Kraken withdrawal fee {} from source 2, simulate min withdrawal amount",
+                   withdrawalFee.str());
+        ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
+
+        ret.second.insert_or_assign(withdrawalFee.currencyCode(), 3 * withdrawalFee);
+      }
+    }
+  }
+
+  if (ret.first.empty() || ret.second.empty()) {
+    log::error("Unable to parse Kraken withdrawal fees from second source");
+  } else {
+    log::info("Updated Kraken withdraw infos for {} coins from second source", ret.first.size());
+  }
+  return ret;
+}
+
+KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
+  WithdrawalInfoMaps ret = updateFromSource1();
+  if (ret.first.empty()) {
+    ret = updateFromSource2();
   }
   if (ret.first.empty() || ret.second.empty()) {
     throw exception("Unable to parse Kraken withdrawal fees");
   }
-
-  log::info("Updated Kraken withdraw infos for {} coins", ret.first.size());
   return ret;
 }
 
