@@ -286,7 +286,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(std::string_view
     while (last < ps && _data[last] != KeyValuePairSep) {
       ++last;
     }
-    _data.erase(_data.begin() + first, _data.begin() + last);
+    _data.erase(_data.begin() + first, _data.begin() + last + (first == 0));
   }
 }
 

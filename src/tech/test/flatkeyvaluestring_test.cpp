@@ -9,24 +9,24 @@ namespace {
 using KvPairs = FlatKeyValueString<'&', '='>;
 }
 
-TEST(CurlOptionsTest, DefaultConstructor) {
+TEST(FlatKeyValueStringTest, DefaultConstructor) {
   KvPairs kvPairs;
   EXPECT_TRUE(kvPairs.empty());
   EXPECT_EQ(kvPairs.str(), "");
 }
 
-TEST(CurlOptionsTest, EmptyIterator) {
+TEST(FlatKeyValueStringTest, EmptyIterator) {
   KvPairs kvPairs;
   EXPECT_EQ(kvPairs.begin(), kvPairs.end());
 }
 
-TEST(CurlOptionsTest, SetEmpty) {
+TEST(FlatKeyValueStringTest, SetEmpty) {
   KvPairs kvPairs;
   kvPairs.set("timestamp", "1621785125200");
   EXPECT_EQ(kvPairs.str(), "timestamp=1621785125200");
 }
 
-TEST(CurlOptionsTest, SetAndAppend) {
+TEST(FlatKeyValueStringTest, SetAndAppend) {
   KvPairs kvPairs;
   kvPairs.append("abc", "666");
   kvPairs.append("de", "aX");
@@ -52,16 +52,23 @@ TEST(CurlOptionsTest, SetAndAppend) {
   EXPECT_DEBUG_DEATH(kvPairs.append("newKey", "="), "");
 }
 
-TEST(CurlOptionsTest, Erase) {
+TEST(FlatKeyValueStringTest, Erase) {
   KvPairs kvPairs{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
   kvPairs.erase("rm");
-  const std::string_view expected = "abc=354&tata=abc&huhu=haha";
-  EXPECT_EQ(kvPairs.str(), expected);
+  EXPECT_EQ(kvPairs.str(), "abc=354&tata=abc&huhu=haha");
   kvPairs.erase("haha");
-  EXPECT_EQ(kvPairs.str(), expected);
+  EXPECT_EQ(kvPairs.str(), "abc=354&tata=abc&huhu=haha");
+  kvPairs.erase("abc");
+  EXPECT_EQ(kvPairs.str(), "tata=abc&huhu=haha");
+  kvPairs.erase("huhu");
+  EXPECT_EQ(kvPairs.str(), "tata=abc");
+  kvPairs.erase("abc");
+  EXPECT_EQ(kvPairs.str(), "tata=abc");
+  kvPairs.erase("tata");
+  EXPECT_TRUE(kvPairs.empty());
 }
 
-TEST(CurlOptionsTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(), json()); }
+TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(), json()); }
 
 class CurlOptionsCase1 : public ::testing::Test {
  protected:
