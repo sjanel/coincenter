@@ -69,6 +69,11 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the withdrawal fee of a Currency only
   virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) = 0;
 
+  /// Return true if exchange supports official REST API has an endpoint to get withdrawal fees
+  /// For instance, Kraken does not offer such endpoint, we nee to query external sources which may provide inaccurate
+  /// results
+  virtual bool isWithdrawalFeesSourceReliable() const = 0;
+
   /// Get all the MarketOrderBooks of this exchange as fast as possible.
   /// Exchanges which do not support retrieval of all of them at once may used heuristic methods.
   virtual MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) = 0;
