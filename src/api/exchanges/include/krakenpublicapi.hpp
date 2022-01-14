@@ -34,6 +34,8 @@ class KrakenPublic : public ExchangePublic {
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
+  bool isWithdrawalFeesSourceReliable() const override { return false; }
+
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get(depth);
   }

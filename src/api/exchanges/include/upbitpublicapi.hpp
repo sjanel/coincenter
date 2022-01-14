@@ -33,6 +33,8 @@ class UpbitPublic : public ExchangePublic {
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
+  bool isWithdrawalFeesSourceReliable() const override { return true; }
+
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get(depth);
   }
