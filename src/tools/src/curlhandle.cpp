@@ -26,8 +26,24 @@ size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
   try {
     reinterpret_cast<string *>(userp)->append(static_cast<const char *>(contents), size * nmemb);
     return size * nmemb;
-  } catch (const std::bad_alloc &) {  // Do not throw exceptions in a function passed to a C library
-    return 0;                         // This will cause CURL to raise an error
+  } catch (const std::bad_alloc &e) {
+    // Do not throw exceptions in a function passed to a C library
+    // This will cause CURL to raise an error
+    log::error("Bad alloc catched in curl write call back action, returning 0: {}", e.what());
+    return 0;
+  }
+}
+
+template <class T>
+void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
+  static_assert(std::is_integral_v<T> || std::is_pointer_v<T>);
+  CURLcode code = curl_easy_setopt(curl, curlOption, value);
+  if (code != CURLE_OK) {
+    if constexpr (std::is_integral_v<T> || std::is_same_v<T, const char *>) {
+      log::error("Curl error {} setting option {} to {}", code, curlOption, value);
+    } else {
+      log::error("Curl error {} setting option {}", code, curlOption);
+    }
   }
 }
 }  // namespace
@@ -41,7 +57,7 @@ CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration mi
     throw std::bad_alloc();
   }
   CURL *curl = reinterpret_cast<CURL *>(_handle);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
+  CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
   log::debug("Initialize a new CurlHandle with {} ms as minimum duration between queries",
              std::chrono::duration_cast<std::chrono::milliseconds>(minDurationBetweenQueries).count());
 
@@ -56,16 +72,16 @@ CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration mi
 
 CurlHandle::CurlHandle(CurlHandle &&o) noexcept
     : _handle(std::exchange(o._handle, nullptr)),
-      _pMetricGateway(std::exchange(o._pMetricGateway, nullptr)),
+      _pMetricGateway(o._pMetricGateway),
       _minDurationBetweenQueries(o._minDurationBetweenQueries),
-      _lastQueryTime(std::exchange(o._lastQueryTime, TimePoint())) {}
+      _lastQueryTime(o._lastQueryTime) {}
 
 CurlHandle &CurlHandle::operator=(CurlHandle &&o) noexcept {
   if (this != std::addressof(o)) {
     _handle = std::exchange(o._handle, nullptr);
-    _pMetricGateway = std::exchange(o._pMetricGateway, nullptr);
+    _pMetricGateway = o._pMetricGateway;
     _minDurationBetweenQueries = o._minDurationBetweenQueries;
-    _lastQueryTime = std::exchange(o._lastQueryTime, TimePoint());
+    _lastQueryTime = o._lastQueryTime;
   }
   return *this;
 }
@@ -87,9 +103,9 @@ void CurlHandle::setUpProxy(const CurlOptions::ProxySettings &proxy) {
     log::info("Setting proxy to {} reset = {} ?", proxy._url, proxy._reset);
     checkHandleOrInit();
     CURL *curl = reinterpret_cast<CURL *>(_handle);
-    curl_easy_setopt(curl, CURLOPT_PROXY, proxy._url);  // Default of nullptr
-    curl_easy_setopt(curl, CURLOPT_CAINFO, GetProxyCAInfo());
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, proxy._url ? 0L : 1L);
+    CurlSetLogIfError(curl, CURLOPT_PROXY, proxy._url);  // Default of nullptr
+    CurlSetLogIfError(curl, CURLOPT_CAINFO, GetProxyCAInfo());
+    CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxy._url ? 0L : 1L);
   }
 }
 
@@ -106,45 +122,41 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
     modifiedURL.append(opts.postdata.str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+    CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, "");
   } else {
     if (opts.postdataInJsonFormat && !opts.postdata.empty()) {
       jsonBuf = opts.postdata.toJson().dump();
       optsStr = jsonBuf.c_str();
     }
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, optsStr);
+    CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
   }
 
-  std::string_view requestTypeStr = opts.requestTypeStr();
-
-  curl_easy_setopt(curl, CURLOPT_URL, modifiedURL.c_str());
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, opts.userAgent);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, opts.followLocation);
+  CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
+  CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.userAgent);
+  CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.followLocation);
 
 #ifdef _WIN32
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
-  curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+  CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 #endif
 
   // Important! We should reset ALL fields of curl object at each call to query,
   // as it would be possible for a new query to read from a dangling reference form a previous
   // query.
-  curl_easy_setopt(curl, CURLOPT_POST, opts.requestType() == HttpRequestType::kPost);
-  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, opts.requestType() == HttpRequestType::kDelete ? "DELETE" : nullptr);
+  CurlSetLogIfError(curl, CURLOPT_POST, opts.requestType() == HttpRequestType::kPost);
+  CurlSetLogIfError(curl, CURLOPT_CUSTOMREQUEST, opts.requestType() == HttpRequestType::kDelete ? "DELETE" : nullptr);
   if (opts.requestType() == HttpRequestType::kGet) {
     // This is to force cURL to switch in a GET request
     // Useless to reset to 0 in other cases
-    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+    CurlSetLogIfError(curl, CURLOPT_HTTPGET, 1);
   }
 
-  curl_easy_setopt(curl, CURLOPT_VERBOSE, opts.verbose ? 1L : 0L);
+  CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.verbose ? 1L : 0L);
   curl_slist *curlListPtr = nullptr, *oldCurlListPtr = nullptr;
   for (const string &header : opts.httpHeaders) {
     curlListPtr = curl_slist_append(curlListPtr, header.c_str());
     if (!curlListPtr) {
-      if (oldCurlListPtr) {
-        curl_slist_free_all(oldCurlListPtr);
-      }
+      curl_slist_free_all(oldCurlListPtr);
       throw std::bad_alloc();
     }
     oldCurlListPtr = curlListPtr;
@@ -153,9 +165,9 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
       std::unique_ptr<curl_slist, decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); })>;
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
 
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curlListPtr);
+  CurlSetLogIfError(curl, CURLOPT_HTTPHEADER, curlListPtr);
   string out;
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out);
+  CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &out);
 
   setUpProxy(opts.proxy);
 
@@ -175,7 +187,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     }
   }
 
-  log::info("{} {}{}{}", requestTypeStr, url, opts.postdata.empty() ? "" : " opts ", optsStr);
+  log::info("{} {}{}{}", ToString(opts.requestType()), url, optsStr[0] == '\0' ? "" : "?", optsStr);
 
   // Actually make the query
   TimePoint t1 = Clock::now();
@@ -209,7 +221,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   return out;
 }
 
-string CurlHandle::urlEncode(std::string_view url) {
+string CurlHandle::urlEncode(std::string_view url) const {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;

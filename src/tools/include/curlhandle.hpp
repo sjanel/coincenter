@@ -38,7 +38,7 @@ class CurlHandle {
 
   ~CurlHandle();
 
-  string urlEncode(std::string_view url);
+  string urlEncode(std::string_view url) const;
 
   string query(std::string_view url, const CurlOptions &opts);
 
@@ -54,7 +54,7 @@ class CurlHandle {
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header
   void *_handle;
-  AbstractMetricGateway *_pMetricGateway;
+  AbstractMetricGateway *_pMetricGateway;  // non-owning pointer
   Clock::duration _minDurationBetweenQueries;
   TimePoint _lastQueryTime;
 };
