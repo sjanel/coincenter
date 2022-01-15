@@ -5,6 +5,7 @@
 #include <charconv>
 #include <concepts>
 #include <cstdint>
+#include <cstdio>
 #include <span>
 #include <string_view>
 #include <variant>
@@ -382,7 +383,7 @@ FlatKeyValueString<KeyValuePairSep, AssignmentChar>::urlEncodeExceptDelimiters()
         c == '\\' || c == '-' || c == '_' || c == ':' || c == KeyValuePairSep || c == AssignmentChar) {
       *outCharIt++ = c;
     } else {
-      sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
+      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
       outCharIt += 3;
     }
   }

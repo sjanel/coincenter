@@ -295,7 +295,6 @@ ExchangePrivate::Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraint
     params.set("order_currency", volumeCur.str());
     json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", _maxNbDecimalsUnitMap, params);
 
-    openedOrders.reserve(openedOrders.size() + result.size());
     for (json& orderDetails : result) {
       int64_t microsecondsSinceEpoch = FromString<int64_t>(orderDetails["order_date"].get<std::string_view>());
 
@@ -320,7 +319,6 @@ ExchangePrivate::Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraint
     }
   }
   std::sort(openedOrders.begin(), openedOrders.end());
-  openedOrders.shrink_to_fit();
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
