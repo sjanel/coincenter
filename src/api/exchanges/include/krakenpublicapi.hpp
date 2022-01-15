@@ -77,7 +77,7 @@ class KrakenPublic : public ExchangePublic {
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
-    WithdrawalFeesFunc(const CoincenterInfo& config, Clock::duration minDurationBetweenQueries);
+    WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Clock::duration minDurationBetweenQueries);
 
     WithdrawalInfoMaps operator()();
 
@@ -85,7 +85,6 @@ class KrakenPublic : public ExchangePublic {
     WithdrawalInfoMaps updateFromSource1();
     WithdrawalInfoMaps updateFromSource2();
 
-    const CoincenterInfo& _coincenterInfo;
     // Use different curl handles as it is not from Kraken official REST API.
     // There are two of them such that second one may be used in case of failure of the first one
     CurlHandle _curlHandle1, _curlHandle2;
