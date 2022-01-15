@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci_windows_build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       matrix:
         buildmode: [Debug, Release]
@@ -31,7 +31,7 @@ jobs:
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        run: cmake -S . -B build -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
+        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build
