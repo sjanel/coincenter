@@ -78,11 +78,10 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
 
 }  // namespace
 
-KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& config,
+KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo,
                                                      Clock::duration minDurationBetweenQueries)
-    : _coincenterInfo(config),
-      _curlHandle1(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()),
-      _curlHandle2(config.metricGatewayPtr(), minDurationBetweenQueries, config.getRunMode()) {}
+    : _curlHandle1(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()),
+      _curlHandle2(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()) {}
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
