@@ -42,7 +42,7 @@ docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data 
 ## Prerequisites
 
 - **Git**
-- **C++** compiler supporting C++20 (gcc >= 10, clang >= 13, MSVC >= 19.28).
+- **C++** compiler supporting C++20 (gcc >= 10, clang >= 13, MSVC >= 19.30).
 - **CMake** >= 3.15
 - **curl** >= 7.58.0 (it may work with an earlier version, it's just the minimum tested)
 - **openssl** >= 1.1.0
@@ -97,7 +97,7 @@ This is a **C++20** project.
 The following compilers and their versions have been tested (and are tested in the CI):
  - GCC version >= 10
  - Clang version >= 13
- - MSVC version >= 19.28
+ - MSVC version >= 19.30
 
 Other compilers have not been tested yet.
 
@@ -114,7 +114,7 @@ Example on Linux: to compile it in `Release` mode and `ninja` generator
 mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
 ```
 
-On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2019**, etc), or build it from command line, with generator `-G "Visual Studio 16 2019"`. Refer to the GitHub Windows workflow to have the detailed installation steps.
+On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2022**, etc), or build it from command line, with generator `-G "Visual Studio 17 2022"` for instance. Refer to the GitHub Windows workflow to have the detailed installation steps.
 
 #### As a static library
 

@@ -150,7 +150,6 @@ ExchangePrivate::Orders BinancePrivate::queryOpenedOrders(const OrdersConstraint
   std::string_view cur1Str = openedOrdersConstraints.curStr1();
   std::string_view cur2Str = openedOrdersConstraints.curStr2();
   ExchangePublic::MarketSet markets;
-  openedOrders.reserve(result.size());
   for (const json& orderDetails : result) {
     std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
     std::size_t cur1Pos = marketStr.find(cur1Str);

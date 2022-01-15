@@ -173,7 +173,6 @@ ExchangePrivate::Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints
   if (openedPartIt != data.end()) {
     ExchangePublic::MarketSet markets;
 
-    openedOrders.reserve(openedPartIt->size());
     for (const auto& [id, orderDetails] : openedPartIt->items()) {
       std::string_view marketStr = orderDetails["descr"]["pair"].get<std::string_view>();
 

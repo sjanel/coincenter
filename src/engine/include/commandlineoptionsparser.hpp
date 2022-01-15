@@ -27,7 +27,6 @@ inline void ThrowExpectingValueException(const CommandLineOption& commandLineOpt
   throw InvalidArgumentException(ex.c_str());
 }
 
-#ifndef _WIN32
 // helper type for the visitor #4
 template <class... Ts>
 struct overloaded : Ts... {
@@ -36,7 +35,6 @@ struct overloaded : Ts... {
 // explicit deduction guide (not needed as of C++20)
 template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
-#endif
 
 /// Basically an extension of the std::optional class with an additional state.
 /// Indeed, we want to distinguish the presence of the option with its optional value.
@@ -269,79 +267,9 @@ class CommandLineOptionsParser : private Opts {
     return secondChar >= '0' && secondChar <= '9';
   }
 
-#ifdef _WIN32
-  // MSVC compiler bug. Information here:
-  // https://developercommunity.visualstudio.com/t/Cannot-compile-lambda-with-pointer-to-me/1416679
-  struct VisitFunc {
-    VisitFunc(Opts* o, int& i, std::span<const char*> a, const CommandLineOption& c)
-        : opts(o), idx(i), argv(a), commandLineOption(c) {}
-
-    void operator()(bool Opts::*arg) const { opts->*arg = true; }
-
-    void operator()(int Opts::*arg) const {
-      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-        const char* beg = argv[idx + 1];
-        const char* end = beg + strlen(beg);
-        opts->*arg = FromString<int>(std::string_view(beg, end));
-        ++idx;
-      } else {
-        ThrowExpectingValueException(commandLineOption);
-      }
-    }
-
-    void operator()(CommandLineOptionalInt Opts::*arg) const {
-      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-        const char* beg = argv[idx + 1];
-        const char* end = beg + strlen(beg);
-        opts->*arg = FromString<int>(std::string_view(beg, end));
-        ++idx;
-      } else {
-        opts->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
-      }
-    }
-
-    void operator()(string Opts::*arg) const {
-      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-        opts->*arg = argv[idx + 1];
-        ++idx;
-      } else {
-        ThrowExpectingValueException(commandLineOption);
-      }
-    }
-
-    void operator()(std::optional<string> Opts::*arg) const {
-      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-        opts->*arg = argv[idx + 1];
-        ++idx;
-      } else {
-        opts->*arg = string();
-      }
-    }
-
-    void operator()(Duration Opts::*arg) const {
-      if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-        opts->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
-        ++idx;
-      } else {
-        ThrowExpectingValueException(commandLineOption);
-      }
-    }
-
-    Opts* opts;
-    int& idx;
-    std::span<const char*> argv;
-    const CommandLineOption& commandLineOption;
-  };
-#endif
-
   void register_callback(const CommandLineOption& commandLineOption, OptionType prop) {
     _callbacks[commandLineOption] = [this, &commandLineOption, prop](int& idx, std::span<const char*> argv) {
       if (commandLineOption.matches(argv[idx])) {
-#ifdef _WIN32
-        std::visit(
-            VisitFunc {
-              this, idx, argv, commandLineOption
-#else
         std::visit(overloaded{
                        [this](bool Opts::*arg) { this->*arg = true; },
                        [this, &idx, argv, &commandLineOption](int Opts::*arg) {
@@ -388,9 +316,8 @@ class CommandLineOptionsParser : private Opts {
                            ThrowExpectingValueException(commandLineOption);
                          }
                        },
-#endif
-            },
-            prop);
+                   },
+                   prop);
       }
     };
   };
