@@ -5,7 +5,6 @@
 
 namespace cct {
 static constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
-static constexpr std::string_view kVersion = CCT_VERSION;
 static constexpr std::string_view kDepositAddressesFileName = "depositaddresses.json";
 
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};

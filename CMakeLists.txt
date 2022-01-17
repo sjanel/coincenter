@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.15)
 
-project(coincenter VERSION 3.10.0
+project(coincenter VERSION 3.11.0
                    DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
                    LANGUAGES CXX)
 
@@ -219,11 +219,7 @@ endif()
 
 # Definition of project constants
 add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
-if (EXISTS ${PROJECT_VERSION})
-  add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
-else()
-  add_compile_definitions("CCT_VERSION=\"1.0.0\"")
-endif()
+add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
 
 if (CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
