@@ -81,7 +81,7 @@ endif()
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
-  GIT_TAG        v3.10.4
+  GIT_TAG        v3.10.5
 )
 
 FetchContent_MakeAvailable(json)
@@ -219,7 +219,12 @@ endif()
 
 # Definition of project constants
 add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
-add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
+if (EXISTS ${PROJECT_VERSION})
+  add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
+else()
+  add_compile_definitions("CCT_VERSION=\"1.0.0\"")
+endif()
+
 if (CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
 endif()
