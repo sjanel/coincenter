@@ -11,6 +11,7 @@
 #include "exchangesecretsinfo.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "monitoringinfo.hpp"
 #include "ordersconstraints.hpp"
 #include "timehelpers.hpp"
 #include "tradeoptions.hpp"
@@ -77,18 +78,14 @@ class CoincenterParsedOptions {
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
 
-  string dataDir;
+  std::string_view dataDir;
 
-  string monitoring_address;
-  string monitoring_username;
-  string monitoring_password;
-  uint16_t monitoring_port;
-  bool useMonitoring = false;
+  MonitoringInfo monitoringInfo;
 
   bool noProcess = false;
   bool printQueryResults;
   int repeats = 1;
-  Duration repeat_time;
+  Duration repeatTime;
 
   std::string_view programName() const { return _programName; }
 

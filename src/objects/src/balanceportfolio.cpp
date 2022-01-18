@@ -20,7 +20,7 @@ inline MonetaryAmountWithEquivalent &operator+=(MonetaryAmountWithEquivalent &lh
 
 void BalancePortfolio::add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency) {
   MonetaryAmountWithEquivalent elem{amount, equivalentInMainCurrency};
-  auto lb = std::lower_bound(_sortedAmounts.begin(), _sortedAmounts.end(), elem, Compare);
+  auto lb = std::ranges::lower_bound(_sortedAmounts, elem, Compare);
   if (lb == _sortedAmounts.end()) {
     _sortedAmounts.push_back(std::move(elem));
   } else if (Compare(elem, *lb)) {
@@ -32,9 +32,9 @@ void BalancePortfolio::add(MonetaryAmount amount, MonetaryAmount equivalentInMai
 }
 
 MonetaryAmount BalancePortfolio::get(CurrencyCode currencyCode) const {
-  auto it = std::partition_point(
-      _sortedAmounts.begin(), _sortedAmounts.end(),
-      [currencyCode](const MonetaryAmountWithEquivalent &a) { return a.amount.currencyCode() < currencyCode; });
+  auto it = std::ranges::partition_point(_sortedAmounts, [currencyCode](const MonetaryAmountWithEquivalent &a) {
+    return a.amount.currencyCode() < currencyCode;
+  });
   if (it == _sortedAmounts.end() || it->amount.currencyCode() != currencyCode) {
     return MonetaryAmount(0, currencyCode);
   }
@@ -68,12 +68,12 @@ BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &o) {
 }
 
 void BalancePortfolio::sortByDecreasingEquivalentAmount() {
-  std::sort(_sortedAmounts.begin(), _sortedAmounts.end(),
-            [](const MonetaryAmountWithEquivalent &lhs, const MonetaryAmountWithEquivalent &rhs) {
-              if (lhs.equi != rhs.equi) {
-                return lhs.equi > rhs.equi;
-              }
-              return lhs.amount.currencyCode() < rhs.amount.currencyCode();
-            });
+  std::ranges::sort(_sortedAmounts,
+                    [](const MonetaryAmountWithEquivalent &lhs, const MonetaryAmountWithEquivalent &rhs) {
+                      if (lhs.equi != rhs.equi) {
+                        return lhs.equi > rhs.equi;
+                      }
+                      return lhs.amount.currencyCode() < rhs.amount.currencyCode();
+                    });
 }
 }  // namespace cct

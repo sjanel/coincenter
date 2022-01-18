@@ -18,8 +18,6 @@
 namespace cct {
 
 struct CoincenterCmdLineOptions {
-  CoincenterCmdLineOptions() : dataDir(kDefaultDataDir) {}
-
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = std::chrono::seconds(1);
@@ -30,60 +28,60 @@ struct CoincenterCmdLineOptions {
 
   static void PrintVersion(std::string_view programName);
 
-  string dataDir;
+  std::string_view dataDir = kDefaultDataDir;
 
-  string logLevel;
+  std::string_view logLevel;
   bool help = false;
   bool version = false;
   bool logFile = false;
   bool noPrint = false;
-  std::optional<string> nosecrets;
+  std::optional<std::string_view> nosecrets;
   CommandLineOptionalInt repeats;
-  Duration repeat_time = kDefaultRepeatTime;
+  Duration repeatTime = kDefaultRepeatTime;
 
-  string monitoring_address = string(kDefaultMonitoringIPAddress);
-  string monitoring_username;
-  string monitoring_password;
-  int monitoring_port = kDefaultMonitoringPort;
+  std::string_view monitoringAddress = kDefaultMonitoringIPAddress;
+  std::string_view monitoringUsername;
+  std::string_view monitoringPassword;
+  int monitoringPort = kDefaultMonitoringPort;
   bool useMonitoring = false;
 
-  string markets;
+  std::string_view markets;
 
-  string orderbook;
-  int orderbook_depth = 0;
-  string orderbook_cur;
+  std::string_view orderbook;
+  int orderbookDepth = 0;
+  std::string_view orderbookCur;
 
-  std::optional<string> ticker;
+  std::optional<std::string_view> ticker;
 
-  string conversion_path;
+  std::string_view conversionPath;
 
-  std::optional<string> balance;
+  std::optional<std::string_view> balance;
 
-  string trade;
-  string trade_all;
-  string trade_multi;
-  string trade_multi_all;
-  string trade_price;
-  bool trade_timeout_match = false;
-  Duration trade_timeout{TradeOptions().maxTradeTime()};
-  Duration trade_updateprice{TradeOptions().minTimeBetweenPriceUpdates()};
-  bool trade_sim{TradeOptions().isSimulation()};
+  std::string_view trade;
+  std::string_view tradeAll;
+  std::string_view tradeMulti;
+  std::string_view tradeMultiAll;
+  std::string_view tradePrice;
+  bool tradeTimeoutMatch = false;
+  Duration tradeTimeout{TradeOptions().maxTradeTime()};
+  Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
+  bool tradeSim{TradeOptions().isSimulation()};
 
-  string deposit_info;
+  std::string_view depositInfo;
 
-  std::optional<string> opened_orders_info;
-  std::optional<string> cancel_opened_orders;
-  string orders_ids;
-  Duration orders_min_age{};
-  Duration orders_max_age{};
+  std::optional<std::string_view> openedOrdersInfo;
+  std::optional<std::string_view> cancelOpenedOrders;
+  std::string_view ordersIds;
+  Duration ordersMinAge{};
+  Duration ordersMaxAge{};
 
-  string withdraw;
-  string withdraw_fee;
+  std::string_view withdraw;
+  std::string_view withdrawFee;
 
-  string last24hTradedVolume;
-  string lastPrice;
+  std::string_view last24hTradedVolume;
+  std::string_view lastPrice;
 
-  string lastTrades;
+  std::string_view lastTrades;
   int nbLastTrades = api::ExchangePublic::kNbLastTradesDefault;
 };
 
@@ -119,7 +117,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                  &OptValueType::repeats},
        {{{"General", 10}, "--repeat-time", "<time>", string("Set delay between each repeat (default: ")
                                                     .append(ToString(kDefaultRepeatDurationSeconds)).append("s)")},  
-                                                  &OptValueType::repeat_time},
+                                                  &OptValueType::repeatTime},
        {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
        {{{"Public queries", 20}, "--markets", 'm', "<cur1[-cur2][,exch1,...]>", "Print markets involving given currencies for all exchanges, "
                                                                                "or only the specified ones. "
@@ -129,16 +127,16 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Public queries", 20}, "--orderbook", 'o', "<cur1-cur2[,exch1,...]>", "Print order book of currency pair for all exchanges offering "
                                                                                "this market, or only for specified exchanges."}, 
                                                                                &OptValueType::orderbook},
-       {{{"Public queries", 20}, "--orderbook-depth", "<n>", "Override default depth of order book"}, &OptValueType::orderbook_depth},
+       {{{"Public queries", 20}, "--orderbook-depth", "<n>", "Override default depth of order book"}, &OptValueType::orderbookDepth},
        {{{"Public queries", 20}, "--orderbook-cur", "<cur>", "If conversion of cur2 into cur is possible (for each exchange), "
                                                             "prints additional column converted to given asset"}, 
-                                                                 &OptValueType::orderbook_cur},
+                                                                 &OptValueType::orderbookCur},
        {{{"Public queries", 20}, "--ticker", "<[exch1,...]>", "Print ticker information for all markets for all exchanges,"
                                                            " or only for specified ones"}, 
                                                            &OptValueType::ticker},
        {{{"Public queries", 20}, "--conversion", 'c', "<cur1-cur2[,exch1,...]>", "Print fastest conversion path of 'cur1' to 'cur2' "
                                                                                 "for given exchanges if possible"}, 
-                                                          &OptValueType::conversion_path},
+                                                          &OptValueType::conversionPath},
        {{{"Public queries", 20}, "--volume-day", "<cur1-cur2[,exch1,...]>", "Print last 24h traded volume for market 'cur1'-'cur2' "
                                                                            "for all exchanges (or specified one)"}, 
                                                           &OptValueType::last24hTradedVolume},
@@ -162,17 +160,17 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
        {{{"Private queries", 31}, "--orders-opened", "<cur1-cur2[,exch1,...]>", "Print opened orders matching selection criteria.\n"
                                                                "All cur1, cur2 and exchanges are optional, "
                                                                "returned opened orders will be filtered accordingly."}, 
-                                                                &OptValueType::opened_orders_info},
+                                                                &OptValueType::openedOrdersInfo},
        {{{"Private queries", 32}, "--orders-cancel", "<cur1-cur2[,exch1,...]>", "Cancel opened orders matching selection criteria.\n"
                                                                "All cur1, cur2 and exchanges are optional."}, 
-                                                                &OptValueType::cancel_opened_orders},
+                                                                &OptValueType::cancelOpenedOrders},
        {{{"Private queries", 34}, "--orders-id", "<id1,...>", "Only select orders with given ID.\n"
                                                               "One or several IDs can be given, should be comma separated."}, 
-                                                              &OptValueType::orders_ids},
+                                                              &OptValueType::ordersIds},
        {{{"Private queries", 35}, "--orders-min-age", "<time>", "Only select orders with given minimum age.\n"}, 
-                                                                &OptValueType::orders_min_age},
+                                                                &OptValueType::ordersMinAge},
        {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"}, 
-                                                                &OptValueType::orders_max_age},
+                                                                &OptValueType::ordersMaxAge},
         {{{"Trade", 40}, "--trade", 't', "<amt[%]cur1-cur2[,exch1,...]>", 
                 "Single trade from given start amount on a list of exchanges, "
                 "or all that have sufficient balance on cur1 if none provided.\n"
@@ -182,7 +180,7 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                 &OptValueType::trade},
        {{{"Trade", 40}, "--trade-all", "<cur1-cur2[,exch1,...]>", "Single trade from available amount from given currency on a list of exchanges,"
                                                                  " or all that have some balance on cur1 if none provided\n"
-                                                                 "Order will be placed at limit price by default"}, &OptValueType::trade_all},
+                                                                 "Order will be placed at limit price by default"}, &OptValueType::tradeAll},
        {{{"Trade", 41}, "--singletrade", "<amt[%]cur1-cur2[,exch1,...]>", "Synonym for '--trade'"}, &OptValueType::trade},
        {{{"Trade", 42}, "--multitrade", "<amt[%]cur1-cur2[,exch1,...]>", "Multi trade from given start amount on a list of exchanges,"
                                                                       " or all that have a sufficient balance on cur1 if none provided \n"
@@ -190,32 +188,32 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                      "if possible reach cur2 by launching multiple single trades.\n"
                                                                      "Options are same than for single trade, applied to each step trade.\n"
                                                                      "If multi trade is used in conjonction with single trade, the latter is ignored."}, 
-                                                                     &OptValueType::trade_multi},
+                                                                     &OptValueType::tradeMulti},
        {{{"Trade", 42}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
-                                                                   "Order will be placed at limit price by default"}, &OptValueType::trade_multi_all},
+                                                                   "Order will be placed at limit price by default"}, &OptValueType::tradeMultiAll},
        {{{"Trade", 43}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
                                                                   " - 'maker': order price continuously set at limit price (default)\n"
                                                                   " - 'nibble': order price continuously set at limit price + (buy)/- (sell) 1\n"
                                                                   " - 'taker': order price will be at market price, expected to be matched directly"}, 
-                                                                  &OptValueType::trade_price},
+                                                                  &OptValueType::tradePrice},
        {{{"Trade", 43}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
                                                 .append(ToString(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 
-                                                &OptValueType::trade_timeout},
+                                                &OptValueType::tradeTimeout},
        {{{"Trade", 43}, "--trade-timeout-match", "", "If after the timeout some amount is still not traded,\n"
                                                     "force match by placing a remaining order at market price\n"}, 
-                                                    &OptValueType::trade_timeout_match},
+                                                    &OptValueType::tradeTimeoutMatch},
        {{{"Trade", 43}, "--trade-updateprice", "<time>", string("Set the min time allowed between two limit price updates (default: ")
                                                     .append(ToString(minUpdatePriceTime))
                                                     .append("s). Avoids cancelling / placing new orders too often with high volumes "
-                                                    "which can be counter productive sometimes.")}, &OptValueType::trade_updateprice},
+                                                    "which can be counter productive sometimes.")}, &OptValueType::tradeUpdatePrice},
        {{{"Trade", 44}, "--trade-sim", "", string("Activates simulation mode only (default: ")
                                          .append(isSimulationModeByDefault ? "true" : "false")
                                          .append("). For some exchanges, API can even be queried in this "
-                                         "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::trade_sim},
+                                         "mode to ensure deeper and more realistic trading inputs")}, &OptValueType::tradeSim},
        {{{"Withdraw and deposit", 50}, "--deposit-info", "<cur[,exch1,...]>", "Get deposit wallet information for given currency."
                                                                              " If no exchange accounts are given, will query all of them by default"},
-                                                                             &OptValueType::deposit_info},
+                                                                             &OptValueType::depositInfo},
        {{{"Withdraw and deposit", 50}, "--withdraw", 'w', "<amt cur,from-to>", string("Withdraw amount from exchange 'from' to exchange 'to'."
                                                                          " Amount is gross, including fees. Address and tag will be retrieved"
                                                                          " automatically from destination exchange and should match an entry in '")
@@ -224,20 +222,20 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                         &OptValueType::withdraw},
        {{{"Withdraw and deposit", 50}, "--withdraw-fee", "<cur[,exch1,...]>", string("Prints withdraw fees of given currency on all supported exchanges,"
                                                                          " or only for the list of specified ones if provided (comma separated).")}, 
-                                                                &OptValueType::withdraw_fee},
+                                                                &OptValueType::withdrawFee},
        {{{"Monitoring", 60}, "--monitoring", "", "Progressively send metrics to external instance provided that it's correctly set up "
                                                 "(Prometheus by default). Refer to the README for more information"}, 
                                                        &OptValueType::useMonitoring},
        {{{"Monitoring", 60}, "--monitoring-port", "<port>", string("Specify port of metric gateway instance (default: ")
                                                           .append(ToString(CoincenterCmdLineOptions::kDefaultMonitoringPort)).append(")")}, 
-                                                         &OptValueType::monitoring_port},
+                                                         &OptValueType::monitoringPort},
        {{{"Monitoring", 60}, "--monitoring-ip", "<IPv4>", string("Specify IP (v4) of metric gateway instance (default: ")
                                                         .append(CoincenterCmdLineOptions::kDefaultMonitoringIPAddress).append(")")}, 
-                                                         &OptValueType::monitoring_address},
+                                                         &OptValueType::monitoringAddress},
        {{{"Monitoring", 60}, "--monitoring-user", "<username>", "Specify username of metric gateway instance (default: none)"}, 
-                                                                &OptValueType::monitoring_username},
+                                                                &OptValueType::monitoringUsername},
        {{{"Monitoring", 60}, "--monitoring-pass", "<password>", "Specify password of metric gateway instance (default: none)"}, 
-                                                                &OptValueType::monitoring_password}});
+                                                                &OptValueType::monitoringPassword}});
   // clang-format on
 }
 }  // namespace cct

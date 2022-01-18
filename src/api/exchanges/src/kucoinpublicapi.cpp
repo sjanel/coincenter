@@ -89,8 +89,8 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(currencyInfoSet.size()));
 
-  std::transform(currencyInfoSet.begin(), currencyInfoSet.end(), std::inserter(currencies, currencies.end()),
-                 [](const auto& currencyInfo) { return currencyInfo.currencyExchange; });
+  std::ranges::transform(currencyInfoSet, std::inserter(currencies, currencies.end()),
+                         [](const auto& currencyInfo) { return currencyInfo.currencyExchange; });
 
   return currencies;
 }
@@ -286,7 +286,7 @@ KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
     ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

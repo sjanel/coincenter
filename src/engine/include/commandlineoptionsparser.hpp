@@ -73,8 +73,9 @@ template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
   using Duration = CommandLineOption::Duration;
-  using OptionType = std::variant<string Opts::*, std::optional<string> Opts::*, int Opts::*,
-                                  CommandLineOptionalInt Opts::*, bool Opts::*, Duration Opts::*>;
+  using OptionType = std::variant<string Opts::*, std::optional<string> Opts::*, std::string_view Opts::*,
+                                  std::optional<std::string_view> Opts::*, int Opts::*, CommandLineOptionalInt Opts::*,
+                                  bool Opts::*, Duration Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -86,9 +87,9 @@ class CommandLineOptionsParser : private Opts {
   }
 
   CommandLineOptionsParser(const CommandLineOptionsParser&) = delete;
-  CommandLineOptionsParser(CommandLineOptionsParser&&) = default;
+  CommandLineOptionsParser(CommandLineOptionsParser&&) noexcept = default;
   CommandLineOptionsParser& operator=(const CommandLineOptionsParser&) = delete;
-  CommandLineOptionsParser& operator=(CommandLineOptionsParser&&) = default;
+  CommandLineOptionsParser& operator=(CommandLineOptionsParser&&) noexcept = default;
 
   void insert(const CommandLineOptionWithValue& commandLineOptionWithValue) {
     _commandLineOptionsWithValues.push_back(commandLineOptionWithValue);
@@ -115,8 +116,8 @@ class CommandLineOptionsParser : private Opts {
     const int vargvSize = static_cast<int>(vargv.size());
     for (int idxOpt = 0; idxOpt < vargvSize; ++idxOpt) {
       const char* argStr = vargv[idxOpt];
-      const bool knownOption = std::any_of(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
-                                           [argStr](const auto& opt) { return opt.first.matches(argStr); });
+      const bool knownOption = std::ranges::any_of(_commandLineOptionsWithValues,
+                                                   [argStr](const auto& opt) { return opt.first.matches(argStr); });
       if (!knownOption) {
         static const string ex = "Unrecognized command-line option: " + string(argStr);
         throw InvalidArgumentException(ex.c_str());
@@ -184,7 +185,7 @@ class CommandLineOptionsParser : private Opts {
           stream << std::endl << spaces;
           linePos = lenFirstRows + 3;
         }
-        stream << std::string_view(descr.begin(), descr.begin() + breakPos + 1);
+        stream << std::string_view(descr.data(), breakPos + 1);
         if (descr[breakPos] == '\n') {
           stream << spaces;
           linePos = lenFirstRows + 3;
@@ -214,22 +215,21 @@ class CommandLineOptionsParser : private Opts {
     const auto compareByLongName = [](const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) {
       return lhs.first.fullName() < rhs.first.fullName();
     };
-    std::sort(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(), compareByLongName);
+    std::ranges::sort(_commandLineOptionsWithValues, compareByLongName);
     const auto equiFunc = [&compareByLongName](const auto& lhs, const auto& rhs) {
       return !compareByLongName(lhs, rhs) && !compareByLongName(rhs, lhs);
     };
-    auto foundIt =
-        std::adjacent_find(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(), equiFunc);
+    auto foundIt = std::ranges::adjacent_find(_commandLineOptionsWithValues, equiFunc);
     if (foundIt != _commandLineOptionsWithValues.end()) {
       // Some duplicate has been found - either with same short name character, or same full name option
       ThrowDuplicatedOptionsException(foundIt->first.fullName(), std::next(foundIt)->first.fullName());
     }
 
     // Finally, sort the options by their natural ordering
-    std::sort(_commandLineOptionsWithValues.begin(), _commandLineOptionsWithValues.end(),
-              [](const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) {
-                return lhs.first < rhs.first;
-              });
+    std::ranges::sort(_commandLineOptionsWithValues,
+                      [](const CommandLineOptionWithValue& lhs, const CommandLineOptionWithValue& rhs) {
+                        return lhs.first < rhs.first;
+                      });
   }
 
   void checkShortNamesDuplicates() const {
@@ -306,6 +306,22 @@ class CommandLineOptionsParser : private Opts {
                            ++idx;
                          } else {
                            this->*arg = string();
+                         }
+                       },
+                       [this, &idx, argv, &commandLineOption](std::string_view Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+                           this->*arg = argv[idx + 1];
+                           ++idx;
+                         } else {
+                           ThrowExpectingValueException(commandLineOption);
+                         }
+                       },
+                       [this, &idx, argv](std::optional<std::string_view> Opts::*arg) {
+                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
+                           this->*arg = argv[idx + 1];
+                           ++idx;
+                         } else {
+                           this->*arg = std::string_view();
                          }
                        },
                        [this, &idx, argv, &commandLineOption](Duration Opts::*arg) {

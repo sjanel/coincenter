@@ -76,8 +76,8 @@ class TestAPI {
 
   void testCurrencies() {
     ASSERT_FALSE(currencies.empty());
-    EXPECT_TRUE(std::none_of(currencies.begin(), currencies.end(),
-                             [](const CurrencyExchange &c) { return c.standardCode().str().empty(); }));
+    EXPECT_TRUE(
+        std::ranges::none_of(currencies, [](const CurrencyExchange &c) { return c.standardCode().str().empty(); }));
 
     // Uncomment below code to print updated Upbit withdrawal fees for static data of withdrawal fees of public API
     // if (exchangePrivatePtr.get()) {
@@ -211,12 +211,11 @@ class TestAPI {
       auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
         return lhs.amount() < rhs.amount();
       };
-      auto smallBigAmountTradesIt = std::minmax_element(lastTrades.begin(), lastTrades.end(), compareTradedVolume);
+      auto [smallAmountIt, bigAmountIt] = std::ranges::minmax_element(lastTrades, compareTradedVolume);
 
       TradeOptions tradeOptions(TradeMode::kSimulation);
-      MonetaryAmount smallFrom = smallBigAmountTradesIt.first->amount() / 100;
-      MonetaryAmount bigFrom =
-          smallBigAmountTradesIt.second->amount().toNeutral() * smallBigAmountTradesIt.second->price() * 100;
+      MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
+      MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
       EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo,
                 MonetaryAmount(0, m.quote()));
       EXPECT_FALSE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom.isZero());

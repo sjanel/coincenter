@@ -38,9 +38,9 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
       _orders.emplace_back(amountIntegral, priceIntegral);
     }
 
-    std::sort(_orders.begin(), _orders.end(), [](AmountPrice lhs, AmountPrice rhs) { return lhs.price < rhs.price; });
-    auto adjacentFindIt = std::adjacent_find(_orders.begin(), _orders.end(),
-                                             [](AmountPrice lhs, AmountPrice rhs) { return lhs.price == rhs.price; });
+    std::ranges::sort(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price < rhs.price; });
+    auto adjacentFindIt =
+        std::ranges::adjacent_find(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price == rhs.price; });
     if (adjacentFindIt != _orders.end()) {
       string ex("Forbidden duplicate price ");
       ex.append(MonetaryAmount(adjacentFindIt->price).amountStr());
@@ -50,8 +50,7 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
       throw exception(std::move(ex));
     }
 
-    auto highestBidPriceIt =
-        std::partition_point(_orders.begin(), _orders.end(), [](AmountPrice a) { return a.amount > 0; });
+    auto highestBidPriceIt = std::ranges::partition_point(_orders, [](AmountPrice a) { return a.amount > 0; });
     _highestBidPricePos = static_cast<int>(highestBidPriceIt - _orders.begin() - 1);
     _lowestAskPricePos = static_cast<int>(
         std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice a) { return a.amount < 0; }) - _orders.begin());

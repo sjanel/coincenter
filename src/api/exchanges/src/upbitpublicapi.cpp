@@ -222,7 +222,7 @@ UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrade
     ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

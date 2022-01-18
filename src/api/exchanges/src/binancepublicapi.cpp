@@ -248,7 +248,7 @@ json BinancePublic::GlobalInfosFunc::operator()() {
     throw exception("JSON parsing error from Binance cryptoFee scraper");
   }
 
-  return json::parse(std::string_view(sv.begin(), sv.begin() + endPos));
+  return json::parse(std::string_view(sv.data(), endPos));
 }
 
 namespace {
@@ -483,7 +483,7 @@ BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbT
     ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

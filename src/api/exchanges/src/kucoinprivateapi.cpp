@@ -217,7 +217,7 @@ ExchangePrivate::Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints
 
     openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
   }
-  std::sort(openedOrders.begin(), openedOrders.end());
+  std::ranges::sort(openedOrders);
   openedOrders.shrink_to_fit();
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
