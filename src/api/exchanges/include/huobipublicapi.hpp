@@ -75,7 +75,9 @@ class HuobiPublic : public ExchangePublic {
   friend class HuobiPrivate;
 
   struct TradableCurrenciesFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     explicit TradableCurrenciesFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+#endif
 
     json operator()();
 
@@ -83,8 +85,10 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+#endif
 
     struct MarketInfo {
       MarketInfo() noexcept : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT") {}
@@ -112,8 +116,10 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     AllOrderBooksFunc(CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _marketsCache(marketsCache), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+#endif
 
     MarketOrderBookMap operator()(int depth);
 
@@ -123,8 +129,10 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     OrderBookFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+#endif
 
     MarketOrderBook operator()(Market m, int depth);
 
@@ -133,7 +141,9 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct TradedVolumeFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+#endif
 
     MonetaryAmount operator()(Market m);
 
@@ -141,7 +151,9 @@ class HuobiPublic : public ExchangePublic {
   };
 
   struct TickerFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     explicit TickerFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+#endif
 
     MonetaryAmount operator()(Market m);
 

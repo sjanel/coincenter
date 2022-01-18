@@ -31,7 +31,7 @@ jobs:
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build

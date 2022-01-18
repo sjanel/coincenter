@@ -8,6 +8,7 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
+#include "cryptowatchapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
@@ -22,7 +23,6 @@ namespace cct {
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
 
 class ExchangePublic : public ExchangeBase {
  public:
@@ -30,6 +30,7 @@ class ExchangePublic : public ExchangeBase {
   static constexpr int kNbLastTradesDefault = 100;
 
   using MarketSet = FlatSet<Market>;
+  using Fiats = CryptowatchAPI::Fiats;
   using MarketOrderBookMap = std::unordered_map<Market, MarketOrderBook>;
   using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
   using WithdrawalFeeMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
@@ -91,6 +92,8 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market m) = 0;
 
+  Fiats queryFiats() { return _cryptowatchApi.queryFiats(); }
+
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
@@ -101,7 +104,14 @@ class ExchangePublic : public ExchangeBase {
   /// @return ordered list of Market (in the order in which they are defined in the exchange),
   ///         or empty list if conversion is not possible
   ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+                                           const MarketSet &markets, const Fiats &fiats,
                                            bool considerStableCoinsAsFiats = false);
+
+  ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+                                           bool considerStableCoinsAsFiats = false) {
+    return findFastestConversionPath(fromCurrencyCode, toCurrencyCode, queryTradableMarkets(), queryFiats(),
+                                     considerStableCoinsAsFiats);
+  }
 
   MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy);
 

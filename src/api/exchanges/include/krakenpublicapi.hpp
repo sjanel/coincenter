@@ -57,12 +57,14 @@ class KrakenPublic : public ExchangePublic {
   friend class KrakenPrivate;
 
   struct TradableCurrenciesFunc {
-    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchApi,
-                           const ExchangeInfo& exchangeInfo, CurlHandle& curlHandle)
+#ifndef CCT_AGGR_INIT_CXX20
+    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchApi, CurlHandle& curlHandle,
+                           const ExchangeInfo& exchangeInfo)
         : _coincenterInfo(config),
           _cryptowatchApi(cryptowatchApi),
           _curlHandle(curlHandle),
           _exchangeInfo(exchangeInfo) {}
+#endif
 
     CurrencyExchangeFlatSet operator()();
 
@@ -91,12 +93,14 @@ class KrakenPublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
-    MarketsFunc(const CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
+#ifndef CCT_AGGR_INIT_CXX20
+    MarketsFunc(CachedResult<TradableCurrenciesFunc>& currenciesCache, const CoincenterInfo& config,
                 CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _tradableCurrenciesCache(currenciesCache),
           _coincenterInfo(config),
           _curlHandle(curlHandle),
           _exchangeInfo(exchangeInfo) {}
+#endif
 
     struct MarketInfo {
       VolAndPriNbDecimals volAndPriNbDecimals;
@@ -114,12 +118,14 @@ class KrakenPublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-    AllOrderBooksFunc(const CoincenterInfo& config, CachedResult<TradableCurrenciesFunc>& currenciesCache,
-                      CachedResult<MarketsFunc>& marketsCache, CurlHandle& curlHandle)
+#ifndef CCT_AGGR_INIT_CXX20
+    AllOrderBooksFunc(CachedResult<TradableCurrenciesFunc>& currenciesCache, CachedResult<MarketsFunc>& marketsCache,
+                      const CoincenterInfo& config, CurlHandle& curlHandle)
         : _tradableCurrenciesCache(currenciesCache),
           _marketsCache(marketsCache),
           _coincenterInfo(config),
           _curlHandle(curlHandle) {}
+#endif
 
     MarketOrderBookMap operator()(int depth);
 
@@ -130,9 +136,11 @@ class KrakenPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     OrderBookFunc(CachedResult<TradableCurrenciesFunc>& currenciesCache, CachedResult<MarketsFunc>& marketsCache,
                   CurlHandle& curlHandle)
         : _tradableCurrenciesCache(currenciesCache), _marketsCache(marketsCache), _curlHandle(curlHandle) {}
+#endif
 
     MarketOrderBook operator()(Market m, int count);
 
@@ -144,8 +152,10 @@ class KrakenPublic : public ExchangePublic {
   struct TickerFunc {
     using Last24hTradedVolumeAndLatestPricePair = std::pair<MonetaryAmount, MonetaryAmount>;
 
+#ifndef CCT_AGGR_INIT_CXX20
     TickerFunc(CachedResult<TradableCurrenciesFunc>& tradableCurrenciesCache, CurlHandle& curlHandle)
         : _tradableCurrenciesCache(tradableCurrenciesCache), _curlHandle(curlHandle) {}
+#endif
 
     Last24hTradedVolumeAndLatestPricePair operator()(Market m);
 
