@@ -38,7 +38,7 @@ class MarketOrderBook {
   using OrderBookLineSpan = std::span<const OrderBookLine>;
 
   struct AmountAtPrice {
-#ifndef CCT_CTAD_SUPPORT
+#ifndef CCT_AGGR_INIT_CXX20
     AmountAtPrice(MonetaryAmount a, MonetaryAmount p) : amount(a), price(p) {}
 #endif
 

@@ -53,8 +53,10 @@ class BithumbPublic : public ExchangePublic {
   friend class BithumbPrivate;
 
   struct TradableCurrenciesFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchAPI, CurlHandle& curlHandle)
         : _coincenterInfo(config), _cryptowatchAPI(cryptowatchAPI), _curlHandle(curlHandle) {}
+#endif
 
     CurrencyExchangeFlatSet operator()();
 
@@ -74,8 +76,10 @@ class BithumbPublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     AllOrderBooksFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+#endif
 
     MarketOrderBookMap operator()(int depth);
 
@@ -85,8 +89,10 @@ class BithumbPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     OrderBookFunc(const CoincenterInfo& config, CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
         : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
+#endif
 
     MarketOrderBook operator()(Market m, int depth);
 
@@ -96,7 +102,9 @@ class BithumbPublic : public ExchangePublic {
   };
 
   struct TradedVolumeFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
+#endif
 
     MonetaryAmount operator()(Market m);
 

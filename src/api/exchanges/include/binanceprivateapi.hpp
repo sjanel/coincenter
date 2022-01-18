@@ -62,8 +62,10 @@ class BinancePrivate : public ExchangePrivate {
   bool checkMarketAppendSymbol(Market m, CurlPostData& params);
 
   struct TradableCurrenciesCache {
+#ifndef CCT_AGGR_INIT_CXX20
     TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
+#endif
 
     CurrencyExchangeFlatSet operator()();
 
@@ -73,8 +75,10 @@ class BinancePrivate : public ExchangePrivate {
   };
 
   struct DepositWalletFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
+#endif
 
     Wallet operator()(CurrencyCode currencyCode);
 
@@ -84,8 +88,10 @@ class BinancePrivate : public ExchangePrivate {
   };
 
   struct AllWithdrawFeesFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     AllWithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
+#endif
 
     WithdrawalFeeMap operator()();
 
@@ -95,8 +101,10 @@ class BinancePrivate : public ExchangePrivate {
   };
 
   struct WithdrawFeesFunc {
+#ifndef CCT_AGGR_INIT_CXX20
     WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
         : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
+#endif
 
     MonetaryAmount operator()(CurrencyCode currencyCode);
 

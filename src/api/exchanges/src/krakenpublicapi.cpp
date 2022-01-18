@@ -88,15 +88,15 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
       _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
-          cryptowatchAPI, config.exchangeInfo(_name), _curlHandle),
+          cryptowatchAPI, _curlHandle, config.exchangeInfo(_name)),
       _withdrawalFeesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
           config, config.exchangeInfo(_name).minPublicQueryDelay()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    config, _tradableCurrenciesCache, _curlHandle, config.exchangeInfo(_name)),
+                    _tradableCurrenciesCache, config, _curlHandle, config.exchangeInfo(_name)),
       _allOrderBooksCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          config, _tradableCurrenciesCache, _marketsCache, _curlHandle),
+          _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
       _orderBookCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, _curlHandle),

@@ -1,20 +1,20 @@
 #include "exchangepublicapi.hpp"
 
+#include <unordered_set>
+
 #include "cct_allocator.hpp"
 #include "cct_exception.hpp"
-#include "cct_flatset.hpp"
-#include "cct_smallset.hpp"
-#include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"
 #include "unreachable.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmount a, CurrencyCode toCurrencyCode) {
   if (a.currencyCode() == toCurrencyCode) {
     return a;
   }
-  ConversionPath conversionPath = findFastestConversionPath(a.currencyCode(), toCurrencyCode, true);
+  Fiats fiats = queryFiats();
+  ConversionPath conversionPath =
+      findFastestConversionPath(a.currencyCode(), toCurrencyCode, queryTradableMarkets(), fiats, true);
   if (conversionPath.empty()) {
     return std::nullopt;
   }
@@ -28,8 +28,8 @@ std::optional<MonetaryAmount> ExchangePublic::convertAtAveragePrice(MonetaryAmou
     CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
     std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
     CurrencyCode fiatToLikeCurCode = (optFiatLikeTo ? *optFiatLikeTo : mToCurrencyCode);
-    const bool isFromFiatLike = optFiatLikeFrom || _cryptowatchApi.queryIsCurrencyCodeFiat(mFromCurrencyCode);
-    const bool isToFiatLike = optFiatLikeTo || _cryptowatchApi.queryIsCurrencyCodeFiat(mToCurrencyCode);
+    const bool isFromFiatLike = optFiatLikeFrom || fiats.contains(mFromCurrencyCode);
+    const bool isToFiatLike = optFiatLikeTo || fiats.contains(mToCurrencyCode);
     if (isFromFiatLike && isToFiatLike) {
       a = _fiatConverter.convert(MonetaryAmount(a, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
@@ -61,13 +61,15 @@ namespace {
 
 // Optimized struct containing a currency and a reverse bool to keep market directionnality information
 struct CurrencyDir {
+#ifndef CCT_AGGR_INIT_CXX20
   CurrencyDir(CurrencyCode c, bool b) : cur(c), isLastRealMarketReversed(b) {}
+#endif
 
   CurrencyCode cur;
   bool isLastRealMarketReversed;
 };
 
-using CurrencyDirPath = SmallVector<CurrencyDir, 4>;
+using CurrencyDirPath = SmallVector<CurrencyDir, 3>;
 
 class CurrencyDirFastestPathComparator {
  public:
@@ -82,7 +84,7 @@ class CurrencyDirFastestPathComparator {
     // - In some countries, tax are automatically collected when any conversion to a fiat on an exchange is made
     // - It may have the highest volume, as fiats are only present on some regions
     auto isFiat = [this](CurrencyDir c) { return _cryptowatchApi.queryIsCurrencyCodeFiat(c.cur); };
-    return std::count_if(lhs.begin(), lhs.end(), isFiat) > std::count_if(rhs.begin(), rhs.end(), isFiat);
+    return std::ranges::count_if(lhs, isFiat) > std::ranges::count_if(rhs, isFiat);
   }
 
  private:
@@ -92,23 +94,22 @@ class CurrencyDirFastestPathComparator {
 
 ExchangePublic::ConversionPath ExchangePublic::findFastestConversionPath(CurrencyCode fromCurrencyCode,
                                                                          CurrencyCode toCurrencyCode,
+                                                                         const MarketSet &markets, const Fiats &fiats,
                                                                          bool considerStableCoinsAsFiats) {
   ConversionPath ret;
   if (fromCurrencyCode == toCurrencyCode) {
     log::error("Cannot convert {} to itself", fromCurrencyCode.str());
     return ret;
   }
+
   std::optional<CurrencyCode> optFiatFromStableCoin =
       considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode) : std::nullopt;
-  const bool isToFiatLike = optFiatFromStableCoin || _cryptowatchApi.queryIsCurrencyCodeFiat(toCurrencyCode);
-
-  MarketSet markets = queryTradableMarkets();
+  const bool isToFiatLike = optFiatFromStableCoin || fiats.contains(toCurrencyCode);
 
   CurrencyDirFastestPathComparator comp(_cryptowatchApi);
 
   vector<CurrencyDirPath> searchPaths(1, CurrencyDirPath(1, CurrencyDir(fromCurrencyCode, false)));
-  using VisitedCurrenciesSet =
-      SmallSet<CurrencyCode, 10, std::less<CurrencyCode>, allocator<CurrencyCode>, FlatSet<CurrencyCode>>;
+  using VisitedCurrenciesSet = std::unordered_set<CurrencyCode>;
   VisitedCurrenciesSet visitedCurrencies;
   do {
     std::pop_heap(searchPaths.begin(), searchPaths.end(), comp);
@@ -141,7 +142,7 @@ ExchangePublic::ConversionPath ExchangePublic::findFastestConversionPath(Currenc
     }
     std::optional<CurrencyCode> optLastFiat =
         considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(lastCurrencyCode) : std::nullopt;
-    const bool isLastFiatLike = optLastFiat || _cryptowatchApi.queryIsCurrencyCodeFiat(lastCurrencyCode);
+    const bool isLastFiatLike = optLastFiat || fiats.contains(lastCurrencyCode);
     if (isToFiatLike && isLastFiatLike) {
       searchPaths.emplace_back(std::move(path)).emplace_back(toCurrencyCode, false);
       std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
@@ -318,5 +319,4 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
   return ret;
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

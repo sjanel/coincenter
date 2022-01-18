@@ -19,6 +19,12 @@ TEST(SSPHashTest, HashCombine) {
   }
 }
 
+TEST(SSPHashTest, EmptyTuple) {
+  using T = std::tuple<>;
+
+  EXPECT_EQ(HashTuple()(T()), HashTuple()(T()));
+}
+
 TEST(SSPHashTest, Pair) {
   using T = std::pair<int64_t, uint8_t>;
 

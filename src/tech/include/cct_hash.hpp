@@ -43,7 +43,7 @@ class HashTuple {
   struct Component {
     const T& value;
 
-#ifndef CCT_CTAD_SUPPORT
+#ifndef CCT_AGGR_INIT_CXX20
     explicit Component(const T& v) : value(v) {}
 #endif
 

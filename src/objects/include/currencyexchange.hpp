@@ -14,6 +14,9 @@ class CurrencyExchange {
   enum class Withdraw { kAvailable, kUnavailable };
   enum class Type { kFiat, kCrypto };
 
+  /// Constructs a CurrencyExchange with a standard code, with unknown withdrawal / deposit statuses
+  CurrencyExchange(CurrencyCode standardCode) : CurrencyExchange(standardCode, standardCode, standardCode) {}
+
   /// Constructs a CurrencyExchange with up to two alternative codes, with unknown withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode);
 

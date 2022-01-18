@@ -62,11 +62,9 @@ class CachedResult : public CachedResultBase {
   /// if given timestamp is more recent than the one associated to the value already present at this key (if any)
   template <class ResultTypeT, class... Args>
   void set(ResultTypeT &&val, TimePoint t, Args &&...funcArgs) {
-    TKey key(std::forward<Args &&>(funcArgs)...);
-    auto it = _cachedResultsMap.find(key);
-    if (it == _cachedResultsMap.end()) {
-      _cachedResultsMap.insert_or_assign(std::move(key), TValue(std::forward<ResultTypeT>(val), t));
-    } else if (it->second.second < t) {
+    auto [it, inserted] =
+        _cachedResultsMap.try_emplace(TKey(std::forward<Args &&>(funcArgs)...), std::forward<ResultTypeT>(val), t);
+    if (!inserted && it->second.second < t) {
       it->second = TValue(std::forward<ResultTypeT>(val), t);
     }
   }
@@ -78,16 +76,16 @@ class CachedResult : public CachedResultBase {
     TKey key(std::forward<Args &&>(funcArgs)...);
     TimePoint t = Clock::now();
     auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
-    auto tValueBuilder = [&flattenTuple, t](TKey &&key) { return TValue(std::apply(flattenTuple, std::move(key)), t); };
     if (_state == State::kForceUniqueRefresh) {
       _cachedResultsMap.clear();
       _state = State::kForceCache;
     }
     auto it = _cachedResultsMap.find(key);
     if (it == _cachedResultsMap.end()) {
-      it = _cachedResultsMap.insert_or_assign(key, tValueBuilder(std::move(key))).first;
+      TValue val(std::apply(flattenTuple, key), t);
+      it = _cachedResultsMap.insert_or_assign(std::move(key), std::move(val)).first;
     } else if (_state != State::kForceCache && it->second.second + _refreshPeriod < t) {
-      it->second = tValueBuilder(std::move(key));
+      it->second = TValue(std::apply(flattenTuple, std::move(key)), t);
     }
     return it->second.first;
   }
@@ -96,8 +94,7 @@ class CachedResult : public CachedResultBase {
   /// If no value has been computed for this key, returns a nullptr.
   template <class... Args>
   ResPtrTimePair retrieve(Args &&...funcArgs) const {
-    TKey key(std::forward<Args &&>(funcArgs)...);
-    auto it = _cachedResultsMap.find(key);
+    auto it = _cachedResultsMap.find(TKey(std::forward<Args &&>(funcArgs)...));
     return it == _cachedResultsMap.end() ? ResPtrTimePair()
                                          : ResPtrTimePair(std::addressof(it->second.first), it->second.second);
   }

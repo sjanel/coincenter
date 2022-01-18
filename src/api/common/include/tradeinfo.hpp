@@ -10,8 +10,10 @@
 namespace cct::api {
 
 struct OrderRef {
+#ifndef CCT_AGGR_INIT_CXX20
   OrderRef(const OrderId &orderId, int64_t nbSecondsSinceEpoch, Market market, TradeSide s)
       : id(orderId), userRef(nbSecondsSinceEpoch), m(market), side(s) {}
+#endif
 
   CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
   CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
@@ -23,7 +25,7 @@ struct OrderRef {
 };
 
 struct TradeInfo {
-#ifndef CCT_CTAD_SUPPORT
+#ifndef CCT_AGGR_INIT_CXX20
   TradeInfo(int64_t nbSecondsSinceEpoch, Market market, TradeSide s, const TradeOptions &opts)
       : userRef(nbSecondsSinceEpoch), m(market), side(s), options(opts) {}
 #endif
@@ -40,12 +42,12 @@ struct TradeInfo {
 };
 
 struct OrderInfo {
+#ifndef CCT_AGGR_INIT_CXX20
   explicit OrderInfo(TradedAmounts &&ta, bool closed = false) : tradedAmounts(std::move(ta)), isClosed(closed) {}
-
-  void setClosed() { isClosed = true; }
+#endif
 
   TradedAmounts tradedAmounts;
-  bool isClosed;
+  bool isClosed = false;
 };
 
 struct PlaceOrderInfo {
@@ -54,7 +56,7 @@ struct PlaceOrderInfo {
   PlaceOrderInfo(OrderInfo &&oInfo, OrderId orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
 
   bool isClosed() const { return orderInfo.isClosed; }
-  void setClosed() { orderInfo.setClosed(); }
+  void setClosed() { orderInfo.isClosed = true; }
 
   TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
   const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
