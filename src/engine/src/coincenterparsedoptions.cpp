@@ -33,7 +33,7 @@ namespace {
 std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
                                                                      std::string_view orderRequestStr) {
   auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
-  auto orderIdViewVector = StringOptionParser(cmdLineOptions.orders_ids).getCSVValues();
+  auto orderIdViewVector = StringOptionParser(cmdLineOptions.ordersIds).getCSVValues();
   vector<OrderId> orderIds;
   orderIds.reserve(orderIdViewVector.size());
   for (std::string_view orderIdView : orderIdViewVector) {
@@ -41,8 +41,8 @@ std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const Coinc
   }
   return std::make_pair(
       OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
-                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_min_age),
-                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.orders_max_age),
+                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.ordersMinAge),
+                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.ordersMaxAge),
                         OrdersConstraints::OrderIdSet(std::move(orderIds))),
       std::get<2>(currenciesPrivateExchangesTuple));
 }
@@ -67,20 +67,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
       repeats = -1;
     }
   }
-  repeat_time = cmdLineOptions.repeat_time;
+  repeatTime = cmdLineOptions.repeatTime;
   printQueryResults = !cmdLineOptions.noPrint;
 
-  if (cmdLineOptions.useMonitoring) {
-    useMonitoring = true;
-    monitoring_username = std::move(cmdLineOptions.monitoring_username);
-    monitoring_address = std::move(cmdLineOptions.monitoring_address);
-    monitoring_password = std::move(cmdLineOptions.monitoring_password);
-    if (cmdLineOptions.monitoring_port < 0 ||
-        cmdLineOptions.monitoring_port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
-      throw InvalidArgumentException("Invalid port value");
-    }
-    monitoring_port = static_cast<uint16_t>(cmdLineOptions.monitoring_port);
-  }
+  monitoringInfo = MonitoringInfo(cmdLineOptions.useMonitoring, _programName, cmdLineOptions.monitoringAddress,
+                                  cmdLineOptions.monitoringPort, cmdLineOptions.monitoringUsername,
+                                  cmdLineOptions.monitoringPassword);
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
@@ -91,8 +83,8 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     StringOptionParser anyParser(cmdLineOptions.orderbook);
     std::tie(marketForOrderBook, orderBookExchanges) = anyParser.getMarketExchanges();
 
-    orderbookDepth = cmdLineOptions.orderbook_depth;
-    orderbookCur = CurrencyCode(cmdLineOptions.orderbook_cur);
+    orderbookDepth = cmdLineOptions.orderbookDepth;
+    orderbookCur = CurrencyCode(cmdLineOptions.orderbookCur);
   }
 
   if (cmdLineOptions.ticker) {
@@ -101,8 +93,8 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     tickerForAll = tickerExchanges.empty();
   }
 
-  if (!cmdLineOptions.conversion_path.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.conversion_path);
+  if (!cmdLineOptions.conversionPath.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.conversionPath);
     std::tie(marketForConversionPath, conversionPathExchanges) = anyParser.getMarketExchanges();
   }
 
@@ -121,12 +113,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   }
 
   std::string_view tradeArgs;
-  bool isMultiTrade = !cmdLineOptions.trade_multi.empty() || !cmdLineOptions.trade_multi_all.empty();
-  bool isTradeAll = !cmdLineOptions.trade_all.empty() || !cmdLineOptions.trade_multi_all.empty();
+  bool isMultiTrade = !cmdLineOptions.tradeMulti.empty() || !cmdLineOptions.tradeMultiAll.empty();
+  bool isTradeAll = !cmdLineOptions.tradeAll.empty() || !cmdLineOptions.tradeMultiAll.empty();
   if (isMultiTrade) {
-    tradeArgs = isTradeAll ? cmdLineOptions.trade_multi_all : cmdLineOptions.trade_multi;
+    tradeArgs = isTradeAll ? cmdLineOptions.tradeMultiAll : cmdLineOptions.tradeMulti;
   } else {
-    tradeArgs = isTradeAll ? cmdLineOptions.trade_all : cmdLineOptions.trade;
+    tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
   }
   if (!tradeArgs.empty()) {
     StringOptionParser anyParser(tradeArgs);
@@ -138,29 +130,29 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
           anyParser.getMonetaryAmountCurrencyPrivateExchanges();
     }
 
-    TradeMode tradeMode = cmdLineOptions.trade_sim ? TradeMode::kSimulation : TradeMode::kReal;
+    TradeMode tradeMode = cmdLineOptions.tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
     TradeType tradeType = isMultiTrade ? TradeType::kMultiTradePossible : TradeType::kSingleTrade;
     TradeTimeoutAction timeoutAction =
-        cmdLineOptions.trade_timeout_match ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
+        cmdLineOptions.tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
 
-    tradeOptions = TradeOptions(cmdLineOptions.trade_price, timeoutAction, tradeMode, cmdLineOptions.trade_timeout,
-                                cmdLineOptions.trade_updateprice, tradeType);
+    tradeOptions = TradeOptions(cmdLineOptions.tradePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
+                                cmdLineOptions.tradeUpdatePrice, tradeType);
   }
 
-  if (!cmdLineOptions.deposit_info.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.deposit_info);
+  if (!cmdLineOptions.depositInfo.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.depositInfo);
     std::tie(depositCurrency, depositInfoPrivateExchanges) = anyParser.getCurrencyPrivateExchanges();
   }
 
-  if (cmdLineOptions.opened_orders_info) {
+  if (cmdLineOptions.openedOrdersInfo) {
     std::tie(openedOrdersConstraints, openedOrdersPrivateExchanges) =
-        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.opened_orders_info);
+        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.openedOrdersInfo);
     queryOpenedOrders = true;
   }
 
-  if (cmdLineOptions.cancel_opened_orders) {
+  if (cmdLineOptions.cancelOpenedOrders) {
     std::tie(cancelOpenedOrdersConstraints, cancelOpenedOrdersPrivateExchanges) =
-        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.cancel_opened_orders);
+        ParseOrderRequest(cmdLineOptions, *cmdLineOptions.cancelOpenedOrders);
     cancelOpenedOrders = true;
   }
 
@@ -170,8 +162,8 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
         anyParser.getMonetaryAmountFromToPrivateExchange();
   }
 
-  if (!cmdLineOptions.withdraw_fee.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.withdraw_fee);
+  if (!cmdLineOptions.withdrawFee.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.withdrawFee);
     std::tie(withdrawFeeCur, withdrawFeeExchanges) = anyParser.getCurrencyPublicExchanges();
   }
 

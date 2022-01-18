@@ -256,9 +256,9 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::prepend(std::string_vi
     _data.append(value);
   } else {
     _data.insert(0U, key.size() + value.size() + 2U, KeyValuePairSep);
-    std::copy(key.begin(), key.end(), _data.begin());
+    std::ranges::copy(key, _data.begin());
     _data[key.size()] = AssignmentChar;
-    std::copy(value.begin(), value.end(), _data.begin() + key.size() + 1U);
+    std::ranges::copy(value, _data.begin() + key.size() + 1U);
   }
 }
 

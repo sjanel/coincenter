@@ -459,7 +459,7 @@ KrakenPublic::LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
     ret.emplace_back(tradeSide, amount, price,
                      PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

@@ -287,8 +287,7 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
 
   auto tryAppendBaseCurrency = [&](CurrencyCode cur) {
     if (!cur.isNeutral()) {
-      auto firstMarketIt =
-          std::partition_point(markets.begin(), markets.end(), [cur](Market m) { return m.base() < cur; });
+      auto firstMarketIt = std::ranges::partition_point(markets, [cur](Market m) { return m.base() < cur; });
       if (firstMarketIt != markets.end() && firstMarketIt->base() == cur) {
         ret = Market(cur, CurrencyCode());
         return true;

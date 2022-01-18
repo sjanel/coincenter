@@ -79,8 +79,8 @@ ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
   const MarketOrderBookMap& marketOrderBookMap = _allOrderBooksCache.get();
   MarketSet markets;
   markets.reserve(static_cast<MarketSet::size_type>(marketOrderBookMap.size()));
-  std::transform(marketOrderBookMap.begin(), marketOrderBookMap.end(), std::inserter(markets, markets.end()),
-                 [](const auto& it) { return it.first; });
+  std::ranges::transform(marketOrderBookMap, std::inserter(markets, markets.end()),
+                         [](const auto& it) { return it.first; });
   return markets;
 }
 
@@ -309,7 +309,7 @@ BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
     ret.emplace_back(tradeSide, amount, price,
                      EpochTime(std::string(detail["transaction_date"].get<std::string_view>())));
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

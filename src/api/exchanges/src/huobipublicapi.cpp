@@ -353,7 +353,7 @@ HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrade
       }
     }
   }
-  std::sort(ret.begin(), ret.end());
+  std::ranges::sort(ret);
   return ret;
 }
 

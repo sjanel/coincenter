@@ -12,10 +12,7 @@ int main(int argc, const char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    cct::MonitoringInfo monitoringInfo(opts.useMonitoring, opts.programName(), opts.monitoring_address,
-                                       opts.monitoring_port, opts.monitoring_username, opts.monitoring_password);
-
-    cct::CoincenterInfo coincenterInfo(cct::settings::RunMode::kProd, opts.dataDir, std::move(monitoringInfo),
+    cct::CoincenterInfo coincenterInfo(cct::settings::RunMode::kProd, opts.dataDir, std::move(opts.monitoringInfo),
                                        opts.printQueryResults);
 
     cct::Coincenter coincenter(coincenterInfo, opts.exchangesSecretsInfo);

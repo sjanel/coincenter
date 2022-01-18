@@ -25,8 +25,8 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform
   auto foundIt = _apiKeysMap.find(platform);
   if (foundIt != _apiKeysMap.end()) {
     const APIKeys& apiKeys = foundIt->second;
-    std::transform(apiKeys.begin(), apiKeys.end(), std::back_inserter(keyNames),
-                   [](const APIKey& apiKey) { return string(apiKey.name()); });
+    std::ranges::transform(apiKeys, std::back_inserter(keyNames),
+                           [](const APIKey& apiKey) { return string(apiKey.name()); });
   }
   return keyNames;
 }
@@ -48,9 +48,8 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     }
     return apiKeys.front();
   }
-  auto keyNameIt = std::find_if(apiKeys.begin(), apiKeys.end(), [privateExchangeName](const APIKey& apiKey) {
-    return apiKey.name() == privateExchangeName.keyName();
-  });
+  auto keyNameIt = std::ranges::find_if(
+      apiKeys, [privateExchangeName](const APIKey& apiKey) { return apiKey.name() == privateExchangeName.keyName(); });
   if (keyNameIt == apiKeys.end()) {
     string ex("Unable to retrieve private key for ");
     ex.append(platformStr).append(" named ").append(privateExchangeName.keyName());
@@ -72,8 +71,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     json jsonData = secretsFile.readJson();
     for (const auto& [platform, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
-      if (std::find(exchangesWithoutSecrets.begin(), exchangesWithoutSecrets.end(), platform) !=
-          exchangesWithoutSecrets.end()) {
+      if (std::ranges::find(exchangesWithoutSecrets, platform) != exchangesWithoutSecrets.end()) {
         log::info("Not loading {} private keys as requested", platform);
         continue;
       }

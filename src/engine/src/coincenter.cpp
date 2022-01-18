@@ -45,7 +45,7 @@ void Coincenter::process(const CoincenterParsedOptions &opts) {
   const int nbRepeats = opts.repeats;
   for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
     if (repeatPos != 0) {
-      std::this_thread::sleep_for(opts.repeat_time);
+      std::this_thread::sleep_for(opts.repeatTime);
     }
     if (nbRepeats != 1) {
       if (nbRepeats == -1) {
@@ -334,8 +334,9 @@ TradedAmounts Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTra
   }
 
   // Sort exchanges from largest to lowest available amount
-  std::sort(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
-            [](const ExchangeAmountPair &lhs, const ExchangeAmountPair &rhs) { return lhs.second > rhs.second; });
+  std::ranges::sort(exchangeAmountPairVector, [](const ExchangeAmountPair &lhs, const ExchangeAmountPair &rhs) {
+    return lhs.second > rhs.second;
+  });
 
   // Locate the point where there is enough available amount to trade for this currency
   MonetaryAmount currentTotalAmount(0, fromCurrency);

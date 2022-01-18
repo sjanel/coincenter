@@ -9,10 +9,12 @@ namespace cct {
 
 struct Opts {
   string stringOpt;
+  std::optional<string> optStr;
+  std::string_view sv;
+  std::optional<std::string_view> optSV;
   int intOpt = 0;
   int int2Opt = 0;
   bool boolOpt = false;
-  std::optional<string> optStr;
   CommandLineOptionalInt optInt;
   Duration timeOpt;
 };
@@ -28,6 +30,8 @@ class CommandLineOptionsParserTest : public ::testing::Test {
                  {{{"Other", 2}, "--opt4", "", "Opt4 descr"}, &Opts::optStr},
                  {{{"Other", 2}, "--opt5", "", "Opt5 time unit"}, &Opts::timeOpt},
                  {{{"Monitoring", 3}, "--optInt", 'i', "", "Optional int"}, &Opts::optInt},
+                 {{{"Monitoring", 3}, "--optSV1", 'v', "", "Username"}, &Opts::sv},
+                 {{{"Monitoring", 3}, "--optSV2", "", "Optional SV"}, &Opts::optSV},
                  {{{"General", 1}, "--help", 'h', "", "Help descr"}, &Opts::boolOpt}}) {}
 
   Opts createOptions(std::initializer_list<const char *> init) {
@@ -51,13 +55,30 @@ TEST_F(CommandLineOptionsParserTest, Basic) {
   EXPECT_THROW(createOptions({"coincenter", "--opt1", "toto", "--opts3", "--opt2", "3"}), std::invalid_argument);
 }
 
-TEST_F(CommandLineOptionsParserTest, String) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt1", "2000 EUR, kraken"}).stringOpt, "2000 EUR, kraken");
+TEST_F(CommandLineOptionsParserTest, StringView1) {
+  EXPECT_EQ(createOptions({"coincenter", "--optSV1", "Hey Listen!"}).sv, std::string_view("Hey Listen!"));
+}
+
+TEST_F(CommandLineOptionsParserTest, StringView2) {
+  EXPECT_EQ(createOptions({"coincenter", "--optSV1", ""}).sv, std::string_view(""));
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringViewEmpty) {
+  EXPECT_EQ(createOptions({"coincenter", "--optSV2", "--help"}).optSV, std::string_view(""));
+}
+
+TEST_F(CommandLineOptionsParserTest, OptStringViewNotEmpty) {
+  EXPECT_EQ(*createOptions({"coincenter", "--optSV2", "I need to save the world"}).optSV,
+            std::string_view("I need to save the world"));
 }
 
 TEST_F(CommandLineOptionsParserTest, AlternativeOptionName) {
   EXPECT_TRUE(createOptions({"coincenter", "-h"}).boolOpt);
   EXPECT_THROW(createOptions({"coincenter", "-j"}), std::invalid_argument);
+}
+
+TEST_F(CommandLineOptionsParserTest, String) {
+  EXPECT_EQ(createOptions({"coincenter", "--opt1", "2000 EUR, kraken"}).stringOpt, "2000 EUR, kraken");
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {

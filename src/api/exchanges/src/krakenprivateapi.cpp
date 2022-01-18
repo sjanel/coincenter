@@ -213,7 +213,7 @@ ExchangePrivate::Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints
       openedOrders.emplace_back(id, matchedVolume, remainingVolume, price, placedTime, side);
     }
   }
-  std::sort(openedOrders.begin(), openedOrders.end());
+  std::ranges::sort(openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }

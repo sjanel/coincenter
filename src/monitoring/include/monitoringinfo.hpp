@@ -12,7 +12,10 @@ class MonitoringInfo {
   /// Creates an empty monitoring info without any monitoring usage
   MonitoringInfo() = default;
 
-  MonitoringInfo(bool useMonitoring, std::string_view jobName, std::string_view address, uint16_t port,
+  /// Creates a fully specified monitoring info.
+  /// Port should be a valid port value (in [0-65535]). Note that port 0 is reserved and should not be attributed.
+  /// If you give 0 to port, it is equivalent to disabling monitoring.
+  MonitoringInfo(bool useMonitoring, std::string_view jobName, std::string_view address, int port,
                  std::string_view username = std::string_view(), std::string_view password = std::string_view());
 
   std::string_view address() const { return _address; }
