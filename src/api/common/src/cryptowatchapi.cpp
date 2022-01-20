@@ -68,11 +68,8 @@ std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, 
   std::lock_guard<std::mutex> guard(_pricesMutex);
 
   for (int marketPos = 0; marketPos < 2; ++marketPos) {
-    string lowerStrMarket = m.assetsPairStr();
-    std::transform(lowerStrMarket.begin(), lowerStrMarket.end(), lowerStrMarket.begin(),
-                   [](char c) { return tolower(c); });
     string mStr = marketPrefix;
-    mStr.append(lowerStrMarket);
+    mStr.append(m.assetsPairStrLower());
 
     const json& result = _allPricesCache.get();
     auto foundIt = result.find(mStr);

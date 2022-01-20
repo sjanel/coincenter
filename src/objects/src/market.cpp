@@ -21,7 +21,7 @@ string Market::assetsPairStr(char sep, bool lowerCase) const {
   }
   ret.append(_assets.back().str());
   if (lowerCase) {
-    std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return tolower(c); });
+    std::ranges::transform(ret, ret.begin(), tolower);
   }
   return ret;
 }

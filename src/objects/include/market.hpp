@@ -14,7 +14,7 @@ class Market {
 
   explicit Market(std::pair<CurrencyCode, CurrencyCode> curPair) : Market(curPair.first, curPair.second) {}
 
-  Market() = default;
+  Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
   Market(CurrencyCode first, CurrencyCode second) : _assets({first, second}) {}
 
@@ -51,12 +51,19 @@ class Market {
 
   auto operator<=>(const Market&) const = default;
 
-  string str() const { return assetsPairStr('-'); }
-  string assetsPairStr(char sep = 0, bool lowerCase = false) const;
+  string str() const { return assetsPairStrUpper('-'); }
 
   friend std::ostream& operator<<(std::ostream& os, const Market& m);
 
+  /// Returns a string representing this Market in lower case
+  string assetsPairStrLower(char sep = 0) const { return assetsPairStr(sep, true); }
+
+  /// Returns a string representing this Market in upper case
+  string assetsPairStrUpper(char sep = 0) const { return assetsPairStr(sep, false); }
+
  private:
+  string assetsPairStr(char sep, bool lowerCase) const;
+
   TradableAssets _assets;
 };
 }  // namespace cct

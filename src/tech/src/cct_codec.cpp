@@ -74,7 +74,7 @@ string B64Decode(std::string_view ascdata) {
     bits_collected += 6;
     if (bits_collected >= 8) {
       bits_collected -= 8;
-      retval += static_cast<char>((accumulator >> bits_collected) & 0xffu);
+      retval.push_back(static_cast<char>((accumulator >> bits_collected) & 0xffu));
     }
   }
   return retval;

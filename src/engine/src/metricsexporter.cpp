@@ -48,7 +48,7 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
     key.set(kMetricHelpKey, "Best bids and asks prices");
     key.set("exchange", e->name());
     for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStr('-', true));
+      key.set("market", m.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
                             marketOrderbook.lowestAskPrice().toDouble());
@@ -59,7 +59,7 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
     key.set(kMetricNameKey, "limit_volume");
     key.set(kMetricHelpKey, "Best bids and asks volumes");
     for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStr('-', true));
+      key.set("market", m.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
                             marketOrderbook.amountAtAskPrice().toDouble());
@@ -74,7 +74,7 @@ void MetricsExporter::exportOrderbookMetrics(Market m,
                                              const MarketOrderBookConversionRates &marketOrderBookConversionRates) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("limit_pri", "Best bids and asks prices");
-  string marketLowerCase = m.assetsPairStr('-', true);
+  string marketLowerCase = m.assetsPairStrLower('-');
   key.append("market", marketLowerCase);
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("exchange", exchangeName);
@@ -99,7 +99,7 @@ void MetricsExporter::exportOrderbookMetrics(Market m,
 void MetricsExporter::exportLastTradesMetrics(Market m, const LastTradesPerExchange &lastTradesPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
-  string marketLowerCase = m.assetsPairStr('-', true);
+  string marketLowerCase = m.assetsPairStrLower('-');
   key.append("market", marketLowerCase);
 
   for (const auto &[e, lastTrades] : lastTradesPerExchange) {

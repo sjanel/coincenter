@@ -194,7 +194,7 @@ ExchangePrivate::Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints&
                                                                               openedOrdersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.append("market", filterMarket.reverse().assetsPairStr('-'));
+      params.append("market", UpbitPublic::ReverseMarketStr(filterMarket));
     }
   }
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/orders", std::move(params));
@@ -254,7 +254,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
   const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
 
-  CurlPostData placePostData{{"market", m.reverse().assetsPairStr('-')}, {"side", askOrBid}, {"ord_type", orderType}};
+  CurlPostData placePostData{{"market", UpbitPublic::ReverseMarketStr(m)}, {"side", askOrBid}, {"ord_type", orderType}};
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
 
@@ -441,7 +441,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
 
   std::string_view state(result["state"].get<std::string_view>());
-  string stateUpperStr = toupper(state);
+  string stateUpperStr = ToUpper(state);
   log::debug("{} withdrawal status {}", _exchangePublic.name(), state);
   // state values: {'submitting', 'submitted', 'almost_accepted', 'rejected', 'accepted', 'processing', 'done',
   // 'canceled'}
@@ -463,7 +463,7 @@ bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
     if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
       std::string_view depositState(trx["state"].get<std::string_view>());
       log::debug("Deposit state {}", depositState);
-      string depositStateUpperStr = toupper(depositState);
+      string depositStateUpperStr = ToUpper(depositState);
       if (depositStateUpperStr == "ACCEPTED") {
         return true;
       }

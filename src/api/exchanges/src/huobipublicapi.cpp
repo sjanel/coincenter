@@ -225,11 +225,10 @@ ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(in
   HuobiAssetPairToStdMarketMap huobiAssetPairToStdMarketMap;
   huobiAssetPairToStdMarketMap.reserve(markets.size());
   for (Market m : markets) {
-    string upperMarket = toupper(m.assetsPairStr());
-    huobiAssetPairToStdMarketMap.insert_or_assign(std::move(upperMarket), m);
+    huobiAssetPairToStdMarketMap.insert_or_assign(m.assetsPairStrUpper(), m);
   }
   for (const json& tickerDetails : PublicQuery(_curlHandle, "/market/tickers")) {
-    string upperMarket = toupper(tickerDetails["symbol"].get<std::string_view>());
+    string upperMarket = ToUpper(tickerDetails["symbol"].get<std::string_view>());
     auto it = huobiAssetPairToStdMarketMap.find(upperMarket);
     if (it == huobiAssetPairToStdMarketMap.end()) {
       continue;
@@ -241,7 +240,7 @@ ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(in
     MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), m.base());
 
     if (bidVol.isZero() || askVol.isZero()) {
-      log::trace("No volume for {}", m.assetsPairStr());
+      log::trace("No volume for {}", m.str());
       continue;
     }
 
@@ -256,8 +255,7 @@ ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(in
 
 MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Huobi has a fixed range of authorized values for depth
-  string lowerCaseAssets = tolower(m.assetsPairStr());
-  CurlPostData postData{{"symbol", std::string_view(lowerCaseAssets)}, {"type", "step0"}};
+  CurlPostData postData{{"symbol", m.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
     static constexpr int kAuthorizedDepths[] = {5, 10, 20};
     auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
@@ -325,18 +323,16 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
 }
 
 MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
-  string lowerCaseAssets = tolower(m.assetsPairStr());
-  json result = PublicQuery(_curlHandle, "/market/detail/merged", {{"symbol", std::string_view(lowerCaseAssets)}});
+  json result = PublicQuery(_curlHandle, "/market/detail/merged", {{"symbol", m.assetsPairStrLower()}});
   double last24hVol = result["amount"].get<double>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
-  string lowerCaseAssets = tolower(m.assetsPairStr());
   nbTrades = std::min(nbTrades, 2000);  // max authorized
   nbTrades = std::max(nbTrades, 1);     // min authorized
-  json result = PublicQuery(_curlHandle, "/market/history/trade",
-                            {{"symbol", std::string_view(lowerCaseAssets)}, {"size", nbTrades}});
+  json result =
+      PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", m.assetsPairStrLower()}, {"size", nbTrades}});
   LastTradesVector ret;
   for (const json& detail : result) {
     auto dataDetails = detail.find("data");
@@ -358,8 +354,7 @@ HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrade
 }
 
 MonetaryAmount HuobiPublic::TickerFunc::operator()(Market m) {
-  string lowerCaseAssets = tolower(m.assetsPairStr());
-  json result = PublicQuery(_curlHandle, "/market/trade", {{"symbol", std::string_view(lowerCaseAssets)}});
+  json result = PublicQuery(_curlHandle, "/market/trade", {{"symbol", m.assetsPairStrLower()}});
   double lastPrice = result["data"].front()["price"].get<double>();
   return MonetaryAmount(lastPrice, m.quote());
 }

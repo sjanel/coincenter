@@ -32,7 +32,7 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
   SimpleTable t("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
   for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
     for (const auto &[m, marketOrderBook] : marketOrderBookMap) {
-      t.emplace_back(e->name(), m.assetsPairStr('-'), marketOrderBook.highestBidPrice().str(),
+      t.emplace_back(e->name(), m.str(), marketOrderBook.highestBidPrice().str(),
                      marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
                      marketOrderBook.amountAtAskPrice().str());
     }
@@ -87,7 +87,7 @@ void QueryResultPrinter::printConversionPath(Market m,
                                              const ConversionPathPerExchange &conversionPathsPerExchange) const {
   RETURN_IF_NO_PRINT;
   string conversionPathStrHeader("Fastest conversion path for ");
-  conversionPathStrHeader.append(m.assetsPairStr('-'));
+  conversionPathStrHeader.append(m.str());
   SimpleTable t("Exchange", std::move(conversionPathStrHeader));
   for (const auto &[e, conversionPath] : conversionPathsPerExchange) {
     if (!conversionPath.empty()) {
@@ -96,7 +96,7 @@ void QueryResultPrinter::printConversionPath(Market m,
         if (!conversionPathStr.empty()) {
           conversionPathStr.push_back(',');
         }
-        conversionPathStr.append(market.assetsPairStr('-'));
+        conversionPathStr.append(market.str());
       }
       t.emplace_back(e->name(), std::move(conversionPathStr));
     }

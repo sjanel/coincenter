@@ -78,15 +78,15 @@ constexpr char tolower(char c) noexcept {
   }
 }
 
-inline string toupper(std::string_view str) {
+inline string ToUpper(std::string_view str) {
   string ret(str);
-  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return toupper(c); });
+  std::ranges::transform(ret, ret.begin(), toupper);
   return ret;
 }
 
-inline string tolower(std::string_view str) {
+inline string ToLower(std::string_view str) {
   string ret(str);
-  std::transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return tolower(c); });
+  std::ranges::transform(ret, ret.begin(), tolower);
   return ret;
 }
 }  // namespace cct

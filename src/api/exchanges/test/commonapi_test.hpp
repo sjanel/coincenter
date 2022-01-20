@@ -96,7 +96,7 @@ class TestAPI {
   }
 
   void testMarket(Market m) {
-    log::info("Test {} market", m.assetsPairStr('-'));
+    log::info("Test {} market", m.str());
     ASSERT_FALSE(markets.empty());
     static constexpr int kCountDepthOrderBook = 5;
     MarketOrderBook marketOrderBook = exchangePublic.queryOrderBook(m, kCountDepthOrderBook);

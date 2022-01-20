@@ -111,7 +111,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
 }
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  string lowerCaseCur = tolower(currencyCode.str());
+  string lowerCaseCur = ToLower(currencyCode.str());
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
                              {{"currency", lowerCaseCur}});
   std::string_view address, tag;
@@ -146,14 +146,14 @@ ExchangePrivate::Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints&
                                                                               openedOrdersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.append("symbol", tolower(filterMarket.assetsPairStr()));
+      params.append("symbol", filterMarket.assetsPairStrLower());
     }
   }
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
   Orders openedOrders;
   for (const json& orderDetails : data["data"]) {
-    string marketStr = toupper(orderDetails["symbol"].get<std::string_view>());
+    string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
 
     std::optional<Market> optMarket =
         _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
@@ -242,7 +242,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
 
   const Market m = tradeInfo.m;
-  string lowerCaseMarket = tolower(m.assetsPairStr());
+  string lowerCaseMarket = m.assetsPairStrLower();
 
   const bool isTakerStrategy =
       tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
@@ -334,7 +334,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderRef& orderRef) {
 
 InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  string lowerCaseCur = tolower(currencyCode.str());
+  string lowerCaseCur = ToLower(currencyCode.str());
 
   json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
                                                "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
@@ -373,7 +373,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
 SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  string lowerCaseCur = tolower(currencyCode.str());
+  string lowerCaseCur = ToLower(currencyCode.str());
   std::string_view withdrawIdStr = initiatedWithdrawInfo.withdrawId();
   int64_t withdrawId = FromString<int64_t>(withdrawIdStr);
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
@@ -428,7 +428,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
 bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                                       const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  string lowerCaseCur = tolower(currencyCode.str());
+  string lowerCaseCur = ToLower(currencyCode.str());
 
   json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                   {{"currency", lowerCaseCur}, {"type", "deposit"}});

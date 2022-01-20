@@ -2,14 +2,13 @@
 
 namespace cct {
 
-CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode)
+CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, Deposit deposit, Withdraw withdraw, Type type)
     : _standardCode(standardCode),
-      _exchangeCode(exchangeCode),
-      _altCode(altCode),
-      _canDeposit(false),
-      _canWithdraw(false),
-      _unknownDepositWithdrawalStatus(true),
-      _isFiat(false) {}
+      _exchangeCode(standardCode),
+      _altCode(standardCode),
+      _canDeposit(deposit == Deposit::kAvailable),
+      _canWithdraw(withdraw == Withdraw::kAvailable),
+      _isFiat(type == Type::kFiat) {}
 
 CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode,
                                    Deposit deposit, Withdraw withdraw, Type type)
@@ -18,7 +17,6 @@ CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, CurrencyCode excha
       _altCode(altCode),
       _canDeposit(deposit == Deposit::kAvailable),
       _canWithdraw(withdraw == Withdraw::kAvailable),
-      _unknownDepositWithdrawalStatus(false),
       _isFiat(type == Type::kFiat) {}
 
 string CurrencyExchange::str() const {

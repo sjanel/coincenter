@@ -412,7 +412,7 @@ ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
   for (Market m : markets) {
-    binanceAssetPairToStdMarketMap.insert_or_assign(m.assetsPairStr(), m);
+    binanceAssetPairToStdMarketMap.insert_or_assign(m.assetsPairStrUpper(), m);
   }
   for (const json& tickerDetails : result) {
     string assetsPairStr = tickerDetails["symbol"];
@@ -442,7 +442,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
     lb = std::next(std::end(kAuthorizedDepths), -1);
     log::error("Invalid depth {}, default to {}", depth, *lb);
   }
-  CurlPostData postData{{"symbol", m.assetsPairStr()}, {"limit", *lb}};
+  CurlPostData postData{{"symbol", m.assetsPairStrUpper()}, {"limit", *lb}};
   json asksAndBids = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/depth", postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
@@ -463,14 +463,14 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
   json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/ticker/24hr",
-                            {{"symbol", m.assetsPairStr()}});
+                            {{"symbol", m.assetsPairStrUpper()}});
   std::string_view last24hVol = result["volume"].get<std::string_view>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
   json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/trades",
-                            {{"symbol", m.assetsPairStr()}, {"limit", nbTrades}});
+                            {{"symbol", m.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
@@ -489,7 +489,7 @@ BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbT
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market m) {
   json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/ticker/price",
-                            {{"symbol", m.assetsPairStr()}});
+                            {{"symbol", m.assetsPairStrUpper()}});
   std::string_view lastPrice = result["price"].get<std::string_view>();
   return MonetaryAmount(lastPrice, m.quote());
 }

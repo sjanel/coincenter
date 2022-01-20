@@ -272,7 +272,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).
   // Warning: this does not change the currency of the returned fee from Kraken in the get Closed / Opened orders,
   // which will be always in quote currency (as per the documentation)
-  CurlPostData placePostData{{"pair", krakenMarket.assetsPairStr()},
+  CurlPostData placePostData{{"pair", krakenMarket.assetsPairStrUpper()},
                              {"type", orderType},
                              {"ordertype", isTakerStrategy ? "market" : "limit"},
                              {"price", price.amountStr()},
@@ -386,8 +386,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   string krakenWalletName(wallet.exchangeName());
   krakenWalletName.push_back('_');
   krakenWalletName.append(currencyCode.str());
-  std::transform(krakenWalletName.begin(), krakenWalletName.end(), krakenWalletName.begin(),
-                 [](char c) { return tolower(c); });
+  std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);
 
   json withdrawData = PrivateQuery(
       _curlHandle, _apiKey, "/private/Withdraw",

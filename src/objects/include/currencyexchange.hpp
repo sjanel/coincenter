@@ -14,11 +14,18 @@ class CurrencyExchange {
   enum class Withdraw { kAvailable, kUnavailable };
   enum class Type { kFiat, kCrypto };
 
+  CurrencyExchange() noexcept = default;
+
   /// Constructs a CurrencyExchange with a standard code, with unknown withdrawal / deposit statuses
-  CurrencyExchange(CurrencyCode standardCode) : CurrencyExchange(standardCode, standardCode, standardCode) {}
+  CurrencyExchange(CurrencyCode standardCode)
+      : _standardCode(standardCode), _exchangeCode(standardCode), _altCode(standardCode) {}
 
   /// Constructs a CurrencyExchange with up to two alternative codes, with unknown withdrawal / deposit statuses
-  CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode);
+  CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode)
+      : _standardCode(standardCode), _exchangeCode(exchangeCode), _altCode(altCode) {}
+
+  /// Constructs a CurrencyExchange with known withdrawal / deposit statuses
+  CurrencyExchange(CurrencyCode standardCode, Deposit deposit, Withdraw withdraw, Type type);
 
   /// Constructs a CurrencyExchange with up to two alternative codes, with known withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode, Deposit deposit,
@@ -37,8 +44,6 @@ class CurrencyExchange {
   bool canDeposit() const { return _canDeposit; }
   bool canWithdraw() const { return _canWithdraw; }
 
-  bool unknownDepositWithdrawalStatus() const { return _unknownDepositWithdrawalStatus; }
-
   bool isFiat() const { return _isFiat; }
 
   auto operator<=>(const CurrencyExchange &o) const { return _standardCode <=> o._standardCode; }
@@ -52,10 +57,9 @@ class CurrencyExchange {
   CurrencyCode _standardCode;
   CurrencyCode _exchangeCode;
   CurrencyCode _altCode;
-  bool _canDeposit;
-  bool _canWithdraw;
-  bool _unknownDepositWithdrawalStatus;
-  bool _isFiat;
+  bool _canDeposit = false;
+  bool _canWithdraw = false;
+  bool _isFiat = false;
 };
 
 }  // namespace cct
