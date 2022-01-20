@@ -164,7 +164,13 @@ class MonetaryAmount {
     return *this;
   }
 
-  constexpr MonetaryAmount toNeutral() const noexcept { return MonetaryAmount(_amount, CurrencyCode(), _nbDecimals); }
+  constexpr MonetaryAmount toNeutral() const noexcept { return MonetaryAmount(_amount, _nbDecimals); }
+
+  constexpr bool isDefault() const noexcept { return _amount == 0 && hasNeutralCurrency(); }
+
+  constexpr bool hasNeutralCurrency() const noexcept { return _currencyCode.isNeutral(); }
+
+  constexpr bool isAmountInteger() const noexcept { return _nbDecimals == 0; }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals
   constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeDecimals(maxNbDecimals); }
@@ -183,6 +189,9 @@ class MonetaryAmount {
   using UnsignedAmountType = uint64_t;
 
   static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
+
+  /// Private constructor used only to transform one MonetaryAmount in neutral currency
+  constexpr MonetaryAmount(AmountType amount, int8_t nbDecimals) noexcept : _amount(amount), _nbDecimals(nbDecimals) {}
 
   constexpr void simplifyDecimals() noexcept {
     if (_amount == 0) {

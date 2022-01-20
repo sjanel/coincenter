@@ -62,6 +62,7 @@ struct CoincenterCmdLineOptions {
   std::string_view tradeMulti;
   std::string_view tradeMultiAll;
   std::string_view tradePrice;
+  std::string_view tradeStrategy;
   bool tradeTimeoutMatch = false;
   Duration tradeTimeout{TradeOptions().maxTradeTime()};
   Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
@@ -191,11 +192,20 @@ CommandLineOptionsParser<OptValueType> CreateCoincenterCommandLineOptionsParser(
                                                                      &OptValueType::tradeMulti},
        {{{"Trade", 42}, "--multitrade-all", "<cur1-cur2,exchange>", "Multi trade from available amount from given currency on an exchange.\n"
                                                                    "Order will be placed at limit price by default"}, &OptValueType::tradeMultiAll},
-       {{{"Trade", 43}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
-                                                                  " - 'maker': order price continuously set at limit price (default)\n"
-                                                                  " - 'nibble': order price continuously set at limit price + (buy)/- (sell) 1\n"
-                                                                  " - 'taker': order price will be at market price, expected to be matched directly"}, 
+       {{{"Trade", 43}, "--trade-price", "<n|amt cur>", "Manually select trade price, supporting two flavors.\n"
+                                                                  "  'n' (>= 0): price will be chosen according to the 'n'th price\n"
+                                                                  "              of the order book (limit price is for n = 0)\n"
+                                                                  "  'amt cur' : price will be fixed at given price\n"
+                                                                  "Order price will not be continuously updated.\n"
+                                                                  "This option is not compatible with '--trade-strategy'"}, 
                                                                   &OptValueType::tradePrice},
+       {{{"Trade", 43}, "--trade-strategy", "<maker|nibble|taker>", "Customize the order price strategy of the trade\n"
+                                                                  "  'maker' : order price set at limit price (default)\n"
+                                                                  "  'nibble': order price set at limit price +(buy)/-(sell) 1\n"
+                                                                  "  'taker' : order price will be at market price and matched immediately\n"
+                                                                  "Order price will be continuously updated and recomputed every '--trade-updateprice' step time.\n"
+                                                                  "This option is not compatible with '--trade-price'"}, 
+                                                                  &OptValueType::tradeStrategy},                                                         
        {{{"Trade", 43}, "--trade-timeout", "<time>", string("Adjust trade timeout (default: ")
                                                 .append(ToString(defaultTradeTimeout))
                                                 .append("s). Remaining orders will be cancelled after the timeout.")}, 

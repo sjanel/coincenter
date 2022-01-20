@@ -5,6 +5,7 @@
 #include "cct_allocator.hpp"
 #include "cct_exception.hpp"
 #include "fiatconverter.hpp"
+#include "tradeoptions.hpp"
 #include "unreachable.hpp"
 
 namespace cct::api {
@@ -153,10 +154,42 @@ ExchangePublic::ConversionPath ExchangePublic::findFastestConversionPath(Currenc
   return ret;
 }
 
-MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy) {
-  MarketOrderBook marketOrderBook = queryOrderBook(m, 1);
+namespace {
+MonetaryAmount ComputeRelativePrice(bool isBuy, const MarketOrderBook &marketOrderBook,
+                                    const TradeOptions &tradeOptions) {
+  int relativePrice = tradeOptions.relativePrice();
+  assert(relativePrice != 0);
+  if (isBuy) {
+    // Bounds check
+    if (relativePrice > 0) {
+      relativePrice = std::min(relativePrice, marketOrderBook.nbBidPrices());
+    } else {
+      relativePrice = std::max(relativePrice, -marketOrderBook.nbAskPrices());
+    }
+    relativePrice = -relativePrice;
+  } else {
+    if (relativePrice > 0) {
+      relativePrice = std::min(relativePrice, marketOrderBook.nbAskPrices());
+    } else {
+      relativePrice = std::max(relativePrice, -marketOrderBook.nbBidPrices());
+    }
+  }
+  if (relativePrice == 0) {
+    throw exception("No orderbook data for market");
+  }
+  return marketOrderBook[relativePrice].first;
+}
+}  // namespace
+
+MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions) {
+  int depth = tradeOptions.isRelativePrice() ? std::abs(tradeOptions.relativePrice()) : 1;
+  MarketOrderBook marketOrderBook = queryOrderBook(m, depth);
+  if (tradeOptions.isRelativePrice()) {
+    const bool isBuy = from.currencyCode() == m.quote();
+    return ComputeRelativePrice(isBuy, marketOrderBook, tradeOptions);
+  }
   CurrencyCode marketCode = m.base();
-  switch (priceStrategy) {
+  switch (tradeOptions.priceStrategy()) {
     case TradePriceStrategy::kTaker:
       [[fallthrough]];
     case TradePriceStrategy::kNibble:
@@ -169,11 +202,24 @@ MonetaryAmount ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount f
   }
 }
 
-MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
-                                                    int depth) {
-  MarketOrderBook marketOrderBook = queryOrderBook(m, priceStrategy == TradePriceStrategy::kTaker ? depth : 1);
+MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions) {
+  if (tradeOptions.isFixedPrice()) {
+    return MonetaryAmount(tradeOptions.fixedPrice(), m.quote());
+  }
+  int depth = 1;
+  if (tradeOptions.isRelativePrice()) {
+    depth = std::abs(tradeOptions.relativePrice());
+  } else if (tradeOptions.priceStrategy() == TradePriceStrategy::kTaker) {
+    depth = kDefaultDepth;
+  }
+  MarketOrderBook marketOrderBook = queryOrderBook(m, depth);
+
+  if (tradeOptions.isRelativePrice()) {
+    const bool isBuy = from.currencyCode() == m.quote();
+    return ComputeRelativePrice(isBuy, marketOrderBook, tradeOptions);
+  }
   CurrencyCode marketCode = m.base();
-  switch (priceStrategy) {
+  switch (tradeOptions.priceStrategy()) {
     case TradePriceStrategy::kTaker: {
       std::optional<MonetaryAmount> optRet = marketOrderBook.computeAvgPriceForTakerAmount(from);
       if (optRet) {
@@ -186,6 +232,9 @@ MonetaryAmount ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount fro
       marketCode = m.quote();
       [[fallthrough]];
     case TradePriceStrategy::kMaker:
+      if (marketOrderBook.empty()) {
+        throw exception("No orderbook data for market");
+      }
       return from.currencyCode() == marketCode ? marketOrderBook.lowestAskPrice() : marketOrderBook.highestBidPrice();
     default:
       unreachable();

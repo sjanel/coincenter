@@ -1,6 +1,7 @@
 #include "tradeoptions.hpp"
 
-#include "cct_exception.hpp"
+#include <stdexcept>
+
 #include "stringhelpers.hpp"
 #include "unreachable.hpp"
 
@@ -12,7 +13,7 @@ constexpr std::string_view kNibbleStr = "nibble";
 constexpr std::string_view kTakerStr = "taker";
 
 constexpr TradePriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
-  if (priceStrategyStr.empty() || priceStrategyStr == kMakerStr) {
+  if (priceStrategyStr == kMakerStr) {
     return TradePriceStrategy::kMaker;
   }
   if (priceStrategyStr == kNibbleStr) {
@@ -21,7 +22,7 @@ constexpr TradePriceStrategy StrategyFromStr(std::string_view priceStrategyStr) 
   if (priceStrategyStr == kTakerStr) {
     return TradePriceStrategy::kTaker;
   }
-  throw exception("Unrecognized trade strategy " + string(priceStrategyStr));
+  throw std::invalid_argument("Unrecognized trade strategy");
 }
 }  // namespace
 
@@ -33,6 +34,26 @@ TradeOptions::TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction
       _timeoutAction(timeoutAction),
       _mode(tradeMode),
       _type(tradeType) {}
+
+TradeOptions::TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+                           Clock::duration dur)
+    : _maxTradeTime(dur),
+      _fixedPrice(fixedPrice),
+      _timeoutAction(timeoutAction),
+      _mode(tradeMode),
+      _type(TradeType::kSingleTrade) {}
+
+TradeOptions::TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+                           Clock::duration dur, TradeType tradeType)
+    : _maxTradeTime(dur),
+      _relativePrice(relativePrice),
+      _timeoutAction(timeoutAction),
+      _mode(tradeMode),
+      _type(tradeType) {
+  if (relativePrice == 0 || relativePrice == kTradeNoRelativePrice) {
+    throw std::invalid_argument("Invalid relative price");
+  }
+}
 
 std::string_view TradeOptions::priceStrategyStr(bool placeRealOrderInSimulationMode) const {
   if (placeRealOrderInSimulationMode) {

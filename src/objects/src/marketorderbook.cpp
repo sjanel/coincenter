@@ -86,27 +86,26 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
 
   constexpr AmountPrice::AmountType kMaxVol = std::numeric_limits<AmountPrice::AmountType>::max() / 2;
 
-  _orders.reserve(depth * 2);
-  _orders.resize(depth);
+  _orders.resize(depth * 2);
   for (int d = 0; d < depth; ++d) {
     AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[depth - d];
     amountPrice.price -= stepPrice * d;
     if (d != 0 && amountPrice.amount < kMaxVol) {
       amountPrice.amount += simulatedStepVol / 2;
     }
-    _orders[depth - d - 1] = amountPrice;
+    _orders[depth - d - 1] = std::move(amountPrice);
   }
-  _highestBidPricePos = _orders.size() - 1;
+  _highestBidPricePos = depth - 1;
   _lowestAskPricePos = _highestBidPricePos + 1;
 
   // Finally add ask lines
   for (int d = 0; d < depth; ++d) {
-    AmountPrice amountPrice = d == 0 ? refAskAmountPrice : _orders.back();
+    AmountPrice amountPrice = d == 0 ? refAskAmountPrice : _orders[depth + d - 1];
     amountPrice.price += stepPrice * d;
     if (d != 0 && -amountPrice.amount < kMaxVol) {
       amountPrice.amount -= simulatedStepVol / 2;
     }
-    _orders.push_back(std::move(amountPrice));
+    _orders[depth + d] = std::move(amountPrice);
   }
 }
 
@@ -333,6 +332,20 @@ std::optional<MonetaryAmount> MarketOrderBook::convertAtAvgPrice(MonetaryAmount 
   return amountInBaseOrQuote.currencyCode() == _market.base()
              ? *avgPrice * amountInBaseOrQuote.toNeutral()
              : MonetaryAmount(amountInBaseOrQuote / *avgPrice, _market.base());
+}
+
+std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::operator[](int relativePosToLimitPrice) const {
+  if (relativePosToLimitPrice == 0) {
+    auto [v11, v12] = (*this)[-1];
+    auto [v21, v22] = (*this)[1];
+    return std::make_pair((v11 + v21) / 2, (v12 + v22) / 2);
+  } else if (relativePosToLimitPrice < 0) {
+    int pos = _lowestAskPricePos + relativePosToLimitPrice;
+    return std::make_pair(priceAt(pos), amountAt(pos));
+  } else {  // > 0
+    int pos = _highestBidPricePos + relativePosToLimitPrice;
+    return std::make_pair(priceAt(pos), negAmountAt(pos));
+  }
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::convertBaseAmountToQuote(MonetaryAmount amountInBaseCurrency) const {

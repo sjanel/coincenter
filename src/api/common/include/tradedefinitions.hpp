@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 namespace cct {
 enum class TradePriceStrategy : int8_t {
@@ -32,4 +33,9 @@ enum class TradeType : int8_t {
                        //  trades on these
                        //    markets.
 };
+
+using TradeRelativePrice = int32_t;
+
+static constexpr TradeRelativePrice kTradeNoRelativePrice = std::numeric_limits<TradeRelativePrice>::min();
+
 }  // namespace cct

@@ -91,7 +91,7 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, options);
 
-  MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options.priceStrategy());
+  MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options);
 
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
@@ -121,9 +121,10 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
     const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + std::chrono::seconds(1);
     bool updatePriceNeeded = false;
-    if (!reachedEmergencyTime && lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
+    if (!options.isFixedPrice() && !reachedEmergencyTime &&
+        lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      price = _exchangePublic.computeLimitOrderPrice(m, from, options.priceStrategy());
+      price = _exchangePublic.computeLimitOrderPrice(m, from, options);
       updatePriceNeeded =
           (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
     }
@@ -151,13 +152,13 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
         } else {
           break;
         }
-      } else {
+      } else {  // updatePriceNeeded
         nextAction = NextAction::kNewOrderLimitPrice;
       }
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          price = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceStrategy());
+          price = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options);
           log::info("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();
@@ -226,6 +227,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
     if (exchangeInfo().placeSimulateRealOrder()) {
+      log::debug("Place simulate real order - price {} will be overriden", price.str());
       MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(m);
       if (isSell) {
         price = marketOrderbook.getHighestTheoreticalPrice();
@@ -239,6 +241,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
       return placeOrderInfo;
     }
   }
+
   log::debug("Place new order {} at price {}", volume.str(), price.str());
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
   if (tradeInfo.options.isSimulation() && isSimulatedOrderSupported()) {

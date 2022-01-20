@@ -121,13 +121,12 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
   }
   if (!tradeArgs.empty()) {
-    StringOptionParser anyParser(tradeArgs);
     if (isTradeAll) {
       std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
-          anyParser.getCurrenciesPrivateExchanges();
+          StringOptionParser(tradeArgs).getCurrenciesPrivateExchanges();
     } else {
       std::tie(startTradeAmount, isPercentageTrade, toTradeCurrency, tradePrivateExchangeNames) =
-          anyParser.getMonetaryAmountCurrencyPrivateExchanges();
+          StringOptionParser(tradeArgs).getMonetaryAmountCurrencyPrivateExchanges();
     }
 
     TradeMode tradeMode = cmdLineOptions.tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
@@ -135,8 +134,26 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     TradeTimeoutAction timeoutAction =
         cmdLineOptions.tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
 
-    tradeOptions = TradeOptions(cmdLineOptions.tradePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
-                                cmdLineOptions.tradeUpdatePrice, tradeType);
+    if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
+      throw std::invalid_argument("Trade price and trade strategy cannot be set together");
+    }
+
+    if (!cmdLineOptions.tradeStrategy.empty()) {
+      tradeOptions = TradeOptions(cmdLineOptions.tradeStrategy, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
+                                  cmdLineOptions.tradeUpdatePrice, tradeType);
+    } else if (!cmdLineOptions.tradePrice.empty()) {
+      MonetaryAmount tradePrice(cmdLineOptions.tradePrice);
+      if (tradePrice.isAmountInteger() && tradePrice.hasNeutralCurrency()) {
+        // Then it must be a relative price
+        tradeOptions =
+            TradeOptions(tradePrice.integerPart(), timeoutAction, tradeMode, cmdLineOptions.tradeTimeout, tradeType);
+      } else {
+        tradeOptions = TradeOptions(tradePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout);
+      }
+    } else {
+      tradeOptions = TradeOptions(timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
+                                  cmdLineOptions.tradeUpdatePrice, tradeType);
+    }
   }
 
   if (!cmdLineOptions.depositInfo.empty()) {

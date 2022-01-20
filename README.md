@@ -289,12 +289,82 @@ If only one private exchange is given and start amount is absolute, `coincenter`
 
 #### Options
 
+__Trade timeout__
+
+A trade is always **synchronous** with the created order of `coincenter` (it follows the lifetime of the order).
+The trade ends when one of the following events occur:
+- Order is matched completely
+- Order has still some unmatched amount when trade reaches the **timeout**
+
+By default, the trade timeout is set to **30 seconds*. If you wish to change it, you can use `--trade-timeout` option. It expects a time and supports all the common time suffixes `y` (years), `mon` (months), `w` (weeks), `d` (days), `h` (hours), `min` (minutes), `s` (seconds), `ms` (milliseconds), `us` (microseconds) and `ns` (nanoseconds).
+
+Value can contain several units, but do not support decimal values. For instance, use `2min30s` instead of `2.5min`.
+
+Another example: `--trade-timeout 3min30s504ms`
+
+__Trade Price Strategy__
+
 Possible order price strategies:
  - `maker`: order placed at limit price and regularly updated to limit price (default)
  - `taker`: order placed at market price, should be matched immediately
  - `nibble`: order price continuously set at limit price + (buy)/- (sell) 1. This is a hybrid mode between the above two methods, ensuring continuous partial matches of the order over time, but at a controlled price (market price can be dangerously low for some short periods of time with large sells)
 
 Use command line option `--trade`, `--singletrade` or `-t` to make a single trade from a departure amount.
+
+__Trade Price Picker__
+
+In order to control more precisely the price of the order, `coincenter` supports custom price as well thanks to `--trade-price` option. Note that this is not compatible with above **trade price strategy** option.
+`--trade-price` expects either an integer (!= 0) representing a **relative** price compared to the limit price, or a monetary amount representing an **absolute** fixed price (decimal amount with the price currency).
+In fact, parser will recognize a relative price if the amount is without any decimals and without any currency. The price currency will be overriden by the engine, but you can add it for readability and to remove ambiguity of an integer price for the parser.
+
+| `--trade-price` value examples | Explanation                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `35`                           | *relative* price                                                                                                                  |
+| `-2`                           | *relative* price                                                                                                                  |
+| `34.6`                         | *absolute* price (engine will take the currency from the market of the trade)                                                     |
+| `25 XXX`                       | *absolute* price (engine will override the currency from the market of the trade and not consider `XXX`, no error will be raised) |
+
+*Absolute price*
+
+When requesting an absolute price, the order will be placed exactly at this price. Depending on the order book and the limit prices, order may or may not be matched instantly. Double check the price before launching your trade command!
+**Notes**: 
+- such an order will not be compatible with [multi trade](#multi-trade)) because an absolute price makes sense only for a specific market. However, if you ask a multi trade with a fixed price, no error will be raised, and `coincenter` will simply launch a single trade.
+- Order price will not be continuously updated over time
+
+*Relative price*
+
+The **relative price** makes it possible to easily settle a price anywhere in the orderbook. The chosen price is **relative** to the order book limit price - it represents how far away the price is related to the 'center' prices. The higher (or lower) the value, the more difficult it will be for the order to be bought - or sold.
+
+A positive value indicates a higher price for a sell, and a lower price for a buy, resulting in a safe position that should not be matched immediately. A negative value is the opposite - which will most probably be matched immediately, depending on the amount of the order.
+
+So, choosing a relative price of `1`: `--trade-price 1` is equivalent as the `maker` trade price strategy, and choosing a relative price of `-1` is equivalent to the `nibble` strategy.
+
+The relative price is, contrary to the **absolute** (fixed) price above, compatible with multi-trade. Also, it is continuously updated over time depending on the `--trade-updateprice` option.
+
+Here is a visual example, considering an order book of market A-B:
+
+| Sellers of A (buying B) asks | A price in B | Buyers of A (selling B) bids | Buy relative price | Sell relative price |
+| ---------------------------- | ------------ | ---------------------------- | ------------------ | ------------------- |
+| 13                           | 0.50         |                              | **-5**             | **5**               |
+| 11                           | 0.49         |                              | **-4**             | **4**               |
+| 9                            | 0.47         |                              | **-3**             | **3**               |
+| 5                            | 0.46         |                              | **-2**             | **2**               |
+| 17                           | 0.45         | <- **lowest ask price**      | **-1**  (nibble)   | **1**  (maker)      |
+| **highest bid price** ->     | 0.44         | 2                            | **1**  (maker)     | **-1**  (nibble)    |
+|                              | 0.43         | 1.5                          | **2**              | **-2**              |
+|                              | 0.42         | 15                           | **3**              | **-3**              |
+|                              | 0.41         | 73                           | **4**              | **-4**              |
+|                              | 0.39         | 9                            | **5**              | **-5**              |
+|                              | 0.35         | 2.56                         | **6**              | **-6**              |
+|                              | 0.34         | 48                           | **7**              | **-7**              |
+|                              | 0.33         | 8                            | **8**              | **-8**              |
+ 
+Say you want to place a buy order of *A* with n *B* at relative price **3** for instance:
+```
+./coincenter -t nB-A --trade-price 3
+```
+
+The chosen price will be `0.42`.
 
 #### Single trade all 
 
