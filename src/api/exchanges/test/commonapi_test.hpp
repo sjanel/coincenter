@@ -100,6 +100,8 @@ class TestAPI {
     ASSERT_FALSE(markets.empty());
     static constexpr int kCountDepthOrderBook = 5;
     MarketOrderBook marketOrderBook = exchangePublic.queryOrderBook(m, kCountDepthOrderBook);
+    EXPECT_LE(marketOrderBook.nbAskPrices(), kCountDepthOrderBook);
+    EXPECT_LE(marketOrderBook.nbBidPrices(), kCountDepthOrderBook);
     EXPECT_FALSE(marketOrderBook.isArtificiallyExtended());
     if (!marketOrderBook.empty()) {
       EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
