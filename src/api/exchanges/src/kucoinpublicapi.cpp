@@ -79,20 +79,16 @@ KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurr
                                MonetaryAmount(curDetail["withdrawalMinSize"].get<std::string_view>(), cur),
                                MonetaryAmount(curDetail["withdrawalMinFee"].get<std::string_view>(), cur));
   }
-  CurrencyInfoSet ret(std::move(currencyInfos));
-  log::info("Retrieved {} Kucoin currencies", ret.size());
-  return CurrencyInfoSet(std::move(ret));
+  log::info("Retrieved {} Kucoin currencies", currencyInfos.size());
+  return CurrencyInfoSet(std::move(currencyInfos));
 }
 
 CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
   const TradableCurrenciesFunc::CurrencyInfoSet& currencyInfoSet = _tradableCurrenciesCache.get();
-  CurrencyExchangeFlatSet currencies;
-  currencies.reserve(static_cast<CurrencyExchangeFlatSet::size_type>(currencyInfoSet.size()));
-
-  std::ranges::transform(currencyInfoSet, std::inserter(currencies, currencies.end()),
+  CurrencyExchangeVector currencies(currencyInfoSet.size());
+  std::ranges::transform(currencyInfoSet, currencies.begin(),
                          [](const auto& currencyInfo) { return currencyInfo.currencyExchange; });
-
-  return currencies;
+  return CurrencyExchangeFlatSet(std::move(currencies));
 }
 
 std::pair<ExchangePublic::MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
@@ -200,34 +196,51 @@ ExchangePublic::MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(i
   return ret;
 }
 
+namespace {
+template <class InputIt>
+void FillOrderBook(Market m, int depth, bool isAsk, InputIt beg, InputIt end, vector<OrderBookLine>& orderBookLines) {
+  int n = 0;
+  for (auto it = beg; it != end; ++it) {
+    MonetaryAmount price((*it)[0].template get<std::string_view>(), m.quote());
+    MonetaryAmount amount((*it)[1].template get<std::string_view>(), m.base());
+
+    orderBookLines.emplace_back(amount, price, isAsk);
+    if (++n == depth) {
+      if (++it != end) {
+        log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
+      }
+      break;
+    }
+  }
+}
+}  // namespace
+
 MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Kucoin has a fixed range of authorized values for depth
   CurlPostData postData{{"symbol", m.assetsPairStrUpper('-')}};
   static constexpr int kAuthorizedDepths[] = {20, 100};
-  auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
+  auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
   if (lb == std::end(kAuthorizedDepths)) {
     lb = std::next(std::end(kAuthorizedDepths), -1);
-    log::error("Invalid depth {}, default to {}", depth, kKucoinStandardOrderBookDefaultDepth);
-    depth = kKucoinStandardOrderBookDefaultDepth;
-  } else {
-    depth = *lb;
+    log::warn("Invalid depth {}, default to {}", depth, *lb);
   }
+
   string endpoint("api/v1/market/orderbook/level2_");
-  AppendString(endpoint, depth);
+  AppendString(endpoint, *lb);
 
   json asksAndBids = PublicQuery(_curlHandle, endpoint, postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
-  for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
+  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
+  for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
-    for (const auto& priceQuantityPair : *asksOrBids) {
-      MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), m.quote());
-      MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), m.base());
-
-      orderBookLines.emplace_back(amount, price, isAsk);
+    if (isAsk) {
+      FillOrderBook(m, depth, isAsk, asksOrBids->begin(), asksOrBids->end(), orderBookLines);
+    } else {
+      // Reverse iterate as they are received in descending order
+      FillOrderBook(m, depth, isAsk, asksOrBids->rbegin(), asksOrBids->rend(), orderBookLines);
     }
   }
   return MarketOrderBook(m, orderBookLines);

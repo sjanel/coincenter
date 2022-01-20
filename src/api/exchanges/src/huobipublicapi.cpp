@@ -257,12 +257,11 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   // Huobi has a fixed range of authorized values for depth
   CurlPostData postData{{"symbol", m.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
-    static constexpr int kAuthorizedDepths[] = {5, 10, 20};
-    auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
+    static constexpr int kAuthorizedDepths[] = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
+    auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
     if (lb == std::end(kAuthorizedDepths)) {
-      lb = std::next(std::end(kAuthorizedDepths), -1);
-      log::error("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
-    } else {
+      log::warn("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
+    } else if (*lb != kHuobiStandardOrderBookDefaultDepth) {
       postData.append("depth", *lb);
     }
   }
@@ -271,14 +270,21 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
-  for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
+  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
+  for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
+    int n = 0;
     for (const auto& priceQuantityPair : *asksOrBids) {
       MonetaryAmount amount(priceQuantityPair.back().get<double>(), m.base());
       MonetaryAmount price(priceQuantityPair.front().get<double>(), m.quote());
 
       orderBookLines.emplace_back(amount, price, isAsk);
+      if (++n == depth) {
+        if (depth < static_cast<int>(asksOrBids->size())) {
+          log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
+        }
+        break;
+      }
     }
   }
   return MarketOrderBook(m, orderBookLines);

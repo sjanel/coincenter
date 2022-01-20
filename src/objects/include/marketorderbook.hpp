@@ -1,6 +1,5 @@
 #pragma once
 
-#include <initializer_list>
 #include <limits>
 #include <optional>
 #include <ostream>
@@ -54,12 +53,6 @@ class MarketOrderBook {
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
   explicit MarketOrderBook(Market market, OrderBookLineSpan orderLines = OrderBookLineSpan(),
                            VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
-
-  /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
-  /// @param volAndPriNbDecimals optional to force number of decimals of amounts
-  MarketOrderBook(Market market, std::initializer_list<OrderBookLine> orderLines,
-                  VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals())
-      : MarketOrderBook(market, OrderBookLineSpan(orderLines.begin(), orderLines.end()), volAndPriNbDecimals) {}
 
   /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
   MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice, MonetaryAmount bidVolume,
@@ -131,6 +124,9 @@ class MarketOrderBook {
 
   std::optional<MonetaryAmount> convertAtAvgPrice(MonetaryAmount amountInBaseOrQuote) const;
 
+  int nbAskPrices() const { return static_cast<int>(_orders.size()) - _lowestAskPricePos; }
+  int nbBidPrices() const { return _lowestAskPricePos; }
+
   MonetaryAmount getHighestTheoreticalPrice() const;
   MonetaryAmount getLowestTheoreticalPrice() const;
 
@@ -140,12 +136,16 @@ class MarketOrderBook {
   void print(std::ostream& os, std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
 
  private:
-  struct AmountPrice {
-    using AmountType = int64_t;
+  using AmountType = MonetaryAmount::AmountType;
 
+  struct AmountPrice {
+    using AmountType = MonetaryAmount::AmountType;
+
+#ifndef CCT_AGGR_INIT_CXX20
     AmountPrice() noexcept = default;
 
     AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
+#endif
 
     bool operator==(const AmountPrice& o) const = default;
 
@@ -153,14 +153,12 @@ class MarketOrderBook {
     AmountType price = 0;
   };
 
-  using AmountPriceVector = SmallVector<AmountPrice, 20>;
+  using AmountPriceVector = SmallVector<AmountPrice, 2 * 1>;
 
  public:
   using trivially_relocatable = is_trivially_relocatable<AmountPriceVector>::type;
 
  private:
-  using AmountType = MonetaryAmount::AmountType;
-
   /// Represents a total amount of waiting orders at a given price.
   /// Note that currency is not stored in situ for memory footprint reasons, but it's not an issue as we can get it from
   /// the 'Market'. Also, the amount is an integral multiplied by the number of decimals stored in the 'Market'.
