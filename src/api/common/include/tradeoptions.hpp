@@ -1,9 +1,11 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "monetaryamount.hpp"
 #include "timehelpers.hpp"
 #include "tradedefinitions.hpp"
 
@@ -19,14 +21,36 @@ class TradeOptions {
 
   constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
 
+  TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Clock::duration dur,
+               Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType)
+      : _maxTradeTime(dur),
+        _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
+        _timeoutAction(timeoutAction),
+        _mode(tradeMode),
+        _type(tradeType) {}
+
+  /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
+  /// strategy
   TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                Clock::duration dur, Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType);
+
+  /// Constructs a TradeOptions based on a fixed absolute price.
+  /// Multi trade is not supported in this case.
+  TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Clock::duration dur);
+
+  /// Constructs a TradeOptions based on a fixed relative price (relative from limit price).
+  TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+               Clock::duration dur, TradeType tradeType);
 
   constexpr Clock::duration maxTradeTime() const { return _maxTradeTime; }
 
   constexpr Clock::duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
 
   constexpr TradePriceStrategy priceStrategy() const { return _priceStrategy; }
+
+  constexpr MonetaryAmount fixedPrice() const { return _fixedPrice; }
+
+  constexpr int relativePrice() const { return _relativePrice; }
 
   constexpr TradeMode tradeMode() const { return _mode; }
 
@@ -37,6 +61,10 @@ class TradeOptions {
   }
 
   constexpr bool isSimulation() const { return _mode == TradeMode::kSimulation; }
+
+  constexpr bool isFixedPrice() const { return !_fixedPrice.isDefault(); }
+
+  constexpr bool isRelativePrice() const { return _relativePrice != kTradeNoRelativePrice; }
 
   constexpr bool placeMarketOrderAtTimeout() const { return _timeoutAction == TradeTimeoutAction::kForceMatch; }
 
@@ -51,6 +79,8 @@ class TradeOptions {
 
   Clock::duration _maxTradeTime = kDefaultTradeDuration;
   Clock::duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
+  MonetaryAmount _fixedPrice;
+  TradeRelativePrice _relativePrice = kTradeNoRelativePrice;
   TradePriceStrategy _priceStrategy = TradePriceStrategy::kMaker;
   TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kCancel;
   TradeMode _mode = TradeMode::kReal;

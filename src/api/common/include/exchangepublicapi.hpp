@@ -21,6 +21,7 @@
 namespace cct {
 
 class FiatConverter;
+class TradeOptions;
 
 namespace api {
 
@@ -113,10 +114,9 @@ class ExchangePublic : public ExchangeBase {
                                      considerStableCoinsAsFiats);
   }
 
-  MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy);
+  MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions);
 
-  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, TradePriceStrategy priceStrategy,
-                                      int depth = kDefaultDepth);
+  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);

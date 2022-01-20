@@ -48,6 +48,15 @@ TEST_F(MarketOrderBookTestCase1, MiddleElements) {
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("1301", "EUR"));
 }
 
+TEST_F(MarketOrderBookTestCase1, OperatorBrackets) {
+  EXPECT_EQ(marketOrderBook[-2], std::make_pair(MonetaryAmount("1300.5EUR"), MonetaryAmount("0.65ETH")));
+  EXPECT_EQ(marketOrderBook[-1], std::make_pair(MonetaryAmount("1301EUR"), MonetaryAmount("0.24ETH")));
+  EXPECT_EQ(marketOrderBook[0], std::make_pair(MonetaryAmount("1301.5EUR"), MonetaryAmount("0.82045ETH")));
+  EXPECT_EQ(marketOrderBook[1], std::make_pair(MonetaryAmount("1302EUR"), MonetaryAmount("1.4009ETH")));
+  EXPECT_EQ(marketOrderBook[2], std::make_pair(MonetaryAmount("1302.5EUR"), MonetaryAmount("3.78ETH")));
+  EXPECT_EQ(marketOrderBook[3], std::make_pair(MonetaryAmount("1303EUR"), MonetaryAmount("56.10001267ETH")));
+}
+
 TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountBoughtImmediately) {
   EXPECT_EQ(marketOrderBook.computeCumulAmountBoughtImmediatelyAt(MonetaryAmount("1302.25", "EUR")),
             MonetaryAmount("1.4009", "ETH"));

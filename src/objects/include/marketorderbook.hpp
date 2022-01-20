@@ -127,6 +127,12 @@ class MarketOrderBook {
   int nbAskPrices() const { return static_cast<int>(_orders.size()) - _lowestAskPricePos; }
   int nbBidPrices() const { return _lowestAskPricePos; }
 
+  /// Get a pair of {Price, Amount} of values positionned at given relative price from limit price.
+  /// At position 0, the pair will contain average limit prices and average amounts from both highest bid and lowest ask
+  /// prices.
+  /// No bounds check is made.
+  std::pair<MonetaryAmount, MonetaryAmount> operator[](int relativePosToLimitPrice) const;
+
   MonetaryAmount getHighestTheoreticalPrice() const;
   MonetaryAmount getLowestTheoreticalPrice() const;
 
