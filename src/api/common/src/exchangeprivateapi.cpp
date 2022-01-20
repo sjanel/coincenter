@@ -227,7 +227,12 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
     if (exchangeInfo().placeSimulateRealOrder()) {
       MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(m);
-      price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
+      if (isSell) {
+        price = marketOrderbook.getHighestTheoreticalPrice();
+      } else {
+        price = marketOrderbook.getLowestTheoreticalPrice();
+        volume = MonetaryAmount(from / price, m.base());
+      }
     } else {
       PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
       from -= placeOrderInfo.tradedAmounts().tradedFrom;
