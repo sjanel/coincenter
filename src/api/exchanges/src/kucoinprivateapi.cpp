@@ -175,7 +175,7 @@ ExchangePrivate::Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints
                                                                               openedOrdersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.append("symbol", filterMarket.assetsPairStr('-'));
+      params.append("symbol", filterMarket.assetsPairStrUpper('-'));
     }
   }
   if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
@@ -227,7 +227,7 @@ void KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   if (openedOrdersConstraints.isMarketOnlyDependent() || openedOrdersConstraints.noConstraints()) {
     CurlPostData params;
     if (openedOrdersConstraints.isMarketDefined()) {
-      params.append("symbol", openedOrdersConstraints.market().assetsPairStr('-'));
+      params.append("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
     }
     PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
     return;
@@ -273,7 +273,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   CurlPostData params;
   params.append("clientOid", Nonce_TimeSinceEpochInMs());
   params.append("side", buyOrSell);
-  params.append("symbol", m.assetsPairStr('-'));
+  params.append("symbol", m.assetsPairStrUpper('-'));
   params.append("type", strategyType);
   params.append("remark", "Placed by coincenter client");
   params.append("tradeType", "TRADE");

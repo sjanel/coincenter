@@ -1,10 +1,10 @@
 #include "krakenpublicapi.hpp"
 
 #include <cassert>
-#include <cctype>
 #include <fstream>
 #include <unordered_map>
 
+#include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
@@ -219,14 +219,13 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
             begPos += kBeginFeeHtmlTag.size();
           }
           // Scan until next non space char
-          while (begPos < withdrawalFeesCsv.size() &&
-                 std::isspace(static_cast<unsigned char>(withdrawalFeesCsv[begPos]))) {
+          while (begPos < withdrawalFeesCsv.size() && isspace(withdrawalFeesCsv[begPos])) {
             ++begPos;
           }
           std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
           std::size_t endHtmlTagPos = endPos;
           assert(endPos != string::npos);
-          while (endPos > begPos && std::isspace(static_cast<unsigned char>(withdrawalFeesCsv[endPos - 1]))) {
+          while (endPos > begPos && isspace(withdrawalFeesCsv[endPos - 1])) {
             --endPos;
           }
           MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
@@ -355,14 +354,15 @@ ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(i
     }
     CurrencyExchange krakenCurrencyExchangeQuote = *lb;
     Market krakenMarket(krakenCurrencyExchangeBase.altStr(), krakenCurrencyExchangeQuote.altStr());
-    string assetPairStr = krakenMarket.assetsPairStr();
+    string assetPairStr = krakenMarket.assetsPairStrUpper();
     if (!allAssetPairs.empty()) {
       allAssetPairs.push_back(',');
     }
     allAssetPairs.append(assetPairStr);
     krakenAssetPairToStdMarketMap.insert_or_assign(assetPairStr, m);
     krakenAssetPairToStdMarketMap.insert_or_assign(
-        Market(krakenCurrencyExchangeBase.exchangeCode(), krakenCurrencyExchangeQuote.exchangeCode()).assetsPairStr(),
+        Market(krakenCurrencyExchangeBase.exchangeCode(), krakenCurrencyExchangeQuote.exchangeCode())
+            .assetsPairStrUpper(),
         m);
   }
   json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
@@ -436,7 +436,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
 KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market m) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
                       _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
-  json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStr()}});
+  json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
   for (const auto& [krakenAssetPair, details] : result.items()) {
     std::string_view last24hVol = details["v"][1].get<std::string_view>();
     std::string_view lastTickerPrice = details["c"][0].get<std::string_view>();
@@ -448,7 +448,7 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 KrakenPublic::LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
                       _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
-  json result = PublicQuery(_curlHandle, "/public/Trades", {{"pair", krakenMarket.assetsPairStr()}});
+  json result = PublicQuery(_curlHandle, "/public/Trades", {{"pair", krakenMarket.assetsPairStrUpper()}});
   LastTradesVector ret;
   for (const json& det : result.front()) {
     MonetaryAmount price(det[0].get<std::string_view>(), m.quote());

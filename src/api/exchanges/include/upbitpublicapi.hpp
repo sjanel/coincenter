@@ -53,6 +53,8 @@ class UpbitPublic : public ExchangePublic {
  private:
   friend class UpbitPrivate;
 
+  static string ReverseMarketStr(Market m) { return m.reverse().assetsPairStrUpper('-'); }
+
   static bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies);
 
   struct MarketsFunc {

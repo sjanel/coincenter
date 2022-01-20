@@ -7,6 +7,7 @@
 #include <ios>
 #include <sstream>
 
+#include "cct_cctype.hpp"
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "stringhelpers.hpp"
@@ -29,7 +30,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
   if (firstChar == '-') {
     isNeg = true;
     amountStr.remove_prefix(1);
-  } else if (firstChar != '.' && (firstChar < '0' || firstChar > '9')) {
+  } else if (firstChar != '.' && !isdigit(firstChar)) {
     string ex("Parsing error, unexpected first char ");
     ex.push_back(firstChar);
     throw exception(std::move(ex));
@@ -102,7 +103,7 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   assert(!amountCurrencyStr.empty());
   auto last = amountCurrencyStr.begin() + 1;  // skipping optional '-'
   auto endIt = amountCurrencyStr.end();
-  while (last != endIt && ((*last >= '0' && *last <= '9') || *last == '.')) {
+  while (last != endIt && (isdigit(*last) || *last == '.')) {
     ++last;
   }
   std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string_view(amountCurrencyStr.begin(), last));

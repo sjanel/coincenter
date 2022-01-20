@@ -187,14 +187,14 @@ ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(in
     if (!marketsStr.empty()) {
       marketsStr.push_back(',');
     }
-    marketsStr.append(m.reverse().assetsPairStr('-'));
+    marketsStr.append(ReverseMarketStr(m));
   }
   return ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", marketsStr}}), depth);
 }
 
 MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
   ExchangePublic::MarketOrderBookMap marketOrderBookMap =
-      ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", m.reverse().assetsPairStr('-')}}), depth);
+      ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", ReverseMarketStr(m)}}), depth);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");
@@ -203,14 +203,13 @@ MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
 }
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "candles/days", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
+  json result = PublicQuery(_curlHandle, "candles/days", {{"count", 1}, {"market", ReverseMarketStr(m)}});
   double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
-  json result =
-      PublicQuery(_curlHandle, "trades/ticks", {{"count", nbTrades}, {"market", m.reverse().assetsPairStr('-')}});
+  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(m)}});
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
   for (const json& detail : result) {
@@ -227,7 +226,7 @@ UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrade
 }
 
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", 1}, {"market", m.reverse().assetsPairStr('-')}});
+  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(m)}});
   double lastPrice = result.front()["trade_price"].get<double>();
   return MonetaryAmount(lastPrice, m.quote());
 }

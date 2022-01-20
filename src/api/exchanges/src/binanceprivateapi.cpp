@@ -130,7 +130,7 @@ bool BinancePrivate::checkMarketAppendSymbol(Market m, CurlPostData& params) {
       return false;
     }
   }
-  params.append("symbol", m.assetsPairStr());
+  params.append("symbol", m.assetsPairStrUpper());
   return true;
 }
 
@@ -222,7 +222,7 @@ void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCon
                 [&ordersByMarketMap](Order&& o) { ordersByMarketMap[o.market()].push_back(std::move(o)); });
   for (const auto& [market, orders] : ordersByMarketMap) {
     if (!isMarketDefined) {
-      params.set("symbol", market.assetsPairStr());
+      params.set("symbol", market.assetsPairStrUpper());
     }
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
       params.erase("orderid");
@@ -306,7 +306,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   }
   volume = sanitizedVol;
   CurlPostData placePostData{
-      {"symbol", m.assetsPairStr()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
+      {"symbol", m.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
   if (!isTakerStrategy) {
     placePostData.append("timeInForce", "GTC");
@@ -340,7 +340,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, bool isCancel) {
   const CurrencyCode fromCurrencyCode = orderRef.side == TradeSide::kSell ? m.base() : m.quote();
   const CurrencyCode toCurrencyCode = orderRef.side == TradeSide::kBuy ? m.base() : m.quote();
   const HttpRequestType requestType = isCancel ? HttpRequestType::kDelete : HttpRequestType::kGet;
-  const string assetsStr = m.assetsPairStr();
+  const string assetsStr = m.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   json result = PrivateQuery(_curlHandle, _apiKey, requestType, binancePublic._commonInfo.getBestBaseURL(),

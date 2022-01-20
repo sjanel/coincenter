@@ -64,7 +64,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Clock::durati
 void FiatConverter::updateCacheFile() const {
   json data;
   for (const auto& [market, priceTimeValue] : _pricesMap) {
-    string marketPairStr = market.assetsPairStr('-');
+    string marketPairStr = market.assetsPairStrUpper('-');
     data[marketPairStr]["rate"] = priceTimeValue.rate;
     data[marketPairStr]["timeepoch"] =
         std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
@@ -75,7 +75,7 @@ void FiatConverter::updateCacheFile() const {
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   string url = "https://free.currconv.com/api/v7/convert?";
 
-  string qStr(m.assetsPairStr('_'));
+  string qStr(m.assetsPairStrUpper('_'));
   CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
 
   url.append(opts.getPostData().str());

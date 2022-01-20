@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "cct_cctype.hpp"
 #include "cct_const.hpp"
 
 namespace cct {
@@ -38,8 +39,8 @@ std::string_view StrEnd(std::string_view opt, std::size_t startPos) {
 }
 
 bool IsExchangeName(std::string_view str) {
-  string lowerStr = tolower(str);
-  return std::any_of(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), [&lowerStr](std::string_view ex) {
+  string lowerStr = ToLower(str);
+  return std::ranges::any_of(kSupportedExchanges, [&lowerStr](std::string_view ex) {
     return lowerStr.starts_with(ex) && (lowerStr.size() == ex.size() || lowerStr[ex.size()] == '_');
   });
 }
@@ -130,18 +131,18 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges() const {
     throw std::invalid_argument("Cannot start with a negative amount");
   }
   std::size_t pos = 1;
-  while (pos < dashPos && ((_opt[pos] >= '0' && _opt[pos] <= '9') || _opt[pos] == '.')) {
+  while (pos < dashPos && (isdigit(_opt[pos]) || _opt[pos] == '.')) {
     ++pos;
   }
   std::string_view startAmountStr(_opt.data(), pos);
-  while (pos < dashPos && _opt[pos] == ' ') {
+  while (pos < dashPos && isblank(_opt[pos])) {
     ++pos;
   }
   bool isPercentage = pos < dashPos && _opt[pos] == '%';
   if (isPercentage) {
     do {
       ++pos;
-    } while (pos < dashPos && _opt[pos] == ' ');
+    } while (pos < dashPos && isblank(_opt[pos]));
   }
   std::string_view startCurStr(_opt.begin() + pos, _opt.begin() + dashPos);
   MonetaryAmount startAmount(startAmountStr, startCurStr);

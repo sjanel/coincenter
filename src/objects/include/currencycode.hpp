@@ -77,8 +77,8 @@ class CurrencyCode {
   AcronymType _data;
 
   constexpr inline void set(std::string_view acronym) {
-    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), [](char c) { return toupper(c); }),
-              _data.end(), '\0');  // Fill extra chars to 0 is important as we always read them for code generation
+    // Fill extra chars to 0 is important as we always read them for code generation
+    std::fill(std::transform(acronym.begin(), acronym.end(), _data.begin(), toupper), _data.end(), '\0');
   }
 };
 
