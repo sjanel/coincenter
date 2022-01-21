@@ -3,8 +3,8 @@
 #include <cassert>
 #include <cctype>
 #include <limits>
-#include <stdexcept>
 
+#include "cct_invalid_argument_exception.hpp"
 namespace cct {
 
 string BinToHex(std::span<const unsigned char> bindata) {
@@ -68,7 +68,7 @@ string B64Decode(std::string_view ascdata) {
       continue;
     }
     if (c > 127 || c < 0 || kReverseTable[c] > 63) {
-      throw ::std::invalid_argument("This contains characters not legal in a base64 encoded string.");
+      throw invalid_argument("This contains characters not legal in a base64 encoded string.");
     }
     accumulator = (accumulator << 6) | kReverseTable[c];
     bits_collected += 6;

@@ -55,10 +55,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     auto errorIt = dataJson.find("error");
     if (errorIt != dataJson.end()) {
       if (errorIt->contains("name")) {
-        throw exception((*errorIt)["name"].get<std::string_view>());
+        throw exception(std::move((*errorIt)["name"].get_ref<string&>()));
       }
       if (errorIt->contains("message")) {
-        throw exception((*errorIt)["message"].get<std::string_view>());
+        throw exception(std::move((*errorIt)["message"].get_ref<string&>()));
       }
       throw exception("Unknown Upbit API error message");
     }

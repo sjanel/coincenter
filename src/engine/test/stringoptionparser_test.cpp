@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_invalid_argument_exception.hpp"
+
 namespace cct {
 
 TEST(StringOptionParserTest, GetExchanges) {
@@ -67,8 +69,8 @@ TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchanges) {
 
 TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchangesValidity) {
   EXPECT_NO_THROW(StringOptionParser("100 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges());
-  EXPECT_THROW(StringOptionParser("-1 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), std::invalid_argument);
-  EXPECT_THROW(StringOptionParser("100.2% eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), std::invalid_argument);
+  EXPECT_THROW(StringOptionParser("-1 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), invalid_argument);
+  EXPECT_THROW(StringOptionParser("100.2% eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {

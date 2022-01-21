@@ -4,6 +4,7 @@
 
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
+#include "cct_invalid_argument_exception.hpp"
 
 namespace cct {
 namespace {
@@ -53,7 +54,7 @@ StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() con
   std::string_view marketStr(_opt.begin(), commaPos == std::string_view::npos ? _opt.end() : _opt.begin() + commaPos);
   std::size_t dashPos = marketStr.find('-');
   if (dashPos == std::string_view::npos) {
-    throw std::invalid_argument("Expected a dash");
+    throw invalid_argument("Expected a dash");
   }
   std::size_t startExchangesPos =
       commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
@@ -116,7 +117,7 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
     }
   }
   if (currenciesShouldBeSet && (fromTradeCurrency.isNeutral() || toTradeCurrency.isNeutral())) {
-    throw std::invalid_argument("Expected a dash");
+    throw invalid_argument("Expected a dash");
   }
   return std::make_tuple(fromTradeCurrency, toTradeCurrency, GetPrivateExchanges(StrEnd(_opt, startExchangesPos)));
 }
@@ -125,10 +126,10 @@ StringOptionParser::MonetaryAmountCurrencyPrivateExchanges
 StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges() const {
   std::size_t dashPos = _opt.find('-');
   if (dashPos == std::string_view::npos) {
-    throw std::invalid_argument("Expected a dash");
+    throw invalid_argument("Expected a dash");
   }
   if (dashPos == 0) {
-    throw std::invalid_argument("Cannot start with a negative amount");
+    throw invalid_argument("Cannot start with a negative amount");
   }
   std::size_t pos = 1;
   while (pos < dashPos && (isdigit(_opt[pos]) || _opt[pos] == '.')) {
@@ -147,7 +148,7 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges() const {
   std::string_view startCurStr(_opt.begin() + pos, _opt.begin() + dashPos);
   MonetaryAmount startAmount(startAmountStr, startCurStr);
   if (isPercentage && startAmount.toNeutral() > MonetaryAmount(100)) {
-    throw std::invalid_argument("A percentage cannot be larger than 100");
+    throw invalid_argument("A percentage cannot be larger than 100");
   }
   std::size_t commaPos = getNextCommaPos(dashPos + 1, false);
   std::size_t startExchangesPos =
@@ -164,7 +165,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
   std::string_view exchangeNames = StrEnd(_opt, commaPos + 1);
   std::size_t dashPos = exchangeNames.find('-');
   if (dashPos == std::string_view::npos) {
-    throw std::invalid_argument("Expected a dash");
+    throw invalid_argument("Expected a dash");
   }
   return MonetaryAmountFromToPrivateExchange{
       amountToWithdraw, PrivateExchangeName(std::string_view(exchangeNames.begin(), exchangeNames.begin() + dashPos)),
@@ -174,7 +175,7 @@ StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getM
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
   std::size_t commaPos = _opt.find(',', startPos);
   if (commaPos == std::string_view::npos && throwIfNone) {
-    throw std::invalid_argument("Expected a comma");
+    throw invalid_argument("Expected a comma");
   }
   return commaPos;
 }
