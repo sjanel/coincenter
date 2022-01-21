@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 
+#include "cct_invalid_argument_exception.hpp"
 #include "stringhelpers.hpp"
 #include "unreachable.hpp"
 
@@ -13,16 +14,11 @@ constexpr std::string_view kNibbleStr = "nibble";
 constexpr std::string_view kTakerStr = "taker";
 
 constexpr TradePriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
-  if (priceStrategyStr == kMakerStr) {
-    return TradePriceStrategy::kMaker;
-  }
-  if (priceStrategyStr == kNibbleStr) {
-    return TradePriceStrategy::kNibble;
-  }
-  if (priceStrategyStr == kTakerStr) {
-    return TradePriceStrategy::kTaker;
-  }
-  throw std::invalid_argument("Unrecognized trade strategy");
+  if (priceStrategyStr == kMakerStr) return TradePriceStrategy::kMaker;
+  if (priceStrategyStr == kNibbleStr) return TradePriceStrategy::kNibble;
+  if (priceStrategyStr == kTakerStr) return TradePriceStrategy::kTaker;
+
+  throw invalid_argument("Unrecognized trade strategy");
 }
 }  // namespace
 
@@ -51,7 +47,7 @@ TradeOptions::TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction 
       _mode(tradeMode),
       _type(tradeType) {
   if (relativePrice == 0 || relativePrice == kTradeNoRelativePrice) {
-    throw std::invalid_argument("Invalid relative price");
+    throw invalid_argument("Invalid relative price");
   }
 }
 

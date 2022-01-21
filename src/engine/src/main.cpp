@@ -1,5 +1,9 @@
 #include <stdlib.h>
 
+#include <stdexcept>
+
+#include "cct_invalid_argument_exception.hpp"
+#include "cct_log.hpp"
 #include "coincenter.hpp"
 #include "coincenterinfo.hpp"
 #include "coincenterparsedoptions.hpp"
@@ -21,7 +25,11 @@ int main(int argc, const char* argv[]) {
 
     coincenter.updateFileCaches();  // Write potentially updated cache data on disk at end of program
 
-  } catch (...) {
+  } catch (const cct::invalid_argument& e) {
+    cct::log::critical("Invalid argument: {}", e.what());
+    return EXIT_FAILURE;
+  } catch (const std::exception& e) {
+    cct::log::critical("Exception: {}", e.what());
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

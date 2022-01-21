@@ -2,99 +2,57 @@
 
 #include <algorithm>
 #include <array>
-#include <cstring>
 #include <exception>
-#include <iostream>
-#include <memory>
-#include <string_view>
+#include <variant>
 
-#include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
+
+/// Implementation of a simple string (untruncated) storage with noexcept constructors and what() method.
+/// To be constructed from a 'const char []', it needs to be small enough to fill in the buffer. For custom, longer
+/// error messages, the constructor from the rvalue of a string should be used instead.
 class exception : public std::exception {
  public:
-  static constexpr int kMsgMaxLen = 127;
+  static constexpr int kMsgMaxLen = 80;
 
-  static_assert(std::is_nothrow_default_constructible<string>::value &&
-                    std::is_nothrow_move_constructible<string>::value,
+  static_assert(std::is_nothrow_move_constructible_v<string> && std::is_nothrow_destructible_v<string>,
                 "exception cannot be nothrow with a string");
 
-  explicit exception(const char* str) noexcept : _info(str) {
-    if (str) {
-      try {
-        log::critical(str);
-      } catch (...) {
-      }
-    }
-    _storage.front() = '\0';
+  template <unsigned N, std::enable_if_t<N <= kMsgMaxLen + 1, bool> = true>
+  explicit exception(const char (&str)[N]) noexcept {
+    // Hint: default constructor constructs a variant holding the value-initialized value of the first alternative
+    // (index() is zero). In our case, it's a std::array, which is what we want here.
+
+    std::ranges::copy(str, std::get<0>(_data).data());
+    // No need to set the null terminating char - it has already been set to 0 thanks to value initialization of the
+    // char array.
   }
 
-  /// We cannot store a reference of a given string in an exception because of dangling reference problem.
-  /// We neither can store a string directly as it could throw by allocating memory, which is not acceptable in an
-  /// exception's constructor.
-  ///
-  /// Thus we store the msg in a fixed size char storage.
-  /// Msg will be truncated to 'kMsgMaxLen' chars.
-  explicit exception(std::string_view str) noexcept {
-    try {
-      log::critical(str);
-    } catch (...) {
-    }
-    copyStrToInlineStorage(str);
-  }
+  explicit exception(string&& str) noexcept : _data(std::move(str)) {}
 
-  explicit exception(string&& str) noexcept : _str(std::move(str)) {
-    try {
-      log::critical(_str);
-    } catch (...) {
-    }
-    _storage.front() = '\0';
-  }
-
-  exception(const exception& o) noexcept : _info(o._info), _str() {
-    if (_info) {
-      _storage.front() = '\0';
-    } else if (o._storage.front() != '\0') {
-      _storage = o._storage;
-    } else {
-      copyStrToInlineStorage(o._str);
-    }
-  }
-
+  exception(const exception& o) noexcept = delete;
   exception(exception&&) noexcept = default;
-
-  exception& operator=(const exception& o) noexcept {
-    if (std::addressof(o) != this) {
-      if (_str.capacity() >= o._str.size()) {
-        _info = o._info;
-        _storage = o._storage;
-        _str = o._str;  // Copy is nothrow here as _str capacity is enough to hold o._str
-      } else {          // o._str.size() is necessarily > 0
-        // Our _str should grow to hold o._str, which is not possible here as we are noexcept.
-        _info = nullptr;
-        copyStrToInlineStorage(o._str);
-        _str.clear();
-      }
-    }
-    return *this;
-  }
-
+  exception& operator=(const exception& o) = delete;
   exception& operator=(exception&&) noexcept = default;
 
   const char* what() const noexcept override {
-    return _info ? _info : (_storage.front() == '\0' ? _str.c_str() : _storage.data());
+    switch (_data.index()) {
+      case 0:
+        return std::get<0>(_data).data();
+      case 1:
+        return std::get<1>(_data).c_str();
+      default:
+        unreachable();
+    }
   }
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  inline void copyStrToInlineStorage(std::string_view str) noexcept {
-    const int sizeToCopy = std::min(static_cast<int>(sizeof(_storage)), static_cast<int>(str.size()));
-    std::memcpy(_storage.data(), str.data(), sizeToCopy);
-    _storage[std::min(static_cast<int>(sizeof(_storage) - 1), sizeToCopy)] = '\0';
-  }
+  using CharStorage = std::array<char, kMsgMaxLen + 1>;
 
-  const char* _info = nullptr;
-  std::array<char, kMsgMaxLen + 1> _storage;
-  string _str;
+  std::variant<CharStorage, string> _data;
 };
 }  // namespace cct

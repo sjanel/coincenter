@@ -61,6 +61,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    static_string_view_helpers_test
+    test/static_string_view_helpers_test.cpp
+)
+
+add_unit_test(
     stringhelpers_test
     test/stringhelpers_test.cpp
     DEFINITIONS

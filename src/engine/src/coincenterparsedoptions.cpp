@@ -4,28 +4,25 @@
 #include <filesystem>
 #include <iostream>
 
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenteroptions.hpp"
 #include "stringoptionparser.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
+
 CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
     : dataDir(kDefaultDataDir), _programName(std::filesystem::path(argv[0]).filename().string()) {
-  try {
-    CommandLineOptionsParser<CoincenterCmdLineOptions> cmdLineOptionsParser =
-        CreateCoincenterCommandLineOptionsParser<CoincenterCmdLineOptions>();
-    CoincenterCmdLineOptions cmdLineOptions = cmdLineOptionsParser.parse(argc, argv);
+  auto parser = CreateCommandLineOptionsParser<CoincenterCmdLineOptions>();
 
-    if (cmdLineOptions.help || argc == 1) {
-      cmdLineOptionsParser.displayHelp(_programName, std::cout);
-      noProcess = true;
-    } else {
-      setFromOptions(cmdLineOptions);
-    }
-  } catch (const InvalidArgumentException &e) {
-    std::cerr << e.what() << std::endl;
-    throw;
+  auto parsedOptions = parser.parse(argc, argv);
+
+  if (parsedOptions.help || argc == 1) {
+    parser.displayHelp(_programName, std::cout);
+    noProcess = true;
+  } else {
+    setFromOptions(parsedOptions);
   }
 }
 
@@ -135,7 +132,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
         cmdLineOptions.tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
 
     if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
-      throw std::invalid_argument("Trade price and trade strategy cannot be set together");
+      throw invalid_argument("Trade price and trade strategy cannot be set together");
     }
 
     if (!cmdLineOptions.tradeStrategy.empty()) {
