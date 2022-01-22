@@ -145,8 +145,8 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
       MonetaryAmount tradePrice(cmdLineOptions.tradePrice);
       if (tradePrice.isAmountInteger() && tradePrice.hasNeutralCurrency()) {
         // Then it must be a relative price
-        tradeOptions =
-            TradeOptions(tradePrice.integerPart(), timeoutAction, tradeMode, cmdLineOptions.tradeTimeout, tradeType);
+        TradeRelativePrice relativePrice = static_cast<TradeRelativePrice>(tradePrice.integerPart());
+        tradeOptions = TradeOptions(relativePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout, tradeType);
       } else {
         tradeOptions = TradeOptions(tradePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout);
       }

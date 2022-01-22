@@ -3,6 +3,9 @@
 #include <cctype>
 
 namespace cct {
+/// Safe std::isalnum version. See https://en.cppreference.com/w/cpp/string/byte/isalnum
+inline bool isalnum(char c) { return std::isalnum(static_cast<unsigned char>(c)); }
+
 /// Safe std::isalpha version. See https://en.cppreference.com/w/cpp/string/byte/isalpha
 inline bool isalpha(char c) { return std::isalpha(static_cast<unsigned char>(c)); }
 

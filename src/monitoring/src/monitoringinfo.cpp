@@ -6,7 +6,11 @@
 namespace cct {
 MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std::string_view address, int port,
                                std::string_view username, std::string_view password)
-    : _jobName(jobName), _address(address), _username(username), _password(password), _port(useMonitoring ? port : 0) {
+    : _jobName(jobName),
+      _address(address),
+      _username(username),
+      _password(password),
+      _port(useMonitoring ? static_cast<uint16_t>(port) : 0U) {
   if (port < 0 || port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
     throw exception("Invalid port value");
   }
