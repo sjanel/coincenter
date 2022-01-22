@@ -10,6 +10,7 @@
 #include <string_view>
 #include <variant>
 
+#include "cct_cctype.hpp"
 #include "cct_hash.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
@@ -376,14 +377,18 @@ json FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJson() const {
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::urlEncodeExceptDelimiters() const {
-  string ret(3U * _data.size(), 0);
+  string ret(3U * _data.size(), '\0');
   char *outCharIt = ret.data();
   for (char c : _data) {
-    if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '@' || c == '.' ||
-        c == '\\' || c == '-' || c == '_' || c == ':' || c == KeyValuePairSep || c == AssignmentChar) {
+    if (isalnum(c) || c == '@' || c == '.' || c == '\\' || c == '-' || c == '_' || c == ':' || c == KeyValuePairSep ||
+        c == AssignmentChar) {
       *outCharIt++ = c;
     } else {
+#ifdef _MSC_VER
+      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(c));
+#else
       std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
+#endif
       outCharIt += 3;
     }
   }
