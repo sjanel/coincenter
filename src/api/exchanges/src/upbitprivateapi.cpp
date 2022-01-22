@@ -469,8 +469,7 @@ bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
       }
     }
     log::debug("Deposit {} with amount {} is similar, but different amount than {}",
-               trx["refid"].get<std::string_view>(), netAmountReceived.str(),
-               sentWithdrawInfo.netEmittedAmount().str());
+               trx["txid"].get<std::string_view>(), netAmountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
   }
   return false;
 }

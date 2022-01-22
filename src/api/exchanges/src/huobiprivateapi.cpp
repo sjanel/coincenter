@@ -415,9 +415,10 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
       }
       netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
       MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
-      if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
-        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
-                   initiatedWithdrawInfo.grossEmittedAmount().amountStr());
+      double diffExpected = (netEmittedAmount + fee - initiatedWithdrawInfo.grossEmittedAmount()).toDouble();
+      if (diffExpected > 0.001 || diffExpected < -0.001) {
+        log::error("Unexpected fee - {} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(),
+                   fee.amountStr(), initiatedWithdrawInfo.grossEmittedAmount().amountStr());
       }
       break;
     }
