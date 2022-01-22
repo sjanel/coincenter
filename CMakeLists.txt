@@ -205,7 +205,7 @@ function(add_unit_test name)
 endfunction()
 
 if (MSVC)
-  add_compile_options(/W4)
+  add_compile_options(/W3)
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
   add_compile_definitions(NOMINMAX)
 else()
