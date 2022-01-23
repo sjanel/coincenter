@@ -5,6 +5,7 @@
 #include "apikey.hpp"
 #include "cct_codec.hpp"
 #include "kucoinpublicapi.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
@@ -385,27 +386,24 @@ bool KucoinPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
                                        const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
 
-  json depositJson =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/deposits", {{"currency", currencyCode.str()}});
-  MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
-  for (const json& depositDetail : depositJson["items"]) {
-    MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
-    if (amount == netEmittedAmount) {
-      std::string_view depositStatus = depositDetail["status"].get<std::string_view>();
-      if (depositStatus == "PROCESSING") {
-        log::debug("Processing");
-      } else if (depositStatus == "SUCCESS") {
-        log::debug("Success");
-        return true;
-      } else if (depositStatus == "FAILURE") {
-        log::debug("Failure");
-      } else {
-        log::error("unknown status value '{}'", depositStatus);
-      }
-      break;
-    }
+  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/deposits",
+                                  {{"currency", currencyCode.str()}, {"status", "SUCCESS"}});
+  auto itemsIt = depositJson.find("items");
+  if (itemsIt == depositJson.end()) {
+    throw exception("Unexpected result from Kucoin deposit API");
   }
-  return false;
+  RecentDeposit::RecentDepositVector recentDeposits;
+  recentDeposits.reserve(itemsIt->size());
+  for (const json& depositDetail : *itemsIt) {
+    MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
+    int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
+
+    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+
+    recentDeposits.emplace_back(amount, timestamp);
+  }
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 }  // namespace api
 }  // namespace cct

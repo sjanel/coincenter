@@ -16,6 +16,7 @@
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "monetaryamount.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
@@ -121,6 +122,7 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
 
 BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
+
   BalancePortfolio ret;
   for (const json& accountDetail : result) {
     MonetaryAmount a(accountDetail["balance"].get<std::string_view>(),
@@ -212,7 +214,8 @@ ExchangePrivate::Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints&
     }
 
     // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-    Order::TimePoint placedTime = FromString(orderDetails["created_at"].get<string>().c_str(), "%Y-%m-%dT%H:%M:%S");
+    Order::TimePoint placedTime =
+        FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -456,22 +459,19 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
 bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                                       const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  json result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", {{"currency", currencyCode.str()}});
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits",
+                             {{"currency", currencyCode.str()}, {"state", "accepted"}});
+  RecentDeposit::RecentDepositVector recentDeposits;
+  recentDeposits.reserve(recentDeposits.size());
   for (const json& trx : result) {
-    MonetaryAmount netAmountReceived(trx["amount"].get<std::string_view>(), currencyCode);
-    if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
-      std::string_view depositState(trx["state"].get<std::string_view>());
-      log::debug("Deposit state {}", depositState);
-      string depositStateUpperStr = ToUpper(depositState);
-      if (depositStateUpperStr == "ACCEPTED") {
-        return true;
-      }
-    }
-    log::debug("Deposit {} with amount {} is similar, but different amount than {}",
-               trx["txid"].get<std::string_view>(), netAmountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
+    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+    // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
+    TimePoint timestamp = FromString(trx["done_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
+
+    recentDeposits.emplace_back(amount, timestamp);
   }
-  return false;
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace api

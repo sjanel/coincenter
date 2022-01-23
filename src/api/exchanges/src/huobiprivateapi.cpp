@@ -5,6 +5,7 @@
 #include "apikey.hpp"
 #include "cct_codec.hpp"
 #include "huobipublicapi.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
@@ -434,29 +435,20 @@ bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
   json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                   {{"currency", lowerCaseCur}, {"type", "deposit"}});
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
+  RecentDeposit::RecentDepositVector recentDeposits;
   for (const json& depositDetail : depositJson["data"]) {
-    MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
-    if (amount == netEmittedAmount) {
-      std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
-      if (depositStatus == "unknown") {
-        log::debug("On-chain transfer has not been received");
-      } else if (depositStatus == "confirming") {
-        log::debug("On-chain transfer waits for first confirmation");
-      } else if (depositStatus == "confirmed") {
-        log::debug("On-chain transfer confirmed for at least one block, user is able to transfer and trade");
-        return true;
-      } else if (depositStatus == "safe") {
-        log::debug("Multiple on-chain confirmed, user is able to withdraw");
-        return true;
-      } else if (depositStatus == "orphan") {
-        log::error("On-chain transfer confirmed but currently in an orphan branch");
-      } else {
-        log::error("unknown status value '{}'", depositStatus);
-      }
-      break;
+    std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
+    log::debug("Exploring Huobi deposit with status {}", depositStatus);
+    if (depositStatus == "confirmed") {
+      MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
+      int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
+      TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+
+      recentDeposits.emplace_back(amount, timestamp);
     }
   }
-  return false;
+  RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {

@@ -15,6 +15,7 @@
 #include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "monetaryamount.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
@@ -498,26 +499,25 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
                                         const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurlPostData checkDepositPostData{
-      {"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}, {"searchGb", "4"}};
+      {"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}, {"searchGb", 4}};
   json trxList =
       PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", _maxNbDecimalsUnitMap, checkDepositPostData);
+
+  RecentDeposit::RecentDepositVector recentDeposits;
   for (const json& trx : trxList) {
-    assert(trx["order_currency"].get<std::string_view>() == currencyCode);
-    MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
-    if (amountReceived == sentWithdrawInfo.netEmittedAmount()) {
-      BalancePortfolio balancePortfolio = queryAccountBalance();
-      if (balancePortfolio.get(currencyCode) >= sentWithdrawInfo.netEmittedAmount()) {
-        // Additional check to be sure money is available
-        return true;
-      }
+    CurrencyCode trxCur(trx["order_currency"].get<std::string_view>());
+    if (trxCur != currencyCode) {
+      continue;
     }
-    // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
-    // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
-    // Let's not implement this for now unless it becomes an issue
-    log::debug("{}: similar deposit found with different amount {} (expected {})", _exchangePublic.name(),
-               amountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
+    MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
+    int64_t microsecondsSinceEpoch = trx["transfer_date"].get<int64_t>();
+
+    TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
+
+    recentDeposits.emplace_back(amountReceived, timestamp);
   }
-  return false;
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 void BithumbPrivate::updateCacheFile() const {

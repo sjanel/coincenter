@@ -10,6 +10,7 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
@@ -434,21 +435,21 @@ bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", {{"asset", krakenCurrency.altStr()}});
+  RecentDeposit::RecentDepositVector recentDeposits;
   for (const json& trx : trxList) {
     std::string_view status(trx["status"].get<std::string_view>());
     if (status != "Success") {
       log::debug("Deposit {} status {}", trx["refid"].get<std::string_view>(), status);
       continue;
     }
-    MonetaryAmount netAmountReceived(trx["amount"].get<std::string_view>(), currencyCode);
-    if (netAmountReceived == sentWithdrawInfo.netEmittedAmount()) {
-      return true;
-    }
-    log::debug("Deposit {} with amount {} is similar, but different amount than {}",
-               trx["refid"].get<std::string_view>(), netAmountReceived.str(),
-               sentWithdrawInfo.netEmittedAmount().str());
+    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+    int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
+    TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
+
+    recentDeposits.emplace_back(amount, timestamp);
   }
-  return false;
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace api
