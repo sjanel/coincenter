@@ -6,6 +6,7 @@
 #include "apikey.hpp"
 #include "binancepublicapi.hpp"
 #include "cct_smallvector.hpp"
+#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
@@ -480,18 +481,24 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   json depositStatus =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, binancePublic._commonInfo.getBestBaseURL(),
                    "/sapi/v1/capital/deposit/hisrec", {{"coin", currencyCode.str()}});
+  const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
+  RecentDeposit::RecentDepositVector recentDeposits;
   for (const json& depositDetail : depositStatus) {
     std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
-    if (depositAddress == initiatedWithdrawInfo.receivingWallet().address()) {
-      MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
-      if (amountReceived == sentWithdrawInfo.netEmittedAmount()) {
-        return true;
+    int status = depositDetail["status"].get<int>();
+    if (status == 1) {  // success
+      if (depositAddress == wallet.address()) {
+        MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
+        int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
+
+        TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+
+        recentDeposits.emplace_back(amountReceived, timestamp);
       }
-      log::debug("{}: similar deposit found with different amount {} (expected {})", _exchangePublic.name(),
-                 amountReceived.str(), sentWithdrawInfo.netEmittedAmount().str());
     }
   }
-  return false;
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace api

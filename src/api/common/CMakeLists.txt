@@ -45,3 +45,12 @@ add_common_test(
   src/exchangepublicapi.cpp
   test/exchangepublicapi_test.cpp
 )
+
+add_unit_test(
+  recentdeposit_test
+  src/recentdeposit.cpp
+  test/recentdeposit_test.cpp
+  LIBRARIES
+  coincenter_objects
+  coincenter_tools
+)
