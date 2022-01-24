@@ -11,14 +11,6 @@ namespace {
 
 string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr std::string_view kDefaultCommunityKey = "b25453de7984135a084b";
-  /// File containing all validated external addresses.
-  /// It should be a json file with this format:
-  /// {
-  ///   "exchangeName1": {"BTC": "btcAddress", "XRP": "xrpAdress,xrpTag", "EOS": "eosAddress,eosTag"},
-  ///   "exchangeName2": {...}
-  /// }
-  /// In case crypto contains an additional "tag", "memo" or other, it will be placed after the ',' in the address
-  /// field.
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
   File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfNotFound::kNoThrow);
@@ -43,8 +35,8 @@ File GetRatesCacheFile(std::string_view dataDir) {
 
 }  // namespace
 
-FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Clock::duration ratesUpdateFrequency)
-    : _curlHandle(coincenterInfo.metricGatewayPtr(), Clock::duration::zero(), coincenterInfo.getRunMode()),
+FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
+    : _curlHandle(coincenterInfo.metricGatewayPtr(), Duration::zero(), coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
@@ -52,11 +44,11 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Clock::durati
   json data = ratesCacheFile.readJson();
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
-    Market m(marketStr, '-');
     double rate = rateAndTimeData["rate"];
     int64_t timeepoch = rateAndTimeData["timeepoch"];
-    log::trace("Stored rate {} for market {} from {}", rate, marketStr.c_str(), kRatesCacheFile);
-    _pricesMap.insert_or_assign(m, PriceTimedValue{rate, TimePoint(std::chrono::seconds(timeepoch))});
+    log::trace("Stored rate {} for market {} from {}", rate, marketStr, kRatesCacheFile);
+    _pricesMap.insert_or_assign(Market(marketStr, '-'),
+                                PriceTimedValue{rate, TimePoint(std::chrono::seconds(timeepoch))});
   }
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }
@@ -81,7 +73,8 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   url.append(opts.getPostData().str());
   opts.getPostData().clear();
 
-  json data = json::parse(_curlHandle.query(url, std::move(opts)), nullptr, false /* allow exceptions */);
+  string dataStr = _curlHandle.query(url, std::move(opts));
+  json data = json::parse(dataStr, nullptr, false /* allow exceptions */);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
     log::error("No JSON data received from fiat currency converter service");
@@ -99,8 +92,8 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   double rate = rates["val"];
   log::debug("Stored rate {} for market {}", rate, qStr.c_str());
   TimePoint t = Clock::now();
-  _pricesMap.insert_or_assign(m, PriceTimedValue{rate, t});
   _pricesMap.insert_or_assign(m.reverse(), PriceTimedValue{static_cast<double>(1) / rate, t});
+  _pricesMap.insert_or_assign(std::move(m), PriceTimedValue{rate, t});
   return rate;
 }
 
@@ -115,7 +108,7 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
   if (it != _pricesMap.end() && Clock::now() - it->second.lastUpdatedTime < _ratesUpdateFrequency) {
     rate = it->second.rate;
   } else {
-    if (_ratesUpdateFrequency == Clock::duration::max()) {
+    if (_ratesUpdateFrequency == Duration::max()) {
       throw exception("Unable to query fiat currency rates and no rate found in cache");
     }
     std::optional<double> queriedRate = queryCurrencyRate(m);

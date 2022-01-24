@@ -22,8 +22,7 @@ class CryptowatchAPI : public ExchangeBase {
   using Fiats = FlatSet<CurrencyCode>;
 
   explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
-                          Clock::duration fiatsUpdateFrequency = std::chrono::hours(96),
-                          bool loadFromFileCacheAtInit = true);
+                          Duration fiatsUpdateFrequency = std::chrono::hours(96), bool loadFromFileCacheAtInit = true);
 
   CryptowatchAPI(const CryptowatchAPI &) = delete;
   CryptowatchAPI &operator=(const CryptowatchAPI &) = delete;
@@ -32,7 +31,7 @@ class CryptowatchAPI : public ExchangeBase {
   CryptowatchAPI &operator=(CryptowatchAPI &&) = delete;
 
   /// Tells whether given exchange is supported by Cryptowatch.
-  bool queryIsExchangeSupported(const string &exchangeName) {
+  bool queryIsExchangeSupported(std::string_view exchangeName) {
     std::lock_guard<std::mutex> guard(_exchangesMutex);
     return _supportedExchanges.get().contains(exchangeName);
   }
@@ -58,7 +57,7 @@ class CryptowatchAPI : public ExchangeBase {
   void updateCacheFile() const override;
 
  private:
-  using SupportedExchanges = FlatSet<string>;
+  using SupportedExchanges = FlatSet<string, std::less<>>;
   /// Cryptowatch markets are represented by one unique string pair, it's not trivial to split the two currencies
   /// acronyms. A second match will be needed to transform it to a final 'Market'
   using PricesPerMarketMap = std::unordered_map<string, double>;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <string_view>
 #include <utility>
 
@@ -22,13 +21,12 @@ class AbstractMetricGateway;
 class CurlHandle {
  public:
   /// Constructs a default CurlHandle without any min duration between queries nor support for metric collection.
-  CurlHandle() : CurlHandle(nullptr, Clock::duration::zero(), settings::RunMode::kProd) {}
+  CurlHandle() : CurlHandle(nullptr, Duration::zero(), settings::RunMode::kProd) {}
 
   /// Constructs a new CurlHandle.
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
   /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
-  CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration minDurationBetweenQueries,
-             settings::RunMode runMode);
+  CurlHandle(AbstractMetricGateway *pMetricGateway, Duration minDurationBetweenQueries, settings::RunMode runMode);
 
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;
@@ -42,7 +40,7 @@ class CurlHandle {
 
   string query(std::string_view url, const CurlOptions &opts);
 
-  Clock::duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
+  Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
   // CurlHandle is trivially relocatable
   using trivially_relocatable = std::true_type;
@@ -55,7 +53,7 @@ class CurlHandle {
   // and to avoid clients to pull unnecessary curl dependencies by just including the header
   void *_handle;
   AbstractMetricGateway *_pMetricGateway;  // non-owning pointer
-  Clock::duration _minDurationBetweenQueries;
+  Duration _minDurationBetweenQueries;
   TimePoint _lastQueryTime;
 };
 

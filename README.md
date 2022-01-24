@@ -296,7 +296,7 @@ The trade ends when one of the following events occur:
 - Order is matched completely
 - Order has still some unmatched amount when trade reaches the **timeout**
 
-By default, the trade timeout is set to **30 seconds*. If you wish to change it, you can use `--trade-timeout` option. It expects a time and supports all the common time suffixes `y` (years), `mon` (months), `w` (weeks), `d` (days), `h` (hours), `min` (minutes), `s` (seconds), `ms` (milliseconds), `us` (microseconds) and `ns` (nanoseconds).
+By default, the trade timeout is set to **30 seconds*. If you wish to change it, you can use `--trade-timeout` option. It expects a time and supports all the common time suffixes `y` (years), `mon` (months), `w` (weeks), `d` (days), `h` (hours), `min` (minutes), `s` (seconds), `ms` (milliseconds) and `us` (microseconds).
 
 Value can contain several units, but do not support decimal values. For instance, use `2min30s` instead of `2.5min`.
 

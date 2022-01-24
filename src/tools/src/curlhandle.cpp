@@ -48,7 +48,7 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
 }
 }  // namespace
 
-CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Clock::duration minDurationBetweenQueries,
+CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Duration minDurationBetweenQueries,
                        settings::RunMode runMode)
     : _handle(curl_easy_init()),
       _pMetricGateway(pMetricGateway),
@@ -136,7 +136,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
   CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.isFollowLocation());
 
-#ifdef _WIN32
+#ifdef _MSC_VER
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
   CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 #endif
@@ -177,12 +177,12 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
 
   setUpProxy(opts.getProxyUrl(), opts.isProxyReset());
 
-  if (_minDurationBetweenQueries != Clock::duration::zero()) {
+  if (_minDurationBetweenQueries != Duration::zero()) {
     // Check last request time
     const TimePoint t = Clock::now();
     if (t < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
-      const Clock::duration sleepingTime = _minDurationBetweenQueries - (t - _lastQueryTime);
+      const Duration sleepingTime = _minDurationBetweenQueries - (t - _lastQueryTime);
       log::debug("Wait {} ms before performing query",
                  std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);

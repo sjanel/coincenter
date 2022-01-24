@@ -12,10 +12,10 @@
 
 namespace cct {
 
-string ToString(std::chrono::system_clock::time_point p, const char* format) {
-  const std::time_t t = std::chrono::system_clock::to_time_t(p);
+string ToString(TimePoint p, const char* format) {
+  const std::time_t t = Clock::to_time_t(p);
   std::tm utc{};
-#ifdef _WIN32
+#ifdef _MSC_VER
   errno_t err = gmtime_s(&utc, &t);
   if (err) {
     throw exception("Issue in gmtime_s");
@@ -36,15 +36,15 @@ string ToString(std::chrono::system_clock::time_point p, const char* format) {
   return buf;
 }
 
-std::chrono::system_clock::time_point FromString(const char* timeStr, const char* format) {
+TimePoint FromString(const char* timeStr, const char* format) {
   std::tm utc{};
   std::stringstream ss{timeStr};
   ss >> std::get_time(&utc, format);
-  return std::chrono::system_clock::from_time_t(std::mktime(&utc));  // TODO: fix issue of local time switch
+  return Clock::from_time_t(std::mktime(&utc));  // TODO: fix issue of local time switch
 }
 
 Nonce Nonce_TimeSinceEpochInMs(int64_t msDelay) {
-  const auto n = std::chrono::system_clock::now();
+  const auto n = Clock::now();
   // The return type of 'count()' is platform dependent. Let's cast it to 'int64_t' which is enough to hold a number of
   // milliseconds from epoch
   int64_t msSinceEpoch =

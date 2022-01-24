@@ -22,8 +22,7 @@
 #include "timestring.hpp"
 #include "tradeoptions.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 string GetMethodURL(std::string_view endpoint) {
@@ -299,7 +298,7 @@ ExchangePrivate::Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraint
     for (json& orderDetails : result) {
       int64_t microsecondsSinceEpoch = FromString<int64_t>(orderDetails["order_date"].get<std::string_view>());
 
-      Order::TimePoint placedTime{std::chrono::microseconds(microsecondsSinceEpoch)};
+      TimePoint placedTime{std::chrono::microseconds(microsecondsSinceEpoch)};
       if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
@@ -532,5 +531,4 @@ void BithumbPrivate::updateCacheFile() const {
   GetBithumbDecimalsCache(_coincenterInfo.dataDir()).write(data);
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

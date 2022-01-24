@@ -22,8 +22,7 @@
 #include "toupperlower.hpp"
 #include "upbitpublicapi.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 namespace {
 
@@ -214,8 +213,7 @@ ExchangePrivate::Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints&
     }
 
     // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-    Order::TimePoint placedTime =
-        FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
+    TimePoint placedTime = FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -474,5 +472,4 @@ bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

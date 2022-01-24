@@ -22,20 +22,15 @@ namespace cct {
 
 struct KeyValuePair {
   using IntegralType = int64_t;
-  using value_type = std::variant<string, std::string_view, IntegralType>;
 
+#ifndef CCT_AGGR_INIT_CXX20
   KeyValuePair(std::string_view k, std::string_view v) : key(k), val(v) {}
 
-  KeyValuePair(std::string_view k, const char *v) : key(k), val(std::string_view(v)) {}
-
-  KeyValuePair(std::string_view k, string &&v) : key(k), val(std::move(v)) {}
-
   KeyValuePair(std::string_view k, IntegralType v) : key(k), val(v) {}
-
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
+#endif
 
   std::string_view key;
-  value_type val;
+  std::variant<std::string_view, IntegralType> val;
 };
 
 template <char KeyValuePairSep, char AssignmentChar>
@@ -141,6 +136,8 @@ class FlatKeyValueString {
     append(key, std::string_view(buf, ret.ptr));
   }
 
+  void append(const KeyValuePair &kvPair);
+
   /// Appends content of other FlatKeyValueString into 'this'.
   /// No check is made on duplicated keys, it is client's responsibility to make sure keys are not duplicated.
   void append(const FlatKeyValueString &o);
@@ -154,6 +151,8 @@ class FlatKeyValueString {
     auto ret = std::to_chars(buf, std::end(buf), i);
     prepend(key, std::string_view(buf, ret.ptr));
   }
+
+  void prepend(const KeyValuePair &kvPair);
 
   /// Updates the value for given key, or append if not existing.
   void set(std::string_view key, std::string_view value);
@@ -209,19 +208,7 @@ class FlatKeyValueString {
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::FlatKeyValueString(std::span<const KeyValuePair> init) {
   for (const KeyValuePair &kv : init) {
-    switch (kv.val.index()) {
-      case 0:
-        append(kv.key, std::get<string>(kv.val));
-        break;
-      case 1:
-        append(kv.key, std::get<std::string_view>(kv.val));
-        break;
-      case 2:
-        append(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
-        break;
-      default:
-        unreachable();
-    }
+    append(kv);
   }
 }
 
@@ -240,6 +227,30 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(std::string_vie
   _data.append(key);
   _data.push_back(AssignmentChar);
   _data.append(value);
+}
+
+template <char KeyValuePairSep, char AssignmentChar>
+inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const KeyValuePair &kv) {
+  switch (kv.val.index()) {
+    case 0:
+      append(kv.key, std::get<std::string_view>(kv.val));
+      break;
+    case 1:
+      append(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
+      break;
+    default:
+      unreachable();
+  }
+}
+
+template <char KeyValuePairSep, char AssignmentChar>
+void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyValueString &o) {
+  if (!o._data.empty()) {
+    if (!_data.empty()) {
+      _data.push_back(KeyValuePairSep);
+    }
+    _data.append(o._data);
+  }
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
@@ -264,12 +275,16 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::prepend(std::string_vi
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyValueString &o) {
-  if (!o._data.empty()) {
-    if (!_data.empty()) {
-      _data.push_back(KeyValuePairSep);
-    }
-    _data.append(o._data);
+inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::prepend(const KeyValuePair &kv) {
+  switch (kv.val.index()) {
+    case 0:
+      prepend(kv.key, std::get<std::string_view>(kv.val));
+      break;
+    case 1:
+      prepend(kv.key, std::get<KeyValuePair::IntegralType>(kv.val));
+      break;
+    default:
+      unreachable();
   }
 }
 

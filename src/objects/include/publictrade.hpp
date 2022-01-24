@@ -1,10 +1,10 @@
 #pragma once
 
-#include <chrono>
 #include <compare>
 
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
+#include "timehelpers.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
@@ -12,8 +12,6 @@ namespace cct {
 /// Class representing an executed trade that happened on one exchange, not necessarily ours.
 class PublicTrade {
  public:
-  using TimePoint = std::chrono::system_clock::time_point;
-
   PublicTrade(TradeSide side, MonetaryAmount amount, MonetaryAmount price, TimePoint time)
       : _time(time), _amount(amount), _price(price), _side(side) {}
 

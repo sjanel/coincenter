@@ -10,13 +10,13 @@ class CachedResultBase {
 
   enum class State { kStandardRefresh, kForceUniqueRefresh, kForceCache };
 
-  explicit CachedResultBase(Clock::duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
+  explicit CachedResultBase(Duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
   void freeze() noexcept { _state = State::kForceUniqueRefresh; }
 
   void unfreeze() noexcept { _state = State::kStandardRefresh; }
 
-  Clock::duration _refreshPeriod;
+  Duration _refreshPeriod;
   State _state = State::kStandardRefresh;
 };
 

@@ -15,8 +15,7 @@
 #include "monetaryamount.hpp"
 #include "stringhelpers.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
@@ -288,12 +287,12 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
 }
 
 namespace {
-PublicTrade::TimePoint EpochTime(const std::string& dateStr) {
+TimePoint EpochTime(const std::string& dateStr) {
   std::istringstream ss(dateStr);
   std::tm t{};
   ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
-  static constexpr std::chrono::system_clock::duration kKoreaUTCTime = std::chrono::hours(9);
-  return std::chrono::system_clock::from_time_t(std::mktime(&t)) - kKoreaUTCTime;
+  static constexpr Duration kKoreaUTCTime = std::chrono::hours(9);
+  return Clock::from_time_t(std::mktime(&t)) - kKoreaUTCTime;
 }
 }  // namespace
 
@@ -313,5 +312,4 @@ BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
   return ret;
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

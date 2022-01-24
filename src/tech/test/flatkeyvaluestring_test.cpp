@@ -29,7 +29,7 @@ TEST(FlatKeyValueStringTest, SetEmpty) {
 TEST(FlatKeyValueStringTest, SetAndAppend) {
   KvPairs kvPairs;
   kvPairs.append("abc", "666");
-  kvPairs.append("de", "aX");
+  kvPairs.append({"de", "aX"});
   EXPECT_EQ(kvPairs.get("def"), "");
   EXPECT_FALSE(kvPairs.empty());
   EXPECT_EQ(kvPairs.str(), "abc=666&de=aX");
@@ -58,7 +58,7 @@ TEST(FlatKeyValueStringTest, Prepend) {
   EXPECT_EQ(kvPairs.str(), "statue=liberty");
   kvPairs.prepend("city", "New York City");
   EXPECT_EQ(kvPairs.str(), "city=New York City&statue=liberty");
-  kvPairs.prepend("state", "New York");
+  kvPairs.prepend({"state", "New York"});
   EXPECT_EQ(kvPairs.str(), "state=New York&city=New York City&statue=liberty");
   kvPairs.prepend("Postal Code", 10015);
   EXPECT_EQ(kvPairs.str(), "Postal Code=10015&state=New York&city=New York City&statue=liberty");

@@ -36,10 +36,10 @@ File GetFiatCacheFile(std::string_view dataDir) {
 }
 }  // namespace
 
-CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode,
-                               Clock::duration fiatsUpdateFrequency, bool loadFromFileCacheAtInit)
+CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode, Duration fiatsUpdateFrequency,
+                               bool loadFromFileCacheAtInit)
     : _coincenterInfo(config),
-      _curlHandle(config.metricGatewayPtr(), Clock::duration::zero(), runMode),
+      _curlHandle(config.metricGatewayPtr(), Duration::zero(), runMode),
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), _curlHandle),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {

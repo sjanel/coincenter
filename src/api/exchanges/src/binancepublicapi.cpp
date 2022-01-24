@@ -18,8 +18,7 @@
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_view method,
@@ -44,11 +43,11 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
   return dataJson;
 }
 
-Clock::duration Ping(CurlHandle& curlHandle, std::string_view baseURL) {
+Duration Ping(CurlHandle& curlHandle, std::string_view baseURL) {
   TimePoint t1 = Clock::now();
   json sysTime = PublicQuery(curlHandle, baseURL, "/api/v3/time");
   TimePoint t2 = Clock::now();
-  Clock::duration ping = t2 - t1;
+  Duration ping = t2 - t1;
   if (!sysTime.contains("serverTime")) {
     throw exception("Binance reply should contain system time information");
   }
@@ -117,7 +116,7 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
       _baseURLUpdater(CachedResultOptions(std::chrono::hours(96))) {}
 
 std::string_view BinancePublic::CommonInfo::BaseURLUpdater::operator()() {
-  Clock::duration pingDurations[kNbBaseURLs];
+  Duration pingDurations[kNbBaseURLs];
   std::transform(std::execution::par, std::begin(_curlHandles), std::end(_curlHandles),
                  std::begin(BinancePublic::kURLBases), std::begin(pingDurations), Ping);
   int minPingDurationPos = static_cast<int>(std::min_element(std::begin(pingDurations), std::end(pingDurations)) -
@@ -480,8 +479,7 @@ BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbT
     int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
     TradeSide tradeSide = detail["isBuyerMaker"].get<bool>() ? TradeSide::kSell : TradeSide::kBuy;
 
-    ret.emplace_back(tradeSide, amount, price,
-                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;
@@ -494,5 +492,4 @@ MonetaryAmount BinancePublic::TickerFunc::operator()(Market m) {
   return MonetaryAmount(lastPrice, m.quote());
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

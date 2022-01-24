@@ -42,7 +42,7 @@ class TestAPI {
         coincenterTestInfo(settings::RunMode::kTest),
         apiKeysProvider(coincenterInfo.dataDir(), coincenterInfo.getRunMode()),
         apiTestKeysProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
-        fiatConverter(coincenterInfo),
+        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
         cryptowatchAPI(coincenterInfo),
         exchangePublic(coincenterInfo, fiatConverter, cryptowatchAPI),
         exchangePrivatePtr(CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)),
