@@ -225,14 +225,14 @@ void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCon
       params.set("symbol", market.assetsPairStrUpper());
     }
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
-      params.erase("orderid");
+      params.erase("orderId");
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, binancePublic._commonInfo.getBestBaseURL(),
                    "/api/v3/openOrders", params);
     } else {
       for (const Order& order : orders) {
-        params.set("orderid", order.id());
+        params.set("orderId", order.id());
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, binancePublic._commonInfo.getBestBaseURL(),
-                     "/api/v3/orders", params);
+                     "/api/v3/order", params);
       }
     }
   }
