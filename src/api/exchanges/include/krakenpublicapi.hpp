@@ -79,7 +79,7 @@ class KrakenPublic : public ExchangePublic {
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
     using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
 
-    WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Clock::duration minDurationBetweenQueries);
+    WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries);
 
     WithdrawalInfoMaps operator()();
 

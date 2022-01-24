@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <compare>
 #include <string_view>
 
@@ -8,14 +7,13 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "orderid.hpp"
+#include "timehelpers.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
 
 class Order {
  public:
-  using TimePoint = std::chrono::system_clock::time_point;
-
   Order(std::string_view id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
         TimePoint placedTime, TradeSide side);
 

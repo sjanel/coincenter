@@ -11,12 +11,13 @@
 namespace cct {
 
 namespace {
-bool AreDoubleEqual(double lhs, double rhs) {
+void AreDoubleEqual(double lhs, double rhs) {
   static constexpr double kEpsilon = 0.000001;
   if (lhs < rhs) {
-    return (rhs - lhs) < kEpsilon;
+    EXPECT_LT(rhs - lhs, kEpsilon);
+  } else {
+    EXPECT_LT(lhs - rhs, kEpsilon);
   }
-  return (lhs - rhs) < kEpsilon;
 }
 
 constexpr double kKRW = 1341.88;
@@ -24,8 +25,7 @@ constexpr double kUSD = 1.21;
 constexpr double kGBP = 0.88;
 }  // namespace
 
-CurlHandle::CurlHandle(AbstractMetricGateway *, Clock::duration d, settings::RunMode)
-    : _handle(nullptr), _minDurationBetweenQueries(d) {}
+CurlHandle::CurlHandle(AbstractMetricGateway *, Duration, settings::RunMode) : _handle(nullptr) {}
 
 string CurlHandle::query(std::string_view url, const CurlOptions &) {
   json j;
@@ -82,18 +82,18 @@ class FiatConverterTest : public ::testing::Test {
 
 TEST_F(FiatConverterTest, DirectConversion) {
   const double amount = 10;
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "KRW"), amount));
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "KRW"), amount * kKRW));
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "USD"), amount * kUSD));
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "EUR", "GBP"), amount * kGBP));
+  AreDoubleEqual(converter.convert(amount, "KRW", "KRW"), amount);
+  AreDoubleEqual(converter.convert(amount, "EUR", "KRW"), amount * kKRW);
+  AreDoubleEqual(converter.convert(amount, "EUR", "USD"), amount * kUSD);
+  AreDoubleEqual(converter.convert(amount, "EUR", "GBP"), amount * kGBP);
   EXPECT_THROW(converter.convert(amount, "EUR", "SUSHI"), exception);
 }
 
 TEST_F(FiatConverterTest, DoubleConversion) {
   const double amount = 20'000'000;
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "EUR"), amount / kKRW));
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "KRW", "USD"), (amount / kKRW) * kUSD));
-  EXPECT_TRUE(AreDoubleEqual(converter.convert(amount, "GBP", "USD"), (amount / kGBP) * kUSD));
+  AreDoubleEqual(converter.convert(amount, "KRW", "EUR"), amount / kKRW);
+  AreDoubleEqual(converter.convert(amount, "KRW", "USD"), (amount / kKRW) * kUSD);
+  AreDoubleEqual(converter.convert(amount, "GBP", "USD"), (amount / kGBP) * kUSD);
   EXPECT_THROW(converter.convert(amount, "SUSHI", "EUR"), exception);
 }
 

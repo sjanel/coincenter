@@ -12,9 +12,9 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "timehelpers.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 string GetMethodUrl(std::string_view method) {
@@ -79,7 +79,7 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
 }  // namespace
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo,
-                                                     Clock::duration minDurationBetweenQueries)
+                                                     Duration minDurationBetweenQueries)
     : _curlHandle1(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()),
       _curlHandle2(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()) {}
 
@@ -106,10 +106,6 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                    _tradableCurrenciesCache, _curlHandle) {
   json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readJson();
   if (!data.empty()) {
-    using Clock = std::chrono::high_resolution_clock;
-    using TimePoint = std::chrono::time_point<Clock>;
-    using Duration = Clock::duration;
-
     Duration withdrawDataRefreshTime = config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees);
     TimePoint lastUpdatedTime(std::chrono::seconds(data["timeepoch"].get<int64_t>()));
     if (Clock::now() < lastUpdatedTime + withdrawDataRefreshTime) {
@@ -456,8 +452,7 @@ KrakenPublic::LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
     TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price,
-                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;
@@ -481,5 +476,4 @@ void KrakenPublic::updateCacheFile() const {
   }
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <chrono>
 #include <compare>
 #include <stdexcept>
 #include <string_view>
 
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 using InvalidArgumentException = std::invalid_argument;
@@ -15,9 +15,6 @@ using InvalidArgumentException = std::invalid_argument;
 class CommandLineOption {
  public:
   using GroupNameAndPrio = std::pair<std::string_view, int>;
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-  using Duration = Clock::duration;
 
   CommandLineOption(GroupNameAndPrio optionGroupName, std::string_view fullName, char shortName,
                     std::string_view valueDescription, std::string_view description);

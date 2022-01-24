@@ -17,8 +17,7 @@
 #include "timestring.hpp"
 #include "toupperlower.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 string PrivateSignature(const APIKey& apiKey, string data, const Nonce& nonce, std::string_view postdata) {
@@ -52,7 +51,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
   string ret = curlHandle.query(methodUrl, opts);
   json jsonData = json::parse(std::move(ret));
-  Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
+  Duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
          jsonData["error"].front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
     log::error("Kraken private API rate limit exceeded");
@@ -217,7 +216,7 @@ ExchangePrivate::Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints
 
       int64_t secondsSinceEpoch = static_cast<int64_t>(orderDetails["opentm"].get<double>());
 
-      Order::TimePoint placedTime{std::chrono::seconds(secondsSinceEpoch)};
+      TimePoint placedTime{std::chrono::seconds(secondsSinceEpoch)};
       if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
@@ -452,5 +451,4 @@ bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

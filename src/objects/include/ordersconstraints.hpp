@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 
 #include "cct_flatset.hpp"
@@ -8,6 +7,7 @@
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "orderid.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -47,8 +47,6 @@ class OrderConstraintsBitmap {
 
 class OrdersConstraints {
  public:
-  using TimePoint = std::chrono::system_clock::time_point;
-  using Duration = std::chrono::system_clock::duration;
   using OrderIdSet = FlatSet<OrderId, std::less<>>;
 
   /// Build OrdersConstraints based on given filtering information

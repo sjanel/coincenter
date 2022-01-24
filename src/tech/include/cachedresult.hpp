@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -9,23 +8,22 @@
 
 #include "cachedresultvault.hpp"
 #include "cct_hash.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
 class CachedResultOptions {
  public:
-  using Clock = std::chrono::high_resolution_clock;
+  explicit CachedResultOptions(Duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
-  explicit CachedResultOptions(Clock::duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
-
-  CachedResultOptions(Clock::duration refreshPeriod, CachedResultVault &cacheResultVault)
+  CachedResultOptions(Duration refreshPeriod, CachedResultVault &cacheResultVault)
       : _refreshPeriod(refreshPeriod), _pCacheResultVault(std::addressof(cacheResultVault)) {}
 
  private:
   template <class T, class... FuncTArgs>
   friend class CachedResult;
 
-  Clock::duration _refreshPeriod;
+  Duration _refreshPeriod;
   CachedResultVault *_pCacheResultVault = nullptr;
 };
 
@@ -34,7 +32,6 @@ class CachedResultOptions {
 template <class T, class... FuncTArgs>
 class CachedResult : public CachedResultBase {
  public:
-  using Clock = std::chrono::high_resolution_clock;
   using ResultType = std::remove_cvref_t<decltype(std::declval<T>()(std::declval<FuncTArgs>()...))>;
   using ResPtrTimePair = std::pair<const ResultType *, TimePoint>;
 

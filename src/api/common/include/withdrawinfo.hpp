@@ -1,10 +1,10 @@
 #pragma once
 
-#include <chrono>
 #include <string_view>
 
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
+#include "timehelpers.hpp"
 #include "wallet.hpp"
 
 namespace cct {
@@ -14,9 +14,6 @@ using WithdrawIdView = std::string_view;
 namespace api {
 class InitiatedWithdrawInfo {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
   InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
       : _receivingWallet(std::move(receivingWallet)),
         _withdrawId(withdrawId),
@@ -58,9 +55,6 @@ class SentWithdrawInfo {
 
 class WithdrawInfo {
  public:
-  using Clock = std::chrono::high_resolution_clock;
-  using TimePoint = std::chrono::time_point<Clock>;
-
   WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo)
       : _receivingWallet(initiatedWithdrawInfo.receivingWallet()),
         _withdrawId(initiatedWithdrawInfo.withdrawId()),

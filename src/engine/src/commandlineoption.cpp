@@ -15,9 +15,9 @@ CommandLineOption::CommandLineOption(GroupNameAndPrio optionGroupName, std::stri
 namespace {
 constexpr char kInvalidTimeDurationUnitMsg[] =
     "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
-    "min (minutes), s (seconds), ms (milliseconds), us (microseconds) and ns (nanoseconds)'";
+    "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
 
-CommandLineOption::Duration ToDuration(int64_t timeAmount, std::string_view timeUnitStr) {
+Duration ToDuration(int64_t timeAmount, std::string_view timeUnitStr) {
   if (timeUnitStr == "y") {
     return std::chrono::years(timeAmount);
   }
@@ -45,14 +45,11 @@ CommandLineOption::Duration ToDuration(int64_t timeAmount, std::string_view time
   if (timeUnitStr == "us") {
     return std::chrono::microseconds(timeAmount);
   }
-  if (timeUnitStr == "ns") {
-    return std::chrono::nanoseconds(timeAmount);
-  }
   throw InvalidArgumentException(kInvalidTimeDurationUnitMsg);
 }
 }  // namespace
 
-CommandLineOption::Duration CommandLineOption::ParseDuration(std::string_view durationStr) {
+Duration CommandLineOption::ParseDuration(std::string_view durationStr) {
   if (durationStr.find('.') != std::string_view::npos) {
     throw InvalidArgumentException("Time amount should be an integral value");
   }

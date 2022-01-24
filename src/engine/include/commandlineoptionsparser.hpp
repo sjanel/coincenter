@@ -19,6 +19,7 @@
 #include "commandlineoption.hpp"
 #include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -72,7 +73,6 @@ class CommandLineOptionalInt {
 template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
-  using Duration = CommandLineOption::Duration;
   using OptionType = std::variant<string Opts::*, std::optional<string> Opts::*, std::string_view Opts::*,
                                   std::optional<std::string_view> Opts::*, int Opts::*, CommandLineOptionalInt Opts::*,
                                   bool Opts::*, Duration Opts::*>;

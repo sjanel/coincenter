@@ -103,7 +103,7 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct GlobalInfosFunc {
-    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, Clock::duration minDurationBetweenQueries,
+    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
                     settings::RunMode runMode)
         : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
 

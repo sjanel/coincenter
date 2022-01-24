@@ -12,7 +12,7 @@
 #include "cct_log.hpp"
 #include "timehelpers.hpp"
 
-#ifdef _WIN32  // for hostname
+#ifdef _MSC_VER
 #include <Winsock2.h>
 #else
 #include <unistd.h>
@@ -24,13 +24,13 @@ namespace {
 constexpr int kHTTPSuccessReturnCode = 200;
 
 // Constants to control frequency of flushes to Prometheus instance
-constexpr Clock::duration kPrometheusAutoFlushPeriod = std::chrono::minutes(3);
+constexpr Duration kPrometheusAutoFlushPeriod = std::chrono::minutes(3);
 constexpr int kCheckFlushCounter = 20;
 
 std::string GetHostName() {
   char hostname[1024];
   if (::gethostname(hostname, sizeof(hostname))) {
-    return {};
+    hostname[0] = '\0';
   }
   return hostname;
 }

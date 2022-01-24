@@ -14,7 +14,7 @@ OrdersConstraints::OrdersConstraints(CurrencyCode cur1, CurrencyCode cur2, Durat
   if (!_ordersIdSet.empty()) {
     _orderConstraintsBitmap.set(OrderConstraintsBitmap::ConstraintType::kOrderId);
   }
-  auto now = std::chrono::system_clock::now();
+  auto now = Clock::now();
   if (minAge != Duration()) {
     _placedBefore = now - minAge;
     _orderConstraintsBitmap.set(OrderConstraintsBitmap::ConstraintType::kPlacedBefore);

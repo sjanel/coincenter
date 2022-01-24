@@ -12,8 +12,7 @@
 #include "timestring.hpp"
 #include "tradeinfo.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 namespace {
 
@@ -45,7 +44,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   if (binanceError(dataJson)) {
     int statusCode = dataJson["code"];  // "1100" for instance
     int nbRetries = 0;
-    Clock::duration sleepingTime = curlHandle.minDurationBetweenQueries();
+    Duration sleepingTime = curlHandle.minDurationBetweenQueries();
     while (++nbRetries < kNbOrderRequestsRetries && (statusCode == -2013 || statusCode == -2011)) {
       // Order does not exist : this may be possible when we query an order info too fast
       log::warn("Binance cannot find order yet");
@@ -162,7 +161,7 @@ ExchangePrivate::Orders BinancePrivate::queryOpenedOrders(const OrdersConstraint
     }
     int64_t millisecondsSinceEpoch = orderDetails["time"].get<int64_t>();
 
-    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -501,5 +500,4 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

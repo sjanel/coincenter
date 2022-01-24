@@ -12,8 +12,8 @@
 namespace cct {
 class TradeOptions {
  public:
-  static constexpr Clock::duration kDefaultTradeDuration = std::chrono::seconds(30);
-  static constexpr Clock::duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
+  static constexpr Duration kDefaultTradeDuration = std::chrono::seconds(30);
+  static constexpr Duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 
   constexpr TradeOptions() noexcept = default;
 
@@ -21,8 +21,8 @@ class TradeOptions {
 
   constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
 
-  TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Clock::duration dur,
-               Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType)
+  TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur, Duration minTimeBetweenPriceUpdates,
+               TradeType tradeType)
       : _maxTradeTime(dur),
         _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
         _timeoutAction(timeoutAction),
@@ -31,20 +31,20 @@ class TradeOptions {
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
-  TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-               Clock::duration dur, Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType);
+  TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
+               Duration minTimeBetweenPriceUpdates, TradeType tradeType);
 
   /// Constructs a TradeOptions based on a fixed absolute price.
   /// Multi trade is not supported in this case.
-  TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Clock::duration dur);
+  TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur);
 
   /// Constructs a TradeOptions based on a fixed relative price (relative from limit price).
-  TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-               Clock::duration dur, TradeType tradeType);
+  TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
+               TradeType tradeType);
 
-  constexpr Clock::duration maxTradeTime() const { return _maxTradeTime; }
+  constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 
-  constexpr Clock::duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
+  constexpr Duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
 
   constexpr TradePriceStrategy priceStrategy() const { return _priceStrategy; }
 
@@ -77,8 +77,8 @@ class TradeOptions {
  private:
   std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
 
-  Clock::duration _maxTradeTime = kDefaultTradeDuration;
-  Clock::duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
+  Duration _maxTradeTime = kDefaultTradeDuration;
+  Duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
   MonetaryAmount _fixedPrice;
   TradeRelativePrice _relativePrice = kTradeNoRelativePrice;
   TradePriceStrategy _priceStrategy = TradePriceStrategy::kMaker;

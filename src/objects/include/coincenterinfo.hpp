@@ -2,7 +2,6 @@
 
 #include <assert.h>
 
-#include <chrono>
 #include <map>
 #include <memory>
 #include <optional>
@@ -17,6 +16,7 @@
 #include "exchangeinfomap.hpp"
 #include "monitoringinfo.hpp"
 #include "runmodes.hpp"
+#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -25,7 +25,6 @@ class AbstractMetricGateway;
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
-  using Duration = std::chrono::high_resolution_clock::duration;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,

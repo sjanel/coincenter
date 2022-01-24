@@ -146,11 +146,6 @@ TEST_F(CommandLineOptionsParserTest, DurationOptionMicroseconds) {
   EXPECT_EQ(createOptions({"coincenter", "--opt5", "567889358us"}).timeOpt, std::chrono::microseconds(567889358));
 }
 
-TEST_F(CommandLineOptionsParserTest, DurationOptionNanoseconds) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "100000000000000  ns"}).timeOpt,
-            std::chrono::nanoseconds(100000000000000L));
-}
-
 TEST_F(CommandLineOptionsParserTest, DurationOptionLongTime) {
   EXPECT_EQ(createOptions({"coincenter", "--opt5", "3y9mon2w5min"}).timeOpt,
             std::chrono::years(3) + std::chrono::months(9) + std::chrono::weeks(2) + std::chrono::minutes(5));

@@ -33,7 +33,7 @@ class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest()
       : cryptowatchAPI(coincenterInfo),
-        fiatConverter(coincenterInfo),
+        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
         exchangePublic("kraken", fiatConverter, cryptowatchAPI, coincenterInfo),
         key("test", "testuser", "", "", ""),
         exchangePrivate(exchangePublic, coincenterInfo, key) {}

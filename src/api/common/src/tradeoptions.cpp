@@ -27,7 +27,7 @@ constexpr TradePriceStrategy StrategyFromStr(std::string_view priceStrategyStr) 
 }  // namespace
 
 TradeOptions::TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                           Clock::duration dur, Clock::duration minTimeBetweenPriceUpdates, TradeType tradeType)
+                           Duration dur, Duration minTimeBetweenPriceUpdates, TradeType tradeType)
     : _maxTradeTime(dur),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _priceStrategy(StrategyFromStr(priceStrategyStr)),
@@ -36,7 +36,7 @@ TradeOptions::TradeOptions(std::string_view priceStrategyStr, TradeTimeoutAction
       _type(tradeType) {}
 
 TradeOptions::TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                           Clock::duration dur)
+                           Duration dur)
     : _maxTradeTime(dur),
       _fixedPrice(fixedPrice),
       _timeoutAction(timeoutAction),
@@ -44,7 +44,7 @@ TradeOptions::TradeOptions(MonetaryAmount fixedPrice, TradeTimeoutAction timeout
       _type(TradeType::kSingleTrade) {}
 
 TradeOptions::TradeOptions(TradeRelativePrice relativePrice, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                           Clock::duration dur, TradeType tradeType)
+                           Duration dur, TradeType tradeType)
     : _maxTradeTime(dur),
       _relativePrice(relativePrice),
       _timeoutAction(timeoutAction),

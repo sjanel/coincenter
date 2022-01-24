@@ -4,8 +4,9 @@
 
 namespace cct {
 /// Alias some types to make it easier to use
-using Clock = std::chrono::high_resolution_clock;
-using TimePoint = std::chrono::time_point<Clock>;
+/// The main clock is system_clock as it is the only one guaranteed to provide conversions to Unix epoch time.
+using Clock = std::chrono::system_clock;
+using TimePoint = Clock::time_point;
 using Duration = Clock::duration;
 
 using TimeInS = std::chrono::seconds;

@@ -81,7 +81,7 @@ class BithumbPrivate : public ExchangePrivate {
 
   CurlHandle _curlHandle;
   MaxNbDecimalsUnitMap _maxNbDecimalsUnitMap;
-  Clock::duration _nbDecimalsRefreshTime;
+  Duration _nbDecimalsRefreshTime;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

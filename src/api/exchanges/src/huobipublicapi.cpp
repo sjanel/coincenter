@@ -14,8 +14,7 @@
 #include "monetaryamount.hpp"
 #include "toupperlower.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
@@ -350,8 +349,7 @@ HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrade
         TradeSide tradeSide =
             detail2["direction"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-        ret.emplace_back(tradeSide, amount, price,
-                         PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+        ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
       }
     }
   }
@@ -364,5 +362,4 @@ MonetaryAmount HuobiPublic::TickerFunc::operator()(Market m) {
   double lastPrice = result["data"].front()["price"].get<double>();
   return MonetaryAmount(lastPrice, m.quote());
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

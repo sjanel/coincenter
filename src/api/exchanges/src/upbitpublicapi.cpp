@@ -10,8 +10,7 @@
 #include "coincenterinfo.hpp"
 #include "fiatconverter.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 
 string GetMethodUrl(std::string_view endpoint) {
@@ -218,8 +217,7 @@ UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrade
     int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
     TradeSide tradeSide = detail["ask_bid"].get<std::string_view>() == "BID" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price,
-                     PublicTrade::TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;
@@ -231,5 +229,4 @@ MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
   return MonetaryAmount(lastPrice, m.quote());
 }
 
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

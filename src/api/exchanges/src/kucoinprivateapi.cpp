@@ -10,8 +10,7 @@
 #include "timestring.hpp"
 #include "toupperlower.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 namespace {
 
@@ -200,7 +199,7 @@ ExchangePrivate::Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints
 
     int64_t millisecondsSinceEpoch = orderDetails["createdAt"].get<int64_t>();
 
-    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -271,10 +270,9 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   std::string_view buyOrSell = fromCurrencyCode == m.base() ? "sell" : "buy";
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
 
-  CurlPostData params;
+  CurlPostData params = KucoinPublic::GetSymbolPostData(m);
   params.append("clientOid", Nonce_TimeSinceEpochInMs());
   params.append("side", buyOrSell);
-  params.append("symbol", m.assetsPairStrUpper('-'));
   params.append("type", strategyType);
   params.append("remark", "Placed by coincenter client");
   params.append("tradeType", "TRADE");
@@ -405,5 +403,4 @@ bool KucoinPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

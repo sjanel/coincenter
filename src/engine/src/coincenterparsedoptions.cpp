@@ -41,8 +41,8 @@ std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const Coinc
   }
   return std::make_pair(
       OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
-                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.ordersMinAge),
-                        std::chrono::duration_cast<OrdersConstraints::Duration>(cmdLineOptions.ordersMaxAge),
+                        std::chrono::duration_cast<Duration>(cmdLineOptions.ordersMinAge),
+                        std::chrono::duration_cast<Duration>(cmdLineOptions.ordersMaxAge),
                         OrdersConstraints::OrderIdSet(std::move(orderIds))),
       std::get<2>(currenciesPrivateExchangesTuple));
 }

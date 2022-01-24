@@ -66,7 +66,7 @@ class BithumbPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, Clock::duration minDurationBetweenQueries,
+    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
                        settings::RunMode runMode)
         : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
 

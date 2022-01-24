@@ -11,8 +11,7 @@
 #include "timestring.hpp"
 #include "toupperlower.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 namespace {
 
@@ -174,7 +173,7 @@ ExchangePrivate::Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints&
 
     int64_t millisecondsSinceEpoch = orderDetails["created-at"].get<int64_t>();
 
-    Order::TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -461,5 +460,4 @@ int HuobiPrivate::AccountIdFunc::operator()() {
   }
   throw exception("Unable to find a working Huobi account");
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

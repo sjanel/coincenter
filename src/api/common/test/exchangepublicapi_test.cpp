@@ -13,7 +13,7 @@ class ExchangePublicTest : public ::testing::Test {
  protected:
   ExchangePublicTest()
       : cryptowatchAPI(coincenterInfo),
-        fiatConverter(coincenterInfo),
+        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
         exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
 
   virtual void SetUp() {}

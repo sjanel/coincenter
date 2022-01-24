@@ -21,8 +21,6 @@ struct CoincenterCmdLineOptions;
 
 class CoincenterParsedOptions {
  public:
-  using Duration = Clock::duration;
-
   /// Parse arguments and store the overriden values in this object.
   CoincenterParsedOptions(int argc, const char *argv[]);
 

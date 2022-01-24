@@ -11,7 +11,7 @@ inline bool operator==(const RecentDeposit &lhs, const RecentDeposit &rhs) {
 using RecentDepositVector = RecentDeposit::RecentDepositVector;
 
 TEST(RecentDepositTestEmpty, Empty) {
-  RecentDeposit tested(MonetaryAmount("0"), Clock::now());
+  RecentDeposit tested(MonetaryAmount(0), Clock::now());
   RecentDepositVector emptyDeposits;
   EXPECT_EQ(tested.selectClosestRecentDeposit(emptyDeposits), nullptr);
 }
@@ -20,13 +20,13 @@ class RecentDepositTest : public ::testing::Test {
  protected:
   RecentDepositTest()
       : refTimePoint(Clock::now()),
-        recentDeposits{RecentDeposit(MonetaryAmount("37"), refTimePoint - std::chrono::seconds(2)),
+        recentDeposits{RecentDeposit(MonetaryAmount(37), refTimePoint - std::chrono::seconds(2)),
                        RecentDeposit(MonetaryAmount("37.5"), refTimePoint - std::chrono::hours(2)),
-                       RecentDeposit(MonetaryAmount("32"), refTimePoint - std::chrono::hours(8)),
-                       RecentDeposit(MonetaryAmount("32"), refTimePoint - std::chrono::hours(1)),
-                       RecentDeposit(MonetaryAmount("38"), refTimePoint - std::chrono::hours(12)),
-                       RecentDeposit(MonetaryAmount("38"), refTimePoint - std::chrono::hours(1)),
-                       RecentDeposit(MonetaryAmount("33"), refTimePoint - std::chrono::minutes(1)),
+                       RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(8)),
+                       RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(1)),
+                       RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(12)),
+                       RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(1)),
+                       RecentDeposit(MonetaryAmount(33), refTimePoint - std::chrono::minutes(1)),
                        RecentDeposit(MonetaryAmount("33.1"), refTimePoint - std::chrono::minutes(12)),
                        RecentDeposit(MonetaryAmount("27.5"), refTimePoint - std::chrono::days(4))} {}
 
@@ -54,7 +54,7 @@ TEST_F(RecentDepositTest, SelectClosestRecentDepositExactAmount1) {
 }
 
 TEST_F(RecentDepositTest, SelectClosestRecentDepositExactAmount2) {
-  testExpected(MonetaryAmount("32"), RecentDeposit(MonetaryAmount("32"), refTimePoint - std::chrono::hours(1)));
+  testExpected(MonetaryAmount(32), RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(1)));
 }
 
 TEST_F(RecentDepositTest, SelectClosestRecentDepositExactAmountButTooOld) { testNull(MonetaryAmount("27.5")); }
