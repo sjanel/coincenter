@@ -461,9 +461,9 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
 SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurlPostData checkWithdrawPostData{{"order_currency", currencyCode.str()}, {"payment_currency", "BTC"}};
-  static constexpr std::string_view kSearchGbs[] = {"3", "5"};
+  static constexpr int kSearchGbs[] = {3, 5};
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  for (std::string_view searchGb : kSearchGbs) {
+  for (int searchGb : kSearchGbs) {
     checkWithdrawPostData.set("searchGb", searchGb);
     json trxList =
         PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", _maxNbDecimalsUnitMap, checkWithdrawPostData);
@@ -480,7 +480,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       }
       MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
       if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
-        bool isWithdrawSuccess = searchGb == "5";
+        bool isWithdrawSuccess = searchGb == 5;
         return SentWithdrawInfo(initiatedWithdrawInfo.grossEmittedAmount() - realFee, isWithdrawSuccess);
       }
       // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
