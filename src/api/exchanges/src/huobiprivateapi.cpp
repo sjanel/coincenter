@@ -220,17 +220,17 @@ void HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) 
   for (const OrderId& orderId : orderIdSet) {
     csvOrderIdValues.append(orderId);
     csvOrderIdValues.push_back(CurlPostData::kArrayElemSepChar);
-    if (++nbOrderIdPerRequest == 50) {  // max 50 per request
+    static constexpr int kMaxNbOrdersPerRequest = 50;
+    if (++nbOrderIdPerRequest == kMaxNbOrdersPerRequest) {
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint,
-                   {{"order-ids", std::move(csvOrderIdValues)}});
+                   {{"order-ids", csvOrderIdValues}});
       csvOrderIdValues.clear();
       nbOrderIdPerRequest = 0;
     }
   }
 
   if (nbOrderIdPerRequest > 0) {
-    PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint,
-                 {{"order-ids", std::move(csvOrderIdValues)}});
+    PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint, {{"order-ids", csvOrderIdValues}});
   }
 }
 

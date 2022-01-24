@@ -286,7 +286,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   params.append("cancelAfter", std::chrono::duration_cast<TimeInS>(tradeInfo.options.maxTradeTime()).count() + 1);
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params));
-  placeOrderInfo.orderId = std::move(result["orderId"]);
+  placeOrderInfo.orderId = std::move(result["orderId"].get_ref<string&>());
   return placeOrderInfo;
 }
 
