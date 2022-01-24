@@ -110,7 +110,8 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   if (res.empty()) {
     throw exception("No deposit method found on Kraken for " + string(currencyCode.str()));
   }
-  const string method = res.front()["method"];
+  // Don't keep a view on 'method' value, we will override json data just below. We can just steal the string.
+  string method = std::move(res.front()["method"].get_ref<string&>());
   res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                      {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
@@ -135,10 +136,20 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       if (keyStr == "address") {
         address = valueStr;
       } else if (keyStr == "expiretm") {
-        std::string_view expireTmValue = valueStr.get<std::string_view>();
-        if (expireTmValue != "0") {
-          log::error("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
+        if (valueStr.is_number_integer()) {  // WARNING: when new = true, expiretm is not a string, but a number!
+          int64_t expireTmValue = valueStr.get<int64_t>();
+          if (expireTmValue != 0) {
+            log::warn("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
+          }
+        } else if (valueStr.is_string()) {
+          std::string_view expireTmValue = valueStr.get<std::string_view>();
+          if (expireTmValue != "0") {
+            log::warn("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
+          }
+        } else {
+          throw exception("Cannot retrieve 'expiretm' field of Kraken deposit address");
         }
+
       } else if (keyStr == "new") {
         // Never used, it's ok, safely pass this
       } else {
