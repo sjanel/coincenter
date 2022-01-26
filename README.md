@@ -1,4 +1,4 @@
-[![alpine_docker](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml)
+[![alpine](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml)
 [![macos](https://github.com/sjanel/coincenter/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/macos.yml)
 [![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
 [![windows](https://github.com/sjanel/coincenter/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/windows.yml)
@@ -11,7 +11,7 @@
 coincenter
 ==========
 
-Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface.
+Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single, ergonomic all in one tool with a unified interface.
 
 Main features:
 
@@ -48,7 +48,6 @@ Main features:
 - [About](#about)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Tests](#tests)
 - [Usage](#usage)
   - [General](#general)
     - [Logging](#logging)
@@ -92,9 +91,13 @@ Main features:
 
 # About
 
-This project is for **C++** and **crypto enthusiasts** providing an alternative to other crypto exchanges clients often written in higher level languages. 
-At the beginning, it started as a experimental project aiming to learn modern C++ (**C++17** and **C++20**), **cmake** and practice all aspects of large project development such as CI/CD, building and documentation.
-All suggestions to improve the project are welcome (should it be bug fixing, support of a new crypto exchange, feature addition / improvements or even technical aspects about the source code and best development practices).
+`coincenter` is not just another random implementation of some exchanges' REST API, it also provides a **higher abstraction** of each platform specificities by providing workarounds for the ones not implementing some queries (for instance, *withdrawal fees* is rarely accessible with the public endpoint, but `coincenter` can handle their query for all exchanges, by using screen scraping techniques of external resources when needed).
+
+Also, it **takes the user by the hand** for more complex queries, like **trades** and **withdraws**, working by default in **synchronized** mode until the operation is finished (*withdraw* will not finish until the funds are **received** and **available** at destination, *trade* will not finish until the opened order is either **matched / canceled**).
+
+Technically speaking, this project is for **C++ enthusiasts** providing an alternative to other crypto exchanges clients often written in higher level languages. It is an illustration of the elegance and possibilities of modern **C++** in an area where it is (sadly) barely chosen.
+
+Of course, all suggestions to improve the project are welcome (should it be bug fixing, support of a new crypto exchange, feature addition / improvements or even technical aspects about the source code and best development practices).
 
 # Installation
 
@@ -103,12 +106,6 @@ See [INSTALL.md](INSTALL.md)
 # Configuration
 
 See [CONFIG.md](CONFIG.md)
-
-# Tests
-
-Tests are compiled only if `coincenter` is built as a main project by default. You can set `cmake` flag `CCT_ENABLE_TESTS` to 1 or 0 to change this behavior.
-
-Note that exchanges API are also unit tested. If no private key is found, only public exchanges will be tested, private exchanges will be skipped and unit test will not fail.
 
 # Usage
 
