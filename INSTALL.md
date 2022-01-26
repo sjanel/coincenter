@@ -19,6 +19,7 @@
     - [With Docker](#with-docker)
       - [Build](#build-1)
       - [Run](#run)
+  - [Tests](#tests)
 
 </p>
 </details>
@@ -172,3 +173,9 @@ docker build --build-arg BUILD_MODE=Release -t local-coincenter .
 ```
 docker run -ti -e "TERM=xterm-256color" local-coincenter --help
 ```
+
+## Tests
+
+Tests are compiled only if `coincenter` is built as a main project by default. You can set `cmake` flag `CCT_ENABLE_TESTS` to 1 or 0 to change this behavior.
+
+Note that exchanges API are also unit tested. If no private key is found, only public exchanges will be tested, private exchanges will be skipped and unit test will not fail.
