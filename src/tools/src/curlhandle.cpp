@@ -105,15 +105,15 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
     // Add parameters as query string after the URL
     modifiedURL.push_back('?');
     modifiedURL.append(postData.str());
-    CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, "");
+    optsStr = "";
   } else {
     if (opts.isPostDataInJsonFormat() && !postData.empty()) {
       jsonBuf = postData.toJson().dump();
       optsStr = jsonBuf.c_str();
     }
-    CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
   }
 
+  CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
   CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
   CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.isFollowLocation());
