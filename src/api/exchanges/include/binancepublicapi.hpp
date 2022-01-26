@@ -69,25 +69,11 @@ class BinancePublic : public ExchangePublic {
 
   CurrencyExchangeFlatSet queryTradableCurrencies(const json& data) const;
 
-  class CommonInfo {
-   public:
-    static constexpr auto kNbBaseURLs = std::distance(std::begin(kURLBases), std::end(kURLBases));
-
+  struct CommonInfo {
     CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
-
-    /// Get the Binance base URL providing the lowest response time thanks to periodic pings.
-    std::string_view getBestBaseURL() { return _baseURLUpdater.get(); }
 
     const ExchangeInfo& _exchangeInfo;
     CurlHandle _curlHandle;
-
-   private:
-    struct BaseURLUpdater {
-      std::string_view operator()();
-
-      CurlHandle _curlHandles[kNbBaseURLs];
-    };
-    CachedResult<BaseURLUpdater> _baseURLUpdater;
   };
 
   struct ExchangeInfoFunc {
@@ -103,9 +89,11 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct GlobalInfosFunc {
+    static constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com/en/fee/cryptoFee";
+
     GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
                     settings::RunMode runMode)
-        : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
+        : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, minDurationBetweenQueries, runMode) {}
 
     json operator()();
 

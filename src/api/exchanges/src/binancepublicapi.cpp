@@ -21,15 +21,14 @@
 namespace cct::api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_view method,
-                 const CurlPostData& curlPostData = CurlPostData()) {
-  string url(baseURL);
-  url.append(method);
+json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
+  string endpoint(method);
   if (!curlPostData.empty()) {
-    url.push_back('?');
-    url.append(curlPostData.str());
+    endpoint.push_back('?');
+    endpoint.append(curlPostData.str());
   }
-  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
+  json dataJson =
+      json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
   auto foundErrorIt = dataJson.find("code");
   auto foundMsgIt = dataJson.find("msg");
   if (foundErrorIt != dataJson.end() && foundMsgIt != dataJson.end()) {
@@ -41,26 +40,6 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view baseURL, std::string_v
     throw exception(std::move(ex));
   }
   return dataJson;
-}
-
-Duration Ping(CurlHandle& curlHandle, std::string_view baseURL) {
-  TimePoint t1 = Clock::now();
-  json sysTime = PublicQuery(curlHandle, baseURL, "/api/v3/time");
-  TimePoint t2 = Clock::now();
-  Duration ping = t2 - t1;
-  if (!sysTime.contains("serverTime")) {
-    throw exception("Binance reply should contain system time information");
-  }
-  TimePoint binanceSysTimePoint(std::chrono::milliseconds(sysTime["serverTime"].get<uint64_t>()));
-  if (t1 < binanceSysTimePoint && binanceSysTimePoint < t2) {
-    log::debug("Your system clock is synchronized with Binance one");
-  } else {
-    log::error("Your system clock is not synchronized with Binance one");
-    log::error("You may experience issues with the recvWindow while discussing with Binance");
-  }
-  log::debug("Binance base URL {} ping is {} ms", baseURL,
-             std::chrono::duration_cast<std::chrono::milliseconds>(ping).count());
-  return ping;
 }
 
 template <class ExchangeInfoDataByMarket>
@@ -112,20 +91,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
                                       settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),
-      _curlHandle(coincenterInfo.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), runMode),
-      _baseURLUpdater(CachedResultOptions(std::chrono::hours(96))) {}
-
-std::string_view BinancePublic::CommonInfo::BaseURLUpdater::operator()() {
-  Duration pingDurations[kNbBaseURLs];
-  std::transform(std::execution::par, std::begin(_curlHandles), std::end(_curlHandles),
-                 std::begin(BinancePublic::kURLBases), std::begin(pingDurations), Ping);
-  int minPingDurationPos = static_cast<int>(std::min_element(std::begin(pingDurations), std::end(pingDurations)) -
-                                            std::begin(pingDurations));
-  std::string_view fastestBaseUrl = BinancePublic::kURLBases[minPingDurationPos];
-  log::info("Selecting Binance base URL {} (ping of {} ms)", fastestBaseUrl,
-            std::chrono::duration_cast<std::chrono::milliseconds>(pingDurations[minPingDurationPos]).count());
-  return fastestBaseUrl;
-}
+      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), runMode) {}
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;
@@ -186,7 +152,7 @@ ExchangePublic::MarketSet BinancePublic::MarketsFunc::operator()() {
 
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
-  json exchangeInfoData = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/exchangeInfo");
+  json exchangeInfoData = PublicQuery(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
   json& symbols = exchangeInfoData["symbols"];
   for (auto it = std::make_move_iterator(symbols.begin()), endIt = std::make_move_iterator(symbols.end()); it != endIt;
        ++it) {
@@ -213,7 +179,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  string s = _curlHandle.query("https://www.binance.com/en/fee/cryptoFee", CurlOptions(HttpRequestType::kGet));
+  string s = _curlHandle.query("", CurlOptions(HttpRequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
   static constexpr std::string_view appBegJson = "application/json\">";
   string::const_iterator first = s.begin() + s.find(appBegJson) + appBegJson.size();
@@ -406,7 +372,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
 ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
-  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/ticker/bookTicker");
+  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
   using BinanceAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
@@ -442,7 +408,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
     log::error("Invalid depth {}, default to {}", depth, *lb);
   }
   CurlPostData postData{{"symbol", m.assetsPairStrUpper()}, {"limit", *lb}};
-  json asksAndBids = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/depth", postData);
+  json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
@@ -461,15 +427,14 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/ticker/24hr",
-                            {{"symbol", m.assetsPairStrUpper()}});
+  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", m.assetsPairStrUpper()}});
   std::string_view last24hVol = result["volume"].get<std::string_view>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
-  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/trades",
-                            {{"symbol", m.assetsPairStrUpper()}, {"limit", nbTrades}});
+  json result =
+      PublicQuery(_commonInfo._curlHandle, "/api/v3/trades", {{"symbol", m.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
@@ -486,8 +451,7 @@ BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbT
 }
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_commonInfo._curlHandle, _commonInfo.getBestBaseURL(), "/api/v3/ticker/price",
-                            {{"symbol", m.assetsPairStrUpper()}});
+  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", m.assetsPairStrUpper()}});
   std::string_view lastPrice = result["price"].get<std::string_view>();
   return MonetaryAmount(lastPrice, m.quote());
 }

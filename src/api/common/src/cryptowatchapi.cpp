@@ -12,11 +12,8 @@
 namespace cct {
 namespace api {
 namespace {
-string Query(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  string methodUrl("https://api.cryptowat.ch");
-  methodUrl.push_back('/');
-  methodUrl.append(method);
-  return curlHandle.query(methodUrl,
+string Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
+  return curlHandle.query(endpoint,
                           CurlOptions(HttpRequestType::kGet, std::move(postData), "Cryptowatch C++ API Client"));
 }
 
@@ -34,12 +31,14 @@ const json& CollectResults(const json& dataJson) {
 File GetFiatCacheFile(std::string_view dataDir) {
   return File(dataDir, File::Type::kCache, "fiatcache.json", File::IfNotFound::kNoThrow);
 }
+
+constexpr std::string_view kCryptowatchBaseUrl = "https://api.cryptowat.ch";
 }  // namespace
 
 CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode, Duration fiatsUpdateFrequency,
                                bool loadFromFileCacheAtInit)
     : _coincenterInfo(config),
-      _curlHandle(config.metricGatewayPtr(), Duration::zero(), runMode),
+      _curlHandle(kCryptowatchBaseUrl, config.metricGatewayPtr(), Duration::zero(), runMode),
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), _curlHandle),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {
@@ -83,7 +82,7 @@ std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, 
 }
 
 CryptowatchAPI::Fiats CryptowatchAPI::FiatsFunc::operator()() {
-  json dataJson = json::parse(Query(_curlHandle, "assets"));
+  json dataJson = json::parse(Query(_curlHandle, "/assets"));
   const json& result = CollectResults(dataJson);
   Fiats fiats;
   for (const json& assetDetails : result) {
@@ -100,7 +99,7 @@ CryptowatchAPI::Fiats CryptowatchAPI::FiatsFunc::operator()() {
 
 CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc::operator()() {
   SupportedExchanges ret;
-  json dataJson = json::parse(Query(_curlHandle, "exchanges"));
+  json dataJson = json::parse(Query(_curlHandle, "/exchanges"));
   const json& result = CollectResults(dataJson);
   for (const json& exchange : result) {
     std::string_view exchangeNameLowerCase = exchange["symbol"].get<std::string_view>();
@@ -112,7 +111,7 @@ CryptowatchAPI::SupportedExchanges CryptowatchAPI::SupportedExchangesFunc::opera
 }
 
 json CryptowatchAPI::AllPricesFunc::operator()() {
-  json dataJson = json::parse(Query(_curlHandle, "markets/prices"));
+  json dataJson = json::parse(Query(_curlHandle, "/markets/prices"));
   return CollectResults(dataJson);
 }
 

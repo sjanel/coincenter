@@ -13,16 +13,9 @@
 namespace cct::api {
 namespace {
 
-string GetMethodUrl(std::string_view endpoint) {
-  string methodUrl(UpbitPublic::kUrlBase);
-  methodUrl.append("/v1/");
-  methodUrl.append(endpoint);
-  return methodUrl;
-}
-
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  json dataJson = json::parse(curlHandle.query(
-      GetMethodUrl(endpoint), CurlOptions(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent)));
+  json dataJson = json::parse(
+      curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent)));
   //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
   if (dataJson.contains("error")) {
     const long statusCode = dataJson["name"].get<long>();
@@ -36,7 +29,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
+                  config.getRunMode()),
       _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
                     _curlHandle, config.exchangeInfo(_name)),
       _tradableCurrenciesCache(
@@ -90,7 +84,7 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInf
 }
 
 ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "market/all", {{"isDetails", "true"}});
+  json result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
@@ -188,12 +182,12 @@ ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(in
     }
     marketsStr.append(ReverseMarketStr(m));
   }
-  return ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", marketsStr}}), depth);
+  return ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", marketsStr}}), depth);
 }
 
 MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
   ExchangePublic::MarketOrderBookMap marketOrderBookMap =
-      ParseOrderBooks(PublicQuery(_curlHandle, "orderbook", {{"markets", ReverseMarketStr(m)}}), depth);
+      ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(m)}}), depth);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");
@@ -202,13 +196,13 @@ MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
 }
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "candles/days", {{"count", 1}, {"market", ReverseMarketStr(m)}});
+  json result = PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(m)}});
   double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
   return MonetaryAmount(last24hVol, m.base());
 }
 
 UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
-  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(m)}});
+  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(m)}});
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
   for (const json& detail : result) {
@@ -224,7 +218,7 @@ UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrade
 }
 
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(m)}});
+  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(m)}});
   double lastPrice = result.front()["trade_price"].get<double>();
   return MonetaryAmount(lastPrice, m.quote());
 }

@@ -14,12 +14,12 @@ namespace cct::api {
 
 namespace {
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   CurlPostData&& postdata = CurlPostData()) {
   string strToSign(Nonce_TimeSinceEpochInMs());
   auto nonceSize = strToSign.size();
   strToSign.append(ToString(requestType));
-  strToSign.append(method);
+  strToSign.append(endpoint);
 
   CurlOptions::PostDataFormat postdataFormat = CurlOptions::PostDataFormat::kString;
   if (!postdata.empty()) {
@@ -42,10 +42,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.appendHttpHeader("KC-API-PASSPHRASE", passphrase);
   opts.appendHttpHeader("KC-API-KEY-VERSION", 2);
 
-  string url(KucoinPublic::kUrlBase);
-  url.append(method);
-
-  json dataJson = json::parse(curlHandle.query(url, std::move(opts)));
+  json dataJson = json::parse(curlHandle.query(endpoint, std::move(opts)));
   auto errCodeIt = dataJson.find("code");
   if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
     string errStr("Kucoin error ");
@@ -120,8 +117,8 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(config, kucoinPublic, apiKey),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(kucoinPublic.name()).minPrivateQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(KucoinPublic::kUrlBase, config.metricGatewayPtr(),
+                  config.exchangeInfo(kucoinPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}

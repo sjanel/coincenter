@@ -2,8 +2,11 @@
 
 #include <curl/curl.h>
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -15,6 +18,7 @@
 #include "cct_log.hpp"
 #include "cct_proxy.hpp"
 #include "curlmetrics.hpp"
+#include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
 #include "timehelpers.hpp"
 
@@ -48,11 +52,14 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
 }
 }  // namespace
 
-CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Duration minDurationBetweenQueries,
+CurlHandle::CurlHandle(const std::string_view *pBaseUrlStartPtr, int8_t nbBaseUrl,
+                       AbstractMetricGateway *pMetricGateway, Duration minDurationBetweenQueries,
                        settings::RunMode runMode)
     : _handle(curl_easy_init()),
       _pMetricGateway(pMetricGateway),
-      _minDurationBetweenQueries(minDurationBetweenQueries) {
+      _pBaseUrls(pBaseUrlStartPtr),
+      _minDurationBetweenQueries(minDurationBetweenQueries),
+      _responseTimeStatsPerBaseUrl(nbBaseUrl) {
   if (!_handle) {
     throw std::bad_alloc();
   }
@@ -70,38 +77,12 @@ CurlHandle::CurlHandle(AbstractMetricGateway *pMetricGateway, Duration minDurati
   }
 }
 
-CurlHandle::CurlHandle(CurlHandle &&o) noexcept
-    : _handle(std::exchange(o._handle, nullptr)),
-      _pMetricGateway(o._pMetricGateway),
-      _minDurationBetweenQueries(o._minDurationBetweenQueries),
-      _lastQueryTime(o._lastQueryTime) {}
-
-CurlHandle &CurlHandle::operator=(CurlHandle &&o) noexcept {
-  if (this != std::addressof(o)) {
-    _handle = std::exchange(o._handle, nullptr);
-    _pMetricGateway = o._pMetricGateway;
-    _minDurationBetweenQueries = o._minDurationBetweenQueries;
-    _lastQueryTime = o._lastQueryTime;
-  }
-  return *this;
-}
-
-void CurlHandle::checkHandleOrInit() {
-  if (!_handle) {
-    _handle = curl_easy_init();
-    if (!_handle) {
-      throw std::bad_alloc();
-    }
-  }
-}
-
 /**
  * Should function remove proxy for subsequent calls when option is off ? not useful for now
  */
 void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
   if (proxyUrl || reset) {
     log::info("Setting proxy to {} reset = {} ?", proxyUrl, reset);
-    checkHandleOrInit();
     CURL *curl = reinterpret_cast<CURL *>(_handle);
     CurlSetLogIfError(curl, CURLOPT_PROXY, proxyUrl);  // Default of nullptr
     CurlSetLogIfError(curl, CURLOPT_CAINFO, GetProxyCAInfo());
@@ -109,15 +90,16 @@ void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
   }
 }
 
-string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
-  checkHandleOrInit();
+string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   // General option settings.
   const CurlPostData &postData = opts.getPostData();
   const char *optsStr = postData.c_str();
 
-  string modifiedURL(url);
+  int8_t baseUrlPos = pickBestBaseUrlPos();
+  string modifiedURL(_pBaseUrls[baseUrlPos]);
+  modifiedURL.append(endpoint);
   string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
   if (opts.requestType() != HttpRequestType::kPost && !postData.empty()) {
     // Add parameters as query string after the URL
@@ -193,7 +175,7 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     }
   }
 
-  log::info("{} {}{}{}", ToString(opts.requestType()), url, optsStr[0] == '\0' ? "" : "?", optsStr);
+  log::info("{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr[0] == '\0' ? "" : "?", optsStr);
 
   // Actually make the query
   TimePoint t1 = Clock::now();
@@ -204,12 +186,15 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
     throw exception(std::move(ex));
   }
 
+  uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<std::chrono::milliseconds>(t1).count());
+  storeResponseTimePerBaseUrl(baseUrlPos, queryRTInMs);
+
   if (_pMetricGateway) {
     _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                          CurlMetrics::kNbRequestsKeys.find(opts.requestType())->second);
     _pMetricGateway->add(MetricType::kHistogram, MetricOperation::kObserve,
                          CurlMetrics::kRequestDurationKeys.find(opts.requestType())->second,
-                         static_cast<double>(GetTimeFrom<std::chrono::milliseconds>(t1).count()) / 1000);
+                         static_cast<double>(queryRTInMs));
   }
 
   if (log::get_level() <= log::level::trace) {
@@ -227,12 +212,12 @@ string CurlHandle::query(std::string_view url, const CurlOptions &opts) {
   return out;
 }
 
-string CurlHandle::urlEncode(std::string_view url) const {
+string CurlHandle::urlEncode(std::string_view data) const {
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;
 
-  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, url.data(), static_cast<int>(url.size())));
+  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, data.data(), static_cast<int>(data.size())));
   const char *encodedChars = uniquePtr.get();
   if (!encodedChars) {
     throw std::bad_alloc();
@@ -241,6 +226,70 @@ string CurlHandle::urlEncode(std::string_view url) const {
 }
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }
+
+int8_t CurlHandle::pickBestBaseUrlPos() const {
+  // First, pick the base url which has less than 'kNbRequestMinBeforeCompare' if any
+  static constexpr int kNbRequestMinBeforeCompare = 10;
+
+  auto minNbIt = std::ranges::find_if(_responseTimeStatsPerBaseUrl, [](ResponseTimeStats lhs) {
+    return lhs.nbRequestsDone < kNbRequestMinBeforeCompare;
+  });
+  if (minNbIt != _responseTimeStatsPerBaseUrl.end()) {
+    return minNbIt - _responseTimeStatsPerBaseUrl.begin();
+  }
+
+  // Then, let's compute a 'score' based on the average deviation and the avg response time and pick best url
+  FixedCapacityVector<uint32_t, kNbMaxBaseUrl> score(nbBaseUrl());
+  std::ranges::transform(_responseTimeStatsPerBaseUrl, score.begin(),
+                         [](ResponseTimeStats stats) { return stats.avgResponseTime + stats.avgDeviation; });
+  return std::ranges::min_element(score) - score.begin();
+}
+
+void CurlHandle::storeResponseTimePerBaseUrl(int8_t baseUrlPos, uint32_t responseTimeInMs) {
+  ResponseTimeStats &stats = _responseTimeStatsPerBaseUrl[baseUrlPos];
+
+  // Let's periodically reset the response time stats, to give chance to less used base URLs to be tested again after a
+  // while.
+  static constexpr int kMaxLastNbRequestsToConsider = 200;
+
+  ++stats.nbRequestsDone;
+
+  if (std::accumulate(_responseTimeStatsPerBaseUrl.begin(), _responseTimeStatsPerBaseUrl.end(), 0,
+                      [](int sum, ResponseTimeStats stats) { return sum + stats.nbRequestsDone; }) ==
+      kMaxLastNbRequestsToConsider) {
+    // Reset all stats to 0
+    _responseTimeStatsPerBaseUrl.assign(nbBaseUrl(), ResponseTimeStats());
+  } else {
+    // Update average
+    uint64_t sumResponseTime = static_cast<uint64_t>(stats.avgResponseTime) * (stats.nbRequestsDone - 1);
+    sumResponseTime += responseTimeInMs;
+    uint64_t newAverageResponseTime = sumResponseTime / stats.nbRequestsDone;
+    if (newAverageResponseTime > static_cast<uint64_t>(std::numeric_limits<decltype(stats.avgResponseTime)>::max())) {
+      log::warn("Cannot update accurately the new average response time {} because of overflow",
+                newAverageResponseTime);
+      stats.avgResponseTime = std::numeric_limits<decltype(stats.avgResponseTime)>::max();
+    } else {
+      stats.avgResponseTime = static_cast<decltype(stats.avgResponseTime)>(newAverageResponseTime);
+    }
+
+    // Update deviation
+    uint64_t sumDeviation = ipow(static_cast<uint64_t>(stats.avgDeviation), 2) * (stats.nbRequestsDone - 1);
+
+    sumDeviation += static_cast<uint64_t>(
+        ipow(static_cast<int64_t>(stats.avgResponseTime) - static_cast<int64_t>(responseTimeInMs), 2));
+    uint64_t newDeviationResponseTime = static_cast<uint64_t>(std::sqrt(sumDeviation / stats.nbRequestsDone));
+    if (newDeviationResponseTime > static_cast<uint64_t>(std::numeric_limits<decltype(stats.avgDeviation)>::max())) {
+      log::warn("Cannot update accurately the new deviation response time {} because of overflow",
+                newDeviationResponseTime);
+      stats.avgDeviation = std::numeric_limits<decltype(stats.avgDeviation)>::max();
+    } else {
+      stats.avgDeviation = static_cast<decltype(stats.avgDeviation)>(newDeviationResponseTime);
+    }
+  }
+
+  log::debug("Response time stats for '{}': Avg: {} ms, Dev: {} ms, Nb: {} (last: {} ms)", _pBaseUrls[baseUrlPos],
+             stats.avgResponseTime, stats.avgDeviation, stats.nbRequestsDone, responseTimeInMs);
+}
 
 CurlInitRAII::CurlInitRAII() {
   CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);

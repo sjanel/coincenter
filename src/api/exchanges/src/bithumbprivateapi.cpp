@@ -25,12 +25,6 @@
 namespace cct::api {
 namespace {
 
-string GetMethodURL(std::string_view endpoint) {
-  string methodUrl(BithumbPublic::kUrlBase);
-  methodUrl.append(endpoint);
-  return methodUrl;
-}
-
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
   string strData(endpoint);
@@ -59,7 +53,7 @@ json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::stri
   string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
 
   SetHttpHeaders(opts, apiKey, signature, strDataAndNoncePair.second);
-  return json::parse(curlHandle.query(GetMethodURL(endpoint), opts));
+  return json::parse(curlHandle.query(endpoint, opts));
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
@@ -187,8 +181,8 @@ File GetBithumbDecimalsCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(config, bithumbPublic, apiKey),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(bithumbPublic.name()).minPrivateQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(),
+                  config.exchangeInfo(bithumbPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _nbDecimalsRefreshTime(config.getAPICallUpdateFrequency(QueryTypeEnum::kNbDecimalsUnitsBithumb)),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),

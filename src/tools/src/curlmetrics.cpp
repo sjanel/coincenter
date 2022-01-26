@@ -18,7 +18,7 @@ MetricKeyPerRequestType CreateNbRequestsMetricKeys() {
 }
 
 MetricKeyPerRequestType CreateRequestDurationMetricKeys() {
-  MetricKey requestCountKey = CreateMetricKey("http_request_duration_seconds", "Duration of http requests in seconds");
+  MetricKey requestCountKey = CreateMetricKey("http_request_duration_ms", "Duration of http requests in milliseconds");
   return DefineTypes(requestCountKey);
 }
 
