@@ -35,7 +35,7 @@ class ExchangePrivate : public ExchangeBase {
   ExchangePrivate(const ExchangePrivate &) = delete;
   ExchangePrivate &operator=(const ExchangePrivate &) = delete;
 
-  ExchangePrivate(ExchangePrivate &&) = default;
+  ExchangePrivate(ExchangePrivate &&) noexcept = default;
   ExchangePrivate &operator=(ExchangePrivate &&) = delete;
 
   virtual ~ExchangePrivate() {}

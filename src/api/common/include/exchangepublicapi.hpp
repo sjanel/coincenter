@@ -40,7 +40,7 @@ class ExchangePublic : public ExchangeBase {
   ExchangePublic(const ExchangePublic &) = delete;
   ExchangePublic &operator=(const ExchangePublic &) = delete;
 
-  ExchangePublic(ExchangePublic &&) = default;
+  ExchangePublic(ExchangePublic &&) noexcept = default;
   ExchangePublic &operator=(ExchangePublic &&) = delete;
 
   virtual ~ExchangePublic() {}

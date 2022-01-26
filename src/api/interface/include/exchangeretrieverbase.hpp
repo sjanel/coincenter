@@ -22,7 +22,7 @@ class ExchangeRetrieverBase {
                          typename ExchangeT::ExchangePublic>;
   using PublicExchangesVec = FixedCapacityVector<ExchangePublicT *, kNbSupportedExchanges>;
 
-  ExchangeRetrieverBase() = default;
+  ExchangeRetrieverBase() noexcept = default;
 
   explicit ExchangeRetrieverBase(std::span<ExchangeT> exchanges) : _exchanges(exchanges) {}
 

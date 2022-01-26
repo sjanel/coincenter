@@ -47,7 +47,7 @@ class MarketOrderBook {
 
   using AmountPerPriceVec = SmallVector<AmountAtPrice, 8>;
 
-  MarketOrderBook() = default;
+  MarketOrderBook() noexcept = default;
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts

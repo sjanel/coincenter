@@ -7,7 +7,7 @@
 namespace cct {
 
 struct TradedAmounts {
-  TradedAmounts() = default;
+  TradedAmounts() noexcept(std::is_nothrow_default_constructible_v<MonetaryAmount>) = default;
 
   TradedAmounts(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode)
       : tradedFrom(0, fromCurrencyCode), tradedTo(0, toCurrencyCode) {}

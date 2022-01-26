@@ -37,7 +37,7 @@ class InitiatedWithdrawInfo {
 
 class SentWithdrawInfo {
  public:
-  SentWithdrawInfo() = default;
+  SentWithdrawInfo() noexcept(std::is_nothrow_default_constructible_v<MonetaryAmount>) = default;
 
   SentWithdrawInfo(MonetaryAmount netEmittedAmount, bool isWithdrawSent)
       : _netEmittedAmount(netEmittedAmount), _isWithdrawSent(isWithdrawSent) {}

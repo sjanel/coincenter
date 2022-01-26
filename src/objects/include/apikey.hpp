@@ -17,8 +17,8 @@ class APIKey {
 
   APIKey(const APIKey &) = delete;
   APIKey operator=(const APIKey &) = delete;
-  APIKey(APIKey &&) = default;
-  APIKey &operator=(APIKey &&) = default;
+  APIKey(APIKey &&) noexcept = default;
+  APIKey &operator=(APIKey &&) noexcept = default;
 
   std::string_view platform() const { return _platform; }
   std::string_view name() const { return _name; }

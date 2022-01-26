@@ -91,7 +91,7 @@ class CoincenterParsedOptions {
   /// Constructor to be called for programs extending the command line options of 'coincenter'.
   /// Indeed, it's not possible to call the constructor with argv as it will contain some unknown arguments from higher
   /// level program
-  CoincenterParsedOptions() = default;
+  CoincenterParsedOptions() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
   void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
 
