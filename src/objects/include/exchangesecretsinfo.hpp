@@ -7,7 +7,7 @@ class ExchangeSecretsInfo {
  public:
   /// Constructs a default Exchange secrets info.
   /// All private keys will be loaded and used.
-  ExchangeSecretsInfo() noexcept = default;
+  ExchangeSecretsInfo() noexcept(std::is_nothrow_default_constructible_v<PublicExchangeNames>) = default;
 
   /// Constructs a custom Exchange secrets info from a list of public exchange names.
   /// For each exchange in the list, private keys will not be loaded and used.

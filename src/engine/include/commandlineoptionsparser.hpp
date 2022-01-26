@@ -43,7 +43,7 @@ class CommandLineOptionalInt {
  public:
   enum class State : int8_t { kValueIsSet, kOptionPresent, kOptionNotPresent };
 
-  constexpr CommandLineOptionalInt() = default;
+  constexpr CommandLineOptionalInt() noexcept = default;
 
   constexpr CommandLineOptionalInt(State state) : _state(state) {}
 

@@ -15,7 +15,7 @@ using PublicExchangeNames = FixedCapacityVector<ExchangeName, kNbSupportedExchan
 
 class PrivateExchangeName {
  public:
-  PrivateExchangeName() = default;
+  PrivateExchangeName() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
   /// Constructs a PrivateExchangeName with a unique identifier name.
   /// Two cases:
