@@ -15,14 +15,14 @@ namespace cct::api {
 
 namespace {
 
-string BuildParamStr(HttpRequestType requestType, std::string_view method, std::string_view postDataStr) {
-  static constexpr std::string_view kUrlBaseWithoutHttps(
-      HuobiPublic::kUrlBase.begin() + std::string_view("https://").size(), HuobiPublic::kUrlBase.end());
+string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std::string_view method,
+                     std::string_view postDataStr) {
+  std::string_view urlBaseWithoutHttps(baseUrl.begin() + std::string_view("https://").size(), baseUrl.end());
 
   string paramsStr(ToString(requestType));
-  paramsStr.reserve(paramsStr.size() + kUrlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U);
+  paramsStr.reserve(paramsStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U);
   paramsStr.push_back('\n');
-  paramsStr.append(kUrlBaseWithoutHttps);
+  paramsStr.append(urlBaseWithoutHttps);
   paramsStr.push_back('\n');
   paramsStr.append(method);
   paramsStr.push_back('\n');
@@ -30,11 +30,8 @@ string BuildParamStr(HttpRequestType requestType, std::string_view method, std::
   return paramsStr;
 }
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   CurlPostData&& postdata = CurlPostData()) {
-  string url(HuobiPublic::kUrlBase);
-  url.append(method);
-
   Nonce nonce = Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S");
   string encodedNonce = curlHandle.urlEncode(nonce);
 
@@ -57,14 +54,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   }
 
   string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(
-      ssl::ShaType::kSha256, BuildParamStr(requestType, method, signaturePostdata.str()), apiKey.privateKey())));
+      ssl::ShaType::kSha256, BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostdata.str()),
+      apiKey.privateKey())));
 
   signaturePostdata.append("Signature", sig);
-  url.push_back('?');
-  url.append(signaturePostdata.str());
+
+  string method(endpoint);
+  method.push_back('?');
+  method.append(signaturePostdata.str());
 
   json ret = json::parse(
-      curlHandle.query(url, CurlOptions(requestType, std::move(postdata), HuobiPublic::kUserAgent, postDataFormat)));
+      curlHandle.query(method, CurlOptions(requestType, std::move(postdata), HuobiPublic::kUserAgent, postDataFormat)));
   auto statusIt = ret.find("status");
   if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
     string errMsg("Error: ");
@@ -84,8 +84,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(config, huobiPublic, apiKey),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(huobiPublic.name()).minPrivateQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(HuobiPublic::kURLBases, config.metricGatewayPtr(),
+                  config.exchangeInfo(huobiPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),

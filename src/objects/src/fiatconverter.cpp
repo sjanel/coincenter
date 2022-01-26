@@ -33,10 +33,12 @@ File GetRatesCacheFile(std::string_view dataDir) {
   return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfNotFound::kNoThrow);
 }
 
+static constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
-    : _curlHandle(coincenterInfo.metricGatewayPtr(), Duration::zero(), coincenterInfo.getRunMode()),
+    : _curlHandle(kFiatConverterBaseUrl, coincenterInfo.metricGatewayPtr(), Duration::zero(),
+                  coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
@@ -65,15 +67,14 @@ void FiatConverter::updateCacheFile() const {
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
-  string url = "https://free.currconv.com/api/v7/convert?";
-
   string qStr(m.assetsPairStrUpper('_'));
   CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
 
-  url.append(opts.getPostData().str());
+  string method = "/v7/convert?";
+  method.append(opts.getPostData().str());
   opts.getPostData().clear();
 
-  string dataStr = _curlHandle.query(url, std::move(opts));
+  string dataStr = _curlHandle.query(method, std::move(opts));
   json data = json::parse(dataStr, nullptr, false /* allow exceptions */);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {

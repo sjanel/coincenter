@@ -39,9 +39,6 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   string path(std::string_view(KrakenPublic::kUrlBase.end() - 2, KrakenPublic::kUrlBase.end()));  // Take /<Version>
   path.append(method);
 
-  string methodUrl(KrakenPublic::kUrlBase);
-  methodUrl.append(method);
-
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData), KrakenPublic::kUserAgent);
 
   Nonce nonce = Nonce_TimeSinceEpochInMs();
@@ -49,7 +46,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   opts.appendHttpHeader("API-Key", apiKey.key());
   opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
 
-  string ret = curlHandle.query(methodUrl, opts);
+  string ret = curlHandle.query(method, opts);
   json jsonData = json::parse(std::move(ret));
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
   while (jsonData.contains("error") && !jsonData["error"].empty() &&
@@ -63,7 +60,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     nonce = Nonce_TimeSinceEpochInMs();
     opts.getPostData().set("nonce", nonce);
     opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
-    ret = curlHandle.query(methodUrl, opts);
+    ret = curlHandle.query(method, opts);
     jsonData = json::parse(std::move(ret));
   }
   auto errorIt = jsonData.find("error");
@@ -84,7 +81,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(config, krakenPublic, apiKey),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(),
+                  config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}

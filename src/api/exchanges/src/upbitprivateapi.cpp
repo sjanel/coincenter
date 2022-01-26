@@ -27,7 +27,7 @@ namespace cct::api {
 namespace {
 
 template <class CurlPostDataT = CurlPostData>
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), UpbitPublic::kUserAgent);
 
@@ -50,10 +50,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
   opts.appendHttpHeader("Authorization", authStr);
 
-  string methodUrl(UpbitPublic::kUrlBase);
-  methodUrl.append(method);
-
-  json dataJson = json::parse(curlHandle.query(methodUrl, std::move(opts)));
+  json dataJson = json::parse(curlHandle.query(endpoint, std::move(opts)));
   if (throwIfError) {
     auto errorIt = dataJson.find("error");
     if (errorIt != dataJson.end()) {
@@ -72,8 +69,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
     : ExchangePrivate(config, upbitPublic, apiKey),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(),
+                  config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _apiKey, config.exchangeInfo(_exchangePublic.name()), upbitPublic._cryptowatchApi),

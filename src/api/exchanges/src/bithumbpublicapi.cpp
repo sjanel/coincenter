@@ -20,8 +20,7 @@ namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
-  string methodUrl(BithumbPublic::kUrlBase);
-  methodUrl.append(endpoint);
+  string methodUrl(endpoint);
   methodUrl.push_back('/');
   methodUrl.append(base.str());
   if (!quote.isNeutral()) {
@@ -57,7 +56,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           cryptowatchAPI, _curlHandle),
@@ -106,7 +106,7 @@ ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()()
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  string s = _curlHandle.query("https://www.bithumb.com/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
+  string s = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //

@@ -17,15 +17,9 @@
 namespace cct::api {
 namespace {
 
-string GetMethodUrl(std::string_view method) {
-  string methodUrl(KrakenPublic::kUrlBase);
-  methodUrl.append(method);
-  return methodUrl;
-}
-
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  json jsonData = json::parse(curlHandle.query(
-      GetMethodUrl(method), CurlOptions(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent)));
+  json jsonData = json::parse(
+      curlHandle.query(method, CurlOptions(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent)));
   auto errorIt = jsonData.find("error");
   if (errorIt != jsonData.end() && !errorIt->empty()) {
     std::string_view msg = errorIt->front().get<std::string_view>();
@@ -76,16 +70,22 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
   return File(dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfNotFound::kNoThrow);
 }
 
+constexpr std::string_view kUrlWithdrawFee1 = "https://withdrawalfees.com/exchanges/kraken";
+constexpr std::string_view kUrlWithdrawFee2 = "https://www.cryptofeesaver.com/exchanges/fees/kraken";
+
 }  // namespace
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo,
                                                      Duration minDurationBetweenQueries)
-    : _curlHandle1(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()),
-      _curlHandle2(coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries, coincenterInfo.getRunMode()) {}
+    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries,
+                   coincenterInfo.getRunMode()),
+      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries,
+                   coincenterInfo.getRunMode()) {}
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
           cryptowatchAPI, _curlHandle, config.exchangeInfo(_name)),
@@ -140,8 +140,7 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {
-  string withdrawalFeesCsv =
-      _curlHandle1.query("https://withdrawalfees.com/exchanges/kraken", CurlOptions(HttpRequestType::kGet));
+  string withdrawalFeesCsv = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
   static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
@@ -189,8 +188,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource2() {
-  string withdrawalFeesCsv =
-      _curlHandle2.query("https://www.cryptofeesaver.com/exchanges/fees/kraken", CurlOptions(HttpRequestType::kGet));
+  string withdrawalFeesCsv = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Kraken Deposit & Withdrawal fees</h2>";
 

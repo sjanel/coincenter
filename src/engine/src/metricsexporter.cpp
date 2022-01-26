@@ -132,8 +132,8 @@ void MetricsExporter::exportLastTradesMetrics(Market m, const LastTradesPerExcha
 
 void MetricsExporter::createSummariesAndHistograms() {
   for (const auto &[k, v] : CurlMetrics::kRequestDurationKeys) {
-    static constexpr double kRequestDurationBoundariesSeconds[] = {0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1};
-    _pMetricsGateway->createHistogram(v, kRequestDurationBoundariesSeconds);
+    static constexpr double kRequestDurationBoundariesMs[] = {5, 10, 20, 50, 100, 200, 500, 1000};
+    _pMetricsGateway->createHistogram(v, kRequestDurationBoundariesMs);
   }
 }
 }  // namespace cct

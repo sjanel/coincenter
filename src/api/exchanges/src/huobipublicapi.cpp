@@ -18,13 +18,12 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  string url(HuobiPublic::kUrlBase);
-  url.append(endpoint);
+  string method(endpoint);
   if (!curlPostData.empty()) {
-    url.push_back('?');
-    url.append(curlPostData.str());
+    method.push_back('?');
+    method.append(curlPostData.str());
   }
-  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
+  json dataJson = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
   bool returnData = dataJson.contains("data");
   if (!returnData && !dataJson.contains("tick")) {
     throw exception("No data for Huobi public endpoint");
@@ -38,7 +37,7 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                          api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle),

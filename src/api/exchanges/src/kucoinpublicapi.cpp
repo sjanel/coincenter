@@ -19,14 +19,12 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  string url(KucoinPublic::kUrlBase);
-  url.push_back('/');
-  url.append(endpoint);
+  string method(endpoint);
   if (!curlPostData.empty()) {
-    url.push_back('?');
-    url.append(curlPostData.str());
+    method.push_back('?');
+    method.append(curlPostData.str());
   }
-  json dataJson = json::parse(curlHandle.query(url, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
+  json dataJson = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
   if (dataJson.contains("code") && dataJson["code"].get<std::string_view>() != "200000") {
     throw exception("Error in Kucoin REST API response");
   }
@@ -39,7 +37,7 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                            api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kucoin", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
           _curlHandle, _coincenterInfo, cryptowatchAPI),
@@ -58,7 +56,7 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                    _curlHandle) {}
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "api/v1/currencies");
+  json result = PublicQuery(_curlHandle, "/api/v1/currencies");
   vector<CurrencyInfo> currencyInfos;
   currencyInfos.reserve(static_cast<uint32_t>(result.size()));
   for (const json& curDetail : result) {
@@ -91,7 +89,7 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
 }
 
 std::pair<ExchangePublic::MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "api/v1/symbols");
+  json result = PublicQuery(_curlHandle, "/api/v1/symbols");
 
   MarketSet markets;
   MarketInfoMap marketInfoMap;
@@ -160,7 +158,7 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
 ExchangePublic::MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  json data = PublicQuery(_curlHandle, "api/v1/market/allTickers");
+  json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
   for (const json& tickerDetails : data["ticker"]) {
     Market m(tickerDetails["symbol"].get<std::string_view>(), '-');
     if (!markets.contains(m)) {
@@ -223,7 +221,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
     log::warn("Invalid depth {}, default to {}", depth, *lb);
   }
 
-  string endpoint("api/v1/market/orderbook/level2_");
+  string endpoint("/api/v1/market/orderbook/level2_");
   AppendString(endpoint, *lb);
 
   json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(m));
@@ -278,12 +276,12 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
 }
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "api/v1/market/stats", GetSymbolPostData(m));
+  json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(m));
   return MonetaryAmount(result["vol"].get<std::string_view>(), m.base());
 }
 
 KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
-  json result = PublicQuery(_curlHandle, "api/v1/market/histories", GetSymbolPostData(m));
+  json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(m));
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
   for (const json& detail : result) {
@@ -300,7 +298,7 @@ KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
 }
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "api/v1/market/orderbook/level1", GetSymbolPostData(m));
+  json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(m));
   return MonetaryAmount(result["price"].get<std::string_view>(), m.quote());
 }
 }  // namespace cct::api

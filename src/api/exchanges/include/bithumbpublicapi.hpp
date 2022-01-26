@@ -66,9 +66,11 @@ class BithumbPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
+    static constexpr std::string_view kFeeUrl = "https://www.bithumb.com";
+
     WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
                        settings::RunMode runMode)
-        : _curlHandle(pMetricGateway, minDurationBetweenQueries, runMode) {}
+        : _curlHandle(kFeeUrl, pMetricGateway, minDurationBetweenQueries, runMode) {}
 
     WithdrawalFeeMap operator()();
 
