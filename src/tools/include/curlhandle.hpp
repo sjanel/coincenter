@@ -30,6 +30,9 @@ class CurlHandle {
   explicit CurlHandle(const std::string_view &singleBaseUrl)
       : CurlHandle(std::addressof(singleBaseUrl), 1, nullptr, Duration::zero(), settings::RunMode::kProd) {}
 
+  CurlHandle(const string &) = delete;
+  CurlHandle(const char *) = delete;
+
   /// Constructs a new CurlHandle with only one possible Base URL.
   /// Warning: given base URL should come from static storage
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
@@ -37,6 +40,9 @@ class CurlHandle {
   CurlHandle(const std::string_view &singleBaseUrl, AbstractMetricGateway *pMetricGateway,
              Duration minDurationBetweenQueries, settings::RunMode runMode)
       : CurlHandle(std::addressof(singleBaseUrl), 1, pMetricGateway, minDurationBetweenQueries, runMode) {}
+
+  CurlHandle(const string &, AbstractMetricGateway *, Duration, settings::RunMode) = delete;
+  CurlHandle(const char *, AbstractMetricGateway *, Duration, settings::RunMode) = delete;
 
   /// Constructs a new CurlHandle without any min duration between queries nor support
   /// for metric collection.
@@ -47,6 +53,9 @@ class CurlHandle {
   explicit CurlHandle(const std::string_view (&aBaseUrl)[N])
       : CurlHandle(aBaseUrl, N, nullptr, Duration::zero(), settings::RunMode::kProd) {}
 
+  CurlHandle(const string[]) = delete;
+  CurlHandle(const char *[]) = delete;
+
   /// Constructs a new CurlHandle.
   /// Warning: given base URL should come from static storage
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
@@ -55,6 +64,9 @@ class CurlHandle {
   CurlHandle(const std::string_view (&aBaseUrl)[N], AbstractMetricGateway *pMetricGateway,
              Duration minDurationBetweenQueries, settings::RunMode runMode)
       : CurlHandle(aBaseUrl, N, pMetricGateway, minDurationBetweenQueries, runMode) {}
+
+  CurlHandle(const string[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
+  CurlHandle(const char *[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
 
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;

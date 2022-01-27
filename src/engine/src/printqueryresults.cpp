@@ -161,7 +161,7 @@ void QueryResultPrinter::printLastTrades(Market m, const LastTradesPerExchange &
       for (int buyOrSell = 0; buyOrSell < 2; ++buyOrSell) {
         summary[buyOrSell].append(totalAmounts[buyOrSell].str());
         summary[buyOrSell].append(" (");
-        summary[buyOrSell].append(ToString(nb[buyOrSell]));
+        AppendString(summary[buyOrSell], nb[buyOrSell]);
         summary[buyOrSell].push_back(' ');
         summary[buyOrSell].append(buyOrSell == 0 ? "buys" : "sells");
         summary[buyOrSell].push_back(')');
