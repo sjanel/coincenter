@@ -8,8 +8,8 @@
 namespace cct {
 
 struct Opts {
-  string stringOpt;
-  std::optional<string> optStr;
+  std::string_view stringOpt;
+  std::optional<std::string_view> optStr;
   std::string_view sv;
   std::optional<std::string_view> optSV;
   int intOpt = 0;
@@ -86,11 +86,11 @@ TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty1) {
-  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "--opt1", "Opt1 value"}).optStr, string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4", "--opt1", "Opt1 value"}).optStr, std::string_view());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
-  EXPECT_EQ(*createOptions({"coincenter", "--opt4"}).optStr, string());
+  EXPECT_EQ(*createOptions({"coincenter", "--opt4"}).optStr, std::string_view());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) {

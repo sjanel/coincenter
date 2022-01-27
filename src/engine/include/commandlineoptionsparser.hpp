@@ -73,9 +73,8 @@ class CommandLineOptionalInt {
 template <class Opts>
 class CommandLineOptionsParser : private Opts {
  public:
-  using OptionType = std::variant<string Opts::*, std::optional<string> Opts::*, std::string_view Opts::*,
-                                  std::optional<std::string_view> Opts::*, int Opts::*, CommandLineOptionalInt Opts::*,
-                                  bool Opts::*, Duration Opts::*>;
+  using OptionType = std::variant<std::string_view Opts::*, std::optional<std::string_view> Opts::*, int Opts::*,
+                                  CommandLineOptionalInt Opts::*, bool Opts::*, Duration Opts::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, OptionType>;
 
   CommandLineOptionsParser(std::initializer_list<CommandLineOptionWithValue> init)
@@ -144,9 +143,8 @@ class CommandLineOptionsParser : private Opts {
     static constexpr int kMaxCharLine = 120;
     for (const auto& [opt, v] : _commandLineOptionsWithValues) {
       int lenRows = static_cast<int>(opt.fullName().size() + opt.valueDescription().size() + 1);
-      int shortNameSize = static_cast<int>(opt.shortName().size());
-      if (shortNameSize > 0) {
-        lenRows += shortNameSize + 2;
+      if (opt.hasShortName()) {
+        lenRows += 4;
       }
       lenFirstRows = std::max(lenFirstRows, lenRows);
     }
@@ -157,11 +155,9 @@ class CommandLineOptionsParser : private Opts {
         stream << std::endl << ' ' << currentGroup << std::endl;
       }
       string firstRowsStr(opt.fullName());
-      string shortName = opt.shortName();
-      if (!shortName.empty()) {
-        firstRowsStr.push_back(',');
-        firstRowsStr.push_back(' ');
-        firstRowsStr.append(shortName);
+      if (opt.hasShortName()) {
+        firstRowsStr.append(",  -");
+        firstRowsStr.push_back(opt.shortNameChar());
       }
       firstRowsStr.push_back(' ');
       firstRowsStr.append(opt.valueDescription());
@@ -290,22 +286,6 @@ class CommandLineOptionsParser : private Opts {
                            ++idx;
                          } else {
                            this->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
-                         }
-                       },
-                       [this, &idx, argv, &commandLineOption](string Opts::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = argv[idx + 1];
-                           ++idx;
-                         } else {
-                           ThrowExpectingValueException(commandLineOption);
-                         }
-                       },
-                       [this, &idx, argv](std::optional<string> Opts::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = argv[idx + 1];
-                           ++idx;
-                         } else {
-                           this->*arg = string();
                          }
                        },
                        [this, &idx, argv, &commandLineOption](std::string_view Opts::*arg) {
