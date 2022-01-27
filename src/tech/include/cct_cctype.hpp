@@ -15,9 +15,6 @@ inline bool isblank(char c) { return std::isblank(static_cast<unsigned char>(c))
 /// Safe std::isdigit version. See https://en.cppreference.com/w/cpp/string/byte/isdigit
 inline bool isdigit(char c) { return std::isdigit(static_cast<unsigned char>(c)); }
 
-/// Safe std::islower version. See https://en.cppreference.com/w/cpp/string/byte/islower
-inline bool islower(char c) { return std::islower(static_cast<unsigned char>(c)); }
-
 /// Safe std::isspace version. See https://en.cppreference.com/w/cpp/string/byte/isspace
 inline bool isspace(char c) { return std::isspace(static_cast<unsigned char>(c)); }
 
