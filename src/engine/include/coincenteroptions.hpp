@@ -63,8 +63,8 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kSimulationMode1 = "Activates simulation mode only (default: ";
   static constexpr std::string_view kSimulationMode2 = TradeOptions().isSimulation() ? "true" : "false";
   static constexpr std::string_view kSimulationMode3 =
-      "). For some exchanges, API can even be queried in this "
-      "mode to ensure deeper and more realistic trading inputs";
+      "). For some exchanges, exchange can be queried in this "
+      "mode to validate the trade input options.";
   static constexpr std::string_view kSimulationMode =
       JoinStringView_v<kSimulationMode1, kSimulationMode2, kSimulationMode3>;
 
@@ -269,9 +269,9 @@ struct CoincenterAllowedOptions {
         "Only select orders with given ID.\n"
         "One or several IDs can be given, should be comma separated."},
        &OptValueType::ordersIds},
-      {{{"Private queries", 35}, "--orders-min-age", "<time>", "Only select orders with given minimum age.\n"},
+      {{{"Private queries", 35}, "--orders-min-age", "<time>", "Only select orders with given minimum age."},
        &OptValueType::ordersMinAge},
-      {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age.\n"},
+      {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
        &OptValueType::ordersMaxAge},
       {{{"Trade", 40},
         "--trade",
@@ -312,10 +312,10 @@ struct CoincenterAllowedOptions {
         "--trade-price",
         "<n|amt cur>",
         "Manually select trade price, supporting two flavors.\n"
-        "  'n' (>= 0): price will be chosen according to the 'n'th price\n"
-        "              of the order book (limit price is for n = 0)\n"
-        "  'amt cur' : price will be fixed at given price\n"
-        "Order price will not be continuously updated.\n"
+        "  'n'      : price will be chosen according to the 'n'th price\n"
+        "             of the order book (0: limit price)\n"
+        "  'amt cur': price will be fixed at given price\n"
+        "             Order price will not be continuously updated.\n"
         "This option is not compatible with '--trade-strategy'"},
        &OptValueType::tradePrice},
       {{{"Trade", 43},
