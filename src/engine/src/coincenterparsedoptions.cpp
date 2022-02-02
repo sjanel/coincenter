@@ -7,6 +7,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenteroptions.hpp"
+#include "commandlineoptionsparser.hpp"
 #include "stringoptionparser.hpp"
 #include "tradedefinitions.hpp"
 
@@ -14,8 +15,9 @@ namespace cct {
 
 CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
     : dataDir(kDefaultDataDir), _programName(std::filesystem::path(argv[0]).filename().string()) {
-  auto parser = CreateCommandLineOptionsParser<CoincenterCmdLineOptions>();
+  using OptValueType = CoincenterCmdLineOptions;
 
+  auto parser = CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
   auto parsedOptions = parser.parse(argc, argv);
 
   if (parsedOptions.help || argc == 1) {

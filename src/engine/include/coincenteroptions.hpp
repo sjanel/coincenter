@@ -7,7 +7,6 @@
 
 #include "cct_const.hpp"
 #include "commandlineoption.hpp"
-#include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
 #include "static_string_view_helpers.hpp"
 #include "staticcommandlineoptioncheck.hpp"
@@ -377,10 +376,5 @@ struct CoincenterAllowedOptions {
   static_assert(StaticCommandLineOptionsCheck(std::to_array(value)),
                 "Duplicated option names (short hand flag / long name)");
 };
-
-template <class OptValueType>
-auto CreateCommandLineOptionsParser() {
-  return CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
-}
 
 }  // namespace cct
