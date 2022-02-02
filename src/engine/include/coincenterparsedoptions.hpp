@@ -1,11 +1,9 @@
 #pragma once
 
-#include <cstdint>
 #include <string_view>
 
 #include "cct_const.hpp"
 #include "cct_string.hpp"
-#include "commandlineoptionsparser.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "exchangesecretsinfo.hpp"
@@ -98,4 +96,5 @@ class CoincenterParsedOptions {
  private:
   string _programName;
 };
+
 }  // namespace cct
