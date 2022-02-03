@@ -56,22 +56,20 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           cryptowatchAPI, _curlHandle),
       _withdrawalFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(), config.getRunMode()),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          config.metricGatewayPtr(), exchangeInfo().minPublicQueryDelay(), config.getRunMode()),
       _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          config, _curlHandle, config.exchangeInfo(_name)),
-      _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault), config,
-          _curlHandle, config.exchangeInfo(_name)),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
+          _curlHandle, exchangeInfo()),
+      _orderbookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      config, _curlHandle, exchangeInfo()),
       _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
 
 ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {

@@ -5,7 +5,7 @@
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {

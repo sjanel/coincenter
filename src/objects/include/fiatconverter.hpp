@@ -9,7 +9,7 @@
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

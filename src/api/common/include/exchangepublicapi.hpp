@@ -141,20 +141,25 @@ class ExchangePublic : public ExchangeBase {
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
-  const ExchangeInfo &exchangeInfo() const { return _coincenterInfo.exchangeInfo(name()); }
+  const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
  protected:
   friend class ExchangePrivate;
 
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
                  const CoincenterInfo &coincenterInfo)
-      : _name(name), _fiatConverter(fiatConverter), _cryptowatchApi(cryptowatchApi), _coincenterInfo(coincenterInfo) {}
+      : _name(name),
+        _fiatConverter(fiatConverter),
+        _cryptowatchApi(cryptowatchApi),
+        _coincenterInfo(coincenterInfo),
+        _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
 
   string _name;
   CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
   CryptowatchAPI &_cryptowatchApi;
   const CoincenterInfo &_coincenterInfo;
+  const ExchangeInfo &_exchangeInfo;
 };
 }  // namespace api
 }  // namespace cct

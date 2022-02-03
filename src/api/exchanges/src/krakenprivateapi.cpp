@@ -13,7 +13,7 @@
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
 
@@ -81,10 +81,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(config, krakenPublic, apiKey),
-      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(),
-                  config.exchangeInfo("kraken").minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+                  config.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
 CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }

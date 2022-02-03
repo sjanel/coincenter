@@ -12,7 +12,7 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct::api {
 namespace {
@@ -84,29 +84,27 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coinc
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
-                  config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault), config,
-          cryptowatchAPI, _curlHandle, config.exchangeInfo(_name)),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
+          cryptowatchAPI, _curlHandle, exchangeInfo()),
       _withdrawalFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          config, config.exchangeInfo(_name).minPublicQueryDelay()),
-      _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    _tradableCurrenciesCache, config, _curlHandle, config.exchangeInfo(_name)),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), config,
+          exchangeInfo().minPublicQueryDelay()),
+      _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _tradableCurrenciesCache, config, _curlHandle, exchangeInfo()),
       _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
-      _orderBookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
-          _tradableCurrenciesCache, _marketsCache, _curlHandle),
-      _tickerCache(CachedResultOptions(std::min(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume),
-                                                config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice)),
+      _orderBookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      _tradableCurrenciesCache, _marketsCache, _curlHandle),
+      _tickerCache(CachedResultOptions(std::min(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume),
+                                                exchangeInfo().getAPICallUpdateFrequency(kLastPrice)),
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
   json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readJson();
   if (!data.empty()) {
-    Duration withdrawDataRefreshTime = config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees);
+    Duration withdrawDataRefreshTime = exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees);
     TimePoint lastUpdatedTime(std::chrono::seconds(data["timeepoch"].get<int64_t>()));
     if (Clock::now() < lastUpdatedTime + withdrawDataRefreshTime) {
       // we can reuse file data

@@ -4,7 +4,7 @@
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 namespace cct {
 

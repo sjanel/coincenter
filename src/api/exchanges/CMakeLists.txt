@@ -10,7 +10,6 @@ function(add_exchange_test name)
      jwt-cpp
      coincenter_apicommon
      coincenter_exchangeapi
-     coincenter_objects
    )
 endfunction()
 

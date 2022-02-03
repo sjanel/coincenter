@@ -3,8 +3,13 @@
 #include "cct_json.hpp"
 
 namespace cct {
-// clang-format off
-const json kDefaultConfig = R"(
+struct ExchangeInfoDefault {
+  static json Prod() {
+    // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
+    // fiasco' problem.
+
+    // clang-format off
+    static const json kProd = R"(
 {
   "asset": {
     "default": {
@@ -30,7 +35,18 @@ const json kDefaultConfig = R"(
     "default": {
       "minprivatequerydelayms": 1000,
       "minpublicquerydelayms": 1000,
-      "placesimulaterealorder": false
+      "placesimulaterealorder": false,
+      "updateFrequency": {
+        "currencies": "8h",
+        "markets": "8h",
+        "withdrawalFees": "4d",
+        "allOrderbooks": "3s",
+        "orderbook": "1s",
+        "tradedVolume": "1h",
+        "lastPrice": "1s",
+        "depositWallet": "1min",
+        "nbDecimals": "4d"
+      }
     },
     "exchange": {
       "binance": {
@@ -96,7 +112,59 @@ const json kDefaultConfig = R"(
       "validatedepositaddressesinfile": true
     }
   }
+} 
+)"_json;
+    // clang-format on
+    return kProd;
+  }
+
+  /// ExchangeInfos for tests only. Some tests rely on provided values so changing them may make them fail.
+  static json Test() {
+    // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
+    // fiasco' problem.
+
+    // clang-format off
+    static const json kTest = R"(
+{
+  "asset": {
+    "default": {
+      "allexclude": "AUD,CAD",
+      "withdrawexclude": "BTC,EUR"
+    }
+  },
+  "query": {
+    "default": {
+      "minprivatequerydelayms": 1055,
+      "minpublicquerydelayms": 1236,
+      "placesimulaterealorder": false,
+      "updateFrequency": {
+        "currencies": "8h",
+        "markets": "8h",
+        "withdrawalFees": "4d",
+        "allOrderbooks": "3s",
+        "orderbook": "1s",
+        "tradedVolume": "1h",
+        "lastPrice": "1s",
+        "depositWallet": "1min",
+        "nbDecimals": "4d"
+      }
+    }
+  },
+  "tradefees": {
+    "default": {
+      "maker": "0.16",
+      "taker": "0.26"
+    }
+  },
+  "withdraw": {
+    "default": {
+      "validatedepositaddressesinfile": false
+    }
+  }
 }
 )"_json;
-// clang-format on
+    // clang-format on
+    return kTest;
+  }
+};
 }  // namespace cct

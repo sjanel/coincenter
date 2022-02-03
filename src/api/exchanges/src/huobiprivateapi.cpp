@@ -88,7 +88,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPubli
                   config.exchangeInfo(huobiPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {

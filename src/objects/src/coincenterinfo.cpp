@@ -5,6 +5,7 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "exchangeinfoparser.hpp"
 
 #ifdef CCT_ENABLE_PROMETHEUS
 #include "prometheusmetricgateway.hpp"
@@ -46,23 +47,13 @@ using MetricGatewayType = VoidMetricGateway;
 
 }  // namespace
 
-CoincenterInfo::CoincenterInfo(settings::RunMode runMode, std::string_view dataDir,
+CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguration& loadConfiguration,
                                const MonitoringInfo& monitoringInfo, bool printQueryResults)
-    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(dataDir)),
-      _stableCoinsMap(ComputeStableCoinsMap(dataDir)),
-      // TODO: make below values configurable, with default value in a json file
-      _apiCallUpdateFrequencyMap{{api::QueryTypeEnum::kCurrencies, std::chrono::hours(8)},
-                                 {api::QueryTypeEnum::kMarkets, std::chrono::hours(8)},
-                                 {api::QueryTypeEnum::kWithdrawalFees, std::chrono::hours(96)},
-                                 {api::QueryTypeEnum::kAllOrderBooks, std::chrono::seconds(3)},
-                                 {api::QueryTypeEnum::kOrderBook, std::chrono::seconds(1)},
-                                 {api::QueryTypeEnum::kTradedVolume, std::chrono::hours(1)},
-                                 {api::QueryTypeEnum::kLastPrice, std::chrono::seconds(1)},
-                                 {api::QueryTypeEnum::kDepositWallet, std::chrono::hours(12)},
-                                 {api::QueryTypeEnum::kNbDecimalsUnitsBithumb, std::chrono::hours(96)}},
-      _exchangeInfoMap(ComputeExchangeInfoMap(dataDir)),
+    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(loadConfiguration.dataDir())),
+      _stableCoinsMap(ComputeStableCoinsMap(loadConfiguration.dataDir())),
+      _exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
       _runMode(runMode),
-      _dataDir(dataDir),
+      _dataDir(loadConfiguration.dataDir()),
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),

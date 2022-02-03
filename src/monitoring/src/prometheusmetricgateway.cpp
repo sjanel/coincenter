@@ -10,7 +10,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 #ifdef _MSC_VER
 #include <Winsock2.h>

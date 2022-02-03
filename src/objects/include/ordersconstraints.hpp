@@ -7,7 +7,7 @@
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "orderid.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

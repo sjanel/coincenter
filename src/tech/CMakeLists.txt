@@ -11,6 +11,14 @@ target_link_libraries(coincenter_tech PUBLIC spdlog)
 target_include_directories(coincenter_tech PUBLIC include)
 
 add_unit_test(
+    cachedresult_test
+    src/cachedresultvault.cpp
+    test/cachedresult_test.cpp
+    LIBRARIES
+    spdlog
+)
+
+add_unit_test(
     cct_exception_test
     test/cct_exception_test.cpp
     DEFINITIONS
@@ -23,24 +31,9 @@ add_unit_test(
 )
 
 add_unit_test(
-    mathhelpers_test
-    test/mathhelpers_test.cpp
-)
-
-add_unit_test(
-    timestring_test
-    src/timestring.cpp
-    test/timestring_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
-
-add_unit_test(
-    cachedresult_test
-    src/cachedresultvault.cpp
-    test/cachedresult_test.cpp
-    LIBRARIES
-    spdlog
+    durationstring_test
+    src/durationstring.cpp
+    test/durationstring_test.cpp
 )
 
 add_unit_test(
@@ -50,6 +43,11 @@ add_unit_test(
     CCT_DISABLE_SPDLOG
     LIBRARIES
     nlohmann_json::nlohmann_json
+)
+
+add_unit_test(
+    mathhelpers_test
+    test/mathhelpers_test.cpp
 )
 
 add_unit_test(
@@ -73,6 +71,14 @@ add_unit_test(
 )
 
 add_unit_test(
-    timehelpers_test
-    test/timehelpers_test.cpp
+    timedef_test
+    test/timedef_test.cpp
+)
+
+add_unit_test(
+    timestring_test
+    src/timestring.cpp
+    test/timestring_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )

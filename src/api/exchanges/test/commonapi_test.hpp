@@ -15,31 +15,15 @@
 
 namespace cct {
 
-/// For API tests, standard exchange config is not loaded, we have a dummy one instead.
-ExchangeInfoMap ComputeExchangeInfoMap(std::string_view) {
-  ExchangeInfoMap ret;
-  for (std::string_view exchangeName : kSupportedExchanges) {
-    static constexpr bool kValidateDepositAddressesInFile = false;
-    static constexpr bool kPlaceSimulatedRealOrder = false;
-    static constexpr int kMinPublicDelayMs = 1000;
-    static constexpr int kMinPrivateDelayMs = 1000;
-
-    ret.insert_or_assign(
-        string(exchangeName),
-        ExchangeInfo(exchangeName, "0.1", "0.1", std::span<const CurrencyCode>(), std::span<const CurrencyCode>(),
-                     kMinPublicDelayMs, kMinPrivateDelayMs, kValidateDepositAddressesInFile, kPlaceSimulatedRealOrder));
-  }
-  return ret;
-}
-
 namespace api {
 
 template <class PublicExchangeT, class PrivateExchangeT>
 class TestAPI {
  public:
   TestAPI()
-      : coincenterInfo(settings::RunMode::kProd, kDefaultDataDir),
-        coincenterTestInfo(settings::RunMode::kTest),
+      : loadConfig(kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest),
+        coincenterInfo(settings::RunMode::kProd, loadConfig),
+        coincenterTestInfo(settings::RunMode::kTest, loadConfig),
         apiKeysProvider(coincenterInfo.dataDir(), coincenterInfo.getRunMode()),
         apiTestKeysProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
         fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
@@ -58,6 +42,7 @@ class TestAPI {
                 std::mt19937{std::random_device{}()});
   }
 
+  LoadConfiguration loadConfig;
   CoincenterInfo coincenterInfo;
   CoincenterInfo coincenterTestInfo;
   APIKeysProvider apiKeysProvider;

@@ -18,7 +18,7 @@
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradeoptions.hpp"
 
@@ -181,11 +181,11 @@ File GetBithumbDecimalsCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(config, bithumbPublic, apiKey),
-      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(),
-                  config.exchangeInfo(bithumbPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
-      _nbDecimalsRefreshTime(config.getAPICallUpdateFrequency(QueryTypeEnum::kNbDecimalsUnitsBithumb)),
+      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+                  config.getRunMode()),
+      _nbDecimalsRefreshTime(exchangeInfo().getAPICallUpdateFrequency(kNbDecimalsUnitsBithumb)),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, _maxNbDecimalsUnitMap, bithumbPublic) {
   json data = GetBithumbDecimalsCache(_coincenterInfo.dataDir()).readJson();
   _maxNbDecimalsUnitMap.reserve(data.size());

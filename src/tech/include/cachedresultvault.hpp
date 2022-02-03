@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cct_vector.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class CachedResultBase {

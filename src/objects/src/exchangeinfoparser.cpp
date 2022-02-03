@@ -4,31 +4,40 @@
 #include "cct_file.hpp"
 #include "cct_log.hpp"
 #include "exchangeinfodefault.hpp"
+#include "loadconfiguration.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 
-json LoadExchangeConfigData(std::string_view dataDir, std::span<const std::string_view> allOptionNames) {
-  static constexpr std::string_view kExchangeConfigFileName = "exchangeconfig.json";
-  File exchangeConfigFile(dataDir, File::Type::kStatic, kExchangeConfigFileName, File::IfNotFound::kNoThrow);
-  json jsonData = exchangeConfigFile.readJson();
-  if (jsonData.empty()) {
-    // Create a file with default values. User can then update them as he wishes.
-    log::warn("No {} file found. Creating a default one which can be updated freely at your convenience",
-              kExchangeConfigFileName);
-    jsonData = kDefaultConfig;
-    exchangeConfigFile.write(jsonData);
-  } else {
-    for (std::string_view optName : allOptionNames) {
-      if (!jsonData.contains(optName)) {  // basic backward compatibility
-        log::error("Invalid {} file (or wrong format), using default configuration instead", kExchangeConfigFileName);
-        log::error("Follow same pattern as default one in 'kDefaultConfig'");
-        jsonData = kDefaultConfig;
-        break;
+json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
+  switch (loadConfiguration.exchangeConfigFileType()) {
+    case LoadConfiguration::ExchangeConfigFileType::kProd: {
+      std::string_view filename = loadConfiguration.exchangeConfigFile();
+      File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfNotFound::kNoThrow);
+      json jsonData = ExchangeInfoDefault::Prod();
+      json exchangeConfigJsonData = exchangeConfigFile.readJson();
+      if (exchangeConfigJsonData.empty()) {
+        // Create a file with default values. User can then update them as he wishes.
+        log::warn("No {} file found. Creating a default one which can be updated freely at your convenience", filename);
+        exchangeConfigFile.write(jsonData);
+      } else {
+        for (std::string_view optName : {TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr,
+                                         TopLevelOption::kTradeFeesOptionStr, TopLevelOption::kWithdrawOptionStr}) {
+          if (!exchangeConfigJsonData.contains(optName)) {  // basic backward compatibility
+            log::error("Invalid {} file (or wrong format), using default configuration instead", filename);
+            log::error("Follow same pattern as default one in 'kDefaultConfig'");
+            return jsonData;
+          }
+        }
+        jsonData.update(exchangeConfigJsonData);
       }
+      return jsonData;
     }
+    case LoadConfiguration::ExchangeConfigFileType::kTest:
+      return ExchangeInfoDefault::Test();
+    default:
+      unreachable();
   }
-
-  return jsonData;
 }
 
 TopLevelOption::TopLevelOption(const json& jsonData, std::string_view optionName) {
@@ -40,6 +49,42 @@ TopLevelOption::TopLevelOption(const json& jsonData, std::string_view optionName
   _hasDefaultPart = _defaultPart != optIt->end();
   _exchangePart = optIt->find("exchange");
   _hasExchangePart = _exchangePart != optIt->end();
+}
+
+TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::string_view subOptionName1,
+                                           std::string_view subOptionName2) const {
+  if (_hasExchangePart) {
+    JsonIt it = _exchangePart->find(exchangeName);
+    if (it != _exchangePart->end()) {
+      JsonIt optValIt = it->find(subOptionName1);
+      if (optValIt != it->end()) {
+        if (subOptionName2 != "") {
+          JsonIt optValIt2 = optValIt->find(subOptionName2);
+          if (optValIt2 != optValIt->end()) {
+            return optValIt2;
+          }
+        } else {
+          // Exchange defined the option, it has priority, return it
+          return optValIt;
+        }
+      }
+    }
+  }
+  if (_hasDefaultPart) {
+    JsonIt optValIt = _defaultPart->find(subOptionName1);
+    if (optValIt != _defaultPart->end()) {
+      if (subOptionName2 != "") {
+        JsonIt optValIt2 = optValIt->find(subOptionName2);
+        if (optValIt2 != optValIt->end()) {
+          return optValIt2;
+        }
+      } else {
+        // Exchange defined the option, it has priority, return it
+        return optValIt;
+      }
+    }
+  }
+  throw exception("Should not happen - Cannot find option value");
 }
 
 string TopLevelOption::getCSVUnion(std::string_view exchangeName, std::string_view subOptionName) const {

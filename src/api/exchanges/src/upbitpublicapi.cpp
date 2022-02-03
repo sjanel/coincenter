@@ -29,26 +29,24 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), config.exchangeInfo(_name).minPublicQueryDelay(),
-                  config.getRunMode()),
-      _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    _curlHandle, config.exchangeInfo(_name)),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPublicQueryDelay(), config.getRunMode()),
+      _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _curlHandle, exchangeInfo()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _marketsCache),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          _marketsCache),
       _withdrawalFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
-          _name, config.dataDir()),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), _name,
+          config.dataDir()),
       _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          _curlHandle, config.exchangeInfo(_name), _marketsCache),
-      _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
-          _curlHandle, config.exchangeInfo(_name)),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          _curlHandle, exchangeInfo(), _marketsCache),
+      _orderbookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      _curlHandle, exchangeInfo()),
       _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
 MonetaryAmount UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {

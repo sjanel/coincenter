@@ -68,19 +68,19 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(config, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, config.metricGatewayPtr(),
-                  config.exchangeInfo(binancePublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(BinancePublic::kURLBases, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _apiKey, binancePublic),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          _apiKey, binancePublic),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic),
       _allWithdrawFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic),
       _withdrawFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {

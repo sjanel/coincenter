@@ -15,9 +15,9 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "commandlineoption.hpp"
+#include "durationstring.hpp"
 #include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
-#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -198,7 +198,7 @@ class CommandLineOptionsParser : private OptValueType {
                        },
                        [this, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
                          if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = CommandLineOption::ParseDuration(argv[idx + 1]);
+                           this->*arg = ParseDuration(argv[idx + 1]);
                            ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);

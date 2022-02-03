@@ -3,7 +3,7 @@
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

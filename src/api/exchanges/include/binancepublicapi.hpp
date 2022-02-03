@@ -8,7 +8,7 @@
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct {

@@ -117,10 +117,10 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(config, kucoinPublic, apiKey),
-      _curlHandle(KucoinPublic::kUrlBase, config.metricGatewayPtr(),
-                  config.exchangeInfo(kucoinPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(KucoinPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+                  config.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}
 
 BalancePortfolio KucoinPrivate::queryAccountBalance(CurrencyCode equiCurrency) {

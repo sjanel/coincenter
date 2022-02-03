@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cct_string.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
