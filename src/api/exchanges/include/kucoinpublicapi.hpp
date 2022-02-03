@@ -171,7 +171,6 @@ class KucoinPublic : public ExchangePublic {
 
   static CurlPostData GetSymbolPostData(Market m) { return CurlPostData{{"symbol", m.assetsPairStrUpper('-')}}; }
 
-  const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;

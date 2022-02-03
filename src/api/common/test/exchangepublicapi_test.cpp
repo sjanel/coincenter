@@ -14,7 +14,7 @@ class ExchangePublicTest : public ::testing::Test {
   ExchangePublicTest()
       : cryptowatchAPI(coincenterInfo),
         fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
-        exchangePublic("test", fiatConverter, cryptowatchAPI, coincenterInfo) {}
+        exchangePublic("kraken", fiatConverter, cryptowatchAPI, coincenterInfo) {}
 
   virtual void SetUp() {}
   virtual void TearDown() {}

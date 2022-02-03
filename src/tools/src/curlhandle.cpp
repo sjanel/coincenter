@@ -20,7 +20,7 @@
 #include "curlmetrics.hpp"
 #include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

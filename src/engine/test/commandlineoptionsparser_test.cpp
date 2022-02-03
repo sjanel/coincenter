@@ -5,7 +5,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_vector.hpp"
 #include "staticcommandlineoptioncheck.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -130,46 +130,13 @@ TEST_F(CommandLineOptionsParserTest, OptIntUnset) {
   EXPECT_FALSE(optInt.isPresent());
 }
 
-TEST_F(CommandLineOptionsParserTest, DurationOptionDays) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "37d"}).timeOpt, std::chrono::days(37));
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionHours) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "12h"}).timeOpt, std::chrono::hours(12));
-}
-
 TEST_F(CommandLineOptionsParserTest, DurationOptionMinutesSpace) {
   EXPECT_EQ(createOptions({"coincenter", "--opt5", "1h45 min"}).timeOpt,
             std::chrono::hours(1) + std::chrono::minutes(45));
 }
 
-TEST_F(CommandLineOptionsParserTest, DurationOptionSeconds) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "3s"}).timeOpt, std::chrono::seconds(3));
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionMilliseconds) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "1500 ms"}).timeOpt, std::chrono::milliseconds(1500));
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionMicroseconds) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "567889358us"}).timeOpt, std::chrono::microseconds(567889358));
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionLongTime) {
-  EXPECT_EQ(createOptions({"coincenter", "--opt5", "3y9mon2w5min"}).timeOpt,
-            std::chrono::years(3) + std::chrono::months(9) + std::chrono::weeks(2) + std::chrono::minutes(5));
-}
-
 TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit1) {
   EXPECT_THROW(createOptions({"coincenter", "--opt5", "13z"}), invalid_argument);
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit2) {
-  EXPECT_THROW(createOptions({"coincenter", "--opt5", "42"}), invalid_argument);
-}
-
-TEST_F(CommandLineOptionsParserTest, DurationOptionThrowOnlyIntegral) {
-  EXPECT_THROW(createOptions({"coincenter", "--opt5", "2.5min"}), invalid_argument);
 }
 
 struct OptsExt : public Opts {

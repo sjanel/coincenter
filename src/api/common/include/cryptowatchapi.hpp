@@ -11,7 +11,7 @@
 #include "exchangebase.hpp"
 #include "market.hpp"
 #include "runmodes.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class CoincenterInfo;

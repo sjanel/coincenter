@@ -39,20 +39,17 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle),
-      _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
+          CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle),
+      _marketsCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _curlHandle, _exchangeInfo),
       _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
+          CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
           _marketsCache, _curlHandle, _exchangeInfo),
-      _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
-          _curlHandle, _exchangeInfo),
+      _orderbookCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      _curlHandle, _exchangeInfo),
       _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
-          _curlHandle),
-      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+          CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault), _curlHandle),
+      _tickerCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "/v2/reference/currencies"); }

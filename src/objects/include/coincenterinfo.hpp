@@ -1,22 +1,18 @@
 #pragma once
 
-#include <assert.h>
-
-#include <map>
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
 
-#include "apiquerytypeenum.hpp"
-#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangeinfomap.hpp"
+#include "loadconfiguration.hpp"
 #include "monitoringinfo.hpp"
 #include "runmodes.hpp"
-#include "timehelpers.hpp"
 
 namespace cct {
 
@@ -28,7 +24,7 @@ class CoincenterInfo {
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
-                          std::string_view dataDir = kDefaultDataDir,
+                          const LoadConfiguration &loadConfiguration = LoadConfiguration(),
                           const MonitoringInfo &monitoringInfo = MonitoringInfo(), bool printQueryResults = true);
 
   CoincenterInfo(const CoincenterInfo &) = delete;
@@ -40,7 +36,7 @@ class CoincenterInfo {
   ~CoincenterInfo();
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.
-  /// Use this function to standardize names (will return BTC for the latter)
+  /// Use this function to standardize names
   CurrencyCode standardizeCurrencyCode(CurrencyCode currencyCode) const;
 
   CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const {
@@ -54,12 +50,6 @@ class CoincenterInfo {
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
     auto it = _exchangeInfoMap.find(exchangeName);
     assert(it != _exchangeInfoMap.end() && "Unable to find this exchange in the configuration file");
-    return it->second;
-  }
-
-  Duration getAPICallUpdateFrequency(api::QueryTypeEnum apiCallType) const {
-    auto it = _apiCallUpdateFrequencyMap.find(apiCallType);
-    assert(it != _apiCallUpdateFrequencyMap.end());
     return it->second;
   }
 
@@ -79,11 +69,8 @@ class CoincenterInfo {
   bool printQueryResults() const { return _printQueryResults; }
 
  private:
-  using APICallUpdateFrequencyMap = std::unordered_map<api::QueryTypeEnum, Duration>;
-
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
   StableCoinsMap _stableCoinsMap;
-  APICallUpdateFrequencyMap _apiCallUpdateFrequencyMap;
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
   string _dataDir;

@@ -36,23 +36,21 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
                            api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kucoin", fiatConverter, cryptowatchAPI, config),
-      _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPublicQueryDelay(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _coincenterInfo, cryptowatchAPI),
-      _marketsCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kMarkets), _cachedResultVault),
-                    _curlHandle, _exchangeInfo),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          _coincenterInfo, cryptowatchAPI),
+      _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _curlHandle, exchangeInfo()),
       _allOrderBooksCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kAllOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle, _exchangeInfo),
-      _orderbookCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kOrderBook), _cachedResultVault),
-          _curlHandle, _exchangeInfo),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          _marketsCache, _curlHandle, exchangeInfo()),
+      _orderbookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      _curlHandle, exchangeInfo()),
       _tradedVolumeCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {

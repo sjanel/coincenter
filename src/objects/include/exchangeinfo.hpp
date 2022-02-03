@@ -3,10 +3,11 @@
 #include <span>
 #include <string_view>
 
+#include "apiquerytypeenum.hpp"
 #include "cct_flatset.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class ExchangeInfo {
@@ -15,10 +16,15 @@ class ExchangeInfo {
 
   enum struct FeeType { kMaker, kTaker };
 
+  struct APIUpdateFrequencies {
+    Duration freq[api::kQueryTypeMax];
+  };
+
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                std::span<const CurrencyCode> excludedAllCurrencies,
-               std::span<const CurrencyCode> excludedCurrenciesWithdraw, int minPublicQueryDelayMs,
-               int minPrivateQueryDelayMs, bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
+               std::span<const CurrencyCode> excludedCurrenciesWithdraw,
+               const APIUpdateFrequencies &apiUpdateFrequencies, int minPublicQueryDelayMs, int minPrivateQueryDelayMs,
+               bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -31,6 +37,12 @@ class ExchangeInfo {
   /// In other words, convert a gross amount into a net amount with maker fees
   MonetaryAmount applyFee(MonetaryAmount m, FeeType feeType) const {
     return m * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
+  }
+
+  const APIUpdateFrequencies &apiUpdateFrequencies() const { return _apiUpdateFrequencies; }
+
+  Duration getAPICallUpdateFrequency(api::QueryType apiCallType) const {
+    return _apiUpdateFrequencies.freq[apiCallType];
   }
 
   /// Get the minimum time between two public api queries
@@ -50,6 +62,7 @@ class ExchangeInfo {
  private:
   CurrencySet _excludedCurrenciesAll;         // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;  // Currencies unavailable for withdrawals
+  APIUpdateFrequencies _apiUpdateFrequencies;
   Duration _minPublicQueryDelay, _minPrivateQueryDelay;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;

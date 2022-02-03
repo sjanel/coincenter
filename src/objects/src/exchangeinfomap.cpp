@@ -1,6 +1,7 @@
 #include "exchangeinfomap.hpp"
 
 #include "cct_const.hpp"
+#include "durationstring.hpp"
 #include "exchangeinfoparser.hpp"
 
 namespace cct {
@@ -21,13 +22,8 @@ vector<CurrencyCode> ConvertToVector(std::string_view csvAssets) {
 }
 }  // namespace
 
-ExchangeInfoMap ComputeExchangeInfoMap(std::string_view dataDir) {
+ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
   ExchangeInfoMap map;
-
-  constexpr std::string_view kAllTopLevelOptionNames[] = {
-      TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr, TopLevelOption::kTradeFeesOptionStr,
-      TopLevelOption::kWithdrawOptionStr};
-  json jsonData = LoadExchangeConfigData(dataDir, kAllTopLevelOptionNames);
 
   TopLevelOption assetTopLevelOption(jsonData, TopLevelOption::kAssetsOptionStr);
   TopLevelOption queryTopLevelOption(jsonData, TopLevelOption::kQueryOptionStr);
@@ -35,24 +31,37 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view dataDir) {
   TopLevelOption withdrawTopLevelOption(jsonData, TopLevelOption::kWithdrawOptionStr);
 
   for (std::string_view exchangeName : kSupportedExchanges) {
-    std::string_view makerStr = tradeFeesTopLevelOption.getBottomUp<std::string_view>(exchangeName, "maker", "0");
-    std::string_view takerStr = tradeFeesTopLevelOption.getBottomUp<std::string_view>(exchangeName, "taker", "0");
+    std::string_view makerStr = tradeFeesTopLevelOption.getStr(exchangeName, "maker");
+    std::string_view takerStr = tradeFeesTopLevelOption.getStr(exchangeName, "taker");
 
     auto excludedAllCurrencies = ConvertToVector(assetTopLevelOption.getCSVUnion(exchangeName, "allexclude"));
     auto excludedCurrenciesWithdraw = ConvertToVector(assetTopLevelOption.getCSVUnion(exchangeName, "withdrawexclude"));
 
-    int minPublicQueryDelayMs = queryTopLevelOption.getBottomUp<int>(exchangeName, "minpublicquerydelayms", 2000);
-    int minPrivateQueryDelayMs = queryTopLevelOption.getBottomUp<int>(exchangeName, "minprivatequerydelayms", 2000);
+    int minPublicQueryDelayMs = queryTopLevelOption.getInt(exchangeName, "minpublicquerydelayms");
+    int minPrivateQueryDelayMs = queryTopLevelOption.getInt(exchangeName, "minprivatequerydelayms");
+
+    static constexpr std::string_view kUpdFreqOptStr = "updateFrequency";
+
+    ExchangeInfo::APIUpdateFrequencies apiUpdateFrequencies{
+        {ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "currencies")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "markets")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "withdrawalFees")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "allOrderbooks")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "orderbook")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "tradedVolume")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "lastPrice")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "depositWallet")),
+         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "nbDecimals"))}};
 
     bool validateDepositAddressesInFile =
-        withdrawTopLevelOption.getBottomUp<bool>(exchangeName, "validatedepositaddressesinfile", true);
-    bool placeSimulatedRealOrder = queryTopLevelOption.getBottomUp<bool>(exchangeName, "placesimulaterealorder");
+        withdrawTopLevelOption.getBool(exchangeName, "validatedepositaddressesinfile");
+    bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placesimulaterealorder");
 
-    map.insert_or_assign(string(exchangeName),
-                         ExchangeInfo(exchangeName, makerStr, takerStr, excludedAllCurrencies,
-                                      excludedCurrenciesWithdraw, minPublicQueryDelayMs, minPrivateQueryDelayMs,
-                                      validateDepositAddressesInFile, placeSimulatedRealOrder));
-  }
+    map.insert_or_assign(
+        exchangeName, ExchangeInfo(exchangeName, makerStr, takerStr, excludedAllCurrencies, excludedCurrenciesWithdraw,
+                                   std::move(apiUpdateFrequencies), minPublicQueryDelayMs, minPrivateQueryDelayMs,
+                                   validateDepositAddressesInFile, placeSimulatedRealOrder));
+  }  // namespace cct
 
   return map;
 }

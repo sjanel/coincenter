@@ -1,17 +1,18 @@
 #pragma once
 
-namespace cct {
-namespace api {
-enum class QueryTypeEnum {
-  kCurrencies,
-  kMarkets,
-  kWithdrawalFees,
-  kAllOrderBooks,
-  kOrderBook,
-  kTradedVolume,
-  kLastPrice,
-  kDepositWallet,
-  kNbDecimalsUnitsBithumb
-};
-}
-}  // namespace cct
+namespace cct::api {
+enum QueryType : int8_t {};
+
+static constexpr QueryType kCurrencies{0};
+static constexpr QueryType kMarkets{1};
+static constexpr QueryType kWithdrawalFees{2};
+static constexpr QueryType kAllOrderBooks{3};
+static constexpr QueryType kOrderBook{4};
+static constexpr QueryType kTradedVolume{5};
+static constexpr QueryType kLastPrice{6};
+static constexpr QueryType kDepositWallet{7};
+static constexpr QueryType kNbDecimalsUnitsBithumb{8};
+
+static constexpr QueryType kQueryTypeMax{9};
+
+}  // namespace cct::api

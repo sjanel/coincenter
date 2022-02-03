@@ -3,11 +3,13 @@
 #include <map>
 #include <string_view>
 
-#include "cct_string.hpp"
+#include "cct_json.hpp"
 #include "exchangeinfo.hpp"
 
 namespace cct {
-using ExchangeInfoMap = std::map<string, ExchangeInfo, std::less<>>;
+/// Map containing the ExchangeInfo per exchange name.
+/// string_view is possible as key because exchange names are compile time std::string_view
+using ExchangeInfoMap = std::map<std::string_view, ExchangeInfo, std::less<>>;
 
-ExchangeInfoMap ComputeExchangeInfoMap(std::string_view dataDir);
+ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData);
 }  // namespace cct

@@ -1,4 +1,4 @@
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 #include <gtest/gtest.h>
 
@@ -6,9 +6,8 @@
 #include <thread>
 
 namespace cct {
-namespace time {
 
-TEST(TimeHelper, Basic) {
+TEST(TimeDefinitions, Basic) {
   TimePoint t1 = Clock::now();
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
   TimePoint t2 = Clock::now();
@@ -19,5 +18,4 @@ TEST(TimeHelper, Basic) {
   EXPECT_GE(res.count(), 2000);
 }
 
-}  // namespace time
 }  // namespace cct

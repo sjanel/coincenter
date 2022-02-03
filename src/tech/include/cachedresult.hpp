@@ -8,7 +8,7 @@
 
 #include "cachedresultvault.hpp"
 #include "cct_hash.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

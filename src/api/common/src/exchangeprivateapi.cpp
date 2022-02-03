@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 namespace api {

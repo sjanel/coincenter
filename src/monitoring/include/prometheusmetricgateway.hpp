@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "abstractmetricgateway.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 /// Registry to collect stats
 namespace cct {

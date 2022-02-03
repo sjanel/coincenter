@@ -8,7 +8,7 @@
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "stringhelpers.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -35,8 +35,6 @@ class CommandLineOption {
   constexpr CommandLineOption(GroupNameAndPrio optionGroupName, const char* fullName, const char* valueDescription,
                               StringViewType description)
       : CommandLineOption(optionGroupName, fullName, '\0', valueDescription, description) {}
-
-  constexpr static Duration ParseDuration(std::string_view durationStr);
 
   constexpr bool matches(std::string_view optName) const;
 
@@ -97,73 +95,6 @@ struct AllowedCommandLineOptionsBase {
                    Duration OptValueType::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, CommandLineOptionType>;
 };
-
-constexpr Duration CommandLineOption::ParseDuration(std::string_view durationStr) {
-  if (durationStr.find('.') != std::string_view::npos) {
-    throw invalid_argument("Time amount should be an integral value");
-  }
-
-  constexpr char kInvalidTimeDurationUnitMsg[] =
-      "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
-      "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
-
-  const std::size_t s = durationStr.size();
-  Duration ret{};
-  for (std::size_t p = 0; p < s;) {
-    std::size_t intFirst = p;
-
-    while (p < s && isdigit(durationStr[p])) {
-      ++p;
-    }
-    if (intFirst == p) {
-      throw invalid_argument(kInvalidTimeDurationUnitMsg);
-    }
-    std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + p);
-    int64_t timeAmount = FromString<int64_t>(timeAmountStr);
-
-    while (p < s && isspace(durationStr[p])) {
-      ++p;
-    }
-    std::size_t unitFirst = p;
-    while (p < s && islower(durationStr[p])) {
-      ++p;
-    }
-    if (unitFirst == p) {
-      throw invalid_argument(kInvalidTimeDurationUnitMsg);
-    }
-    std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + p);
-    if (timeUnitStr == "y") {
-      ret += std::chrono::years(timeAmount);
-    } else if (timeUnitStr == "mon") {
-      ret += std::chrono::months(timeAmount);
-    } else if (timeUnitStr == "w") {
-      ret += std::chrono::weeks(timeAmount);
-    } else if (timeUnitStr == "d") {
-      ret += std::chrono::days(timeAmount);
-    } else if (timeUnitStr == "h") {
-      ret += std::chrono::hours(timeAmount);
-    } else if (timeUnitStr == "min") {
-      ret += std::chrono::minutes(timeAmount);
-    } else if (timeUnitStr == "s") {
-      ret += std::chrono::seconds(timeAmount);
-    } else if (timeUnitStr == "ms") {
-      ret += std::chrono::milliseconds(timeAmount);
-    } else if (timeUnitStr == "us") {
-      ret += std::chrono::microseconds(timeAmount);
-    } else {
-      throw invalid_argument(kInvalidTimeDurationUnitMsg);
-    }
-    while (p < s && isspace(durationStr[p])) {
-      ++p;
-    }
-  }
-
-  if (ret == Duration()) {
-    throw invalid_argument(kInvalidTimeDurationUnitMsg);
-  }
-
-  return ret;
-}
 
 constexpr bool CommandLineOption::matches(std::string_view optName) const {
   if (optName.size() == 2 && optName.front() == '-' && optName.back() == _shortName) {

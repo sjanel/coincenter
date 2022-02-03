@@ -7,7 +7,7 @@
 #include "cct_string.hpp"
 #include "curloptions.hpp"
 #include "runmodes.hpp"
-#include "timehelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

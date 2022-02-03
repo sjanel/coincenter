@@ -69,16 +69,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
     : ExchangePrivate(config, upbitPublic, apiKey),
-      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(),
-                  config.exchangeInfo(upbitPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kCurrencies), _cachedResultVault),
-          _curlHandle, _apiKey, config.exchangeInfo(_exchangePublic.name()), upbitPublic._cryptowatchApi),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          _apiKey, exchangeInfo(), upbitPublic._cryptowatchApi),
       _depositWalletsCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
       _withdrawalFeesCache(
-          CachedResultOptions(config.getAPICallUpdateFrequency(QueryTypeEnum::kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
