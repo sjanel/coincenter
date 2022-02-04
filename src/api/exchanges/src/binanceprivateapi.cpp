@@ -68,7 +68,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(config, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, config.metricGatewayPtr(), exchangeInfo().minPrivateQueryDelay(),
+      _curlHandle(BinancePublic::kURLBases, config.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,

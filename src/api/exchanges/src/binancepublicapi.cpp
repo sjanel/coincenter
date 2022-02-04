@@ -69,8 +69,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                          _commonInfo),
       _globalInfosCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
-          coincenterInfo.metricGatewayPtr(), _commonInfo._exchangeInfo.minPublicQueryDelay(),
-          coincenterInfo.getRunMode()),
+          coincenterInfo.metricGatewayPtr(), _commonInfo._exchangeInfo.publicAPIRate(), coincenterInfo.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
       _allOrderBooksCache(
@@ -87,7 +86,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
                                       settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),
-      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), runMode) {}
+      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), _exchangeInfo.publicAPIRate(), runMode) {}
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;

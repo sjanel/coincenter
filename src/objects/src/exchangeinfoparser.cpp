@@ -84,18 +84,30 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
       }
     }
   }
-  throw exception("Should not happen - Cannot find option value");
+  string err("Unable to find option '");
+  err.append(subOptionName1);
+  if (!subOptionName2.empty()) {
+    err.push_back('.');
+    err.append(subOptionName2);
+  }
+  err.append("' for ");
+  err.append(exchangeName);
+  err.append(". Make sure schema is up to date compared to exchangeinfodefault.hpp");
+  throw exception(std::move(err));
 }
 
-string TopLevelOption::getCSVUnion(std::string_view exchangeName, std::string_view subOptionName) const {
+string TopLevelOption::getStrUnion(std::string_view exchangeName, std::string_view subOptionName) const {
   string ret;
   const auto appendFunc = [&](JsonIt it) {
     JsonIt optValIt = it->find(subOptionName);
     if (optValIt != it->end()) {
-      if (!ret.empty()) {
-        ret.push_back(',');
+      assert(optValIt->is_array());
+      for (const auto& val : *optValIt) {
+        if (!ret.empty()) {
+          ret.push_back(',');
+        }
+        ret.append(val.get<std::string_view>());
       }
-      ret.append(optValIt->get<std::string_view>());
     }
   };
   if (_hasExchangePart) {

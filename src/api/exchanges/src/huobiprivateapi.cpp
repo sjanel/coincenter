@@ -85,7 +85,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(config, huobiPublic, apiKey),
       _curlHandle(HuobiPublic::kURLBases, config.metricGatewayPtr(),
-                  config.exchangeInfo(huobiPublic.name()).minPrivateQueryDelay(), config.getRunMode()),
+                  config.exchangeInfo(huobiPublic.name()).privateAPIRate(), config.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

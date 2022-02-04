@@ -13,29 +13,45 @@ struct ExchangeInfoDefault {
 {
   "asset": {
     "default": {
-      "allexclude": "",
-      "withdrawexclude": "BTC,AUD,CAD,GBP,JPY,USD,CHF"
+      "allExclude": [],
+      "withdrawExclude": [
+        "BTC",
+        "AUD",
+        "CAD",
+        "GBP",
+        "JPY",
+        "USD",
+        "CHF"
+      ]
     },
     "exchange": {
       "binance": {
-        "allexclude": "BQX"
+        "allExclude": [
+          "BQX"
+        ]
       },
       "bithumb": {
-        "withdrawexclude": "KRW"
+        "withdrawExclude": [
+          "KRW"
+        ]
       },
       "kraken": {
-        "withdrawexclude": "KFEE"
+        "withdrawExclude": [
+          "KFEE"
+        ]
       },
       "upbit": {
-        "withdrawexclude": "KRW"
+        "withdrawExclude": [
+          "KRW"
+        ]
       }
     }
   },
   "query": {
     "default": {
-      "minprivatequerydelayms": 1000,
-      "minpublicquerydelayms": 1000,
-      "placesimulaterealorder": false,
+      "privateAPIRate": "1000ms",
+      "publicAPIRate": "1000ms",
+      "placeSimulateRealOrder": false,
       "updateFrequency": {
         "currencies": "8h",
         "markets": "8h",
@@ -50,28 +66,28 @@ struct ExchangeInfoDefault {
     },
     "exchange": {
       "binance": {
-        "minprivatequerydelayms": 150,
-        "minpublicquerydelayms": 55
+        "privateAPIRate": "150ms",
+        "publicAPIRate": "55ms"
       },
       "bithumb": {
-        "minprivatequerydelayms": 8,
-        "minpublicquerydelayms": 8
+        "privateAPIRate": "8ms",
+        "publicAPIRate": "8ms"
       },
       "huobi": {
-        "minprivatequerydelayms": 100,
-        "minpublicquerydelayms": 50
+        "privateAPIRate": "100ms",
+        "publicAPIRate": "50ms"
       },
       "kraken": {
-        "minprivatequerydelayms": 2000,
-        "minpublicquerydelayms": 500
+        "privateAPIRate": "2000ms",
+        "publicAPIRate": "500ms"
       },
       "kucoin": {
-        "minprivatequerydelayms": 200,
-        "minpublicquerydelayms": 200
+        "privateAPIRate": "200ms",
+        "publicAPIRate": "200ms"
       },
       "upbit": {
-        "minprivatequerydelayms": 350,
-        "minpublicquerydelayms": 100
+        "privateAPIRate": "350ms",
+        "publicAPIRate": "100ms"
       }
     }
   },
@@ -109,7 +125,7 @@ struct ExchangeInfoDefault {
   },
   "withdraw": {
     "default": {
-      "validatedepositaddressesinfile": true
+      "validateDepositAddressesInFile": true
     }
   }
 } 
@@ -128,15 +144,21 @@ struct ExchangeInfoDefault {
 {
   "asset": {
     "default": {
-      "allexclude": "AUD,CAD",
-      "withdrawexclude": "BTC,EUR"
+      "allExclude": [
+        "AUD",
+        "CAD"
+      ],
+      "withdrawExclude": [
+        "BTC",
+        "EUR"
+      ]
     }
   },
   "query": {
     "default": {
-      "minprivatequerydelayms": 1055,
-      "minpublicquerydelayms": 1236,
-      "placesimulaterealorder": false,
+      "privateAPIRate": "1055ms",
+      "publicAPIRate": "1236ms",
+      "placeSimulateRealOrder": false,
       "updateFrequency": {
         "currencies": "8h",
         "markets": "8h",
@@ -150,7 +172,7 @@ struct ExchangeInfoDefault {
       }
     }
   },
-  "tradefees": {
+  "tradefees": { 
     "default": {
       "maker": "0.16",
       "taker": "0.26"
@@ -158,7 +180,7 @@ struct ExchangeInfoDefault {
   },
   "withdraw": {
     "default": {
-      "validatedepositaddressesinfile": false
+      "validateDepositAddressesInFile": false
     }
   }
 }

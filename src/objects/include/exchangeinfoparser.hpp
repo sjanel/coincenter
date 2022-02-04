@@ -5,6 +5,7 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "durationstring.hpp"
 
 namespace cct {
 class LoadConfiguration;
@@ -30,6 +31,12 @@ class TopLevelOption {
     return get(exchangeName, subOptionName1, subOptionName2)->get<std::string_view>();
   }
 
+  /// Get the first defined duration of given sub option name, traversing the config options from bottom to up.
+  Duration getDuration(std::string_view exchangeName, std::string_view subOptionName1,
+                       std::string_view subOptionName2 = "") const {
+    return ParseDuration(getStr(exchangeName, subOptionName1, subOptionName2));
+  }
+
   /// Get the first defined int of given sub option name, traversing the config options from bottom to up.
   int getInt(std::string_view exchangeName, std::string_view subOptionName1,
              std::string_view subOptionName2 = "") const {
@@ -42,8 +49,8 @@ class TopLevelOption {
     return get(exchangeName, subOptionName1, subOptionName2)->get<bool>();
   }
 
-  /// Create a string which is an aggregate of comma separated values of all option levels
-  string getCSVUnion(std::string_view exchangeName, std::string_view subOptionName) const;
+  /// Create a string which is an aggregate of array string values of all option levels
+  string getStrUnion(std::string_view exchangeName, std::string_view subOptionName) const;
 
  private:
   JsonIt get(std::string_view exchangeName, std::string_view subOptionName1,
