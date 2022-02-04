@@ -37,7 +37,7 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                          api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.minPublicQueryDelay(), config.getRunMode()),
+      _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.publicAPIRate(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle),
       _marketsCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kMarkets), _cachedResultVault),

@@ -428,7 +428,7 @@ If for a given exchange account a deposit address is not created yet, `coincente
 
 Only one deposit address per currency / account is returned.
 
-**Important note**: only addresses which are validated against the `depositaddresses.json` file will be returned (unless option `validatedepositaddressesinfile` is set to `false` in `static/exchangeconfig.json` file). This file allows you to control addresses to which `coincenter` can send funds, even if you have more deposit addresses already configured.
+**Important note**: only addresses which are validated against the `depositaddresses.json` file will be returned (unless option `validateDepositAddressesInFile` is set to `false` in `static/exchangeconfig.json` file). This file allows you to control addresses to which `coincenter` can send funds, even if you have more deposit addresses already configured.
 
 ### Opened orders
 
@@ -468,7 +468,7 @@ Some exchanges require that external addresses are validated prior to their usag
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
  - External address is not taken as an input parameter, but instead dynamically retrieved from the REST API `getDepositAddress` of the destination exchange (see [Deposit information](#deposit-information))
- - By default (can be configured in `static/exchangeconfig.json` with boolean value `validatedepositaddressesinfile`) deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
+ - By default (can be configured in `static/exchangeconfig.json` with boolean value `validateDepositAddressesInFile`) deposit address is validated in `<DataDir>/secret/depositaddresses.json` which serves as a *portfolio* of trusted addresses
 
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```

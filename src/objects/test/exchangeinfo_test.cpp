@@ -41,8 +41,8 @@ TEST_F(ExchangeInfoTest, TradeFees) {
 }
 
 TEST_F(ExchangeInfoTest, Query) {
-  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(exchangeInfo.minPublicQueryDelay()).count(), 1236);
-  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(exchangeInfo.minPrivateQueryDelay()).count(), 1055);
+  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(exchangeInfo.publicAPIRate()).count(), 1236);
+  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(exchangeInfo.privateAPIRate()).count(), 1055);
 }
 
 TEST_F(ExchangeInfoTest, MiscellaneousOptions) {

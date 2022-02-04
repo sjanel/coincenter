@@ -34,32 +34,32 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
     std::string_view makerStr = tradeFeesTopLevelOption.getStr(exchangeName, "maker");
     std::string_view takerStr = tradeFeesTopLevelOption.getStr(exchangeName, "taker");
 
-    auto excludedAllCurrencies = ConvertToVector(assetTopLevelOption.getCSVUnion(exchangeName, "allexclude"));
-    auto excludedCurrenciesWithdraw = ConvertToVector(assetTopLevelOption.getCSVUnion(exchangeName, "withdrawexclude"));
+    auto excludedAllCurrencies = ConvertToVector(assetTopLevelOption.getStrUnion(exchangeName, "allExclude"));
+    auto excludedCurrenciesWithdraw = ConvertToVector(assetTopLevelOption.getStrUnion(exchangeName, "withdrawExclude"));
 
-    int minPublicQueryDelayMs = queryTopLevelOption.getInt(exchangeName, "minpublicquerydelayms");
-    int minPrivateQueryDelayMs = queryTopLevelOption.getInt(exchangeName, "minprivatequerydelayms");
+    Duration publicAPIRate = queryTopLevelOption.getDuration(exchangeName, "publicAPIRate");
+    Duration privateAPIRate = queryTopLevelOption.getDuration(exchangeName, "privateAPIRate");
 
     static constexpr std::string_view kUpdFreqOptStr = "updateFrequency";
 
     ExchangeInfo::APIUpdateFrequencies apiUpdateFrequencies{
-        {ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "currencies")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "markets")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "withdrawalFees")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "allOrderbooks")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "orderbook")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "tradedVolume")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "lastPrice")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "depositWallet")),
-         ParseDuration(queryTopLevelOption.getStr(exchangeName, kUpdFreqOptStr, "nbDecimals"))}};
+        {queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "currencies"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "markets"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "withdrawalFees"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "allOrderbooks"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "orderbook"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "tradedVolume"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "lastPrice"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "depositWallet"),
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "nbDecimals")}};
 
     bool validateDepositAddressesInFile =
-        withdrawTopLevelOption.getBool(exchangeName, "validatedepositaddressesinfile");
-    bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placesimulaterealorder");
+        withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
+    bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
 
     map.insert_or_assign(
         exchangeName, ExchangeInfo(exchangeName, makerStr, takerStr, excludedAllCurrencies, excludedCurrenciesWithdraw,
-                                   std::move(apiUpdateFrequencies), minPublicQueryDelayMs, minPrivateQueryDelayMs,
+                                   std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
                                    validateDepositAddressesInFile, placeSimulatedRealOrder));
   }  // namespace cct
 

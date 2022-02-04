@@ -23,7 +23,7 @@ class ExchangeInfo {
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                std::span<const CurrencyCode> excludedAllCurrencies,
                std::span<const CurrencyCode> excludedCurrenciesWithdraw,
-               const APIUpdateFrequencies &apiUpdateFrequencies, int minPublicQueryDelayMs, int minPrivateQueryDelayMs,
+               const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
                bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
@@ -46,10 +46,10 @@ class ExchangeInfo {
   }
 
   /// Get the minimum time between two public api queries
-  Duration minPublicQueryDelay() const { return _minPublicQueryDelay; }
+  Duration publicAPIRate() const { return _publicAPIRate; }
 
   /// Get the minimum time between two public api queries
-  Duration minPrivateQueryDelay() const { return _minPrivateQueryDelay; }
+  Duration privateAPIRate() const { return _privateAPIRate; }
 
   bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
 
@@ -63,7 +63,8 @@ class ExchangeInfo {
   CurrencySet _excludedCurrenciesAll;         // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;  // Currencies unavailable for withdrawals
   APIUpdateFrequencies _apiUpdateFrequencies;
-  Duration _minPublicQueryDelay, _minPrivateQueryDelay;
+  Duration _publicAPIRate;
+  Duration _privateAPIRate;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
   bool _validateDepositAddressesInFile;
