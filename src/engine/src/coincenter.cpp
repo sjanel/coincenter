@@ -148,7 +148,20 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName
   // Do not call in parallel here because tradable currencies service could be queried from several identical public
   // exchanges (when there are several accounts for one exchange)
   std::transform(depositInfoExchanges.begin(), depositInfoExchanges.end(), canDepositCurrency.begin(),
-                 [depositCurrency](Exchange *e) { return e->queryTradableCurrencies().contains(depositCurrency); });
+                 [depositCurrency](Exchange *e) {
+                   auto tradableCur = e->queryTradableCurrencies();
+                   auto curIt = tradableCur.find(depositCurrency);
+                   if (curIt == tradableCur.end()) {
+                     return false;
+                   }
+                   if (curIt->canDeposit()) {
+                     log::debug("{} can be deposited on {} currently", curIt->standardCode().str(), e->name());
+                     return true;
+                   } else {
+                     log::info("{} cannot be deposited on {} currently", curIt->standardCode().str(), e->name());
+                     return false;
+                   }
+                 });
 
   FilterVector(depositInfoExchanges, canDepositCurrency);
 
