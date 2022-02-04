@@ -73,10 +73,13 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           _curlHandle) {}
 
 ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
-  const MarketOrderBookMap& marketOrderBookMap = _allOrderBooksCache.get();
+  auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
+  if (!pMarketOrderbookMap || lastUpdatedTime + exchangeInfo().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
+    pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
+  }
   MarketSet markets;
-  markets.reserve(static_cast<MarketSet::size_type>(marketOrderBookMap.size()));
-  std::ranges::transform(marketOrderBookMap, std::inserter(markets, markets.end()),
+  markets.reserve(static_cast<MarketSet::size_type>(pMarketOrderbookMap->size()));
+  std::ranges::transform(*pMarketOrderbookMap, std::inserter(markets, markets.end()),
                          [](const auto& it) { return it.first; });
   return markets;
 }
@@ -176,7 +179,7 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
                                                  std::optional<Market> optM = std::nullopt,
                                                  std::optional<int> optDepth = std::nullopt) {
   ExchangePublic::MarketOrderBookMap ret;
-  // all seems to work as default for all public methods
+  // 'all' seems to work as default for all public methods
   CurrencyCode base("all");
   CurrencyCode quote;
   const bool singleMarketQuote = optM.has_value();

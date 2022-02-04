@@ -87,7 +87,7 @@ class CachedResult : public CachedResultBase {
     return it->second.first;
   }
 
-  /// Retrieve a pointer to latest value associated to the key built with given parameters.
+  /// Retrieve a {pointer, lastUpdateTime} to latest value associated to the key built with given parameters.
   /// If no value has been computed for this key, returns a nullptr.
   template <class... Args>
   ResPtrTimePair retrieve(Args &&...funcArgs) const {
