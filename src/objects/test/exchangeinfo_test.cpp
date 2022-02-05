@@ -35,9 +35,9 @@ TEST_F(ExchangeInfoTest, ExcludedAssets) {
 
 TEST_F(ExchangeInfoTest, TradeFees) {
   EXPECT_EQ(exchangeInfo.applyFee(MonetaryAmount("120.5 ETH"), ExchangeInfo::FeeType::kMaker),
-            MonetaryAmount("120.3072 ETH"));
+            MonetaryAmount("120.3795 ETH"));
   EXPECT_EQ(exchangeInfo.applyFee(MonetaryAmount("2.356097 ETH"), ExchangeInfo::FeeType::kTaker),
-            MonetaryAmount("2.3499711478 ETH"));
+            MonetaryAmount("2.351384806 ETH"));
 }
 
 TEST_F(ExchangeInfoTest, Query) {

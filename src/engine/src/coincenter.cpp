@@ -117,6 +117,18 @@ TradedAmounts Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTra
   return _exchangesOrchestrator.trade(startAmount, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions);
 }
 
+Coincenter::TradedAmountsVector Coincenter::smartBuy(MonetaryAmount endAmount,
+                                                     std::span<const PrivateExchangeName> privateExchangeNames,
+                                                     const TradeOptions &tradeOptions) {
+  return _exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions);
+}
+
+Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount,
+                                                      std::span<const PrivateExchangeName> privateExchangeNames,
+                                                      const TradeOptions &tradeOptions) {
+  return _exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions);
+}
+
 TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                    std::span<const PrivateExchangeName> privateExchangeNames,
                                    const TradeOptions &tradeOptions) {
@@ -235,9 +247,15 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
     tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }
 
-  if (!opts.startTradeAmount.isZero()) {
-    trade(opts.startTradeAmount, opts.isPercentageTrade, opts.toTradeCurrency, opts.tradePrivateExchangeNames,
-          opts.tradeOptions);
+  if (!opts.endTradeAmount.isZero()) {
+    smartBuy(opts.endTradeAmount, opts.tradePrivateExchangeNames, opts.tradeOptions);
+  } else if (!opts.startTradeAmount.isZero()) {
+    if (opts.toTradeCurrency.isNeutral()) {
+      smartSell(opts.startTradeAmount, opts.tradePrivateExchangeNames, opts.tradeOptions);
+    } else {
+      trade(opts.startTradeAmount, opts.isPercentageTrade, opts.toTradeCurrency, opts.tradePrivateExchangeNames,
+            opts.tradeOptions);
+    }
   }
 
   if (!opts.amountToWithdraw.isZero()) {

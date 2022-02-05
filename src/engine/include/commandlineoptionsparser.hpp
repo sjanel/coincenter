@@ -106,7 +106,7 @@ class CommandLineOptionsParser : private OptValueType {
       }
       string firstRowsStr(opt.fullName());
       if (opt.hasShortName()) {
-        firstRowsStr.append(",  -");
+        firstRowsStr.append(", -");
         firstRowsStr.push_back(opt.shortNameChar());
       }
       firstRowsStr.push_back(' ');

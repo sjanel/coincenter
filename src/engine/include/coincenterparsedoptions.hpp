@@ -23,6 +23,7 @@ class CoincenterParsedOptions {
   CoincenterParsedOptions(int argc, const char *argv[]);
 
   MonetaryAmount startTradeAmount;
+  MonetaryAmount endTradeAmount;
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
   bool isPercentageTrade = false;

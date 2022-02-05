@@ -1,5 +1,7 @@
 #include "exchangeinfo.hpp"
 
+#include <span>
+
 #include "cct_const.hpp"
 #include "cct_log.hpp"
 #include "durationstring.hpp"
@@ -18,36 +20,30 @@ string BuildCurrenciesString(std::span<const CurrencyCode> currencies) {
   ret.push_back(']');
   return ret;
 }
+
 string BuildUpdateFrequenciesString(const ExchangeInfo::APIUpdateFrequencies &apiUpdateFrequencies) {
-  string ret(1, '[');
-  ret.append("Cur: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kCurrencies]));
-  ret.append(", Mar: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kMarkets]));
-  ret.append(", WFe: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kWithdrawalFees]));
-  ret.append(", AOb: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kAllOrderBooks]));
-  ret.append(", TdV: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kTradedVolume]));
-  ret.append(", Pri: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kLastPrice]));
-  ret.append(", Wal: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kDepositWallet]));
-  ret.append(", NbD: ");
-  ret.append(DurationToString(apiUpdateFrequencies.freq[api::kNbDecimalsUnitsBithumb]));
+  string ret;
+  ret.append("[Cur: ").append(DurationToString(apiUpdateFrequencies.freq[api::kCurrencies]));
+  ret.append(", Mar: ").append(DurationToString(apiUpdateFrequencies.freq[api::kMarkets]));
+  ret.append(", WFe: ").append(DurationToString(apiUpdateFrequencies.freq[api::kWithdrawalFees]));
+  ret.append(", Tic: ").append(DurationToString(apiUpdateFrequencies.freq[api::kAllOrderBooks]));
+  ret.append(", TdV: ").append(DurationToString(apiUpdateFrequencies.freq[api::kTradedVolume]));
+  ret.append(", Pri: ").append(DurationToString(apiUpdateFrequencies.freq[api::kLastPrice]));
+  ret.append(", Wal: ").append(DurationToString(apiUpdateFrequencies.freq[api::kDepositWallet]));
+  ret.append(", NbD: ").append(DurationToString(apiUpdateFrequencies.freq[api::kNbDecimalsUnitsBithumb]));
   ret.push_back(']');
   return ret;
 }
 }  // namespace
 
 ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
-                           std::span<const CurrencyCode> excludedAllCurrencies,
-                           std::span<const CurrencyCode> excludedCurrenciesWithdraw,
+                           CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
+                           CurrencyVector &&preferredPaymentCurrencies,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
                            Duration privateAPIRate, bool validateDepositAddressesInFile, bool placeSimulateRealOrder)
-    : _excludedCurrenciesAll(excludedAllCurrencies.begin(), excludedAllCurrencies.end()),
-      _excludedCurrenciesWithdrawal(excludedCurrenciesWithdraw.begin(), excludedCurrenciesWithdraw.end()),
+    : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
+      _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
+      _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
       _apiUpdateFrequencies(apiUpdateFrequencies),
       _publicAPIRate(publicAPIRate),
       _privateAPIRate(privateAPIRate),
@@ -60,6 +56,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
 
     log::trace(" - General excluded currencies  : {}", BuildCurrenciesString(_excludedCurrenciesAll));
     log::trace(" - Withdraw excluded currencies : {}", BuildCurrenciesString(_excludedCurrenciesWithdrawal));
+    log::trace(" - Preferred payment currencies : {}", BuildCurrenciesString(_preferredPaymentCurrencies));
     log::trace(" - General update frequencies   : {} for public, {} for private", DurationToString(publicAPIRate),
                DurationToString(privateAPIRate));
     log::trace(" - Update frequencies by method : {}", BuildUpdateFrequenciesString(_apiUpdateFrequencies));
@@ -67,6 +64,9 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
     log::trace(" - Validate deposit addresses   : {}{}", _validateDepositAddressesInFile ? "yes in " : "no",
                _validateDepositAddressesInFile ? kDepositAddressesFileName : "");
     log::trace(" - Order placing in simulation  : {}", _placeSimulateRealOrder ? "real, unmatchable" : "none");
+  }
+  if (_preferredPaymentCurrencies.empty()) {
+    log::warn("{} list of preferred currencies is empty, buy and sell commands cannot perform trades", exchangeNameStr);
   }
 }
 

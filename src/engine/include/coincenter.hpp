@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "apikeysprovider.hpp"
+#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
@@ -26,6 +27,8 @@ class TradeOptions;
 
 class Coincenter {
  public:
+  using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
+
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
   Coincenter(const Coincenter &) = delete;
@@ -90,6 +93,12 @@ class Coincenter {
   /// check.
   TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                       std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+
+  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const PrivateExchangeName> privateExchangeNames,
+                               const TradeOptions &tradeOptions);
+
+  TradedAmountsVector smartSell(MonetaryAmount startAmount, std::span<const PrivateExchangeName> privateExchangeNames,
+                                const TradeOptions &tradeOptions);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
   /// conversion path and will launch several 'single' trades to reach that final goal. Example:

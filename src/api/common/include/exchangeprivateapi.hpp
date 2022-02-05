@@ -70,9 +70,15 @@ class ExchangePrivate : public ExchangeBase {
   /// Because of this, it needs to expire at some point (and thus returning a non fully converted amount, or even 0
   /// if nothing was traded).
   /// @param from the starting amount from which conversion will be done
-  /// @param toCurrencyCode the destination currency
+  /// @param toCurrency the destination currency
   /// @return trade amounts (fees deduced)
-  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options);
+  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options) {
+    return trade(from, toCurrency, options, _exchangePublic.findMarketsPath(from.currencyCode(), toCurrency));
+  }
+
+  /// Variation of 'trade' with already computed conversion path
+  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
+                      const ExchangePublic::MarketsPath &conversionPath);
 
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes (or hours with Bitcoin)
@@ -150,9 +156,7 @@ class ExchangePrivate : public ExchangeBase {
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                   const SentWithdrawInfo &sentWithdrawInfo) = 0;
 
-  TradedAmounts singleTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
-
-  TradedAmounts multiTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options);
+  TradedAmounts marketTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault;

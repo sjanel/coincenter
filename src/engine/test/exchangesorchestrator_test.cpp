@@ -21,18 +21,14 @@ using OrderInfo = api::OrderInfo;
 using PlaceOrderInfo = api::PlaceOrderInfo;
 using ExchangePublic = api::ExchangePublic;
 using ExchangePrivate = api::ExchangePrivate;
+using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
 
 class ExchangeOrchestratorTest : public ::testing::Test {
  protected:
-  static_assert(kNbSupportedExchanges >= 3);
-
-  const string kTestedExchanges2[1] = {string(kSupportedExchanges[1])};
-  const string kTestedExchanges12[2] = {string(kSupportedExchanges[0]), string(kSupportedExchanges[1])};
-  const string kTestedExchanges123[3] = {string(kSupportedExchanges[0]), string(kSupportedExchanges[1]),
-                                         string(kSupportedExchanges[2])};
-
   ExchangeOrchestratorTest()
-      : cryptowatchAPI(coincenterInfo, settings::RunMode::kProd, Duration::max(), true),
+      : loadConfiguration(kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest),
+        coincenterInfo(settings::RunMode::kProd, loadConfiguration),
+        cryptowatchAPI(coincenterInfo, settings::RunMode::kProd, Duration::max(), true),
         fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
         exchangePublic1(kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo),
         exchangePublic2(kSupportedExchanges[1], fiatConverter, cryptowatchAPI, coincenterInfo),
@@ -66,6 +62,7 @@ class ExchangeOrchestratorTest : public ::testing::Test {
 
   virtual void TearDown() {}
 
+  LoadConfiguration loadConfiguration;
   CoincenterInfo coincenterInfo;
   api::CryptowatchAPI cryptowatchAPI;
   FiatConverter fiatConverter;
@@ -116,8 +113,9 @@ class ExchangeOrchestratorTest : public ::testing::Test {
                                       MonetaryAmount("6750USDT")};
   const MonetaryAmount amounts3[5] = {MonetaryAmount("0.6ETH"), MonetaryAmount("1000XLM"), MonetaryAmount("0.01AVAX"),
                                       MonetaryAmount("1500EUR"), MonetaryAmount("4250USDT")};
-  const MonetaryAmount amounts4[5] = {MonetaryAmount("147ADA"), MonetaryAmount("4.76DOT"), MonetaryAmount("15004MATIC"),
-                                      MonetaryAmount("155USD"), MonetaryAmount("107.5USDT")};
+  const MonetaryAmount amounts4[6] = {MonetaryAmount("147ADA"),     MonetaryAmount("4.76DOT"),
+                                      MonetaryAmount("15004MATIC"), MonetaryAmount("155USD"),
+                                      MonetaryAmount("107.5USDT"),  MonetaryAmount("1200EUR")};
 
   BalancePortfolio balancePortfolio1, balancePortfolio2, balancePortfolio3, balancePortfolio4;
 };
@@ -128,6 +126,8 @@ TEST_F(ExchangeOrchestratorTest, TickerInformation) {
 
   const MarketOrderBookMap marketOrderbookMap2 = {{m1, marketOrderBook10}, {m3, marketOrderBook3}};
   EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderbookMap2));
+
+  const string kTestedExchanges12[] = {string(kSupportedExchanges[0]), string(kSupportedExchanges[1])};
 
   ExchangeTickerMaps expectedTickerMaps = {{&exchange1, marketOrderbookMap1}, {&exchange2, marketOrderbookMap2}};
   EXPECT_EQ(exchangesOrchestrator.getTickerInformation(kTestedExchanges12), expectedTickerMaps);
@@ -157,6 +157,9 @@ class ExchangeOrchestratorMarketOrderbookTest : public ExchangeOrchestratorTest 
 };
 
 TEST_F(ExchangeOrchestratorMarketOrderbookTest, AllSpecifiedExchanges) {
+  const string kTestedExchanges123[] = {string(kSupportedExchanges[0]), string(kSupportedExchanges[1]),
+                                        string(kSupportedExchanges[2])};
+
   EXPECT_EQ(exchangesOrchestrator.getMarketOrderBooks(testedMarket, kTestedExchanges123, equiCurrencyCode, optDepth),
             marketOrderBookConversionRates);
 }
@@ -184,6 +187,7 @@ class ExchangeOrchestratorEmptyMarketOrderbookTest : public ExchangeOrchestrator
 };
 
 TEST_F(ExchangeOrchestratorEmptyMarketOrderbookTest, MarketDoesNotExist) {
+  const string kTestedExchanges2[] = {string(kSupportedExchanges[1])};
   EXPECT_EQ(exchangesOrchestrator.getMarketOrderBooks(testedMarket, kTestedExchanges2, equiCurrencyCode, optDepth),
             marketOrderBookConversionRates);
 }
@@ -205,9 +209,9 @@ TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencySeveralExchanges) {
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio2));
   EXPECT_CALL(exchangePrivate4, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio3));
 
-  const PrivateExchangeName privateExchangeNames[3] = {PrivateExchangeName(exchange1.name(), exchange1.keyName()),
-                                                       PrivateExchangeName(exchange3.name(), exchange3.keyName()),
-                                                       PrivateExchangeName(exchange4.name(), exchange4.keyName())};
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName()),
+                                                      PrivateExchangeName(exchange4.name(), exchange4.keyName())};
   BalancePerExchange ret{
       {&exchange1, balancePortfolio1}, {&exchange3, balancePortfolio2}, {&exchange4, balancePortfolio3}};
   EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, equiCurrency), ret);
@@ -233,9 +237,9 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
 TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDeposits) {
   CurrencyCode depositCurrency{"XRP"};
 
-  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName()),
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName()),
                                                       PrivateExchangeName(exchange2.name(), exchange2.keyName()),
-                                                      PrivateExchangeName(exchange3.name(), exchange3.keyName()),
                                                       PrivateExchangeName(exchange4.name(), exchange4.keyName())};
 
   CurrencyExchangeFlatSet tradableCurrencies1{CurrencyExchangeVector{
@@ -269,8 +273,8 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
 TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
   OrdersConstraints noConstraints;
 
-  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange2.name(), exchange2.keyName()),
-                                                      PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange2.name(), exchange2.keyName()),
                                                       PrivateExchangeName(exchange4.name(), exchange4.keyName())};
 
   Orders orders2{Order("Id1", MonetaryAmount("0.1ETH"), MonetaryAmount("0.9ETH"), MonetaryAmount("0.14BTC"),
@@ -393,11 +397,17 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
  protected:
   ExchangeOrchestratorSimpleTradeTest()
       : tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
-                     TradeType::kSingleTrade) {}
+                     TradeType::kSingleTrade) {
+    resetMarkets();
+  }
 
-  TradedAmounts expectSimpleTakerTrade(int exchangePrivateNum, MonetaryAmount from, CurrencyCode toCurrency,
-                                       TradeSide side, int nbTradableMarketsQueries = 1, int nbOrderbookQueries = 1,
-                                       bool makeMarketAvailable = true) {
+  enum class TradableMarkets : int8_t { kExpectNoCall, kExpectCall, kNoExpectation };
+  enum class OrderBook : int8_t { kExpectNoCall, kExpectCall, kExpect2Calls, kNoExpectation };
+  enum class AllOrderBooks : int8_t { kExpectNoCall, kExpectCall, kNoExpectation };
+
+  TradedAmounts expectTrade(int exchangePrivateNum, MonetaryAmount from, CurrencyCode toCurrency, TradeSide side,
+                            TradableMarkets tradableMarketsCall, OrderBook orderBookCall,
+                            AllOrderBooks allOrderBooksCall, bool makeMarketAvailable) {
     Market m(from.currencyCode(), toCurrency);
     if (side == TradeSide::kBuy) {
       m = m.reverse();
@@ -424,84 +434,159 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
     OrderInfo orderInfo(tradedAmounts, true);
     PlaceOrderInfo placeOrderInfo(orderInfo, orderId);
 
-    MarketSet markets{Market("AAA", "BBB"), Market("CCC", "BBB"), Market("XXX", "ZZZ")};
     if (makeMarketAvailable) {
       markets.insert(m);
+      marketOrderBookMap.insert_or_assign(m, marketOrderbook);
     }
 
     // EXPECT_CALL does not allow references. Or I did not found the way to make it work...
     switch (exchangePrivateNum) {
       case 1:
-        if (nbTradableMarketsQueries != 0) {
-          EXPECT_CALL(exchangePublic1, queryTradableMarkets())
-              .Times(nbTradableMarketsQueries)
-              .WillRepeatedly(testing::Return(markets));
+        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
+          EXPECT_CALL(exchangePublic1, queryTradableMarkets()).WillOnce(testing::Return(markets));
+        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic1, queryTradableMarkets()).Times(0);
+        }
+
+        switch (orderBookCall) {
+          case OrderBook::kExpect2Calls:
+            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth))
+                .Times(2)
+                .WillRepeatedly(testing::Return(marketOrderbook));
+            break;
+          case OrderBook::kExpectCall:
+            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
+            break;
+          case OrderBook::kExpectNoCall:
+            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth)).Times(0);
+            break;
+          case OrderBook::kNoExpectation:
+            break;
+        }
+
+        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
+          EXPECT_CALL(exchangePublic1, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
+        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic1, queryAllApproximatedOrderBooks(1)).Times(0);
         }
 
         EXPECT_CALL(exchangePrivate1, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-
         if (makeMarketAvailable && from.isStrictlyPositive()) {
-          if (nbOrderbookQueries != 0) {
-            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth))
-                .Times(nbOrderbookQueries)
-                .WillRepeatedly(testing::Return(marketOrderbook));
-          }
           EXPECT_CALL(exchangePrivate1, placeOrder(from, vol, pri, testing::_))
               .WillOnce(testing::Return(placeOrderInfo));
+        } else {
+          EXPECT_CALL(exchangePrivate1, placeOrder(from, vol, pri, testing::_)).Times(0);
         }
         break;
       case 2:
-        if (nbTradableMarketsQueries != 0) {
-          EXPECT_CALL(exchangePublic2, queryTradableMarkets())
-              .Times(nbTradableMarketsQueries)
-              .WillRepeatedly(testing::Return(markets));
+        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
+          EXPECT_CALL(exchangePublic2, queryTradableMarkets()).WillOnce(testing::Return(markets));
+        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic2, queryTradableMarkets()).Times(0);
         }
-        EXPECT_CALL(exchangePrivate2, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
 
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          if (nbOrderbookQueries != 0) {
+        switch (orderBookCall) {
+          case OrderBook::kExpect2Calls:
             EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth))
-                .Times(nbOrderbookQueries)
+                .Times(2)
                 .WillRepeatedly(testing::Return(marketOrderbook));
-          }
+            break;
+          case OrderBook::kExpectCall:
+            EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
+            break;
+          case OrderBook::kExpectNoCall:
+            EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth)).Times(0);
+            break;
+          case OrderBook::kNoExpectation:
+            break;
+        }
+
+        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
+          EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
+        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).Times(0);
+        }
+
+        EXPECT_CALL(exchangePrivate2, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
+        if (makeMarketAvailable && from.isStrictlyPositive()) {
           EXPECT_CALL(exchangePrivate2, placeOrder(from, vol, pri, testing::_))
               .WillOnce(testing::Return(placeOrderInfo));
+        } else {
+          EXPECT_CALL(exchangePrivate2, placeOrder(from, vol, pri, testing::_)).Times(0);
         }
         break;
       case 3:
-        if (nbTradableMarketsQueries != 0) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets())
-              .Times(nbTradableMarketsQueries)
-              .WillRepeatedly(testing::Return(markets));
+        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
+          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).WillOnce(testing::Return(markets));
+        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
         }
-        EXPECT_CALL(exchangePrivate3, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
 
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          if (nbOrderbookQueries != 0) {
+        switch (orderBookCall) {
+          case OrderBook::kExpect2Calls:
             EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth))
-                .Times(nbOrderbookQueries)
+                .Times(2)
                 .WillRepeatedly(testing::Return(marketOrderbook));
-          }
+            break;
+          case OrderBook::kExpectCall:
+            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
+            break;
+          case OrderBook::kExpectNoCall:
+            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).Times(0);
+            break;
+          case OrderBook::kNoExpectation:
+            break;
+        }
+
+        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
+          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
+        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).Times(0);
+        }
+
+        EXPECT_CALL(exchangePrivate3, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
+        if (makeMarketAvailable && from.isStrictlyPositive()) {
           EXPECT_CALL(exchangePrivate3, placeOrder(from, vol, pri, testing::_))
               .WillOnce(testing::Return(placeOrderInfo));
+        } else {
+          EXPECT_CALL(exchangePrivate3, placeOrder(from, vol, pri, testing::_)).Times(0);
         }
         break;
       case 4:
-        if (nbTradableMarketsQueries != 0) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets())
-              .Times(nbTradableMarketsQueries)
-              .WillRepeatedly(testing::Return(markets));
+        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
+          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).WillOnce(testing::Return(markets));
+        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
         }
-        EXPECT_CALL(exchangePrivate4, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
 
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          if (nbOrderbookQueries != 0) {
+        switch (orderBookCall) {
+          case OrderBook::kExpect2Calls:
             EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth))
-                .Times(nbOrderbookQueries)
+                .Times(2)
                 .WillRepeatedly(testing::Return(marketOrderbook));
-          }
+            break;
+          case OrderBook::kExpectCall:
+            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
+            break;
+          case OrderBook::kExpectNoCall:
+            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).Times(0);
+            break;
+          case OrderBook::kNoExpectation:
+            break;
+        }
+
+        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
+          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
+        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
+          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).Times(0);
+        }
+
+        EXPECT_CALL(exchangePrivate4, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
+        if (makeMarketAvailable && from.isStrictlyPositive()) {
           EXPECT_CALL(exchangePrivate4, placeOrder(from, vol, pri, testing::_))
               .WillOnce(testing::Return(placeOrderInfo));
+        } else {
+          EXPECT_CALL(exchangePrivate4, placeOrder(from, vol, pri, testing::_)).Times(0);
         }
         break;
     }
@@ -509,16 +594,24 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
     return tradedAmounts;
   }
 
+  void resetMarkets() {
+    marketOrderBookMap = {};
+    markets = {Market("AAA", "BBB"), Market("CCC", "BBB"), Market("XXX", "ZZZ")};
+  }
+
   PriceOptions priceOptions{PriceStrategy::kTaker};
   TradeOptions tradeOptions;
   bool isPercentageTrade = false;
+  api::ExchangePublic::MarketOrderBookMap marketOrderBookMap;
+  MarketSet markets;
 };
 
 TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuy) {
-  MonetaryAmount from("100EUR");
+  MonetaryAmount from(100, "EUR");
   CurrencyCode toCurrency("XRP");
   TradeSide side = TradeSide::kBuy;
-  TradedAmounts tradedAmounts = expectSimpleTakerTrade(1, from, toCurrency, side);
+  TradedAmounts tradedAmounts = expectTrade(1, from, toCurrency, side, TradableMarkets::kExpectCall,
+                                            OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName())};
 
@@ -527,7 +620,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuy) {
 }
 
 TEST_F(ExchangeOrchestratorSimpleTradeTest, NoAvailableAmountToSell) {
-  MonetaryAmount from("10SOL");
+  MonetaryAmount from(10, "SOL");
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
 
@@ -537,18 +630,18 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, NoAvailableAmountToSell) {
   EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
 
-  const int nbMarketCalls = 1;
-  const int nbOrderbookCalls = 0;
   MonetaryAmount zero(0, from.currencyCode());
-  expectSimpleTakerTrade(1, zero, toCurrency, side, nbMarketCalls - 1, nbOrderbookCalls);
-  expectSimpleTakerTrade(2, zero, toCurrency, side, nbMarketCalls, nbOrderbookCalls, false);
+  expectTrade(2, zero, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, false);
+  expectTrade(1, zero, toCurrency, side, TradableMarkets::kExpectNoCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, true);
 
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
             TradedAmounts(from.currencyCode(), toCurrency));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSell) {
-  MonetaryAmount from("2ETH");
+TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoAccountsSameExchangeSell) {
+  MonetaryAmount from(2, "ETH");
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
 
@@ -560,11 +653,10 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSell) {
 
   MonetaryAmount ratio3("0.75");
   MonetaryAmount ratio4 = MonetaryAmount(1) - ratio3;
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
-  TradedAmounts tradedAmounts3 =
-      expectSimpleTakerTrade(3, from * ratio3, toCurrency, side, nbMarketCalls + 1, nbOrderbookCalls + 1);
-  TradedAmounts tradedAmounts4 = expectSimpleTakerTrade(4, from * ratio4, toCurrency, side, 0, 0);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from * ratio3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts4 = expectTrade(4, from * ratio4, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
   TradedAmounts tradedAmounts = tradedAmounts3 + tradedAmounts4;
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
             tradedAmounts);
@@ -581,15 +673,16 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuy) {
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
   EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
   MonetaryAmount from1(5000, fromCurrency);
   MonetaryAmount from2(6750, fromCurrency);
   MonetaryAmount from3(1265, fromCurrency);
 
-  TradedAmounts tradedAmounts1 = expectSimpleTakerTrade(1, from1, toCurrency, side, nbMarketCalls, nbOrderbookCalls);
-  TradedAmounts tradedAmounts2 = expectSimpleTakerTrade(2, from2, toCurrency, side, nbMarketCalls, nbOrderbookCalls);
-  TradedAmounts tradedAmounts3 = expectSimpleTakerTrade(3, from3, toCurrency, side, nbMarketCalls, nbOrderbookCalls);
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3;
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, PrivateExchangeNames{}, tradeOptions),
@@ -607,18 +700,18 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
   EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
   MonetaryAmount from1(0, fromCurrency);
   MonetaryAmount from2(6750, fromCurrency);
   MonetaryAmount from3(4250, fromCurrency);
   MonetaryAmount from4("107.5", fromCurrency);
-  TradedAmounts tradedAmounts1 =
-      expectSimpleTakerTrade(1, from1, toCurrency, side, nbMarketCalls - 1, nbOrderbookCalls - 1, false);
-  TradedAmounts tradedAmounts2 = expectSimpleTakerTrade(2, from2, toCurrency, side, nbMarketCalls, nbOrderbookCalls);
-  TradedAmounts tradedAmounts3 =
-      expectSimpleTakerTrade(3, from3, toCurrency, side, nbMarketCalls + 1, nbOrderbookCalls + 1);
-  TradedAmounts tradedAmounts4 = expectSimpleTakerTrade(4, from4, toCurrency, side, 0, 0);
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectNoCall, AllOrderBooks::kExpectNoCall, false);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts4 = expectTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
   TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, PrivateExchangeNames{}, tradeOptions),
@@ -634,11 +727,9 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuyAll) {
 
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
-
   TradedAmounts tradedAmounts =
-      expectSimpleTakerTrade(3, MonetaryAmount(1500, fromCurrency), toCurrency, side, nbMarketCalls, nbOrderbookCalls);
+      expectTrade(3, MonetaryAmount(1500, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+                  OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
             tradedAmounts);
@@ -657,13 +748,12 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSellAll) {
   EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
-
   TradedAmounts tradedAmounts1 =
-      expectSimpleTakerTrade(1, balancePortfolio1.get(fromCurrency), toCurrency, side, nbMarketCalls, nbOrderbookCalls);
+      expectTrade(1, balancePortfolio1.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+                  OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
   TradedAmounts tradedAmounts3 =
-      expectSimpleTakerTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side, nbMarketCalls, nbOrderbookCalls);
+      expectTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+                  OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts3;
   EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
@@ -675,36 +765,307 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, AllExchangesBuyAllOneMarketUnavailab
   CurrencyCode toCurrency("DOT");
   TradeSide side = TradeSide::kBuy;
 
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName()),
+                                                      PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange2.name(), exchange2.keyName()),
+                                                      PrivateExchangeName(exchange4.name(), exchange4.keyName())};
+
   EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
   EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  const int nbMarketCalls = 2;
-  const int nbOrderbookCalls = 1;
-
-  expectSimpleTakerTrade(1, MonetaryAmount(0, fromCurrency), toCurrency, side, nbMarketCalls - 1, 0, false);
+  expectTrade(1, MonetaryAmount(0, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+              OrderBook::kExpectNoCall, AllOrderBooks::kExpectNoCall, false);
 
   TradedAmounts tradedAmounts2 =
-      expectSimpleTakerTrade(2, balancePortfolio2.get(fromCurrency), toCurrency, side, nbMarketCalls, nbOrderbookCalls);
-  TradedAmounts tradedAmounts3 = expectSimpleTakerTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side,
-                                                        nbMarketCalls + 1, nbOrderbookCalls + 1);
-  TradedAmounts tradedAmounts4 = expectSimpleTakerTrade(4, balancePortfolio4.get(fromCurrency), toCurrency, side, 0, 0);
+      expectTrade(2, balancePortfolio2.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+                  OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts3 =
+      expectTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
+                  OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts4 =
+      expectTrade(4, balancePortfolio4.get(fromCurrency), toCurrency, side, TradableMarkets::kNoExpectation,
+                  OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
   TradedAmounts tradedAmounts = tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
-  EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, PrivateExchangeNames{}, tradeOptions),
+  EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
             tradedAmounts);
 }
 
+TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartBuy) {
+  // Fee is automatically applied on buy
+  MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
+  CurrencyCode toCurrency = endAmount.currencyCode();
+  TradeSide side = TradeSide::kBuy;
+
+  MonetaryAmount from = MonetaryAmount(1000, "USDT");
+
+  TradedAmounts tradedAmounts = expectTrade(1, from, toCurrency, side, TradableMarkets::kExpectCall,
+                                            OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts};
+  EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuy) {
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
+  CurrencyCode toCurrency = endAmount.currencyCode();
+  TradeSide side = TradeSide::kBuy;
+
+  MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
+  MonetaryAmount from31 = MonetaryAmount(4250, "USDT");
+  MonetaryAmount from32 = MonetaryAmount(750, "EUR");
+
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+  TradedAmounts tradedAmounts31 = expectTrade(3, from31, toCurrency, side, TradableMarkets::kNoExpectation,
+                                              OrderBook::kExpectCall, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts32 = expectTrade(3, from32, toCurrency, side, TradableMarkets::kExpectCall,
+                                              OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts1, tradedAmounts31, tradedAmounts32};
+  EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange) {
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
+  CurrencyCode toCurrency = endAmount.currencyCode();
+  TradeSide side = TradeSide::kBuy;
+
+  MonetaryAmount from1 = MonetaryAmount(0, "USDT");
+  MonetaryAmount from3 = MonetaryAmount(4250, "USDT");
+
+  expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, false);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange3.name(), exchange3.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts3};
+  EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartBuy) {
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
+  CurrencyCode toCurrency = endAmount.currencyCode();
+  TradeSide side = TradeSide::kBuy;
+
+  MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
+  MonetaryAmount from2 = MonetaryAmount(0, "USDT");
+  MonetaryAmount from41 = MonetaryAmount(0, "USDT");
+  MonetaryAmount from42 = MonetaryAmount(1200, "EUR");
+
+  expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, false);
+
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+
+  resetMarkets();
+
+  expectTrade(4, from41, toCurrency, side, TradableMarkets::kNoExpectation, OrderBook::kExpectNoCall,
+              AllOrderBooks::kNoExpectation, false);
+
+  TradedAmounts tradedAmounts4 = expectTrade(4, from42, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange4.name(), exchange4.keyName()),
+                                                      PrivateExchangeName(exchange2.name(), exchange2.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts1, tradedAmounts4};
+  EXPECT_TRUE(
+      std::ranges::is_permutation(ret, exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions)));
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartBuyAllExchanges) {
+  CurrencyCode toCurrency("XLM");
+  MonetaryAmount endAmount = MonetaryAmount(18800, toCurrency) * exchangePublic1.exchangeInfo().getTakerFeeRatio();
+  TradeSide side = TradeSide::kBuy;
+
+  MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
+  MonetaryAmount from2 = MonetaryAmount(6750, "USDT");
+  MonetaryAmount from31 = MonetaryAmount(1500, "EUR");
+  MonetaryAmount from32 = MonetaryAmount(4250, "USDT");
+  MonetaryAmount from41 = MonetaryAmount(100, "USDT");
+  MonetaryAmount from42 = MonetaryAmount(1200, "EUR");
+
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
+  TradedAmounts tradedAmounts31 = expectTrade(3, from31, toCurrency, side, TradableMarkets::kExpectCall,
+                                              OrderBook::kExpect2Calls, AllOrderBooks::kExpectCall, true);
+  TradedAmounts tradedAmounts32 = expectTrade(3, from32, toCurrency, side, TradableMarkets::kNoExpectation,
+                                              OrderBook::kExpect2Calls, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts41 = expectTrade(4, from41, toCurrency, side, TradableMarkets::kNoExpectation,
+                                              OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts42 = expectTrade(4, from42, toCurrency, side, TradableMarkets::kNoExpectation,
+                                              OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+
+  TradedAmountsVector ret{tradedAmounts1,  tradedAmounts2,  tradedAmounts31,
+                          tradedAmounts32, tradedAmounts41, tradedAmounts42};
+  EXPECT_TRUE(std::ranges::is_permutation(
+      ret, exchangesOrchestrator.smartBuy(endAmount, PrivateExchangeNames{}, tradeOptions)));
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartSell) {
+  MonetaryAmount startAmount = MonetaryAmount(2, "ETH");
+  CurrencyCode toCurrency("USDT");
+  TradeSide side = TradeSide::kSell;
+
+  MonetaryAmount from = MonetaryAmount("1.5ETH");
+
+  TradedAmounts tradedAmounts = expectTrade(1, from, toCurrency, side, TradableMarkets::kExpectCall,
+                                            OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts};
+  EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions), ret);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSell) {
+  MonetaryAmount startAmount = MonetaryAmount(16, "BTC");
+  CurrencyCode fromCurrency = startAmount.currencyCode();
+  CurrencyCode toCurrency("EUR");
+  TradeSide side = TradeSide::kSell;
+
+  MonetaryAmount from1 = MonetaryAmount(15, fromCurrency);
+  MonetaryAmount from2 = MonetaryAmount("0.5", fromCurrency);
+
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange1.name(), exchange1.keyName()),
+                                                      PrivateExchangeName(exchange2.name(), exchange2.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts1, tradedAmounts2};
+  EXPECT_TRUE(std::ranges::is_permutation(
+      ret, exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions)));
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange) {
+  MonetaryAmount startAmount = MonetaryAmount(10000, "SHIB");
+  CurrencyCode toCurrency("USDT");
+  TradeSide side = TradeSide::kSell;
+
+  MonetaryAmount from2 = startAmount;
+  MonetaryAmount from3 = MonetaryAmount(0, startAmount.currencyCode());
+
+  expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectNoCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, false);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange2.name(), exchange2.keyName()),
+                                                      PrivateExchangeName(exchange3.name(), exchange3.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts2};
+  EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions), ret);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartSellFromAnotherPreferredCurrency) {
+  MonetaryAmount startAmount = MonetaryAmount(2000, "EUR");
+  CurrencyCode toCurrency("USDT");
+  TradeSide side = TradeSide::kSell;
+
+  MonetaryAmount from1 = MonetaryAmount(0, startAmount.currencyCode());
+  MonetaryAmount from3 = MonetaryAmount(1500, startAmount.currencyCode());
+  MonetaryAmount from4 = MonetaryAmount(500, startAmount.currencyCode());
+
+  expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectNoCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts4 = expectTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kExpectNoCall, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+
+  const PrivateExchangeName privateExchangeNames[] = {PrivateExchangeName(exchange4.name(), exchange4.keyName()),
+                                                      PrivateExchangeName(exchange1.name(), exchange1.keyName()),
+                                                      PrivateExchangeName(exchange3.name(), exchange3.keyName())};
+
+  TradedAmountsVector ret{tradedAmounts3, tradedAmounts4};
+  EXPECT_TRUE(std::ranges::is_permutation(
+      ret, exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions)));
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartSellAllExchanges) {
+  MonetaryAmount startAmount = MonetaryAmount(1, "ETH");
+  CurrencyCode toCurrency("EUR");
+  TradeSide side = TradeSide::kSell;
+
+  MonetaryAmount from1 = MonetaryAmount(1, startAmount.currencyCode());
+  MonetaryAmount from2 = MonetaryAmount(0, startAmount.currencyCode());
+  MonetaryAmount from3 = MonetaryAmount(0, startAmount.currencyCode());
+  MonetaryAmount from4 = MonetaryAmount(0, startAmount.currencyCode());
+
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectNoCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, true);
+  expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
+              AllOrderBooks::kExpectNoCall, true);
+  expectTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation, OrderBook::kNoExpectation,
+              AllOrderBooks::kNoExpectation, true);
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+
+  TradedAmountsVector ret{tradedAmounts1};
+  EXPECT_EQ(ret, exchangesOrchestrator.smartSell(startAmount, PrivateExchangeNames{}, tradeOptions));
+}
+
 TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
-  MonetaryAmount grossAmount{"1000XRP"};
+  MonetaryAmount grossAmount{1000, "XRP"};
   PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   PrivateExchangeName toExchange = fromExchange;
   EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, fromExchange, toExchange), exception);
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
-  MonetaryAmount grossAmount{"1000XRP"};
+  MonetaryAmount grossAmount{1000, "XRP"};
   PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   PrivateExchangeName toExchange(exchange2.name(), exchange2.keyName());
 
@@ -721,7 +1082,7 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
-  MonetaryAmount grossAmount{"1000XRP"};
+  MonetaryAmount grossAmount{1000, "XRP"};
   PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   PrivateExchangeName toExchange(exchange2.name(), exchange2.keyName());
 
@@ -752,7 +1113,7 @@ inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs)
 }  // namespace api
 
 TEST_F(ExchangeOrchestratorTest, WithdrawPossible) {
-  MonetaryAmount grossAmount{"1000XRP"};
+  MonetaryAmount grossAmount{1000, "XRP"};
   CurrencyCode cur = grossAmount.currencyCode();
   PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   PrivateExchangeName toExchange(exchange2.name(), exchange2.keyName());

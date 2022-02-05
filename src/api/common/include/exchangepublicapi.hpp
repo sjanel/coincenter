@@ -36,6 +36,7 @@ class ExchangePublic : public ExchangeBase {
   using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
   using WithdrawalFeeMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
   using LastTradesVector = vector<PublicTrade>;
+  using MarketsPath = SmallVector<Market, 3>;
 
   ExchangePublic(const ExchangePublic &) = delete;
   ExchangePublic &operator=(const ExchangePublic &) = delete;
@@ -60,8 +61,20 @@ class ExchangePublic : public ExchangeBase {
 
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
-  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrencyCode,
-                                        const PriceOptions &priceOptions = PriceOptions());
+  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrency,
+                                        const PriceOptions &priceOptions = PriceOptions()) {
+    MarketOrderBookMap marketOrderBookMap;
+    Fiats fiats = queryFiats();
+    MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrency, queryTradableMarkets(), fiats, true);
+    return convert(a, toCurrency, conversionPath, fiats, marketOrderBookMap, true, priceOptions);
+  }
+
+  /// Attempts to convert amount into a target currency.
+  /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
+  /// No external calls is made with this version, it has all what it needs
+  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrency, const MarketsPath &conversionPath,
+                                        const Fiats &fiats, MarketOrderBookMap &marketOrderBookMap,
+                                        bool canUseCryptowatchAPI, const PriceOptions &priceOptions = PriceOptions());
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
@@ -97,8 +110,6 @@ class ExchangePublic : public ExchangeBase {
 
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
-
-  using MarketsPath = SmallVector<Market, 3>;
 
   /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
   /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.
@@ -156,6 +167,8 @@ class ExchangePublic : public ExchangeBase {
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
+
+  CryptowatchAPI &cryptowatchAPI() { return _cryptowatchApi; }
 
  protected:
   friend class ExchangePrivate;

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <span>
 #include <string_view>
 
 #include "apiquerytypeenum.hpp"
 #include "cct_flatset.hpp"
+#include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
@@ -13,6 +13,7 @@ namespace cct {
 class ExchangeInfo {
  public:
   using CurrencySet = FlatSet<CurrencyCode>;
+  using CurrencyVector = vector<CurrencyCode>;
 
   enum struct FeeType { kMaker, kTaker };
 
@@ -21,10 +22,10 @@ class ExchangeInfo {
   };
 
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
-               std::span<const CurrencyCode> excludedAllCurrencies,
-               std::span<const CurrencyCode> excludedCurrenciesWithdraw,
-               const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
-               bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
+               CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
+               CurrencyVector &&preferredPaymentCurrencies, const APIUpdateFrequencies &apiUpdateFrequencies,
+               Duration publicAPIRate, Duration privateAPIRate, bool validateDepositAddressesInFile,
+               bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -33,11 +34,18 @@ class ExchangeInfo {
   /// Get a reference to the list of statically excluded currency codes to consider for withdrawals.
   const CurrencySet &excludedCurrenciesWithdrawal() const { return _excludedCurrenciesWithdrawal; }
 
+  /// Get a reference to the array of preferred payment currencies ordered by decreasing priority.
+  const CurrencyVector &preferredPaymentCurrencies() const { return _preferredPaymentCurrencies; }
+
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
   MonetaryAmount applyFee(MonetaryAmount m, FeeType feeType) const {
     return m * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
   }
+
+  MonetaryAmount getMakerFeeRatio() const { return _generalMakerRatio; }
+
+  MonetaryAmount getTakerFeeRatio() const { return _generalTakerRatio; }
 
   const APIUpdateFrequencies &apiUpdateFrequencies() const { return _apiUpdateFrequencies; }
 
@@ -60,8 +68,9 @@ class ExchangeInfo {
   bool placeSimulateRealOrder() const { return _placeSimulateRealOrder; }
 
  private:
-  CurrencySet _excludedCurrenciesAll;         // Currencies will be completely ignored by the exchange
-  CurrencySet _excludedCurrenciesWithdrawal;  // Currencies unavailable for withdrawals
+  CurrencySet _excludedCurrenciesAll;          // Currencies will be completely ignored by the exchange
+  CurrencySet _excludedCurrenciesWithdrawal;   // Currencies unavailable for withdrawals
+  CurrencyVector _preferredPaymentCurrencies;  // Ordered list of currencies available from smart trading.
   APIUpdateFrequencies _apiUpdateFrequencies;
   Duration _publicAPIRate;
   Duration _privateAPIRate;

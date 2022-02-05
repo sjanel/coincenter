@@ -29,6 +29,7 @@ class BalancePortfolio {
 
   MonetaryAmount get(CurrencyCode currencyCode) const;
 
+  bool hasSome(CurrencyCode cur) const { return get(cur).isStrictlyPositive(); }
   bool hasAtLeast(MonetaryAmount amount) const { return get(amount.currencyCode()) >= amount; }
 
   const_iterator begin() const { return _sortedAmounts.begin(); }
