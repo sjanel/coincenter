@@ -96,17 +96,15 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
   throw exception(std::move(err));
 }
 
-string TopLevelOption::getStrUnion(std::string_view exchangeName, std::string_view subOptionName) const {
-  string ret;
+TopLevelOption::CurrencyVector TopLevelOption::getUnorderedCurrencyUnion(std::string_view exchangeName,
+                                                                         std::string_view subOptionName) const {
+  CurrencyVector ret;
   const auto appendFunc = [&](JsonIt it) {
     JsonIt optValIt = it->find(subOptionName);
     if (optValIt != it->end()) {
       assert(optValIt->is_array());
       for (const auto& val : *optValIt) {
-        if (!ret.empty()) {
-          ret.push_back(',');
-        }
-        ret.append(val.get<std::string_view>());
+        ret.emplace_back(val.get<std::string_view>());
       }
     }
   };
@@ -118,6 +116,20 @@ string TopLevelOption::getStrUnion(std::string_view exchangeName, std::string_vi
   }
   if (_hasDefaultPart) {
     appendFunc(_defaultPart);
+  }
+  return ret;
+}
+
+TopLevelOption::CurrencyVector TopLevelOption::getCurrenciesArray(std::string_view exchangeName,
+                                                                  std::string_view subOptionName1,
+                                                                  std::string_view subOptionName2) const {
+  JsonIt optValIt = get(exchangeName, subOptionName1, subOptionName2);
+
+  CurrencyVector ret;
+  ret.reserve(optValIt->size());
+  assert(optValIt->is_array());
+  for (const auto& val : *optValIt) {
+    ret.emplace_back(val.get<std::string_view>());
   }
   return ret;
 }

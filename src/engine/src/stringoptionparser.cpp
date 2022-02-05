@@ -89,6 +89,14 @@ StringOptionParser::MonetaryAmountExchanges StringOptionParser::getMonetaryAmoun
                                  GetExchanges(StrEnd(_opt, startExchangesPos))};
 }
 
+StringOptionParser::MonetaryAmountPrivateExchanges StringOptionParser::getMonetaryAmountPrivateExchanges() const {
+  std::size_t commaPos = getNextCommaPos(0, false);
+  std::size_t startExchangesPos =
+      commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
+  return MonetaryAmountPrivateExchanges{MonetaryAmount(StrBeforeComma(_opt, 0, commaPos)),
+                                        GetPrivateExchanges(StrEnd(_opt, startExchangesPos))};
+}
+
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(
     bool currenciesShouldBeSet) const {
   std::size_t dashPos = _opt.find('-', 1);

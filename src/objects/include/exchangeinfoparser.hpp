@@ -5,6 +5,8 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
+#include "currencycode.hpp"
 #include "durationstring.hpp"
 
 namespace cct {
@@ -22,6 +24,7 @@ class TopLevelOption {
   static constexpr std::string_view kWithdrawOptionStr = "withdraw";
 
   using JsonIt = json::const_iterator;
+  using CurrencyVector = vector<CurrencyCode>;
 
   TopLevelOption(const json& jsonData, std::string_view optionName);
 
@@ -49,8 +52,13 @@ class TopLevelOption {
     return get(exchangeName, subOptionName1, subOptionName2)->get<bool>();
   }
 
-  /// Create a string which is an aggregate of array string values of all option levels
-  string getStrUnion(std::string_view exchangeName, std::string_view subOptionName) const;
+  /// Create an unordered aggregation of currencies from array string values of all option levels
+  CurrencyVector getUnorderedCurrencyUnion(std::string_view exchangeName, std::string_view subOptionName) const;
+
+  /// Get the ordered aggregation of currencies from array string values traversing the config options from bottom to
+  /// up.
+  CurrencyVector getCurrenciesArray(std::string_view exchangeName, std::string_view subOptionName1,
+                                    std::string_view subOptionName2 = "") const;
 
  private:
   JsonIt get(std::string_view exchangeName, std::string_view subOptionName1,

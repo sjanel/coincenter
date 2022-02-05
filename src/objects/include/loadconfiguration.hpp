@@ -5,6 +5,8 @@
 namespace cct {
 class LoadConfiguration {
  public:
+  static constexpr std::string_view kProdDefaultExchangeConfigFile = "exchangeconfig.json";
+
   enum class ExchangeConfigFileType : int8_t { kProd, kTest };
 
   LoadConfiguration() noexcept : _dataDir(kDefaultDataDir), _exchangeConfigFileType(ExchangeConfigFileType::kProd) {}
@@ -22,7 +24,6 @@ class LoadConfiguration {
   ExchangeConfigFileType exchangeConfigFileType() const { return _exchangeConfigFileType; }
 
  private:
-  static constexpr std::string_view kProdDefaultExchangeConfigFile = "exchangeconfig.json";
   static constexpr std::string_view kTestDefaultExchangeConfigFile = "exchangeconfig_test.json";
 
   std::string_view _dataDir;

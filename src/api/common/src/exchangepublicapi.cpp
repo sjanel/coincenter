@@ -8,24 +8,25 @@
 #include "unreachable.hpp"
 
 namespace cct::api {
-std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, CurrencyCode toCurrencyCode,
+std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, CurrencyCode toCurrency,
+                                                      const MarketsPath &conversionPath, const Fiats &fiats,
+                                                      MarketOrderBookMap &marketOrderBookMap, bool canUseCryptowatchAPI,
                                                       const PriceOptions &priceOptions) {
-  if (a.currencyCode() == toCurrencyCode) {
+  CurrencyCode fromCurrency = a.currencyCode();
+  if (fromCurrency == toCurrency) {
     return a;
   }
-  Fiats fiats = queryFiats();
-  MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrencyCode, queryTradableMarkets(), fiats, true);
   if (conversionPath.empty()) {
     return std::nullopt;
   }
   const ExchangeInfo::FeeType feeType =
       priceOptions.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-  bool canUseCryptoWatch = priceOptions.isAveragePrice() && _cryptowatchApi.queryIsExchangeSupported(_name);
-  std::optional<MarketOrderBookMap> optMarketOrderBook;
+  bool canUseCryptoWatch =
+      canUseCryptowatchAPI && priceOptions.isAveragePrice() && _cryptowatchApi.queryIsExchangeSupported(_name);
   for (Market m : conversionPath) {
-    assert(m.canTrade(a.currencyCode()));
-    CurrencyCode mFromCurrencyCode = a.currencyCode();
-    CurrencyCode mToCurrencyCode = m.base() == a.currencyCode() ? m.quote() : m.base();
+    assert(m.canTrade(fromCurrency));
+    CurrencyCode mFromCurrencyCode = fromCurrency;
+    CurrencyCode mToCurrencyCode = m.base() == fromCurrency ? m.quote() : m.base();
     std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(mFromCurrencyCode);
     CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
     std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
@@ -42,11 +43,11 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
           continue;
         }
       }
-      if (!optMarketOrderBook) {
-        optMarketOrderBook = queryAllApproximatedOrderBooks(1);
+      if (marketOrderBookMap.empty()) {
+        marketOrderBookMap = queryAllApproximatedOrderBooks(1);
       }
-      auto it = optMarketOrderBook->find(m);
-      if (it == optMarketOrderBook->end()) {
+      auto it = marketOrderBookMap.find(m);
+      if (it == marketOrderBookMap.end()) {
         return std::nullopt;
       }
       const MarketOrderBook &marketOrderbook = it->second;
@@ -95,22 +96,22 @@ class CurrencyDirFastestPathComparator {
 };
 }  // namespace
 
-ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                                             const MarketSet &markets, const Fiats &fiats,
                                                             bool considerStableCoinsAsFiats) {
   MarketsPath ret;
-  if (fromCurrencyCode == toCurrencyCode) {
-    log::error("Cannot convert {} to itself", fromCurrencyCode.str());
+  if (fromCurrency == toCurrency) {
+    log::warn("Cannot convert {} to itself", fromCurrency.str());
     return ret;
   }
 
   std::optional<CurrencyCode> optFiatFromStableCoin =
-      considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrencyCode) : std::nullopt;
-  const bool isToFiatLike = optFiatFromStableCoin || fiats.contains(toCurrencyCode);
+      considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrency) : std::nullopt;
+  const bool isToFiatLike = optFiatFromStableCoin || fiats.contains(toCurrency);
 
   CurrencyDirFastestPathComparator comp(_cryptowatchApi);
 
-  vector<CurrencyDirPath> searchPaths(1, CurrencyDirPath(1, CurrencyDir(fromCurrencyCode, false)));
+  vector<CurrencyDirPath> searchPaths(1, CurrencyDirPath(1, CurrencyDir(fromCurrency, false)));
   using VisitedCurrenciesSet = std::unordered_set<CurrencyCode>;
   VisitedCurrenciesSet visitedCurrencies;
   do {
@@ -121,7 +122,7 @@ ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCur
     if (visitedCurrencies.contains(lastCurrencyCode)) {
       continue;
     }
-    if (lastCurrencyCode == toCurrencyCode) {
+    if (lastCurrencyCode == toCurrency) {
       const int nbCurDir = path.size();
       ret.reserve(nbCurDir - 1);
       for (int curDirPos = 1; curDirPos < nbCurDir; ++curDirPos) {
@@ -146,7 +147,7 @@ ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCur
         considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(lastCurrencyCode) : std::nullopt;
     const bool isLastFiatLike = optLastFiat || fiats.contains(lastCurrencyCode);
     if (isToFiatLike && isLastFiatLike) {
-      searchPaths.emplace_back(std::move(path)).emplace_back(toCurrencyCode, false);
+      searchPaths.emplace_back(std::move(path)).emplace_back(toCurrency, false);
       std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
     }
     visitedCurrencies.insert(std::move(lastCurrencyCode));
@@ -155,14 +156,13 @@ ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCur
   return ret;
 }
 
-ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode fromCurrencyCode,
-                                                                  CurrencyCode toCurrencyCode,
+ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                                                   bool considerStableCoinsAsFiats) {
-  MarketsPath marketsPath = findMarketsPath(fromCurrencyCode, toCurrencyCode, considerStableCoinsAsFiats);
+  MarketsPath marketsPath = findMarketsPath(fromCurrency, toCurrency, considerStableCoinsAsFiats);
   CurrenciesPath ret;
   if (!marketsPath.empty()) {
     ret.reserve(marketsPath.size() + 1U);
-    ret.emplace_back(fromCurrencyCode);
+    ret.emplace_back(fromCurrency);
     for (Market m : marketsPath) {
       if (m.base() == ret.back()) {
         ret.emplace_back(m.quote());

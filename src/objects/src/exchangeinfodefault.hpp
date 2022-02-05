@@ -22,6 +22,13 @@ struct ExchangeInfoDefault {
         "JPY",
         "USD",
         "CHF"
+      ],
+      "preferredPaymentCurrencies": [
+        "USDT",
+        "USDC",
+        "EUR",
+        "USD",
+        "KRW"
       ]
     },
     "exchange": {
@@ -151,6 +158,10 @@ struct ExchangeInfoDefault {
       "withdrawExclude": [
         "BTC",
         "EUR"
+      ],
+      "preferredPaymentCurrencies": [
+        "USDT",
+        "EUR"
       ]
     }
   },
@@ -174,8 +185,8 @@ struct ExchangeInfoDefault {
   },
   "tradefees": { 
     "default": {
-      "maker": "0.16",
-      "taker": "0.26"
+      "maker": "0.1",
+      "taker": "0.2"
     }
   },
   "withdraw": {

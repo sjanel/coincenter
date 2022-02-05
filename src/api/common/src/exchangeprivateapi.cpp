@@ -34,26 +34,18 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
   }
 }
 
-TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options) {
-  log::info("{} trade {} -> {} on {}_{} requested", options.isMultiTradeAllowed() ? "Multi" : "Single", from.str(),
-            toCurrencyCode.str(), _exchangePublic.name(), keyName());
+TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
+                                     const ExchangePublic::MarketsPath &conversionPath) {
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
   log::debug(options.str(realOrderPlacedInSimulationMode));
-  TradedAmounts tradedAmounts = multiTrade(from, toCurrencyCode, options);
-  if (!options.isSimulation() || realOrderPlacedInSimulationMode) {
-    log::info("**** Traded {} into {} ****", tradedAmounts.tradedFrom.str(), tradedAmounts.tradedTo.str());
-  }
-  return tradedAmounts;
-}
-
-TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options) {
-  ExchangePublic::MarketsPath conversionPath = _exchangePublic.findMarketsPath(from.currencyCode(), toCurrency);
+  const int nbTrades = static_cast<int>(conversionPath.size());
+  log::info("{}rade {} -> {} on {}_{} requested", options.isMultiTradeAllowed() && nbTrades > 1 ? "Multi t" : "T",
+            from.str(), toCurrency.str(), _exchangePublic.name(), keyName());
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
     log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency.str(), _exchangePublic.name());
     return tradedAmounts;
   }
-  const int nbTrades = conversionPath.size();
   if (nbTrades > 1 && !options.isMultiTradeAllowed()) {
     log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from.str(),
                toCurrency.str(), nbTrades);
@@ -64,7 +56,7 @@ TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCu
     Market m = conversionPath[tradePos];
     toCurrency = avAmount.currencyCode() == m.base() ? m.quote() : m.base();
     log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(), toCurrency.str());
-    TradedAmounts stepTradedAmounts = singleTrade(avAmount, toCurrency, options, m);
+    TradedAmounts stepTradedAmounts = marketTrade(avAmount, toCurrency, options, m);
     avAmount = stepTradedAmounts.tradedTo;
     if (avAmount.isZero()) {
       break;
@@ -76,28 +68,30 @@ TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCu
       tradedAmounts.tradedTo = stepTradedAmounts.tradedTo;
     }
   }
+  if (!options.isSimulation() || realOrderPlacedInSimulationMode) {
+    log::info("**** Traded {} into {} ****", tradedAmounts.tradedFrom.str(), tradedAmounts.tradedTo.str());
+  }
   return tradedAmounts;
 }
 
-TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
+TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
                                            Market m) {
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrency = from.currencyCode();
-  const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
-  TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;
-
-  const auto nbSecondsSinceEpoch =
-      std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
-
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, options);
 
   std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(m, from, options.priceOptions());
   if (!optPrice) {
-    throw exception("Impossible to compute average price");
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts(fromCurrency, toCurrency);
   }
 
   MonetaryAmount price = *optPrice;
+  const auto nbSecondsSinceEpoch =
+      std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
+  const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
 
+  TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;
+  TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, options);
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
   if (placeOrderInfo.isClosed()) {

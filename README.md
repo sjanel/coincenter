@@ -70,6 +70,8 @@ Main features:
     - [Multi Trade](#multi-trade)
       - [Multi trade all](#multi-trade-all)
       - [Trade simulation](#trade-simulation)
+    - [Buy / Sell](#buy--sell)
+      - [Examples with explanation](#examples-with-explanation-1)
     - [Deposit information](#deposit-information)
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
@@ -419,6 +421,54 @@ Similarly to single trade, you can use command line option `--multitrade-all` wh
 #### Trade simulation
 
 Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
+
+### Buy / Sell
+
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. It's really a *trade* in this aspect. If you wish, you can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+
+The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md) file to see how to set the preferred currencies.
+
+**Behavior**:
+
+ - All currencies present in the **preferred currencies** of a given exchange may be used to validate and perform trades. For instance, if you decide to include non stable cryptos (for instance, `BTC` as it is often involves in many pairs), it can be used as a base for a *buy*, or target for a *sell*. Thus as a recommendation, if you do add such currencies as *preferred*, prefer placing them after the fiats and stable coins.
+ - Several trades may be performed on the same account for a **buy**. For instance: you have both `EUR` and `USDT` and they are both present in the *preferred currencies*, and the desired amount of target currency is high enough such that it would *eat* all of your `EUR` or `USDT`.
+ - Similarly to **trade** options, `coincenter` tries to minimize the number of actual trades to achieve the desired goal. So it will favor exchanges and currencies with the largest available amount.
+ - For the `buy`, trade fees are taken into account to attempt to reach exactly the desired **net** amount.
+
+#### Examples with explanation
+```bash
+coincenter --sell 1 BTC,exchange1,exchange3_user1
+```
+Sell `1 BTC` on all accounts on `exchange1` and `exchange3_user1` to any preferred currencies
+
+| Exchange        | Amount  | Considered amount for sell | Preferred currencies | Markets              | Sold to  |
+| --------------- | ------- | -------------------------- | -------------------- | -------------------- | -------- |
+| exchange1_user1 | 0.1 BTC | **0.1 BTC**                | `[USDT,EUR]`         | **BTC-USDT**,BTC-EUR | **USDT** |
+| exchange1_user2 | 0.2 BTC | **0.2 BTC**                | `[USDT,EUR]`         | **BTC-USDT**,BTC-EUR | **USDT** |
+| exchange2_user1 | 0.3 BTC | 0 BTC                      |                      |                      |          |
+| exchange3_user1 | 0.6 BTC | **0.6 BTC**                | `[USDT,KRW]`         | **BTC-KRW**          | **KRW**  |
+| exchange4_user1 | 0 BTC   | 0 BTC                      |                      |                      |          |
+
+A total of `0.9 BTC` will be sold, to `USDT` on `exchange1` and to `KRW` on `exchange3`.
+
+```bash
+coincenter --buy 2.5ETH
+```
+Buy `2 ETH` on all accounts which has some available amount in preferred currencies.
+Let's consider following prices, without any trade fees (`coincenter` takes trade fees into account for `buy`):
+ - 1 ETH = 1000 EUR
+ - 1 ETH = 1200 USDT
+ - 1 ETH = 1000000 KRW
+
+| Exchange        | Amount            | Considered amount for buy | Preferred currencies | Markets              | Bought                    |
+| --------------- | ----------------- | ------------------------- | -------------------- | -------------------- | ------------------------- |
+| exchange1_user1 | 350 EUR           | 0 EUR                     | `[USDT,EUR]`         | ETH-USDT             | 0 ETH (no market ETH-EUR) |
+| exchange1_user2 | 600 USDT          | **600 USDT**              | `[USDT,EUR]`         | **ETH-USDT**         | **0.5 ETH**               |
+| exchange2_user1 | 100 EUR           | 0 EUR                     | `[USDT]`             |                      |                           |
+| exchange3_user1 | 800 EUR, 300 USDT | **800 EUR, 240 USDT**     | `[USDT,KRW,EUR]`     | **ETH-EUR,ETH-USDT** | **0.8 + 0.20 ETH**        |
+| exchange4_user1 | 500000 KRW        | **500000 KRW**            | `[USDT,KRW]`         | **ETH-KRW**          | **0.5 ETH**               |
+
+A total of `2 ETH` will be bought, from **600 USDT** on `exchange1_user2`, **800 EUR** and **240 USDT** from `exchange3_user1` and **500000 KRW** from `exchange4_user1`. As you can see in this example, it's possible to make several trades per account for one `--buy` request.
 
 ### Deposit information
 

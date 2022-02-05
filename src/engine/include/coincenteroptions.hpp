@@ -7,6 +7,7 @@
 
 #include "cct_const.hpp"
 #include "commandlineoption.hpp"
+#include "exchangeinfomap.hpp"
 #include "exchangepublicapi.hpp"
 #include "static_string_view_helpers.hpp"
 #include "staticcommandlineoptioncheck.hpp"
@@ -45,6 +46,24 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kLastTradesN =
       JoinStringView_v<kLastTradesN1, IntToStringView_v<api::ExchangePublic::kNbLastTradesDefault>,
                        kClosingParenthesis>;
+
+  static constexpr std::string_view kSmartBuy1 =
+      "Attempt to buy the specified amount, on matching exchange accounts (all are considered if none provided)."
+      " The base currencies will be chosen according to the '";
+  static constexpr std::string_view kSmartBuy2 = "' array defined in '";
+  static constexpr std::string_view kSmartBuy3 =
+      "' file. "
+      "Standard trade options are compatible to customize the trade, and if enabled, multi trade can be used.";
+  static constexpr std::string_view kSmartBuy =
+      JoinStringView_v<kSmartBuy1, LoadConfiguration::kProdDefaultExchangeConfigFile, kSmartBuy2,
+                       kPreferredPaymentCurrenciesOptName, kSmartBuy3>;
+
+  static constexpr std::string_view kSmartSell1 =
+      "Attempt to sell the specified amount, on matching exchange accounts (all are considered if none provided)."
+      " The payment currencies will be chosen according to the '";
+  static constexpr std::string_view kSmartSell =
+      JoinStringView_v<kSmartSell1, LoadConfiguration::kProdDefaultExchangeConfigFile, kSmartBuy2,
+                       kPreferredPaymentCurrenciesOptName, kSmartBuy3>;
 
   static constexpr std::string_view kTradeTimeout1 = "Adjust trade timeout (default: ";
   static constexpr std::string_view kTradeTimeout2 = "s). Remaining orders will be cancelled after the timeout.";
@@ -128,6 +147,9 @@ struct CoincenterCmdLineOptions {
   Duration tradeTimeout{TradeOptions().maxTradeTime()};
   Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
   bool tradeSim{TradeOptions().isSimulation()};
+
+  std::string_view buy;
+  std::string_view sell;
 
   std::string_view depositInfo;
 
@@ -272,6 +294,8 @@ struct CoincenterAllowedOptions {
        &OptValueType::ordersMinAge},
       {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
        &OptValueType::ordersMaxAge},
+      {{{"Trade", 40}, "--buy", "<amt-cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
+      {{{"Trade", 40}, "--sell", "<amt-cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
       {{{"Trade", 40},
         "--trade",
         't',

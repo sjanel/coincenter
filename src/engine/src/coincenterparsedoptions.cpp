@@ -111,21 +111,40 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
   }
 
+  // Parse trade / buy / sell options
+  // First, check that at most one master trade option is set
+  // (options would be set for all trades otherwise which is not very intuitive)
+  if (!cmdLineOptions.tradeMulti.empty() + !cmdLineOptions.tradeMultiAll.empty() + !cmdLineOptions.buy.empty() +
+          !cmdLineOptions.sell.empty() + !cmdLineOptions.tradeAll.empty() + !cmdLineOptions.tradeMultiAll.empty() >
+      1) {
+    throw invalid_argument("Only one trade can be done at a time");
+  }
   std::string_view tradeArgs;
-  bool isMultiTrade = !cmdLineOptions.tradeMulti.empty() || !cmdLineOptions.tradeMultiAll.empty();
+  bool isSmartTrade = !cmdLineOptions.buy.empty() || !cmdLineOptions.sell.empty();
+  bool isMultiTrade = !cmdLineOptions.tradeMulti.empty() || !cmdLineOptions.tradeMultiAll.empty() || isSmartTrade;
   bool isTradeAll = !cmdLineOptions.tradeAll.empty() || !cmdLineOptions.tradeMultiAll.empty();
   if (isMultiTrade) {
-    tradeArgs = isTradeAll ? cmdLineOptions.tradeMultiAll : cmdLineOptions.tradeMulti;
+    if (!cmdLineOptions.buy.empty()) {
+      tradeArgs = cmdLineOptions.buy;
+    } else if (!cmdLineOptions.sell.empty()) {
+      tradeArgs = cmdLineOptions.sell;
+    } else {
+      tradeArgs = isTradeAll ? cmdLineOptions.tradeMultiAll : cmdLineOptions.tradeMulti;
+    }
   } else {
     tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
   }
   if (!tradeArgs.empty()) {
-    if (isTradeAll) {
+    StringOptionParser optParser(tradeArgs);
+    if (isSmartTrade) {
+      MonetaryAmount &specifiedAmount = !cmdLineOptions.buy.empty() ? endTradeAmount : startTradeAmount;
+      std::tie(specifiedAmount, tradePrivateExchangeNames) = optParser.getMonetaryAmountPrivateExchanges();
+    } else if (isTradeAll) {
       std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
-          StringOptionParser(tradeArgs).getCurrenciesPrivateExchanges();
+          optParser.getCurrenciesPrivateExchanges();
     } else {
       std::tie(startTradeAmount, isPercentageTrade, toTradeCurrency, tradePrivateExchangeNames) =
-          StringOptionParser(tradeArgs).getMonetaryAmountCurrencyPrivateExchanges();
+          optParser.getMonetaryAmountCurrencyPrivateExchanges();
     }
 
     TradeMode tradeMode = cmdLineOptions.tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
@@ -150,6 +169,9 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
         tradeOptions = TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
                                     cmdLineOptions.tradeUpdatePrice, tradeType);
       } else {
+        if (isSmartTrade) {
+          throw invalid_argument("Absolute price is not compatible with smart buy / sell");
+        }
         PriceOptions priceOptions(tradePrice);
         tradeOptions = TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout);
       }
