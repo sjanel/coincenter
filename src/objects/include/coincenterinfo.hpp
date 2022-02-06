@@ -68,12 +68,15 @@ class CoincenterInfo {
 
   bool printQueryResults() const { return _printQueryResults; }
 
+  Duration fiatConversionQueryRate() const { return _fiatConversionQueryRate; }
+
  private:
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
   StableCoinsMap _stableCoinsMap;
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
   string _dataDir;
+  Duration _fiatConversionQueryRate;
   std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
   const MonitoringInfo &_monitoringInfo;
   bool _printQueryResults;

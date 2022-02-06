@@ -32,7 +32,7 @@ void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
     : _coincenterInfo(coincenterInfo),
       _cryptowatchAPI(_coincenterInfo, coincenterInfo.getRunMode()),
-      _fiatConverter(_coincenterInfo, std::chrono::hours(8)),
+      _fiatConverter(_coincenterInfo, _coincenterInfo.fiatConversionQueryRate()),
       _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
       _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),

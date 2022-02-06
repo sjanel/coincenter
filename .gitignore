@@ -66,4 +66,5 @@ cscope*
 data/secret
 data/cache
 data/static/exchangeconfig.json
+data/static/generalconfig.json
 monitoring/data/grafana/*

@@ -5,6 +5,7 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "durationstring.hpp"
 #include "exchangeinfoparser.hpp"
 
 #ifdef CCT_ENABLE_PROMETHEUS
@@ -39,6 +40,23 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
   return ret;
 }
 
+json LoadGeneralConfig(std::string_view dataDir) {
+  File generalConfigFile(dataDir, File::Type::kStatic, "generalconfig.json", File::IfNotFound::kNoThrow);
+  json jsonData = generalConfigFile.readJson();
+  if (jsonData.empty()) {
+    static const json kDefaultGeneralConfig = R"(
+{
+    "fiatConversion": {
+        "rate": "8h"
+    }
+}
+)"_json;
+    jsonData = kDefaultGeneralConfig;
+    generalConfigFile.write(jsonData);
+  }
+  return jsonData;
+}
+
 #ifdef CCT_ENABLE_PROMETHEUS
 using MetricGatewayType = PrometheusMetricGateway;
 #else
@@ -54,6 +72,8 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
       _exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
+      _fiatConversionQueryRate(
+          ParseDuration(LoadGeneralConfig(_dataDir)["fiatConversion"]["rate"].get<std::string_view>())),
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
