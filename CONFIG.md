@@ -79,7 +79,7 @@ The chosen values will be:
 
 Refer to the hardcoded default json example as a model in case of doubt.
 
-#### Option descriptions
+#### Options description
 
 | Module      | Name                               | Value                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----------- | ---------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -104,3 +104,13 @@ Refer to the hardcoded default json example as a model in case of doubt.
 ##### Note
 `updateFrequency` is itself a json document containing all duration values as query frequencies. 
 See [ExchangeInfo default file](src/objects/src/exchangeinfodefault.hpp) as an example for the syntax.
+
+### static/generalconfig.json
+
+Contains options that are not exchange specific.
+
+#### Options description
+
+| Module  | Name                   | Value                      | Description                                                               |
+| ------- | ---------------------- | -------------------------- | ------------------------------------------------------------------------- |
+| *query* | **fiatConversionRate** | Duration string (ex: `8h`) | Minimum time between two consecutive requests of the same fiat conversion |
