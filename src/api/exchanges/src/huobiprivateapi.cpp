@@ -239,7 +239,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.toCur());
 
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
   const Market m = tradeInfo.m;
   string lowerCaseMarket = m.assetsPairStrLower();
@@ -282,7 +282,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", std::move(placePostData));
-  placeOrderInfo.orderId = result["data"];
+  placeOrderInfo.orderId = std::move(result["data"].get_ref<string&>());
   return placeOrderInfo;
 }
 

@@ -260,7 +260,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   // We have to compute the amount manually (always in base currency)
   volume.truncate(volAndPriNbDecimals.volNbDecimals);
 
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
   if (volume < orderMin) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
               orderMin.str());
@@ -302,7 +302,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
     return placeOrderInfo;
   }
 
-  placeOrderInfo.orderId = placeOrderRes["txid"].front();
+  placeOrderInfo.orderId = std::move(placeOrderRes["txid"].front().get_ref<string&>());
 
   // Kraken will automatically truncate the decimals to the maximum allowed for the trade assets. Get this information
   // and adjust our amount.

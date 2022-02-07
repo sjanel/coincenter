@@ -254,7 +254,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   CurlPostData placePostData{{"market", UpbitPublic::ReverseMarketStr(m)}, {"side", askOrBid}, {"ord_type", orderType}};
 
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
   volume = sanitizeVolume(volume, price);
 
@@ -287,8 +287,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
 
-  placeOrderInfo.orderId = placeOrderRes["uuid"];
   placeOrderInfo.orderInfo = parseOrderJson(placeOrderRes, fromCurrencyCode, m);
+  placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
 
   // Upbit takes some time to match the market order - We should wait that it has been matched
   bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;

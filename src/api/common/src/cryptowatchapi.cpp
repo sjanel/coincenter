@@ -9,8 +9,7 @@
 #include "coincenterinfo.hpp"
 #include "toupperlower.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 namespace {
 string Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
   return curlHandle.query(endpoint,
@@ -45,13 +44,13 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
   if (loadFromFileCacheAtInit) {
     json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readJson();
     if (!data.empty()) {
-      const int64_t timeepoch = data["timeepoch"].get<int64_t>();
-      const auto& fiatsFile = data["fiats"];
+      int64_t timeepoch = data["timeepoch"].get<int64_t>();
+      auto& fiatsFile = data["fiats"];
       Fiats fiats;
       fiats.reserve(static_cast<Fiats::size_type>(fiatsFile.size()));
       for (auto it = fiatsFile.begin(), endIt = fiatsFile.end(); it != endIt; ++it) {
         log::debug("Reading fiat {} from cache file", it->get<std::string_view>());
-        fiats.emplace(it->get<std::string_view>());
+        fiats.emplace_hint(fiats.end(), std::move(it->get_ref<string&>()));
       }
       log::info("Loaded {} fiats from cache file", fiats.size());
       _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeepoch)));
@@ -136,5 +135,4 @@ void CryptowatchAPI::updateCacheFile() const {
     fiatsCacheFile.write(data);
   }
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

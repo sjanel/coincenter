@@ -84,6 +84,7 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
                                            Market m) {
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrency = from.currencyCode();
+  const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
   TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;
 
   const auto nbSecondsSinceEpoch =
@@ -119,7 +120,8 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
     TimePoint t = Clock::now();
 
-    const bool reachedEmergencyTime = timerStart + options.maxTradeTime() < t + std::chrono::seconds(1);
+    const bool reachedEmergencyTime =
+        !noEmergencyTime && timerStart + options.maxTradeTime() < t + std::chrono::seconds(1);
     bool updatePriceNeeded = false;
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
         lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
@@ -183,7 +185,8 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
   return totalTradedAmounts;
 }
 
-WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange) {
+WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
+                                       Duration withdrawRefreshTime) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
@@ -194,7 +197,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   NextAction action = NextAction::kCheckSender;
   SentWithdrawInfo sentWithdrawInfo;
   do {
-    std::this_thread::sleep_for(kWithdrawInfoRefreshTime);
+    std::this_thread::sleep_for(withdrawRefreshTime);
     switch (action) {
       case NextAction::kCheckSender:
         sentWithdrawInfo = isWithdrawSuccessfullySent(initiatedWithdrawInfo);
@@ -261,7 +264,8 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
   ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
   toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)));
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)),
+                                OrderId("SimulatedOrderId"));
   placeOrderInfo.setClosed();
   return placeOrderInfo;
 }

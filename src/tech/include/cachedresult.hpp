@@ -81,7 +81,8 @@ class CachedResult : public CachedResultBase {
     if (it == _cachedResultsMap.end()) {
       TValue val(std::apply(flattenTuple, key), t);
       it = _cachedResultsMap.insert_or_assign(std::move(key), std::move(val)).first;
-    } else if (_state != State::kForceCache && it->second.second + _refreshPeriod < t) {
+    } else if (_state != State::kForceCache && _refreshPeriod != Duration::max() &&
+               it->second.second + _refreshPeriod < t) {
       it->second = TValue(std::apply(flattenTuple, std::move(key)), t);
     }
     return it->second.first;

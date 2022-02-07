@@ -43,6 +43,7 @@ struct TradeInfo {
 
 struct OrderInfo {
 #ifndef CCT_AGGR_INIT_CXX20
+  explicit OrderInfo(const TradedAmounts &ta, bool closed = false) : tradedAmounts(ta), isClosed(closed) {}
   explicit OrderInfo(TradedAmounts &&ta, bool closed = false) : tradedAmounts(std::move(ta)), isClosed(closed) {}
 #endif
 
@@ -51,9 +52,10 @@ struct OrderInfo {
 };
 
 struct PlaceOrderInfo {
-  explicit PlaceOrderInfo(OrderInfo &&oInfo) : orderInfo(std::move(oInfo)) {}
-
-  PlaceOrderInfo(OrderInfo &&oInfo, OrderId orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
+#ifndef CCT_AGGR_INIT_CXX20
+  PlaceOrderInfo(const OrderInfo &oInfo, const OrderId &orderId) : orderInfo(oInfo), orderId(orderId) {}
+  PlaceOrderInfo(OrderInfo &&oInfo, OrderId &&orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
+#endif
 
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.isClosed = true; }
