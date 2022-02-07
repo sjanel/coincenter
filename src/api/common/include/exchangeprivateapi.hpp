@@ -85,7 +85,8 @@ class ExchangePrivate : public ExchangeBase {
   /// @param grossAmount gross amount to withdraw, including the fee that will be deduced.
   /// @param targetExchange private exchange to which we should deliver the transfer
   /// @return information about the withdraw
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange);
+  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
+                        Duration withdrawRefreshTime = kWithdrawInfoRefreshTime);
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.

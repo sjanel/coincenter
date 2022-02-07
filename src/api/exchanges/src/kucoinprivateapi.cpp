@@ -239,7 +239,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.toCur());
 
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)));
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
   if (!EnsureEnoughAmountIn(_curlHandle, _apiKey, from, "trade")) {
     placeOrderInfo.setClosed();

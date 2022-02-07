@@ -14,6 +14,12 @@ using WithdrawIdView = std::string_view;
 namespace api {
 class InitiatedWithdrawInfo {
  public:
+  InitiatedWithdrawInfo(const Wallet &receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
+      : _receivingWallet(receivingWallet),
+        _withdrawId(withdrawId),
+        _initiatedTime(Clock::now()),
+        _grossEmittedAmount(grossEmittedAmount) {}
+
   InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
       : _receivingWallet(std::move(receivingWallet)),
         _withdrawId(withdrawId),
