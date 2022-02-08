@@ -17,7 +17,6 @@ aux_source_directory(exchanges/src API_EXCHANGES_SRC)
 aux_source_directory(interface/src API_INTERFACE_SRC)
 
 add_library(coincenter_exchangeapi STATIC ${API_EXCHANGES_SRC} ${API_INTERFACE_SRC})
-target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_tools)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_objects)
 target_link_libraries(coincenter_exchangeapi PUBLIC coincenter_apicommon)
 target_link_libraries(coincenter_exchangeapi PRIVATE coincenter_monitoring)

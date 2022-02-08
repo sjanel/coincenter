@@ -14,6 +14,10 @@ namespace cct {
 
 class Order {
  public:
+  Order(const char *id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
+        TimePoint placedTime, TradeSide side)
+      : Order(OrderId(id), matchedVolume, remainingVolume, price, placedTime, side) {}
+
   Order(std::string_view id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
         TimePoint placedTime, TradeSide side);
 

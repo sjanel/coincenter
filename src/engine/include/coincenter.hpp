@@ -10,7 +10,7 @@
 #include "exchange.hpp"
 #include "exchangename.hpp"
 #include "exchangepool.hpp"
-#include "exchangeretriever.hpp"
+#include "exchangesorchestrator.hpp"
 #include "fiatconverter.hpp"
 #include "metricsexporter.hpp"
 #include "monitoringinfo.hpp"
@@ -23,8 +23,6 @@ namespace cct {
 
 class CoincenterParsedOptions;
 class TradeOptions;
-
-using ExchangeNameSpan = std::span<const ExchangeName>;
 
 class Coincenter {
  public:
@@ -132,8 +130,7 @@ class Coincenter {
   MetricsExporter _metricsExporter;
 
   ExchangePool _exchangePool;
-  ExchangeRetriever _exchangeRetriever;
-  ConstExchangeRetriever _cexchangeRetriever;
+  ExchangesOrchestrator _exchangesOrchestrator;
   QueryResultPrinter _queryResultPrinter;
 };
 }  // namespace cct

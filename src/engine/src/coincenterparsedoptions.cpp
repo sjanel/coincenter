@@ -138,16 +138,20 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     }
 
     if (!cmdLineOptions.tradeStrategy.empty()) {
-      tradeOptions = TradeOptions(cmdLineOptions.tradeStrategy, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
+      PriceOptions priceOptions(cmdLineOptions.tradeStrategy);
+      tradeOptions = TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
                                   cmdLineOptions.tradeUpdatePrice, tradeType);
     } else if (!cmdLineOptions.tradePrice.empty()) {
       MonetaryAmount tradePrice(cmdLineOptions.tradePrice);
       if (tradePrice.isAmountInteger() && tradePrice.hasNeutralCurrency()) {
         // Then it must be a relative price
-        TradeRelativePrice relativePrice = static_cast<TradeRelativePrice>(tradePrice.integerPart());
-        tradeOptions = TradeOptions(relativePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout, tradeType);
+        RelativePrice relativePrice = static_cast<RelativePrice>(tradePrice.integerPart());
+        PriceOptions priceOptions(relativePrice);
+        tradeOptions = TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
+                                    cmdLineOptions.tradeUpdatePrice, tradeType);
       } else {
-        tradeOptions = TradeOptions(tradePrice, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout);
+        PriceOptions priceOptions(tradePrice);
+        tradeOptions = TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout);
       }
     } else {
       tradeOptions = TradeOptions(timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,

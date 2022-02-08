@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string_view>
 
 #include "cct_const.hpp"
@@ -12,6 +13,7 @@ namespace cct {
 
 using ExchangeName = string;
 using PublicExchangeNames = FixedCapacityVector<ExchangeName, kNbSupportedExchanges>;
+using ExchangeNameSpan = std::span<const ExchangeName>;
 
 class PrivateExchangeName {
  public:

@@ -7,7 +7,9 @@
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
+#include "priceoptions.hpp"
 #include "simpletable.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 
@@ -324,13 +326,14 @@ std::optional<MonetaryAmount> MarketOrderBook::computeWorstPriceForTakerAmount(
   return std::optional<MonetaryAmount>();
 }
 
-std::optional<MonetaryAmount> MarketOrderBook::convertAtAvgPrice(MonetaryAmount amountInBaseOrQuote) const {
-  std::optional<MonetaryAmount> avgPrice = averagePrice();
+std::optional<MonetaryAmount> MarketOrderBook::convert(MonetaryAmount amountInBaseOrQuote,
+                                                       const PriceOptions& priceOptions) const {
+  std::optional<MonetaryAmount> avgPrice = computeAvgPrice(amountInBaseOrQuote, priceOptions);
   if (!avgPrice) {
-    return avgPrice;
+    return std::nullopt;
   }
   return amountInBaseOrQuote.currencyCode() == _market.base()
-             ? *avgPrice * amountInBaseOrQuote.toNeutral()
+             ? amountInBaseOrQuote.toNeutral() * (*avgPrice)
              : MonetaryAmount(amountInBaseOrQuote / *avgPrice, _market.base());
 }
 
@@ -338,7 +341,7 @@ std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::operator[](int relati
   if (relativePosToLimitPrice == 0) {
     auto [v11, v12] = (*this)[-1];
     auto [v21, v22] = (*this)[1];
-    return std::make_pair((v11 + v21) / 2, (v12 + v22) / 2);
+    return std::make_pair(v11 + (v21 - v11) / 2, v12 + (v22 - v12) / 2);
   } else if (relativePosToLimitPrice < 0) {
     int pos = _lowestAskPricePos + relativePosToLimitPrice;
     return std::make_pair(priceAt(pos), amountAt(pos));
@@ -402,6 +405,87 @@ MonetaryAmount MarketOrderBook::getHighestTheoreticalPrice() const {
 MonetaryAmount MarketOrderBook::getLowestTheoreticalPrice() const {
   // Use 10 as default number of decimals if empty orderbook (like Satoshi)
   return MonetaryAmount(1, _market.quote(), _orders.empty() ? 10 : (lowestAskPrice() - highestBidPrice()).nbDecimals());
+}
+
+namespace {
+std::optional<MonetaryAmount> ComputeRelativePrice(bool isBuy, const MarketOrderBook& marketOrderBook,
+                                                   int relativePrice) {
+  assert(relativePrice != 0);
+  if (isBuy) {
+    // Bounds check
+    if (relativePrice > 0) {
+      relativePrice = std::min(relativePrice, marketOrderBook.nbBidPrices());
+    } else {
+      relativePrice = std::max(relativePrice, -marketOrderBook.nbAskPrices());
+    }
+    relativePrice = -relativePrice;
+  } else {
+    if (relativePrice > 0) {
+      relativePrice = std::min(relativePrice, marketOrderBook.nbAskPrices());
+    } else {
+      relativePrice = std::max(relativePrice, -marketOrderBook.nbBidPrices());
+    }
+  }
+  if (relativePrice == 0) {
+    return std::nullopt;
+  }
+  return marketOrderBook[relativePrice].first;
+}
+}  // namespace
+
+std::optional<MonetaryAmount> MarketOrderBook::computeLimitPrice(MonetaryAmount from,
+                                                                 const PriceOptions& priceOptions) const {
+  if (empty()) {
+    return std::nullopt;
+  }
+  if (priceOptions.isRelativePrice()) {
+    const bool isBuy = from.currencyCode() == _market.quote();
+    return ComputeRelativePrice(isBuy, *this, priceOptions.relativePrice());
+  }
+  CurrencyCode marketCode = _market.base();
+  switch (priceOptions.priceStrategy()) {
+    case PriceStrategy::kTaker:
+      [[fallthrough]];
+    case PriceStrategy::kNibble:
+      marketCode = _market.quote();
+      [[fallthrough]];
+    case PriceStrategy::kMaker:
+      return from.currencyCode() == marketCode ? lowestAskPrice() : highestBidPrice();
+    default:
+      unreachable();
+  }
+}
+
+std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount from,
+                                                               const PriceOptions& priceOptions) const {
+  if (empty()) {
+    return std::nullopt;
+  }
+  if (priceOptions.isFixedPrice()) {
+    return MonetaryAmount(priceOptions.fixedPrice(), _market.quote());
+  }
+  if (priceOptions.isRelativePrice()) {
+    const bool isBuy = from.currencyCode() == _market.quote();
+    return ComputeRelativePrice(isBuy, *this, priceOptions.relativePrice());
+  }
+  CurrencyCode marketCode = _market.base();
+  switch (priceOptions.priceStrategy()) {
+    case PriceStrategy::kTaker: {
+      std::optional<MonetaryAmount> optRet = computeAvgPriceForTakerAmount(from);
+      if (optRet) {
+        return optRet;
+      }
+      log::warn("{} is too big to be matched immediately on {}, return limit price instead", from.str(), _market.str());
+      [[fallthrough]];
+    }
+    case PriceStrategy::kNibble:
+      marketCode = _market.quote();
+      [[fallthrough]];
+    case PriceStrategy::kMaker:
+      return from.currencyCode() == marketCode ? lowestAskPrice() : highestBidPrice();
+    default:
+      unreachable();
+  }
 }
 
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,

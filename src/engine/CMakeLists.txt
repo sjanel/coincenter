@@ -16,8 +16,6 @@ else()
 
 endif()
 
-target_link_libraries(coincenter PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(coincenter PRIVATE spdlog)
 target_link_libraries(coincenter PUBLIC coincenter_exchangeapi)
 target_link_libraries(coincenter PUBLIC coincenter_objects)
 target_include_directories(coincenter PUBLIC include)
@@ -29,19 +27,28 @@ set_target_properties(coincenter PROPERTIES
 )    
 
 add_unit_test(
-    stringoptionparser_test
-    src/stringoptionparser.cpp
-    test/stringoptionparser_test.cpp
-    LIBRARIES
-    coincenter_objects
-    coincenter_tools
-)
-
-add_unit_test(
     commandlineoptionsparser_test
     test/commandlineoptionsparser_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
     LIBRARIES
     coincenter_tech
+)
+
+add_unit_test(
+    exchangesorchestrator_test
+    src/exchangesorchestrator.cpp
+    test/exchangesorchestrator_test.cpp
+    LIBRARIES
+    coincenter_exchangeapi
+    coincenter_objects
+)
+
+add_unit_test(
+    stringoptionparser_test
+    src/stringoptionparser.cpp
+    test/stringoptionparser_test.cpp
+    LIBRARIES
+    coincenter_objects
+    coincenter_tools
 )

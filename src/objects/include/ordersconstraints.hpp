@@ -41,6 +41,8 @@ class OrderConstraintsBitmap {
 
   bool isOrderIdOnlyDependent() const { return _bmp == kOrderIdConstrained; }
 
+  bool operator==(const OrderConstraintsBitmap &) const = default;
+
  private:
   uint8_t _bmp{};
 };
@@ -101,6 +103,8 @@ class OrdersConstraints {
   bool isAtMostMarketDependent() const { return _orderConstraintsBitmap.isAtMostMarketOnlyDependent(); }
 
   string str() const;
+
+  bool operator==(const OrdersConstraints &) const = default;
 
  private:
   OrderIdSet _ordersIdSet;

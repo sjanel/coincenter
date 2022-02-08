@@ -15,13 +15,13 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "priceoptions.hpp"
 #include "publictrade.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
 
 class FiatConverter;
-class TradeOptions;
 
 namespace api {
 
@@ -59,9 +59,9 @@ class ExchangePublic : public ExchangeBase {
   virtual MarketPriceMap queryAllPrices() = 0;
 
   /// Attempts to convert amount into a target currency.
-  /// Conversion is made with the 'average' price, which is the average of the lowest ask price and
-  /// the highest bid price of a market order book if available.
-  std::optional<MonetaryAmount> convertAtAveragePrice(MonetaryAmount a, CurrencyCode toCurrencyCode);
+  /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
+  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrencyCode,
+                                        const PriceOptions &priceOptions = PriceOptions());
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
@@ -98,25 +98,37 @@ class ExchangePublic : public ExchangeBase {
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
 
-  using ConversionPath = SmallVector<Market, 3>;
+  using MarketsPath = SmallVector<Market, 3>;
 
-  /// Retrieve the fastest conversion path (fastest in terms of number of conversions)
-  /// of 'fromCurrencyCode' to 'toCurrencyCode'
-  /// @return ordered list of Market (in the order in which they are defined in the exchange),
-  ///         or empty list if conversion is not possible
-  ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
-                                           const MarketSet &markets, const Fiats &fiats,
-                                           bool considerStableCoinsAsFiats = false);
+  /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
+  /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.
+  /// Important: fiats are considered equivalent and can always be convertible with their rate.
+  /// @return array of Market (in the order in which they are defined in the exchange),
+  ///         or empty array if conversion is not possible
+  /// For instance, findMarketsPath("XLM", "XRP") can return:
+  ///   - XLM-USDT
+  ///   - XRP-USDT (and not USDT-XRP, as the pair defined on the exchange is XRP-USDT)
+  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, const MarketSet &markets,
+                              const Fiats &fiats, bool considerStableCoinsAsFiats = false);
 
-  ConversionPath findFastestConversionPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
-                                           bool considerStableCoinsAsFiats = false) {
-    return findFastestConversionPath(fromCurrencyCode, toCurrencyCode, queryTradableMarkets(), queryFiats(),
-                                     considerStableCoinsAsFiats);
+  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+                              bool considerStableCoinsAsFiats = false) {
+    return findMarketsPath(fromCurrencyCode, toCurrencyCode, queryTradableMarkets(), queryFiats(),
+                           considerStableCoinsAsFiats);
   }
 
-  MonetaryAmount computeLimitOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions);
+  using CurrenciesPath = SmallVector<CurrencyCode, 4>;
 
-  MonetaryAmount computeAvgOrderPrice(Market m, MonetaryAmount from, const TradeOptions &tradeOptions);
+  /// Retrieve the shortest path allowing to convert 'fromCurrencyCode' to 'toCurrencyCode', as an array of currencies.
+  /// This is a variation of 'findMarketsPath', except that instead of returning markets as defined in the exchange, it
+  /// gives only the currencies in order.
+  /// For instance, findCurrenciesPath("XLM", "XRP") can return ["XLM", "USDT", "XRP"]
+  CurrenciesPath findCurrenciesPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
+                                    bool considerStableCoinsAsFiats = false);
+
+  std::optional<MonetaryAmount> computeLimitOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
+
+  std::optional<MonetaryAmount> computeAvgOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);

@@ -44,7 +44,7 @@ using OpenedOrdersPerExchange =
     SmallVector<std::pair<const Exchange *, api::ExchangePrivate::Orders>, kTypicalNbPrivateAccounts>;
 
 using ConversionPathPerExchange =
-    FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::ConversionPath>, kNbSupportedExchanges>;
+    FixedCapacityVector<std::pair<const Exchange *, api::ExchangePublic::MarketsPath>, kNbSupportedExchanges>;
 
 using WithdrawFeePerExchange = FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 }  // namespace cct

@@ -12,6 +12,8 @@ class BalancePortfolio {
   struct MonetaryAmountWithEquivalent {
     MonetaryAmount amount;
     MonetaryAmount equi;
+
+    bool operator==(const MonetaryAmountWithEquivalent &) const = default;
   };
 
  private:
@@ -42,6 +44,8 @@ class BalancePortfolio {
   void sortByDecreasingEquivalentAmount();
 
   BalancePortfolio &operator+=(const BalancePortfolio &o);
+
+  bool operator==(const BalancePortfolio &) const = default;
 
   using trivially_relocatable = is_trivially_relocatable<MonetaryAmountVec>::type;
 

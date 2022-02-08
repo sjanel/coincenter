@@ -1,17 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <limits>
 
 namespace cct {
-enum class TradePriceStrategy : int8_t {
-  kMaker,   // Place order at limit price.
-  kNibble,  // Buy at 'limit + 1' price, sell at 'limit - 1' price (+-1 referring to previous or next price of the
-            // orderbook). Benefits: you control the price, while at the same time speeding up the order execution
-            // (compared to kMaker)
-  kTaker    // Place order at market price for an expecting direct match
-};
-
 enum class TradeTimeoutAction : int8_t {
   kCancel,     // When timeout of trade is reached, cancel remaining order
   kForceMatch  // When timeout of trade is reached, update remaining order at market price to force match
@@ -33,9 +24,5 @@ enum class TradeType : int8_t {
                        //  trades on these
                        //    markets.
 };
-
-using TradeRelativePrice = int32_t;
-
-static constexpr TradeRelativePrice kTradeNoRelativePrice = std::numeric_limits<TradeRelativePrice>::min();
 
 }  // namespace cct

@@ -12,6 +12,10 @@ class Exchange {
  public:
   using ExchangePublic = api::ExchangePublic;
   using WithdrawalFeeMap = api::ExchangePublic::WithdrawalFeeMap;
+  using MarketSet = api::ExchangePublic::MarketSet;
+  using MarketPriceMap = api::ExchangePublic::MarketPriceMap;
+  using MarketOrderBookMap = api::ExchangePublic::MarketOrderBookMap;
+  using LastTradesVector = api::ExchangePublic::LastTradesVector;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
   Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic);
@@ -44,11 +48,44 @@ class Exchange {
 
   bool hasPrivateAPI() const { return _pExchangePrivate; }
 
-  CurrencyExchangeFlatSet queryTradableCurrencies();
+  CurrencyExchangeFlatSet queryTradableCurrencies() {
+    return hasPrivateAPI() ? _pExchangePrivate->queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
+  }
 
-  WithdrawalFeeMap queryWithdrawalFees();
+  CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) {
+    return _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
+  }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode);
+  MarketSet queryTradableMarkets() { return _exchangePublic.queryTradableMarkets(); }
+
+  MarketPriceMap queryAllPrices() { return _exchangePublic.queryAllPrices(); }
+
+  WithdrawalFeeMap queryWithdrawalFees() {
+    return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFees() : _exchangePublic.queryWithdrawalFees();
+  }
+
+  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) {
+    return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFee(currencyCode)
+                           : _exchangePublic.queryWithdrawalFee(currencyCode);
+  }
+
+  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = ExchangePublic::kDefaultDepth) {
+    return _exchangePublic.queryAllApproximatedOrderBooks(depth);
+  }
+
+  MarketOrderBook queryOrderBook(Market m, int depth = ExchangePublic::kDefaultDepth) {
+    return _exchangePublic.queryOrderBook(m, depth);
+  }
+
+  MonetaryAmount queryLast24hVolume(Market m) { return _exchangePublic.queryLast24hVolume(m); }
+
+  /// Retrieve an ordered vector of recent last trades
+  LastTradesVector queryLastTrades(Market m, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
+    return _exchangePublic.queryLastTrades(m, nbTrades);
+  }
+
+  /// Retrieve the last price of given market.
+  MonetaryAmount queryLastPrice(Market m) { return _exchangePublic.queryLastPrice(m); }
 
   bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 

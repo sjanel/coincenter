@@ -3,7 +3,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "mock_exchangepublicapi.hpp"
+#include "cct_const.hpp"
+#include "exchangeprivateapi_mock.hpp"
+#include "exchangepublicapi_mock.hpp"
 
 namespace cct {
 inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
@@ -12,35 +14,13 @@ inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
 }  // namespace cct
 
 namespace cct::api {
-class MockExchangePrivate : public ExchangePrivate {
- public:
-  MockExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
-      : ExchangePrivate(config, exchangePublic, apiKey) {}
-
-  MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
-  MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode), (override));
-  MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode), (override));
-  MOCK_METHOD(bool, canGenerateDepositAddress, (), (const override));
-  MOCK_METHOD(Orders, queryOpenedOrders, (const OrdersConstraints &), (override));
-  MOCK_METHOD(void, cancelOpenedOrders, (const OrdersConstraints &), (override));
-
-  MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));
-
-  MOCK_METHOD(PlaceOrderInfo, placeOrder, (MonetaryAmount, MonetaryAmount, MonetaryAmount, const TradeInfo &),
-              (override));
-  MOCK_METHOD(OrderInfo, cancelOrder, (const OrderRef &), (override));
-  MOCK_METHOD(OrderInfo, queryOrderInfo, (const OrderRef &), (override));
-  MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount, Wallet &&), (override));
-  MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &), (override));
-  MOCK_METHOD(bool, isWithdrawReceived, (const InitiatedWithdrawInfo &, const SentWithdrawInfo &), (override));
-};
 
 class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest()
       : cryptowatchAPI(coincenterInfo, settings::RunMode::kProd, Duration::max(), true),
         fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
-        exchangePublic("kraken", fiatConverter, cryptowatchAPI, coincenterInfo),
+        exchangePublic(kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo),
         key("test", "testuser", "", "", ""),
         exchangePrivate(exchangePublic, coincenterInfo, key) {}
 
@@ -101,7 +81,8 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   MonetaryAmount vol(from);
   MonetaryAmount pri(bidPrice1);
 
-  TradeOptions tradeOptions(TradePriceStrategy::kTaker);
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  TradeOptions tradeOptions(priceOptions);
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, TradeSide::kSell, tradeOptions);
 
   MonetaryAmount tradedTo("23004 EUR");
@@ -122,7 +103,8 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   MonetaryAmount pri(*marketOrderBook1.computeAvgPriceForTakerAmount(from));
 
   MonetaryAmount vol(from / pri, m.base());
-  TradeOptions tradeOptions(TradePriceStrategy::kTaker);
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  TradeOptions tradeOptions(priceOptions);
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, TradeSide::kBuy, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
@@ -144,7 +126,8 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
   MonetaryAmount pri(askPrice1);
 
   TradeSide side = TradeSide::kSell;
-  TradeOptions tradeOptions(TradePriceStrategy::kMaker);
+  PriceOptions priceOptions(PriceStrategy::kMaker);
+  TradeOptions tradeOptions(priceOptions);
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(m, testing::_)).WillOnce(testing::Return(marketOrderBook1));
