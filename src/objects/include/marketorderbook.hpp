@@ -13,6 +13,8 @@
 
 namespace cct {
 
+class PriceOptions;
+
 /// Represents an entry in an order book, an amount at a given price.
 class OrderBookLine {
  public:
@@ -122,7 +124,7 @@ class MarketOrderBook {
                                                                 : convertQuoteAmountToBase(amountInBaseOrQuote);
   }
 
-  std::optional<MonetaryAmount> convertAtAvgPrice(MonetaryAmount amountInBaseOrQuote) const;
+  std::optional<MonetaryAmount> convert(MonetaryAmount amountInBaseOrQuote, const PriceOptions& priceOptions) const;
 
   int nbAskPrices() const { return static_cast<int>(_orders.size()) - _lowestAskPricePos; }
   int nbBidPrices() const { return _lowestAskPricePos; }
@@ -135,6 +137,10 @@ class MarketOrderBook {
 
   MonetaryAmount getHighestTheoreticalPrice() const;
   MonetaryAmount getLowestTheoreticalPrice() const;
+
+  std::optional<MonetaryAmount> computeLimitPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
+
+  std::optional<MonetaryAmount> computeAvgPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
 
   /// Print the market order book to given stream.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
@@ -163,6 +169,8 @@ class MarketOrderBook {
 
  public:
   using trivially_relocatable = is_trivially_relocatable<AmountPriceVector>::type;
+
+  bool operator==(const MarketOrderBook&) const = default;
 
  private:
   /// Represents a total amount of waiting orders at a given price.

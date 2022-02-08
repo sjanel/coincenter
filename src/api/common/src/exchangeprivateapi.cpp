@@ -21,8 +21,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       log::debug("{} Balance {}", _exchangePublic.name(), amount.str());
       balancePortfolio.add(amount);
     } else {
-      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
-          _exchangePublic.convertAtAveragePrice(amount, equiCurrency);
+      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency = _exchangePublic.convert(amount, equiCurrency);
       MonetaryAmount equivalentInMainCurrency;
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
@@ -52,8 +51,7 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
 }
 
 TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options) {
-  ExchangePublic::ConversionPath conversionPath =
-      _exchangePublic.findFastestConversionPath(from.currencyCode(), toCurrency);
+  ExchangePublic::MarketsPath conversionPath = _exchangePublic.findMarketsPath(from.currencyCode(), toCurrency);
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
     log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency.str(), _exchangePublic.name());
@@ -92,7 +90,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
 
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, options);
 
-  MonetaryAmount price = _exchangePublic.computeAvgOrderPrice(m, from, options);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(m, from, options.priceOptions());
+  if (!optPrice) {
+    throw exception("Impossible to compute average price");
+  }
+
+  MonetaryAmount price = *optPrice;
 
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
@@ -126,9 +129,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
         lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      price = _exchangePublic.computeLimitOrderPrice(m, from, options);
-      updatePriceNeeded =
-          (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
+      std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, from, options.priceOptions());
+      if (optPrice) {
+        price = *optPrice;
+        updatePriceNeeded =
+            (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
+      }
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
       // Cancel
@@ -160,7 +166,12 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          price = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options);
+          std::optional<MonetaryAmount> optPrice =
+              _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceOptions());
+          if (!optPrice) {
+            throw exception("Impossible to compute new average order price");
+          }
+          price = *optPrice;
           log::info("Reached emergency time, make a last taker order at price {}", price.str());
         } else {
           lastPriceUpdateTime = Clock::now();
