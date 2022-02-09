@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci_windows_build:
-    runs-on: windows-2022
+    runs-on: windows-latest
     strategy:
       matrix:
         buildmode: [Debug, Release]
