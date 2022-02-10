@@ -30,33 +30,61 @@ using ExchangeAmountToCurrencyToAmountVector = SmallVector<ExchangeAmountToCurre
 using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
 
 template <class FilterFunc>
-void Filter(ExchangeAmountPairVector &exchangeAmountPairVector, FilterFunc &func) {
+void Filter(ExchangeAmountPairVector &exchangeAmountPairVector, const FilterFunc &func) {
   SmallVector<bool, kTypicalNbPrivateAccounts> keepExchanges(exchangeAmountPairVector.size());
-  std::transform(std::execution::par, exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(),
-                 keepExchanges.begin(), func);
+  std::ranges::transform(exchangeAmountPairVector, keepExchanges.begin(), func);
   FilterVector(exchangeAmountPairVector, keepExchanges);
 }
 
-void FilterConversionPaths(ExchangeAmountPairVector &exchangeAmountPairVector, CurrencyCode fromCurrency,
-                           CurrencyCode toCurrency) {
-  auto filterFunc = [fromCurrency, toCurrency](auto &exchangeAmountPair) {
-    return !exchangeAmountPair.second.isZero() &&
-           !exchangeAmountPair.first->apiPublic().findMarketsPath(fromCurrency, toCurrency).empty();
-  };
-  Filter(exchangeAmountPairVector, filterFunc);
+template <class FilterFunc>
+void FilterExchangePublicToBoolFunc(ExchangeRetriever exchangeRetriever,
+                                    ExchangeAmountPairVector &exchangeAmountPairVector, const FilterFunc &func) {
+  // First, filter zero amounts
+  Filter(exchangeAmountPairVector, [](auto &exchangeAmountPair) { return !exchangeAmountPair.second.isZero(); });
+
+  /// Select unique public exchanges for findMarketsPath call
+  FixedCapacityVector<std::string_view, kNbSupportedExchanges> names(exchangeAmountPairVector.size());
+  std::transform(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), names.begin(),
+                 [](auto &exchangeAmountPair) { return exchangeAmountPair.first->apiPublic().name(); });
+  ExchangeRetriever::PublicExchangesVec publicExchanges = exchangeRetriever.selectPublicExchanges(names);
+  std::array<bool, kNbSupportedExchanges> keepPublicExchanges;
+  std::transform(std::execution::par, publicExchanges.begin(), publicExchanges.end(), keepPublicExchanges.begin(),
+                 func);
+
+  // Remove exchanges with no markets path
+  int nbExchanges = static_cast<int>(exchangeAmountPairVector.size());
+  int publicExchangePos = -1;
+  api::ExchangePublic *pExchangePublic = nullptr;
+  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
+    const ExchangeAmountPair &exchangeAmountPair = exchangeAmountPairVector[exchangePos];
+    if (pExchangePublic != &exchangeAmountPair.first->apiPublic()) {
+      pExchangePublic = &exchangeAmountPair.first->apiPublic();
+      ++publicExchangePos;
+    }
+    if (!keepPublicExchanges[publicExchangePos]) {
+      exchangeAmountPairVector.erase(exchangeAmountPairVector.begin() + exchangePos);
+      --exchangePos;
+      --nbExchanges;
+    }
+  }
 }
 
-void FilterMarkets(ExchangeAmountPairVector &exchangeAmountPairVector, CurrencyCode fromCurrency,
-                   CurrencyCode toCurrency) {
+void FilterConversionPaths(ExchangeRetriever exchangeRetriever, ExchangeAmountPairVector &exchangeAmountPairVector,
+                           CurrencyCode fromCurrency, CurrencyCode toCurrency) {
+  auto filterFunc = [fromCurrency, toCurrency](api::ExchangePublic *pExchangePublic) {
+    return !pExchangePublic->findMarketsPath(fromCurrency, toCurrency).empty();
+  };
+  FilterExchangePublicToBoolFunc(exchangeRetriever, exchangeAmountPairVector, filterFunc);
+}
+
+void FilterMarkets(ExchangeRetriever exchangeRetriever, ExchangeAmountPairVector &exchangeAmountPairVector,
+                   CurrencyCode fromCurrency, CurrencyCode toCurrency) {
   Market m(fromCurrency, toCurrency);
-  auto filterFunc = [m](auto &exchangeAmountPair) {
-    if (exchangeAmountPair.second.isZero()) {
-      return false;
-    }
-    api::ExchangePublic::MarketSet markets = exchangeAmountPair.first->apiPublic().queryTradableMarkets();
+  auto filterFunc = [m](api::ExchangePublic *pExchangePublic) {
+    api::ExchangePublic::MarketSet markets = pExchangePublic->queryTradableMarkets();
     return markets.contains(m) || markets.contains(m.reverse());
   };
-  Filter(exchangeAmountPairVector, filterFunc);
+  FilterExchangePublicToBoolFunc(exchangeRetriever, exchangeAmountPairVector, filterFunc);
 }
 
 ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurrency,
@@ -282,7 +310,7 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingMarket(M
                  isMarketTradablePerExchange.begin(),
                  [m](Exchange *e) { return e->queryTradableMarkets().contains(m); });
 
-  // Erases Exchanges which do not propose asked currency
+  // Erases Exchanges which do not propose asked market
   FilterVector(selectedExchanges, isMarketTradablePerExchange);
 
   return selectedExchanges;
@@ -304,9 +332,9 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
       ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
 
   if (tradeOptions.isMultiTradeAllowed()) {
-    FilterConversionPaths(exchangeAmountPairVector, fromCurrency, toCurrency);
+    FilterConversionPaths(_exchangeRetriever, exchangeAmountPairVector, fromCurrency, toCurrency);
   } else {
-    FilterMarkets(exchangeAmountPairVector, fromCurrency, toCurrency);
+    FilterMarkets(_exchangeRetriever, exchangeAmountPairVector, fromCurrency, toCurrency);
   }
 
   // Sort exchanges from largest to lowest available amount
@@ -332,7 +360,9 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
     currentTotalAmount += it->second;
   }
 
-  if (currentTotalAmount < startAmount) {
+  if (currentTotalAmount.isZero()) {
+    log::warn("No available {} to trade", fromCurrency.str());
+  } else if (currentTotalAmount < startAmount) {
     log::warn("Will trade {} < {} amount", currentTotalAmount.str(), startAmount.str());
   }
 
@@ -348,7 +378,7 @@ TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, Currenc
       ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
 
   if (!tradeOptions.isMultiTradeAllowed()) {
-    FilterMarkets(exchangeAmountPairVector, fromCurrency, toCurrency);
+    FilterMarkets(_exchangeRetriever, exchangeAmountPairVector, fromCurrency, toCurrency);
   }
 
   return LaunchAndCollectTrades(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), fromCurrency,
@@ -357,12 +387,16 @@ TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, Currenc
 
 WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
                                              const PrivateExchangeName &fromPrivateExchangeName,
-                                             const PrivateExchangeName &toPrivateExchangeName) {
+                                             const PrivateExchangeName &toPrivateExchangeName,
+                                             Duration withdrawRefreshTime) {
   log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
             toPrivateExchangeName.str());
   Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);
   Exchange &toExchange = _exchangeRetriever.retrieveUniqueCandidate(toPrivateExchangeName);
   const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
+  if (exchangePair.front() == exchangePair.back()) {
+    throw exception("Cannot withdraw to the same account");
+  }
   std::array<CurrencyExchangeFlatSet, 2> currencyExchangeSets;
   std::transform(std::execution::par, exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
                  [](Exchange *e) { return e->queryTradableCurrencies(); });
@@ -371,15 +405,17 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
     string errMsg("It's currently not possible to withdraw ");
     errMsg.append(currencyCode.str()).append(" from ").append(fromPrivateExchangeName.str());
-    throw exception(std::move(errMsg));
+    log::error(errMsg);
+    return WithdrawInfo(std::move(errMsg));
   }
   if (!toExchange.canDeposit(currencyCode, currencyExchangeSets.back())) {
     string errMsg("It's currently not possible to deposit ");
     errMsg.append(currencyCode.str()).append(" to ").append(fromPrivateExchangeName.str());
-    throw exception(std::move(errMsg));
+    log::error(errMsg);
+    return WithdrawInfo(std::move(errMsg));
   }
 
-  return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate());
+  return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawRefreshTime);
 }
 
 WithdrawFeePerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,

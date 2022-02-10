@@ -52,6 +52,7 @@ class PrivateExchangeName {
 using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
 
 inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName; }
+inline std::string_view ToString(std::string_view exchangeName) { return exchangeName; }
 inline std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
 
 template <class ExchangeNames>

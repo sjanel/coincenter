@@ -194,8 +194,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market m, Mon
   return queryOrderBook(m, depth).computeAvgPrice(from, priceOptions);
 }
 
-Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
-  MarketSet markets = queryTradableMarkets();
+Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
   Market m(c1, c2);
   if (!markets.contains(m)) {
     m = m.reverse();

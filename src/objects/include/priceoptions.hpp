@@ -49,6 +49,8 @@ class PriceOptions {
 
   string str(bool placeRealOrderInSimulationMode) const;
 
+  bool operator==(const PriceOptions &) const = default;
+
  private:
   std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
 

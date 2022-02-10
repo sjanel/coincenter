@@ -50,11 +50,12 @@ TEST_F(ExchangePublicTest, FindFastestConversionPath) {
 
 TEST_F(ExchangePublicTest, RetrieveMarket) {
   MarketSet markets{{"BTC", "KRW"}, {"XLM", "KRW"}, {"USD", "EOS"}};
-  EXPECT_CALL(exchangePublic, queryTradableMarkets()).Times(3).WillRepeatedly(::testing::Return(markets));
+  EXPECT_CALL(exchangePublic, queryTradableMarkets()).Times(2).WillRepeatedly(::testing::Return(markets));
 
   EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW"), Market("BTC", "KRW"));
-  EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC"), Market("BTC", "KRW"));
-  EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS"), exception);
+  MarketSet tradableMarkets = exchangePublic.queryTradableMarkets();
+  EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC", tradableMarkets), Market("BTC", "KRW"));
+  EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS", tradableMarkets), exception);
 }
 
 }  // namespace cct::api

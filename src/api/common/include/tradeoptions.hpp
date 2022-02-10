@@ -63,6 +63,8 @@ class TradeOptions {
 
   string str(bool placeRealOrderInSimulationMode) const;
 
+  bool operator==(const TradeOptions &) const = default;
+
  private:
   Duration _maxTradeTime = kDefaultTradeDuration;
   Duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
