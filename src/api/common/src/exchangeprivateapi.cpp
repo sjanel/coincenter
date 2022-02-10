@@ -5,8 +5,7 @@
 
 #include "timedef.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
 
 BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
   UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
@@ -40,10 +39,7 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
             toCurrencyCode.str(), _exchangePublic.name(), keyName());
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
   log::debug(options.str(realOrderPlacedInSimulationMode));
-  TradedAmounts tradedAmounts = options.isMultiTradeAllowed()
-                                    ? multiTrade(from, toCurrencyCode, options)
-                                    : singleTrade(from, toCurrencyCode, options,
-                                                  _exchangePublic.retrieveMarket(from.currencyCode(), toCurrencyCode));
+  TradedAmounts tradedAmounts = multiTrade(from, toCurrencyCode, options);
   if (!options.isSimulation() || realOrderPlacedInSimulationMode) {
     log::info("**** Traded {} into {} ****", tradedAmounts.tradedFrom.str(), tradedAmounts.tradedTo.str());
   }
@@ -58,6 +54,11 @@ TradedAmounts ExchangePrivate::multiTrade(MonetaryAmount from, CurrencyCode toCu
     return tradedAmounts;
   }
   const int nbTrades = conversionPath.size();
+  if (nbTrades > 1 && !options.isMultiTradeAllowed()) {
+    log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from.str(),
+               toCurrency.str(), nbTrades);
+    return tradedAmounts;
+  }
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
     Market m = conversionPath[tradePos];
@@ -129,7 +130,7 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
         lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, from, options.priceOptions());
+      optPrice = _exchangePublic.computeLimitOrderPrice(m, from, options.priceOptions());
       if (optPrice) {
         price = *optPrice;
         updatePriceNeeded =
@@ -166,8 +167,7 @@ TradedAmounts ExchangePrivate::singleTrade(MonetaryAmount from, CurrencyCode toC
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          std::optional<MonetaryAmount> optPrice =
-              _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceOptions());
+          optPrice = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceOptions());
           if (!optPrice) {
             throw exception("Impossible to compute new average order price");
           }
@@ -280,5 +280,4 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   placeOrderInfo.setClosed();
   return placeOrderInfo;
 }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

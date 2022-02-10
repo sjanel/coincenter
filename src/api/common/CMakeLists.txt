@@ -36,6 +36,7 @@ add_common_test(
   src/exchangepublicapi.cpp
   src/tradedamounts.cpp
   src/tradeoptions.cpp
+  src/withdrawinfo.cpp
   test/exchangeprivateapi_test.cpp
 )
 

@@ -131,7 +131,9 @@ class ExchangePublic : public ExchangeBase {
   std::optional<MonetaryAmount> computeAvgOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
-  Market retrieveMarket(CurrencyCode c1, CurrencyCode c2);
+  Market retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets);
+
+  Market retrieveMarket(CurrencyCode c1, CurrencyCode c2) { return retrieveMarket(c1, c2, queryTradableMarkets()); }
 
   /// Helper method to determine ordered Market from this exchange from a market string representation without currency
   /// separator (for instance, "BTCEUR" should be guessed as a market with BTC as base currency, and EUR as price

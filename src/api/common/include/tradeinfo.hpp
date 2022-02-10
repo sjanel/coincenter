@@ -47,6 +47,8 @@ struct OrderInfo {
   explicit OrderInfo(TradedAmounts &&ta, bool closed = false) : tradedAmounts(std::move(ta)), isClosed(closed) {}
 #endif
 
+  bool operator==(const OrderInfo &) const = default;
+
   TradedAmounts tradedAmounts;
   bool isClosed = false;
 };
@@ -62,6 +64,8 @@ struct PlaceOrderInfo {
 
   TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
   const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
+
+  bool operator==(const PlaceOrderInfo &) const = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 

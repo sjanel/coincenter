@@ -64,14 +64,6 @@ class ExchangePrivateTest : public ::testing::Test {
 
 inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) { return lhs.m == rhs.m && lhs.side == rhs.side; }
 
-inline bool operator==(const OrderInfo &lhs, const OrderInfo &rhs) {
-  return lhs.isClosed == rhs.isClosed && lhs.tradedAmounts == rhs.tradedAmounts;
-}
-
-inline bool operator==(const PlaceOrderInfo &lhs, const PlaceOrderInfo &rhs) {
-  return lhs.orderInfo == rhs.orderInfo && lhs.orderId == rhs.orderId;
-}
-
 inline bool operator==(const OrderRef &lhs, const OrderRef &rhs) { return lhs.id == rhs.id; }
 
 TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {

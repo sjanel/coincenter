@@ -97,10 +97,11 @@ class ExchangeRetrieverBase {
 
   template <class NameType>
   struct Matcher {
-    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, PrivateExchangeName>);
+    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view> ||
+                  std::is_same_v<NameType, PrivateExchangeName>);
 
     bool operator()(const ExchangeT &e, const NameType &n) const {
-      if constexpr (std::is_same_v<NameType, ExchangeName>) {
+      if constexpr (std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view>) {
         return e.name() == n;
       } else {
         return e.matchesKeyNameWildcard(n);

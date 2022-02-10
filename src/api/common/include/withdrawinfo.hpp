@@ -14,29 +14,21 @@ using WithdrawIdView = std::string_view;
 namespace api {
 class InitiatedWithdrawInfo {
  public:
-  InitiatedWithdrawInfo(const Wallet &receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
-      : _receivingWallet(receivingWallet),
-        _withdrawId(withdrawId),
-        _initiatedTime(Clock::now()),
-        _grossEmittedAmount(grossEmittedAmount) {}
+  InitiatedWithdrawInfo(const Wallet &receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount);
 
-  InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount)
-      : _receivingWallet(std::move(receivingWallet)),
-        _withdrawId(withdrawId),
-        _initiatedTime(Clock::now()),
-        _grossEmittedAmount(grossEmittedAmount) {}
+  InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount);
 
   TimePoint initiatedTime() const { return _initiatedTime; }
 
   const Wallet &receivingWallet() const { return _receivingWallet; }
 
-  const WithdrawId &withdrawId() const { return _withdrawId; }
+  const WithdrawId &withdrawId() const { return _withdrawIdOrMsgIfNotInitiated; }
 
   MonetaryAmount grossEmittedAmount() const { return _grossEmittedAmount; }
 
  private:
   Wallet _receivingWallet;
-  WithdrawId _withdrawId;
+  WithdrawId _withdrawIdOrMsgIfNotInitiated;
   TimePoint _initiatedTime;  // The time at which withdraw has been ordered from the source exchange
   MonetaryAmount _grossEmittedAmount;
 };
@@ -61,12 +53,13 @@ class SentWithdrawInfo {
 
 class WithdrawInfo {
  public:
-  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo)
-      : _receivingWallet(initiatedWithdrawInfo.receivingWallet()),
-        _withdrawId(initiatedWithdrawInfo.withdrawId()),
-        _initiatedTime(initiatedWithdrawInfo.initiatedTime()),
-        _receivedTime(Clock::now()),
-        _netEmittedAmount(sentWithdrawInfo.netEmittedAmount()) {}
+  /// Empty withdraw info, when no withdrawal has been done
+  WithdrawInfo(string &&msg = string()) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
+
+  /// Constructs a withdraw info with all information
+  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo);
+
+  bool hasBeenInitiated() const { return _initiatedTime != TimePoint{}; }
 
   TimePoint initiatedTime() const { return _initiatedTime; }
 
@@ -76,13 +69,15 @@ class WithdrawInfo {
 
   MonetaryAmount netEmittedAmount() const { return _netEmittedAmount; }
 
-  const WithdrawId withdrawId() const { return _withdrawId; }
+  const WithdrawId &withdrawId() const;
+
+  std::string_view withdrawStatus() const { return hasBeenInitiated() ? "OK" : _withdrawIdOrMsgIfNotInitiated; }
 
  private:
   Wallet _receivingWallet;
-  WithdrawId _withdrawId;
-  TimePoint _initiatedTime;          // The time at which withdraw has been ordered from the source exchange
-  TimePoint _receivedTime;           // time at which destination provides received funds as available for trade
+  WithdrawId _withdrawIdOrMsgIfNotInitiated;
+  TimePoint _initiatedTime{};        // The time at which withdraw has been ordered from the source exchange
+  TimePoint _receivedTime{};         // time at which destination provides received funds as available for trade
   MonetaryAmount _netEmittedAmount;  // fee deduced amount that destination will receive
 };
 }  // namespace cct
