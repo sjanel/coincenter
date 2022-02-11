@@ -9,6 +9,7 @@
 #include "cct_log.hpp"
 #include "priceoptions.hpp"
 #include "simpletable.hpp"
+#include "stringhelpers.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
@@ -67,28 +68,96 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   if (depth <= 0) {
     throw exception("Invalid depth, should be strictly positive");
   }
-  if (bidPrice >= askPrice || bidVolume.isZero() || askVolume.isZero()) {
-    log::critical("Bid pri {}, Ask pri {}, Bid vol {}, Ask vol {}", bidPrice.str().c_str(), askPrice.str().c_str(),
-                  bidVolume.str().c_str(), askVolume.str().c_str());
-    throw exception("Invalid ticker information for MarketOrderBook");
+
+  static constexpr std::string_view kErrNegVolumeMsg = " for MarketOrderbook creation, should be strictly positive";
+
+  if (askVolume.isNegativeOrZero()) {
+    string err("Invalid ask volume ");
+    err.append(askVolume.str()).append(kErrNegVolumeMsg);
+    throw exception(std::move(err));
   }
+  if (bidVolume.isNegativeOrZero()) {
+    string err("Invalid bid volume ");
+    err.append(bidVolume.str()).append(kErrNegVolumeMsg);
+    throw exception(std::move(err));
+  }
+  static constexpr MonetaryAmount::RoundType roundType = MonetaryAmount::RoundType::kNearest;
+  MonetaryAmount priRound(1, CurrencyCode(), _volAndPriNbDecimals.priNbDecimals);
+
+  askPrice = askPrice.round(priRound, roundType);
   askPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
+  bidPrice = bidPrice.round(priRound, roundType);
   bidPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
+
+  MonetaryAmount volRound(1, CurrencyCode(), _volAndPriNbDecimals.volNbDecimals);
+
+  askVolume = askVolume.round(volRound, roundType);
   askVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
+  bidVolume = bidVolume.round(volRound, roundType);
   bidVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
 
-  const AmountPrice::AmountType stepPrice = *(askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
+  std::optional<AmountType> optStepPrice = (askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
+  if (!optStepPrice) {
+    string err("Invalid number of decimals ");
+    err.append(ToString(_volAndPriNbDecimals.priNbDecimals));
+    err.append(" for ask price ").append(askPrice.str()).append(" and bid price ").append(bidPrice.str());
+    throw exception(std::move(err));
+  }
+  if (*optStepPrice <= 0) {
+    string err("Invalid ask price ");
+    err.append(askPrice.str()).append(" and bid price ").append(bidPrice.str());
+    err.append(" for MarketOrderbook creation. Ask price should be larger than Bid price.");
+    throw exception(std::move(err));
+  }
+  const AmountPrice::AmountType stepPrice = *optStepPrice;
 
-  // Add bid lines first
-  const AmountPrice refBidAmountPrice(*bidVolume.amount(_volAndPriNbDecimals.volNbDecimals),
-                                      *bidPrice.amount(_volAndPriNbDecimals.priNbDecimals));
-  const AmountPrice refAskAmountPrice(-(*askVolume.amount(_volAndPriNbDecimals.volNbDecimals)),
-                                      *askPrice.amount(_volAndPriNbDecimals.priNbDecimals));
+  std::optional<AmountType> optBidVol = bidVolume.amount(_volAndPriNbDecimals.volNbDecimals);
+  std::optional<AmountType> optAskVol = askVolume.amount(_volAndPriNbDecimals.volNbDecimals);
+  if (!optBidVol) {
+    string err("Cannot retrieve amount from bid volume ");
+    err.append(bidVolume.str())
+        .append(" with ")
+        .append(ToString(_volAndPriNbDecimals.volNbDecimals))
+        .append(" decimals");
+    throw exception(std::move(err));
+  }
+  if (!optAskVol) {
+    string err("Cannot retrieve amount from ask volume ");
+    err.append(askVolume.str())
+        .append(" with ")
+        .append(ToString(_volAndPriNbDecimals.volNbDecimals))
+        .append(" decimals");
+    throw exception(std::move(err));
+  }
+
+  std::optional<AmountType> optBidPri = bidPrice.amount(_volAndPriNbDecimals.priNbDecimals);
+  std::optional<AmountType> optAskPri = askPrice.amount(_volAndPriNbDecimals.priNbDecimals);
+  if (!optBidPri) {
+    string err("Cannot retrieve amount from bid price ");
+    err.append(bidPrice.str())
+        .append(" with ")
+        .append(ToString(_volAndPriNbDecimals.priNbDecimals))
+        .append(" decimals");
+    throw exception(std::move(err));
+  }
+  if (!optAskPri) {
+    string err("Cannot retrieve amount from ask price ");
+    err.append(askPrice.str())
+        .append(" with ")
+        .append(ToString(_volAndPriNbDecimals.priNbDecimals))
+        .append(" decimals");
+    throw exception(std::move(err));
+  }
+
+  const AmountPrice refBidAmountPrice(*optBidVol, *optBidPri);
+  const AmountPrice refAskAmountPrice(-(*optAskVol), *optAskPri);
   const AmountPrice::AmountType simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
 
   constexpr AmountPrice::AmountType kMaxVol = std::numeric_limits<AmountPrice::AmountType>::max() / 2;
 
   _orders.resize(depth * 2);
+
+  // Add bid lines first
   for (int d = 0; d < depth; ++d) {
     AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[depth - d];
     amountPrice.price -= stepPrice * d;

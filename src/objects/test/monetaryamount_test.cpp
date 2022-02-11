@@ -197,6 +197,8 @@ TEST(MonetaryAmountTest, StepRounding) {
             MonetaryAmount("12.3 EUR"));
   EXPECT_EQ(MonetaryAmount("12.35 EUR").round(MonetaryAmount("0.1"), MonetaryAmount::RoundType::kUp),
             MonetaryAmount("12.4 EUR"));
+  EXPECT_EQ(MonetaryAmount("12.307 EUR").round(MonetaryAmount("0.1"), MonetaryAmount::RoundType::kNearest),
+            MonetaryAmount("12.3 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount("0.5"), MonetaryAmount::RoundType::kDown),
             MonetaryAmount("-23.5 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.5 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kDown),
@@ -220,6 +222,13 @@ TEST(MonetaryAmountTest, StepRounding) {
             MonetaryAmount("-24 EUR"));
   EXPECT_EQ(MonetaryAmount("-23.1 EUR").round(MonetaryAmount(1), MonetaryAmount::RoundType::kNearest),
             MonetaryAmount("-23 EUR"));
+  EXPECT_EQ(MonetaryAmount("-23.02099").round(MonetaryAmount("0.01"), MonetaryAmount::RoundType::kNearest),
+            MonetaryAmount("-23.02"));
+  EXPECT_EQ(MonetaryAmount("-23.02050").round(MonetaryAmount("0.001"), MonetaryAmount::RoundType::kNearest),
+            MonetaryAmount("-23.021"));
+
+  EXPECT_EQ(MonetaryAmount("2899.80000000000018").round(MonetaryAmount("0.01"), MonetaryAmount::RoundType::kNearest),
+            MonetaryAmount("2899.8"));
 }
 
 TEST(MonetaryAmountTest, PositiveDoubleConstructor) {
@@ -249,6 +258,13 @@ TEST(MonetaryAmountTest, NegativeDoubleConstructor) {
   EXPECT_EQ(MonetaryAmount(-7.9999E-4), MonetaryAmount("-0.00079999"));
   EXPECT_EQ(MonetaryAmount(-0.14), MonetaryAmount("-0.14"));
   EXPECT_EQ(MonetaryAmount(-0.14000001), MonetaryAmount("-0.14000001"));
+}
+
+TEST(MonetaryAmountTest, CloseDoubles) {
+  EXPECT_LT(MonetaryAmount(3005.71), MonetaryAmount(3005.72));
+  EXPECT_LT(MonetaryAmount(3069.96), MonetaryAmount(3069.97));
+  EXPECT_LT(MonetaryAmount(3076.21), MonetaryAmount(3076.22));
+  EXPECT_LT(MonetaryAmount(3081.94), MonetaryAmount(3081.95));
 }
 
 TEST(MonetaryAmountTest, Truncate) {

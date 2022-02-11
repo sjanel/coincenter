@@ -55,7 +55,7 @@ class Wallet {
 
   CurrencyCode currencyCode() const { return _currency; }
 
-  bool hasTag() const { return _tagPos != string::npos; }
+  bool hasTag() const { return _tagPos != std::string_view::npos; }
 
   string str() const;
 
@@ -64,8 +64,8 @@ class Wallet {
   static bool ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &privateExchangeName,
                              CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag);
 
-  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<PrivateExchangeName> &&
-                                                                 is_trivially_relocatable_v<string> >::type;
+  using trivially_relocatable =
+      std::bool_constant<is_trivially_relocatable_v<PrivateExchangeName> && is_trivially_relocatable_v<string> >::type;
 
  private:
   const char *startTag() const { return _addressAndTag.data() + (hasTag() ? _tagPos : _addressAndTag.size()); }
@@ -78,7 +78,7 @@ class Wallet {
 
   PrivateExchangeName _privateExchangeName;
   string _addressAndTag;
-  std::size_t _tagPos = string::npos;
+  std::size_t _tagPos = std::string_view::npos;
   CurrencyCode _currency;
 };
 

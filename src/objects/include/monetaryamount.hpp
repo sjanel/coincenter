@@ -117,8 +117,10 @@ class MonetaryAmount {
   /// True if amount is 0
   constexpr bool isZero() const noexcept { return _amount == 0; }
 
-  constexpr bool isPositive() const noexcept { return _amount > 0; }
-  constexpr bool isNegative() const noexcept { return _amount < 0; }
+  constexpr bool isPositiveOrZero() const noexcept { return _amount >= 0; }
+  constexpr bool isNegativeOrZero() const noexcept { return _amount <= 0; }
+  constexpr bool isStrictlyPositive() const noexcept { return _amount > 0; }
+  constexpr bool isStrictlyNegative() const noexcept { return _amount < 0; }
 
   constexpr MonetaryAmount abs() const noexcept {
     return MonetaryAmount(_amount < 0 ? -_amount : _amount, _currencyCode, _nbDecimals);
