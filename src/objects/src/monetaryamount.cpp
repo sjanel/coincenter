@@ -40,7 +40,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
   MonetaryAmount::AmountType decPart, integerPart;
-  if (dotPos == string::npos) {
+  if (dotPos == std::string_view::npos) {
     decPart = 0;
     integerPart = FromString<MonetaryAmount::AmountType>(amountStr);
   } else {
@@ -51,7 +51,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
       std::size_t bestFindPos = 0;
       for (std::string_view pattern : {"000", "999"}) {
         std::size_t findPos = amountStr.rfind(pattern);
-        if (findPos != string::npos && findPos > dotPos) {
+        if (findPos != std::string_view::npos && findPos > dotPos) {
           while (amountStr[findPos - 1] == pattern.front()) {
             --findPos;
           }
@@ -187,15 +187,12 @@ MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) c
   if (epsilon != 0) {
     if (lhsAmount < 0) {
       if (resAmount >= std::numeric_limits<AmountType>::min() + rhsAmount &&  // Protection against overflow
-          (roundType == RoundType::kDown ||
-           (roundType == RoundType::kNearest &&
-            (-lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5)))) {
+          (roundType == RoundType::kDown || (roundType == RoundType::kNearest && -epsilon >= rhsAmount / 2U))) {
         resAmount -= rhsAmount;
       }
     } else {
       if (resAmount <= std::numeric_limits<AmountType>::max() - rhsAmount &&  // Protection against overflow
-          (roundType == RoundType::kUp || (roundType == RoundType::kNearest &&
-                                           (lhsAmount % static_cast<AmountType>(10)) >= static_cast<AmountType>(5)))) {
+          (roundType == RoundType::kUp || (roundType == RoundType::kNearest && epsilon >= rhsAmount / 2U))) {
         resAmount += rhsAmount;
       }
     }

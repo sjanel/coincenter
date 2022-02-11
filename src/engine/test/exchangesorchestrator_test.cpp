@@ -95,8 +95,8 @@ class ExchangeOrchestratorTest : public ::testing::Test {
                                     volAndPriDec,
                                     depth + 1};
 
-  MonetaryAmount askPrice3{"0.0000017 BTC"};
-  MonetaryAmount bidPrice3{"0.0000016 BTC"};
+  MonetaryAmount askPrice3{"0.37 BTC"};
+  MonetaryAmount bidPrice3{"0.36 BTC"};
   MarketOrderBook marketOrderBook3{
       askPrice3, MonetaryAmount("916.4XRP"), bidPrice3, MonetaryAmount("3494XRP"), volAndPriDec, depth};
 

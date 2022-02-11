@@ -42,14 +42,15 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &
     for (const auto &[currencyCodeStr, value] : wallets.items()) {
       CurrencyCode currencyCode(currencyCodeStr);
       if (currencyCode == currency) {
-        string addressAndTag = value;
+        std::string_view addressAndTag = value.get<std::string_view>();
         std::size_t tagPos = addressAndTag.find(',');
         std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
         if (expectedAddress != address) {
           return false;
         }
-        std::string_view tag(tagPos == string::npos ? addressAndTag.end() : (addressAndTag.begin() + tagPos + 1),
-                             addressAndTag.end());
+        std::string_view tag(
+            tagPos == std::string_view::npos ? addressAndTag.end() : (addressAndTag.begin() + tagPos + 1),
+            addressAndTag.end());
         return expectedTag == tag;
       }
     }
@@ -74,7 +75,7 @@ Wallet::Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode curr
                std::string_view tag, WalletCheck walletCheck)
     : _privateExchangeName(privateExchangeName),
       _addressAndTag(address),
-      _tagPos(tag.empty() ? string::npos : address.size()),
+      _tagPos(tag.empty() ? std::string_view::npos : address.size()),
       _currency(currency) {
   _addressAndTag.append(tag);
   ValidateDepositAddressIfNeeded(_privateExchangeName, currency, address, tag, walletCheck);
@@ -84,7 +85,7 @@ Wallet::Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency,
                WalletCheck walletCheck)
     : _privateExchangeName(std::move(privateExchangeName)),
       _addressAndTag(std::move(address)),
-      _tagPos(tag.empty() ? string::npos : _addressAndTag.size()),
+      _tagPos(tag.empty() ? std::string_view::npos : _addressAndTag.size()),
       _currency(currency) {
   _addressAndTag.append(tag);
   ValidateDepositAddressIfNeeded(_privateExchangeName, currency, this->address(), tag, walletCheck);

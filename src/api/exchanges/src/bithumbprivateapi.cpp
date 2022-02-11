@@ -149,14 +149,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               }
             }
             if ((isInfoOpenedOrders || isCancelQuery) &&
-                msg.find("거래 진행중인 내역이 존재하지 않습니다") != string::npos) {
+                msg.find("거래 진행중인 내역이 존재하지 않습니다") != std::string_view::npos) {
               // This is not really an error, it means that order has been eaten or cancelled.
               // Just return empty json in this case
               log::info("Considering Bithumb order as closed as no data received from them");
               dataJson.clear();
               return dataJson;
             }
-            if (isDepositInfo && msg.find("잘못된 접근입니다.") != string::npos) {
+            if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
               dataJson["wallet_address"] = "";
               return dataJson;
             }
