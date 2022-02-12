@@ -11,29 +11,34 @@
 #include "timedef.hpp"
 
 namespace cct {
-
-class CachedResultOptions {
+template <class DurationT>
+class CachedResultOptionsT {
  public:
-  explicit CachedResultOptions(Duration refreshPeriod) : _refreshPeriod(refreshPeriod) {}
+  explicit CachedResultOptionsT(DurationT refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
-  CachedResultOptions(Duration refreshPeriod, CachedResultVault &cacheResultVault)
+  CachedResultOptionsT(DurationT refreshPeriod, CachedResultVaultT<DurationT> &cacheResultVault)
       : _refreshPeriod(refreshPeriod), _pCacheResultVault(std::addressof(cacheResultVault)) {}
 
  private:
-  template <class T, class... FuncTArgs>
-  friend class CachedResult;
+  template <class, class, class...>
+  friend class CachedResultT;
 
-  Duration _refreshPeriod;
-  CachedResultVault *_pCacheResultVault = nullptr;
+  DurationT _refreshPeriod;
+  CachedResultVaultT<DurationT> *_pCacheResultVault = nullptr;
 };
+
+using CachedResultOptions = CachedResultOptionsT<Duration>;
 
 /// Wrapper of an object of type T (should be a functor) for which the underlying method is called at most once per
 /// given period of time. May be useful to automatically cache some API calls in an easy and efficient way.
-template <class T, class... FuncTArgs>
-class CachedResult : public CachedResultBase {
+template <class ClockT, class T, class... FuncTArgs>
+class CachedResultT : public CachedResultBase<typename ClockT::duration> {
  public:
   using ResultType = std::remove_cvref_t<decltype(std::declval<T>()(std::declval<FuncTArgs>()...))>;
+  using TimePoint = typename ClockT::time_point;
+  using Duration = typename ClockT::duration;
   using ResPtrTimePair = std::pair<const ResultType *, TimePoint>;
+  using State = typename CachedResultBase<Duration>::State;
 
  private:
   using TKey = std::tuple<std::remove_cvref_t<FuncTArgs>...>;
@@ -42,18 +47,18 @@ class CachedResult : public CachedResultBase {
 
  public:
   template <class... TArgs>
-  explicit CachedResult(CachedResultOptions opts, TArgs &&...args)
-      : CachedResultBase(opts._refreshPeriod), _func(std::forward<TArgs &&>(args)...) {
+  explicit CachedResultT(CachedResultOptionsT<Duration> opts, TArgs &&...args)
+      : CachedResultBase<Duration>(opts._refreshPeriod), _func(std::forward<TArgs &&>(args)...) {
     if (opts._pCacheResultVault) {
       opts._pCacheResultVault->registerCachedResult(*this);
     }
   }
 
-  CachedResult(const CachedResult &) = delete;
-  CachedResult &operator=(const CachedResult &) = delete;
+  CachedResultT(const CachedResultT &) = delete;
+  CachedResultT &operator=(const CachedResultT &) = delete;
 
-  CachedResult(CachedResult &&) noexcept = default;
-  CachedResult &operator=(CachedResult &&) noexcept = default;
+  CachedResultT(CachedResultT &&) noexcept = default;
+  CachedResultT &operator=(CachedResultT &&) noexcept = default;
 
   /// Sets given value associated to the key built with given parameters,
   /// if given timestamp is more recent than the one associated to the value already present at this key (if any)
@@ -71,18 +76,18 @@ class CachedResult : public CachedResultBase {
   template <class... Args>
   const ResultType &get(Args &&...funcArgs) {
     TKey key(std::forward<Args &&>(funcArgs)...);
-    TimePoint t = Clock::now();
+    auto t = ClockT::now();
     auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
-    if (_state == State::kForceUniqueRefresh) {
+    if (this->_state == State::kForceUniqueRefresh) {
       _cachedResultsMap.clear();
-      _state = State::kForceCache;
+      this->_state = State::kForceCache;
     }
     auto it = _cachedResultsMap.find(key);
     if (it == _cachedResultsMap.end()) {
       TValue val(std::apply(flattenTuple, key), t);
       it = _cachedResultsMap.insert_or_assign(std::move(key), std::move(val)).first;
-    } else if (_state != State::kForceCache && _refreshPeriod != Duration::max() &&
-               it->second.second + _refreshPeriod < t) {
+    } else if (this->_state != State::kForceCache && this->_refreshPeriod != Duration::max() &&
+               it->second.second + this->_refreshPeriod < t) {
       it->second = TValue(std::apply(flattenTuple, std::move(key)), t);
     }
     return it->second.first;
@@ -101,5 +106,8 @@ class CachedResult : public CachedResultBase {
   T _func;
   MapType _cachedResultsMap;
 };
+
+template <class T, class... FuncTArgs>
+using CachedResult = CachedResultT<Clock, T, FuncTArgs...>;
 
 }  // namespace cct

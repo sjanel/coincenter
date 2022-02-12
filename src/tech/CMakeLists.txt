@@ -12,7 +12,6 @@ target_include_directories(coincenter_tech PUBLIC include)
 
 add_unit_test(
     cachedresult_test
-    src/cachedresultvault.cpp
     test/cachedresult_test.cpp
     LIBRARIES
     spdlog
