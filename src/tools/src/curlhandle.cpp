@@ -118,7 +118,7 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
   CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.isFollowLocation());
 
-#ifdef _MSC_VER
+#ifdef CCT_MSVC
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
   CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 #endif

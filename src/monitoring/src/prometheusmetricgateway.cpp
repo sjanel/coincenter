@@ -12,7 +12,7 @@
 #include "cct_log.hpp"
 #include "timedef.hpp"
 
-#ifdef _MSC_VER
+#ifdef CCT_MSVC
 #include <Winsock2.h>
 #else
 #include <unistd.h>

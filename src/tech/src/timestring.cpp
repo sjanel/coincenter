@@ -15,7 +15,7 @@ namespace cct {
 string ToString(TimePoint p, const char* format) {
   const std::time_t t = Clock::to_time_t(p);
   std::tm utc{};
-#ifdef _MSC_VER
+#ifdef CCT_MSVC
   errno_t err = gmtime_s(&utc, &t);
   if (err) {
     throw exception("Issue in gmtime_s");
