@@ -5,6 +5,8 @@
 #define CCT_CLANG (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
 #define CCT_GCC (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#elif defined(_MSC_FULL_VER)
+#define CCT_MSVC _MSC_FULL_VER
 #endif
 
 #if defined(__GNUC__)
@@ -32,7 +34,7 @@
 #define CCT_GCC_DISABLE_WARNING(warningName) CCT_DISABLE_WARNING(warningName)
 #endif
 
-#ifdef _MSC_VER
+#ifdef CCT_MSVC
 #define CCT_ALWAYS_INLINE __forceinline
 #define CCT_NOINLINE __declspec(noinline)
 #elif defined(__GNUC__)
@@ -46,7 +48,7 @@
 #define CCT_STRINGIFY(x) #x
 #define CCT_VER_STRING(major, minor, patch) CCT_STRINGIFY(major) "." CCT_STRINGIFY(minor) "." CCT_STRINGIFY(patch)
 
-#if defined(__clang__)
+#ifdef CCT_CLANG
 #define CCT_COMPILER_NAME "clang"
 #define CCT_COMPILER_VERSION \
   CCT_COMPILER_NAME " " CCT_VER_STRING(__clang_major__, __clang_minor__, __clang_patchlevel__)
@@ -60,7 +62,7 @@
 #error "Unknown compiler"
 #endif
 
-#if !defined(__clang__)
+#ifndef CCT_CLANG
 // Clang does not support 'Allow initializing aggregates from a parenthesized list of values' (nor CTAD) yet.
 // Although it's a C++20 project, it's nice to support clang so let's keep this switch for now, until clang finally
 // implements it. More information here:

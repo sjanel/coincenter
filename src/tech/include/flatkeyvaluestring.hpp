@@ -399,7 +399,7 @@ FlatKeyValueString<KeyValuePairSep, AssignmentChar>::urlEncodeExceptDelimiters()
         c == AssignmentChar) {
       *outCharIt++ = c;
     } else {
-#ifdef _MSC_VER
+#ifdef CCT_MSVC
       sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(c));
 #else
       std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
