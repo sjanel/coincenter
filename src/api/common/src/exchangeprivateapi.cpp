@@ -39,14 +39,15 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
   log::debug(options.str(realOrderPlacedInSimulationMode));
   const int nbTrades = static_cast<int>(conversionPath.size());
-  log::info("{}rade {} -> {} on {}_{} requested", options.isMultiTradeAllowed() && nbTrades > 1 ? "Multi t" : "T",
-            from.str(), toCurrency.str(), _exchangePublic.name(), keyName());
+  const bool isMultiTradeAllowed = options.isMultiTradeAllowed(exchangeInfo().multiTradeAllowedByDefault());
+  log::info("{}rade {} -> {} on {}_{} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from.str(),
+            toCurrency.str(), _exchangePublic.name(), keyName());
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
     log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency.str(), _exchangePublic.name());
     return tradedAmounts;
   }
-  if (nbTrades > 1 && !options.isMultiTradeAllowed()) {
+  if (nbTrades > 1 && !isMultiTradeAllowed) {
     log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from.str(),
                toCurrency.str(), nbTrades);
     return tradedAmounts;

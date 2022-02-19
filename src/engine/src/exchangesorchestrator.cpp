@@ -292,7 +292,8 @@ using KeepExchangeBoolArray = std::array<bool, kNbSupportedExchanges>;
 ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVector &exchangeAmountPairVector,
                                                       CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                                       const MarketSetsPerPublicExchange &marketsPerPublicExchange,
-                                                      const api::CryptowatchAPI::Fiats &fiats, bool multiTradeAllowed) {
+                                                      const api::CryptowatchAPI::Fiats &fiats,
+                                                      const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector ret;
 
   int nbExchanges = static_cast<int>(exchangeAmountPairVector.size());
@@ -310,7 +311,9 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
     MarketsPath marketsPath =
         pExchangePublic->findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
     const int nbMarketsInPath = static_cast<int>(marketsPath.size());
-    if (nbMarketsInPath == 1 || (nbMarketsInPath > 1 && multiTradeAllowed)) {
+    if (nbMarketsInPath == 1 ||
+        (nbMarketsInPath > 1 &&
+         tradeOptions.isMultiTradeAllowed(pExchangePublic->exchangeInfo().multiTradeAllowedByDefault()))) {
       ret.emplace_back(exchangeAmountPair.first, exchangeAmountPair.second, std::move(marketsPath));
     }
   }
@@ -357,7 +360,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
                                                                       const BalancePerExchange &balancePerExchange,
                                                                       CurrencyCode fromCurrency,
                                                                       CurrencyCode toCurrency,
-                                                                      bool isMultiTradeAllowed) {
+                                                                      const TradeOptions &tradeOptions) {
   // Retrieve amount per start amount currency for each exchange
   ExchangeAmountPairVector exchangeAmountPairVector = ComputeExchangeAmountPairVector(fromCurrency, balancePerExchange);
 
@@ -369,7 +372,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
   api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
 
   return FilterConversionPaths(exchangeAmountPairVector, fromCurrency, toCurrency, marketsPerPublicExchange, fiats,
-                               isMultiTradeAllowed);
+                               tradeOptions);
 }
 
 }  // namespace
@@ -385,9 +388,8 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
 
   const CurrencyCode fromCurrency = startAmount.currencyCode();
 
-  ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector =
-      CreateExchangeAmountMarketsPathVector(_exchangeRetriever, getBalance(privateExchangeNames), fromCurrency,
-                                            toCurrency, tradeOptions.isMultiTradeAllowed());
+  ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
+      _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
 
   // Sort exchanges from largest to lowest available amount (should be after filter on markets and conversion paths)
   std::ranges::sort(exchangeAmountMarketsPathVector,
@@ -425,9 +427,8 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
 TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                               std::span<const PrivateExchangeName> privateExchangeNames,
                                               const TradeOptions &tradeOptions) {
-  ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector =
-      CreateExchangeAmountMarketsPathVector(_exchangeRetriever, getBalance(privateExchangeNames), fromCurrency,
-                                            toCurrency, tradeOptions.isMultiTradeAllowed());
+  ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
+      _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
 
   return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(),
                                 fromCurrency, toCurrency, tradeOptions);
@@ -481,6 +482,10 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
         ++publicExchangePos;
       }
       api::ExchangePublic &exchangePublic = *pExchangePublic;
+      if (nbSteps > 1 &&
+          !tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeInfo().multiTradeAllowedByDefault())) {
+        continue;
+      }
       const auto &markets = marketsPerPublicExchange[publicExchangePos];
       auto &marketOrderBookMap = marketOrderbooksPerPublicExchange[publicExchangePos];
       for (CurrencyCode fromCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
@@ -530,7 +535,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
     }
     trades.erase(trades.begin() + nbTradesToKeep, trades.end());
 
-    if (remEndAmount.isZero() || !continuingHigherStepsPossible || !tradeOptions.isMultiTradeAllowed()) {
+    if (remEndAmount.isZero() || !continuingHigherStepsPossible) {
       break;
     }
   }
@@ -573,9 +578,10 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
     bool continuingHigherStepsPossible = false;
     int exchangePos = 0;
     for (auto &[pExchange, avAmount] : exchangeAmountPairVector) {
-      if (avAmount.isZero()) {
+      if (avAmount.isZero() ||  // It can be set to 0 in below code
+          (nbSteps > 1 && !tradeOptions.isMultiTradeAllowed(pExchange->exchangeInfo().multiTradeAllowedByDefault()))) {
         ++exchangePos;
-        continue;  // It can be set to 0 in below code
+        continue;
       }
       const MarketSet &markets = *marketSetsPtrPerExchange[exchangePos];
       for (CurrencyCode toCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
@@ -604,7 +610,7 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
       }
       ++exchangePos;
     }
-    if (remStartAmount.isZero() || !continuingHigherStepsPossible || !tradeOptions.isMultiTradeAllowed()) {
+    if (remStartAmount.isZero() || !continuingHigherStepsPossible) {
       break;
     }
   }

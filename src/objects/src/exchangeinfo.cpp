@@ -40,7 +40,8 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
                            CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
                            CurrencyVector &&preferredPaymentCurrencies,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
-                           Duration privateAPIRate, bool validateDepositAddressesInFile, bool placeSimulateRealOrder)
+                           Duration privateAPIRate, bool multiTradeAllowedByDefault,
+                           bool validateDepositAddressesInFile, bool placeSimulateRealOrder)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
@@ -49,6 +50,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
       _privateAPIRate(privateAPIRate),
       _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
       _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
+      _multiTradeAllowedByDefault(multiTradeAllowedByDefault),
       _validateDepositAddressesInFile(validateDepositAddressesInFile),
       _placeSimulateRealOrder(placeSimulateRealOrder) {
   if (log::get_level() <= log::level::trace) {
@@ -61,6 +63,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
                DurationToString(privateAPIRate));
     log::trace(" - Update frequencies by method : {}", BuildUpdateFrequenciesString(_apiUpdateFrequencies));
     log::trace(" - Taker / Maker fees           : {} / {}", makerStr, takerStr);
+    log::trace(" - Multi Trade by default       : {}", _multiTradeAllowedByDefault ? "yes" : "no");
     log::trace(" - Validate deposit addresses   : {}{}", _validateDepositAddressesInFile ? "yes in " : "no",
                _validateDepositAddressesInFile ? kDepositAddressesFileName : "");
     log::trace(" - Order placing in simulation  : {}", _placeSimulateRealOrder ? "real, unmatchable" : "none");

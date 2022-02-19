@@ -9,21 +9,34 @@
 namespace cct {
 
 TradeOptions::TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
-                           Duration minTimeBetweenPriceUpdates, TradeType tradeType)
+                           Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeType)
     : _maxTradeTime(dur),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _timeoutAction(timeoutAction),
       _mode(tradeMode),
-      _type(tradeType) {}
+      _tradeTypePolicy(tradeType) {}
 
 TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                           Duration dur, Duration minTimeBetweenPriceUpdates, TradeType tradeType)
+                           Duration dur, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy)
     : _maxTradeTime(dur),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _priceOptions(priceOptions),
       _timeoutAction(timeoutAction),
       _mode(tradeMode),
-      _type(tradeType) {}
+      _tradeTypePolicy(tradeTypePolicy) {}
+
+bool TradeOptions::isMultiTradeAllowed(bool multiTradeAllowedByDefault) const {
+  switch (_tradeTypePolicy) {
+    case TradeTypePolicy::kDefault:
+      return multiTradeAllowedByDefault;
+    case TradeTypePolicy::kForceMultiTrade:
+      return true;
+    case TradeTypePolicy::kForceSingleTrade:
+      return false;
+    default:
+      unreachable();
+  }
+}
 
 std::string_view TradeOptions::timeoutActionStr() const {
   switch (_timeoutAction) {

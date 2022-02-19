@@ -139,13 +139,14 @@ struct CoincenterCmdLineOptions {
 
   std::string_view trade;
   std::string_view tradeAll;
-  std::string_view tradeMulti;
-  std::string_view tradeMultiAll;
   std::string_view tradePrice;
   std::string_view tradeStrategy;
-  bool tradeTimeoutMatch = false;
   Duration tradeTimeout{TradeOptions().maxTradeTime()};
   Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
+
+  bool forceMultiTrade = false;
+  bool forceSingleTrade = false;
+  bool tradeTimeoutMatch = false;
   bool tradeSim{TradeOptions().isSimulation()};
 
   std::string_view buy;
@@ -313,24 +314,20 @@ struct CoincenterAllowedOptions {
         " or all that have some balance on cur1 if none provided\n"
         "Order will be placed at limit price by default"},
        &OptValueType::tradeAll},
-      {{{"Trade", 41}, "--singletrade", "<amt[%]cur1-cur2[,exch1,...]>", "Synonym for '--trade'"},
-       &OptValueType::trade},
+      {{{"Trade", 41},
+        "--multi-trade",
+        "",
+        "Force activation of multi trade mode for all exchanges, overriding default configuration of config file.\n"
+        "It makes trade in multiple steps possible if exchange does not provide a direct currency market pair.\n"
+        "The conversion path used is always one of the fastest(s). All other trade options apply to one unique trade "
+        "step (for instance, the trade timeout is related to a single trade, not the series of all trades of a multi "
+        "trade)."},
+       &OptValueType::forceMultiTrade},
       {{{"Trade", 42},
-        "--multitrade",
-        "<amt[%]cur1-cur2[,exch1,...]>",
-        "Multi trade from given start amount on a list of exchanges,"
-        " or all that have a sufficient balance on cur1 if none provided \n"
-        "Multi trade will first compute fastest path from cur1 to cur2 and "
-        "if possible reach cur2 by launching multiple single trades.\n"
-        "Options are same than for single trade, applied to each step trade.\n"
-        "If multi trade is used in conjonction with single trade, the latter is ignored."},
-       &OptValueType::tradeMulti},
-      {{{"Trade", 42},
-        "--multitrade-all",
-        "<cur1-cur2,exchange>",
-        "Multi trade from available amount from given currency on an exchange.\n"
-        "Order will be placed at limit price by default"},
-       &OptValueType::tradeMultiAll},
+        "--no-multi-trade",
+        "",
+        "Force deactivation of multi trade mode for all exchanges, overriding default configuration of config file."},
+       &OptValueType::forceSingleTrade},
       {{{"Trade", 43},
         "--trade-price",
         "<n|amt cur>",

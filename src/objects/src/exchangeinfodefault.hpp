@@ -56,6 +56,7 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "multiTradeAllowedByDefault": false,
       "privateAPIRate": "1000ms",
       "publicAPIRate": "1000ms",
       "placeSimulateRealOrder": false,
@@ -167,6 +168,7 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "multiTradeAllowedByDefault": true,
       "privateAPIRate": "1055ms",
       "publicAPIRate": "1236ms",
       "placeSimulateRealOrder": false,

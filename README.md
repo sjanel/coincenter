@@ -68,7 +68,6 @@ Main features:
       - [Single trade all](#single-trade-all)
       - [Examples with explanation](#examples-with-explanation)
     - [Multi Trade](#multi-trade)
-      - [Multi trade all](#multi-trade-all)
       - [Trade simulation](#trade-simulation)
     - [Buy / Sell](#buy--sell)
       - [Examples with explanation](#examples-with-explanation-1)
@@ -191,10 +190,11 @@ coincenter --last-trades dot-usdt,binance,huobi --last-trades-n 15
 
 ### Conversion path
 
-Option `--conversion` is used by `--multitrade` option (see [Multi trade](#multi-trade)) but may be used as stand-alone for information.
-From a starting currency to a destination currency, `coincenter` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
+From a starting currency to a destination currency, `--conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
 
 It will print the result as an ordered list of markets for each exchange.
+
+Option `--conversion` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query sfor information.
 
 **Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
 
@@ -412,11 +412,13 @@ You can also choose the behavior of the trade when timeout is reached, thanks to
 
 ### Multi Trade
 
-If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC* market and have *AAA-BBB* and *BBB-CCC*, then it's possible with a multi trade by changing `--trade` into `--multitrade`. Options are the same than for a simple trade. `coincenter` starts by evaluating the shortest conversion path to reach *CCC* from *AAA* and then applies the single trades in the correct order to its final goal.
+If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC* market and have *AAA-BBB* and *BBB-CCC*, then it's possible with a multi trade, which will perform a series of trades in order until the destination currency is reached. Other trade options are the same than for a simple trade. `coincenter` starts by evaluating the shortest conversion path to reach *CCC* from *AAA* and then applies the single trades in the correct order to its final goal.
 
-#### Multi trade all
+In order to activate multi trades, there are two ways:
+ - Default behavior is controlled by [multiTradeAllowedByDefault option](CONFIG.md#options-description) in the `exchangeconfig.json` file. If `true`, multi trade is allowed for the given exchange (or all exchanges if under `default` level).
+ - It can be forced by adding command line flag `--multi-trade`.
 
-Similarly to single trade, you can use command line option `--multitrade-all` when you want to sell all available amount from a currency.
+In the case it's activated in the config file, `--no-multi-trade` can force deactivation of the multi trade if needed.
 
 #### Trade simulation
 
@@ -424,9 +426,9 @@ Some exchanges (**Kraken** and **Binance** for instance) allow to actually query
 
 ### Buy / Sell
 
-Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. It's really a *trade* in this aspect. If you wish, you can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. It's really a *trade* in this aspect. If you wish, you can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
 
-The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md) file to see how to set the preferred currencies.
+The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md#options-description) file to see how to set the preferred currencies.
 
 **Behavior**:
 

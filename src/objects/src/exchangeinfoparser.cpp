@@ -43,7 +43,9 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
 TopLevelOption::TopLevelOption(const json& jsonData, std::string_view optionName) {
   auto optIt = jsonData.find(optionName);
   if (optIt == jsonData.end()) {
-    throw exception("Unexpected exchange config file content");
+    string err("Unable to find '");
+    err.append(optionName).append("' top level option in config file content");
+    throw exception(std::move(err));
   }
   _defaultPart = optIt->find("default");
   _hasDefaultPart = _defaultPart != optIt->end();
@@ -90,9 +92,9 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
     err.push_back('.');
     err.append(subOptionName2);
   }
-  err.append("' for ");
-  err.append(exchangeName);
-  err.append(". Make sure schema is up to date compared to exchangeinfodefault.hpp");
+  err.append("' for '").append(exchangeName);
+  err.append("'. Make sure that your ").append(LoadConfiguration::kProdDefaultExchangeConfigFile);
+  err.append(" file follows same schema as possible options.");
   throw exception(std::move(err));
 }
 

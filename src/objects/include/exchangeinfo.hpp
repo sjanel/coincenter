@@ -24,8 +24,8 @@ class ExchangeInfo {
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
                CurrencyVector &&preferredPaymentCurrencies, const APIUpdateFrequencies &apiUpdateFrequencies,
-               Duration publicAPIRate, Duration privateAPIRate, bool validateDepositAddressesInFile,
-               bool placeSimulateRealOrder);
+               Duration publicAPIRate, Duration privateAPIRate, bool multiTradeAllowedByDefault,
+               bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -67,6 +67,8 @@ class ExchangeInfo {
   // - Maximum for a sell
   bool placeSimulateRealOrder() const { return _placeSimulateRealOrder; }
 
+  bool multiTradeAllowedByDefault() const { return _multiTradeAllowedByDefault; }
+
  private:
   CurrencySet _excludedCurrenciesAll;          // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;   // Currencies unavailable for withdrawals
@@ -76,6 +78,7 @@ class ExchangeInfo {
   Duration _privateAPIRate;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
+  bool _multiTradeAllowedByDefault;
   bool _validateDepositAddressesInFile;
   bool _placeSimulateRealOrder;
 };
