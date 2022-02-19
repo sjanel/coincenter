@@ -34,6 +34,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "depositWallet"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "nbDecimals")}};
 
+    bool multiTradeAllowedByDefault = queryTopLevelOption.getBool(exchangeName, "multiTradeAllowedByDefault");
     bool validateDepositAddressesInFile =
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
     bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
@@ -44,8 +45,8 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
                      assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
                      assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
                      assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
-                     std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate, validateDepositAddressesInFile,
-                     placeSimulatedRealOrder));
+                     std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate, multiTradeAllowedByDefault,
+                     validateDepositAddressesInFile, placeSimulatedRealOrder));
   }  // namespace cct
 
   return map;

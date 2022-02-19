@@ -46,6 +46,7 @@ TEST_F(ExchangeInfoTest, Query) {
 }
 
 TEST_F(ExchangeInfoTest, MiscellaneousOptions) {
+  EXPECT_TRUE(exchangeInfo.multiTradeAllowedByDefault());
   EXPECT_FALSE(exchangeInfo.placeSimulateRealOrder());
   EXPECT_FALSE(exchangeInfo.validateDepositAddressesInFile());
 }

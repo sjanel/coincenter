@@ -397,7 +397,7 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
  protected:
   ExchangeOrchestratorSimpleTradeTest()
       : tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
-                     TradeType::kSingleTrade) {
+                     TradeTypePolicy::kDefault) {
     resetMarkets();
   }
 

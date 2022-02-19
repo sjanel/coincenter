@@ -21,13 +21,13 @@ class TradeOptions {
   constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
 
   TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur, Duration minTimeBetweenPriceUpdates,
-               TradeType tradeType);
+               TradeTypePolicy tradeType);
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
   TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
                Duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates,
-               TradeType tradeType = TradeType::kMultiTradePossible);
+               TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault);
 
   constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 
@@ -43,7 +43,7 @@ class TradeOptions {
 
   constexpr TradeMode tradeMode() const { return _mode; }
 
-  constexpr bool isMultiTradeAllowed() const { return _type == TradeType::kMultiTradePossible; }
+  bool isMultiTradeAllowed(bool multiTradeAllowedByDefault) const;
 
   constexpr bool isTakerStrategy(bool placeRealOrderInSimulationMode) const {
     return _priceOptions.isTakerStrategy() && (!isSimulation() || !placeRealOrderInSimulationMode);
@@ -71,6 +71,6 @@ class TradeOptions {
   PriceOptions _priceOptions;
   TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kCancel;
   TradeMode _mode = TradeMode::kReal;
-  TradeType _type = TradeType::kMultiTradePossible;
+  TradeTypePolicy _tradeTypePolicy = TradeTypePolicy::kDefault;
 };
 }  // namespace cct

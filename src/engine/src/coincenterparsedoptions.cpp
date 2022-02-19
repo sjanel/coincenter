@@ -114,23 +114,16 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   // Parse trade / buy / sell options
   // First, check that at most one master trade option is set
   // (options would be set for all trades otherwise which is not very intuitive)
-  if (!cmdLineOptions.tradeMulti.empty() + !cmdLineOptions.tradeMultiAll.empty() + !cmdLineOptions.buy.empty() +
-          !cmdLineOptions.sell.empty() + !cmdLineOptions.tradeAll.empty() + !cmdLineOptions.tradeMultiAll.empty() >
-      1) {
+  if (!cmdLineOptions.buy.empty() + !cmdLineOptions.sell.empty() + !cmdLineOptions.tradeAll.empty() > 1) {
     throw invalid_argument("Only one trade can be done at a time");
   }
   std::string_view tradeArgs;
   bool isSmartTrade = !cmdLineOptions.buy.empty() || !cmdLineOptions.sell.empty();
-  bool isMultiTrade = !cmdLineOptions.tradeMulti.empty() || !cmdLineOptions.tradeMultiAll.empty() || isSmartTrade;
-  bool isTradeAll = !cmdLineOptions.tradeAll.empty() || !cmdLineOptions.tradeMultiAll.empty();
-  if (isMultiTrade) {
-    if (!cmdLineOptions.buy.empty()) {
-      tradeArgs = cmdLineOptions.buy;
-    } else if (!cmdLineOptions.sell.empty()) {
-      tradeArgs = cmdLineOptions.sell;
-    } else {
-      tradeArgs = isTradeAll ? cmdLineOptions.tradeMultiAll : cmdLineOptions.tradeMulti;
-    }
+  bool isTradeAll = !cmdLineOptions.tradeAll.empty();
+  if (!cmdLineOptions.buy.empty()) {
+    tradeArgs = cmdLineOptions.buy;
+  } else if (!cmdLineOptions.sell.empty()) {
+    tradeArgs = cmdLineOptions.sell;
   } else {
     tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
   }
@@ -147,13 +140,22 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
           optParser.getMonetaryAmountCurrencyPrivateExchanges();
     }
 
+    if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
+      throw invalid_argument("Trade price and trade strategy cannot be set together");
+    }
+
     TradeMode tradeMode = cmdLineOptions.tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
-    TradeType tradeType = isMultiTrade ? TradeType::kMultiTradePossible : TradeType::kSingleTrade;
     TradeTimeoutAction timeoutAction =
         cmdLineOptions.tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
 
-    if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
-      throw invalid_argument("Trade price and trade strategy cannot be set together");
+    TradeTypePolicy tradeType = TradeTypePolicy::kDefault;
+    if (cmdLineOptions.forceMultiTrade) {
+      if (cmdLineOptions.forceSingleTrade) {
+        throw invalid_argument("Multi & Single trade cannot be forced at the same time");
+      }
+      tradeType = TradeTypePolicy::kForceMultiTrade;
+    } else if (cmdLineOptions.forceSingleTrade) {
+      tradeType = TradeTypePolicy::kForceSingleTrade;
     }
 
     if (!cmdLineOptions.tradeStrategy.empty()) {

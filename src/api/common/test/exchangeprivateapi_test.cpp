@@ -156,7 +156,7 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   MonetaryAmount vol2(from / pri2, m.base());
 
   TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
-                            TradeType::kMultiTradePossible);
+                            TradeTypePolicy::kForceMultiTrade);
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, tradeOptions);
 
   {
@@ -232,7 +232,7 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
 
   TradeSide side = TradeSide::kSell;
   TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kSimulation, Duration::max(), Duration::zero(),
-                            TradeType::kMultiTradePossible);
+                            TradeTypePolicy::kForceMultiTrade);
   TradeInfo tradeInfo(nbSecondsSinceEpoch, m, side, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(m, testing::_)).WillOnce(testing::Return(marketOrderBook1));
