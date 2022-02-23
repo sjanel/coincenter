@@ -1,19 +1,13 @@
 #pragma once
 
-#include <string.h>
-
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <compare>
 #include <cstdint>
 #include <iostream>
-#include <iterator>
-#include <memory>
 #include <string_view>
 #include <type_traits>
 
-#include "cct_config.hpp"
 #include "cct_hash.hpp"
 #include "cct_log.hpp"
 #include "toupperlower.hpp"
@@ -48,7 +42,7 @@ class CurrencyCode {
     set(acronym);
   }
 
-  constexpr std::size_t size() const { return std::ranges::find(_data, '\0') - _data.begin(); }
+  constexpr uint64_t size() const { return std::ranges::find(_data, '\0') - _data.begin(); }
 
   /// Get a string view of this CurrencyCode, trimmed.
   constexpr std::string_view str() const { return std::string_view(_data.begin(), std::ranges::find(_data, '\0')); }
@@ -92,6 +86,6 @@ inline std::ostream &operator<<(std::ostream &os, const CurrencyCode &c) {
 namespace std {
 template <>
 struct hash<cct::CurrencyCode> {
-  size_t operator()(const cct::CurrencyCode &c) const { return cct::HashValue64(c.code()); }
+  auto operator()(const cct::CurrencyCode &c) const { return cct::HashValue64(c.code()); }
 };
 }  // namespace std

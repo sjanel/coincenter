@@ -2,9 +2,10 @@
 
 #include <cassert>
 #include <cctype>
-#include <limits>
+#include <cstddef>
 
 #include "cct_invalid_argument_exception.hpp"
+
 namespace cct {
 
 string BinToHex(std::span<const unsigned char> bindata) {

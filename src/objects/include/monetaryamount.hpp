@@ -5,6 +5,7 @@
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -240,7 +241,8 @@ class MonetaryAmount {
   CurrencyCode _currencyCode;
 };
 
-static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small and fast to copy");
+static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small");
+static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount should be fast to copy");
 
 inline MonetaryAmount operator*(MonetaryAmount::AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 

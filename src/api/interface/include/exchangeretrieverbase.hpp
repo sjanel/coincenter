@@ -58,14 +58,13 @@ class ExchangeRetrieverBase {
   SelectedExchanges select(Order order, const Names &names, Matcher matcher) const {
     SelectedExchanges ret;
     if (names.empty()) {
-      ret.reserve(static_cast<typename SelectedExchanges::size_type>(_exchanges.size()));
-      std::transform(_exchanges.begin(), _exchanges.end(), std::back_inserter(ret),
-                     [](ExchangeT &e) { return std::addressof(e); });
+      ret.resize(static_cast<typename SelectedExchanges::size_type>(_exchanges.size()));
+      std::ranges::transform(_exchanges, ret.begin(), static_cast<ExchangeT *(*)(ExchangeT &)>(std::addressof));
     } else {
       switch (order) {
         case Order::kInitial:
           for (ExchangeT &e : _exchanges) {
-            if (std::any_of(names.begin(), names.end(), [&e, &matcher](const auto &n) { return matcher(e, n); })) {
+            if (std::ranges::any_of(names, [&e, &matcher](const auto &n) { return matcher(e, n); })) {
               ret.push_back(std::addressof(e));
             }
           }
@@ -75,7 +74,7 @@ class ExchangeRetrieverBase {
             auto nameMatch = [&n, &matcher](ExchangeT &e) { return matcher(e, n); };
             auto endIt = _exchanges.end();
             auto oldSize = ret.size();
-            for (auto foundIt = std::find_if(_exchanges.begin(), endIt, nameMatch); foundIt != _exchanges.end();
+            for (auto foundIt = std::ranges::find_if(_exchanges, nameMatch); foundIt != _exchanges.end();
                  foundIt = std::find_if(std::next(foundIt), endIt, nameMatch)) {
               ret.push_back(std::addressof(*foundIt));
             }
@@ -134,8 +133,8 @@ class ExchangeRetrieverBase {
   UniquePublicSelectedExchanges selectOneAccount(const Names &exchangeNames) const {
     SelectedExchanges selectedExchanges = select(Order::kSelection, exchangeNames, Matcher<NameType<Names>>());
     UniquePublicSelectedExchanges ret;
-    std::copy_if(selectedExchanges.begin(), selectedExchanges.end(), std::back_inserter(ret), [&ret](ExchangeT *e) {
-      return std::none_of(ret.begin(), ret.end(), [e](ExchangeT *o) { return o->name() == e->name(); });
+    std::ranges::copy_if(selectedExchanges, std::back_inserter(ret), [&ret](ExchangeT *e) {
+      return std::ranges::none_of(ret, [e](ExchangeT *o) { return o->name() == e->name(); });
     });
     return ret;
   }
@@ -149,9 +148,9 @@ class ExchangeRetrieverBase {
   template <class Names>
   PublicExchangesVec selectPublicExchanges(const Names &exchangeNames) const {
     auto selectedExchanges = selectOneAccount(exchangeNames);
-    PublicExchangesVec selectedPublicExchanges;
-    std::transform(selectedExchanges.begin(), selectedExchanges.end(), std::back_inserter(selectedPublicExchanges),
-                   [](ExchangeT *e) { return std::addressof(e->apiPublic()); });
+    PublicExchangesVec selectedPublicExchanges(selectedExchanges.size());
+    std::ranges::transform(selectedExchanges, selectedPublicExchanges.begin(),
+                           [](ExchangeT *e) { return std::addressof(e->apiPublic()); });
     return selectedPublicExchanges;
   }
 

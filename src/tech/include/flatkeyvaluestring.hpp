@@ -1,20 +1,22 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <charconv>
-#include <concepts>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
+#include <limits>
 #include <span>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 #include "cct_cctype.hpp"
-#include "cct_hash.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
-#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "unreachable.hpp"
 
