@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace cct::api {
 enum QueryType : int8_t {};
 

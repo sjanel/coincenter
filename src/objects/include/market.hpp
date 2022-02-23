@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <utility>
+
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <span>
 
 #include "cct_string.hpp"

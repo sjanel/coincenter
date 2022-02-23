@@ -154,9 +154,7 @@ class MarketOrderBook {
     using AmountType = MonetaryAmount::AmountType;
 
 #ifndef CCT_AGGR_INIT_CXX20
-    AmountPrice() noexcept = default;
-
-    AmountPrice(AmountType a, AmountType p) : amount(a), price(p) {}
+    explicit AmountPrice(AmountType a = 0, AmountType p = 0) : amount(a), price(p) {}
 #endif
 
     bool operator==(const AmountPrice& o) const = default;

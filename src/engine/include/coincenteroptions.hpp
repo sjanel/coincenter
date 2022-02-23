@@ -14,7 +14,6 @@
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "tradeoptions.hpp"
-#include "wallet.hpp"
 
 namespace cct {
 

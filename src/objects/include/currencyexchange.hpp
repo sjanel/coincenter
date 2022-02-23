@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 
 #include "cct_string.hpp"
@@ -10,9 +11,10 @@ namespace cct {
 /// Represents a currency for a given exchange.
 class CurrencyExchange {
  public:
-  enum class Deposit { kAvailable, kUnavailable };  // use scoped enums to ensure type checks and increase readability
-  enum class Withdraw { kAvailable, kUnavailable };
-  enum class Type { kFiat, kCrypto };
+  // use scoped enums to ensure type checks and increase readability
+  enum class Deposit : int8_t { kAvailable, kUnavailable };
+  enum class Withdraw : int8_t { kAvailable, kUnavailable };
+  enum class Type : int8_t { kFiat, kCrypto };
 
   CurrencyExchange() noexcept = default;
 

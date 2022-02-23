@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "cct_string.hpp"
 #include "timedef.hpp"
 

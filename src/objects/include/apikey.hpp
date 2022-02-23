@@ -4,8 +4,8 @@
 
 #include "cct_string.hpp"
 
-namespace cct {
-namespace api {
+namespace cct::api {
+
 class APIKey {
  public:
   APIKey(std::string_view platform, std::string_view name, string &&key, string &&privateKey, string &&passphrase)
@@ -35,5 +35,4 @@ class APIKey {
   string _privateKey;
   string _passphrase;
 };
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api
