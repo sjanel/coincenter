@@ -25,25 +25,7 @@ using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
 
 class ExchangeOrchestratorTest : public ::testing::Test {
  protected:
-  ExchangeOrchestratorTest()
-      : loadConfiguration(kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest),
-        coincenterInfo(settings::RunMode::kProd, loadConfiguration),
-        cryptowatchAPI(coincenterInfo, settings::RunMode::kProd, Duration::max(), true),
-        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
-        exchangePublic1(kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo),
-        exchangePublic2(kSupportedExchanges[1], fiatConverter, cryptowatchAPI, coincenterInfo),
-        exchangePublic3(kSupportedExchanges[2], fiatConverter, cryptowatchAPI, coincenterInfo),
-        key1("test1", "testuser1", "", "", ""),
-        key2("test2", "testuser2", "", "", ""),
-        exchangePrivate1(exchangePublic1, coincenterInfo, key1),
-        exchangePrivate2(exchangePublic2, coincenterInfo, key1),
-        exchangePrivate3(exchangePublic3, coincenterInfo, key1),
-        exchangePrivate4(exchangePublic3, coincenterInfo, key2),
-        exchange1(coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate1),
-        exchange2(coincenterInfo.exchangeInfo(exchangePublic2.name()), exchangePublic2, exchangePrivate2),
-        exchange3(coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate3),
-        exchange4(coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate4),
-        exchangesOrchestrator(std::span<Exchange>(&exchange1, 4)) {}
+  ExchangeOrchestratorTest() = default;
 
   virtual void SetUp() {
     for (MonetaryAmount a : amounts1) {
@@ -58,19 +40,44 @@ class ExchangeOrchestratorTest : public ::testing::Test {
     for (MonetaryAmount a : amounts4) {
       balancePortfolio4.add(a);
     }
+
+    EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
   }
 
   virtual void TearDown() {}
 
-  LoadConfiguration loadConfiguration;
-  CoincenterInfo coincenterInfo;
-  api::CryptowatchAPI cryptowatchAPI;
-  FiatConverter fiatConverter;
-  api::MockExchangePublic exchangePublic1, exchangePublic2, exchangePublic3;
-  api::APIKey key1, key2;
-  api::MockExchangePrivate exchangePrivate1, exchangePrivate2, exchangePrivate3, exchangePrivate4;
-  Exchange exchange1, exchange2, exchange3, exchange4;
-  ExchangesOrchestrator exchangesOrchestrator;
+  LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
+  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
+  api::CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kProd, Duration::max(), true};
+  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
+  api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, cryptowatchAPI, coincenterInfo};
+  api::MockExchangePublic exchangePublic3{kSupportedExchanges[2], fiatConverter, cryptowatchAPI, coincenterInfo};
+  api::APIKey key1{"test1", "testuser1", "", "", ""};
+  api::APIKey key2{"test2", "testuser2", "", "", ""};
+  api::APIKey key3{"test3", "testuser3", "", "", ""};
+  api::APIKey key4{"test4", "testuser4", "", "", ""};
+  api::APIKey key5{"test5", "testuser5", "", "", ""};
+  api::MockExchangePrivate exchangePrivate1{exchangePublic1, coincenterInfo, key1};
+  api::MockExchangePrivate exchangePrivate2{exchangePublic2, coincenterInfo, key1};
+  api::MockExchangePrivate exchangePrivate3{exchangePublic3, coincenterInfo, key1};
+  api::MockExchangePrivate exchangePrivate4{exchangePublic3, coincenterInfo, key2};
+  api::MockExchangePrivate exchangePrivate5{exchangePublic3, coincenterInfo, key3};
+  api::MockExchangePrivate exchangePrivate6{exchangePublic3, coincenterInfo, key4};
+  api::MockExchangePrivate exchangePrivate7{exchangePublic3, coincenterInfo, key5};
+  api::MockExchangePrivate exchangePrivate8{exchangePublic1, coincenterInfo, key2};
+  Exchange exchange1{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
+  Exchange exchange2{coincenterInfo.exchangeInfo(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
+  Exchange exchange3{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
+  Exchange exchange4{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
+  Exchange exchange5{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
+  Exchange exchange6{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
+  Exchange exchange7{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
+  Exchange exchange8{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
+  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&exchange1, 8)};
 
   Market m1{"ETH", "EUR"};
   Market m2{"BTC", "EUR"};
@@ -117,7 +124,7 @@ class ExchangeOrchestratorTest : public ::testing::Test {
                                       MonetaryAmount("15004MATIC"), MonetaryAmount("155USD"),
                                       MonetaryAmount("107.5USDT"),  MonetaryAmount("1200EUR")};
 
-  BalancePortfolio balancePortfolio1, balancePortfolio2, balancePortfolio3, balancePortfolio4;
+  BalancePortfolio balancePortfolio1, balancePortfolio2, balancePortfolio3, balancePortfolio4, emptyBalance;
 };
 
 TEST_F(ExchangeOrchestratorTest, TickerInformation) {
@@ -393,16 +400,59 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingMarket) {
 
 /// For the trade tests, 'exchangeprivateapi_test' already tests a lot of complex trade options.
 /// Here we are only interested in testing the orchestrator, so we for simplicity reasons we will do only taker trades.
+
+#define EXPECT_TRADE(exchangePublic, exchangePrivate)                                                               \
+  if (tradableMarketsCall == TradableMarkets::kExpectCall) {                                                        \
+    EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(markets));                         \
+  } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {                                               \
+    EXPECT_CALL(exchangePublic, queryTradableMarkets()).Times(0);                                                   \
+  }                                                                                                                 \
+                                                                                                                    \
+  switch (orderBookCall) {                                                                                          \
+    case OrderBook::kExpect2Calls:                                                                                  \
+    case OrderBook::kExpect3Calls:                                                                                  \
+    case OrderBook::kExpect4Calls:                                                                                  \
+    case OrderBook::kExpect5Calls:                                                                                  \
+      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth))                                                         \
+          .Times(static_cast<int>(orderBookCall))                                                                   \
+          .WillRepeatedly(testing::Return(marketOrderbook));                                                        \
+      break;                                                                                                        \
+    case OrderBook::kExpectCall:                                                                                    \
+      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));             \
+      break;                                                                                                        \
+    case OrderBook::kExpectNoCall:                                                                                  \
+      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth)).Times(0);                                               \
+      break;                                                                                                        \
+    case OrderBook::kNoExpectation:                                                                                 \
+      break;                                                                                                        \
+  }                                                                                                                 \
+                                                                                                                    \
+  if (allOrderBooksCall == AllOrderBooks::kExpectCall) {                                                            \
+    EXPECT_CALL(exchangePublic, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));   \
+  } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {                                                   \
+    EXPECT_CALL(exchangePublic, queryAllApproximatedOrderBooks(1)).Times(0);                                        \
+  }                                                                                                                 \
+                                                                                                                    \
+  EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));                 \
+  if (makeMarketAvailable && from.isStrictlyPositive()) {                                                           \
+    EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).WillOnce(testing::Return(placeOrderInfo)); \
+  } else {                                                                                                          \
+    EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).Times(0);                                  \
+  }
 class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
  protected:
-  ExchangeOrchestratorSimpleTradeTest()
-      : tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
-                     TradeTypePolicy::kDefault) {
-    resetMarkets();
-  }
+  ExchangeOrchestratorSimpleTradeTest() { resetMarkets(); }
 
   enum class TradableMarkets : int8_t { kExpectNoCall, kExpectCall, kNoExpectation };
-  enum class OrderBook : int8_t { kExpectNoCall, kExpectCall, kExpect2Calls, kNoExpectation };
+  enum class OrderBook : int8_t {
+    kExpectNoCall,
+    kExpectCall,
+    kExpect2Calls,
+    kExpect3Calls,
+    kExpect4Calls,
+    kExpect5Calls,
+    kNoExpectation
+  };
   enum class AllOrderBooks : int8_t { kExpectNoCall, kExpectCall, kNoExpectation };
 
   TradedAmounts expectTrade(int exchangePrivateNum, MonetaryAmount from, CurrencyCode toCurrency, TradeSide side,
@@ -439,168 +489,47 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
       marketOrderBookMap.insert_or_assign(m, marketOrderbook);
     }
 
-    // EXPECT_CALL does not allow references. Or I did not found the way to make it work...
+    // EXPECT_CALL does not allow references. Or I did not found the way to make it work, so we use ugly macros here
     switch (exchangePrivateNum) {
       case 1:
-        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
-          EXPECT_CALL(exchangePublic1, queryTradableMarkets()).WillOnce(testing::Return(markets));
-        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic1, queryTradableMarkets()).Times(0);
-        }
-
-        switch (orderBookCall) {
-          case OrderBook::kExpect2Calls:
-            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth))
-                .Times(2)
-                .WillRepeatedly(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectCall:
-            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectNoCall:
-            EXPECT_CALL(exchangePublic1, queryOrderBook(m, depth)).Times(0);
-            break;
-          case OrderBook::kNoExpectation:
-            break;
-        }
-
-        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
-          EXPECT_CALL(exchangePublic1, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
-        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic1, queryAllApproximatedOrderBooks(1)).Times(0);
-        }
-
-        EXPECT_CALL(exchangePrivate1, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          EXPECT_CALL(exchangePrivate1, placeOrder(from, vol, pri, testing::_))
-              .WillOnce(testing::Return(placeOrderInfo));
-        } else {
-          EXPECT_CALL(exchangePrivate1, placeOrder(from, vol, pri, testing::_)).Times(0);
-        }
+        EXPECT_TRADE(exchangePublic1, exchangePrivate1)
         break;
       case 2:
-        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
-          EXPECT_CALL(exchangePublic2, queryTradableMarkets()).WillOnce(testing::Return(markets));
-        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic2, queryTradableMarkets()).Times(0);
-        }
-
-        switch (orderBookCall) {
-          case OrderBook::kExpect2Calls:
-            EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth))
-                .Times(2)
-                .WillRepeatedly(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectCall:
-            EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectNoCall:
-            EXPECT_CALL(exchangePublic2, queryOrderBook(m, depth)).Times(0);
-            break;
-          case OrderBook::kNoExpectation:
-            break;
-        }
-
-        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
-          EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
-        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).Times(0);
-        }
-
-        EXPECT_CALL(exchangePrivate2, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          EXPECT_CALL(exchangePrivate2, placeOrder(from, vol, pri, testing::_))
-              .WillOnce(testing::Return(placeOrderInfo));
-        } else {
-          EXPECT_CALL(exchangePrivate2, placeOrder(from, vol, pri, testing::_)).Times(0);
-        }
+        EXPECT_TRADE(exchangePublic2, exchangePrivate2)
         break;
       case 3:
-        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).WillOnce(testing::Return(markets));
-        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
-        }
-
-        switch (orderBookCall) {
-          case OrderBook::kExpect2Calls:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth))
-                .Times(2)
-                .WillRepeatedly(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectCall:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectNoCall:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).Times(0);
-            break;
-          case OrderBook::kNoExpectation:
-            break;
-        }
-
-        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
-          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
-        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).Times(0);
-        }
-
-        EXPECT_CALL(exchangePrivate3, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          EXPECT_CALL(exchangePrivate3, placeOrder(from, vol, pri, testing::_))
-              .WillOnce(testing::Return(placeOrderInfo));
-        } else {
-          EXPECT_CALL(exchangePrivate3, placeOrder(from, vol, pri, testing::_)).Times(0);
-        }
+        EXPECT_TRADE(exchangePublic3, exchangePrivate3)
         break;
       case 4:
-        if (tradableMarketsCall == TradableMarkets::kExpectCall) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).WillOnce(testing::Return(markets));
-        } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
-        }
-
-        switch (orderBookCall) {
-          case OrderBook::kExpect2Calls:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth))
-                .Times(2)
-                .WillRepeatedly(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectCall:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));
-            break;
-          case OrderBook::kExpectNoCall:
-            EXPECT_CALL(exchangePublic3, queryOrderBook(m, depth)).Times(0);
-            break;
-          case OrderBook::kNoExpectation:
-            break;
-        }
-
-        if (allOrderBooksCall == AllOrderBooks::kExpectCall) {
-          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderBookMap));
-        } else if (allOrderBooksCall == AllOrderBooks::kExpectNoCall) {
-          EXPECT_CALL(exchangePublic3, queryAllApproximatedOrderBooks(1)).Times(0);
-        }
-
-        EXPECT_CALL(exchangePrivate4, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-        if (makeMarketAvailable && from.isStrictlyPositive()) {
-          EXPECT_CALL(exchangePrivate4, placeOrder(from, vol, pri, testing::_))
-              .WillOnce(testing::Return(placeOrderInfo));
-        } else {
-          EXPECT_CALL(exchangePrivate4, placeOrder(from, vol, pri, testing::_)).Times(0);
-        }
+        EXPECT_TRADE(exchangePublic3, exchangePrivate4)
         break;
+      case 5:
+        EXPECT_TRADE(exchangePublic3, exchangePrivate5)
+        break;
+      case 6:
+        EXPECT_TRADE(exchangePublic3, exchangePrivate6)
+        break;
+      case 7:
+        EXPECT_TRADE(exchangePublic3, exchangePrivate7)
+        break;
+      case 8:
+        EXPECT_TRADE(exchangePublic1, exchangePrivate8)
+        break;
+      default:
+        throw exception("Unexpected exchange number ");
     }
 
     return tradedAmounts;
   }
 
   void resetMarkets() {
-    marketOrderBookMap = {};
+    marketOrderBookMap.clear();
     markets = {Market("AAA", "BBB"), Market("CCC", "BBB"), Market("XXX", "ZZZ")};
   }
 
   PriceOptions priceOptions{PriceStrategy::kTaker};
-  TradeOptions tradeOptions;
+  TradeOptions tradeOptions{priceOptions,     TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
+                            Duration::zero(), TradeTypePolicy::kDefault};
   bool isPercentageTrade = false;
   api::ExchangePublic::MarketOrderBookMap marketOrderBookMap;
   MarketSet markets;
@@ -714,6 +643,50 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuyNotEnoughAmount) {
                                              OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
   TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
+  EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, PrivateExchangeNames{}, tradeOptions),
+            tradedAmounts);
+}
+
+TEST_F(ExchangeOrchestratorSimpleTradeTest, ManyAccountsTrade) {
+  CurrencyCode fromCurrency("USDT");
+  MonetaryAmount from(40000, fromCurrency);
+  CurrencyCode toCurrency("LUNA");
+  TradeSide side = TradeSide::kBuy;
+
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+
+  EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+
+  MonetaryAmount from1(5000, fromCurrency);
+  MonetaryAmount from2(6750, fromCurrency);
+  MonetaryAmount from3(4250, fromCurrency);
+  MonetaryAmount from4("107.5", fromCurrency);
+  TradedAmounts tradedAmounts1 = expectTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts2 = expectTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts3 = expectTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
+                                             OrderBook::kExpect5Calls, AllOrderBooks::kExpectNoCall, true);
+  TradedAmounts tradedAmounts4 = expectTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+
+  TradedAmounts tradedAmounts5 = expectTrade(5, from1, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts6 = expectTrade(6, from1, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts7 = expectTrade(7, from1, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+  TradedAmounts tradedAmounts8 = expectTrade(8, from1, toCurrency, side, TradableMarkets::kNoExpectation,
+                                             OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+
+  TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3 + tradedAmounts4 + tradedAmounts5 +
+                                tradedAmounts6 + tradedAmounts7 + tradedAmounts8;
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, PrivateExchangeNames{}, tradeOptions),
             tradedAmounts);
 }
