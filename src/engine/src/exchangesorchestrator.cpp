@@ -51,7 +51,7 @@ ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetrie
                       [](const auto &lhs, const auto &rhs) { return lhs.first->name() < rhs.first->name(); });
   }
 
-  FixedCapacityVector<std::string_view, kNbSupportedExchanges> names(exchangeVector.size());
+  SmallVector<std::string_view, kTypicalNbPrivateAccounts> names(exchangeVector.size());
 
   std::transform(exchangeVector.begin(), exchangeVector.end(), names.begin(),
                  [](const auto &p) { return p.first->apiPublic().name(); });
