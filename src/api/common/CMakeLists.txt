@@ -24,7 +24,6 @@ function(add_common_test name)
    )
 endfunction()
 
-
 add_common_test(
   cryptowatchapi_test
   test/cryptowatchapi_test.cpp
@@ -44,6 +43,16 @@ add_common_test(
   exchangepublicapi_test
   src/exchangepublicapi.cpp
   test/exchangepublicapi_test.cpp
+)
+
+add_unit_test(
+    ordersconstraints_test
+    src/ordersconstraints.cpp
+    test/ordersconstraints_test.cpp
+    LIBRARIES
+    coincenter_objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(

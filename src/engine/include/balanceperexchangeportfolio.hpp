@@ -10,8 +10,6 @@
 namespace cct {
 class BalancePerExchangePortfolio {
  public:
-  BalancePerExchangePortfolio() : _balances(1) {}
-
   void add(const Exchange &exchange, const BalancePortfolio &balancePortfolio);
   void add(const Exchange &exchange, BalancePortfolio &&balancePortfolio);
 
@@ -23,7 +21,7 @@ class BalancePerExchangePortfolio {
   // +1 for total in first position
   using BalancePortfolioVector = SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts + 1>;
 
-  BalancePortfolioVector _balances;
+  BalancePortfolioVector _balances{1};
   ConstExchangeRetriever::SelectedExchanges _exchanges;
 };
 
