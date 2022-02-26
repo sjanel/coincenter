@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include <span>
 #include <string_view>
 
@@ -41,6 +42,11 @@ class PrivateExchangeName {
 
   bool operator==(const PrivateExchangeName &o) const { return _nameWithKey == o._nameWithKey; }
   bool operator!=(const PrivateExchangeName &o) const { return !(*this == o); }
+
+  friend std::ostream &operator<<(std::ostream &os, const PrivateExchangeName &v) {
+    os << v.str();
+    return os;
+  }
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 

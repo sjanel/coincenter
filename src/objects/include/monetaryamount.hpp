@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <ostream>
 #include <string_view>
 #include <type_traits>
 
@@ -57,12 +58,13 @@ class MonetaryAmount {
 
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
   /// If it's not present, assume default CurrencyCode.
+  /// If given string is empty, it is equivalent to a default constructor.
   /// Examples: "10.5EUR" -> 10.5 units of currency EUR
   ///           "45 KRW" -> 45 units of currency KRW
   ///           "-345.8909" -> -345.8909 units of no currency
   explicit MonetaryAmount(std::string_view amountCurrencyStr);
 
-  /// Constructs a new MonetaryAmount from a string and a currency code.
+  /// Constructs a new MonetaryAmount from a string representing the amount only and a currency code.
   /// Precision is calculated automatically.
   MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode);
 

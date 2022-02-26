@@ -15,8 +15,6 @@ namespace cct {
 class StringOptionParser {
  public:
   using MarketExchanges = std::pair<Market, PublicExchangeNames>;
-  using MonetaryAmountExchanges = std::pair<MonetaryAmount, PublicExchangeNames>;
-  using MonetaryAmountPrivateExchanges = std::pair<MonetaryAmount, PrivateExchangeNames>;
   using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
   using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
   using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, PrivateExchangeNames>;
@@ -33,13 +31,16 @@ class StringOptionParser {
 
   CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;
 
-  MonetaryAmountExchanges getMonetaryAmountExchanges() const;
-
-  MonetaryAmountPrivateExchanges getMonetaryAmountPrivateExchanges() const;
+  auto getMonetaryAmountPrivateExchanges() const {
+    auto ret = getMonetaryAmountCurrencyPrivateExchanges(false);
+    return std::make_tuple(std::move(std::get<0>(ret)), std::move(std::get<1>(ret)), std::move(std::get<3>(ret)));
+  }
 
   CurrenciesPrivateExchanges getCurrenciesPrivateExchanges(bool currenciesShouldBeSet = true) const;
 
-  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges() const;
+  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges() const {
+    return getMonetaryAmountCurrencyPrivateExchanges(true);
+  }
 
   MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
 
@@ -51,6 +52,8 @@ class StringOptionParser {
 
  protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;
+
+  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency) const;
 
   std::string_view _opt;
 };

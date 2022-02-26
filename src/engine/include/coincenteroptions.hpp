@@ -47,7 +47,8 @@ struct CoincenterCmdLineOptions {
                        kClosingParenthesis>;
 
   static constexpr std::string_view kSmartBuy1 =
-      "Attempt to buy the specified amount, on matching exchange accounts (all are considered if none provided)."
+      "Attempt to buy the specified amount in total, on matching exchange accounts (all are considered if none "
+      "provided)."
       " The base currencies will be chosen according to the '";
   static constexpr std::string_view kSmartBuy2 = "' array defined in '";
   static constexpr std::string_view kSmartBuy3 =
@@ -58,7 +59,8 @@ struct CoincenterCmdLineOptions {
                        kPreferredPaymentCurrenciesOptName, kSmartBuy3>;
 
   static constexpr std::string_view kSmartSell1 =
-      "Attempt to sell the specified amount, on matching exchange accounts (all are considered if none provided)."
+      "Attempt to sell the specified amount in total (or percentage with '%'), on matching exchange accounts (all are "
+      "considered if none provided)."
       " The payment currencies will be chosen according to the '";
   static constexpr std::string_view kSmartSell =
       JoinStringView_v<kSmartSell1, LoadConfiguration::kProdDefaultExchangeConfigFile, kSmartBuy2,
@@ -150,6 +152,7 @@ struct CoincenterCmdLineOptions {
 
   std::string_view buy;
   std::string_view sell;
+  std::string_view sellAll;
 
   std::string_view depositInfo;
 
@@ -294,8 +297,13 @@ struct CoincenterAllowedOptions {
        &OptValueType::ordersMinAge},
       {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
        &OptValueType::ordersMaxAge},
-      {{{"Trade", 40}, "--buy", "<amt-cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
-      {{{"Trade", 40}, "--sell", "<amt-cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
+      {{{"Trade", 40}, "--buy", "<amt cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
+      {{{"Trade", 40}, "--sell", "<amt[%]cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
+      {{{"Trade", 40},
+        "--sell-all",
+        "<cur[,exch1,...]>",
+        "Sell all available amount on matching exchanges (or all if none specified), behaving like sell option."},
+       &OptValueType::sellAll},
       {{{"Trade", 40},
         "--trade",
         't',

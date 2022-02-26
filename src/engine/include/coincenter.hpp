@@ -97,7 +97,8 @@ class Coincenter {
   TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const PrivateExchangeName> privateExchangeNames,
                                const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartSell(MonetaryAmount startAmount, std::span<const PrivateExchangeName> privateExchangeNames,
+  TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                std::span<const PrivateExchangeName> privateExchangeNames,
                                 const TradeOptions &tradeOptions);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency

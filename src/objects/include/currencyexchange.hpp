@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ostream>
 #include <string_view>
 
 #include "cct_string.hpp"
@@ -54,6 +55,8 @@ class CurrencyExchange {
   bool operator!=(const CurrencyExchange &o) const { return !(*this == o); }
 
   operator CurrencyCode() const { return _standardCode; }
+
+  friend std::ostream &operator<<(std::ostream &os, const CurrencyExchange &v);
 
  private:
   CurrencyCode _standardCode;

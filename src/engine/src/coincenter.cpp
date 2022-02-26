@@ -123,10 +123,10 @@ Coincenter::TradedAmountsVector Coincenter::smartBuy(MonetaryAmount endAmount,
   return _exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions);
 }
 
-Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount,
+Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                                       std::span<const PrivateExchangeName> privateExchangeNames,
                                                       const TradeOptions &tradeOptions) {
-  return _exchangesOrchestrator.smartSell(startAmount, privateExchangeNames, tradeOptions);
+  return _exchangesOrchestrator.smartSell(startAmount, isPercentageTrade, privateExchangeNames, tradeOptions);
 }
 
 TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
@@ -251,7 +251,7 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
     smartBuy(opts.endTradeAmount, opts.tradePrivateExchangeNames, opts.tradeOptions);
   } else if (!opts.startTradeAmount.isZero()) {
     if (opts.toTradeCurrency.isNeutral()) {
-      smartSell(opts.startTradeAmount, opts.tradePrivateExchangeNames, opts.tradeOptions);
+      smartSell(opts.startTradeAmount, opts.isPercentageTrade, opts.tradePrivateExchangeNames, opts.tradeOptions);
     } else {
       trade(opts.startTradeAmount, opts.isPercentageTrade, opts.toTradeCurrency, opts.tradePrivateExchangeNames,
             opts.tradeOptions);

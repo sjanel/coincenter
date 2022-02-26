@@ -100,18 +100,22 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
 }  // namespace
 
 MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
-  assert(!amountCurrencyStr.empty());
-  auto last = amountCurrencyStr.begin() + 1;  // skipping optional '-'
-  auto endIt = amountCurrencyStr.end();
-  while (last != endIt && (isdigit(*last) || *last == '.')) {
-    ++last;
+  if (amountCurrencyStr.empty()) {
+    _amount = 0;
+    _nbDecimals = 0;
+  } else {
+    auto last = amountCurrencyStr.begin() + 1;  // skipping optional '-'
+    auto endIt = amountCurrencyStr.end();
+    while (last != endIt && (isdigit(*last) || *last == '.')) {
+      ++last;
+    }
+    std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string_view(amountCurrencyStr.begin(), last));
+    while (last != endIt && *last == ' ') {
+      ++last;
+    }
+    _currencyCode = CurrencyCode(std::string_view(last, endIt));
+    assert(isSane());
   }
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string_view(amountCurrencyStr.begin(), last));
-  while (last != endIt && *last == ' ') {
-    ++last;
-  }
-  _currencyCode = CurrencyCode(std::string_view(last, endIt));
-  assert(isSane());
 }
 
 MonetaryAmount::MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode) : _currencyCode(currencyCode) {
