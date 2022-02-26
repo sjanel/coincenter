@@ -235,14 +235,14 @@ int8_t CurlHandle::pickBestBaseUrlPos() const {
     return lhs.nbRequestsDone < kNbRequestMinBeforeCompare;
   });
   if (minNbIt != _responseTimeStatsPerBaseUrl.end()) {
-    return minNbIt - _responseTimeStatsPerBaseUrl.begin();
+    return static_cast<int8_t>(minNbIt - _responseTimeStatsPerBaseUrl.begin());
   }
 
   // Then, let's compute a 'score' based on the average deviation and the avg response time and pick best url
   FixedCapacityVector<uint32_t, kNbMaxBaseUrl> score(nbBaseUrl());
   std::ranges::transform(_responseTimeStatsPerBaseUrl, score.begin(),
                          [](ResponseTimeStats stats) { return stats.avgResponseTime + stats.avgDeviation; });
-  return std::ranges::min_element(score) - score.begin();
+  return static_cast<int8_t>(std::ranges::min_element(score) - score.begin());
 }
 
 void CurlHandle::storeResponseTimePerBaseUrl(int8_t baseUrlPos, uint32_t responseTimeInMs) {

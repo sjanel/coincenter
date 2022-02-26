@@ -114,14 +114,18 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   // Parse trade / buy / sell options
   // First, check that at most one master trade option is set
   // (options would be set for all trades otherwise which is not very intuitive)
-  if (!cmdLineOptions.buy.empty() + !cmdLineOptions.sell.empty() + !cmdLineOptions.tradeAll.empty() > 1) {
+  if (!cmdLineOptions.buy.empty() + !cmdLineOptions.sell.empty() + !cmdLineOptions.sellAll.empty() +
+          !cmdLineOptions.tradeAll.empty() >
+      1) {
     throw invalid_argument("Only one trade can be done at a time");
   }
   std::string_view tradeArgs;
-  bool isSmartTrade = !cmdLineOptions.buy.empty() || !cmdLineOptions.sell.empty();
+  bool isSmartTrade = !cmdLineOptions.buy.empty() || !cmdLineOptions.sell.empty() || !cmdLineOptions.sellAll.empty();
   bool isTradeAll = !cmdLineOptions.tradeAll.empty();
   if (!cmdLineOptions.buy.empty()) {
     tradeArgs = cmdLineOptions.buy;
+  } else if (!cmdLineOptions.sellAll.empty()) {
+    tradeArgs = cmdLineOptions.sellAll;
   } else if (!cmdLineOptions.sell.empty()) {
     tradeArgs = cmdLineOptions.sell;
   } else {
@@ -130,14 +134,27 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
   if (!tradeArgs.empty()) {
     StringOptionParser optParser(tradeArgs);
     if (isSmartTrade) {
-      MonetaryAmount &specifiedAmount = !cmdLineOptions.buy.empty() ? endTradeAmount : startTradeAmount;
-      std::tie(specifiedAmount, tradePrivateExchangeNames) = optParser.getMonetaryAmountPrivateExchanges();
+      if (!cmdLineOptions.sellAll.empty()) {
+        std::tie(fromTradeCurrency, tradePrivateExchangeNames) = optParser.getCurrencyPrivateExchanges();
+        startTradeAmount = MonetaryAmount(100, fromTradeCurrency);
+        isPercentageTrade = true;
+      } else {
+        MonetaryAmount &specifiedAmount = !cmdLineOptions.buy.empty() ? endTradeAmount : startTradeAmount;
+        std::tie(specifiedAmount, isPercentageTrade, tradePrivateExchangeNames) =
+            optParser.getMonetaryAmountPrivateExchanges();
+        if (specifiedAmount.isNegativeOrZero()) {
+          throw invalid_argument("Start trade amount should be positive");
+        }
+      }
     } else if (isTradeAll) {
       std::tie(fromTradeCurrency, toTradeCurrency, tradePrivateExchangeNames) =
           optParser.getCurrenciesPrivateExchanges();
     } else {
       std::tie(startTradeAmount, isPercentageTrade, toTradeCurrency, tradePrivateExchangeNames) =
           optParser.getMonetaryAmountCurrencyPrivateExchanges();
+      if (startTradeAmount.isNegativeOrZero()) {
+        throw invalid_argument("Start trade amount should be positive");
+      }
     }
 
     if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {

@@ -4,7 +4,7 @@
 #include <array>
 #include <compare>
 #include <cstdint>
-#include <iostream>
+#include <ostream>
 #include <string_view>
 #include <type_traits>
 
@@ -61,11 +61,14 @@ class CurrencyCode {
 
   constexpr bool isNeutral() const noexcept { return _data.front() == '\0'; }
 
-  void print(std::ostream &os) const { os << str(); }
-
   constexpr auto operator<=>(const CurrencyCode &) const = default;
 
   constexpr bool operator==(const CurrencyCode &) const = default;
+
+  friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &c) {
+    os << c.str();
+    return os;
+  }
 
  private:
   AcronymType _data;
@@ -76,10 +79,6 @@ class CurrencyCode {
   }
 };
 
-inline std::ostream &operator<<(std::ostream &os, const CurrencyCode &c) {
-  c.print(os);
-  return os;
-}
 }  // namespace cct
 
 // Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key

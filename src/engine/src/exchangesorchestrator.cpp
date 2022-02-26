@@ -256,13 +256,6 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingMarket(M
 namespace {
 using MarketSetsPerPublicExchange = FixedCapacityVector<MarketSet, kNbSupportedExchanges>;
 
-MarketSetsPerPublicExchange QueryMarkets(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
-  MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
-  std::transform(std::execution::par, publicExchanges.begin(), publicExchanges.end(), marketsPerPublicExchange.begin(),
-                 [](api::ExchangePublic *pPublicExchange) { return pPublicExchange->queryTradableMarkets(); });
-  return marketsPerPublicExchange;
-}
-
 api::CryptowatchAPI::Fiats QueryFiats(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
   api::CryptowatchAPI::Fiats fiats;
   if (!publicExchanges.empty()) {
@@ -271,11 +264,11 @@ api::CryptowatchAPI::Fiats QueryFiats(const ExchangeRetriever::PublicExchangesVe
   return fiats;
 }
 
-using MarketSetsPtrPerExchange = SmallVector<const MarketSet *, kTypicalNbPrivateAccounts>;
+using MarketSetsPtrPerExchange = SmallVector<MarketSet *, kTypicalNbPrivateAccounts>;
 
 MarketSetsPtrPerExchange MapMarketSetsPtrInExchangesOrder(const ExchangeAmountPairVector &exchangeAmountPairVector,
                                                           const ExchangeRetriever::PublicExchangesVec &publicExchanges,
-                                                          const MarketSetsPerPublicExchange &marketSetsPerExchange) {
+                                                          MarketSetsPerPublicExchange &marketSetsPerExchange) {
   MarketSetsPtrPerExchange marketSetsPtrFromExchange(exchangeAmountPairVector.size());
   std::transform(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), marketSetsPtrFromExchange.begin(),
                  [&](const auto &p) {
@@ -291,7 +284,7 @@ using KeepExchangeBoolArray = std::array<bool, kNbSupportedExchanges>;
 
 ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVector &exchangeAmountPairVector,
                                                       CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                                      const MarketSetsPerPublicExchange &marketsPerPublicExchange,
+                                                      MarketSetsPerPublicExchange &marketsPerPublicExchange,
                                                       const api::CryptowatchAPI::Fiats &fiats,
                                                       const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector ret;
@@ -307,7 +300,7 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
       ++publicExchangePos;
     }
 
-    const MarketSet &markets = marketsPerPublicExchange[publicExchangePos];
+    MarketSet &markets = marketsPerPublicExchange[publicExchangePos];
     MarketsPath marketsPath =
         pExchangePublic->findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
     const int nbMarketsInPath = static_cast<int>(marketsPath.size());
@@ -367,7 +360,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
   ExchangeRetriever::PublicExchangesVec publicExchanges =
       SelectUniquePublicExchanges(exchangeRetriever, exchangeAmountPairVector);
 
-  MarketSetsPerPublicExchange marketsPerPublicExchange = QueryMarkets(publicExchanges);
+  MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
   api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
 
@@ -391,27 +384,29 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
   ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
       _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
 
-  // Sort exchanges from largest to lowest available amount (should be after filter on markets and conversion paths)
-  std::ranges::sort(exchangeAmountMarketsPathVector,
-                    [](const auto &lhs, const auto &rhs) { return std::get<1>(lhs) > std::get<1>(rhs); });
-
-  // Locate the point where there is enough available amount to trade for this currency
   MonetaryAmount currentTotalAmount(0, fromCurrency);
 
-  if (isPercentageTrade) {
-    MonetaryAmount totalAvailableAmount =
-        std::accumulate(exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(),
-                        currentTotalAmount, [](MonetaryAmount tot, const auto &t) { return tot + std::get<1>(t); });
-    startAmount = (totalAvailableAmount * startAmount.toNeutral()) / 100;
-  }
   auto it = exchangeAmountMarketsPathVector.begin();
-  for (auto endIt = exchangeAmountMarketsPathVector.end(); it != endIt && currentTotalAmount < startAmount; ++it) {
-    MonetaryAmount &amount = std::get<1>(*it);
-    if (currentTotalAmount + amount > startAmount) {
-      // Cap last amount such that total start trade on all exchanges reaches exactly 'startAmount'
-      amount = startAmount - currentTotalAmount;
+  if (!exchangeAmountMarketsPathVector.empty()) {
+    // Sort exchanges from largest to lowest available amount (should be after filter on markets and conversion paths)
+    std::ranges::sort(exchangeAmountMarketsPathVector,
+                      [](const auto &lhs, const auto &rhs) { return std::get<1>(lhs) > std::get<1>(rhs); });
+
+    // Locate the point where there is enough available amount to trade for this currency
+    if (isPercentageTrade) {
+      MonetaryAmount totalAvailableAmount =
+          std::accumulate(exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(),
+                          currentTotalAmount, [](MonetaryAmount tot, const auto &t) { return tot + std::get<1>(t); });
+      startAmount = (totalAvailableAmount * startAmount.toNeutral()) / 100;
     }
-    currentTotalAmount += amount;
+    for (auto endIt = exchangeAmountMarketsPathVector.end(); it != endIt && currentTotalAmount < startAmount; ++it) {
+      MonetaryAmount &amount = std::get<1>(*it);
+      if (currentTotalAmount + amount > startAmount) {
+        // Cap last amount such that total start trade on all exchanges reaches exactly 'startAmount'
+        amount = startAmount - currentTotalAmount;
+      }
+      currentTotalAmount += amount;
+    }
   }
 
   if (currentTotalAmount.isZero()) {
@@ -452,7 +447,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
   ExchangeRetriever::PublicExchangesVec publicExchanges =
       SelectUniquePublicExchanges(_exchangeRetriever, balancePerExchange);
 
-  MarketSetsPerPublicExchange marketsPerPublicExchange = QueryMarkets(publicExchanges);
+  MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
   FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges> marketOrderbooksPerPublicExchange(
       publicExchanges.size());
@@ -486,7 +481,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
           !tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeInfo().multiTradeAllowedByDefault())) {
         continue;
       }
-      const auto &markets = marketsPerPublicExchange[publicExchangePos];
+      auto &markets = marketsPerPublicExchange[publicExchangePos];
       auto &marketOrderBookMap = marketOrderbooksPerPublicExchange[publicExchangePos];
       for (CurrencyCode fromCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
         if (fromCurrency == toCurrency) {
@@ -504,11 +499,11 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
             continuingHigherStepsPossible = true;
           } else if (nbConversions == nbSteps) {
             MonetaryAmount startAmount = avAmount;
-            std::optional<MonetaryAmount> endAmount =
+            std::optional<MonetaryAmount> optEndAmount =
                 exchangePublic.convert(startAmount, toCurrency, conversionPath, fiats, marketOrderBookMap,
                                        canUseCryptowatchAPI, tradeOptions.priceOptions());
-            if (endAmount) {
-              trades.emplace_back(pExchange, startAmount, toCurrency, std::move(conversionPath), *endAmount);
+            if (optEndAmount) {
+              trades.emplace_back(pExchange, startAmount, toCurrency, std::move(conversionPath), *optEndAmount);
             }
           }
         }
@@ -518,15 +513,15 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
     std::sort(trades.begin() + nbTrades, trades.end(),
               [](const auto &lhs, const auto &rhs) { return std::get<4>(lhs) > std::get<4>(rhs); });
     int nbTradesToKeep = 0;
-    for (auto &[pExchange, startAmount, toCurrency, conversionPath, endAmount] : trades) {
-      if (endAmount > remEndAmount) {
-        startAmount = (startAmount * remEndAmount.toNeutral()) / endAmount.toNeutral();
-        endAmount = remEndAmount;
+    for (auto &[pExchange, startAmount, tradeToCurrency, conversionPath, tradeEndAmount] : trades) {
+      if (tradeEndAmount > remEndAmount) {
+        startAmount = (startAmount * remEndAmount.toNeutral()) / tradeEndAmount.toNeutral();
+        tradeEndAmount = remEndAmount;
       }
-      remEndAmount -= endAmount;
+      remEndAmount -= tradeEndAmount;
 
-      log::debug("Validating max trade of {} to {} on {}_{}", startAmount.str(), endAmount.str(), pExchange->name(),
-                 pExchange->keyName());
+      log::debug("Validating max trade of {} to {} on {}_{}", startAmount.str(), tradeEndAmount.str(),
+                 pExchange->name(), pExchange->keyName());
 
       ++nbTradesToKeep;
       if (remEndAmount.isZero()) {
@@ -547,7 +542,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
 }
 
-TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
+TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                                      std::span<const PrivateExchangeName> privateExchangeNames,
                                                      const TradeOptions &tradeOptions) {
   const CurrencyCode fromCurrency = startAmount.currencyCode();
@@ -555,67 +550,81 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
   ExchangeAmountPairVector exchangeAmountPairVector =
       ComputeExchangeAmountPairVector(fromCurrency, getBalance(privateExchangeNames));
 
-  // Sort exchanges from largest to lowest available amount
-  std::ranges::sort(exchangeAmountPairVector, [](const auto &lhs, const auto &rhs) { return lhs.second > rhs.second; });
-
-  ExchangeRetriever::PublicExchangesVec publicExchanges =
-      SelectUniquePublicExchanges(_exchangeRetriever, exchangeAmountPairVector, false);  // unsorted
-
-  MarketSetsPerPublicExchange marketsPerPublicExchange = QueryMarkets(publicExchanges);
-
-  // As we want to sort Exchanges by largest to smallest amount, we cannot directly map MarketSets per Exchange.
-  // That's why we need to keep pointers to MarketSets ordered by exchanges
-  MarketSetsPtrPerExchange marketSetsPtrPerExchange =
-      MapMarketSetsPtrInExchangesOrder(exchangeAmountPairVector, publicExchanges, marketsPerPublicExchange);
-
-  api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
-
-  // check from which exchanges we can start trades, minimizing number of steps per trade
   ExchangeAmountToCurrencyVector trades;
   MonetaryAmount remStartAmount = startAmount;
-  constexpr bool considerStableCoinsAsFiats = false;
-  for (int nbSteps = 1;; ++nbSteps) {
-    bool continuingHigherStepsPossible = false;
-    int exchangePos = 0;
-    for (auto &[pExchange, avAmount] : exchangeAmountPairVector) {
-      if (avAmount.isZero() ||  // It can be set to 0 in below code
-          (nbSteps > 1 && !tradeOptions.isMultiTradeAllowed(pExchange->exchangeInfo().multiTradeAllowedByDefault()))) {
-        ++exchangePos;
-        continue;
-      }
-      const MarketSet &markets = *marketSetsPtrPerExchange[exchangePos];
-      for (CurrencyCode toCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
-        if (fromCurrency == toCurrency) {
+  if (!exchangeAmountPairVector.empty()) {
+    // Sort exchanges from largest to lowest available amount
+    std::ranges::sort(exchangeAmountPairVector,
+                      [](const auto &lhs, const auto &rhs) { return lhs.second > rhs.second; });
+
+    ExchangeRetriever::PublicExchangesVec publicExchanges =
+        SelectUniquePublicExchanges(_exchangeRetriever, exchangeAmountPairVector, false);  // unsorted
+
+    MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
+
+    // As we want to sort Exchanges by largest to smallest amount, we cannot directly map MarketSets per Exchange.
+    // That's why we need to keep pointers to MarketSets ordered by exchanges
+    MarketSetsPtrPerExchange marketSetsPtrPerExchange =
+        MapMarketSetsPtrInExchangesOrder(exchangeAmountPairVector, publicExchanges, marketsPerPublicExchange);
+
+    api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
+
+    if (isPercentageTrade) {
+      MonetaryAmount totalAvailableAmount = std::accumulate(
+          exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), MonetaryAmount(0, fromCurrency),
+          [](MonetaryAmount tot, const auto &t) { return tot + std::get<1>(t); });
+      startAmount = (totalAvailableAmount * startAmount.toNeutral()) / 100;
+      remStartAmount = startAmount;
+    }
+
+    // check from which exchanges we can start trades, minimizing number of steps per trade
+    constexpr bool considerStableCoinsAsFiats = false;
+    for (int nbSteps = 1;; ++nbSteps) {
+      bool continuingHigherStepsPossible = false;
+      int exchangePos = 0;
+      for (auto &[pExchange, avAmount] : exchangeAmountPairVector) {
+        if (avAmount.isZero() ||  // It can be set to 0 in below code
+            (nbSteps > 1 &&
+             !tradeOptions.isMultiTradeAllowed(pExchange->exchangeInfo().multiTradeAllowedByDefault()))) {
+          ++exchangePos;
           continue;
         }
-        MarketsPath path = pExchange->apiPublic().findMarketsPath(fromCurrency, toCurrency, markets, fiats,
-                                                                  considerStableCoinsAsFiats);
-        if (static_cast<int>(path.size()) > nbSteps) {
-          continuingHigherStepsPossible = true;
-        } else if (static_cast<int>(path.size()) == nbSteps) {
-          MonetaryAmount fromAmount = avAmount;
-          if (fromAmount > remStartAmount) {
-            fromAmount = remStartAmount;
+        MarketSet &markets = *marketSetsPtrPerExchange[exchangePos];
+        for (CurrencyCode toCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
+          if (fromCurrency == toCurrency) {
+            continue;
           }
-          remStartAmount -= fromAmount;
-          trades.emplace_back(pExchange, fromAmount, toCurrency, std::move(path));
-          avAmount = MonetaryAmount(0, fromCurrency);
-          if (remStartAmount.isZero()) {
-            break;
+          MarketsPath path = pExchange->apiPublic().findMarketsPath(fromCurrency, toCurrency, markets, fiats,
+                                                                    considerStableCoinsAsFiats);
+          if (static_cast<int>(path.size()) > nbSteps) {
+            continuingHigherStepsPossible = true;
+          } else if (static_cast<int>(path.size()) == nbSteps) {
+            MonetaryAmount fromAmount = avAmount;
+            if (fromAmount > remStartAmount) {
+              fromAmount = remStartAmount;
+            }
+            remStartAmount -= fromAmount;
+            trades.emplace_back(pExchange, fromAmount, toCurrency, std::move(path));
+            avAmount = MonetaryAmount(0, fromCurrency);
+            if (remStartAmount.isZero()) {
+              break;
+            }
           }
         }
+        if (remStartAmount.isZero()) {
+          break;
+        }
+        ++exchangePos;
       }
-      if (remStartAmount.isZero()) {
+      if (remStartAmount.isZero() || !continuingHigherStepsPossible) {
         break;
       }
-      ++exchangePos;
-    }
-    if (remStartAmount.isZero() || !continuingHigherStepsPossible) {
-      break;
     }
   }
 
-  if (!remStartAmount.isZero()) {
+  if (remStartAmount == startAmount) {
+    log::warn("No available amount of {} to sell", startAmount.currencyCode().str());
+  } else if (!remStartAmount.isZero()) {
     log::warn("Will trade {} < {} amount", (startAmount - remStartAmount).str(), startAmount.str());
   }
 

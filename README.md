@@ -426,7 +426,11 @@ Some exchanges (**Kraken** and **Binance** for instance) allow to actually query
 
 ### Buy / Sell
 
-Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. It's really a *trade* in this aspect. If you wish, you can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+
+Sell option also supports percentage as start amount. In this case, the desired percentage of total available amount of given currency on matching exchanges (the ones specified after the `,` or all if none given as usual) will be sold. To complement this, `--sell-all` option with a start currency instead of an amount is supported as well, which is syntaxic sugar of a sell of `100%` of available amount.
+
+Buy a percentage is not available yet, simply because I am not sure about what should be the behavior of this option. If you have ideas about it, do not hesitate to propose them.
 
 The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md#options-description) file to see how to set the preferred currencies.
 

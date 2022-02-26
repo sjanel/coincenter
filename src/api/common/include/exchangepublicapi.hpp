@@ -65,7 +65,8 @@ class ExchangePublic : public ExchangeBase {
                                         const PriceOptions &priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
     Fiats fiats = queryFiats();
-    MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrency, queryTradableMarkets(), fiats, true);
+    MarketSet markets;
+    MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrency, markets, fiats, true);
     return convert(a, toCurrency, conversionPath, fiats, marketOrderBookMap, true, priceOptions);
   }
 
@@ -119,13 +120,13 @@ class ExchangePublic : public ExchangeBase {
   /// For instance, findMarketsPath("XLM", "XRP") can return:
   ///   - XLM-USDT
   ///   - XRP-USDT (and not USDT-XRP, as the pair defined on the exchange is XRP-USDT)
-  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, const MarketSet &markets,
+  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet &markets,
                               const Fiats &fiats, bool considerStableCoinsAsFiats = false);
 
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                               bool considerStableCoinsAsFiats = false) {
-    return findMarketsPath(fromCurrencyCode, toCurrencyCode, queryTradableMarkets(), queryFiats(),
-                           considerStableCoinsAsFiats);
+    MarketSet markets;
+    return findMarketsPath(fromCurrencyCode, toCurrencyCode, markets, queryFiats(), considerStableCoinsAsFiats);
   }
 
   using CurrenciesPath = SmallVector<CurrencyCode, 4>;

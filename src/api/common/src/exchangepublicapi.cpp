@@ -97,7 +97,7 @@ class CurrencyDirFastestPathComparator {
 }  // namespace
 
 ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                                            const MarketSet &markets, const Fiats &fiats,
+                                                            MarketSet &markets, const Fiats &fiats,
                                                             bool considerStableCoinsAsFiats) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
@@ -107,7 +107,7 @@ ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCur
 
   std::optional<CurrencyCode> optFiatFromStableCoin =
       considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrency) : std::nullopt;
-  const bool isToFiatLike = optFiatFromStableCoin || fiats.contains(toCurrency);
+  const bool isToFiatLike = optFiatFromStableCoin.has_value() || fiats.contains(toCurrency);
 
   CurrencyDirFastestPathComparator comp(_cryptowatchApi);
 
@@ -133,6 +133,13 @@ ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCur
         }
       }
       return ret;
+    }
+    if (markets.empty()) {
+      markets = queryTradableMarkets();
+      if (markets.empty()) {
+        log::error("No markets retrieved for {}", _name);
+        return ret;
+      }
     }
     for (Market m : markets) {
       if (m.canTrade(lastCurrencyCode)) {

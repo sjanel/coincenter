@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <ostream>
 #include <utility>
 
 #include "cct_string.hpp"
