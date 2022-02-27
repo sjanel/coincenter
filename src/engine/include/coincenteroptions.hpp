@@ -89,7 +89,8 @@ struct CoincenterCmdLineOptions {
 
   static constexpr std::string_view kWithdraw1 =
       "Withdraw amount from exchange 'from' to exchange 'to'."
-      " Amount is gross, including fees. Address and tag will be retrieved"
+      " Amount is gross, including fees, and can be absolute or percentage of all available amount. Address and tag "
+      "will be retrieved"
       " automatically from destination exchange and should match an entry in '";
   static constexpr std::string_view kWithdraw2 = "' file.";
   static constexpr std::string_view kWithdraw = JoinStringView_v<kWithdraw1, kDepositAddressesFileName, kWithdraw2>;
@@ -163,6 +164,7 @@ struct CoincenterCmdLineOptions {
   Duration ordersMaxAge{};
 
   std::string_view withdraw;
+  std::string_view withdrawAll;
   std::string_view withdrawFee;
 
   std::string_view last24hTradedVolume;
@@ -372,8 +374,13 @@ struct CoincenterAllowedOptions {
         "Get deposit wallet information for given currency."
         " If no exchange accounts are given, will query all of them by default"},
        &OptValueType::depositInfo},
-      {{{"Withdraw and deposit", 50}, "--withdraw", 'w', "<amt cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
+      {{{"Withdraw and deposit", 50}, "--withdraw", 'w', "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
        &OptValueType::withdraw},
+      {{{"Withdraw and deposit", 50},
+        "--withdraw-all",
+        "<cur,from-to>",
+        "Withdraw all available amount instead of a specified amount."},
+       &OptValueType::withdrawAll},
       {{{"Withdraw and deposit", 50},
         "--withdraw-fee",
         "<cur[,exch1,...]>",

@@ -219,8 +219,17 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
 
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
-    std::tie(amountToWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =
+    std::tie(amountToWithdraw, isPercentageWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =
         anyParser.getMonetaryAmountFromToPrivateExchange();
+  }
+
+  if (!cmdLineOptions.withdrawAll.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.withdrawAll);
+    CurrencyCode curToWithdraw;
+    std::tie(curToWithdraw, withdrawFromExchangeName, withdrawToExchangeName) =
+        anyParser.getCurrencyFromToPrivateExchange();
+    amountToWithdraw = MonetaryAmount(100, curToWithdraw);
+    isPercentageWithdraw = true;
   }
 
   if (!cmdLineOptions.withdrawFee.empty()) {

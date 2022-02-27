@@ -439,9 +439,9 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingMarket) {
   } else {                                                                                                          \
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).Times(0);                                  \
   }
-class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
+class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
  protected:
-  ExchangeOrchestratorSimpleTradeTest() { resetMarkets(); }
+  ExchangeOrchestratorTradeTest() { resetMarkets(); }
 
   enum class TradableMarkets : int8_t { kExpectNoCall, kExpectCall, kNoExpectation };
   enum class OrderBook : int8_t {
@@ -532,7 +532,7 @@ class ExchangeOrchestratorSimpleTradeTest : public ExchangeOrchestratorTest {
   MarketSet markets;
 };
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuy) {
+TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuy) {
   MonetaryAmount from(100, "EUR");
   CurrencyCode toCurrency("XRP");
   TradeSide side = TradeSide::kBuy;
@@ -545,7 +545,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuy) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, NoAvailableAmountToSell) {
+TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
   MonetaryAmount from(10, "SOL");
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
@@ -566,7 +566,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, NoAvailableAmountToSell) {
             TradedAmounts(from.currencyCode(), toCurrency));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoAccountsSameExchangeSell) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
   MonetaryAmount from(2, "ETH");
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
@@ -588,7 +588,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoAccountsSameExchangeSell) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuy) {
+TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuy) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(13015, fromCurrency);
   CurrencyCode toCurrency("LUNA");
@@ -615,7 +615,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuy) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuyNotEnoughAmount) {
+TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(13015, fromCurrency);
   CurrencyCode toCurrency("LUNA");
@@ -644,7 +644,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesBuyNotEnoughAmount) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, ManyAccountsTrade) {
+TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(40000, fromCurrency);
   CurrencyCode toCurrency("LUNA");
@@ -688,7 +688,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ManyAccountsTrade) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuyAll) {
+TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
   CurrencyCode fromCurrency("EUR");
   CurrencyCode toCurrency("XRP");
   TradeSide side = TradeSide::kBuy;
@@ -705,7 +705,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeBuyAll) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSellAll) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
   CurrencyCode fromCurrency("ETH");
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
@@ -730,7 +730,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSellAll) {
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
+TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
   CurrencyCode fromCurrency("USDT");
   CurrencyCode toCurrency("DOT");
   TradeSide side = TradeSide::kBuy;
@@ -763,7 +763,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, AllExchangesBuyAllOneMarketUnavailab
             tradedAmounts);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartBuy) {
+TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
   // Fee is automatically applied on buy
   MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
   CurrencyCode toCurrency = endAmount.currencyCode();
@@ -782,7 +782,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartBuy) {
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuy) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
   MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
@@ -808,7 +808,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuy) {
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange) {
   MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
@@ -831,7 +831,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartBuyNoMarketOnOneExc
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), ret);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartBuy) {
+TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
   MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeInfo().getTakerFeeRatio();
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
@@ -868,7 +868,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartBuy) {
       std::ranges::is_permutation(ret, exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions)));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartBuyAllExchanges) {
+TEST_F(ExchangeOrchestratorTradeTest, SmartBuyAllExchanges) {
   CurrencyCode toCurrency("XLM");
   MonetaryAmount endAmount = MonetaryAmount(18800, toCurrency) * exchangePublic1.exchangeInfo().getTakerFeeRatio();
   TradeSide side = TradeSide::kBuy;
@@ -904,7 +904,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartBuyAllExchanges) {
       ret, exchangesOrchestrator.smartBuy(endAmount, PrivateExchangeNames{}, tradeOptions)));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartSell) {
+TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartSell) {
   MonetaryAmount startAmount = MonetaryAmount(2, "ETH");
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
@@ -922,7 +922,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SingleExchangeSmartSell) {
   EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions), ret);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartSellAllNoAvailableAmount) {
+TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllNoAvailableAmount) {
   MonetaryAmount startAmount = MonetaryAmount(100, "FIL");
 
   MonetaryAmount from = MonetaryAmount(0, "FIL");
@@ -939,7 +939,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartSellAllNoAvailableAmount) {
   EXPECT_TRUE(exchangesOrchestrator.smartSell(startAmount, true, PrivateExchangeNames{}, tradeOptions).empty());
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSell) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSell) {
   MonetaryAmount startAmount = MonetaryAmount(16, "BTC");
   CurrencyCode fromCurrency = startAmount.currencyCode();
   CurrencyCode toCurrency("EUR");
@@ -964,7 +964,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSell) {
       ret, exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions)));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSellPercentage) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellPercentage) {
   MonetaryAmount startAmount = MonetaryAmount(25, "ETH");
   CurrencyCode fromCurrency = startAmount.currencyCode();
   CurrencyCode toCurrency("USDT");
@@ -988,7 +988,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSellPercentage) {
   EXPECT_EQ(ret, exchangesOrchestrator.smartSell(startAmount, true, privateExchangeNames, tradeOptions));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange) {
+TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange) {
   MonetaryAmount startAmount = MonetaryAmount(10000, "SHIB");
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
@@ -1011,7 +1011,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, TwoExchangesSmartSellNoMarketOnOneEx
   EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions), ret);
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartSellFromAnotherPreferredCurrency) {
+TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartSellFromAnotherPreferredCurrency) {
   MonetaryAmount startAmount = MonetaryAmount(2000, "EUR");
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
@@ -1040,7 +1040,7 @@ TEST_F(ExchangeOrchestratorSimpleTradeTest, ThreeExchangesSmartSellFromAnotherPr
       ret, exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions)));
 }
 
-TEST_F(ExchangeOrchestratorSimpleTradeTest, SmartSellAllExchanges) {
+TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllExchanges) {
   MonetaryAmount startAmount = MonetaryAmount(1, "ETH");
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
@@ -1072,7 +1072,7 @@ TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
   MonetaryAmount grossAmount{1000, "XRP"};
   PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   PrivateExchangeName toExchange = fromExchange;
-  EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, fromExchange, toExchange), exception);
+  EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange), exception);
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
@@ -1089,7 +1089,7 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
       CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, fromExchange, toExchange).hasBeenInitiated());
+  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
@@ -1106,7 +1106,7 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
       CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, fromExchange, toExchange).hasBeenInitiated());
+  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
 }
 
 inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
@@ -1123,43 +1123,69 @@ inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs)
 }
 }  // namespace api
 
-TEST_F(ExchangeOrchestratorTest, WithdrawPossible) {
-  MonetaryAmount grossAmount{1000, "XRP"};
-  CurrencyCode cur = grossAmount.currencyCode();
-  PrivateExchangeName fromExchange(exchange1.name(), exchange1.keyName());
-  PrivateExchangeName toExchange(exchange2.name(), exchange2.keyName());
+class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
+ protected:
+  ExchangeOrchestratorWithdrawTest() {
+    CurrencyExchangeFlatSet tradableCurrencies1{
+        CurrencyExchangeVector{CurrencyExchange(cur, Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
+                               CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+    CurrencyExchangeFlatSet tradableCurrencies2{
+        CurrencyExchangeVector{CurrencyExchange(cur, Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
+                               CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
 
-  CurrencyExchangeFlatSet tradableCurrencies1{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
-  CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+    EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
+    EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+  }
 
-  std::string_view address = "TestAddress";
-  std::string_view tag = "TestTag";
-  Wallet receivingWallet(toExchange, cur, address, tag, WalletCheck());
-  EXPECT_CALL(exchangePrivate2, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
+  WithdrawInfo createWithdrawInfo(MonetaryAmount grossAmount, bool isPercentageWithdraw) {
+    if (isPercentageWithdraw) {
+      EXPECT_CALL(exchangePrivate1, queryAccountBalance(CurrencyCode())).WillOnce(testing::Return(balancePortfolio1));
+      grossAmount = (grossAmount.toNeutral() * balancePortfolio1.get(cur)) / 100;
+    } else {
+      EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).Times(0);
+    }
+    MonetaryAmount netEmittedAmount = grossAmount - fee;
+    Wallet receivingWallet{toExchange, cur, address, tag, WalletCheck()};
+    EXPECT_CALL(exchangePrivate2, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
-  WithdrawIdView withdrawIdView = "WithdrawId";
-  api::InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, withdrawIdView, grossAmount);
-  EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
-      .WillOnce(testing::Return(initiatedWithdrawInfo));
+    api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawIdView, grossAmount};
+    EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
+        .WillOnce(testing::Return(initiatedWithdrawInfo));
+    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, true};
+    EXPECT_CALL(exchangePrivate1, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
+        .WillOnce(testing::Return(sentWithdrawInfo));
+    EXPECT_CALL(exchangePrivate2, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
+        .WillOnce(testing::Return(true));
+    return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+  }
 
-  MonetaryAmount fee("0.02 XRP");
-  MonetaryAmount netEmittedAmount = grossAmount - fee;
+  CurrencyCode cur{"XRP"};
+  PrivateExchangeName fromExchange{exchange1.name(), exchange1.keyName()};
+  PrivateExchangeName toExchange{exchange2.name(), exchange2.keyName()};
 
-  api::SentWithdrawInfo unsentWithdrawInfo(netEmittedAmount, false);
-  api::SentWithdrawInfo sentWithdrawInfo(netEmittedAmount, true);
-  EXPECT_CALL(exchangePrivate1, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
-      .WillOnce(testing::Return(sentWithdrawInfo));
+  std::string_view address{"TestAddress"};
+  std::string_view tag{"TestTag"};
 
-  EXPECT_CALL(exchangePrivate2, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
-      .WillOnce(testing::Return(true));
+  WithdrawIdView withdrawIdView{"WithdrawId"};
 
-  WithdrawInfo withdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
-  EXPECT_EQ(exchangesOrchestrator.withdraw(grossAmount, fromExchange, toExchange, Duration::zero()), withdrawInfo);
+  MonetaryAmount fee{"0.02", cur};
+};
+
+TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossible) {
+  MonetaryAmount grossAmount{1000, cur};
+  bool isPercentageWithdraw = false;
+  auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
+  auto ret =
+      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, Duration::zero());
+  EXPECT_EQ(exp, ret);
+}
+
+TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossiblePercentage) {
+  MonetaryAmount grossAmount{25, cur};
+  bool isPercentageWithdraw = true;
+  auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
+  auto ret =
+      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, Duration::zero());
+  EXPECT_EQ(exp, ret);
 }
 }  // namespace cct

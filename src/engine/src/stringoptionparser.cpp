@@ -65,6 +65,30 @@ std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::siz
   return std::string_view(opt.begin() + begPos, opt.begin() + endPos);
 }
 
+auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPercentageAtLast, std::size_t &pos) {
+  std::string_view amountStr = GetNextStr(opt, sepWithPercentageAtLast, pos);
+
+  if (amountStr.empty()) {
+    if (pos == opt.size()) {
+      throw invalid_argument("Expected a start amount");
+    }
+    // We matched one '-' representing a negative number
+    amountStr = GetNextStr(opt, sepWithPercentageAtLast, pos);
+    amountStr = std::string_view(amountStr.data() - 1U, amountStr.size() + 1U);
+  }
+  MonetaryAmount startAmount(amountStr);
+  bool isPercentage = pos > 0U && pos < opt.size() && opt[pos - 1] == '%';
+  if (isPercentage) {
+    assert(sepWithPercentageAtLast.back() == '%');
+    std::string_view sepWithoutPercentage(sepWithPercentageAtLast.begin(), sepWithPercentageAtLast.end() - 1);
+    startAmount = MonetaryAmount(startAmount, CurrencyCode(GetNextStr(opt, sepWithoutPercentage, pos)));
+    if (startAmount.abs().toNeutral() > MonetaryAmount(100)) {
+      throw invalid_argument("A percentage cannot be larger than 100");
+    }
+  }
+  return std::make_pair(std::move(startAmount), isPercentage);
+}
+
 }  // namespace
 
 PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
@@ -137,24 +161,7 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
 StringOptionParser::MonetaryAmountCurrencyPrivateExchanges
 StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency) const {
   std::size_t pos = 0;
-  std::string_view amountStr = GetNextStr(_opt, std::string_view("-,%"), pos);
-
-  if (amountStr.empty()) {
-    if (pos == _opt.size()) {
-      throw invalid_argument("Expected a start amount");
-    }
-    // We matched one '-' representing a negative number
-    amountStr = GetNextStr(_opt, std::string_view("-,%"), pos);
-    amountStr = std::string_view(amountStr.data() - 1U, amountStr.size() + 1U);
-  }
-  MonetaryAmount startAmount(amountStr);
-  bool isPercentage = pos > 0U && pos < _opt.size() && _opt[pos - 1] == '%';
-  if (isPercentage) {
-    startAmount = MonetaryAmount(startAmount, CurrencyCode(GetNextStr(_opt, std::string_view("-,"), pos)));
-    if (startAmount.abs().toNeutral() > MonetaryAmount(100)) {
-      throw invalid_argument("A percentage cannot be larger than 100");
-    }
-  }
+  auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, "-,%", pos);
   CurrencyCode toTradeCurrency;
   if (withCurrency) {
     toTradeCurrency = CurrencyCode(GetNextStr(_opt, ',', pos));
@@ -163,18 +170,22 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
   return std::make_tuple(startAmount, isPercentage, toTradeCurrency, GetPrivateExchanges(GetNextStr(_opt, '\0', pos)));
 }
 
+StringOptionParser::CurrencyFromToPrivateExchange StringOptionParser::getCurrencyFromToPrivateExchange() const {
+  std::size_t pos = 0;
+  CurrencyCode cur(GetNextStr(_opt, ',', pos));
+  PrivateExchangeName from(GetNextStr(_opt, '-', pos));
+  // Warning: in C++, order of evaluation of parameters is unspecified. Because GetNextStr has side
+  // effects (it modifies 'pos') we need temporary variables here
+  return std::make_tuple(std::move(cur), std::move(from), PrivateExchangeName(GetNextStr(_opt, '-', pos)));
+}
+
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()
     const {
-  std::size_t commaPos = getNextCommaPos();
-  MonetaryAmount amountToWithdraw(std::string_view(_opt.begin(), _opt.begin() + commaPos));
-  std::string_view exchangeNames = StrEnd(_opt, commaPos + 1);
-  std::size_t dashPos = exchangeNames.find('-');
-  if (dashPos == std::string_view::npos) {
-    throw invalid_argument("Expected a dash");
-  }
-  return MonetaryAmountFromToPrivateExchange{
-      amountToWithdraw, PrivateExchangeName(std::string_view(exchangeNames.begin(), exchangeNames.begin() + dashPos)),
-      PrivateExchangeName(StrEnd(exchangeNames, dashPos + 1))};
+  std::size_t pos = 0;
+  auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, ",%", pos);
+  PrivateExchangeName from(GetNextStr(_opt, '-', pos));
+  return std::make_tuple(std::move(startAmount), isPercentage, std::move(from),
+                         PrivateExchangeName(GetNextStr(_opt, '-', pos)));
 }
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
