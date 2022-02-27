@@ -109,7 +109,8 @@ class Coincenter {
                          std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
+  WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
+                        const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.

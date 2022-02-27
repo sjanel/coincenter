@@ -55,7 +55,8 @@ class ExchangesOrchestrator {
   TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
                          std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
+  WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
+                        const PrivateExchangeName &fromPrivateExchangeName,
                         const PrivateExchangeName &toPrivateExchangeName,
                         Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawInfoRefreshTime);
 

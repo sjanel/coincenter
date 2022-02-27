@@ -26,7 +26,6 @@ class CoincenterParsedOptions {
   MonetaryAmount endTradeAmount;
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
-  bool isPercentageTrade = false;
   PrivateExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 
@@ -34,16 +33,13 @@ class CoincenterParsedOptions {
   PublicExchangeNames marketsExchanges;
 
   Market marketForOrderBook;
-  bool tickerForAll = false;
   PublicExchangeNames tickerExchanges;
   PublicExchangeNames orderBookExchanges;
-  int orderbookDepth = 0;
   CurrencyCode orderbookCur;
 
   Market marketForConversionPath;
   PublicExchangeNames conversionPathExchanges;
 
-  bool balanceForAll = false;
   PrivateExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
 
@@ -52,11 +48,9 @@ class CoincenterParsedOptions {
   CurrencyCode depositCurrency;
   PrivateExchangeNames depositInfoPrivateExchanges;
 
-  bool queryOpenedOrders = false;
   PrivateExchangeNames openedOrdersPrivateExchanges;
   OrdersConstraints openedOrdersConstraints;
 
-  bool cancelOpenedOrders = false;
   PrivateExchangeNames cancelOpenedOrdersPrivateExchanges;
   OrdersConstraints cancelOpenedOrdersConstraints;
 
@@ -70,7 +64,6 @@ class CoincenterParsedOptions {
 
   Market lastTradesMarket;
   PublicExchangeNames lastTradesExchanges;
-  int nbLastTrades;
 
   Market lastPriceMarket;
   PublicExchangeNames lastPriceExchanges;
@@ -80,9 +73,19 @@ class CoincenterParsedOptions {
   MonitoringInfo monitoringInfo;
 
   bool noProcess = false;
-  bool printQueryResults;
+  bool printQueryResults = true;
+  bool tickerForAll = false;
+  bool balanceForAll = false;
+  bool queryOpenedOrders = false;
+  bool cancelOpenedOrders = false;
+  bool isPercentageTrade = false;
+  bool isPercentageWithdraw = false;
+
+  int orderbookDepth = 0;
+  int nbLastTrades = 0;
   int repeats = 1;
-  Duration repeatTime;
+
+  Duration repeatTime{};
 
   std::string_view programName() const { return _programName; }
 

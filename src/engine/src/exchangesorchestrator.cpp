@@ -631,12 +631,19 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
 }
 
-WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
+WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                                              const PrivateExchangeName &fromPrivateExchangeName,
                                              const PrivateExchangeName &toPrivateExchangeName,
                                              Duration withdrawRefreshTime) {
-  log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
-            toPrivateExchangeName.str());
+  const CurrencyCode currencyCode = grossAmount.currencyCode();
+  if (isPercentageWithdraw) {
+    log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode.str(),
+              fromPrivateExchangeName.str(), toPrivateExchangeName.str());
+  } else {
+    log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
+              toPrivateExchangeName.str());
+  }
+
   Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);
   Exchange &toExchange = _exchangeRetriever.retrieveUniqueCandidate(toPrivateExchangeName);
   const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
@@ -647,7 +654,6 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
   std::transform(std::execution::par, exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
                  [](Exchange *e) { return e->queryTradableCurrencies(); });
 
-  const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
     string errMsg("It's currently not possible to withdraw ");
     errMsg.append(currencyCode.str()).append(" from ").append(fromPrivateExchangeName.str());
@@ -659,6 +665,11 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
     errMsg.append(currencyCode.str()).append(" to ").append(fromPrivateExchangeName.str());
     log::error(errMsg);
     return WithdrawInfo(std::move(errMsg));
+  }
+
+  if (isPercentageWithdraw) {
+    MonetaryAmount avAmount = fromExchange.apiPrivate().getAccountBalance().get(currencyCode);
+    grossAmount = (avAmount * grossAmount.toNeutral()) / 100;
   }
 
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawRefreshTime);

@@ -135,9 +135,11 @@ TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCur
   return _exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions);
 }
 
-WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, const PrivateExchangeName &fromPrivateExchangeName,
+WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
+                                  const PrivateExchangeName &fromPrivateExchangeName,
                                   const PrivateExchangeName &toPrivateExchangeName) {
-  return _exchangesOrchestrator.withdraw(grossAmount, fromPrivateExchangeName, toPrivateExchangeName);
+  return _exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromPrivateExchangeName,
+                                         toPrivateExchangeName);
 }
 
 WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
@@ -259,7 +261,8 @@ void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
   }
 
   if (!opts.amountToWithdraw.isZero()) {
-    withdraw(opts.amountToWithdraw, opts.withdrawFromExchangeName, opts.withdrawToExchangeName);
+    withdraw(opts.amountToWithdraw, opts.isPercentageWithdraw, opts.withdrawFromExchangeName,
+             opts.withdrawToExchangeName);
   }
 }
 

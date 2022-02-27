@@ -519,7 +519,8 @@ cancels order Id OID1 only, on the exchange where it is found on (no error is ra
 
 ### Withdraw coin
 
-It is possible to withdraw coin with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination).
+It is possible to withdraw crypto currency with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination). Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-all` is a convenient command wrapper of `--withdraw 100%`.
+
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
 To ensure maximum safety, there are two checks performed by `coincenter` prior to all withdraw launches:
