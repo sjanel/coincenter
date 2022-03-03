@@ -925,8 +925,6 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartSell) {
 TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllNoAvailableAmount) {
   MonetaryAmount startAmount = MonetaryAmount(100, "FIL");
 
-  MonetaryAmount from = MonetaryAmount(0, "FIL");
-
   EXPECT_CALL(exchangePublic1, queryTradableMarkets()).Times(0);
   EXPECT_CALL(exchangePublic2, queryTradableMarkets()).Times(0);
   EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
