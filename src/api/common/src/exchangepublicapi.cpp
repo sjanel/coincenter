@@ -12,8 +12,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
                                                       MarketOrderBookMap &marketOrderBookMap, bool canUseCryptowatchAPI,
                                                       const PriceOptions &priceOptions) {
-  CurrencyCode fromCurrency = a.currencyCode();
-  if (fromCurrency == toCurrency) {
+  if (a.currencyCode() == toCurrency) {
     return a;
   }
   if (conversionPath.empty()) {
@@ -24,9 +23,9 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
   bool canUseCryptoWatch =
       canUseCryptowatchAPI && priceOptions.isAveragePrice() && _cryptowatchApi.queryIsExchangeSupported(_name);
   for (Market m : conversionPath) {
-    assert(m.canTrade(fromCurrency));
-    CurrencyCode mFromCurrencyCode = fromCurrency;
-    CurrencyCode mToCurrencyCode = m.base() == fromCurrency ? m.quote() : m.base();
+    CurrencyCode mFromCurrencyCode = a.currencyCode();
+    assert(m.canTrade(mFromCurrencyCode));
+    CurrencyCode mToCurrencyCode = m.base() == a.currencyCode() ? m.quote() : m.base();
     std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(mFromCurrencyCode);
     CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
     std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
