@@ -14,7 +14,6 @@
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
-#include "monetaryamount.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
@@ -24,6 +23,8 @@
 
 namespace cct::api {
 namespace {
+
+constexpr std::string_view kMinOrderSizeJsonKeyStr = "minOrderSize";
 
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
@@ -119,14 +120,17 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
           }
           case 5600:
             if (isTradeQuery) {
-              // too many decimals, you need to truncate
-              static constexpr std::string_view kMagicKoreanString1 = "수량은 소수점 ";
-              static constexpr std::string_view kMagicKoreanString2 = "자";
-              std::size_t nbDecimalsMaxPos = msg.find(kMagicKoreanString1);
+              static constexpr std::string_view kTooManyDecimals1 = "수량은 소수점 ";
+              static constexpr std::string_view kTooManyDecimals2 = "자";
+
+              std::size_t nbDecimalsMaxPos = msg.find(kTooManyDecimals1);
               if (nbDecimalsMaxPos != std::string_view::npos) {
-                std::size_t idxFirst = nbDecimalsMaxPos + kMagicKoreanString1.size();
-                auto first = msg.begin() + idxFirst;
-                std::string_view maxNbDecimalsStr(first, msg.begin() + msg.find(kMagicKoreanString2, idxFirst));
+                std::size_t idxFirst = nbDecimalsMaxPos + kTooManyDecimals1.size();
+                std::size_t endPos = msg.find(kTooManyDecimals2, idxFirst);
+                if (endPos == std::string_view::npos) {
+                  throw exception("Unexpected string in parsing correct number of decimals for Bithumb");
+                }
+                std::string_view maxNbDecimalsStr(msg.begin() + idxFirst, msg.begin() + endPos);
                 CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));
                 // I did not find the way via the API to get the maximum precision of Bithumb assets,
                 // so I get them this way, by parsing the Korean error message of the response
@@ -146,6 +150,24 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                 }
                 updatedPostData.set("units", volume.amountStr());
                 return PrivateQuery(curlHandle, apiKey, endpoint, maxNbDecimalsPerCurrencyCodePlace, updatedPostData);
+              }
+
+              static constexpr std::string_view kMinOrderString1 = "주문금액은 ";
+              static constexpr std::string_view kMinOrderString2 = " 입니다";
+              std::size_t minOrderAmountPos = msg.find(kMinOrderString1);
+              if (minOrderAmountPos != std::string_view::npos) {
+                std::size_t idxFirst = minOrderAmountPos + kMinOrderString1.size();
+                std::size_t endPos = msg.find(kMinOrderString2, idxFirst);
+                if (endPos == std::string_view::npos) {
+                  throw exception("Unexpected string in parsing min order size on Bithumb");
+                }
+                MonetaryAmount minOrderAmount(std::string_view(msg.begin() + idxFirst, msg.begin() + endPos));
+                dataJson.clear();
+                log::warn("Bithumb told us that minimum order size is {}", minOrderAmount.str());
+                // Even if kMinOrderSizeJsonKeyStr is a std::string_view, it's null terminated because it's pointing to
+                // a static 'const char *'
+                dataJson[kMinOrderSizeJsonKeyStr.data()] = minOrderAmount.str();
+                return dataJson;
               }
             }
             if ((isInfoOpenedOrders || isCancelQuery) &&
@@ -377,8 +399,15 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     placeOrderInfo.orderId = result["order_id"];
     placeOrderInfo.orderInfo = queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId));
   } else {
-    log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
-              toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
+    auto minOrderSizeIt = result.find(kMinOrderSizeJsonKeyStr);
+    if (minOrderSizeIt != result.end()) {
+      log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(),
+                toCurrencyCode.str(), minOrderSizeIt->get<std::string_view>());
+    } else {
+      log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
+                toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
+    }
+
     placeOrderInfo.setClosed();
   }
 
