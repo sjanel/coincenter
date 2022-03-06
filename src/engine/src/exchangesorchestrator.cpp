@@ -308,6 +308,10 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
         (nbMarketsInPath > 1 &&
          tradeOptions.isMultiTradeAllowed(pExchangePublic->exchangeInfo().multiTradeAllowedByDefault()))) {
       ret.emplace_back(exchangeAmountPair.first, exchangeAmountPair.second, std::move(marketsPath));
+    } else {
+      log::warn("{} is not convertible{} to {} on {}", fromCurrency.str(),
+                nbMarketsInPath == 0 ? "" : "directly (and multi trade is not allowed)", toCurrency.str(),
+                pExchangePublic->name());
     }
   }
   return ret;
