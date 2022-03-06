@@ -1,8 +1,10 @@
 #include "exchangeprivateapi.hpp"
 
 #include <chrono>
+#include <map>
 #include <thread>
 
+#include "cct_vector.hpp"
 #include "timedef.hpp"
 
 namespace cct::api {
@@ -96,7 +98,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
   if (placeOrderInfo.isClosed()) {
-    log::debug("Order {} closed with traded amounts {}", placeOrderInfo.orderId, placeOrderInfo.tradedAmounts().str());
+    log::debug("Order {} closed with traded amounts {}", placeOrderInfo.orderId, placeOrderInfo.tradedAmounts());
     return placeOrderInfo.tradedAmounts();
   }
 
@@ -110,7 +112,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
     OrderInfo orderInfo = queryOrderInfo(orderRef);
     if (orderInfo.isClosed) {
       totalTradedAmounts += orderInfo.tradedAmounts;
-      log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId, orderInfo.tradedAmounts.str());
+      log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId, orderInfo.tradedAmounts);
       break;
     }
 
@@ -140,7 +142,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
       if (from == 0) {
         log::debug("Order {} matched with last traded amounts {} while cancelling", placeOrderInfo.orderId,
-                   cancelledOrderInfo.tradedAmounts.str());
+                   cancelledOrderInfo.tradedAmounts);
         break;
       }
 
@@ -181,7 +183,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
         if (placeOrderInfo.isClosed()) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
           log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId,
-                     placeOrderInfo.tradedAmounts().str());
+                     placeOrderInfo.tradedAmounts());
           break;
         }
       }
@@ -224,6 +226,208 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount(),
             initiatedWithdrawInfo.receivingWallet().exchangeName(), initiatedWithdrawInfo.receivingWallet().address());
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+}
+
+namespace {
+bool IsAboveDustAmountThreshold(const ExchangeInfo::MonetaryAmountSet &dustThresholds, MonetaryAmount amount) {
+  auto lb = std::ranges::lower_bound(dustThresholds, amount, ExchangeInfo::CompareByCurrencyCode{});
+  return lb == dustThresholds.end() || lb->currencyCode() != amount.currencyCode() || *lb <= amount;
+}
+
+using PenaltyPerMarketMap = std::map<Market, int>;
+
+void IncrementPenalty(Market m, PenaltyPerMarketMap &penaltyPerMarketMap) {
+  auto insertItInsertedPair = penaltyPerMarketMap.insert({m, 1});
+  if (!insertItInsertedPair.second) {
+    ++insertItInsertedPair.first->second;
+  }
+}
+
+vector<Market> GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
+                                                   const ExchangeInfo::MonetaryAmountSet &dustThresholds,
+                                                   CurrencyCode currencyCode, const MarketSet &markets,
+                                                   const PenaltyPerMarketMap &penaltyPerMarketMap) {
+  vector<Market> possibleMarkets;
+  for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
+    MonetaryAmount avAmount = avAmountEq.amount;
+    CurrencyCode avCur = avAmount.currencyCode();
+    auto lbAvAmount =
+        std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, avCur), ExchangeInfo::CompareByCurrencyCode{});
+    if (lbAvAmount == dustThresholds.end() || lbAvAmount->currencyCode() != avCur || *lbAvAmount < avAmount) {
+      Market m(currencyCode, avCur);
+      if (markets.contains(m)) {
+        possibleMarkets.push_back(std::move(m));
+      } else if (markets.contains(m.reverse())) {
+        possibleMarkets.push_back(m.reverse());
+      }
+    }
+  }
+
+  struct PenaltyMarketComparator {
+    explicit PenaltyMarketComparator(const PenaltyPerMarketMap &map) : penaltyPerMarketMap(map) {}
+
+    bool operator()(Market m1, Market m2) const {
+      auto m1It = penaltyPerMarketMap.find(m1);
+      auto m2It = penaltyPerMarketMap.find(m2);
+      // not present is equivalent to a weight of 0
+      int w1 = m1It == penaltyPerMarketMap.end() ? 0 : m1It->second;
+      int w2 = m2It == penaltyPerMarketMap.end() ? 0 : m2It->second;
+
+      if (w1 != w2) {
+        return w1 < w2;
+      }
+      return m1 < m2;
+    }
+
+    const PenaltyPerMarketMap &penaltyPerMarketMap;
+  };
+
+  // Sort them according to the penalty (we favor markets on which we did not try any buy on them yet)
+  std::ranges::sort(possibleMarkets, PenaltyMarketComparator(penaltyPerMarketMap));
+  return possibleMarkets;
+}
+}  // namespace
+
+std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSweeper(
+    std::span<const Market> possibleMarkets, MonetaryAmount amountBalance, const TradeOptions &tradeOptions) {
+  for (Market m : possibleMarkets) {
+    log::info("Dust sweeper - attempt to sell in one shot on {}", m);
+    TradedAmounts tradedAmounts = marketTrade(amountBalance, tradeOptions, m);
+    if (tradedAmounts.tradedTo != 0) {
+      return {tradedAmounts, m};
+    }
+  }
+  return {};
+}
+
+TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
+    std::span<const Market> possibleMarkets, MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
+    const BalancePortfolio &balance, const TradeOptions &tradeOptions,
+    const ExchangeInfo::MonetaryAmountSet &dustThresholds) {
+  CurrencyCode currencyCode = dustThreshold.currencyCode();
+  static constexpr MonetaryAmount kMultiplier(15, CurrencyCode(), 1);
+
+  if (marketPriceMap.empty()) {
+    marketPriceMap = _exchangePublic.queryAllPrices();
+  }
+
+  for (MonetaryAmount mult = MonetaryAmount(1);; mult *= kMultiplier) {
+    bool enoughAvAmount = false;
+    for (Market m : possibleMarkets) {
+      // We will buy some amount. It should be as small as possible to limit fees
+      auto it = marketPriceMap.find(m);
+      if (it == marketPriceMap.end()) {
+        continue;
+      }
+
+      // Compute initial fromAmount from a random small amount defined from current price and dust threshold
+      // (assuming it's rather small)
+      MonetaryAmount p = it->second;
+      MonetaryAmount fromAmount;
+      if (currencyCode == m.base()) {
+        fromAmount = MonetaryAmount(dustThreshold * p.toNeutral(), m.quote());
+      } else {
+        fromAmount = MonetaryAmount(dustThreshold / p.toNeutral(), m.base());
+      }
+
+      fromAmount *= mult;
+
+      MonetaryAmount fromAmountAv = balance.get(fromAmount.currencyCode());
+      if (fromAmountAv < fromAmount || !IsAboveDustAmountThreshold(dustThresholds, fromAmountAv - fromAmount)) {
+        // The resulting sell of fromAmount should not bring this other currency below the dust thresholds,
+        // it's counter productive
+        continue;
+      }
+
+      enoughAvAmount = true;
+
+      log::info("Dust sweeper - attempt to buy some {} for future selling", currencyCode);
+      TradedAmounts tradedAmounts = marketTrade(fromAmount, tradeOptions, m);
+
+      if (tradedAmounts.tradedTo != 0) {
+        // Then we should have sufficient amount now on this market
+        return tradedAmounts;
+      }
+    }
+    if (!enoughAvAmount) {
+      break;
+    }
+  }
+  return TradedAmounts{};
+}
+
+TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
+  using MonetaryAmountSet = ExchangeInfo::MonetaryAmountSet;
+  const MonetaryAmountSet &dustThresholds = exchangeInfo().dustAmountsThreshold();
+  const int dustSweeperMaxNbTrades = exchangeInfo().dustSweeperMaxNbTrades();
+  auto dustThresholdLb =
+      std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, currencyCode), ExchangeInfo::CompareByCurrencyCode());
+  TradedAmountsVectorWithFinalAmount ret;
+  auto eName = exchangeName();
+  if (dustThresholdLb == dustThresholds.end() || dustThresholdLb->currencyCode() != currencyCode) {
+    log::warn("No dust threshold is configured for {} on {:n}", currencyCode, eName);
+    return ret;
+  }
+  const MonetaryAmount dustThreshold = *dustThresholdLb;
+
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  TradeOptions tradeOptions(priceOptions);
+  MarketSet markets = _exchangePublic.queryTradableMarkets();
+  MarketPriceMap marketPriceMap;
+  bool checkAmountBalanceAgainstDustThreshold = true;
+  int dustSweeperTradePos;
+  PenaltyPerMarketMap penaltyPerMarketMap;
+  Market tradedMarket;
+  for (dustSweeperTradePos = 0; dustSweeperTradePos < dustSweeperMaxNbTrades; ++dustSweeperTradePos) {
+    BalancePortfolio balance = queryAccountBalance();
+    ret.finalAmount = balance.get(currencyCode);
+    log::info("Dust sweeper for {} - step {}/{} - {} remaining", eName, dustSweeperTradePos + 1, dustSweeperMaxNbTrades,
+              ret.finalAmount);
+    if (ret.finalAmount == 0) {
+      if (checkAmountBalanceAgainstDustThreshold) {
+        log::info("Already no {} present in {} balance", currencyCode, eName);
+      } else {
+        log::info("Successfully sold all {} on {}", currencyCode, eName);
+      }
+      return ret;
+    }
+    if (checkAmountBalanceAgainstDustThreshold && dustThreshold < ret.finalAmount) {
+      log::warn("Initial amount balance {} is larger that dust threshold {} on {}, abort", ret.finalAmount,
+                dustThreshold, eName);
+      return ret;
+    }
+    checkAmountBalanceAgainstDustThreshold = false;
+
+    // Pick a trade currency which has some available balance for which the market exists with 'currencyCode',
+    // whose amount is higher than its dust amount threshold if it exists
+    vector<Market> possibleMarkets =
+        GetPossibleMarketsForDustThresholds(balance, dustThresholds, currencyCode, markets, penaltyPerMarketMap);
+    if (possibleMarkets.empty()) {
+      log::warn("No more market is allowed for trade in dust threshold sweeper context");
+      break;
+    }
+
+    // First pass - check if by chance on selected markets selling is possible in one shot
+    TradedAmounts tradedAmounts;
+    std::tie(tradedAmounts, tradedMarket) =
+        isSellingPossibleOneShotDustSweeper(possibleMarkets, ret.finalAmount, tradeOptions);
+    if (tradedAmounts.tradedFrom != 0) {
+      IncrementPenalty(tradedMarket, penaltyPerMarketMap);
+      ret.tradedAmountsVector.push_back(std::move(tradedAmounts));
+      continue;
+    }
+
+    // At this point we did not sell all amount, but it's possible that some trades have been done, with remainings.
+    // Selling has not worked - so we need to buy some amount on the requested currency first
+    tradedAmounts = buySomeAmountToMakeFutureSellPossible(possibleMarkets, marketPriceMap, dustThreshold, balance,
+                                                          tradeOptions, dustThresholds);
+    if (tradedAmounts.tradedFrom == 0) {
+      break;
+    }
+    ret.tradedAmountsVector.push_back(std::move(tradedAmounts));
+  }
+  log::warn("Could not sell dust on {} after {} tries", eName, dustSweeperTradePos + 1);
+  return ret;
 }
 
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,

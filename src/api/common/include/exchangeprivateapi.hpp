@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <span>
+#include <utility>
 
 #include "apikey.hpp"
 #include "balanceportfolio.hpp"
@@ -99,6 +101,10 @@ class ExchangePrivate : public ExchangeBase {
     return _exchangePublic.queryWithdrawalFee(currencyCode);
   }
 
+  /// Attempts to clean small remaining amount on 'currencyCode' of this exchange.
+  /// Returns the amounts actually traded with the final amount balance on this currency
+  TradedAmountsVectorWithFinalAmount queryDustSweeper(CurrencyCode currencyCode);
+
   ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.name(), _apiKey.name()); }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
@@ -156,6 +162,15 @@ class ExchangePrivate : public ExchangeBase {
 
   PlaceOrderInfo computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
                                                         const TradeInfo &tradeInfo) const;
+
+  std::pair<TradedAmounts, Market> isSellingPossibleOneShotDustSweeper(std::span<const Market> possibleMarkets,
+                                                                       MonetaryAmount amountBalance,
+                                                                       const TradeOptions &tradeOptions);
+
+  TradedAmounts buySomeAmountToMakeFutureSellPossible(std::span<const Market> possibleMarkets,
+                                                      MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
+                                                      const BalancePortfolio &balance, const TradeOptions &tradeOptions,
+                                                      const ExchangeInfo::MonetaryAmountSet &dustThresholds);
 };
 }  // namespace api
 }  // namespace cct

@@ -1,21 +1,22 @@
 #include "exchangeinfo.hpp"
 
-#include <span>
-
 #include "cct_const.hpp"
+#include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "durationstring.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct {
 
 namespace {
-string BuildCurrenciesString(std::span<const CurrencyCode> currencies) {
+template <class ContainerType>
+string BuildConcatenatedString(const ContainerType &printableValues) {
   string ret(1, '[');
-  for (CurrencyCode c : currencies) {
+  for (auto v : printableValues) {
     if (ret.size() > 1) {
       ret.push_back(',');
     }
-    c.appendStr(ret);
+    v.appendStr(ret);
   }
   ret.push_back(']');
   return ret;
@@ -38,27 +39,35 @@ string BuildUpdateFrequenciesString(const ExchangeInfo::APIUpdateFrequencies &ap
 
 ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                            CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
-                           CurrencyVector &&preferredPaymentCurrencies,
+                           CurrencyVector &&preferredPaymentCurrencies, MonetaryAmountSet &&dustAmountsThreshold,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
-                           Duration privateAPIRate, bool multiTradeAllowedByDefault,
+                           Duration privateAPIRate, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
                            bool validateDepositAddressesInFile, bool placeSimulateRealOrder)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
+      _dustAmountsThreshold(std::move(dustAmountsThreshold)),
       _apiUpdateFrequencies(apiUpdateFrequencies),
       _publicAPIRate(publicAPIRate),
       _privateAPIRate(privateAPIRate),
       _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
       _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
+      _dustSweeperMaxNbTrades(dustSweeperMaxNbTrades),
       _multiTradeAllowedByDefault(multiTradeAllowedByDefault),
       _validateDepositAddressesInFile(validateDepositAddressesInFile),
       _placeSimulateRealOrder(placeSimulateRealOrder) {
+  if (dustSweeperMaxNbTrades > std::numeric_limits<int16_t>::max() || dustSweeperMaxNbTrades < 0) {
+    throw exception("Invalid number of dust sweeper max trades '{}', should be in [0, {}]", dustSweeperMaxNbTrades,
+                    std::numeric_limits<int16_t>::max());
+  }
   if (log::get_level() <= log::level::trace) {
     log::trace("{} configuration", exchangeNameStr);
 
-    log::trace(" - General excluded currencies  : {}", BuildCurrenciesString(_excludedCurrenciesAll));
-    log::trace(" - Withdraw excluded currencies : {}", BuildCurrenciesString(_excludedCurrenciesWithdrawal));
-    log::trace(" - Preferred payment currencies : {}", BuildCurrenciesString(_preferredPaymentCurrencies));
+    log::trace(" - General excluded currencies  : {}", BuildConcatenatedString(_excludedCurrenciesAll));
+    log::trace(" - Withdraw excluded currencies : {}", BuildConcatenatedString(_excludedCurrenciesWithdrawal));
+    log::trace(" - Preferred payment currencies : {}", BuildConcatenatedString(_preferredPaymentCurrencies));
+    log::trace(" - Dust amounts threshold       : {}", BuildConcatenatedString(_dustAmountsThreshold));
+    log::trace(" - Dust sweeper nb max trades   : {}", _dustSweeperMaxNbTrades);
     log::trace(" - General update frequencies   : {} for public, {} for private", DurationToString(publicAPIRate),
                DurationToString(privateAPIRate));
     log::trace(" - Update frequencies by method : {}", BuildUpdateFrequenciesString(_apiUpdateFrequencies));
@@ -70,6 +79,9 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
   }
   if (_preferredPaymentCurrencies.empty()) {
     log::warn("{} list of preferred currencies is empty, buy and sell commands cannot perform trades", exchangeNameStr);
+  }
+  if (_dustAmountsThreshold.empty()) {
+    log::warn("{} set of dust amounts threshold is empty, dust sweeper is not possible", exchangeNameStr);
   }
 }
 

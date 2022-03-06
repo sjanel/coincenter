@@ -118,18 +118,4 @@ TopLevelOption::CurrencyVector TopLevelOption::getUnorderedCurrencyUnion(std::st
   return ret;
 }
 
-TopLevelOption::CurrencyVector TopLevelOption::getCurrenciesArray(std::string_view exchangeName,
-                                                                  std::string_view subOptionName1,
-                                                                  std::string_view subOptionName2) const {
-  JsonIt optValIt = get(exchangeName, subOptionName1, subOptionName2);
-
-  CurrencyVector ret;
-  ret.reserve(optValIt->size());
-  assert(optValIt->is_array());
-  for (const auto& val : *optValIt) {
-    ret.emplace_back(val.get<std::string_view>());
-  }
-  return ret;
-}
-
 }  // namespace cct

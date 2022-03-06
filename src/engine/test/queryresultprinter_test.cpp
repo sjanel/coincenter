@@ -1989,4 +1989,87 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, NoPrint) {
   expectNoStr();
 }
 
+class QueryResultPrinterDustSweeperTest : public QueryResultPrinterTest {
+ protected:
+  CurrencyCode cur{"ETH"};
+  CurrencyCode cur1{"BTC"};
+  CurrencyCode cur2{"EUR"};
+  TradedAmountsVectorWithFinalAmountPerExchange tradedAmountsVectorWithFinalAmountPerExchange{
+      {&exchange1,
+       {TradedAmountsVector{TradedAmounts{MonetaryAmount{9847, cur, 2}, MonetaryAmount{"0.00005", cur1}}},
+        MonetaryAmount{0, cur}}},
+      {&exchange3, {TradedAmountsVector{}, MonetaryAmount{156, cur, 2}}},
+      {&exchange4,
+       {TradedAmountsVector{TradedAmounts{MonetaryAmount{"0.45609", cur2}, MonetaryAmount{9847, cur, 2}},
+                            TradedAmounts{MonetaryAmount{150945, cur, 2}, MonetaryAmount{"0.000612", cur1}}},
+        MonetaryAmount{0, cur}}}};
+};
+
+TEST_F(QueryResultPrinterDustSweeperTest, FormattedTable) {
+  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+      .printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
+  static constexpr std::string_view kExpected = R"(
+-----------------------------------------------------------------------------------------------
+| Exchange | Account   | Trades                                                | Final Amount |
+-----------------------------------------------------------------------------------------------
+| binance  | testuser1 | 98.47 ETH -> 0.00005 BTC                              | 0 ETH        |
+| huobi    | testuser1 |                                                       | 1.56 ETH     |
+| huobi    | testuser2 | 0.45609 EUR -> 98.47 ETH, 1509.45 ETH -> 0.000612 BTC | 0 ETH        |
+-----------------------------------------------------------------------------------------------
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterDustSweeperTest, Json) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "cur": "ETH"
+    },
+    "req": "DustSweeper"
+  },
+  "out": {
+    "binance": {
+      "testuser1": {
+        "finalAmount": "0 ETH",
+        "trades": [
+          {
+            "from": "98.47 ETH",
+            "to": "0.00005 BTC"
+          }
+        ]
+      }
+    },
+    "huobi": {
+      "testuser1": {
+        "finalAmount": "1.56 ETH",
+        "trades": []
+      },
+      "testuser2": {
+        "finalAmount": "0 ETH",
+        "trades": [
+          {
+            "from": "0.45609 EUR",
+            "to": "98.47 ETH"
+          },
+          {
+            "from": "1509.45 ETH",
+            "to": "0.000612 BTC"
+          }
+        ]
+      }
+    }
+  }
+}
+)";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterDustSweeperTest, NoPrint) {
+  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
+  expectNoStr();
+}
+
 }  // namespace cct

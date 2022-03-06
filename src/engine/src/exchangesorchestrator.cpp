@@ -623,6 +623,22 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
 }
 
+TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper(
+    std::span<const ExchangeName> privateExchangeNames, CurrencyCode currencyCode) {
+  log::info("Query {} dust sweeper from {}", currencyCode, ConstructAccumulatedExchangeNames(privateExchangeNames));
+
+  ExchangeRetriever::SelectedExchanges selExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  TradedAmountsVectorWithFinalAmountPerExchange ret(selExchanges.size());
+  std::transform(
+      std::execution::par, selExchanges.begin(), selExchanges.end(), ret.begin(), [currencyCode](Exchange *e) {
+        return std::make_pair(static_cast<const Exchange *>(e), e->apiPrivate().queryDustSweeper(currencyCode));
+      });
+
+  return ret;
+}
+
 WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                                              const ExchangeName &fromPrivateExchangeName,
                                              const ExchangeName &toPrivateExchangeName, Duration withdrawRefreshTime) {

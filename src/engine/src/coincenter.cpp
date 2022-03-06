@@ -139,6 +139,10 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
                                         cmd.exchangeNames().front(), cmd.exchangeNames().back());
       break;
     }
+    case CoincenterCommandType::kDustSweeper: {
+      _queryResultPrinter.printDustSweeper(dustSweeper(cmd.exchangeNames(), cmd.cur1()), cmd.cur1());
+      break;
+    }
     default:
       throw exception("Unknown command type");
   }
@@ -191,6 +195,11 @@ OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const ExchangeName
 NbCancelledOrdersPerExchange Coincenter::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                                                       const OrdersConstraints &ordersConstraints) {
   return _exchangesOrchestrator.cancelOrders(privateExchangeNames, ordersConstraints);
+}
+
+TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
+    std::span<const ExchangeName> privateExchangeNames, CurrencyCode currencyCode) {
+  return _exchangesOrchestrator.dustSweeper(privateExchangeNames, currencyCode);
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {

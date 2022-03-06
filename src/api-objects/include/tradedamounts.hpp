@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ostream>
+
+#include "cct_format.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"
@@ -15,13 +18,17 @@ struct TradedAmounts {
   constexpr TradedAmounts(MonetaryAmount fromAmount, MonetaryAmount toAmount)
       : tradedFrom(fromAmount), tradedTo(toAmount) {}
 
-  TradedAmounts operator+(const TradedAmounts &o) const;
+  TradedAmounts operator+(const TradedAmounts &o) const {
+    return TradedAmounts(tradedFrom + o.tradedFrom, tradedTo + o.tradedTo);
+  }
   TradedAmounts &operator+=(const TradedAmounts &o) {
     *this = *this + o;
     return *this;
   }
 
   bool operator==(const TradedAmounts &) const = default;
+
+  friend std::ostream &operator<<(std::ostream &os, const TradedAmounts &a);
 
   string str() const;
 
@@ -30,3 +37,21 @@ struct TradedAmounts {
 };
 
 }  // namespace cct
+
+#ifndef CCT_DISABLE_SPDLOG
+template <>
+struct fmt::formatter<cct::TradedAmounts> {
+  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin(), end = ctx.end();
+    if (it != end && *it != '}') {
+      throw format_error("invalid format");
+    }
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const cct::TradedAmounts &a, FormatContext &ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{} -> {}", a.tradedFrom, a.tradedTo);
+  }
+};
+#endif

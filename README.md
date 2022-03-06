@@ -30,6 +30,7 @@ Main features:
  - Opened orders
  - Cancel opened orders
  - Withdraw (with check at destination that funds are well received)
+ - Dust sweeper
   
 **Supported exchanges**
 | Exchange |                                      Link                                       |
@@ -76,6 +77,7 @@ Main features:
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
+    - [Dust sweeper](#dust-sweeper)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
   - [Examples of use cases](#examples-of-use-cases)
@@ -552,6 +554,30 @@ To ensure maximum safety, there are two checks performed by `coincenter` prior t
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
 coincenter --withdraw 10000xlm,bithumb-huobi
+```
+
+### Dust sweeper
+
+If you are annoyed with this kind of balance:
+```
+| BTG      | 0.0000442                |
+| DASH     | 0.00002264               |
+| DOT      | 0.00009634               |
+```
+
+and you would like to "clean" these small amounts to zero, then *dust sweeper* is the option to use!
+
+When user defines a threshold amount on a given currency, `--dust-sweeper` can be used to attempt to sell all amount (if below this threshold) trying to reach exactly 0 amount on this currency for a clean balance.
+The algorithm used by `coincenter` is a simple heuristic:
+
+- it finds the best markets involving currency to be sold
+- it tries to sell all immediately.
+- if full selling is not possible, it buys a small amount of this currency
+- retry until either maximum number of steps (configurable) is reached or balance is exactly 0 on given currency
+
+Example: Attempts to clean amount of BTG on bithumb and upbit
+```
+coincenter --dust-sweeper btg,bithumb,upbit
 ```
 
 ## Monitoring options
