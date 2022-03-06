@@ -28,6 +28,7 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount, Wallet &&), (override));
   MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &), (override));
   MOCK_METHOD(bool, isWithdrawReceived, (const InitiatedWithdrawInfo &, const SentWithdrawInfo &), (override));
+  MOCK_METHOD(TradedAmounts, tryMarketSellOrReturnMinOrderSize, (MonetaryAmount, Market), (override));
 };
 
 }  // namespace cct::api

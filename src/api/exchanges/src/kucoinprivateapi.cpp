@@ -403,4 +403,30 @@ bool KucoinPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
+
+TradedAmounts KucoinPrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  KucoinPublic& kucoinPublic = dynamic_cast<KucoinPublic&>(_exchangePublic);
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+  if (!optPrice) {
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts();
+  }
+  MonetaryAmount price = *optPrice;
+
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / price, m.base()));
+  MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(m, volume);
+  TradedAmounts tradedAmounts;
+  if (sanitizedVol == volume) {
+    TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+    TradeInfo tradeInfo(0UL, m, side, TradeOptions(priceOptions));
+    tradedAmounts = placeOrder(amountToSell, volume, price, tradeInfo).tradedAmounts();
+  } else {
+    tradedAmounts.tradedFrom = sanitizedVol;
+  }
+  return tradedAmounts;
+}
+
 }  // namespace cct::api

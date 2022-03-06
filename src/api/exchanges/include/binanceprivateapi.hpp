@@ -54,6 +54,8 @@ class BinancePrivate : public ExchangePrivate {
   bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
+  TradedAmounts tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) override;
+
  private:
   OrderInfo queryOrder(const OrderRef& orderRef, bool isCancel);
 

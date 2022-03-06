@@ -479,6 +479,32 @@ bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
+TradedAmounts HuobiPrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  constexpr bool isTakerStrategy = true;
+  HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+  if (!optPrice) {
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts();
+  }
+  MonetaryAmount price = *optPrice;
+
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / price, m.base()));
+  MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(m, cur, volume, price, isTakerStrategy);
+  TradedAmounts tradedAmounts;
+  if (sanitizedVol == volume) {
+    TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+    TradeInfo tradeInfo(0UL, m, side, TradeOptions(priceOptions));
+    tradedAmounts = placeOrder(amountToSell, volume, price, tradeInfo).tradedAmounts();
+  } else {
+    tradedAmounts.tradedFrom = sanitizedVol;
+  }
+  return tradedAmounts;
+}
+
 int HuobiPrivate::AccountIdFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts");
   for (const json& accDetails : result["data"]) {

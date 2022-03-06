@@ -229,6 +229,110 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
 }
 
+namespace {
+bool IsAboveDustAmountThreshold(const ExchangeInfo::MonetaryAmountSet &dustThresholds, MonetaryAmount amount) {
+  auto lb = std::ranges::lower_bound(dustThresholds, amount);
+  return lb == dustThresholds.end() || lb->currencyCode() != amount.currencyCode() || *lb <= amount;
+}
+}  // namespace
+
+TradedAmountsVector ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
+  using MonetaryAmountSet = ExchangeInfo::MonetaryAmountSet;
+  const MonetaryAmountSet &dustThresholds = exchangeInfo().dustAmountsThreshold();
+  auto dustThresholdLb = std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, currencyCode));
+  TradedAmountsVector ret;
+  if (dustThresholdLb == dustThresholds.end() || dustThresholdLb->currencyCode() != currencyCode) {
+    log::warn("No dust threshold is configured for {} on {}", currencyCode.str(), _exchangePublic.name());
+    return ret;
+  }
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  TradeOptions tradeOptions(priceOptions);
+  MarketSet markets = _exchangePublic.queryTradableMarkets();
+  BalancePortfolio balance = queryAccountBalance();
+  MonetaryAmount dustThreshold = *dustThresholdLb;
+  MonetaryAmount amountBalance;
+  while ((amountBalance = balance.get(currencyCode)) >= dustThreshold) {
+    // Pick a trade currency which has some available balance for which the market exists with 'currencyCode',
+    // whose amount is higher than its dust amount threshold if it exists
+    static constexpr int kNbTypicalPossibleMarkets = 4;
+    SmallVector<Market, kNbTypicalPossibleMarkets> possibleMarkets;
+    for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
+      MonetaryAmount avAmount = avAmountEq.amount;
+      CurrencyCode avCur = avAmount.currencyCode();
+      auto lbAvAmount = std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, avCur));
+      if (lbAvAmount == dustThresholds.end() || lbAvAmount->currencyCode() != avCur || *lbAvAmount < avAmount) {
+        Market m(currencyCode, avCur);
+        if (markets.contains(m)) {
+          possibleMarkets.push_back(std::move(m));
+        } else if (markets.contains(m.reverse())) {
+          possibleMarkets.push_back(m.reverse());
+        }
+      }
+    }
+    SmallVector<TradedAmounts, kNbTypicalPossibleMarkets> tradedAmountsVec;
+    SmallVector<MonetaryAmount, kNbTypicalPossibleMarkets> pricePerMarket;
+    for (auto it = possibleMarkets.begin(); it != possibleMarkets.end(); ++it) {
+      Market m = *it;
+      TradedAmounts tradedAmounts = tryMarketSellOrReturnMinOrderSize(amountBalance, m);
+      if (tradedAmounts.isZero()) {
+        possibleMarkets.erase(it);
+        --it;
+        continue;
+      }
+      if (!tradedAmounts.tradedTo.isZero()) {
+        ret.push_back(tradedAmounts);
+        if (tradedAmounts.tradedFrom == amountBalance) {
+          log::info("Dust {} sweeped successfully into {}", amountBalance.str(), tradedAmounts.tradedTo.str());
+        }
+        tradedAmountsVec.clear();
+        break;
+      }
+      log::info("Cannot end the dust sweeper with {}, we need {}", amountBalance.str(), tradedAmounts.tradedFrom.str());
+      CurrencyCode fromCur = m.base() == currencyCode ? m.quote() : m.base();
+      std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, fromCur, priceOptions);
+      if (optPrice) {
+        tradedAmountsVec.push_back(tradedAmounts);
+        pricePerMarket.push_back(*optPrice);
+      } else {
+        possibleMarkets.erase(it);
+        --it;
+      }
+    }
+    static constexpr MonetaryAmount kMultiplier(15, CurrencyCode(), 1);
+
+    bool boughtSomething = false;
+    for (MonetaryAmount mult(1); !boughtSomething; mult *= kMultiplier) {
+      int pos = 0;
+      for (const TradedAmounts &tradedAmounts : tradedAmountsVec) {
+        // Amount of dust is too low compared to what we can sell. We need to buy additional amount so that we can
+        // launch a bigger sell afterwards.
+        Market m = possibleMarkets[pos];
+        MonetaryAmount sanitizedVol = tradedAmounts.tradedFrom;
+        MonetaryAmount from = mult * sanitizedVol;
+
+        if (m.base() == currencyCode) {
+          // We need to buy some 'base' currency.
+          from *= pricePerMarket[pos];
+        }
+
+        if (balance.hasAtLeast(from) &&
+            IsAboveDustAmountThreshold(dustThresholds, balance.get(from.currencyCode()) - from)) {
+          TradedAmounts marketTradedAmounts = marketTrade(from, currencyCode, tradeOptions, m);
+          if (marketTradedAmounts.tradedTo.isStrictlyPositive()) {
+            boughtSomething = true;
+            break;
+          }
+        }
+
+        ++pos;
+      }
+    }
+
+    balance = queryAccountBalance();
+  }
+  return ret;
+}
+
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
                                                   const TradeInfo &tradeInfo) {
   Market m = tradeInfo.m;

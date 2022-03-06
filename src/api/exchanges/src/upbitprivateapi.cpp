@@ -291,6 +291,20 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
 
 }  // namespace
 
+void UpbitPrivate::applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
+                            MonetaryAmount& volume) {
+  if (fromCurrencyCode == m.quote()) {
+    // For 'buy', from amount is fee excluded
+    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
+    if (isTakerStrategy) {
+      from = exchangeInfo.applyFee(from, feeType);
+    } else {
+      volume = exchangeInfo.applyFee(volume, feeType);
+    }
+  }
+}
+
 PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
@@ -306,16 +320,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  if (fromCurrencyCode == m.quote()) {
-    // For 'buy', from amount is fee excluded
-    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
-    if (isTakerStrategy) {
-      from = exchangeInfo.applyFee(from, feeType);
-    } else {
-      volume = exchangeInfo.applyFee(volume, feeType);
-    }
-  }
+  applyFee(m, fromCurrencyCode, isTakerStrategy, from, volume);
 
   MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
@@ -436,6 +441,29 @@ bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWith
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+}
+
+TradedAmounts UpbitPrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+  if (!optPrice) {
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts();
+  }
+  MonetaryAmount price = *optPrice;
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / price, m.base()));
+  MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
+  TradedAmounts tradedAmounts;
+  if (sanitizedVol == volume) {
+    TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+    TradeInfo tradeInfo(0UL, m, side, TradeOptions(priceOptions));
+    tradedAmounts = placeOrder(amountToSell, volume, price, tradeInfo).tradedAmounts();
+  } else {
+    tradedAmounts.tradedFrom = sanitizedVol;
+  }
+  return tradedAmounts;
 }
 
 }  // namespace cct::api

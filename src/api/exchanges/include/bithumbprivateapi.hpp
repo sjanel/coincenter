@@ -52,6 +52,8 @@ class BithumbPrivate : public ExchangePrivate {
   bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
+  TradedAmounts tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) override;
+
  private:
   struct DepositWalletFunc {
 #ifndef CCT_AGGR_INIT_CXX20
