@@ -1,4 +1,3 @@
-
 #include "monetaryamount.hpp"
 
 #include <gtest/gtest.h>

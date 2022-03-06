@@ -1,9 +1,6 @@
 #include "tradedamounts.hpp"
 
 namespace cct {
-TradedAmounts TradedAmounts::operator+(const TradedAmounts &o) const {
-  return TradedAmounts(tradedFrom + o.tradedFrom, tradedTo + o.tradedTo);
-}
 
 string TradedAmounts::str() const {
   string ret;
@@ -12,4 +9,10 @@ string TradedAmounts::str() const {
   ret.append(tradedTo.str());
   return ret;
 }
+
+std::ostream &operator<<(std::ostream &os, const TradedAmounts &a) {
+  os << a.tradedFrom << " -> " << a.tradedTo;
+  return os;
+}
+
 }  // namespace cct

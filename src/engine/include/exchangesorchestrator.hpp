@@ -50,6 +50,9 @@ class ExchangesOrchestrator {
                                      std::span<const ExchangeName> privateExchangeNames,
                                      const TradeOptions &tradeOptions);
 
+  TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
+                                                            CurrencyCode currencyCode);
+
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
                         Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawRefreshTime);

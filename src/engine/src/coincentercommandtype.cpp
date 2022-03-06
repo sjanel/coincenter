@@ -38,6 +38,8 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
       return "Sell";
     case CoincenterCommandType::kWithdraw:
       return "Withdraw";
+    case CoincenterCommandType::kDustSweeper:
+      return "DustSweeper";
     default:
       throw exception("Unknown command type");
   }

@@ -267,6 +267,14 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
         .setExchangeNames(std::move(exchanges));
   }
 
+  if (!cmdLineOptions.dustSweeper.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.dustSweeper);
+    auto [currencyCode, exchanges] = anyParser.getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory);
+    _commands.emplace_back(CoincenterCommandType::kDustSweeper)
+        .setCur1(currencyCode)
+        .setExchangeNames(std::move(exchanges));
+  }
+
   if (!cmdLineOptions.withdrawFee.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdrawFee);
     auto [withdrawFeeCur, exchanges] = anyParser.getCurrencyPublicExchanges();

@@ -98,6 +98,13 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kWithdraw2 = "' file.";
   static constexpr std::string_view kWithdraw = JoinStringView_v<kWithdraw1, kDepositAddressesFileName, kWithdraw2>;
 
+  static constexpr std::string_view kDustSweeper =
+      "Attempts to clean small remaining amount of given currency on each given exchange."
+      " The amount is considered 'small' and eligible for dust sweeper process if the 'dustAmountsThreshold' is set in "
+      "the config file for this currency and if starting available amount is lower than this defined threshold."
+      " Dust sweeper process is iterative, involving at most 'dustSweeperMaxNbTrades' max trades to be set as well in "
+      "the config file.";
+
   static constexpr std::string_view kMonitoringPort1 = "Specify port of metric gateway instance (default: ";
   static constexpr std::string_view kMonitoringPort =
       JoinStringView_v<kMonitoringPort1, IntToStringView_v<CoincenterCmdLineOptions::kDefaultMonitoringPort>,
@@ -166,6 +173,8 @@ struct CoincenterCmdLineOptions {
   std::string_view withdraw;
   std::string_view withdrawAll;
   std::string_view withdrawFee;
+
+  std::string_view dustSweeper;
 
   std::string_view last24hTradedVolume;
   std::string_view lastPrice;
@@ -370,20 +379,22 @@ struct CoincenterAllowedOptions {
       {{{"Trade", 43}, "--trade-updateprice", "<time>", CoincenterCmdLineOptions::kTradeUpdatePrice},
        &OptValueType::tradeUpdatePrice},
       {{{"Trade", 44}, "--trade-sim", "", CoincenterCmdLineOptions::kSimulationMode}, &OptValueType::tradeSim},
-      {{{"Withdraw and deposit", 50},
+      {{{"Tools", 50}, "--dust-sweeper", "<cur[,exch1,...]>", CoincenterCmdLineOptions::kDustSweeper},
+       &OptValueType::dustSweeper},
+      {{{"Withdraw and deposit", 60},
         "--deposit-info",
         "<cur[,exch1,...]>",
         "Get deposit wallet information for given currency."
         " If no exchange accounts are given, will query all of them by default"},
        &OptValueType::depositInfo},
-      {{{"Withdraw and deposit", 50}, "--withdraw", 'w', "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
+      {{{"Withdraw and deposit", 60}, "--withdraw", 'w', "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
        &OptValueType::withdraw},
-      {{{"Withdraw and deposit", 50},
+      {{{"Withdraw and deposit", 60},
         "--withdraw-all",
         "<cur,from-to>",
         "Withdraw all available amount instead of a specified amount."},
        &OptValueType::withdrawAll},
-      {{{"Withdraw and deposit", 50},
+      {{{"Withdraw and deposit", 60},
         "--withdraw-fee",
         "<cur[,exch1,...]>",
         "Prints withdraw fees of given currency on all supported exchanges,"
@@ -395,16 +406,16 @@ struct CoincenterAllowedOptions {
         "Progressively send metrics to external instance provided that it's correctly set up "
         "(Prometheus by default). Refer to the README for more information"},
        &OptValueType::useMonitoring},
-      {{{"Monitoring", 60}, "--monitoring-port", "<port>", CoincenterCmdLineOptions::kMonitoringPort},
+      {{{"Monitoring", 70}, "--monitoring-port", "<port>", CoincenterCmdLineOptions::kMonitoringPort},
        &OptValueType::monitoringPort},
-      {{{"Monitoring", 60}, "--monitoring-ip", "<IPv4>", CoincenterCmdLineOptions::kMonitoringIP},
+      {{{"Monitoring", 70}, "--monitoring-ip", "<IPv4>", CoincenterCmdLineOptions::kMonitoringIP},
        &OptValueType::monitoringAddress},
-      {{{"Monitoring", 60},
+      {{{"Monitoring", 70},
         "--monitoring-user",
         "<username>",
         "Specify username of metric gateway instance (default: none)"},
        &OptValueType::monitoringUsername},
-      {{{"Monitoring", 60},
+      {{{"Monitoring", 70},
         "--monitoring-pass",
         "<password>",
         "Specify password of metric gateway instance (default: none)"},

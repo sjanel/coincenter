@@ -64,6 +64,10 @@ class QueryResultPrinter {
   void printWithdraw(const WithdrawInfo &withdrawInfo, MonetaryAmount grossAmount, bool isPercentageWithdraw,
                      const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName) const;
 
+  void printDustSweeper(
+      const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
+      CurrencyCode currencyCode) const;
+
  private:
   void printTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount amount,
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,

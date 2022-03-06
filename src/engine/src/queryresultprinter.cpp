@@ -741,4 +741,64 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
   }
 }
 
+void QueryResultPrinter::printDustSweeper(
+    const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
+    CurrencyCode currencyCode) const {
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable t("Exchange", "Account", "Trades", "Final Amount");
+      for (const auto &[exchangePtr, tradedAmountsVectorWithFinalAmount] :
+           tradedAmountsVectorWithFinalAmountPerExchange) {
+        string tradesStr;
+        for (const auto &tradedAmounts : tradedAmountsVectorWithFinalAmount.tradedAmountsVector) {
+          if (!tradesStr.empty()) {
+            tradesStr.append(", ");
+          }
+          tradesStr.append(tradedAmounts.str());
+        }
+        t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesStr),
+                       tradedAmountsVectorWithFinalAmount.finalAmount.str());
+      }
+      t.print(_os);
+      break;
+    }
+    case ApiOutputType::kJson: {
+      json in;
+      in.emplace("req", CoincenterCommandTypeToString(CoincenterCommandType::kDustSweeper));
+      json inOpt;
+      inOpt.emplace("cur", currencyCode.str());
+      in.emplace("opt", std::move(inOpt));
+
+      json out = json::object();
+      for (const auto &[exchangePtr, tradedAmountsVectorWithFinalAmount] :
+           tradedAmountsVectorWithFinalAmountPerExchange) {
+        json tradedAmountsArray = json::array_t();
+        for (const auto &tradedAmounts : tradedAmountsVectorWithFinalAmount.tradedAmountsVector) {
+          json tradedAmountsData;
+          tradedAmountsData.emplace("from", tradedAmounts.tradedFrom.str());
+          tradedAmountsData.emplace("to", tradedAmounts.tradedTo.str());
+          tradedAmountsArray.push_back(std::move(tradedAmountsData));
+        }
+
+        json tradedInfoPerExchangeData;
+        tradedInfoPerExchangeData.emplace("trades", std::move(tradedAmountsArray));
+        tradedInfoPerExchangeData.emplace("finalAmount", tradedAmountsVectorWithFinalAmount.finalAmount.str());
+
+        auto it = out.find(exchangePtr->name());
+        if (it == out.end()) {
+          json dataForExchangeUser;
+          dataForExchangeUser.emplace(exchangePtr->keyName(), std::move(tradedInfoPerExchangeData));
+          out.emplace(exchangePtr->name(), std::move(dataForExchangeUser));
+        } else {
+          it->emplace(exchangePtr->keyName(), std::move(tradedInfoPerExchangeData));
+        }
+      }
+      PrintOutJson(_os, std::move(in), std::move(out));
+      break;
+    }
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+}
+
 }  // namespace cct

@@ -80,6 +80,11 @@ class Coincenter {
   NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                                             const OrdersConstraints &ordersConstraints);
 
+  /// Attemps to sell all small amount of 'currencyCode' (dust) for given list of accounts.
+  /// Dust threshold should be set first in the config file for the corresponding currency
+  TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
+                                                            CurrencyCode currencyCode);
+
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
 

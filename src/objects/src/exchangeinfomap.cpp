@@ -39,14 +39,19 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
     bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
 
+    ExchangeInfo::MonetaryAmountSet dustAmountsThresholds(
+        queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
+    int dustSweeperMaxNbTrades = queryTopLevelOption.getInt(exchangeName, "dustSweeperMaxNbTrades");
+
     map.insert_or_assign(
         exchangeName,
         ExchangeInfo(exchangeName, makerStr, takerStr,
                      assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
                      assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
                      assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
-                     std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate, multiTradeAllowedByDefault,
-                     validateDepositAddressesInFile, placeSimulatedRealOrder));
+                     std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
+                     dustSweeperMaxNbTrades, multiTradeAllowedByDefault, validateDepositAddressesInFile,
+                     placeSimulatedRealOrder));
   }  // namespace cct
 
   return map;

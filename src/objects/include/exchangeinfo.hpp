@@ -15,6 +15,11 @@ class ExchangeInfo {
   using CurrencySet = FlatSet<CurrencyCode>;
   using CurrencyVector = vector<CurrencyCode>;
 
+  struct CompareByCurrencyCode {
+    bool operator()(MonetaryAmount lhs, MonetaryAmount rhs) const { return lhs.currencyCode() < rhs.currencyCode(); }
+  };
+  using MonetaryAmountSet = FlatSet<MonetaryAmount, CompareByCurrencyCode>;
+
   enum struct FeeType { kMaker, kTaker };
 
   struct APIUpdateFrequencies {
@@ -23,9 +28,10 @@ class ExchangeInfo {
 
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
                CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
-               CurrencyVector &&preferredPaymentCurrencies, const APIUpdateFrequencies &apiUpdateFrequencies,
-               Duration publicAPIRate, Duration privateAPIRate, bool multiTradeAllowedByDefault,
-               bool validateDepositAddressesInFile, bool placeSimulateRealOrder);
+               CurrencyVector &&preferredPaymentCurrencies, MonetaryAmountSet &&dustAmountsThreshold,
+               const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
+               int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
+               bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -36,6 +42,14 @@ class ExchangeInfo {
 
   /// Get a reference to the array of preferred payment currencies ordered by decreasing priority.
   const CurrencyVector &preferredPaymentCurrencies() const { return _preferredPaymentCurrencies; }
+
+  /// Get a reference to the set of monetary amounts representing the threshold for dust sweeper
+  const MonetaryAmountSet &dustAmountsThreshold() const { return _dustAmountsThreshold; }
+
+  /// Maximum number of trades performed by the automatic dust sweeper process.
+  /// A high value may have a higher chance of successfully sell to 0 the wanted currency,
+  /// at the cost of more fees paid to the exchange.
+  int dustSweeperMaxNbTrades() const { return _dustSweeperMaxNbTrades; }
 
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
@@ -56,7 +70,7 @@ class ExchangeInfo {
   /// Get the minimum time between two public api queries
   Duration publicAPIRate() const { return _publicAPIRate; }
 
-  /// Get the minimum time between two public api queries
+  /// Get the minimum time between two private api queries
   Duration privateAPIRate() const { return _privateAPIRate; }
 
   bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
@@ -73,11 +87,14 @@ class ExchangeInfo {
   CurrencySet _excludedCurrenciesAll;          // Currencies will be completely ignored by the exchange
   CurrencySet _excludedCurrenciesWithdrawal;   // Currencies unavailable for withdrawals
   CurrencyVector _preferredPaymentCurrencies;  // Ordered list of currencies available from smart trading.
+  MonetaryAmountSet _dustAmountsThreshold;  // Total amount in balance under one of these thresholds will be considered
+                                            // for dust sweeper
   APIUpdateFrequencies _apiUpdateFrequencies;
   Duration _publicAPIRate;
   Duration _privateAPIRate;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
+  int16_t _dustSweeperMaxNbTrades;  // max number of trades of a dust sweeper attempt per currency
   bool _multiTradeAllowedByDefault;
   bool _validateDepositAddressesInFile;
   bool _placeSimulateRealOrder;
