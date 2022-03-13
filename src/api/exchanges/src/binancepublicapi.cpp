@@ -21,6 +21,8 @@
 namespace cct::api {
 namespace {
 
+static constexpr int kMaxNbLastTrades = 1000;
+
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
   string endpoint(method);
   if (!curlPostData.empty()) {
@@ -292,7 +294,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
   return ret;
 }
 
-MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount sanitizedPrice,
+MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount priceForMinNotional,
                                              bool isTakerOrder) {
   const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), m);
   MonetaryAmount ret(vol);
@@ -309,7 +311,32 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
         marketLotSizeFilter = std::addressof(filter);
       }
     } else if (filterType == "MIN_NOTIONAL") {
-      minNotionalFilter = std::addressof(filter);
+      if (isTakerOrder) {
+        const bool appliesToMarketTrade = filter["applyToMarket"].get<bool>();
+        if (appliesToMarketTrade) {
+          const int avgPriceMins = filter["avgPriceMins"].get<int>();
+
+          if (avgPriceMins == 0) {
+            // price should be the last matched price
+            LastTradesVector lastTrades = queryLastTrades(m, 1);
+            if (lastTrades.empty()) {
+              log::error("Unable to retrieve last trades from {}, use average price instead for min notional", m.str());
+              json result =
+                  PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", m.assetsPairStrUpper()}});
+              priceForMinNotional = MonetaryAmount(result["price"].get<std::string_view>(), m.quote());
+            } else {
+              priceForMinNotional = lastTrades.front().price();
+            }
+          } else {
+            json result =
+                PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", m.assetsPairStrUpper()}});
+            priceForMinNotional = MonetaryAmount(result["price"].get<std::string_view>(), m.quote());
+          }
+          minNotionalFilter = std::addressof(filter);
+        }
+      } else {
+        minNotionalFilter = std::addressof(filter);
+      }
     }
   }
 
@@ -319,8 +346,8 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
     // "avgPriceMins": 5,
     // "minNotional": "0.05000000"
     MonetaryAmount minNotional((*minNotionalFilter)["minNotional"].get<std::string_view>());
-    MonetaryAmount priceTimesQuantity = ret.toNeutral() * sanitizedPrice.toNeutral();
-    minVolumeAfterMinNotional = MonetaryAmount(minNotional / sanitizedPrice, ret.currencyCode());
+    MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForMinNotional.toNeutral();
+    minVolumeAfterMinNotional = MonetaryAmount(minNotional / priceForMinNotional, ret.currencyCode());
     if (priceTimesQuantity < minNotional) {
       log::debug("Too small min price * quantity. {} increased to {} for {}", ret.str(),
                  minVolumeAfterMinNotional.str(), m.str());
@@ -428,6 +455,10 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
 }
 
 BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
+  if (nbTrades > kMaxNbLastTrades) {
+    log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, _name);
+    nbTrades = kMaxNbLastTrades;
+  }
   json result =
       PublicQuery(_commonInfo._curlHandle, "/api/v3/trades", {{"symbol", m.assetsPairStrUpper()}, {"limit", nbTrades}});
 
