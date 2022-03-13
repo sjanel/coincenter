@@ -34,13 +34,6 @@ using ExchangeAmountToCurrencyVector = SmallVector<ExchangeAmountToCurrency, kTy
 using ExchangeAmountToCurrencyToAmountVector = SmallVector<ExchangeAmountToCurrencyToAmount, kTypicalNbPrivateAccounts>;
 using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
 
-template <class FilterFunc>
-void Filter(ExchangeAmountPairVector &exchangeAmountPairVector, const FilterFunc &func) {
-  SmallVector<bool, kTypicalNbPrivateAccounts> keepExchanges(exchangeAmountPairVector.size());
-  std::ranges::transform(exchangeAmountPairVector, keepExchanges.begin(), func);
-  FilterVector(exchangeAmountPairVector, keepExchanges);
-}
-
 template <class VecWithExchangeFirstPos>
 ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetriever exchangeRetriever,
                                                                   VecWithExchangeFirstPos &exchangeVector,
@@ -53,8 +46,7 @@ ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetrie
 
   SmallVector<std::string_view, kTypicalNbPrivateAccounts> names(exchangeVector.size());
 
-  std::transform(exchangeVector.begin(), exchangeVector.end(), names.begin(),
-                 [](const auto &p) { return p.first->apiPublic().name(); });
+  std::ranges::transform(exchangeVector, names.begin(), [](const auto &p) { return p.first->apiPublic().name(); });
 
   return exchangeRetriever.selectPublicExchanges(names);
 }
@@ -131,7 +123,7 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const PrivateE
   ExchangeRetriever::SelectedExchanges depositInfoExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
-  /// Filter only on exchanges with can receive given currency
+  /// Keep only exchanges which can receive given currency
   SmallVector<bool, kTypicalNbPrivateAccounts> canDepositCurrency(depositInfoExchanges.size());
 
   auto canDepositFunc = [depositCurrency](Exchange *e) {
@@ -140,8 +132,11 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const PrivateE
     if (curIt == tradableCur.end()) {
       return false;
     }
-    log::log(curIt->canDeposit() ? log::level::debug : log::level::info, "{} can{} be deposited on {} currently",
-             curIt->canDeposit() ? "" : "not", curIt->standardCode().str(), e->name());
+    if (curIt->canDeposit()) {
+      log::debug("{} can currently be deposited on {}", curIt->standardCode().str(), e->name());
+    } else {
+      log::info("{} cannot currently be deposited on {}", curIt->standardCode().str(), e->name());
+    }
     return curIt->canDeposit();
   };
 
