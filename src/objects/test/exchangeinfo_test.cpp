@@ -15,17 +15,12 @@ constexpr std::string_view kExchangeNameTest = kSupportedExchanges[0];
 
 class ExchangeInfoTest : public ::testing::Test {
  protected:
-  ExchangeInfoTest()
-      : loadConfiguration(kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest),
-        exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
-        exchangeInfo(exchangeInfoMap.at(kExchangeNameTest)) {}
-
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  LoadConfiguration loadConfiguration;
-  ExchangeInfoMap exchangeInfoMap;
-  ExchangeInfo exchangeInfo;
+  LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
+  ExchangeInfoMap exchangeInfoMap{ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))};
+  ExchangeInfo exchangeInfo{exchangeInfoMap.at(kExchangeNameTest)};
 };
 
 TEST_F(ExchangeInfoTest, ExcludedAssets) {
