@@ -13,7 +13,7 @@ static constexpr QueryType kOrderBook{4};
 static constexpr QueryType kTradedVolume{5};
 static constexpr QueryType kLastPrice{6};
 static constexpr QueryType kDepositWallet{7};
-static constexpr QueryType kNbDecimalsUnitsBithumb{8};
+static constexpr QueryType kCurrencyInfoBithumb{8};
 
 static constexpr QueryType kQueryTypeMax{9};
 

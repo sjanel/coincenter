@@ -69,7 +69,7 @@ struct ExchangeInfoDefault {
         "tradedVolume": "1h",
         "lastPrice": "1s",
         "depositWallet": "1min",
-        "nbDecimals": "4d"
+        "currencyInfo": "4d"
       }
     },
     "exchange": {
@@ -181,7 +181,7 @@ struct ExchangeInfoDefault {
         "tradedVolume": "1h",
         "lastPrice": "1s",
         "depositWallet": "1min",
-        "nbDecimals": "4d"
+        "currencyInfo": "4d"
       }
     }
   },

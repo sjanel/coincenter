@@ -30,7 +30,7 @@ string BuildUpdateFrequenciesString(const ExchangeInfo::APIUpdateFrequencies &ap
   ret.append(", TdV: ").append(DurationToString(apiUpdateFrequencies.freq[api::kTradedVolume]));
   ret.append(", Pri: ").append(DurationToString(apiUpdateFrequencies.freq[api::kLastPrice]));
   ret.append(", Wal: ").append(DurationToString(apiUpdateFrequencies.freq[api::kDepositWallet]));
-  ret.append(", NbD: ").append(DurationToString(apiUpdateFrequencies.freq[api::kNbDecimalsUnitsBithumb]));
+  ret.append(", CuB: ").append(DurationToString(apiUpdateFrequencies.freq[api::kCurrencyInfoBithumb]));
   ret.push_back(']');
   return ret;
 }

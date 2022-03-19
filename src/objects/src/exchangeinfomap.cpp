@@ -32,7 +32,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "tradedVolume"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "lastPrice"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "depositWallet"),
-         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "nbDecimals")}};
+         queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "currencyInfo")}};
 
     bool multiTradeAllowedByDefault = queryTopLevelOption.getBool(exchangeName, "multiTradeAllowedByDefault");
     bool validateDepositAddressesInFile =

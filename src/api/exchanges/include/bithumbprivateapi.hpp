@@ -18,13 +18,6 @@ class BithumbPublic;
 
 class BithumbPrivate : public ExchangePrivate {
  public:
-  struct NbDecimalsTimeValue {
-    int8_t nbDecimals;
-    TimePoint lastUpdatedTime;
-  };
-
-  using MaxNbDecimalsUnitMap = std::unordered_map<CurrencyCode, NbDecimalsTimeValue>;
-
   BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
@@ -61,27 +54,31 @@ class BithumbPrivate : public ExchangePrivate {
  private:
   struct DepositWalletFunc {
 #ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, MaxNbDecimalsUnitMap& maxNbDecimalsUnitMap,
-                      BithumbPublic& exchangePublic)
-        : _curlHandle(curlHandle),
-          _apiKey(apiKey),
-          _maxNbDecimalsUnitMap(maxNbDecimalsUnitMap),
-          _exchangePublic(exchangePublic) {}
+    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BithumbPublic& exchangePublic)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
 #endif
 
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
-    MaxNbDecimalsUnitMap& _maxNbDecimalsUnitMap;
     BithumbPublic& _exchangePublic;
   };
 
   void cancelOrderProcess(const OrderRef& orderRef);
 
+  struct CurrencyOrderInfo {
+    int8_t nbDecimals{};
+    TimePoint lastNbDecimalsUpdatedTime{};
+    MonetaryAmount minOrderSize;
+    TimePoint lastMinOrderSizeUpdatedTime{};
+  };
+
+  using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;
+
   CurlHandle _curlHandle;
-  MaxNbDecimalsUnitMap _maxNbDecimalsUnitMap;
-  Duration _nbDecimalsRefreshTime;
+  CurrencyOrderInfoMap _currencyOrderInfoMap;
+  Duration _currencyOrderInfoRefreshTime;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

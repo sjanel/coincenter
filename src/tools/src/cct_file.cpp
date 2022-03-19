@@ -57,7 +57,11 @@ void File::write(const json &data) const {
   if (!file) {
     throw exception("Unable to open " + _filePath + " for writing");
   }
-  file << data.dump(2);
+  if (data.empty()) {
+    file << "{}" << std::endl;
+  } else {
+    file << data.dump(2) << std::endl;
+  }
 }
 
 }  // namespace cct
