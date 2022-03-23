@@ -42,24 +42,25 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.appendHttpHeader("KC-API-PASSPHRASE", passphrase);
   opts.appendHttpHeader("KC-API-KEY-VERSION", 2);
 
-  json dataJson = json::parse(curlHandle.query(endpoint, std::move(opts)));
-  auto errCodeIt = dataJson.find("code");
-  if (errCodeIt != dataJson.end() && errCodeIt->get<std::string_view>() != "200000") {
-    string errStr("Kucoin error ");
+  json ret = json::parse(curlHandle.query(endpoint, std::move(opts)));
+  auto errCodeIt = ret.find("code");
+  if (errCodeIt != ret.end() && errCodeIt->get<std::string_view>() != "200000") {
+    string errStr("Kucoin error: ");
     errStr.append(errCodeIt->get<std::string_view>());
-    auto msgIt = dataJson.find("msg");
-    if (msgIt != dataJson.end()) {
+    auto msgIt = ret.find("msg");
+    if (msgIt != ret.end()) {
       errStr.append(" - ");
       errStr.append(msgIt->get<std::string_view>());
     }
     if (requestType == HttpRequestType::kDelete) {
       log::warn("{} bypassed, object probably disappeared correctly", errStr);
-      dataJson.clear();
-      return dataJson;
+      ret.clear();
+      return ret;
     }
+    log::error("Full Kucoin json error: '{}'", ret.dump());
     throw exception(std::move(errStr));
   }
-  return dataJson["data"];
+  return ret["data"];
 }
 
 void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount amount, std::string_view fromStr,

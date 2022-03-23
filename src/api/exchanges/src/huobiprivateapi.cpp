@@ -46,7 +46,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet) {
       signaturePostdata.append(std::move(postdata));
-      // After a move, an object has unspecified state, but is valid. Let's call clear() to force it to be empty.
+      // After a move, an object has unspecified but valid state. Let's call clear() to force it to be empty.
       postdata.clear();
     } else {
       postDataFormat = CurlOptions::PostDataFormat::kJson;
@@ -67,7 +67,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       curlHandle.query(method, CurlOptions(requestType, std::move(postdata), HuobiPublic::kUserAgent, postDataFormat)));
   auto statusIt = ret.find("status");
   if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
-    string errMsg("Error: ");
+    log::error("Full Huobi json error: '{}'", ret.dump());
+    string errMsg("Huobi error: ");
     auto errIt = ret.find("err-msg");
     if (errIt == ret.end()) {
       errMsg.append("unknown");

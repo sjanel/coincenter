@@ -24,11 +24,15 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.push_back('?');
     method.append(curlPostData.str());
   }
-  json dataJson = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
-  if (dataJson.contains("code") && dataJson["code"].get<std::string_view>() != "200000") {
-    throw exception("Error in Kucoin REST API response");
+  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
+  auto errorIt = ret.find("code");
+  if (errorIt != ret.end() && errorIt->get<std::string_view>() != "200000") {
+    log::error("Full Kucoin json error: '{}'", ret.dump());
+    string err("Kucoin error: ");
+    err.append(errorIt->get<std::string_view>());
+    throw exception(std::move(err));
   }
-  return dataJson["data"];
+  return ret["data"];
 }
 
 }  // namespace

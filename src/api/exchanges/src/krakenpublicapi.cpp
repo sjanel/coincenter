@@ -18,16 +18,17 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  json jsonData = json::parse(
+  json ret = json::parse(
       curlHandle.query(method, CurlOptions(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent)));
-  auto errorIt = jsonData.find("error");
-  if (errorIt != jsonData.end() && !errorIt->empty()) {
+  auto errorIt = ret.find("error");
+  if (errorIt != ret.end() && !errorIt->empty()) {
+    log::error("Full Kraken json error: '{}'", ret.dump());
     std::string_view msg = errorIt->front().get<std::string_view>();
-    string ex("Kraken public query error: ");
+    string ex("Kraken error: ");
     ex.append(msg);
     throw exception(std::move(ex));
   }
-  return jsonData["result"];
+  return ret["result"];
 }
 
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,

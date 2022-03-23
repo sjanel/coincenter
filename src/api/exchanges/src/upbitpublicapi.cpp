@@ -9,20 +9,29 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "fiatconverter.hpp"
+#include "stringhelpers.hpp"
 
 namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  json dataJson = json::parse(
+  json ret = json::parse(
       curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent)));
   //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
-  if (dataJson.contains("error")) {
-    const long statusCode = dataJson["name"].get<long>();
-    std::string_view msg = dataJson["message"].get<std::string_view>();
-    throw exception("error: " + MonetaryAmount(statusCode).amountStr() + " \"" + string(msg) + "\"");
+  auto errorIt = ret.find("error");
+  if (errorIt != ret.end()) {
+    log::error("Full Upbit json error: '{}'", ret.dump());
+    auto statusCodeIt = ret.find("name");
+    const long statusCode = statusCodeIt == ret.end() ? -1 : statusCodeIt->get<long>();
+    auto msgIt = ret.find("message");
+    std::string_view msg = msgIt == ret.end() ? "Unknown" : msgIt->get<std::string_view>();
+    string err("Upbit error: ");
+    err.append(msg);
+    err.append(", code = ");
+    AppendString(err, statusCode);
+    throw exception(std::move(err));
   }
-  return dataJson;
+  return ret;
 }
 
 }  // namespace

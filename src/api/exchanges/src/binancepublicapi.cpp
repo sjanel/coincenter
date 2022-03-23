@@ -29,19 +29,19 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
     endpoint.push_back('?');
     endpoint.append(curlPostData.str());
   }
-  json dataJson =
-      json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
-  auto foundErrorIt = dataJson.find("code");
-  auto foundMsgIt = dataJson.find("msg");
-  if (foundErrorIt != dataJson.end() && foundMsgIt != dataJson.end()) {
+  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
+  auto foundErrorIt = ret.find("code");
+  auto foundMsgIt = ret.find("msg");
+  if (foundErrorIt != ret.end() && foundMsgIt != ret.end()) {
     const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
+    log::error("Full Binance json error: '{}'", ret.dump());
     string ex("Error: ");
     ex.append(MonetaryAmount(statusCode).amountStr());
     ex.append(", msg: ");
     ex.append(foundMsgIt->get<std::string_view>());
     throw exception(std::move(ex));
   }
-  return dataJson;
+  return ret;
 }
 
 template <class ExchangeInfoDataByMarket>

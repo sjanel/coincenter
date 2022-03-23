@@ -50,10 +50,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
   opts.appendHttpHeader("Authorization", authStr);
 
-  json dataJson = json::parse(curlHandle.query(endpoint, std::move(opts)));
+  json ret = json::parse(curlHandle.query(endpoint, std::move(opts)));
   if (throwIfError) {
-    auto errorIt = dataJson.find("error");
-    if (errorIt != dataJson.end()) {
+    auto errorIt = ret.find("error");
+    if (errorIt != ret.end()) {
+      log::error("Full Upbit json error: '{}'", ret.dump());
       if (errorIt->contains("name")) {
         throw exception(std::move((*errorIt)["name"].get_ref<string&>()));
       }
@@ -63,7 +64,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       throw exception("Unknown Upbit API error message");
     }
   }
-  return dataJson;
+  return ret;
 }
 }  // namespace
 

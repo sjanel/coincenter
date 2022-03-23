@@ -32,16 +32,16 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     methodUrl.append(urlOpts);
   }
 
-  json dataJson =
-      json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
-  auto errorIt = dataJson.find("status");
-  if (errorIt != dataJson.end()) {
+  json ret = json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
+  auto errorIt = ret.find("status");
+  if (errorIt != ret.end()) {
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
     if (statusCode != "0000") {                                      // "0000" stands for: request OK
+      log::error("Full Bithumb json error: '{}'", ret.dump());
       string err("Bithumb error: ");
       err.append(statusCode);
-      auto msgIt = dataJson.find("message");
-      if (msgIt != dataJson.end()) {
+      auto msgIt = ret.find("message");
+      if (msgIt != ret.end()) {
         err.append(" \"");
         err.append(msgIt->get<std::string_view>());
         err.push_back('\"');
@@ -49,7 +49,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
       throw exception(std::move(err));
     }
   }
-  return dataJson["data"];
+  return ret["data"];
 }
 
 }  // namespace
