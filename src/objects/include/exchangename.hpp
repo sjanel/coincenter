@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <ostream>
 #include <span>
 #include <string_view>
@@ -30,18 +31,22 @@ class PrivateExchangeName {
 
   PrivateExchangeName(std::string_view exchangeName, std::string_view keyName);
 
-  std::string_view name() const { return std::string_view(_nameWithKey.begin(), _nameWithKey.begin() + _dashPos); }
-
-  std::string_view keyName() const {
-    return std::string_view(_nameWithKey.begin() + _dashPos + (_dashPos != _nameWithKey.size()), _nameWithKey.end());
+  std::string_view name() const {
+    std::size_t dash = dashPos();
+    return std::string_view(_nameWithKey.data(), dash == string::npos ? _nameWithKey.size() : dash);
   }
 
-  bool isKeyNameDefined() const { return _dashPos < _nameWithKey.size(); }
+  std::string_view keyName() const {
+    std::size_t dash = dashPos();
+    return std::string_view(_nameWithKey.begin() + (dash == string::npos ? _nameWithKey.size() : dash + 1U),
+                            _nameWithKey.end());
+  }
+
+  bool isKeyNameDefined() const { return dashPos() != string::npos; }
 
   std::string_view str() const { return _nameWithKey; }
 
-  bool operator==(const PrivateExchangeName &o) const { return _nameWithKey == o._nameWithKey; }
-  bool operator!=(const PrivateExchangeName &o) const { return !(*this == o); }
+  bool operator==(const PrivateExchangeName &) const = default;
 
   friend std::ostream &operator<<(std::ostream &os, const PrivateExchangeName &v) {
     os << v.str();
@@ -51,8 +56,14 @@ class PrivateExchangeName {
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
+  std::size_t dashPos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
+
+  static constexpr std::size_t kMinExchangeNameLength =
+      std::ranges::min_element(kSupportedExchanges, [](std::string_view lhs, std::string_view rhs) {
+        return lhs.size() < rhs.size();
+      })->size();
+
   string _nameWithKey;
-  std::size_t _dashPos = 0;
 };
 
 using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
