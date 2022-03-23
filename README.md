@@ -541,8 +541,8 @@ The metrics are exported in *push* mode to the gateway at each new query. You ca
 
 ### Repeat
 
-Most `coincenter` options are executed only once, and program is terminated after it.
-To continuously query the same option to export regular metrics to Prometheus, you can use `--repeat` option. It has no effect on "write" queries such as withdraws and trades, but is compatible with all read only options, including private requests (such as balance).
+`coincenter` commands are normally executed only once, and program is terminated after it.
+To continuously query the same option to export regular metrics to Prometheus, you can use `--repeat` option. **Warning**: for trades and withdraw commands, use with care.
 
 Without a following numeric value, the command will repeat endlessly. You can fix a specific number of repeats by giving a number.
 
