@@ -35,6 +35,8 @@ constexpr std::string_view kPaymentCurParamStr = "payment_currency";
 constexpr std::string_view kOrderIdParamStr = "order_id";
 constexpr std::string_view kTypeParamStr = "type";
 
+constexpr std::string_view kWalletAddressEndpointStr = "/info/wallet_address";
+
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
   string strData(endpoint);
@@ -77,7 +79,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
   const bool isInfoOpenedOrders = endpoint == "/info/orders";
   const bool isCancelQuery = endpoint == "/trade/cancel";
-  const bool isDepositInfo = endpoint == "/info/wallet_address";
+  const bool isDepositInfo = endpoint == kWalletAddressEndpointStr;
   const bool isPlaceOrderQuery = !isCancelQuery && endpoint.starts_with("/trade");
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
@@ -176,7 +178,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               return ret;
             }
             if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
-              ret["wallet_address"] = "";
+              ret.clear();
               return ret;
             }
             break;
@@ -246,14 +248,14 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 }
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  json result = PrivateQuery(_curlHandle, _apiKey, "/info/wallet_address", {{"currency", currencyCode.str()}})["data"];
-  std::string_view addressAndTag = result["wallet_address"].get<std::string_view>();
-  if (addressAndTag.empty()) {
+  json ret = PrivateQuery(_curlHandle, _apiKey, kWalletAddressEndpointStr, {{"currency", currencyCode.str()}});
+  if (ret.empty()) {
     string err("Bithumb wallet is not created for ");
     err.append(currencyCode.str());
     err.append(", it should be done with the UI first (no way to do it via API).");
     throw exception(std::move(err));
   }
+  std::string_view addressAndTag = ret["data"]["wallet_address"].get<std::string_view>();
   std::size_t tagPos = addressAndTag.find('&');
   std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
   std::string_view tag(
