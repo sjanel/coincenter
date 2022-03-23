@@ -13,51 +13,46 @@
 #include "exchangepublicapi.hpp"
 #include "fiatconverter.hpp"
 
-namespace cct {
-
-namespace api {
+namespace cct::api {
 
 template <class PublicExchangeT, class PrivateExchangeT>
 class TestAPI {
  public:
-  TestAPI()
-      : loadConfig(kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest),
-        coincenterInfo(settings::RunMode::kProd, loadConfig),
-        coincenterTestInfo(settings::RunMode::kTest, loadConfig),
-        apiKeysProvider(coincenterInfo.dataDir(), coincenterInfo.getRunMode()),
-        apiTestKeysProvider(coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()),
-        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
-        cryptowatchAPI(coincenterInfo),
-        exchangePublic(coincenterInfo, fiatConverter, cryptowatchAPI),
-        exchangePrivatePtr(CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)),
-        currencies(exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
-                                            : exchangePublic.queryTradableCurrencies()),
-        markets(exchangePublic.queryTradableMarkets()),
-        approximatedMarketOrderbooks(exchangePublic.queryAllApproximatedOrderBooks(1)),
-        marketPriceMap(exchangePublic.queryAllPrices()),
-        withdrawalFees(exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
-                                                : exchangePublic.queryWithdrawalFees()) {
+  static ExchangePublic::MarketSet ComputeMarketSetSample(const ExchangePublic::MarketSet &markets,
+                                                          const CurrencyExchangeFlatSet &currencies) {
     static constexpr int kNbSamples = 1;
-    std::sample(markets.begin(), markets.end(), std::inserter(sampleMarkets, sampleMarkets.end()), kNbSamples,
-                std::mt19937{std::random_device{}()});
+    ExchangePublic::MarketSet consideredMarkets;
+    std::ranges::copy_if(markets, std::inserter(consideredMarkets, consideredMarkets.end()), [&currencies](Market m) {
+      auto cur1It = currencies.find(m.base());
+      auto cur2It = currencies.find(m.quote());
+      return cur1It != currencies.end() && cur2It != currencies.end() && (!cur1It->isFiat() || !cur2It->isFiat());
+    });
+    ExchangePublic::MarketSet sampleMarkets;
+    std::ranges::sample(consideredMarkets, std::inserter(sampleMarkets, sampleMarkets.end()), kNbSamples,
+                        std::mt19937{std::random_device{}()});
+    return sampleMarkets;
   }
 
-  LoadConfiguration loadConfig;
-  CoincenterInfo coincenterInfo;
-  CoincenterInfo coincenterTestInfo;
-  APIKeysProvider apiKeysProvider;
-  APIKeysProvider apiTestKeysProvider;
-  FiatConverter fiatConverter;
-  CryptowatchAPI cryptowatchAPI;
-  PublicExchangeT exchangePublic;
-  std::unique_ptr<PrivateExchangeT> exchangePrivatePtr;
+  LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
+  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfig};
+  CoincenterInfo coincenterTestInfo{settings::RunMode::kTest, loadConfig};
+  APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
+  APIKeysProvider apiTestKeysProvider{coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()};
+  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  CryptowatchAPI cryptowatchAPI{coincenterInfo};
+  PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};
+  std::unique_ptr<PrivateExchangeT> exchangePrivatePtr{
+      CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)};
 
-  CurrencyExchangeFlatSet currencies;
-  ExchangePublic::MarketSet markets;
-  ExchangePublic::MarketSet sampleMarkets;
-  ExchangePublic::MarketOrderBookMap approximatedMarketOrderbooks;
-  ExchangePublic::MarketPriceMap marketPriceMap;
-  ExchangePublic::WithdrawalFeeMap withdrawalFees;
+  CurrencyExchangeFlatSet currencies{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
+                                                              : exchangePublic.queryTradableCurrencies()};
+  ExchangePublic::MarketSet markets{exchangePublic.queryTradableMarkets()};
+  ExchangePublic::MarketSet sampleMarkets{ComputeMarketSetSample(markets, currencies)};
+  ExchangePublic::MarketOrderBookMap approximatedMarketOrderbooks{exchangePublic.queryAllApproximatedOrderBooks(1)};
+  ExchangePublic::MarketPriceMap marketPriceMap{exchangePublic.queryAllPrices()};
+  ExchangePublic::WithdrawalFeeMap withdrawalFees{exchangePrivatePtr.get()
+                                                      ? exchangePrivatePtr.get()->queryWithdrawalFees()
+                                                      : exchangePublic.queryWithdrawalFees()};
 
   void testCurrencies() {
     ASSERT_FALSE(currencies.empty());
@@ -103,18 +98,17 @@ class TestAPI {
 
   void testWithdrawalFees() {
     CurrencyExchangeFlatSet withdrawableCryptos;
-    std::copy_if(currencies.begin(), currencies.end(), std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
-                 [this](const CurrencyExchange &c) {
-                   return !c.isFiat() && c.canWithdraw() && std::any_of(markets.begin(), markets.end(), [&c](Market m) {
-                     return m.canTrade(c.standardCode());
-                   });
-                 });
+    std::ranges::copy_if(currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
+                         [this](const CurrencyExchange &c) {
+                           return !c.isFiat() && c.canWithdraw() &&
+                                  std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
+                         });
 
     if (!withdrawableCryptos.empty()) {
       CurrencyExchangeFlatSet sample;
       if (exchangePublic.isWithdrawalFeesSourceReliable()) {
-        std::sample(withdrawableCryptos.begin(), withdrawableCryptos.end(), std::inserter(sample, sample.end()), 1,
-                    std::mt19937{std::random_device{}()});
+        std::ranges::sample(withdrawableCryptos, std::inserter(sample, sample.end()), 1,
+                            std::mt19937{std::random_device{}()});
       } else {
         // If exchange withdrawal fees source is not reliable, make several tries
         sample = std::move(withdrawableCryptos);
@@ -144,17 +138,16 @@ class TestAPI {
   void testDepositWallet() {
     if (exchangePrivatePtr.get()) {
       CurrencyExchangeFlatSet depositableCryptos;
-      std::copy_if(currencies.begin(), currencies.end(), std::inserter(depositableCryptos, depositableCryptos.end()),
-                   [this](const CurrencyExchange &c) {
-                     return !c.isFiat() && c.canDeposit() &&
-                            std::any_of(markets.begin(), markets.end(),
-                                        [&c](Market m) { return m.canTrade(c.standardCode()); });
-                   });
+      std::ranges::copy_if(
+          currencies, std::inserter(depositableCryptos, depositableCryptos.end()), [this](const CurrencyExchange &c) {
+            return !c.isFiat() && c.canDeposit() &&
+                   std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
+          });
       if (!depositableCryptos.empty()) {
         CurrencyExchangeFlatSet sample;
         if (exchangePrivatePtr.get()->canGenerateDepositAddress()) {
-          std::sample(depositableCryptos.begin(), depositableCryptos.end(), std::inserter(sample, sample.end()), 1,
-                      std::mt19937{std::random_device{}()});
+          std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), 1,
+                              std::mt19937{std::random_device{}()});
         } else {
           // If exchange cannot generate deposit wallet, test all until success (hopefully, at least one address will be
           // generated)
@@ -233,5 +226,4 @@ class TestAPI {
   TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }                      \
   TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(testAPI.sampleMarkets.front()); } \
   TEST(TestAPIType##Test, Trade) { testAPI.testTrade(testAPI.sampleMarkets.front()); }
-}  // namespace api
-}  // namespace cct
+}  // namespace cct::api

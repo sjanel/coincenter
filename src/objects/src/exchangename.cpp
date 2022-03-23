@@ -4,18 +4,18 @@
 #include "toupperlower.hpp"
 
 namespace cct {
-PrivateExchangeName::PrivateExchangeName(std::string_view globalExchangeName)
-    : _nameWithKey(globalExchangeName), _dashPos(globalExchangeName.find('_')) {
-  if (_dashPos == std::string_view::npos) {
-    _dashPos = _nameWithKey.size();
+PrivateExchangeName::PrivateExchangeName(std::string_view globalExchangeName) : _nameWithKey(globalExchangeName) {
+  for (std::size_t p = 0, s = globalExchangeName.size(); p < s && _nameWithKey[p] != '_'; ++p) {
+    _nameWithKey[p] = tolower(_nameWithKey[p]);
   }
-  std::transform(_nameWithKey.begin(), _nameWithKey.begin() + _dashPos, _nameWithKey.begin(), tolower);
 }
 
 PrivateExchangeName::PrivateExchangeName(std::string_view exchangeName, std::string_view keyName)
-    : _nameWithKey(ToLower(exchangeName)), _dashPos(_nameWithKey.size()) {
+    : _nameWithKey(ToLower(exchangeName)) {
   if (_nameWithKey.find('_') != string::npos) {
-    throw exception("Invalid exchange name " + _nameWithKey);
+    string err("Invalid exchange name ");
+    err.append(_nameWithKey);
+    throw exception(std::move(err));
   }
   if (!keyName.empty()) {
     _nameWithKey.push_back('_');
