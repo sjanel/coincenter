@@ -104,10 +104,6 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kMonitoringIP =
       JoinStringView_v<kMonitoringIP1, CoincenterCmdLineOptions::kDefaultMonitoringIPAddress, kClosingParenthesis>;
 
-  void setLogLevel() const;
-
-  void setLogFile() const;
-
   static void PrintVersion(std::string_view programName);
 
   std::string_view dataDir = kDefaultDataDir;
@@ -116,7 +112,9 @@ struct CoincenterCmdLineOptions {
   bool help = false;
   bool version = false;
   bool logFile = false;
-  bool noPrint = false;
+  bool logConsole = false;
+  bool printResults = false;
+  bool noPrintResults = false;
   std::optional<std::string_view> nosecrets;
   CommandLineOptionalInt repeats;
   Duration repeatTime = kDefaultRepeatTime;
@@ -180,25 +178,37 @@ struct CoincenterAllowedOptions {
   using CommandLineOptionWithValue = typename AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
 
   static constexpr CommandLineOptionWithValue value[] = {
-      {{{"General", 10}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
-      {{{"General", 10}, "--data", 'd', "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
-      {{{"General", 10},
+      {{{"General", 1}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
+      {{{"General", 2}, "--data", 'd', "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
+      {{{"General", 3},
         "--log",
         'v',
         "<levelname|0-6>",
         "Sets the log level during all execution. "
         "Possible values are: \n(off|critical|error|warning|info|debug|trace) or "
-        "(0-6) (default: info)"},
+        "(0-6) (default configured in general config file)"},
        &OptValueType::logLevel},
-      {{{"General", 10}, "--log-file", "", "Log to rotating files instead of stdout / stderr"}, &OptValueType::logFile},
-      {{{"General", 10}, "--no-print", "", "Do not print query results in standard output"}, &OptValueType::noPrint},
-      {{{"General", 10},
+      {{{"General", 4}, "--log-console", "", "Log to stdout (default configured in general config file)"},
+       &OptValueType::logConsole},
+      {{{"General", 4}, "--log-file", "", "Log to rotating files (default configured in general config file)"},
+       &OptValueType::logFile},
+      {{{"General", 5},
+        "--print",
+        "",
+        "Force print results in standard output (default configured in general config file)"},
+       &OptValueType::printResults},
+      {{{"General", 6},
+        "--no-print",
+        "",
+        "Force no print of results in standard output (default configured in general config file)"},
+       &OptValueType::noPrintResults},
+      {{{"General", 7},
         "--no-secrets",
         "<[exch1,...]>",
         "Even if present, do not load secrets and do not use private exchanges.\n"
         "If empty list of exchanges, it skips secrets load for all private exchanges"},
        &OptValueType::nosecrets},
-      {{{"General", 10},
+      {{{"General", 8},
         "--repeat",
         'r',
         "<[n]>",
@@ -206,7 +216,7 @@ struct CoincenterAllowedOptions {
         "Modifying requests such as trades and withdraws are not impacted by this option. "
         "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},
        &OptValueType::repeats},
-      {{{"General", 10}, "--repeat-time", "<time>", CoincenterCmdLineOptions::kRepeat}, &OptValueType::repeatTime},
+      {{{"General", 9}, "--repeat-time", "<time>", CoincenterCmdLineOptions::kRepeat}, &OptValueType::repeatTime},
       {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
       {{{"Public queries", 20},
         "--markets",

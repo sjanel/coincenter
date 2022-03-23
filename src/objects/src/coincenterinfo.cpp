@@ -35,26 +35,9 @@ CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
-    ret.insert_or_assign(CurrencyCode(key), value.get<std::string_view>());
+    ret.emplace(key, value.get<std::string_view>());
   }
   return ret;
-}
-
-json LoadGeneralConfig(std::string_view dataDir) {
-  File generalConfigFile(dataDir, File::Type::kStatic, "generalconfig.json", File::IfNotFound::kNoThrow);
-  json jsonData = generalConfigFile.readJson();
-  if (jsonData.empty()) {
-    static const json kDefaultGeneralConfig = R"(
-{
-    "fiatConversion": {
-        "rate": "8h"
-    }
-}
-)"_json;
-    jsonData = kDefaultGeneralConfig;
-    generalConfigFile.write(jsonData);
-  }
-  return jsonData;
 }
 
 #ifdef CCT_ENABLE_PROMETHEUS
@@ -66,19 +49,17 @@ using MetricGatewayType = VoidMetricGateway;
 }  // namespace
 
 CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguration& loadConfiguration,
-                               const MonitoringInfo& monitoringInfo, bool printQueryResults)
+                               GeneralConfig&& generalConfig, MonitoringInfo&& monitoringInfo)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(loadConfiguration.dataDir())),
       _stableCoinsMap(ComputeStableCoinsMap(loadConfiguration.dataDir())),
       _exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
-      _fiatConversionQueryRate(
-          ParseDuration(LoadGeneralConfig(_dataDir)["fiatConversion"]["rate"].get<std::string_view>())),
+      _generalConfig(std::move(generalConfig)),
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
-      _monitoringInfo(monitoringInfo),
-      _printQueryResults(printQueryResults) {}
+      _monitoringInfo(monitoringInfo) {}
 
 CoincenterInfo::~CoincenterInfo() {}  // To have definition of MetricGateway
 

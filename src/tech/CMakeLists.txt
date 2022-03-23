@@ -81,3 +81,9 @@ add_unit_test(
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
+
+add_unit_test(
+    unitsparser_test
+    src/unitsparser.cpp
+    test/unitsparser_test.cpp
+)

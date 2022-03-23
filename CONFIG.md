@@ -4,7 +4,7 @@ At this step, `coincenter` is built. To execute properly, it needs read/write ac
 
 - `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
 - `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
-- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs.
+- `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs. `generalconfig.json` contains general options independent from exchanges (such as logging, fiat converter).
 
 ## Important files
 
@@ -113,6 +113,11 @@ Contains options that are not exchange specific.
 
 #### Options description
 
-| Module  | Name                   | Value                      | Description                                                               |
-| ------- | ---------------------- | -------------------------- | ------------------------------------------------------------------------- |
-| *query* | **fiatConversionRate** | Duration string (ex: `8h`) | Minimum time between two consecutive requests of the same fiat conversion |
+| Name                   | Value                              | Description                                                                                                                                                                                                     |
+| ---------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **fiatConversionRate** | Duration string (ex: `8h`)         | Minimum time between two consecutive requests of the same fiat conversion                                                                                                                                       |
+| **log.file**           | Boolean                            | If `true`, will log in rotating files instead of standard output                                                                                                                                                |
+| **log.level**          | String                             | Defines the log level. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                                 |
+| **log.maxFileSize**    | String (ex: `5Mi` for 5 Megabytes) | Defines in bytes the maximum logging file size. A string representation of an integral, possibly with one suffix ending such as k, M, G, T (1k multipliers) or Ki, Mi, Gi, Ti (1024 multipliers) are supported. |
+| **log.maxNbFiles**     | Integer                            | Number of maximum rotating files for log in files                                                                                                                                                               |
+| **printResults**       | Boolean                            | Print query results if `true`                                                                                                                                                                                   |

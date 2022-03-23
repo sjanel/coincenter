@@ -10,6 +10,7 @@
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangeinfomap.hpp"
+#include "generalconfig.hpp"
 #include "loadconfiguration.hpp"
 #include "monitoringinfo.hpp"
 #include "runmodes.hpp"
@@ -25,7 +26,8 @@ class CoincenterInfo {
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
                           const LoadConfiguration &loadConfiguration = LoadConfiguration(),
-                          const MonitoringInfo &monitoringInfo = MonitoringInfo(), bool printQueryResults = true);
+                          GeneralConfig &&generalConfig = GeneralConfig(),
+                          MonitoringInfo &&monitoringInfo = MonitoringInfo());
 
   ~CoincenterInfo();
 
@@ -60,9 +62,9 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
-  bool printQueryResults() const { return _printQueryResults; }
+  bool printResults() const { return _generalConfig.printResults(); }
 
-  Duration fiatConversionQueryRate() const { return _fiatConversionQueryRate; }
+  Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversionQueryRate(); }
 
  private:
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
@@ -70,9 +72,8 @@ class CoincenterInfo {
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
   string _dataDir;
-  Duration _fiatConversionQueryRate;
+  GeneralConfig _generalConfig;
   std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
-  const MonitoringInfo &_monitoringInfo;
-  bool _printQueryResults;
+  MonitoringInfo _monitoringInfo;
 };
 }  // namespace cct

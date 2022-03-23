@@ -13,7 +13,7 @@ namespace cct {
 
 class OrderConstraintsBitmap {
  public:
-  enum class ConstraintType : uint8_t { kCur1 = 0, kCur2, kPlacedBefore, kPlacedAfter, kOrderId };
+  enum class ConstraintType : uint8_t { kCur1, kCur2, kPlacedBefore, kPlacedAfter, kOrderId };
 
  private:
   static constexpr uint8_t kMarketConstrained =
@@ -105,6 +105,8 @@ class OrdersConstraints {
   string str() const;
 
   bool operator==(const OrdersConstraints &) const = default;
+
+  using trivially_relocatable = is_trivially_relocatable<OrderIdSet>::type;
 
  private:
   OrderIdSet _ordersIdSet;

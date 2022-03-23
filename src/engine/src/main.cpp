@@ -1,31 +1,24 @@
 #include <stdlib.h>
 
+#include <filesystem>
 #include <stdexcept>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
-#include "coincenter.hpp"
-#include "coincenterinfo.hpp"
-#include "coincenterparsedoptions.hpp"
+#include "coincentercommands.hpp"
+#include "processcommandsfromcli.hpp"
 
 int main(int argc, const char* argv[]) {
   try {
-    cct::CoincenterParsedOptions opts(argc, argv);
+    cct::CoincenterCommands coincenterCommands;
 
-    if (opts.noProcess) {
-      return EXIT_SUCCESS;
+    auto parsedOptions = coincenterCommands.parseOptions(argc, argv);
+
+    if (coincenterCommands.setFromOptions(parsedOptions)) {
+      auto programName = std::filesystem::path(argv[0]).filename().string();
+
+      cct::ProcessCommandsFromCLI(programName, coincenterCommands, parsedOptions);
     }
-
-    cct::LoadConfiguration loadConfiguration(opts.dataDir, cct::LoadConfiguration::ExchangeConfigFileType::kProd);
-    cct::CoincenterInfo coincenterInfo(cct::settings::RunMode::kProd, loadConfiguration, std::move(opts.monitoringInfo),
-                                       opts.printQueryResults);
-
-    cct::Coincenter coincenter(coincenterInfo, opts.exchangesSecretsInfo);
-
-    coincenter.process(opts);
-
-    coincenter.updateFileCaches();  // Write potentially updated cache data on disk at end of program
-
   } catch (const cct::invalid_argument& e) {
     cct::log::critical("Invalid argument: {}", e.what());
     return EXIT_FAILURE;

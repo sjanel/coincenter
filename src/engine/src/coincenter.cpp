@@ -5,10 +5,8 @@
 #include <thread>
 
 #include "abstractmetricgateway.hpp"
-#include "cct_exception.hpp"
-#include "cct_smallvector.hpp"
+#include "coincentercommands.hpp"
 #include "coincenteroptions.hpp"
-#include "coincenterparsedoptions.hpp"
 #include "printqueryresults.hpp"
 #include "stringoptionparser.hpp"
 
@@ -22,24 +20,113 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangesOrchestrator(_exchangePool.exchanges()),
-      _queryResultPrinter(_coincenterInfo.printQueryResults()) {}
+      _queryResultPrinter(_coincenterInfo.printResults()) {}
 
-void Coincenter::process(const CoincenterParsedOptions &opts) {
-  processWriteRequests(opts);
-  const int nbRepeats = opts.repeats;
+void Coincenter::process(const CoincenterCommands &coincenterCommands) {
+  const int nbRepeats = coincenterCommands.repeats();
   for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
     if (repeatPos != 0) {
-      std::this_thread::sleep_for(opts.repeatTime);
+      std::this_thread::sleep_for(coincenterCommands.repeatTime());
     }
     if (nbRepeats != 1) {
       if (nbRepeats == -1) {
-        log::info("Processing read request {}/{}", repeatPos + 1, "\u221E");  // unicode char for infinity sign
+        log::info("Processing request {}", repeatPos + 1);
       } else {
-        log::info("Processing read request {}/{}", repeatPos + 1, nbRepeats);
+        log::info("Processing request {}/{}", repeatPos + 1, nbRepeats);
       }
     }
+    for (const CoincenterCommand &cmd : coincenterCommands.commands()) {
+      processCommand(cmd);
+    }
+  }
+}
 
-    processReadRequests(opts);
+void Coincenter::processCommand(const CoincenterCommand &cmd) {
+  switch (cmd.type()) {
+    case CoincenterCommand::Type::kMarkets: {
+      MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cmd.cur1(), cmd.cur2(), cmd.exchangeNames());
+      _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kConversionPath: {
+      ConversionPathPerExchange conversionPathPerExchange = getConversionPaths(cmd.market(), cmd.exchangeNames());
+      _queryResultPrinter.printConversionPath(cmd.market(), conversionPathPerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kLastPrice: {
+      MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(cmd.market(), cmd.exchangeNames());
+      _queryResultPrinter.printLastPrice(cmd.market(), lastPricePerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kTicker: {
+      ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(cmd.exchangeNames());
+      _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
+      break;
+    }
+    case CoincenterCommand::Type::kOrderbook: {
+      MarketOrderBookConversionRates marketOrderBooksConversionRates =
+          getMarketOrderBooks(cmd.market(), cmd.exchangeNames(), cmd.cur1(), cmd.optDepth());
+      _queryResultPrinter.printMarketOrderBooks(marketOrderBooksConversionRates);
+      break;
+    }
+    case CoincenterCommand::Type::kLastTrades: {
+      LastTradesPerExchange lastTradesPerExchange =
+          getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), cmd.nbLastTrades());
+      _queryResultPrinter.printLastTrades(cmd.market(), lastTradesPerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kLast24hTradedVolume: {
+      MonetaryAmountPerExchange tradedVolumePerExchange =
+          getLast24hTradedVolumePerExchange(cmd.market(), cmd.exchangeNames());
+      _queryResultPrinter.printLast24hTradedVolume(cmd.market(), tradedVolumePerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kWithdrawFee: {
+      auto withdrawFeesPerExchange = getWithdrawFees(cmd.cur1(), cmd.exchangeNames());
+      _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange);
+      break;
+    }
+
+    case CoincenterCommand::Type::kBalance: {
+      BalancePerExchange balancePerExchange = getBalance(cmd.exchangeNames(), cmd.cur1());
+      _queryResultPrinter.printBalance(balancePerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kDepositInfo: {
+      WalletPerExchange walletPerExchange = getDepositInfo(cmd.exchangeNames(), cmd.cur1());
+      _queryResultPrinter.printDepositInfo(cmd.cur1(), walletPerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kOrdersOpened: {
+      OpenedOrdersPerExchange openedOrdersPerExchange = getOpenedOrders(cmd.exchangeNames(), cmd.ordersConstraints());
+      _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
+      break;
+    }
+    case CoincenterCommand::Type::kOrdersCancel:
+      cancelOrders(cmd.exchangeNames(), cmd.ordersConstraints());
+      break;
+    case CoincenterCommand::Type::kTrade: {
+      if (cmd.cur2().isNeutral()) {
+        trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
+      } else {
+        tradeAll(cmd.cur1(), cmd.cur2(), cmd.exchangeNames(), cmd.tradeOptions());
+      }
+      break;
+    }
+    case CoincenterCommand::Type::kBuy: {
+      smartBuy(cmd.amount(), cmd.exchangeNames(), cmd.tradeOptions());
+      break;
+    }
+    case CoincenterCommand::Type::kSell: {
+      smartSell(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames(), cmd.tradeOptions());
+      break;
+    }
+    case CoincenterCommand::Type::kWithdraw: {
+      withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(), cmd.exchangeNames().back());
+      break;
+    }
+    default:
+      throw exception("Unknown command type");
   }
 }
 
@@ -167,102 +254,6 @@ void Coincenter::updateFileCaches() const {
   _fiatConverter.updateCacheFile();
   auto exchanges = _exchangePool.exchanges();
   std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
-}
-
-void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
-  if (!opts.marketsCurrency1.isNeutral()) {
-    MarketsPerExchange marketsPerExchange =
-        getMarketsPerExchange(opts.marketsCurrency1, opts.marketsCurrency2, opts.marketsExchanges);
-    _queryResultPrinter.printMarkets(opts.marketsCurrency1, opts.marketsCurrency2, marketsPerExchange);
-  }
-
-  if (opts.tickerForAll || !opts.tickerExchanges.empty()) {
-    ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(opts.tickerExchanges);
-    _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
-  }
-
-  if (!opts.marketForOrderBook.isNeutral()) {
-    std::optional<int> depth;
-    if (opts.orderbookDepth != 0) {
-      depth = opts.orderbookDepth;
-    }
-    MarketOrderBookConversionRates marketOrderBooksConversionRates =
-        getMarketOrderBooks(opts.marketForOrderBook, opts.orderBookExchanges, opts.orderbookCur, depth);
-    _queryResultPrinter.printMarketOrderBooks(marketOrderBooksConversionRates);
-  }
-
-  if (!opts.marketForConversionPath.isNeutral()) {
-    ConversionPathPerExchange conversionPathPerExchange =
-        getConversionPaths(opts.marketForConversionPath, opts.conversionPathExchanges);
-    _queryResultPrinter.printConversionPath(opts.marketForConversionPath, conversionPathPerExchange);
-  }
-
-  if (opts.balanceForAll || !opts.balancePrivateExchanges.empty()) {
-    BalancePerExchange balancePerExchange = getBalance(opts.balancePrivateExchanges, opts.balanceCurrencyCode);
-    _queryResultPrinter.printBalance(balancePerExchange);
-  }
-
-  if (!opts.depositCurrency.isNeutral()) {
-    WalletPerExchange walletPerExchange = getDepositInfo(opts.depositInfoPrivateExchanges, opts.depositCurrency);
-
-    _queryResultPrinter.printDepositInfo(opts.depositCurrency, walletPerExchange);
-  }
-
-  if (opts.queryOpenedOrders) {
-    OpenedOrdersPerExchange openedOrdersPerExchange =
-        getOpenedOrders(opts.openedOrdersPrivateExchanges, opts.openedOrdersConstraints);
-
-    _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
-  }
-
-  if (opts.cancelOpenedOrders) {
-    cancelOrders(opts.cancelOpenedOrdersPrivateExchanges, opts.cancelOpenedOrdersConstraints);
-  }
-
-  if (!opts.withdrawFeeCur.isNeutral()) {
-    auto withdrawFeesPerExchange = getWithdrawFees(opts.withdrawFeeCur, opts.withdrawFeeExchanges);
-    _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange);
-  }
-
-  if (!opts.tradedVolumeMarket.isNeutral()) {
-    MonetaryAmountPerExchange tradedVolumePerExchange =
-        getLast24hTradedVolumePerExchange(opts.tradedVolumeMarket, opts.tradedVolumeExchanges);
-    _queryResultPrinter.printLast24hTradedVolume(opts.tradedVolumeMarket, tradedVolumePerExchange);
-  }
-
-  if (!opts.lastTradesMarket.isNeutral()) {
-    LastTradesPerExchange lastTradesPerExchange =
-        getLastTradesPerExchange(opts.lastTradesMarket, opts.lastTradesExchanges, opts.nbLastTrades);
-    _queryResultPrinter.printLastTrades(opts.lastTradesMarket, lastTradesPerExchange);
-  }
-
-  if (!opts.lastPriceMarket.isNeutral()) {
-    MonetaryAmountPerExchange lastPricePerExchange =
-        getLastPricePerExchange(opts.lastPriceMarket, opts.lastPriceExchanges);
-    _queryResultPrinter.printLastPrice(opts.lastPriceMarket, lastPricePerExchange);
-  }
-}
-
-void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
-  if (!opts.fromTradeCurrency.isNeutral() && !opts.toTradeCurrency.isNeutral()) {
-    tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
-  }
-
-  if (!opts.endTradeAmount.isZero()) {
-    smartBuy(opts.endTradeAmount, opts.tradePrivateExchangeNames, opts.tradeOptions);
-  } else if (!opts.startTradeAmount.isZero()) {
-    if (opts.toTradeCurrency.isNeutral()) {
-      smartSell(opts.startTradeAmount, opts.isPercentageTrade, opts.tradePrivateExchangeNames, opts.tradeOptions);
-    } else {
-      trade(opts.startTradeAmount, opts.isPercentageTrade, opts.toTradeCurrency, opts.tradePrivateExchangeNames,
-            opts.tradeOptions);
-    }
-  }
-
-  if (!opts.amountToWithdraw.isZero()) {
-    withdraw(opts.amountToWithdraw, opts.isPercentageWithdraw, opts.withdrawFromExchangeName,
-             opts.withdrawToExchangeName);
-  }
 }
 
 }  // namespace cct
