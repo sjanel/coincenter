@@ -2,8 +2,10 @@
 
 #include <string_view>
 
-#include "cct_const.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
+#include "coincentercommand.hpp"
+#include "coincenteroptions.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "exchangesecretsinfo.hpp"
@@ -15,12 +17,17 @@
 #include "tradeoptions.hpp"
 
 namespace cct {
-struct CoincenterCmdLineOptions;
 
-class CoincenterParsedOptions {
+class CoincenterCommands {
  public:
-  /// Parse arguments and store the overriden values in this object.
-  CoincenterParsedOptions(int argc, const char *argv[]);
+  CoincenterCommands() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+
+  CoincenterCmdLineOptions parseOptions(int argc, const char *argv[]) const;
+
+  MonitoringInfo createMonitoringInfo(std::string_view programName,
+                                      const CoincenterCmdLineOptions &cmdLineOptions) const;
+
+  bool setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
 
   MonetaryAmount startTradeAmount;
   MonetaryAmount endTradeAmount;
@@ -33,9 +40,9 @@ class CoincenterParsedOptions {
   ExchangeNames marketsExchanges;
 
   Market marketForOrderBook;
+  CurrencyCode orderbookCur;
   ExchangeNames tickerExchanges;
   ExchangeNames orderBookExchanges;
-  CurrencyCode orderbookCur;
 
   Market marketForConversionPath;
   ExchangeNames conversionPathExchanges;
@@ -60,19 +67,18 @@ class CoincenterParsedOptions {
   ExchangeNames withdrawFeeExchanges;
 
   Market tradedVolumeMarket;
-  ExchangeNames tradedVolumeExchanges;
-
   Market lastTradesMarket;
-  ExchangeNames lastTradesExchanges;
-
   Market lastPriceMarket;
+  ExchangeNames tradedVolumeExchanges;
+  ExchangeNames lastTradesExchanges;
   ExchangeNames lastPriceExchanges;
 
-  std::string_view dataDir;
+  Duration repeatTime{};
 
-  MonitoringInfo monitoringInfo;
+  int orderbookDepth = 0;
+  int nbLastTrades = 0;
+  int repeats = 1;
 
-  bool noProcess = false;
   bool printQueryResults = true;
   bool tickerForAll = false;
   bool balanceForAll = false;
@@ -81,24 +87,10 @@ class CoincenterParsedOptions {
   bool isPercentageTrade = false;
   bool isPercentageWithdraw = false;
 
-  int orderbookDepth = 0;
-  int nbLastTrades = 0;
-  int repeats = 1;
-
-  Duration repeatTime{};
-
-  std::string_view programName() const { return _programName; }
-
- protected:
-  /// Constructor to be called for programs extending the command line options of 'coincenter'.
-  /// Indeed, it's not possible to call the constructor with argv as it will contain some unknown arguments from higher
-  /// level program
-  CoincenterParsedOptions() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
-
-  void setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
-
  private:
-  string _programName;
+  using Commands = vector<CoincenterCommand>;
+
+  Commands _commands;
 };
 
 }  // namespace cct

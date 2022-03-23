@@ -7,8 +7,8 @@
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_smallvector.hpp"
+#include "coincentercommands.hpp"
 #include "coincenteroptions.hpp"
-#include "coincenterparsedoptions.hpp"
 #include "printqueryresults.hpp"
 #include "stringoptionparser.hpp"
 
@@ -24,7 +24,7 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _exchangesOrchestrator(_exchangePool.exchanges()),
       _queryResultPrinter(_coincenterInfo.printQueryResults()) {}
 
-void Coincenter::process(const CoincenterParsedOptions &opts) {
+void Coincenter::process(const CoincenterCommands &opts) {
   processWriteRequests(opts);
   const int nbRepeats = opts.repeats;
   for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
@@ -169,7 +169,7 @@ void Coincenter::updateFileCaches() const {
   std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
 }
 
-void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
+void Coincenter::processReadRequests(const CoincenterCommands &opts) {
   if (!opts.marketsCurrency1.isNeutral()) {
     MarketsPerExchange marketsPerExchange =
         getMarketsPerExchange(opts.marketsCurrency1, opts.marketsCurrency2, opts.marketsExchanges);
@@ -243,7 +243,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
   }
 }
 
-void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
+void Coincenter::processWriteRequests(const CoincenterCommands &opts) {
   if (!opts.fromTradeCurrency.isNeutral() && !opts.toTradeCurrency.isNeutral()) {
     tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }

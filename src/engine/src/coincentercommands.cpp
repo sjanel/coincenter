@@ -1,4 +1,4 @@
-#include "coincenterparsedoptions.hpp"
+#include "coincentercommands.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -13,19 +13,26 @@
 
 namespace cct {
 
-CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
-    : dataDir(kDefaultDataDir), _programName(std::filesystem::path(argv[0]).filename().string()) {
+CoincenterCmdLineOptions CoincenterCommands::parseOptions(int argc, const char *argv[]) const {
   using OptValueType = CoincenterCmdLineOptions;
 
   auto parser = CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
-  auto parsedOptions = parser.parse(argc, argv);
+  CoincenterCmdLineOptions parsedOptions = parser.parse(argc, argv);
 
-  if (parsedOptions.help || argc == 1) {
-    parser.displayHelp(_programName, std::cout);
-    noProcess = true;
-  } else {
-    setFromOptions(parsedOptions);
+  auto programName = std::filesystem::path(argv[0]).filename().string();
+  if (parsedOptions.help) {
+    parser.displayHelp(programName, std::cout);
+  } else if (parsedOptions.version) {
+    CoincenterCmdLineOptions::PrintVersion(programName);
   }
+  return parsedOptions;
+}
+
+MonitoringInfo CoincenterCommands::createMonitoringInfo(std::string_view programName,
+                                                        const CoincenterCmdLineOptions &cmdLineOptions) const {
+  return MonitoringInfo(cmdLineOptions.useMonitoring, programName, cmdLineOptions.monitoringAddress,
+                        cmdLineOptions.monitoringPort, cmdLineOptions.monitoringUsername,
+                        cmdLineOptions.monitoringPassword);
 }
 
 namespace {
@@ -47,17 +54,14 @@ std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCm
 }
 }  // namespace
 
-void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
-  if (cmdLineOptions.version) {
-    CoincenterCmdLineOptions::PrintVersion(_programName);
-    noProcess = true;
-    return;
+bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
+  if (cmdLineOptions.help || cmdLineOptions.version) {
+    return false;
   }
 
   cmdLineOptions.setLogLevel();
   cmdLineOptions.setLogFile();
 
-  dataDir = cmdLineOptions.dataDir;
   if (cmdLineOptions.repeats.isPresent()) {
     if (cmdLineOptions.repeats.isSet()) {
       repeats = *cmdLineOptions.repeats;
@@ -66,12 +70,9 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
       repeats = -1;
     }
   }
+
   repeatTime = cmdLineOptions.repeatTime;
   printQueryResults = !cmdLineOptions.noPrint;
-
-  monitoringInfo = MonitoringInfo(cmdLineOptions.useMonitoring, _programName, cmdLineOptions.monitoringAddress,
-                                  cmdLineOptions.monitoringPort, cmdLineOptions.monitoringUsername,
-                                  cmdLineOptions.monitoringPassword);
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
@@ -252,5 +253,7 @@ void CoincenterParsedOptions::setFromOptions(const CoincenterCmdLineOptions &cmd
     StringOptionParser anyParser(cmdLineOptions.lastPrice);
     std::tie(lastPriceMarket, lastPriceExchanges) = anyParser.getMarketExchanges();
   }
+
+  return true;
 }
 }  // namespace cct

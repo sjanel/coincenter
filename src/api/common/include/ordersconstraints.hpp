@@ -106,6 +106,8 @@ class OrdersConstraints {
 
   bool operator==(const OrdersConstraints &) const = default;
 
+  using trivially_relocatable = is_trivially_relocatable<OrderIdSet>::type;
+
  private:
   OrderIdSet _ordersIdSet;
   TimePoint _placedBefore;

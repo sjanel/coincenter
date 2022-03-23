@@ -22,7 +22,7 @@
 
 namespace cct {
 
-class CoincenterParsedOptions;
+class CoincenterCommands;
 class TradeOptions;
 
 class Coincenter {
@@ -36,7 +36,7 @@ class Coincenter {
   Coincenter &operator=(const Coincenter &) = delete;
   Coincenter &operator=(Coincenter &&) = delete;
 
-  void process(const CoincenterParsedOptions &opts);
+  void process(const CoincenterCommands &opts);
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
@@ -124,9 +124,9 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  void processReadRequests(const CoincenterParsedOptions &opts);
+  void processReadRequests(const CoincenterCommands &opts);
 
-  void processWriteRequests(const CoincenterParsedOptions &opts);
+  void processWriteRequests(const CoincenterCommands &opts);
 
   CurlInitRAII _curlInitRAII;  // Should be first
   const CoincenterInfo &_coincenterInfo;
