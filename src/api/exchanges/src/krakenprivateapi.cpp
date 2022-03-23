@@ -46,11 +46,12 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   opts.appendHttpHeader("API-Key", apiKey.key());
   opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
 
-  string ret = curlHandle.query(method, opts);
-  json jsonData = json::parse(std::move(ret));
+  json ret = json::parse(curlHandle.query(method, opts));
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
-  while (jsonData.contains("error") && !jsonData["error"].empty() &&
-         jsonData["error"].front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
+  static constexpr std::string_view kErrorKey = "error";
+  auto errorIt = ret.find(kErrorKey);
+  while (errorIt != ret.end() && !errorIt->empty() &&
+         errorIt->front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
     log::error("Kraken private API rate limit exceeded");
     sleepingTime *= 2;
     log::debug("Wait {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
@@ -60,22 +61,22 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     nonce = Nonce_TimeSinceEpochInMs();
     opts.getPostData().set("nonce", nonce);
     opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
-    ret = curlHandle.query(method, opts);
-    jsonData = json::parse(std::move(ret));
+    ret = json::parse(curlHandle.query(method, opts));
+    errorIt = ret.find(kErrorKey);
   }
-  auto errorIt = jsonData.find("error");
-  if (errorIt != jsonData.end() && !errorIt->empty()) {
+  if (errorIt != ret.end() && !errorIt->empty()) {
     std::string_view msg = errorIt->front().get<std::string_view>();
     if (method.ends_with("CancelOrder") && msg == "EOrder:Unknown order") {
       log::warn("Unknown order from Kraken CancelOrder. Assuming closed order");
-      jsonData = "{\" error \":[],\" result \":{\" count \":1}}"_json;
+      ret = "{\" error \":[],\" result \":{\" count \":1}}"_json;
     } else {
-      string ex("Kraken private query error: ");
+      log::error("Full Kraken json error: '{}'", ret.dump());
+      string ex("Kraken error: ");
       ex.append(msg);
       throw exception(std::move(ex));
     }
   }
-  return jsonData["result"];
+  return ret["result"];
 }
 }  // namespace
 

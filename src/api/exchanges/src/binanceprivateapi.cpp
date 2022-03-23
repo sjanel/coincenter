@@ -36,10 +36,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.appendHttpHeader("X-MBX-APIKEY", apiKey.key());
   SetNonceAndSignature(apiKey, opts.getPostData());
 
-  json dataJson = json::parse(curlHandle.query(endpoint, opts));
+  json ret = json::parse(curlHandle.query(endpoint, opts));
   auto binanceError = [](const json& j) { return j.contains("code") && j.contains("msg"); };
-  if (binanceError(dataJson)) {
-    int statusCode = dataJson["code"];  // "1100" for instance
+  if (binanceError(ret)) {
+    int statusCode = ret["code"];  // "1100" for instance
     int nbRetries = 0;
     Duration sleepingTime = curlHandle.minDurationBetweenQueries();
     while (++nbRetries < kNbOrderRequestsRetries && (statusCode == -2013 || statusCode == -2011)) {
@@ -49,19 +49,20 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       log::trace("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
       SetNonceAndSignature(apiKey, opts.getPostData());
-      dataJson = json::parse(curlHandle.query(endpoint, opts));
-      if (!binanceError(dataJson)) {
-        return dataJson;
+      ret = json::parse(curlHandle.query(endpoint, opts));
+      if (!binanceError(ret)) {
+        return ret;
       }
-      statusCode = dataJson["code"];
+      statusCode = ret["code"];
     }
+    log::error("Full Binance json error: '{}'", ret.dump());
     string ex("Error: ");
     ex.append(MonetaryAmount(statusCode).amountStr());
     ex.append(", msg: ");
-    ex.append(dataJson["msg"].get<std::string_view>());
+    ex.append(ret["msg"].get<std::string_view>());
     throw exception(std::move(ex));
   }
-  return dataJson;
+  return ret;
 }
 
 }  // namespace

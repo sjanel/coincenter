@@ -23,12 +23,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.push_back('?');
     method.append(curlPostData.str());
   }
-  json dataJson = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
-  bool returnData = dataJson.contains("data");
-  if (!returnData && !dataJson.contains("tick")) {
+  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
+  bool returnData = ret.contains("data");
+  if (!returnData && !ret.contains("tick")) {
     throw exception("No data for Huobi public endpoint");
   }
-  return returnData ? dataJson["data"] : dataJson["tick"];
+  return returnData ? ret["data"] : ret["tick"];
 }
 
 }  // namespace

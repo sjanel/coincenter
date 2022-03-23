@@ -72,7 +72,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   CurlPostData postdata(std::forward<CurlPostDataT>(curlPostData));
   postdata.prepend("endpoint", endpoint);
   CurlOptions opts(HttpRequestType::kPost, postdata.urlEncodeExceptDelimiters(), BithumbPublic::kUserAgent);
-  json dataJson = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+  json ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
 
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
   const bool isInfoOpenedOrders = endpoint == "/info/orders";
@@ -81,14 +81,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   const bool isPlaceOrderQuery = !isCancelQuery && endpoint.starts_with("/trade");
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
-  while (dataJson.contains("status") && ++nbRetries < kMaxNbRetries) {
+  while (ret.contains("status") && ++nbRetries < kMaxNbRetries) {
     // "5300" for instance. "0000" stands for: request OK
-    std::string_view statusCode = dataJson["status"].get<std::string_view>();
+    std::string_view statusCode = ret["status"].get<std::string_view>();
     int64_t errorCode = FromString<int64_t>(statusCode);
     if (errorCode != 0) {
       std::string_view msg;
-      auto messageIt = dataJson.find("message");
-      if (messageIt != dataJson.end()) {
+      auto messageIt = ret.find("message");
+      if (messageIt != ret.end()) {
         msg = messageIt->get<std::string_view>();
         switch (errorCode) {
           case 5100: {
@@ -120,7 +120,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                   log::error("Bithumb time is not synchronized with us (difference of {} s)",
                              (reqTimeInt - nowTimeInt) / 1000);
                   log::error("It can sometimes come from a bug in Bithumb, retry");
-                  dataJson = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+                  ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
                   continue;
                 }
               }
@@ -146,9 +146,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                 log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
                           maxNbDecimalsStr);
                 int8_t maxNbDecimals = FromString<int8_t>(maxNbDecimalsStr);
-                dataJson.clear();
-                dataJson.emplace(kNbDecimalsStr, maxNbDecimals);
-                return dataJson;
+                ret.clear();
+                ret.emplace(kNbDecimalsStr, maxNbDecimals);
+                return ret;
               }
 
               static constexpr std::string_view kMinOrderString1 = "주문금액은 ";
@@ -162,9 +162,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                 }
                 std::string_view minOrderAmountStr(msg.begin() + idxFirst, msg.begin() + endPos);
                 log::warn("Bithumb told us that minimum order size is {}", minOrderAmountStr);
-                dataJson.clear();
-                dataJson.emplace(kMinOrderSizeJsonKeyStr, minOrderAmountStr);
-                return dataJson;
+                ret.clear();
+                ret.emplace(kMinOrderSizeJsonKeyStr, minOrderAmountStr);
+                return ret;
               }
             }
             if ((isInfoOpenedOrders || isCancelQuery) &&
@@ -172,24 +172,25 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
               // This is not really an error, it means that order has been eaten or cancelled.
               // Just return empty json in this case
               log::info("Considering Bithumb order as closed as no data received from them");
-              dataJson.clear();
-              return dataJson;
+              ret.clear();
+              return ret;
             }
             if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
-              dataJson["wallet_address"] = "";
-              return dataJson;
+              ret["wallet_address"] = "";
+              return ret;
             }
             break;
           default:
             break;
         }
       }
-      string ex("Bithumb::query error: ");
+      log::error("Full Bithumb json error: '{}'", ret.dump());
+      string ex("Bithumb error: ");
       ex.append(statusCode).append(" \"").append(msg).append("\"");
       throw exception(std::move(ex));
     }
   }
-  return dataJson;
+  return ret;
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
