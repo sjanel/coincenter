@@ -24,12 +24,6 @@ class CryptowatchAPI : public ExchangeBase {
   explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
                           Duration fiatsUpdateFrequency = std::chrono::hours(96), bool loadFromFileCacheAtInit = true);
 
-  CryptowatchAPI(const CryptowatchAPI &) = delete;
-  CryptowatchAPI &operator=(const CryptowatchAPI &) = delete;
-
-  CryptowatchAPI(CryptowatchAPI &&) noexcept = delete;
-  CryptowatchAPI &operator=(CryptowatchAPI &&) = delete;
-
   /// Tells whether given exchange is supported by Cryptowatch.
   bool queryIsExchangeSupported(std::string_view exchangeName) {
     std::lock_guard<std::mutex> guard(_exchangesMutex);

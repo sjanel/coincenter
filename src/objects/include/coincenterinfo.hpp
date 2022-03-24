@@ -27,12 +27,6 @@ class CoincenterInfo {
                           const LoadConfiguration &loadConfiguration = LoadConfiguration(),
                           const MonitoringInfo &monitoringInfo = MonitoringInfo(), bool printQueryResults = true);
 
-  CoincenterInfo(const CoincenterInfo &) = delete;
-  CoincenterInfo &operator=(const CoincenterInfo &) = delete;
-
-  CoincenterInfo(CoincenterInfo &&) = delete;
-  CoincenterInfo &operator=(CoincenterInfo &&) = delete;
-
   ~CoincenterInfo();
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.

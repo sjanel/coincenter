@@ -34,12 +34,6 @@ class FiatConverter {
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
   FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency);
 
-  FiatConverter(const FiatConverter &) = delete;
-  FiatConverter &operator=(const FiatConverter &) = delete;
-
-  FiatConverter(FiatConverter &&) = delete;  // because of mutex
-  FiatConverter &operator=(FiatConverter &&) = delete;
-
   double convert(double amount, CurrencyCode from, CurrencyCode to);
 
   MonetaryAmount convert(MonetaryAmount amount, CurrencyCode to) {
