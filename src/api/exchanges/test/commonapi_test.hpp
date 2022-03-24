@@ -173,8 +173,9 @@ class TestAPI {
     }
   }
 
-  void testOpenedOrders(Market m) {
-    if (exchangePrivatePtr.get()) {
+  void testOpenedOrders() {
+    if (exchangePrivatePtr.get() && !sampleMarkets.empty()) {
+      Market m = sampleMarkets.front();
       ExchangePrivate::Orders baseOpenedOrders =
           exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
       if (!baseOpenedOrders.empty()) {
@@ -185,20 +186,23 @@ class TestAPI {
     }
   }
 
-  void testTrade(Market m) {
-    ExchangePublic::LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
-    if (!lastTrades.empty() && exchangePrivatePtr.get()) {
-      auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
-        return lhs.amount() < rhs.amount();
-      };
-      auto [smallAmountIt, bigAmountIt] = std::ranges::minmax_element(lastTrades, compareTradedVolume);
+  void testTrade() {
+    if (!sampleMarkets.empty()) {
+      Market m = sampleMarkets.front();
+      ExchangePublic::LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
+      if (!lastTrades.empty() && exchangePrivatePtr.get()) {
+        auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
+          return lhs.amount() < rhs.amount();
+        };
+        auto [smallAmountIt, bigAmountIt] = std::ranges::minmax_element(lastTrades, compareTradedVolume);
 
-      TradeOptions tradeOptions(TradeMode::kSimulation);
-      MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
-      MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
-      EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo,
-                MonetaryAmount(0, m.quote()));
-      EXPECT_FALSE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom.isZero());
+        TradeOptions tradeOptions(TradeMode::kSimulation);
+        MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
+        MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
+        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo,
+                  MonetaryAmount(0, m.quote()));
+        EXPECT_FALSE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom.isZero());
+      }
     }
   }
 
@@ -218,12 +222,12 @@ class TestAPI {
   }
 };
 
-#define CCT_TEST_ALL(TestAPIType, testAPI)                                                     \
-  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }                            \
-  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }                                  \
-  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); }                    \
-  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }                                  \
-  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }                      \
-  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(testAPI.sampleMarkets.front()); } \
-  TEST(TestAPIType##Test, Trade) { testAPI.testTrade(testAPI.sampleMarkets.front()); }
+#define CCT_TEST_ALL(TestAPIType, testAPI)                                  \
+  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }         \
+  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }               \
+  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); } \
+  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }               \
+  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }   \
+  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(); }           \
+  TEST(TestAPIType##Test, Trade) { testAPI.testTrade(); }
 }  // namespace cct::api
