@@ -38,12 +38,6 @@ class ExchangePublic : public ExchangeBase {
   using LastTradesVector = vector<PublicTrade>;
   using MarketsPath = SmallVector<Market, 3>;
 
-  ExchangePublic(const ExchangePublic &) = delete;
-  ExchangePublic &operator=(const ExchangePublic &) = delete;
-
-  ExchangePublic(ExchangePublic &&) noexcept = default;
-  ExchangePublic &operator=(ExchangePublic &&) = delete;
-
   virtual ~ExchangePublic() {}
 
   /// Retrieve the possible currencies known by current exchange.

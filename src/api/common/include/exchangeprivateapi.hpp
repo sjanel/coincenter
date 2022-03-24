@@ -32,12 +32,6 @@ class ExchangePrivate : public ExchangeBase {
   using WithdrawalFeeMap = ExchangePublic::WithdrawalFeeMap;
   using Orders = vector<Order>;
 
-  ExchangePrivate(const ExchangePrivate &) = delete;
-  ExchangePrivate &operator=(const ExchangePrivate &) = delete;
-
-  ExchangePrivate(ExchangePrivate &&) noexcept = default;
-  ExchangePrivate &operator=(ExchangePrivate &&) = delete;
-
   virtual ~ExchangePrivate() {}
 
   std::string_view keyName() const { return _apiKey.name(); }

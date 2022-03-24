@@ -28,6 +28,8 @@ class APIKey {
 
   ~APIKey() { _privateKey.assign(_privateKey.size(), '\0'); }
 
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
+
  private:
   string _platform;
   string _name;
