@@ -33,15 +33,13 @@ class Wallet {
   Wallet() noexcept = default;
 
   /// Build a wallet with all information.
-  Wallet(const PrivateExchangeName &privateExchangeName, CurrencyCode currency, std::string_view address,
-         std::string_view tag, WalletCheck walletCheck);
-
-  Wallet(PrivateExchangeName &&privateExchangeName, CurrencyCode currency, string &&address, std::string_view tag,
+  Wallet(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address, std::string_view tag,
          WalletCheck walletCheck);
 
-  const PrivateExchangeName &privateExchangeName() const { return _privateExchangeName; }
+  Wallet(ExchangeName &&exchangeName, CurrencyCode currency, string &&address, std::string_view tag,
+         WalletCheck walletCheck);
 
-  std::string_view exchangeName() const { return _privateExchangeName.name(); }
+  const ExchangeName &exchangeName() const { return _exchangeName; }
 
   std::string_view address() const {
     check();
@@ -61,11 +59,11 @@ class Wallet {
 
   bool operator==(const Wallet &) const = default;
 
-  static bool ValidateWallet(WalletCheck walletCheck, const PrivateExchangeName &privateExchangeName,
-                             CurrencyCode currency, std::string_view expectedAddress, std::string_view expectedTag);
+  static bool ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchangeName, CurrencyCode currency,
+                             std::string_view expectedAddress, std::string_view expectedTag);
 
   using trivially_relocatable =
-      std::bool_constant<is_trivially_relocatable_v<PrivateExchangeName> && is_trivially_relocatable_v<string> >::type;
+      std::bool_constant<is_trivially_relocatable_v<ExchangeName> && is_trivially_relocatable_v<string> >::type;
 
  private:
   const char *startTag() const { return _addressAndTag.data() + (hasTag() ? _tagPos : _addressAndTag.size()); }
@@ -76,7 +74,7 @@ class Wallet {
     }
   }
 
-  PrivateExchangeName _privateExchangeName;
+  ExchangeName _exchangeName;
   string _addressAndTag;
   std::size_t _tagPos = std::string_view::npos;
   CurrencyCode _currency;

@@ -149,17 +149,15 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     result = result.front();
   }
 
-  std::string_view address = result["address"].get<std::string_view>();
   auto memoIt = result.find("memo");
   std::string_view tag = (memoIt != result.end() && !memoIt->is_null()) ? memoIt->get<std::string_view>() : "";
 
-  PrivateExchangeName privateExchangeName(_kucoinPublic.name(), _apiKey.name());
-
   const CoincenterInfo& coincenterInfo = _kucoinPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_kucoinPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
-  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
+  Wallet w(ExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode,
+           std::move(result["address"].get_ref<string&>()), tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }

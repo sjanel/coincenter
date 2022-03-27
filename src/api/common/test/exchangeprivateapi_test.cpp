@@ -261,7 +261,7 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
   std::string_view address = "TestAddress";
   std::string_view tag = "TestTag";
-  Wallet receivingWallet(destinationExchangePrivate.createPrivateExchangeName(), cur, address, tag, WalletCheck());
+  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, address, tag, WalletCheck());
   EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
   WithdrawIdView withdrawIdView = "WithdrawId";

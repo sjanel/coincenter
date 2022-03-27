@@ -13,23 +13,19 @@
 
 namespace cct {
 
-using ExchangeName = string;
-using PublicExchangeNames = FixedCapacityVector<ExchangeName, kNbSupportedExchanges>;
-using ExchangeNameSpan = std::span<const ExchangeName>;
-
-class PrivateExchangeName {
+class ExchangeName {
  public:
-  PrivateExchangeName() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+  ExchangeName() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
-  /// Constructs a PrivateExchangeName with a unique identifier name.
+  /// Constructs a ExchangeName with a unique identifier name.
   /// Two cases:
   ///  - either there is no '_', in this case, keyName will be empty
   ///  - either there is a '_', in this case 'globalExchangeName' will be parsed as '<exchangeName>_<keyName>'
   /// Important: it is ok to have '_' in the key name itself, but forbidden in the exchange name as it is the
   /// first '_' that is important.
-  explicit PrivateExchangeName(std::string_view globalExchangeName);
+  explicit ExchangeName(std::string_view globalExchangeName);
 
-  PrivateExchangeName(std::string_view exchangeName, std::string_view keyName);
+  ExchangeName(std::string_view exchangeName, std::string_view keyName);
 
   std::string_view name() const {
     std::size_t dash = dashPos();
@@ -46,9 +42,9 @@ class PrivateExchangeName {
 
   std::string_view str() const { return _nameWithKey; }
 
-  bool operator==(const PrivateExchangeName &) const = default;
+  bool operator==(const ExchangeName &) const = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const PrivateExchangeName &v) {
+  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &v) {
     os << v.str();
     return os;
   }
@@ -66,11 +62,11 @@ class PrivateExchangeName {
   string _nameWithKey;
 };
 
-using PrivateExchangeNames = SmallVector<PrivateExchangeName, kTypicalNbPrivateAccounts>;
+using ExchangeNameSpan = std::span<const ExchangeName>;
+using ExchangeNames = SmallVector<ExchangeName, kTypicalNbPrivateAccounts>;
 
-inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName; }
 inline std::string_view ToString(std::string_view exchangeName) { return exchangeName; }
-inline std::string_view ToString(const PrivateExchangeName &exchangeName) { return exchangeName.str(); }
+inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName.str(); }
 
 template <class ExchangeNames>
 inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNames) {

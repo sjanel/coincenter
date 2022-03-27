@@ -28,16 +28,15 @@ class ExchangeRetrieverBase {
 
   std::span<ExchangeT> exchanges() const { return _exchanges; }
 
-  /// Retrieve the unique Exchange corresponding to given private exchange name.
+  /// Retrieve the unique Exchange corresponding to given exchange name.
   /// Raise exception in case of ambiguity
-  ExchangeT &retrieveUniqueCandidate(PrivateExchangeName privateExchangeName) const {
+  ExchangeT &retrieveUniqueCandidate(const ExchangeName &exchangeName) const {
     ExchangeT *pExchange = nullptr;
     for (ExchangeT &exchange : _exchanges) {
-      if (privateExchangeName.name() == exchange.name() &&
-          (!privateExchangeName.isKeyNameDefined() || exchange.keyName() == privateExchangeName.keyName())) {
+      if (exchange.matches(exchangeName)) {
         if (pExchange) {
           string ex("Several private exchanges found for ");
-          ex.append(privateExchangeName.str()).append(" - remove ambiguity by specifying key name");
+          ex.append(exchangeName.str()).append(" - remove ambiguity by specifying key name");
           throw exception(std::move(ex));
         }
         pExchange = std::addressof(exchange);
@@ -45,7 +44,7 @@ class ExchangeRetrieverBase {
     }
     if (!pExchange) {
       string ex("Cannot find exchange ");
-      ex.append(privateExchangeName.str());
+      ex.append(exchangeName.str());
       throw exception(std::move(ex));
     }
     return *pExchange;
@@ -96,14 +95,13 @@ class ExchangeRetrieverBase {
 
   template <class NameType>
   struct Matcher {
-    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view> ||
-                  std::is_same_v<NameType, PrivateExchangeName>);
+    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view>);
 
     bool operator()(const ExchangeT &e, const NameType &n) const {
-      if constexpr (std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view>) {
+      if constexpr (std::is_same_v<NameType, std::string_view>) {
         return e.name() == n;
       } else {
-        return e.matchesKeyNameWildcard(n);
+        return e.matches(n);
       }
     }
   };
@@ -139,7 +137,7 @@ class ExchangeRetrieverBase {
     return ret;
   }
 
-  /// Extract the 'ExchangePublic' from the 'Exchange' corresponding to given 'PublicExchangeNames'.
+  /// Extract the 'ExchangePublic' from the 'Exchange' corresponding to given 'ExchangeNames'.
   /// Order of public exchanges will respect the same order as the 'exchangeNames' given in input.
   /// Examples
   ///   {"kraken_user1", "kucoin_user1"}                 -> {"kraken", "kucoin"}

@@ -67,19 +67,17 @@ class Coincenter {
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
 
   /// Query the private balance
-  BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+  BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
                                 CurrencyCode equiCurrency = CurrencyCode());
 
-  WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
-                                   CurrencyCode depositCurrency);
+  WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
   /// Get opened orders on given list of exchanges following given order constraints
-  OpenedOrdersPerExchange getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+  OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 
   /// Cancel orders on given list of exchanges following given constraints.
-  void cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
-                    const OrdersConstraints &ordersConstraints);
+  void cancelOrders(std::span<const ExchangeName> privateExchangeNames, const OrdersConstraints &ordersConstraints);
 
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
@@ -92,26 +90,24 @@ class Coincenter {
   /// If exactly one private exchange is given, balance will not be queried and trade will be launched without balance
   /// check.
   TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                      std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                      std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const PrivateExchangeName> privateExchangeNames,
+  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
                                const TradeOptions &tradeOptions);
 
   TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                std::span<const PrivateExchangeName> privateExchangeNames,
-                                const TradeOptions &tradeOptions);
+                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
   /// conversion path and will launch several 'single' trades to reach that final goal. Example:
   ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
   ///    markets.
   TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                         std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                         std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                        const PrivateExchangeName &fromPrivateExchangeName,
-                        const PrivateExchangeName &toPrivateExchangeName);
+                        const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;

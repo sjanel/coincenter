@@ -14,9 +14,34 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
       log::info("Test mode activated, shifting to secret_test.json file.");
       return "secret_test.json";
     default:
-      break;
-  };
-  return "secret.json";
+      return "secret.json";
+  }
+}
+
+string FoundKeysStr(const auto& map) {
+  string foundKeysStr;
+  for (const auto& [platform, keys] : map) {
+    if (!foundKeysStr.empty()) {
+      foundKeysStr.append(" | ");
+    }
+    if (keys.size() > 1U) {
+      foundKeysStr.push_back('{');
+    }
+    bool firstKey = true;
+    for (const APIKey& key : keys) {
+      if (!firstKey) {
+        foundKeysStr.push_back(',');
+      }
+      foundKeysStr.append(key.name());
+      firstKey = false;
+    }
+    if (keys.size() > 1U) {
+      foundKeysStr.push_back('}');
+    }
+    foundKeysStr.push_back('@');
+    foundKeysStr.append(platform);
+  }
+  return foundKeysStr;
 }
 }  // namespace
 
@@ -31,8 +56,8 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform
   return keyNames;
 }
 
-const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeName) const {
-  std::string_view platformStr = privateExchangeName.name();
+const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
+  std::string_view platformStr = exchangeName.name();
   auto foundIt = _apiKeysMap.find(platformStr);
   if (foundIt == _apiKeysMap.end()) {
     string ex("Unable to retrieve private key for ");
@@ -40,7 +65,7 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     throw exception(std::move(ex));
   }
   const APIKeys& apiKeys = foundIt->second;
-  if (!privateExchangeName.isKeyNameDefined()) {
+  if (!exchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
       string ex("Specify name for ");
       ex.append(platformStr).append(" keys as you have several");
@@ -49,10 +74,10 @@ const APIKey& APIKeysProvider::get(const PrivateExchangeName& privateExchangeNam
     return apiKeys.front();
   }
   auto keyNameIt = std::ranges::find_if(
-      apiKeys, [privateExchangeName](const APIKey& apiKey) { return apiKey.name() == privateExchangeName.keyName(); });
+      apiKeys, [exchangeName](const APIKey& apiKey) { return apiKey.name() == exchangeName.keyName(); });
   if (keyNameIt == apiKeys.end()) {
     string ex("Unable to retrieve private key for ");
-    ex.append(platformStr).append(" named ").append(privateExchangeName.keyName());
+    ex.append(platformStr).append(" named ").append(exchangeName.keyName());
     throw exception(std::move(ex));
   }
   return *keyNameIt;
@@ -69,20 +94,24 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
                      runMode == settings::RunMode::kProd ? File::IfNotFound::kNoThrow : File::IfNotFound::kThrow);
     json jsonData = secretsFile.readJson();
-    for (const auto& [platform, keyObj] : jsonData.items()) {
+    for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
-      if (std::ranges::find(exchangesWithoutSecrets, platform) != exchangesWithoutSecrets.end()) {
-        log::info("Not loading {} private keys as requested", platform);
+      if (std::ranges::find(exchangesWithoutSecrets, ExchangeName(publicExchangeName)) !=
+          exchangesWithoutSecrets.end()) {
+        log::info("Not loading {} private keys as requested", publicExchangeName);
         continue;
       }
-      for (const auto& [name, keySecretObj] : keyObj.items()) {
-        if (keySecretObj.contains("key") && keySecretObj.contains("private")) {
+      for (auto& [name, keySecretObj] : keyObj.items()) {
+        auto keyIt = keySecretObj.find("key");
+        auto privateIt = keySecretObj.find("private");
+        if (keyIt != keySecretObj.end() && privateIt != keySecretObj.end()) {
           string passphrase;
-          if (keySecretObj.contains("passphrase")) {
-            passphrase = keySecretObj["passphrase"];
+          auto passphraseIt = keySecretObj.find("passphrase");
+          if (passphraseIt != keySecretObj.end()) {
+            passphrase = std::move(passphraseIt->get_ref<string&>());
           }
-          map[platform].emplace_back(platform, name, keySecretObj["key"], keySecretObj["private"],
-                                     std::move(passphrase));
+          map[publicExchangeName].emplace_back(publicExchangeName, name, std::move(keyIt->get_ref<string&>()),
+                                               std::move(privateIt->get_ref<string&>()), std::move(passphrase));
         } else {
           log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
         }
@@ -94,28 +123,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
   }
 
   if (log::get_level() <= log::level::info) {
-    string foundKeysStr;
-    for (const auto& [platform, keys] : map) {
-      if (!foundKeysStr.empty()) {
-        foundKeysStr.append(" | ");
-      }
-      if (keys.size() > 1U) {
-        foundKeysStr.push_back('{');
-      }
-      bool firstKey = true;
-      for (const APIKey& key : keys) {
-        if (!firstKey) {
-          foundKeysStr.push_back(',');
-        }
-        foundKeysStr.append(key.name());
-        firstKey = false;
-      }
-      if (keys.size() > 1U) {
-        foundKeysStr.push_back('}');
-      }
-      foundKeysStr.push_back('@');
-      foundKeysStr.append(platform);
-    }
+    string foundKeysStr = FoundKeysStr(map);
     if (!foundKeysStr.empty()) {
       log::info("Loaded keys {}", foundKeysStr);
     }

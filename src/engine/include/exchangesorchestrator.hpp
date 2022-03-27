@@ -21,17 +21,15 @@ class ExchangesOrchestrator {
   MarketOrderBookConversionRates getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode, std::optional<int> depth);
 
-  BalancePerExchange getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+  BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
                                 CurrencyCode equiCurrency = CurrencyCode());
 
-  WalletPerExchange getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
-                                   CurrencyCode depositCurrency);
+  WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
-  OpenedOrdersPerExchange getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+  OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 
-  void cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
-                    const OrdersConstraints &ordersConstraints);
+  void cancelOrders(std::span<const ExchangeName> privateExchangeNames, const OrdersConstraints &ordersConstraints);
 
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
 
@@ -43,21 +41,19 @@ class ExchangesOrchestrator {
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
 
   TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                      std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                      std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const PrivateExchangeName> privateExchangeNames,
+  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
                                const TradeOptions &tradeOptions);
 
   TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                std::span<const PrivateExchangeName> privateExchangeNames,
-                                const TradeOptions &tradeOptions);
+                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                         std::span<const PrivateExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                         std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                        const PrivateExchangeName &fromPrivateExchangeName,
-                        const PrivateExchangeName &toPrivateExchangeName,
+                        const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
                         Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawInfoRefreshTime);
 
   WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);

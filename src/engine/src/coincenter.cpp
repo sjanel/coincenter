@@ -62,7 +62,7 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
   return ret;
 }
 
-BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateExchangeNames,
                                           CurrencyCode equiCurrency) {
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
@@ -77,17 +77,17 @@ BalancePerExchange Coincenter::getBalance(std::span<const PrivateExchangeName> p
   return ret;
 }
 
-WalletPerExchange Coincenter::getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
+WalletPerExchange Coincenter::getDepositInfo(std::span<const ExchangeName> privateExchangeNames,
                                              CurrencyCode depositCurrency) {
   return _exchangesOrchestrator.getDepositInfo(privateExchangeNames, depositCurrency);
 }
 
-OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                                     const OrdersConstraints &openedOrdersConstraints) {
   return _exchangesOrchestrator.getOpenedOrders(privateExchangeNames, openedOrdersConstraints);
 }
 
-void Coincenter::cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+void Coincenter::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                               const OrdersConstraints &ordersConstraints) {
   _exchangesOrchestrator.cancelOrders(privateExchangeNames, ordersConstraints);
 }
@@ -112,32 +112,31 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m, Ex
 }
 
 TradedAmounts Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                                std::span<const PrivateExchangeName> privateExchangeNames,
-                                const TradeOptions &tradeOptions) {
+                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.trade(startAmount, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions);
 }
 
 Coincenter::TradedAmountsVector Coincenter::smartBuy(MonetaryAmount endAmount,
-                                                     std::span<const PrivateExchangeName> privateExchangeNames,
+                                                     std::span<const ExchangeName> privateExchangeNames,
                                                      const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions);
 }
 
 Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                      std::span<const PrivateExchangeName> privateExchangeNames,
+                                                      std::span<const ExchangeName> privateExchangeNames,
                                                       const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.smartSell(startAmount, isPercentageTrade, privateExchangeNames, tradeOptions);
 }
 
 TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                   std::span<const PrivateExchangeName> privateExchangeNames,
+                                   std::span<const ExchangeName> privateExchangeNames,
                                    const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions);
 }
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                  const PrivateExchangeName &fromPrivateExchangeName,
-                                  const PrivateExchangeName &toPrivateExchangeName) {
+                                  const ExchangeName &fromPrivateExchangeName,
+                                  const ExchangeName &toPrivateExchangeName) {
   return _exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromPrivateExchangeName,
                                          toPrivateExchangeName);
 }

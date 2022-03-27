@@ -95,7 +95,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
   return ret;
 }
 
-BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const PrivateExchangeName> privateExchangeNames,
+BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeName> privateExchangeNames,
                                                      CurrencyCode equiCurrency) {
   log::info("Query balance from {}{}{}", ConstructAccumulatedExchangeNames(privateExchangeNames),
             equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency.str());
@@ -116,7 +116,7 @@ BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const PrivateExch
   return ret;
 }
 
-WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const PrivateExchangeName> privateExchangeNames,
+WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const ExchangeName> privateExchangeNames,
                                                         CurrencyCode depositCurrency) {
   log::info("Query {} deposit information from {}", depositCurrency.str(),
             ConstructAccumulatedExchangeNames(privateExchangeNames));
@@ -158,8 +158,8 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const PrivateE
   return ret;
 }
 
-OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(
-    std::span<const PrivateExchangeName> privateExchangeNames, const OrdersConstraints &openedOrdersConstraints) {
+OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
+                                                               const OrdersConstraints &openedOrdersConstraints) {
   log::info("Query opened orders matching {} on {}", openedOrdersConstraints.str(),
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges selectedExchanges =
@@ -173,7 +173,7 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(
   return ret;
 }
 
-void ExchangesOrchestrator::cancelOrders(std::span<const PrivateExchangeName> privateExchangeNames,
+void ExchangesOrchestrator::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                                          const OrdersConstraints &ordersConstraints) {
   log::info("Cancel opened orders matching {} on {}", ordersConstraints.str(),
             ConstructAccumulatedExchangeNames(privateExchangeNames));
@@ -370,7 +370,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
 }  // namespace
 
 TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                                           std::span<const PrivateExchangeName> privateExchangeNames,
+                                           std::span<const ExchangeName> privateExchangeNames,
                                            const TradeOptions &tradeOptions) {
   if (privateExchangeNames.size() == 1 && !isPercentageTrade) {
     // In this special case we don't need to call the balance - call trade directly
@@ -419,7 +419,7 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
 }
 
 TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                              std::span<const PrivateExchangeName> privateExchangeNames,
+                                              std::span<const ExchangeName> privateExchangeNames,
                                               const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
       _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
@@ -429,7 +429,7 @@ TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, Currenc
 }
 
 TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
-                                                    std::span<const PrivateExchangeName> privateExchangeNames,
+                                                    std::span<const ExchangeName> privateExchangeNames,
                                                     const TradeOptions &tradeOptions) {
   const CurrencyCode toCurrency = endAmount.currencyCode();
   BalancePerExchange balancePerExchange = getBalance(privateExchangeNames);
@@ -542,7 +542,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
 }
 
 TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                     std::span<const PrivateExchangeName> privateExchangeNames,
+                                                     std::span<const ExchangeName> privateExchangeNames,
                                                      const TradeOptions &tradeOptions) {
   const CurrencyCode fromCurrency = startAmount.currencyCode();
   // Retrieve amount per start amount currency for each exchange
@@ -631,9 +631,8 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
 }
 
 WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                             const PrivateExchangeName &fromPrivateExchangeName,
-                                             const PrivateExchangeName &toPrivateExchangeName,
-                                             Duration withdrawRefreshTime) {
+                                             const ExchangeName &fromPrivateExchangeName,
+                                             const ExchangeName &toPrivateExchangeName, Duration withdrawRefreshTime) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (isPercentageWithdraw) {
     log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode.str(),

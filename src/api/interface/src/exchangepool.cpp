@@ -49,7 +49,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
     if (canUsePrivateExchange) {
       for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
         api::ExchangePrivate* exchangePrivate;
-        const api::APIKey& apiKey = _apiKeyProvider.get(PrivateExchangeName(exchangeName, keyName));
+        const api::APIKey& apiKey = _apiKeyProvider.get(ExchangeName(exchangeName, keyName));
         if (exchangeName == "binance") {
           exchangePrivate = std::addressof(_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey));
         } else if (exchangeName == "bithumb") {

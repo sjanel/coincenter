@@ -105,15 +105,13 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address",
                              {{"coin", currencyCode.str()}});
-  std::string_view address(result["address"].get<std::string_view>());
   std::string_view tag(result["tag"].get<std::string_view>());
-  std::string_view url(result["url"].get<std::string_view>());
   const CoincenterInfo& coincenterInfo = _public.coincenterInfo();
-  PrivateExchangeName privateExchangeName(_public.name(), _apiKey.name());
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_public.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
-  log::info("Retrieved {} (URL: '{}')", w.str(), url);
+  Wallet w(ExchangeName(_public.name(), _apiKey.name()), currencyCode, std::move(result["address"].get_ref<string&>()),
+           tag, walletCheck);
+  log::info("Retrieved {} (URL: '{}')", w.str(), result["url"].get<std::string_view>());
   return w;
 }
 

@@ -118,10 +118,8 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
 }
 
 BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
-
   BalancePortfolio ret;
-  for (const json& accountDetail : result) {
+  for (const json& accountDetail : PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts")) {
     MonetaryAmount a(accountDetail["balance"].get<std::string_view>(),
                      accountDetail["currency"].get<std::string_view>());
     this->addBalance(ret, a, equiCurrency);
@@ -133,9 +131,10 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurlPostData postdata{{"currency", currencyCode.str()}};
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postdata, false);
   bool generateDepositAddressNeeded = false;
-  if (result.contains("error")) {
-    std::string_view name = result["error"]["name"].get<std::string_view>();
-    std::string_view msg = result["error"]["message"].get<std::string_view>();
+  auto errorIt = result.find("error");
+  if (errorIt != result.end()) {
+    std::string_view name = (*errorIt)["name"].get<std::string_view>();
+    std::string_view msg = (*errorIt)["message"].get<std::string_view>();
     if (name == "coin_address_not_found") {
       log::warn("No deposit address found for {}, generating a new one", currencyCode.str());
       generateDepositAddressNeeded = true;
@@ -152,7 +151,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       log::info("Successfully generated address");
     }
     std::chrono::seconds sleepingTime(1);
-    static constexpr int kNbMaxRetries = 8;
+    static constexpr int kNbMaxRetries = 15;
     int nbRetries = 0;
     do {
       if (nbRetries > 0) {
@@ -161,25 +160,27 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       }
       std::this_thread::sleep_for(sleepingTime);
       result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postdata);
-      sleepingTime *= 2;
+      sleepingTime += std::chrono::seconds(1);
       ++nbRetries;
     } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
   }
-  if (result["deposit_address"].is_null()) {
-    throw exception("Deposit address for " + string(currencyCode.str()) + " is undefined");
+  auto addressIt = result.find("deposit_address");
+  if (addressIt == result.end() || addressIt->is_null()) {
+    string err("Deposit address for ");
+    err.append(currencyCode.str()).append(" is undefined");
+    throw exception(std::move(err));
   }
-  std::string_view address = result["deposit_address"].get<std::string_view>();
   std::string_view tag;
-  if (result.contains("secondary_address") && !result["secondary_address"].is_null()) {
-    tag = result["secondary_address"].get<std::string_view>();
+  auto secondaryAddressIt = result.find("secondary_address");
+  if (secondaryAddressIt != result.end() && !secondaryAddressIt->is_null()) {
+    tag = secondaryAddressIt->get<std::string_view>();
   }
-
-  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
+  Wallet w(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, std::move(addressIt->get_ref<string&>()),
+           tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }

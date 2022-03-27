@@ -265,11 +265,9 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
           : addressAndTag.end(),
       addressAndTag.end());
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-
-  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
+  Wallet w(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }

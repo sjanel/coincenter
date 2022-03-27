@@ -124,10 +124,10 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       throw exception(std::move(err));
     }
   }
-  PrivateExchangeName privateExchangeName(_exchangePublic.name(), _apiKey.name());
+  ExchangeName exchangeName(_exchangePublic.name(), _apiKey.name());
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   string address, tag;
   for (const json& depositDetail : res) {
@@ -163,7 +163,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         }
       }
     }
-    if (Wallet::ValidateWallet(walletCheck, privateExchangeName, currencyCode, address, tag)) {
+    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
@@ -171,7 +171,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet w(std::move(privateExchangeName), currencyCode, std::move(address), std::move(tag), walletCheck);
+  Wallet w(std::move(exchangeName), currencyCode, std::move(address), std::move(tag), walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }
@@ -393,7 +393,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
 
-  string krakenWalletName(wallet.exchangeName());
+  string krakenWalletName(wallet.exchangeName().str());
   krakenWalletName.push_back('_');
   krakenWalletName.append(currencyCode.str());
   std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);

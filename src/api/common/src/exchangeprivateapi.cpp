@@ -7,6 +7,10 @@
 
 namespace cct::api {
 
+ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic,
+                                 const APIKey &apiKey)
+    : ExchangeBase(), _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
+
 BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
   UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
   BalancePortfolio balancePortfolio = queryAccountBalance(equiCurrency);
@@ -223,7 +227,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
     }
   } while (action != NextAction::kTerminate);
   log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount().str(),
-            initiatedWithdrawInfo.receivingWallet().privateExchangeName().str(),
+            initiatedWithdrawInfo.receivingWallet().exchangeName().str(),
             initiatedWithdrawInfo.receivingWallet().address());
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
 }
