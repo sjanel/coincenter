@@ -29,8 +29,8 @@ CoincenterParsedOptions::CoincenterParsedOptions(int argc, const char *argv[])
 }
 
 namespace {
-std::pair<OrdersConstraints, PrivateExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
-                                                                     std::string_view orderRequestStr) {
+std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
+                                                              std::string_view orderRequestStr) {
   auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
   auto orderIdViewVector = StringOptionParser(cmdLineOptions.ordersIds).getCSVValues();
   vector<OrderId> orderIds;

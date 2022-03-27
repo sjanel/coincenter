@@ -26,47 +26,47 @@ class CoincenterParsedOptions {
   MonetaryAmount endTradeAmount;
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
-  PrivateExchangeNames tradePrivateExchangeNames;
+  ExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 
   CurrencyCode marketsCurrency1, marketsCurrency2;
-  PublicExchangeNames marketsExchanges;
+  ExchangeNames marketsExchanges;
 
   Market marketForOrderBook;
-  PublicExchangeNames tickerExchanges;
-  PublicExchangeNames orderBookExchanges;
+  ExchangeNames tickerExchanges;
+  ExchangeNames orderBookExchanges;
   CurrencyCode orderbookCur;
 
   Market marketForConversionPath;
-  PublicExchangeNames conversionPathExchanges;
+  ExchangeNames conversionPathExchanges;
 
-  PrivateExchangeNames balancePrivateExchanges;
+  ExchangeNames balancePrivateExchanges;
   CurrencyCode balanceCurrencyCode;
 
   ExchangeSecretsInfo exchangesSecretsInfo;
 
   CurrencyCode depositCurrency;
-  PrivateExchangeNames depositInfoPrivateExchanges;
+  ExchangeNames depositInfoPrivateExchanges;
 
-  PrivateExchangeNames openedOrdersPrivateExchanges;
+  ExchangeNames openedOrdersPrivateExchanges;
   OrdersConstraints openedOrdersConstraints;
 
-  PrivateExchangeNames cancelOpenedOrdersPrivateExchanges;
+  ExchangeNames cancelOpenedOrdersPrivateExchanges;
   OrdersConstraints cancelOpenedOrdersConstraints;
 
   MonetaryAmount amountToWithdraw;
-  PrivateExchangeName withdrawFromExchangeName, withdrawToExchangeName;
+  ExchangeName withdrawFromExchangeName, withdrawToExchangeName;
   CurrencyCode withdrawFeeCur;
-  PublicExchangeNames withdrawFeeExchanges;
+  ExchangeNames withdrawFeeExchanges;
 
   Market tradedVolumeMarket;
-  PublicExchangeNames tradedVolumeExchanges;
+  ExchangeNames tradedVolumeExchanges;
 
   Market lastTradesMarket;
-  PublicExchangeNames lastTradesExchanges;
+  ExchangeNames lastTradesExchanges;
 
   Market lastPriceMarket;
-  PublicExchangeNames lastPriceExchanges;
+  ExchangeNames lastPriceExchanges;
 
   std::string_view dataDir;
 

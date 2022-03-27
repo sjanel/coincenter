@@ -116,15 +116,15 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
                              {{"currency", lowerCaseCur}});
   std::string_view address, tag;
-  PrivateExchangeName privateExchangeName(_huobiPublic.name(), _apiKey.name());
+  ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(privateExchangeName.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   for (const json& depositDetail : result["data"]) {
     address = depositDetail["address"].get<std::string_view>();
     tag = depositDetail["addressTag"].get<std::string_view>();
 
-    if (Wallet::ValidateWallet(walletCheck, privateExchangeName, currencyCode, address, tag)) {
+    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
@@ -132,7 +132,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = std::string_view();
   }
 
-  Wallet w(std::move(privateExchangeName), currencyCode, address, tag, walletCheck);
+  Wallet w(std::move(exchangeName), currencyCode, address, tag, walletCheck);
   log::info("Retrieved {}", w.str());
   return w;
 }

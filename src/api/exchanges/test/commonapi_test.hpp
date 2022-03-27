@@ -210,14 +210,14 @@ class TestAPI {
   static std::unique_ptr<PrivateExchangeT> CreatePrivateExchangeIfKeyPresent(PublicExchangeT &exchangePublic,
                                                                              const CoincenterInfo &coincenterInfo,
                                                                              const APIKeysProvider &apiKeysProvider) {
-    std::string_view exchangeName = exchangePublic.name();
-    if (!apiKeysProvider.contains(exchangeName)) {
-      log::warn("Skip {} private API test as cannot find associated private key", exchangeName);
+    std::string_view publicExchangeName = exchangePublic.name();
+    if (!apiKeysProvider.contains(publicExchangeName)) {
+      log::warn("Skip {} private API test as cannot find associated private key", publicExchangeName);
       return {};
     }
 
-    PrivateExchangeName privateExchangeName(exchangeName, apiKeysProvider.getKeyNames(exchangeName).front());
-    const APIKey &firstAPIKey = apiKeysProvider.get(privateExchangeName);
+    ExchangeName exchangeName(publicExchangeName, apiKeysProvider.getKeyNames(publicExchangeName).front());
+    const APIKey &firstAPIKey = apiKeysProvider.get(exchangeName);
     return std::make_unique<PrivateExchangeT>(coincenterInfo, exchangePublic, firstAPIKey);
   }
 };

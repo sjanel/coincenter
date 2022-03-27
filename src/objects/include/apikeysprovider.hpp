@@ -35,7 +35,7 @@ class APIKeysProvider {
 
   bool contains(std::string_view platform) const { return _apiKeysMap.find(platform) != _apiKeysMap.end(); }
 
-  const APIKey &get(const PrivateExchangeName &privateExchangeName) const;
+  const APIKey &get(const ExchangeName &exchangeName) const;
 
  private:
   using APIKeys = vector<APIKey>;

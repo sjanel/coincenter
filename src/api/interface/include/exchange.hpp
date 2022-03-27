@@ -91,13 +91,8 @@ class Exchange {
 
   bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 
-  bool matches(const PrivateExchangeName &privateExchangeName) const {
-    return name() == privateExchangeName.name() && keyName() == privateExchangeName.keyName();
-  }
-
-  bool matchesKeyNameWildcard(const PrivateExchangeName &privateExchangeName) const {
-    return name() == privateExchangeName.name() &&
-           (!privateExchangeName.isKeyNameDefined() || keyName() == privateExchangeName.keyName());
+  bool matches(const ExchangeName &exchangeName) const {
+    return name() == exchangeName.name() && (!exchangeName.isKeyNameDefined() || keyName() == exchangeName.keyName());
   }
 
   void updateCacheFile() const;

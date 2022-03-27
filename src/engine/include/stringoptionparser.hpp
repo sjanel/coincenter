@@ -14,20 +14,19 @@
 namespace cct {
 class StringOptionParser {
  public:
-  using MarketExchanges = std::pair<Market, PublicExchangeNames>;
-  using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, PrivateExchangeNames>;
-  using CurrencyPrivateExchanges = std::pair<CurrencyCode, PrivateExchangeNames>;
-  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, PrivateExchangeNames>;
-  using CurrencyFromToPrivateExchange = std::tuple<CurrencyCode, PrivateExchangeName, PrivateExchangeName>;
-  using MonetaryAmountFromToPrivateExchange =
-      std::tuple<MonetaryAmount, bool, PrivateExchangeName, PrivateExchangeName>;
-  using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, PublicExchangeNames, CurrencyCode>;
-  using CurrencyPublicExchanges = std::pair<CurrencyCode, PublicExchangeNames>;
-  using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, PublicExchangeNames>;
+  using MarketExchanges = std::pair<Market, ExchangeNames>;
+  using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
+  using CurrencyPrivateExchanges = std::pair<CurrencyCode, ExchangeNames>;
+  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, ExchangeNames>;
+  using CurrencyFromToPrivateExchange = std::tuple<CurrencyCode, ExchangeName, ExchangeName>;
+  using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, bool, ExchangeName, ExchangeName>;
+  using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, ExchangeNames, CurrencyCode>;
+  using CurrencyPublicExchanges = std::pair<CurrencyCode, ExchangeNames>;
+  using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
 
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
-  PublicExchangeNames getExchanges() const;
+  ExchangeNames getExchanges() const;
 
   MarketExchanges getMarketExchanges() const;
 

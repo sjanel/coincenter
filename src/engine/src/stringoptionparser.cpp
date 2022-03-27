@@ -8,25 +8,17 @@
 
 namespace cct {
 namespace {
-PublicExchangeNames GetExchanges(std::string_view str) {
-  PublicExchangeNames exchanges;
+ExchangeNames GetExchanges(std::string_view str) {
+  ExchangeNames exchanges;
   if (!str.empty()) {
     std::size_t first, last;
     for (first = 0, last = str.find(','); last != std::string_view::npos; last = str.find(',', last + 1)) {
-      exchanges.emplace_back(str.begin() + first, str.begin() + last);
+      exchanges.emplace_back(std::string_view(str.begin() + first, str.begin() + last));
       first = last + 1;
     }
-    exchanges.emplace_back(str.begin() + first, str.end());
+    exchanges.emplace_back(std::string_view(str.begin() + first, str.end()));
   }
   return exchanges;
-}
-
-PrivateExchangeNames GetPrivateExchanges(std::string_view str) {
-  PublicExchangeNames fullNames = GetExchanges(str);
-  PrivateExchangeNames ret(fullNames.size());
-  std::transform(fullNames.begin(), fullNames.end(), ret.begin(),
-                 [](std::string_view exchangeName) { return PrivateExchangeName(exchangeName); });
-  return ret;
 }
 
 std::string_view StrBeforeComma(std::string_view opt, std::size_t startPos, std::size_t commaPos) {
@@ -91,7 +83,7 @@ auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPerce
 
 }  // namespace
 
-PublicExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
+ExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
 
 StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() const {
   std::size_t commaPos = getNextCommaPos(0, false);
@@ -122,7 +114,7 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
     }
   }
 
-  return CurrencyPrivateExchanges(CurrencyCode(curStr), GetPrivateExchanges(exchangesStr));
+  return CurrencyPrivateExchanges(CurrencyCode(curStr), GetExchanges(exchangesStr));
 }
 
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(
@@ -155,7 +147,7 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
   if (currenciesShouldBeSet && (fromTradeCurrency.isNeutral() || toTradeCurrency.isNeutral())) {
     throw invalid_argument("Expected a dash");
   }
-  return std::make_tuple(fromTradeCurrency, toTradeCurrency, GetPrivateExchanges(StrEnd(_opt, startExchangesPos)));
+  return std::make_tuple(fromTradeCurrency, toTradeCurrency, GetExchanges(StrEnd(_opt, startExchangesPos)));
 }
 
 StringOptionParser::MonetaryAmountCurrencyPrivateExchanges
@@ -167,25 +159,25 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
     toTradeCurrency = CurrencyCode(GetNextStr(_opt, ',', pos));
   }
 
-  return std::make_tuple(startAmount, isPercentage, toTradeCurrency, GetPrivateExchanges(GetNextStr(_opt, '\0', pos)));
+  return std::make_tuple(startAmount, isPercentage, toTradeCurrency, GetExchanges(GetNextStr(_opt, '\0', pos)));
 }
 
 StringOptionParser::CurrencyFromToPrivateExchange StringOptionParser::getCurrencyFromToPrivateExchange() const {
   std::size_t pos = 0;
   CurrencyCode cur(GetNextStr(_opt, ',', pos));
-  PrivateExchangeName from(GetNextStr(_opt, '-', pos));
+  ExchangeName from(GetNextStr(_opt, '-', pos));
   // Warning: in C++, order of evaluation of parameters is unspecified. Because GetNextStr has side
   // effects (it modifies 'pos') we need temporary variables here
-  return std::make_tuple(std::move(cur), std::move(from), PrivateExchangeName(GetNextStr(_opt, '-', pos)));
+  return std::make_tuple(std::move(cur), std::move(from), ExchangeName(GetNextStr(_opt, '-', pos)));
 }
 
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()
     const {
   std::size_t pos = 0;
   auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, ",%", pos);
-  PrivateExchangeName from(GetNextStr(_opt, '-', pos));
+  ExchangeName from(GetNextStr(_opt, '-', pos));
   return std::make_tuple(std::move(startAmount), isPercentage, std::move(from),
-                         PrivateExchangeName(GetNextStr(_opt, '-', pos)));
+                         ExchangeName(GetNextStr(_opt, '-', pos)));
 }
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
