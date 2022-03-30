@@ -244,7 +244,7 @@ void Coincenter::processReadRequests(const CoincenterParsedOptions &opts) {
 }
 
 void Coincenter::processWriteRequests(const CoincenterParsedOptions &opts) {
-  if (!opts.fromTradeCurrency.isNeutral()) {
+  if (!opts.fromTradeCurrency.isNeutral() && !opts.toTradeCurrency.isNeutral()) {
     tradeAll(opts.fromTradeCurrency, opts.toTradeCurrency, opts.tradePrivateExchangeNames, opts.tradeOptions);
   }
 
