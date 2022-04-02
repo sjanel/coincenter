@@ -36,55 +36,15 @@ class CoincenterCommands {
   ExchangeNames tradePrivateExchangeNames;
   TradeOptions tradeOptions;
 
-  CurrencyCode marketsCurrency1, marketsCurrency2;
-  ExchangeNames marketsExchanges;
-
-  Market marketForOrderBook;
-  CurrencyCode orderbookCur;
-  ExchangeNames tickerExchanges;
-  ExchangeNames orderBookExchanges;
-
-  Market marketForConversionPath;
-  ExchangeNames conversionPathExchanges;
-
-  ExchangeNames balancePrivateExchanges;
-  CurrencyCode balanceCurrencyCode;
-
   ExchangeSecretsInfo exchangesSecretsInfo;
-
-  CurrencyCode depositCurrency;
-  ExchangeNames depositInfoPrivateExchanges;
-
-  ExchangeNames openedOrdersPrivateExchanges;
-  OrdersConstraints openedOrdersConstraints;
-
-  ExchangeNames cancelOpenedOrdersPrivateExchanges;
-  OrdersConstraints cancelOpenedOrdersConstraints;
-
-  MonetaryAmount amountToWithdraw;
-  ExchangeName withdrawFromExchangeName, withdrawToExchangeName;
-  CurrencyCode withdrawFeeCur;
-  ExchangeNames withdrawFeeExchanges;
-
-  Market tradedVolumeMarket;
-  Market lastTradesMarket;
-  Market lastPriceMarket;
-  ExchangeNames tradedVolumeExchanges;
-  ExchangeNames lastTradesExchanges;
-  ExchangeNames lastPriceExchanges;
 
   Duration repeatTime{};
 
-  int orderbookDepth = 0;
-  int nbLastTrades = 0;
   int repeats = 1;
 
-  bool tickerForAll = false;
-  bool balanceForAll = false;
-  bool queryOpenedOrders = false;
-  bool cancelOpenedOrders = false;
   bool isPercentageTrade = false;
-  bool isPercentageWithdraw = false;
+
+  std::span<const CoincenterCommand> commands() const { return _commands; }
 
  private:
   using Commands = vector<CoincenterCommand>;

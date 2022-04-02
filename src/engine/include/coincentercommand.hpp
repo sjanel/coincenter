@@ -1,12 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <variant>
 
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
+#include "tradeoptions.hpp"
 
 namespace cct {
 class CoincenterCommand {
@@ -39,6 +41,9 @@ class CoincenterCommand {
   CoincenterCommand& setOrdersConstraints(const OrdersConstraints& ordersConstraints);
   CoincenterCommand& setOrdersConstraints(OrdersConstraints&& ordersConstraints);
 
+  CoincenterCommand& setTradeOptions(const TradeOptions& tradeOptions);
+  CoincenterCommand& setTradeOptions(TradeOptions&& tradeOptions);
+
   CoincenterCommand& setAmount(MonetaryAmount amount);
 
   CoincenterCommand& setRepeats(int repeats);
@@ -50,7 +55,7 @@ class CoincenterCommand {
   CoincenterCommand& setCur1(CurrencyCode cur1);
   CoincenterCommand& setCur2(CurrencyCode cur2);
 
-  CoincenterCommand& setPercentageTrade();
+  CoincenterCommand& setPercentageAmount(bool value = true);
 
   bool isPublic() const;
   bool isPrivate() const { return !isPublic(); }
@@ -60,7 +65,9 @@ class CoincenterCommand {
 
   const ExchangeNames& exchangeNames() const { return _exchangeNames; }
 
-  const OrdersConstraints& ordersConstraints() const { return _ordersConstraints; }
+  const OrdersConstraints& ordersConstraints() const { return std::get<OrdersConstraints>(_tradeOrOrdersOptions); }
+
+  const TradeOptions& tradeOptions() const { return std::get<TradeOptions>(_tradeOrOrdersOptions); }
 
   MonetaryAmount amount() const { return _amount; }
 
@@ -75,21 +82,23 @@ class CoincenterCommand {
 
   Type type() const { return _type; }
 
-  bool isPercentageTrade() const { return _isPercentageTrade; }
+  bool isPercentageAmount() const { return _isPercentageAmount; }
 
   using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<ExchangeNames> &&
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
 
  private:
+  using TradeOrOrdersOptions = std::variant<OrdersConstraints, TradeOptions>;
+
   ExchangeNames _exchangeNames;
-  OrdersConstraints _ordersConstraints;
+  TradeOrOrdersOptions _tradeOrOrdersOptions;
   MonetaryAmount _amount;
   int _repeats = 1;
   int _n = 0;
   Market _market;
   CurrencyCode _cur1, _cur2;
   Type _type;
-  bool _isPercentageTrade = false;
+  bool _isPercentageAmount = false;
 };
 
 }  // namespace cct

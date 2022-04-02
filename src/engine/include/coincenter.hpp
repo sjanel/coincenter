@@ -124,8 +124,6 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  void processReadRequests(const CoincenterCommands &opts);
-
   void processWriteRequests(const CoincenterCommands &opts);
 
   CurlInitRAII _curlInitRAII;  // Should be first

@@ -55,7 +55,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstrain
   if (_type != Type::kOrdersCancel && _type != Type::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
-  _ordersConstraints = ordersConstraints;
+  _tradeOrOrdersOptions = ordersConstraints;
   return *this;
 }
 
@@ -63,7 +63,23 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& o
   if (_type != Type::kOrdersCancel && _type != Type::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
-  _ordersConstraints = std::move(ordersConstraints);
+  _tradeOrOrdersOptions = std::move(ordersConstraints);
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setTradeOptions(const TradeOptions& tradeOptions) {
+  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade) {
+    throw exception("Trade options can only be used for trade related commands");
+  }
+  _tradeOrOrdersOptions = tradeOptions;
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOptions) {
+  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade) {
+    throw exception("Trade options can only be used for trade related commands");
+  }
+  _tradeOrOrdersOptions = std::move(tradeOptions);
   return *this;
 }
 
@@ -103,11 +119,11 @@ CoincenterCommand& CoincenterCommand::setCur2(CurrencyCode cur2) {
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setPercentageTrade() {
-  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade) {
-    throw exception("Percentage trade can only be set for trade / buy / sell command");
+CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
+  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade && _type != Type::kWithdraw) {
+    throw exception("Percentage trade can only be set for trade / buy / sell or withdraw command");
   }
-  _isPercentageTrade = true;
+  _isPercentageAmount = value;
   return *this;
 }
 }  // namespace cct
