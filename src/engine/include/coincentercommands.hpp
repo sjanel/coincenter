@@ -79,7 +79,6 @@ class CoincenterCommands {
   int nbLastTrades = 0;
   int repeats = 1;
 
-  bool printQueryResults = true;
   bool tickerForAll = false;
   bool balanceForAll = false;
   bool queryOpenedOrders = false;

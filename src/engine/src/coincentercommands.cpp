@@ -59,9 +59,6 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     return false;
   }
 
-  cmdLineOptions.setLogLevel();
-  cmdLineOptions.setLogFile();
-
   if (cmdLineOptions.repeats.isPresent()) {
     if (cmdLineOptions.repeats.isSet()) {
       repeats = *cmdLineOptions.repeats;
@@ -72,7 +69,6 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   }
 
   repeatTime = cmdLineOptions.repeatTime;
-  printQueryResults = !cmdLineOptions.noPrint;
 
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);

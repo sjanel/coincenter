@@ -19,7 +19,14 @@ inline void trace(std::string_view, ...) {}
 inline int get_level() { return 0; }
 
 struct level {
-  static constexpr int trace{};
+  using level_enum = int;
+  static constexpr int trace = 6;
+  static constexpr int debug = 5;
+  static constexpr int info = 4;
+  static constexpr int warn = 3;
+  static constexpr int error = 2;
+  static constexpr int critical = 1;
+  static constexpr int off = 0;
 };
 
 }  // namespace log

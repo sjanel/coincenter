@@ -13,7 +13,7 @@ namespace cct {
 
 class OrderConstraintsBitmap {
  public:
-  enum class ConstraintType : uint8_t { kCur1 = 0, kCur2, kPlacedBefore, kPlacedAfter, kOrderId };
+  enum class ConstraintType : uint8_t { kCur1, kCur2, kPlacedBefore, kPlacedAfter, kOrderId };
 
  private:
   static constexpr uint8_t kMarketConstrained =

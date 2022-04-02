@@ -5,8 +5,6 @@
 #include <thread>
 
 #include "abstractmetricgateway.hpp"
-#include "cct_exception.hpp"
-#include "cct_smallvector.hpp"
 #include "coincentercommands.hpp"
 #include "coincenteroptions.hpp"
 #include "printqueryresults.hpp"
@@ -22,7 +20,7 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangesOrchestrator(_exchangePool.exchanges()),
-      _queryResultPrinter(_coincenterInfo.printQueryResults()) {}
+      _queryResultPrinter(_coincenterInfo.printResults()) {}
 
 void Coincenter::process(const CoincenterCommands &opts) {
   processWriteRequests(opts);
