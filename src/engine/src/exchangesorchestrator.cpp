@@ -455,13 +455,13 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
 
   ExchangeAmountToCurrencyToAmountVector trades;
   MonetaryAmount remEndAmount = endAmount;
-  api::ExchangePublic *pExchangePublic = nullptr;
   constexpr bool canUseCryptowatchAPI = false;
   constexpr bool considerStableCoinsAsFiats = false;
   for (int nbSteps = 1;; ++nbSteps) {
     bool continuingHigherStepsPossible = false;
     const int nbTrades = trades.size();
     int publicExchangePos = -1;
+    api::ExchangePublic *pExchangePublic = nullptr;
 #ifdef CCT_CLANG
     // Clang does not consider structured bindings symbols as variables yet...
     // So they cannot be captured by lambdas
