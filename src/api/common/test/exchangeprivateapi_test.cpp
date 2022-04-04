@@ -17,12 +17,7 @@ namespace cct::api {
 
 class ExchangePrivateTest : public ::testing::Test {
  protected:
-  ExchangePrivateTest()
-      : cryptowatchAPI(coincenterInfo, settings::RunMode::kProd, Duration::max(), true),
-        fiatConverter(coincenterInfo, Duration::max()),  // max to avoid real Fiat converter queries
-        exchangePublic(kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo),
-        key("test", "testuser", "", "", ""),
-        exchangePrivate(exchangePublic, coincenterInfo, key) {}
+  ExchangePrivateTest() = default;
 
   virtual void SetUp() {}
 
@@ -33,12 +28,13 @@ class ExchangePrivateTest : public ::testing::Test {
     EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(ExchangePublic::MarketSet{m}));
   }
 
-  CoincenterInfo coincenterInfo;
-  CryptowatchAPI cryptowatchAPI;
-  FiatConverter fiatConverter;
-  MockExchangePublic exchangePublic;
-  APIKey key;
-  MockExchangePrivate exchangePrivate;
+  LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
+  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
+  CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kProd, Duration::max(), true};
+  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
+  APIKey key{"test", "testuser", "", "", ""};
+  MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
 
   Market m{"ETH", "EUR"};
 
