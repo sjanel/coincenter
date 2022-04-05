@@ -98,9 +98,6 @@ class UpbitPrivate : public ExchangePrivate {
   OrderInfo parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const;
 
   bool isOrderClosed(const json& orderJson) const;
-  bool isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) const;
-
-  MonetaryAmount sanitizeVolume(MonetaryAmount volume, MonetaryAmount price) const;
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

@@ -247,8 +247,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.toCur());
-  const bool isTakerStrategy =
-      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const Market m = tradeInfo.m;
 
   const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
@@ -258,7 +258,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  volume = sanitizeVolume(volume, price);
+  UpbitPublic& exchangePublic = dynamic_cast<UpbitPublic&>(_exchangePublic);
 
   if (fromCurrencyCode == m.quote()) {
     // For 'buy', from amount is fee excluded
@@ -270,6 +270,18 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
       volume = exchangeInfo.applyFee(volume, feeType);
     }
   }
+
+  MonetaryAmount sanitizedVol = exchangePublic.sanitizeVolume(volume, price);
+  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
+  if (volume < sanitizedVol && !isSimulationWithRealOrder) {
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+              sanitizedVol.str());
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
+  volume = sanitizedVol;
+
   if (isTakerStrategy) {
     // Upbit has an exotic way to distinguish buy and sell on the same market
     if (fromCurrencyCode == m.base()) {
@@ -280,11 +292,6 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   } else {
     placePostData.append("volume", volume.amountStr());
     placePostData.append("price", price.amountStr());
-  }
-
-  if (isOrderTooSmall(volume, price)) {
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
   }
 
   json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
@@ -370,49 +377,6 @@ bool UpbitPrivate::isOrderClosed(const json& orderJson) const {
     log::error("Unknown state {} to be handled for Upbit", state);
     return true;
   }
-}
-
-bool UpbitPrivate::isOrderTooSmall(MonetaryAmount volume, MonetaryAmount price) const {
-  /// Value found in this page:
-  /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
-  /// confirmed with some tests. However, could change in the future.
-  constexpr std::array<MonetaryAmount, 2> minOrderAmounts{
-      {MonetaryAmount(5000, "KRW"), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
-  bool orderIsTooSmall = false;
-  for (MonetaryAmount minOrderAmount : minOrderAmounts) {
-    if (volume.currencyCode() == minOrderAmount.currencyCode()) {
-      orderIsTooSmall = volume < minOrderAmount;
-      if (orderIsTooSmall) {
-        log::warn("No trade of {} because min vol order is {} for this market", volume.str(), minOrderAmount.str());
-      }
-    } else if (price.currencyCode() == minOrderAmount.currencyCode()) {
-      MonetaryAmount orderAmount(volume.toNeutral() * price);
-      orderIsTooSmall = orderAmount < minOrderAmount;
-      if (orderIsTooSmall) {
-        log::warn("No trade of {} because min vol order is {} for this market", orderAmount.str(),
-                  minOrderAmount.str());
-      }
-    }
-    if (orderIsTooSmall) {
-      break;
-    }
-  }
-  return orderIsTooSmall;
-}
-
-MonetaryAmount UpbitPrivate::sanitizeVolume(MonetaryAmount volume, MonetaryAmount price) const {
-  // Upbit can return this error for big trades:
-  // "최대매수금액 1000000000.0 KRW 보다 작은 주문을 입력해 주세요."
-  // It means that total value of the order should not exceed 1000000000 KRW.
-  // Let's adjust volume to avoid this issue.
-  static constexpr MonetaryAmount kMaximumOrderValue = MonetaryAmount(1000000000, CurrencyCode("KRW"));
-  MonetaryAmount ret = volume;
-  if (price.currencyCode() == kMaximumOrderValue.currencyCode() && volume.toNeutral() * price > kMaximumOrderValue) {
-    log::warn("{} / {} = {}", kMaximumOrderValue.str(), price.str(), (kMaximumOrderValue / price).str());
-    ret = MonetaryAmount(kMaximumOrderValue / price, volume.currencyCode());
-    log::warn("Order too big, decrease volume {} to {}", volume.str(), ret.str());
-  }
-  return ret;
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
