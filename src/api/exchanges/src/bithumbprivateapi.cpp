@@ -24,10 +24,13 @@
 namespace cct::api {
 namespace {
 
+constexpr std::string_view kValueKeyStr = "val";
+constexpr std::string_view kTimestampKeyStr = "ts";
+
+constexpr std::string_view kMaxOrderPriceJsonKeyStr = "maxOrderPrice";
+constexpr std::string_view kMinOrderPriceJsonKeyStr = "minOrderPrice";
 constexpr std::string_view kMinOrderSizeJsonKeyStr = "minOrderSize";
-constexpr std::string_view kMinOrderSizeTimeEpochStr = "minOrderSizeEpochSec";
 constexpr std::string_view kNbDecimalsStr = "nbDecimals";
-constexpr std::string_view kNbDecimalsTimeEpochStr = "nbDecimalsEpochSec";
 
 // Bithumb API parameter constants
 constexpr std::string_view kOrderCurrencyParamStr = "order_currency";
@@ -66,6 +69,70 @@ json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::stri
 
   SetHttpHeaders(opts, apiKey, signature, strDataAndNoncePair.second);
   return json::parse(curlHandle.query(endpoint, opts));
+}
+
+template <class ValueType>
+bool LoadCurrencyInfoField(const json& currencyOrderInfoJson, std::string_view keyStr, ValueType& val, TimePoint& ts) {
+  auto subPartIt = currencyOrderInfoJson.find(keyStr.data());
+  if (subPartIt != currencyOrderInfoJson.end()) {
+    auto valIt = subPartIt->find(kValueKeyStr);
+    auto tsIt = subPartIt->find(kTimestampKeyStr);
+    if (valIt == subPartIt->end() || tsIt == subPartIt->end()) {
+      log::warn("Unexpected format of Bithumb cache detected - do not use (will be automatically updated)");
+      return false;
+    }
+    if constexpr (std::is_same_v<ValueType, MonetaryAmount>) {
+      val = MonetaryAmount(valIt->get<std::string_view>());
+      log::debug("Loaded {} for '{}' from cache file", val.str(), keyStr);
+    } else {
+      val = valIt->get<ValueType>();
+      log::debug("Loaded {} for '{}' from cache file", val, keyStr);
+    }
+    ts = TimePoint(std::chrono::seconds(tsIt->get<int64_t>()));
+    return true;
+  }
+  return false;
+}
+
+template <class ValueType>
+json CurrencyOrderInfoField2Json(const ValueType& val, TimePoint ts) {
+  json data;
+  if constexpr (std::is_same_v<ValueType, MonetaryAmount>) {
+    data.emplace(kValueKeyStr, val.str());
+  } else {
+    data.emplace(kValueKeyStr, val);
+  }
+  data.emplace(kTimestampKeyStr, std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch()).count());
+  return data;
+}
+
+template <class ValueType>
+bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::string_view logStr, std::string_view msg,
+                  std::string_view jsonKeyStr, json& jsonData) {
+  std::size_t startPos = msg.find(findStr1);
+  if (startPos != std::string_view::npos) {
+    static_assert(std::is_integral_v<ValueType> || std::is_same_v<ValueType, string>,
+                  "ValueType should be a possible json value, not a view");
+    std::size_t idxFirst = startPos + findStr1.size();
+    std::size_t endPos = msg.find(findStr2, idxFirst);
+    if (endPos == std::string_view::npos) {
+      return false;
+    }
+    std::string_view valueStr(msg.begin() + idxFirst, msg.begin() + endPos);
+    // I did not find the way via the API to get various important information for some currency bound values,
+    // so I get them this way, by parsing the Korean error message of the response
+    log::warn("Bithumb told us that {} is {}", logStr, valueStr);
+    ValueType val;
+    if constexpr (std::is_integral_v<ValueType>) {
+      val = FromString<ValueType>(valueStr);
+    } else {
+      val = ValueType(valueStr);
+    }
+    jsonData.clear();
+    jsonData.emplace(jsonKeyStr, CurrencyOrderInfoField2Json(val, Clock::now()));
+    return true;
+  }
+  return false;
 }
 
 template <class CurlPostDataT = CurlPostData>
@@ -131,41 +198,12 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
           }
           case 5600:
             if (isPlaceOrderQuery) {
-              static constexpr std::string_view kTooManyDecimals1 = "수량은 소수점 ";
-              static constexpr std::string_view kTooManyDecimals2 = "자";
-
-              std::size_t nbDecimalsMaxPos = msg.find(kTooManyDecimals1);
-              if (nbDecimalsMaxPos != std::string_view::npos) {
-                std::size_t idxFirst = nbDecimalsMaxPos + kTooManyDecimals1.size();
-                std::size_t endPos = msg.find(kTooManyDecimals2, idxFirst);
-                if (endPos == std::string_view::npos) {
-                  throw exception("Unexpected string in parsing correct number of decimals for Bithumb");
-                }
-                std::string_view maxNbDecimalsStr(msg.begin() + idxFirst, msg.begin() + endPos);
-                CurrencyCode currencyCode(std::string_view(msg.begin(), msg.begin() + msg.find(' ')));
-                // I did not find the way via the API to get the maximum precision of Bithumb assets,
-                // so I get them this way, by parsing the Korean error message of the response
-                log::warn("Bithumb told us that maximum precision of {} is {} decimals", currencyCode.str(),
-                          maxNbDecimalsStr);
-                int8_t maxNbDecimals = FromString<int8_t>(maxNbDecimalsStr);
-                ret.clear();
-                ret.emplace(kNbDecimalsStr, maxNbDecimals);
-                return ret;
-              }
-
-              static constexpr std::string_view kMinOrderString1 = "주문금액은 ";
-              static constexpr std::string_view kMinOrderString2 = " 입니다";
-              std::size_t minOrderAmountPos = msg.find(kMinOrderString1);
-              if (minOrderAmountPos != std::string_view::npos) {
-                std::size_t idxFirst = minOrderAmountPos + kMinOrderString1.size();
-                std::size_t endPos = msg.find(kMinOrderString2, idxFirst);
-                if (endPos == std::string_view::npos) {
-                  throw exception("Unexpected string in parsing min order size on Bithumb");
-                }
-                std::string_view minOrderAmountStr(msg.begin() + idxFirst, msg.begin() + endPos);
-                log::warn("Bithumb told us that minimum order size is {}", minOrderAmountStr);
-                ret.clear();
-                ret.emplace(kMinOrderSizeJsonKeyStr, minOrderAmountStr);
+              if (ExtractError<int8_t>("수량은 소수점 ", "자", "number of decimals", msg, kNbDecimalsStr, ret) ||
+                  ExtractError<string>("주문금액은 ", " 입니다", "min order size", msg, kMinOrderSizeJsonKeyStr, ret) ||
+                  ExtractError<string>("주문 가격은 ", " 이상으로 입력 가능합니다", "min order price", msg,
+                                       kMinOrderPriceJsonKeyStr, ret) ||
+                  ExtractError<string>("주문 가격은 ", " 이하로 입력 가능합니다", "max order price", msg,
+                                       kMaxOrderPriceJsonKeyStr, ret)) {
                 return ret;
               }
             }
@@ -210,26 +248,18 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, bithumbPublic) {
   json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readJson();
-  _currencyOrderInfoMap.reserve(data.size());
   for (const auto& [currencyCodeStr, currencyOrderInfoJson] : data.items()) {
-    auto nbDecimalsIt = currencyOrderInfoJson.find(kNbDecimalsStr.data());
-    auto nbDecimalsEpochSecIt = currencyOrderInfoJson.find(kNbDecimalsTimeEpochStr.data());
-    auto minOrderSizeIt = currencyOrderInfoJson.find(kMinOrderSizeJsonKeyStr.data());
-    auto minOrderSizeEpochSecIt = currencyOrderInfoJson.find(kMinOrderSizeTimeEpochStr.data());
-    if (nbDecimalsIt == currencyOrderInfoJson.end() || nbDecimalsEpochSecIt == currencyOrderInfoJson.end() ||
-        minOrderSizeIt == currencyOrderInfoJson.end() || minOrderSizeEpochSecIt == currencyOrderInfoJson.end()) {
-      log::warn("Unexpected format of {} cache detected - do not use (will be automatically updated)");
-      _currencyOrderInfoMap.clear();
-      break;
-    }
-    int8_t nbDecimals = nbDecimalsIt->get<int8_t>();
-    MonetaryAmount minOrderSize(minOrderSizeIt->get<std::string_view>());
-    log::debug("Stored {} decimals, min order size {} for {} from cache file", static_cast<int>(nbDecimals),
-               minOrderSize.str(), currencyCodeStr);
-    _currencyOrderInfoMap.insert_or_assign(
-        CurrencyCode(currencyCodeStr),
-        CurrencyOrderInfo{nbDecimals, TimePoint(std::chrono::seconds(nbDecimalsEpochSecIt->get<int64_t>())),
-                          minOrderSize, TimePoint(std::chrono::seconds(minOrderSizeEpochSecIt->get<int64_t>()))});
+    CurrencyOrderInfo currencyOrderInfo;
+
+    LoadCurrencyInfoField(currencyOrderInfoJson, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
+                          currencyOrderInfo.lastNbDecimalsUpdatedTime);
+    LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
+                          currencyOrderInfo.lastMinOrderSizeUpdatedTime);
+    LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
+                          currencyOrderInfo.lastMinOrderPriceUpdatedTime);
+    LoadCurrencyInfoField(currencyOrderInfoJson, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
+                          currencyOrderInfo.lastMaxOrderPriceUpdatedTime);
+    _currencyOrderInfoMap.insert_or_assign(CurrencyCode(currencyCodeStr), std::move(currencyOrderInfo));
   }
 }
 
@@ -358,8 +388,8 @@ void BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCon
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
-  const bool isTakerStrategy =
-      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.toCur());
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
@@ -386,6 +416,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     volume = exchangeInfo.applyFee(volume, feeType);
   }
 
+  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
+
   auto currencyOrderInfoIt = _currencyOrderInfoMap.find(m.base());
   auto nowTime = Clock::now();
   CurrencyOrderInfo currencyOrderInfo;
@@ -401,17 +433,44 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
         return placeOrderInfo;
       }
     }
+    if (!isTakerStrategy) {
+      MonetaryAmount minOrderPrice = price, maxOrderPrice = price;
+      if (currencyOrderInfo.lastMinOrderPriceUpdatedTime + _currencyOrderInfoRefreshTime > nowTime &&
+          currencyOrderInfo.minOrderPrice.currencyCode() == price.currencyCode()) {
+        minOrderPrice = currencyOrderInfo.minOrderPrice;
+      }
+      if (currencyOrderInfo.lastMaxOrderPriceUpdatedTime + _currencyOrderInfoRefreshTime > nowTime &&
+          currencyOrderInfo.maxOrderPrice.currencyCode() == price.currencyCode()) {
+        maxOrderPrice = currencyOrderInfo.maxOrderPrice;
+      }
+      if (price < minOrderPrice || price > maxOrderPrice) {
+        if (isSimulationWithRealOrder) {
+          if (price < minOrderPrice) {
+            price = minOrderPrice;
+          } else {
+            price = maxOrderPrice;
+          }
+          placePostData.set("price", price.amountStr());
+        } else {
+          log::warn("No trade of {} into {} because {} is outside price bounds [{}, {}]", volume.str(),
+                    toCurrencyCode.str(), price.str(), minOrderPrice.str(), maxOrderPrice.str());
+          placeOrderInfo.setClosed();
+          return placeOrderInfo;
+        }
+      }
+    }
+
     if (currencyOrderInfo.lastMinOrderSizeUpdatedTime + _currencyOrderInfoRefreshTime > nowTime) {
-      CurrencyCode minOrderSizeCur = currencyOrderInfo.minOrderSize.currencyCode();
-      MonetaryAmount size;
+      MonetaryAmount size = currencyOrderInfo.minOrderSize;
+      CurrencyCode minOrderSizeCur = size.currencyCode();
       if (volume.currencyCode() == minOrderSizeCur) {
         size = volume;
       } else if (price.currencyCode() == minOrderSizeCur) {
         size = volume.toNeutral() * price;
       } else {
-        log::error("Unexpected currency for min order size {}", currencyOrderInfo.minOrderSize.str());
+        log::error("Unexpected currency for min order size {}", size.str());
       }
-      if (size < currencyOrderInfo.minOrderSize) {
+      if (size < currencyOrderInfo.minOrderSize && !isSimulationWithRealOrder) {
         log::warn("No trade of {} into {} because {} is lower than min order {}", volume.str(), toCurrencyCode.str(),
                   size.str(), currencyOrderInfo.minOrderSize.str());
         placeOrderInfo.setClosed();
@@ -422,36 +481,66 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   placePostData.append("units", volume.amountStr());
 
-  json result = PrivateQuery(_curlHandle, _apiKey, endpoint, placePostData);
-  auto orderIdIt = result.find(kOrderIdParamStr.data());
-  if (orderIdIt == result.end()) {
-    auto nbDecimalsIt = result.find(kNbDecimalsStr.data());
-    if (nbDecimalsIt != result.end()) {
-      currencyOrderInfo.nbDecimals = nbDecimalsIt->get<int8_t>();
-      currencyOrderInfo.lastNbDecimalsUpdatedTime = nowTime;
+  placeOrderInfo.setClosed();
 
-      volume.truncate(currencyOrderInfo.nbDecimals);
-      placePostData.set("units", volume.amountStr());
-      result = PrivateQuery(_curlHandle, _apiKey, endpoint, std::move(placePostData));
-    } else {
-      auto minOrderSizeIt = result.find(kMinOrderSizeJsonKeyStr.data());
-      if (minOrderSizeIt == result.end()) {
-        log::error("Unexpected answer from {} place order, no data", _exchangePublic.name());
+  static constexpr int kNbMaxRetries = 3;
+  bool currencyInfoUpdated = false;
+  for (int nbRetries = 0; nbRetries < kNbMaxRetries; ++nbRetries) {
+    json result = PrivateQuery(_curlHandle, _apiKey, endpoint, placePostData);
+    auto orderIdIt = result.find(kOrderIdParamStr.data());
+    if (orderIdIt == result.end()) {
+      currencyInfoUpdated = true;
+      if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
+                                currencyOrderInfo.lastNbDecimalsUpdatedTime)) {
+        volume.truncate(currencyOrderInfo.nbDecimals);
+        placePostData.set("units", volume.amountStr());
+      } else if (LoadCurrencyInfoField(result, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
+                                       currencyOrderInfo.lastMinOrderSizeUpdatedTime)) {
+        if (isSimulationWithRealOrder && currencyOrderInfo.minOrderSize.currencyCode() == price.currencyCode()) {
+          volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
+          placePostData.set("units", volume.amountStr());
+        } else {
+          log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(),
+                    toCurrencyCode.str(), currencyOrderInfo.minOrderSize.str());
+          break;
+        }
+      } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
+                                       currencyOrderInfo.lastMinOrderPriceUpdatedTime)) {
+        if (isSimulationWithRealOrder) {
+          if (!isTakerStrategy) {
+            price = currencyOrderInfo.minOrderPrice;
+            placePostData.set("price", price.amountStr());
+          }
+        } else {
+          log::warn("No trade of {} into {} because min order price is {} for this market", volume.str(),
+                    toCurrencyCode.str(), currencyOrderInfo.minOrderPrice.str());
+          break;
+        }
+      } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
+                                       currencyOrderInfo.lastMaxOrderPriceUpdatedTime)) {
+        if (isSimulationWithRealOrder) {
+          if (!isTakerStrategy) {
+            price = currencyOrderInfo.maxOrderPrice;
+            placePostData.set("price", price.amountStr());
+          }
+        } else {
+          log::warn("No trade of {} into {} because max order price is {} for this market", volume.str(),
+                    toCurrencyCode.str(), currencyOrderInfo.maxOrderPrice.str());
+          break;
+        }
       } else {
-        currencyOrderInfo.minOrderSize = MonetaryAmount(minOrderSizeIt->get<std::string_view>());
-        currencyOrderInfo.lastMinOrderSizeUpdatedTime = nowTime;
-
-        log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(),
-                  toCurrencyCode.str(), minOrderSizeIt->get<std::string_view>());
+        log::error("Unexpected answer from {} place order, no data", _exchangePublic.name());
+        break;
       }
+    } else {
+      placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
+      placeOrderInfo.orderInfo = queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId));
+      break;
     }
-    _currencyOrderInfoMap.insert_or_assign(m.base(), std::move(currencyOrderInfo));
   }
-  if (orderIdIt == result.end()) {
-    placeOrderInfo.setClosed();
-  } else {
-    placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
-    placeOrderInfo.orderInfo = queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId));
+
+  if (currencyInfoUpdated) {
+    _currencyOrderInfoMap.insert_or_assign(m.base(), std::move(currencyOrderInfo));
   }
 
   return placeOrderInfo;
@@ -589,16 +678,19 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
 void BithumbPrivate::updateCacheFile() const {
   json data;
   for (const auto& [currencyCode, currencyOrderInfo] : _currencyOrderInfoMap) {
-    string currencyStr(currencyCode.str());
     json curData;
-    curData.emplace(kNbDecimalsStr, currencyOrderInfo.nbDecimals);
-    curData.emplace(kNbDecimalsTimeEpochStr, std::chrono::duration_cast<std::chrono::seconds>(
-                                                 currencyOrderInfo.lastNbDecimalsUpdatedTime.time_since_epoch())
-                                                 .count());
-    curData.emplace(kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize.str());
-    curData.emplace(kMinOrderSizeTimeEpochStr, std::chrono::duration_cast<std::chrono::seconds>(
-                                                   currencyOrderInfo.lastMinOrderSizeUpdatedTime.time_since_epoch())
-                                                   .count());
+
+    curData.emplace(kNbDecimalsStr, CurrencyOrderInfoField2Json(currencyOrderInfo.nbDecimals,
+                                                                currencyOrderInfo.lastNbDecimalsUpdatedTime));
+    curData.emplace(
+        kMinOrderSizeJsonKeyStr,
+        CurrencyOrderInfoField2Json(currencyOrderInfo.minOrderSize, currencyOrderInfo.lastMinOrderSizeUpdatedTime));
+    curData.emplace(
+        kMinOrderPriceJsonKeyStr,
+        CurrencyOrderInfoField2Json(currencyOrderInfo.minOrderPrice, currencyOrderInfo.lastMinOrderPriceUpdatedTime));
+    curData.emplace(
+        kMaxOrderPriceJsonKeyStr,
+        CurrencyOrderInfoField2Json(currencyOrderInfo.maxOrderPrice, currencyOrderInfo.lastMaxOrderPriceUpdatedTime));
 
     data.emplace(currencyCode.str(), std::move(curData));
   }

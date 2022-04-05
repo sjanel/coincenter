@@ -230,4 +230,43 @@ MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
   return MonetaryAmount(lastPrice, m.quote());
 }
 
+MonetaryAmount UpbitPublic::sanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) const {
+  // Upbit can return this error for big trades:
+  // "최대매수금액 1000000000.0 KRW 보다 작은 주문을 입력해 주세요."
+  // It means that total value of the order should not exceed 1000000000 KRW.
+  // Let's adjust volume to avoid this issue.
+  static constexpr MonetaryAmount kMaximumOrderValue = MonetaryAmount(1000000000, CurrencyCode("KRW"));
+  MonetaryAmount ret = vol;
+  if (pri.currencyCode() == kMaximumOrderValue.currencyCode() && vol.toNeutral() * pri > kMaximumOrderValue) {
+    log::debug("{} / {} = {}", kMaximumOrderValue.str(), pri.str(), (kMaximumOrderValue / pri).str());
+    ret = MonetaryAmount(kMaximumOrderValue / pri, vol.currencyCode());
+    log::debug("Order too big, decrease volume {} to {}", vol.str(), ret.str());
+  } else {
+    /// Value found in this page:
+    /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
+    /// confirmed with some tests. However, it could change in the future.
+    static constexpr std::array<MonetaryAmount, 2> kMinOrderAmounts{
+        {MonetaryAmount(5000, "KRW"), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
+    for (MonetaryAmount minOrderAmount : kMinOrderAmounts) {
+      if (vol.currencyCode() == minOrderAmount.currencyCode()) {
+        if (vol < minOrderAmount) {
+          ret = minOrderAmount;
+          break;
+        }
+      } else if (pri.currencyCode() == minOrderAmount.currencyCode()) {
+        MonetaryAmount orderAmount(vol.toNeutral() * pri);
+        // vol * pri = minOrderAmount, vol = minOrderAmount / pri
+        if (orderAmount < minOrderAmount) {
+          ret = MonetaryAmount(minOrderAmount / pri, vol.currencyCode());
+          break;
+        }
+      }
+    }
+  }
+  if (ret != vol) {
+    log::warn("Sanitize volume {} -> {}", vol.str(), ret.str());
+  }
+  return ret;
+}
+
 }  // namespace cct::api

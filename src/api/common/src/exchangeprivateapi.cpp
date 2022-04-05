@@ -246,7 +246,6 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
         price = marketOrderbook.getHighestTheoreticalPrice();
       } else {
         price = marketOrderbook.getLowestTheoreticalPrice();
-        volume = MonetaryAmount(from / price, m.base());
       }
     } else {
       PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);

@@ -71,7 +71,9 @@ class WithdrawInfo {
 
   const WithdrawId &withdrawId() const;
 
-  std::string_view withdrawStatus() const { return hasBeenInitiated() ? "OK" : _withdrawIdOrMsgIfNotInitiated; }
+  std::string_view withdrawStatus() const {
+    return hasBeenInitiated() ? std::string_view("OK") : std::string_view(_withdrawIdOrMsgIfNotInitiated);
+  }
 
  private:
   Wallet _receivingWallet;

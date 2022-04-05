@@ -257,16 +257,17 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   const CurrencyCode toCurrencyCode(tradeInfo.toCur());
   const Market m = tradeInfo.m;
   const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(binancePublic.exchangeInfo().placeSimulateRealOrder());
+  const bool placeSimulatedRealOrder = binancePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
   const bool isSimulation = tradeInfo.options.isSimulation();
 
   price = binancePublic.sanitizePrice(m, price);
 
   MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(m, volume, price, isTakerStrategy);
-
+  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
-  if (volume < sanitizedVol) {
+  if (volume < sanitizedVol && !isSimulationWithRealOrder) {
     static constexpr CurrencyCode kBinanceCoinCur("BNB");
     if (!isSimulation && m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
       // Use special Binance Dust transfer

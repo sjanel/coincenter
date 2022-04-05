@@ -57,6 +57,8 @@ class UpbitPublic : public ExchangePublic {
 
   static bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies);
 
+  MonetaryAmount sanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) const;
+
   struct MarketsFunc {
 #ifndef CCT_AGGR_INIT_CXX20
     MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)

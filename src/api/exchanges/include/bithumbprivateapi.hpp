@@ -72,6 +72,10 @@ class BithumbPrivate : public ExchangePrivate {
     TimePoint lastNbDecimalsUpdatedTime{};
     MonetaryAmount minOrderSize;
     TimePoint lastMinOrderSizeUpdatedTime{};
+    MonetaryAmount minOrderPrice;
+    TimePoint lastMinOrderPriceUpdatedTime{};
+    MonetaryAmount maxOrderPrice;
+    TimePoint lastMaxOrderPriceUpdatedTime{};
   };
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;

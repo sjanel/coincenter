@@ -245,8 +245,8 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const Market m = tradeInfo.m;
   string lowerCaseMarket = m.assetsPairStrLower();
 
-  const bool isTakerStrategy =
-      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   std::string_view type;
   if (isTakerStrategy) {
     type = fromCurrencyCode == m.base() ? "sell-market" : "buy-market";
@@ -259,7 +259,8 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   price = huobiPublic.sanitizePrice(m, price);
 
   MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(m, fromCurrencyCode, volume, price, isTakerStrategy);
-  if (volume < sanitizedVol) {
+  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
+  if (volume < sanitizedVol && !isSimulationWithRealOrder) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
               sanitizedVol.str());
     placeOrderInfo.setClosed();
