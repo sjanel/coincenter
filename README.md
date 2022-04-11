@@ -49,7 +49,8 @@ Main features:
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-  - [General](#general)
+  - [Input / output](#input--output)
+    - [Format](#format)
     - [Logging](#logging)
   - [Public requests](#public-requests)
     - [Markets](#markets)
@@ -110,7 +111,28 @@ See [CONFIG.md](CONFIG.md)
 
 # Usage
 
-## General
+## Input / output
+
+### Format
+
+`coincenter` is a command line tool with ergonomic and easy to remember option schema. You will usually provide this kind of input:
+ - Command name, with short hand flag or long name (check with `-h` or `--help`)
+ - Followed by either:
+   - Nothing, meaning that command will be applied globally
+   - Amount with currency or any currency, separated by dash to specify pairs, or source - destination
+   - Comma separated list of exchanges (all are considered if not provided)
+
+Example:
+```
+                    Ori curr.   exchange1
+                        |          |
+coincenter --trade 0.05BTC-USDT,kraken,huobi
+                    |        |           |
+               from amt.  to curr.    exchange2
+```
+
+By default, result of command is printed in a formatted table on standard output.
+You can also choose a *json* output format with option `-o json`.
 
 ### Logging
 

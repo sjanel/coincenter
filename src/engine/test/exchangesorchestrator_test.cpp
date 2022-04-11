@@ -192,7 +192,9 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
                        TradeSide::kBuy)};
   EXPECT_CALL(exchangePrivate4, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(orders4));
 
-  OpenedOrdersPerExchange ret{{&exchange2, orders2}, {&exchange3, orders3}, {&exchange4, orders4}};
+  OpenedOrdersPerExchange ret{{&exchange2, OrdersSet(orders2.begin(), orders2.end())},
+                              {&exchange3, OrdersSet(orders3.begin(), orders3.end())},
+                              {&exchange4, OrdersSet(orders4.begin(), orders4.end())}};
   EXPECT_EQ(exchangesOrchestrator.getOpenedOrders(privateExchangeNames, noConstraints), ret);
 }
 
@@ -334,7 +336,7 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingMarket) {
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).Times(0);                                  \
   }
 
-#define EXPECT_TWO_STEP_TRADE(exchangePublic, exchangePrivate)                                                         \
+#define EXPECT_TWO_STEP_TRADE(exchangePublic, exchangePrivate, m1, m2)                                                 \
   if (tradableMarketsCall == TradableMarkets::kExpectCall) {                                                           \
     EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(markets));                            \
   } else if (tradableMarketsCall == TradableMarkets::kExpectNoCall) {                                                  \
@@ -466,25 +468,25 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
                                    TradableMarkets tradableMarketsCall, OrderBook orderBookCall,
                                    AllOrderBooks allOrderBooksCall, bool makeMarketAvailable) {
     CurrencyCode interCur("AAA");
-    Market m1(from.currencyCode(), interCur);
-    Market m2(interCur, toCurrency);
+    Market market1(from.currencyCode(), interCur);
+    Market market2(interCur, toCurrency);
     if (side == TradeSide::kBuy) {
-      m1 = Market(toCurrency, interCur);
-      m2 = Market(interCur, from.currencyCode());
+      market1 = Market(toCurrency, interCur);
+      market2 = Market(interCur, from.currencyCode());
     } else {
-      m1 = Market(from.currencyCode(), interCur);
-      m2 = Market(interCur, toCurrency);
+      market1 = Market(from.currencyCode(), interCur);
+      market2 = Market(interCur, toCurrency);
     }
 
     // Choose price of 1 such that we do not need to make a division if it's a buy.
-    MonetaryAmount vol1(from, m1.base());
-    MonetaryAmount vol2(from, m2.base());
-    MonetaryAmount pri1(1, m1.quote());
-    MonetaryAmount pri2(1, m2.quote());
+    MonetaryAmount vol1(from, market1.base());
+    MonetaryAmount vol2(from, market2.base());
+    MonetaryAmount pri1(1, market1.quote());
+    MonetaryAmount pri2(1, market2.quote());
 
-    MonetaryAmount maxVol1(std::numeric_limits<MonetaryAmount::AmountType>::max(), m1.base(),
+    MonetaryAmount maxVol1(std::numeric_limits<MonetaryAmount::AmountType>::max(), market1.base(),
                            volAndPriDec1.volNbDecimals);
-    MonetaryAmount maxVol2(std::numeric_limits<MonetaryAmount::AmountType>::max(), m2.base(),
+    MonetaryAmount maxVol2(std::numeric_limits<MonetaryAmount::AmountType>::max(), market2.base(),
                            volAndPriDec1.volNbDecimals);
 
     MonetaryAmount tradedTo1(from, interCur);
@@ -492,14 +494,12 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
 
     MonetaryAmount deltaPri1(1, pri1.currencyCode(), volAndPriDec1.priNbDecimals);
     MonetaryAmount deltaPri2(1, pri2.currencyCode(), volAndPriDec1.priNbDecimals);
-    MonetaryAmount askPrice1 = side == TradeSide::kBuy ? pri1 : pri1 + deltaPri1;
-    MonetaryAmount askPrice2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
-    MonetaryAmount bidPrice1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
-    MonetaryAmount bidPrice2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
-    MarketOrderBook marketOrderbook1{askPrice1, maxVol1,       bidPrice1,
-                                     maxVol1,   volAndPriDec1, MarketOrderBook::kDefaultDepth};
-    MarketOrderBook marketOrderbook2{askPrice2, maxVol2,       bidPrice2,
-                                     maxVol2,   volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    MonetaryAmount askPri1 = side == TradeSide::kBuy ? pri1 : pri1 + deltaPri1;
+    MonetaryAmount askPri2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
+    MonetaryAmount bidPri1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
+    MonetaryAmount bidPri2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
+    MarketOrderBook marketOrderbook1{askPri1, maxVol1, bidPri1, maxVol1, volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook2{askPri2, maxVol2, bidPri2, maxVol2, volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
     TradedAmounts tradedAmounts1(from, vol2);
     TradedAmounts tradedAmounts2(MonetaryAmount(from, interCur), tradedTo2);
@@ -512,38 +512,38 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     PlaceOrderInfo placeOrderInfo2(orderInfo2, orderId2);
 
     if (makeMarketAvailable) {
-      markets.insert(m1);
-      markets.insert(m2);
+      markets.insert(market1);
+      markets.insert(market2);
 
-      marketOrderBookMap.insert_or_assign(m1, marketOrderbook1);
-      marketOrderBookMap.insert_or_assign(m2, marketOrderbook2);
+      marketOrderBookMap.insert_or_assign(market1, marketOrderbook1);
+      marketOrderBookMap.insert_or_assign(market2, marketOrderbook2);
     }
 
     // EXPECT_CALL does not allow references. Or I did not found the way to make it work, so we use ugly macros here
     switch (exchangePrivateNum) {
       case 1:
-        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate1)
+        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate1, market1, market2)
         break;
       case 2:
-        EXPECT_TWO_STEP_TRADE(exchangePublic2, exchangePrivate2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic2, exchangePrivate2, market1, market2)
         break;
       case 3:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate3)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate3, market1, market2)
         break;
       case 4:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate4)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate4, market1, market2)
         break;
       case 5:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate5)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate5, market1, market2)
         break;
       case 6:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate6)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate6, market1, market2)
         break;
       case 7:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate7)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate7, market1, market2)
         break;
       case 8:
-        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate8)
+        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate8, market1, market2)
         break;
       default:
         throw exception("Unexpected exchange number ");
@@ -743,9 +743,9 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
       expectSingleTrade(3, MonetaryAmount(1500, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  constexpr bool isPercentageTrade = true;
+  constexpr bool kIsPercentageTrade = true;
   TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange3, tradedAmounts3)};
-  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), kIsPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
             tradedAmountsPerExchange);
 }
@@ -770,10 +770,10 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
       expectSingleTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  constexpr bool isPercentageTrade = true;
+  constexpr bool kIsPercentageTrade = true;
   TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange1, tradedAmounts1),
                                                     std::make_pair(&exchange3, tradedAmounts3)};
-  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), kIsPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
             tradedAmountsPerExchange);
 }
@@ -805,11 +805,11 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
       expectSingleTrade(4, balancePortfolio4.get(fromCurrency), toCurrency, side, TradableMarkets::kNoExpectation,
                         OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
-  constexpr bool isPercentageTrade = true;
+  constexpr bool kIsPercentageTrade = true;
   TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange2, tradedAmounts2),
                                                     std::make_pair(&exchange3, tradedAmounts3),
                                                     std::make_pair(&exchange4, tradedAmounts4)};
-  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), kIsPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
             tradedAmountsPerExchange);
 }

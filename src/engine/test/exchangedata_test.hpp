@@ -13,22 +13,7 @@ namespace cct {
 
 class ExchangesBaseTest : public ::testing::Test {
  protected:
-  ExchangesBaseTest() = default;
-
   void SetUp() override {
-    for (MonetaryAmount a : amounts1) {
-      balancePortfolio1.add(a);
-    }
-    for (MonetaryAmount a : amounts2) {
-      balancePortfolio2.add(a);
-    }
-    for (MonetaryAmount a : amounts3) {
-      balancePortfolio3.add(a);
-    }
-    for (MonetaryAmount a : amounts4) {
-      balancePortfolio4.add(a);
-    }
-
     EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
     EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
     EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
@@ -113,10 +98,10 @@ class ExchangesBaseTest : public ::testing::Test {
                                       MonetaryAmount("15004MATIC"), MonetaryAmount("155USD"),
                                       MonetaryAmount("107.5USDT"),  MonetaryAmount("1200EUR")};
 
-  BalancePortfolio balancePortfolio1;
-  BalancePortfolio balancePortfolio2;
-  BalancePortfolio balancePortfolio3;
-  BalancePortfolio balancePortfolio4;
+  BalancePortfolio balancePortfolio1{amounts1};
+  BalancePortfolio balancePortfolio2{amounts2};
+  BalancePortfolio balancePortfolio3{amounts3};
+  BalancePortfolio balancePortfolio4{amounts4};
   BalancePortfolio emptyBalance;
 };
 }  // namespace cct

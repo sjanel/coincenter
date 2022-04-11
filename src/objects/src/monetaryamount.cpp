@@ -261,7 +261,7 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
     } else {
       if (roundType != RoundType::kDown) {
         const AmountType r = epsilon - (_amount % epsilon);
-        if (  //_amount <= std::numeric_limits<AmountType>::max() - r &&  // Protection against overflow
+        if (_amount <= std::numeric_limits<AmountType>::max() - r &&  // Protection against overflow
             (roundType == RoundType::kUp || 2 * r <= epsilon)) {
           _amount += r;
         }

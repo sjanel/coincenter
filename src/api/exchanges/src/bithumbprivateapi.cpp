@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <execution>
-#include <iostream>
 #include <thread>
 
 #include "apikey.hpp"

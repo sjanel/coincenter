@@ -45,15 +45,13 @@ class PriceOptions {
 
   constexpr void switchToTakerStrategy() { _priceStrategy = PriceStrategy::kTaker; }
 
-  std::string_view timeoutActionStr() const;
+  std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
 
   string str(bool placeRealOrderInSimulationMode) const;
 
   bool operator==(const PriceOptions &) const = default;
 
  private:
-  std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
-
   MonetaryAmount _fixedPrice;
   RelativePrice _relativePrice = kNoRelativePrice;
   PriceStrategy _priceStrategy = PriceStrategy::kMaker;

@@ -14,7 +14,8 @@ using WithdrawIdView = std::string_view;
 namespace api {
 class InitiatedWithdrawInfo {
  public:
-  InitiatedWithdrawInfo(Wallet receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount);
+  InitiatedWithdrawInfo(Wallet receivingWallet, WithdrawIdView withdrawId, MonetaryAmount grossEmittedAmount,
+                        TimePoint initiatedTime = Clock::now());
 
   TimePoint initiatedTime() const { return _initiatedTime; }
 
@@ -52,10 +53,11 @@ class SentWithdrawInfo {
 class WithdrawInfo {
  public:
   /// Empty withdraw info, when no withdrawal has been done
-  WithdrawInfo(string &&msg = string()) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
+  explicit WithdrawInfo(string &&msg = string()) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
 
   /// Constructs a withdraw info with all information
-  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo);
+  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, const api::SentWithdrawInfo &sentWithdrawInfo,
+               TimePoint receivedTime = Clock::now());
 
   bool hasBeenInitiated() const { return _initiatedTime != TimePoint{}; }
 

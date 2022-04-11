@@ -73,9 +73,6 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
       tradedAmounts.tradedTo = stepTradedAmounts.tradedTo;
     }
   }
-  if (!options.isSimulation() || realOrderPlacedInSimulationMode) {
-    log::info("**** Traded {} into {} ****", tradedAmounts.tradedFrom.str(), tradedAmounts.tradedTo.str());
-  }
   return tradedAmounts;
 }
 

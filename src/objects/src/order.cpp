@@ -23,16 +23,7 @@ Order::Order(string &&id, MonetaryAmount matchedVolume, MonetaryAmount remaining
       _price(price),
       _side(side) {}
 
-std::string_view Order::sideStr() const {
-  switch (_side) {
-    case TradeSide::kBuy:
-      return "Buy";
-    case TradeSide::kSell:
-      return "Sell";
-    default:
-      unreachable();
-  }
-}
+std::string_view Order::sideStr() const { return SideStr(_side); }
 
 string Order::placedTimeStr() const { return ToString(_placedTime); }
 }  // namespace cct

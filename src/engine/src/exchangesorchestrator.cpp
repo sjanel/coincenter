@@ -16,12 +16,9 @@ namespace {
 
 template <class MainVec>
 void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
-  // Erases from last to first to keep index consistent
-  for (auto pos = main.size(); pos > 0; --pos) {
-    if (!considerSpan[pos - 1]) {
-      main.erase(main.begin() + pos - 1);
-    }
-  }
+  const auto begIt = main.begin();
+  const auto endIt = main.end();
+  main.erase(std::remove_if(begIt, endIt, [=](const auto &v) { return !considerSpan[&v - &*begIt]; }), endIt);
 }
 
 using ExchangeAmountPairVector = SmallVector<std::pair<Exchange *, MonetaryAmount>, kTypicalNbPrivateAccounts>;
@@ -165,9 +162,10 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const E
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
   OpenedOrdersPerExchange ret(selectedExchanges.size());
-  std::transform(
-      std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
-      [&](Exchange *e) { return std::make_pair(e, e->apiPrivate().queryOpenedOrders(openedOrdersConstraints)); });
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [&](Exchange *e) {
+                   return std::make_pair(e, OrdersSet(e->apiPrivate().queryOpenedOrders(openedOrdersConstraints)));
+                 });
 
   return ret;
 }
@@ -668,12 +666,12 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
   return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawRefreshTime);
 }
 
-WithdrawFeePerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
-                                                              ExchangeNameSpan exchangeNames) {
+MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
+                                                                 ExchangeNameSpan exchangeNames) {
   log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames, true);
 
-  WithdrawFeePerExchange withdrawFeePerExchange(selectedExchanges.size());
+  MonetaryAmountPerExchange withdrawFeePerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
                  withdrawFeePerExchange.begin(),
                  [currencyCode](Exchange *e) { return std::make_pair(e, e->queryWithdrawalFee(currencyCode)); });

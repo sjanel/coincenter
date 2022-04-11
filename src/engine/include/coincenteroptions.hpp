@@ -29,11 +29,14 @@ struct CoincenterCmdLineOptions {
   static constexpr int64_t kDefaultRepeatDurationSeconds =
       std::chrono::duration_cast<std::chrono::seconds>(kDefaultRepeatTime).count();
 
-  static constexpr std::string_view kSingleQuote = "'";
-  static constexpr std::string_view kClosingParenthesis = ")";
+  static constexpr std::string_view kOutput1 = "Output format. One of (";
+  static constexpr std::string_view kOutput2 = ") (default configured in general config file)";
+  static constexpr std::string_view kOutput =
+      JoinStringView_v<kOutput1, kApiOutputTypeNoPrintStr, CharToStringView_v<'|'>, kApiOutputTypeTableStr,
+                       CharToStringView_v<'|'>, kApiOutputTypeJsonStr, kOutput2>;
 
   static constexpr std::string_view kData1 = "Use given 'data' directory instead of the one chosen at build time '";
-  static constexpr std::string_view kData = JoinStringView_v<kData1, kDefaultDataDir, kSingleQuote>;
+  static constexpr std::string_view kData = JoinStringView_v<kData1, kDefaultDataDir, CharToStringView_v<'\''>>;
 
   static constexpr std::string_view kRepeat1 = "Set delay between each repeat (default: ";
   static constexpr std::string_view kRepeat2 = "s)";
@@ -44,7 +47,7 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kLastTradesN1 = "Change number of last trades to query (default: ";
   static constexpr std::string_view kLastTradesN =
       JoinStringView_v<kLastTradesN1, IntToStringView_v<api::ExchangePublic::kNbLastTradesDefault>,
-                       kClosingParenthesis>;
+                       CharToStringView_v<')'>>;
 
   static constexpr std::string_view kSmartBuy1 =
       "Attempt to buy the specified amount in total, on matching exchange accounts (all are considered if none "
@@ -98,23 +101,22 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kMonitoringPort1 = "Specify port of metric gateway instance (default: ";
   static constexpr std::string_view kMonitoringPort =
       JoinStringView_v<kMonitoringPort1, IntToStringView_v<CoincenterCmdLineOptions::kDefaultMonitoringPort>,
-                       kClosingParenthesis>;
+                       CharToStringView_v<')'>>;
 
   static constexpr std::string_view kMonitoringIP1 = "Specify IP (v4) of metric gateway instance (default: ";
   static constexpr std::string_view kMonitoringIP =
-      JoinStringView_v<kMonitoringIP1, CoincenterCmdLineOptions::kDefaultMonitoringIPAddress, kClosingParenthesis>;
+      JoinStringView_v<kMonitoringIP1, CoincenterCmdLineOptions::kDefaultMonitoringIPAddress, CharToStringView_v<')'>>;
 
   static void PrintVersion(std::string_view programName);
 
   std::string_view dataDir = kDefaultDataDir;
 
+  std::string_view apiOutputType;
   std::string_view logLevel;
   bool help = false;
   bool version = false;
   bool logFile = false;
   bool logConsole = false;
-  bool printResults = false;
-  bool noPrintResults = false;
   std::optional<std::string_view> nosecrets;
   CommandLineOptionalInt repeats;
   Duration repeatTime = kDefaultRepeatTime;
@@ -192,16 +194,7 @@ struct CoincenterAllowedOptions {
        &OptValueType::logConsole},
       {{{"General", 4}, "--log-file", "", "Log to rotating files (default configured in general config file)"},
        &OptValueType::logFile},
-      {{{"General", 5},
-        "--print",
-        "",
-        "Force print results in standard output (default configured in general config file)"},
-       &OptValueType::printResults},
-      {{{"General", 6},
-        "--no-print",
-        "",
-        "Force no print of results in standard output (default configured in general config file)"},
-       &OptValueType::noPrintResults},
+      {{{"General", 5}, "--output", 'o', "", CoincenterCmdLineOptions::kOutput}, &OptValueType::apiOutputType},
       {{{"General", 7},
         "--no-secrets",
         "<[exch1,...]>",
@@ -229,7 +222,6 @@ struct CoincenterAllowedOptions {
 
       {{{"Public queries", 20},
         "--orderbook",
-        'o',
         "<cur1-cur2[,exch1,...]>",
         "Print order book of currency pair for all exchanges offering "
         "this market, or only for specified exchanges."},

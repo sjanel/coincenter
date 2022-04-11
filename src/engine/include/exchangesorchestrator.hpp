@@ -54,7 +54,7 @@ class ExchangesOrchestrator {
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
                         Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawInfoRefreshTime);
 
-  WithdrawFeePerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
+  MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames);
 

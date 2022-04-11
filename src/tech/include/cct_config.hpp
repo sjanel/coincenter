@@ -64,3 +64,8 @@
 // https://stackoverflow.com/questions/70260994/automatic-template-deduction-c20-with-aggregate-type
 #define CCT_AGGR_INIT_CXX20
 #endif
+
+#if defined(CCT_MSVC) || (defined(CCT_GCC) && CCT_GCC >= 110000)
+// std::stringstream::view is not yet implemented for many compilers.
+#define CCT_STRINGSTREAM_HAS_VIEW
+#endif

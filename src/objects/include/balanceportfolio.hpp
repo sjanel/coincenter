@@ -1,5 +1,8 @@
 #pragma once
 
+#include <initializer_list>
+#include <span>
+
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
@@ -22,6 +25,18 @@ class BalancePortfolio {
  public:
   using const_iterator = MonetaryAmountVec::const_iterator;
   using size_type = MonetaryAmountVec::size_type;
+
+  BalancePortfolio() noexcept = default;
+
+  BalancePortfolio(std::initializer_list<MonetaryAmount> init)
+      : BalancePortfolio(std::span<const MonetaryAmount>(init.begin(), init.end())) {}
+
+  BalancePortfolio(std::span<const MonetaryAmount> init);
+
+  BalancePortfolio(std::initializer_list<MonetaryAmountWithEquivalent> init)
+      : BalancePortfolio(std::span<const MonetaryAmountWithEquivalent>(init.begin(), init.end())) {}
+
+  BalancePortfolio(std::span<const MonetaryAmountWithEquivalent> init);
 
   /// Adds an amount in the `BalancePortfolio`.
   /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency

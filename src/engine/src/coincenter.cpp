@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iostream>
 #include <thread>
 
 #include "abstractmetricgateway.hpp"
 #include "coincentercommands.hpp"
+#include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "queryresultprinter.hpp"
 #include "stringoptionparser.hpp"
@@ -21,7 +23,7 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _metricsExporter(_coincenterInfo.metricGatewayPtr()),
       _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangesOrchestrator(_exchangePool.exchanges()),
-      _queryResultPrinter(_coincenterInfo.printResults()) {}
+      _queryResultPrinter(std::cout, _coincenterInfo.apiOutputType()) {}
 
 void Coincenter::process(const CoincenterCommands &coincenterCommands) {
   const int nbRepeats = coincenterCommands.repeats();
@@ -44,85 +46,97 @@ void Coincenter::process(const CoincenterCommands &coincenterCommands) {
 
 void Coincenter::processCommand(const CoincenterCommand &cmd) {
   switch (cmd.type()) {
-    case CoincenterCommand::Type::kMarkets: {
+    case CoincenterCommandType::kMarkets: {
       MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cmd.cur1(), cmd.cur2(), cmd.exchangeNames());
       _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
       break;
     }
-    case CoincenterCommand::Type::kConversionPath: {
+    case CoincenterCommandType::kConversionPath: {
       ConversionPathPerExchange conversionPathPerExchange = getConversionPaths(cmd.market(), cmd.exchangeNames());
       _queryResultPrinter.printConversionPath(cmd.market(), conversionPathPerExchange);
       break;
     }
-    case CoincenterCommand::Type::kLastPrice: {
+    case CoincenterCommandType::kLastPrice: {
       MonetaryAmountPerExchange lastPricePerExchange = getLastPricePerExchange(cmd.market(), cmd.exchangeNames());
       _queryResultPrinter.printLastPrice(cmd.market(), lastPricePerExchange);
       break;
     }
-    case CoincenterCommand::Type::kTicker: {
+    case CoincenterCommandType::kTicker: {
       ExchangeTickerMaps exchangeTickerMaps = getTickerInformation(cmd.exchangeNames());
       _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
       break;
     }
-    case CoincenterCommand::Type::kOrderbook: {
+    case CoincenterCommandType::kOrderbook: {
       MarketOrderBookConversionRates marketOrderBooksConversionRates =
           getMarketOrderBooks(cmd.market(), cmd.exchangeNames(), cmd.cur1(), cmd.optDepth());
-      _queryResultPrinter.printMarketOrderBooks(marketOrderBooksConversionRates);
+      _queryResultPrinter.printMarketOrderBooks(cmd.market(), cmd.cur1(), cmd.optDepth(),
+                                                marketOrderBooksConversionRates);
       break;
     }
-    case CoincenterCommand::Type::kLastTrades: {
+    case CoincenterCommandType::kLastTrades: {
       LastTradesPerExchange lastTradesPerExchange =
           getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), cmd.nbLastTrades());
-      _queryResultPrinter.printLastTrades(cmd.market(), lastTradesPerExchange);
+      _queryResultPrinter.printLastTrades(cmd.market(), cmd.nbLastTrades(), lastTradesPerExchange);
       break;
     }
-    case CoincenterCommand::Type::kLast24hTradedVolume: {
+    case CoincenterCommandType::kLast24hTradedVolume: {
       MonetaryAmountPerExchange tradedVolumePerExchange =
           getLast24hTradedVolumePerExchange(cmd.market(), cmd.exchangeNames());
       _queryResultPrinter.printLast24hTradedVolume(cmd.market(), tradedVolumePerExchange);
       break;
     }
-    case CoincenterCommand::Type::kWithdrawFee: {
+    case CoincenterCommandType::kWithdrawFee: {
       auto withdrawFeesPerExchange = getWithdrawFees(cmd.cur1(), cmd.exchangeNames());
-      _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange);
+      _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange, cmd.cur1());
       break;
     }
 
-    case CoincenterCommand::Type::kBalance: {
+    case CoincenterCommandType::kBalance: {
       BalancePerExchange balancePerExchange = getBalance(cmd.exchangeNames(), cmd.cur1());
-      _queryResultPrinter.printBalance(balancePerExchange);
+      _queryResultPrinter.printBalance(balancePerExchange, cmd.cur1());
       break;
     }
-    case CoincenterCommand::Type::kDepositInfo: {
+    case CoincenterCommandType::kDepositInfo: {
       WalletPerExchange walletPerExchange = getDepositInfo(cmd.exchangeNames(), cmd.cur1());
       _queryResultPrinter.printDepositInfo(cmd.cur1(), walletPerExchange);
       break;
     }
-    case CoincenterCommand::Type::kOrdersOpened: {
+    case CoincenterCommandType::kOrdersOpened: {
       OpenedOrdersPerExchange openedOrdersPerExchange = getOpenedOrders(cmd.exchangeNames(), cmd.ordersConstraints());
-      _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
+      _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange, cmd.ordersConstraints());
       break;
     }
-    case CoincenterCommand::Type::kOrdersCancel: {
+    case CoincenterCommandType::kOrdersCancel: {
       NbCancelledOrdersPerExchange nbCancelledOrdersPerExchange =
           cancelOrders(cmd.exchangeNames(), cmd.ordersConstraints());
-      _queryResultPrinter.printCancelledOrders(nbCancelledOrdersPerExchange);
+      _queryResultPrinter.printCancelledOrders(nbCancelledOrdersPerExchange, cmd.ordersConstraints());
       break;
     }
-    case CoincenterCommand::Type::kTrade: {
-      trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
+    case CoincenterCommandType::kTrade: {
+      TradedAmountsPerExchange tradedAmountsPerExchange =
+          trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
+      _queryResultPrinter.printTrades(tradedAmountsPerExchange, cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(),
+                                      cmd.tradeOptions());
       break;
     }
-    case CoincenterCommand::Type::kBuy: {
-      smartBuy(cmd.amount(), cmd.exchangeNames(), cmd.tradeOptions());
+    case CoincenterCommandType::kBuy: {
+      TradedAmountsPerExchange tradedAmountsPerExchange =
+          smartBuy(cmd.amount(), cmd.exchangeNames(), cmd.tradeOptions());
+      _queryResultPrinter.printBuyTrades(tradedAmountsPerExchange, cmd.amount(), cmd.tradeOptions());
       break;
     }
-    case CoincenterCommand::Type::kSell: {
-      smartSell(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames(), cmd.tradeOptions());
+    case CoincenterCommandType::kSell: {
+      TradedAmountsPerExchange tradedAmountsPerExchange =
+          smartSell(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames(), cmd.tradeOptions());
+      _queryResultPrinter.printSellTrades(tradedAmountsPerExchange, cmd.amount(), cmd.isPercentageAmount(),
+                                          cmd.tradeOptions());
       break;
     }
-    case CoincenterCommand::Type::kWithdraw: {
-      withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(), cmd.exchangeNames().back());
+    case CoincenterCommandType::kWithdraw: {
+      WithdrawInfo withdrawInfo =
+          withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(), cmd.exchangeNames().back());
+      _queryResultPrinter.printWithdraw(withdrawInfo, cmd.amount(), cmd.isPercentageAmount(),
+                                        cmd.exchangeNames().front(), cmd.exchangeNames().back());
       break;
     }
     default:
@@ -223,7 +237,7 @@ WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageW
                                          toPrivateExchangeName);
 }
 
-WithdrawFeePerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
+MonetaryAmountPerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
   return _exchangesOrchestrator.getWithdrawFees(currencyCode, exchangeNames);
 }
 

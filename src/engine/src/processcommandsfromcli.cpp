@@ -15,10 +15,8 @@ json LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &
   json generalConfigData = GeneralConfig::LoadFile(cmdLineOptions.dataDir);
 
   // Override general config options from CLI
-  if (cmdLineOptions.printResults) {
-    generalConfigData["printResults"] = true;
-  } else if (cmdLineOptions.noPrintResults) {
-    generalConfigData["printResults"] = false;
+  if (!cmdLineOptions.apiOutputType.empty()) {
+    generalConfigData["apiOutputType"] = cmdLineOptions.apiOutputType;
   }
   if (!cmdLineOptions.logLevel.empty()) {
     generalConfigData["log"]["level"] = string(cmdLineOptions.logLevel);
@@ -41,7 +39,7 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
   Duration fiatConversionQueryRate = ParseDuration(generalConfigData["fiatConversion"]["rate"].get<std::string_view>());
 
   GeneralConfig generalConfig(LoggingInfo(static_cast<const json &>(generalConfigData["log"])), fiatConversionQueryRate,
-                              generalConfigData["printResults"].get<bool>());
+                              ApiOutputTypeFromString(generalConfigData["apiOutputType"].get<std::string_view>()));
 
   LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 

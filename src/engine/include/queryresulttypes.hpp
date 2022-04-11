@@ -38,11 +38,9 @@ using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, 
 
 using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
 
-using OpenedOrdersPerExchange = SmallVector<std::pair<const Exchange *, Orders>, kTypicalNbPrivateAccounts>;
+using OpenedOrdersPerExchange = SmallVector<std::pair<const Exchange *, OrdersSet>, kTypicalNbPrivateAccounts>;
 
 using NbCancelledOrdersPerExchange = SmallVector<std::pair<const Exchange *, int>, kTypicalNbPrivateAccounts>;
 
 using ConversionPathPerExchange = FixedCapacityVector<std::pair<const Exchange *, MarketsPath>, kNbSupportedExchanges>;
-
-using WithdrawFeePerExchange = FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 }  // namespace cct
