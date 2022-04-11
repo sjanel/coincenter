@@ -4,18 +4,20 @@
 
 namespace cct {
 
-GeneralConfig::GeneralConfig(const LoggingInfo &loggingInfo, Duration fiatConversionQueryRate, bool printResults)
-    : _loggingInfo(loggingInfo), _fiatConversionQueryRate(fiatConversionQueryRate), _printResults(printResults) {}
+GeneralConfig::GeneralConfig(const LoggingInfo &loggingInfo, Duration fiatConversionQueryRate,
+                             ApiOutputType apiOutputType)
+    : _loggingInfo(loggingInfo), _fiatConversionQueryRate(fiatConversionQueryRate), _apiOutputType(apiOutputType) {}
 
-GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, bool printResults)
+GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType)
     : _loggingInfo(std::move(loggingInfo)),
       _fiatConversionQueryRate(fiatConversionQueryRate),
-      _printResults(printResults) {}
+      _apiOutputType(apiOutputType) {}
 
 json GeneralConfig::LoadFile(std::string_view dataDir) {
   File generalConfigFile(dataDir, File::Type::kStatic, GeneralConfig::kFilename, File::IfNotFound::kNoThrow);
   static const json kDefaultGeneralConfig = R"(
 {
+  "apiOutputType": "table",
   "log": {
     "level": "info",
     "file": false,
@@ -24,8 +26,7 @@ json GeneralConfig::LoadFile(std::string_view dataDir) {
   },
   "fiatConversion": {
     "rate": "8h"
-  },
-  "printResults": true
+  }
 }
 )"_json;
   json jsonData = kDefaultGeneralConfig;

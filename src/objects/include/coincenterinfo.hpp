@@ -6,6 +6,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "apioutputtype.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeinfo.hpp"
@@ -62,7 +63,7 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
-  bool printResults() const { return _generalConfig.printResults(); }
+  ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType(); }
 
   Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversionQueryRate(); }
 

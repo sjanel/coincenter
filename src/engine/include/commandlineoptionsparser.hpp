@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <functional>
-#include <iostream>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <span>
 #include <string_view>
 

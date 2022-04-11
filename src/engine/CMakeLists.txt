@@ -45,6 +45,17 @@ add_unit_test(
 )
 
 add_unit_test(
+    queryresultprinter_test
+    src/balanceperexchangeportfolio.cpp
+    src/coincentercommandtype.cpp
+    src/queryresultprinter.cpp
+    test/queryresultprinter_test.cpp
+    LIBRARIES
+    coincenter_exchangeapi
+    coincenter_objects
+)
+
+add_unit_test(
     stringoptionparser_test
     src/stringoptionparser.cpp
     test/stringoptionparser_test.cpp

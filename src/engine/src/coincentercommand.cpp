@@ -5,21 +5,21 @@
 namespace cct {
 bool CoincenterCommand::isPublic() const {
   switch (_type) {
-    case Type::kMarkets:
+    case CoincenterCommandType::kMarkets:
       [[fallthrough]];
-    case Type::kConversionPath:
+    case CoincenterCommandType::kConversionPath:
       [[fallthrough]];
-    case Type::kLastPrice:
+    case CoincenterCommandType::kLastPrice:
       [[fallthrough]];
-    case Type::kTicker:
+    case CoincenterCommandType::kTicker:
       [[fallthrough]];
-    case Type::kOrderbook:
+    case CoincenterCommandType::kOrderbook:
       [[fallthrough]];
-    case Type::kLastTrades:
+    case CoincenterCommandType::kLastTrades:
       [[fallthrough]];
-    case Type::kLast24hTradedVolume:
+    case CoincenterCommandType::kLast24hTradedVolume:
       [[fallthrough]];
-    case Type::kWithdrawFee:
+    case CoincenterCommandType::kWithdrawFee:
       return true;
     default:
       return false;
@@ -31,11 +31,11 @@ bool CoincenterCommand::isReadOnly() const {
     return true;
   }
   switch (_type) {
-    case Type::kBalance:
+    case CoincenterCommandType::kBalance:
       [[fallthrough]];
-    case Type::kDepositInfo:
+    case CoincenterCommandType::kDepositInfo:
       [[fallthrough]];
-    case Type::kOrdersOpened:
+    case CoincenterCommandType::kOrdersOpened:
       return true;
     default:
       return false;
@@ -52,7 +52,7 @@ CoincenterCommand& CoincenterCommand::setExchangeNames(ExchangeNames&& exchangeN
 }
 
 CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstraints& ordersConstraints) {
-  if (_type != Type::kOrdersCancel && _type != Type::kOrdersOpened) {
+  if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
   _tradeOrOrdersOptions = ordersConstraints;
@@ -60,7 +60,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstrain
 }
 
 CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& ordersConstraints) {
-  if (_type != Type::kOrdersCancel && _type != Type::kOrdersOpened) {
+  if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
   _tradeOrOrdersOptions = std::move(ordersConstraints);
@@ -68,7 +68,8 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& o
 }
 
 CoincenterCommand& CoincenterCommand::setTradeOptions(const TradeOptions& tradeOptions) {
-  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade) {
+  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
+      _type != CoincenterCommandType::kTrade) {
     throw exception("Trade options can only be used for trade related commands");
   }
   _tradeOrOrdersOptions = tradeOptions;
@@ -76,7 +77,8 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(const TradeOptions& tradeO
 }
 
 CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOptions) {
-  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade) {
+  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
+      _type != CoincenterCommandType::kTrade) {
     throw exception("Trade options can only be used for trade related commands");
   }
   _tradeOrOrdersOptions = std::move(tradeOptions);
@@ -112,7 +114,8 @@ CoincenterCommand& CoincenterCommand::setCur2(CurrencyCode cur2) {
 }
 
 CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
-  if (_type != Type::kBuy && _type != Type::kSell && _type != Type::kTrade && _type != Type::kWithdraw) {
+  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
+      _type != CoincenterCommandType::kTrade && _type != CoincenterCommandType::kWithdraw) {
     throw exception("Percentage trade can only be set for trade / buy / sell or withdraw command");
   }
   _isPercentageAmount = value;

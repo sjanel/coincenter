@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "apioutputtype.hpp"
 #include "cct_json.hpp"
 #include "logginginfo.hpp"
 #include "timedef.hpp"
@@ -16,20 +17,20 @@ class GeneralConfig {
 
   GeneralConfig() = default;
 
-  GeneralConfig(const LoggingInfo &loggingInfo, Duration fiatConversionQueryRate, bool printResults);
+  GeneralConfig(const LoggingInfo &loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
 
-  GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, bool printResults);
+  GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
 
   const LoggingInfo &loggingInfo() const { return _loggingInfo; }
 
-  bool printResults() const { return _printResults; }
+  ApiOutputType apiOutputType() const { return _apiOutputType; }
 
   Duration fiatConversionQueryRate() const { return _fiatConversionQueryRate; }
 
  private:
   LoggingInfo _loggingInfo;
   Duration _fiatConversionQueryRate = std::chrono::hours(8);
-  bool _printResults = true;
+  ApiOutputType _apiOutputType = ApiOutputType::kFormattedTable;
 };
 
 }  // namespace cct

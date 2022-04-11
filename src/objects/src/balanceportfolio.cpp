@@ -6,7 +6,7 @@ namespace cct {
 namespace {
 using MonetaryAmountWithEquivalent = BalancePortfolio::MonetaryAmountWithEquivalent;
 
-inline bool Compare(const MonetaryAmountWithEquivalent &lhs, const MonetaryAmountWithEquivalent &rhs) {
+inline bool CurCompare(const MonetaryAmountWithEquivalent &lhs, const MonetaryAmountWithEquivalent &rhs) {
   return lhs.amount.currencyCode() < rhs.amount.currencyCode();
 }
 
@@ -18,16 +18,30 @@ inline MonetaryAmountWithEquivalent &operator+=(MonetaryAmountWithEquivalent &lh
 }
 }  // namespace
 
+BalancePortfolio::BalancePortfolio(std::span<const MonetaryAmount> init) {
+  // Simple for loop to avoid complex code eliminating duplicates for same currency
+  for (MonetaryAmount a : init) {
+    add(a);
+  }
+}
+
+BalancePortfolio::BalancePortfolio(std::span<const MonetaryAmountWithEquivalent> init) {
+  // Simple for loop to avoid complex code eliminating duplicates for same currency
+  for (const MonetaryAmountWithEquivalent &e : init) {
+    add(e.amount, e.equi);
+  }
+}
+
 void BalancePortfolio::add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency) {
   MonetaryAmountWithEquivalent elem{amount, equivalentInMainCurrency};
-  auto lb = std::ranges::lower_bound(_sortedAmounts, elem, Compare);
+  auto lb = std::ranges::lower_bound(_sortedAmounts, elem, CurCompare);
   if (lb == _sortedAmounts.end()) {
     _sortedAmounts.push_back(std::move(elem));
-  } else if (Compare(elem, *lb)) {
+  } else if (CurCompare(elem, *lb)) {
     _sortedAmounts.insert(lb, std::move(elem));
   } else {
     // equal, sum amounts
-    *lb += elem;
+    *lb += std::move(elem);
   }
 }
 
@@ -52,9 +66,9 @@ BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &o) {
       _sortedAmounts.insert(_sortedAmounts.end(), first2, last2);
       break;
     }
-    if (Compare(*first1, *first2)) {
+    if (CurCompare(*first1, *first2)) {
       ++first1;
-    } else if (Compare(*first2, *first1)) {
+    } else if (CurCompare(*first2, *first1)) {
       first1 = _sortedAmounts.insert(first1, *first2);
       ++first1;
       last1 = _sortedAmounts.end();  // as iterators may have been invalidated

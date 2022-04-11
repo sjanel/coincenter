@@ -2,26 +2,27 @@
 
 #include <ostream>
 
-#include "balanceportfolio.hpp"
 #include "cct_const.hpp"
-#include "cct_smallvector.hpp"
-#include "exchangename.hpp"
+#include "cct_json.hpp"
+#include "queryresulttypes.hpp"
 
 namespace cct {
 class BalancePerExchangePortfolio {
  public:
-  void add(ExchangeName exchangeName, BalancePortfolio balancePortfolio);
+  explicit BalancePerExchangePortfolio(const BalancePerExchange &balancePerExchange)
+      : _balancePerExchange(balancePerExchange) {}
 
   /// Pretty print table of balance.
   /// @param wide if true, all exchange amount will be printed as well
-  void print(std::ostream &os, bool wide) const;
+  void printTable(std::ostream &os, bool wide) const;
+
+  /// Print in json format.
+  json printJson(CurrencyCode equiCurrency) const;
 
  private:
-  // +1 for total in first position
-  using BalancePortfolioVector = SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts + 1>;
+  BalancePortfolio computeTotal() const;
 
-  BalancePortfolioVector _balances{1};
-  ExchangeNames _exchanges;
+  const BalancePerExchange &_balancePerExchange;
 };
 
 }  // namespace cct

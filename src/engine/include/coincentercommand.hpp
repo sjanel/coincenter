@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <variant>
 
+#include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
@@ -13,27 +13,7 @@
 namespace cct {
 class CoincenterCommand {
  public:
-  enum class Type : int8_t {
-    kMarkets,
-    kConversionPath,
-    kLastPrice,
-    kTicker,
-    kOrderbook,
-    kLastTrades,
-    kLast24hTradedVolume,
-    kWithdrawFee,
-
-    kBalance,
-    kDepositInfo,
-    kOrdersOpened,
-    kOrdersCancel,
-    kTrade,
-    kBuy,
-    kSell,
-    kWithdraw,
-  };
-
-  explicit CoincenterCommand(Type type) : _type(type) {}
+  explicit CoincenterCommand(CoincenterCommandType type) : _type(type) {}
 
   CoincenterCommand& setExchangeNames(const ExchangeNames& exchangeNames);
   CoincenterCommand& setExchangeNames(ExchangeNames&& exchangeNames);
@@ -78,7 +58,7 @@ class CoincenterCommand {
   CurrencyCode cur1() const { return _cur1; }
   CurrencyCode cur2() const { return _cur2; }
 
-  Type type() const { return _type; }
+  CoincenterCommandType type() const { return _type; }
 
   bool isPercentageAmount() const { return _isPercentageAmount; }
 
@@ -94,7 +74,7 @@ class CoincenterCommand {
   int _n = -1;
   Market _market;
   CurrencyCode _cur1, _cur2;
-  Type _type;
+  CoincenterCommandType _type;
   bool _isPercentageAmount = false;
 };
 

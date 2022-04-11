@@ -95,7 +95,7 @@ string Wallet::str() const {
   string ret(_exchangeName.str());
   ret.append(" wallet of ");
   ret.append(_currency.str());
-  ret.append(", address: [");
+  ret.append(" [");
   ret.append(address());
   ret.push_back(']');
   if (hasTag()) {

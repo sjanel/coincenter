@@ -6,6 +6,7 @@
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
+#include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "stringoptionparser.hpp"
@@ -73,7 +74,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
     auto [cur1, cur2, exchanges] = anyParser.getCurrenciesPublicExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kMarkets)
+    _commands.emplace_back(CoincenterCommandType::kMarkets)
         .setCur1(cur1)
         .setCur2(cur2)
         .setExchangeNames(std::move(exchanges));
@@ -82,7 +83,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.orderbook.empty()) {
     StringOptionParser anyParser(cmdLineOptions.orderbook);
     auto [market, exchanges] = anyParser.getMarketExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kOrderbook)
+    _commands.emplace_back(CoincenterCommandType::kOrderbook)
         .setMarket(market)
         .setExchangeNames(std::move(exchanges))
         .setDepth(cmdLineOptions.orderbookDepth)
@@ -91,13 +92,13 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
 
   if (cmdLineOptions.ticker) {
     StringOptionParser anyParser(*cmdLineOptions.ticker);
-    _commands.emplace_back(CoincenterCommand::Type::kTicker).setExchangeNames(anyParser.getExchanges());
+    _commands.emplace_back(CoincenterCommandType::kTicker).setExchangeNames(anyParser.getExchanges());
   }
 
   if (!cmdLineOptions.conversionPath.empty()) {
     StringOptionParser anyParser(cmdLineOptions.conversionPath);
     auto [market, exchanges] = anyParser.getMarketExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kConversionPath)
+    _commands.emplace_back(CoincenterCommandType::kConversionPath)
         .setMarket(market)
         .setExchangeNames(std::move(exchanges));
   }
@@ -105,7 +106,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (cmdLineOptions.balance) {
     StringOptionParser anyParser(*cmdLineOptions.balance);
     auto [balanceCurrencyCode, exchanges] = anyParser.getCurrencyPrivateExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kBalance)
+    _commands.emplace_back(CoincenterCommandType::kBalance)
         .setCur1(balanceCurrencyCode)
         .setExchangeNames(std::move(exchanges));
   }
@@ -121,19 +122,19 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   std::string_view tradeArgs;
   bool isSmartTrade = !cmdLineOptions.buy.empty() || !cmdLineOptions.sell.empty() || !cmdLineOptions.sellAll.empty();
   bool isTradeAll = !cmdLineOptions.tradeAll.empty();
-  CoincenterCommand::Type commandType;
+  CoincenterCommandType commandType;
   if (!cmdLineOptions.buy.empty()) {
     tradeArgs = cmdLineOptions.buy;
-    commandType = CoincenterCommand::Type::kBuy;
+    commandType = CoincenterCommandType::kBuy;
   } else if (!cmdLineOptions.sellAll.empty()) {
     tradeArgs = cmdLineOptions.sellAll;
-    commandType = CoincenterCommand::Type::kSell;
+    commandType = CoincenterCommandType::kSell;
   } else if (!cmdLineOptions.sell.empty()) {
     tradeArgs = cmdLineOptions.sell;
-    commandType = CoincenterCommand::Type::kSell;
+    commandType = CoincenterCommandType::kSell;
   } else {
     tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
-    commandType = CoincenterCommand::Type::kTrade;
+    commandType = CoincenterCommandType::kTrade;
   }
   if (!tradeArgs.empty()) {
     if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
@@ -219,21 +220,21 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.depositInfo.empty()) {
     StringOptionParser anyParser(cmdLineOptions.depositInfo);
     auto [depositCurrency, exchanges] = anyParser.getCurrencyPrivateExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kDepositInfo)
+    _commands.emplace_back(CoincenterCommandType::kDepositInfo)
         .setCur1(depositCurrency)
         .setExchangeNames(std::move(exchanges));
   }
 
   if (cmdLineOptions.openedOrdersInfo) {
     auto [ordersConstraints, exchanges] = ParseOrderRequest(cmdLineOptions, *cmdLineOptions.openedOrdersInfo);
-    _commands.emplace_back(CoincenterCommand::Type::kOrdersOpened)
+    _commands.emplace_back(CoincenterCommandType::kOrdersOpened)
         .setOrdersConstraints(std::move(ordersConstraints))
         .setExchangeNames(std::move(exchanges));
   }
 
   if (cmdLineOptions.cancelOpenedOrders) {
     auto [ordersConstraints, exchanges] = ParseOrderRequest(cmdLineOptions, *cmdLineOptions.cancelOpenedOrders);
-    _commands.emplace_back(CoincenterCommand::Type::kOrdersCancel)
+    _commands.emplace_back(CoincenterCommandType::kOrdersCancel)
         .setOrdersConstraints(std::move(ordersConstraints))
         .setExchangeNames(std::move(exchanges));
   }
@@ -245,7 +246,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     ExchangeNames exchanges;
     exchanges.push_back(std::move(fromExchange));
     exchanges.push_back(std::move(toExchange));
-    _commands.emplace_back(CoincenterCommand::Type::kWithdraw)
+    _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(amountToWithdraw)
         .setPercentageAmount(isPercentageWithdraw)
         .setExchangeNames(std::move(exchanges));
@@ -257,7 +258,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     ExchangeNames exchanges;
     exchanges.push_back(std::move(fromExchange));
     exchanges.push_back(std::move(toExchange));
-    _commands.emplace_back(CoincenterCommand::Type::kWithdraw)
+    _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(MonetaryAmount(100, curToWithdraw))
         .setPercentageAmount(true)
         .setExchangeNames(std::move(exchanges));
@@ -266,7 +267,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.withdrawFee.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdrawFee);
     auto [withdrawFeeCur, exchanges] = anyParser.getCurrencyPublicExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kWithdrawFee)
+    _commands.emplace_back(CoincenterCommandType::kWithdrawFee)
         .setCur1(withdrawFeeCur)
         .setExchangeNames(std::move(exchanges));
   }
@@ -274,7 +275,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.last24hTradedVolume.empty()) {
     StringOptionParser anyParser(cmdLineOptions.last24hTradedVolume);
     auto [tradedVolumeMarket, exchanges] = anyParser.getMarketExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kLast24hTradedVolume)
+    _commands.emplace_back(CoincenterCommandType::kLast24hTradedVolume)
         .setMarket(tradedVolumeMarket)
         .setExchangeNames(std::move(exchanges));
   }
@@ -282,7 +283,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.lastTrades.empty()) {
     StringOptionParser anyParser(cmdLineOptions.lastTrades);
     auto [lastTradesMarket, exchanges] = anyParser.getMarketExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kLastTrades)
+    _commands.emplace_back(CoincenterCommandType::kLastTrades)
         .setMarket(lastTradesMarket)
         .setNbLastTrades(cmdLineOptions.nbLastTrades)
         .setExchangeNames(std::move(exchanges));
@@ -291,7 +292,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (!cmdLineOptions.lastPrice.empty()) {
     StringOptionParser anyParser(cmdLineOptions.lastPrice);
     auto [lastPriceMarket, exchanges] = anyParser.getMarketExchanges();
-    _commands.emplace_back(CoincenterCommand::Type::kLastPrice)
+    _commands.emplace_back(CoincenterCommandType::kLastPrice)
         .setMarket(lastPriceMarket)
         .setExchangeNames(std::move(exchanges));
   }
