@@ -5,6 +5,7 @@ include(FindOpenSSL)
 
 add_library(coincenter_apicommon STATIC ${API_COMMON_SRC})
 target_link_libraries(coincenter_apicommon PUBLIC coincenter_objects)
+target_link_libraries(coincenter_apicommon PUBLIC coincenter_api-objects)
 target_link_libraries(coincenter_apicommon PRIVATE OpenSSL::SSL)
 
 target_include_directories(coincenter_apicommon PUBLIC include)
@@ -19,6 +20,7 @@ function(add_common_test name)
      ${MY_UNPARSED_ARGUMENTS}
      src/cryptowatchapi.cpp
      LIBRARIES
+     coincenter_api-objects
      coincenter_objects
      coincenter_tools
    )
@@ -33,9 +35,6 @@ add_common_test(
   exchangeprivateapi_test
   src/exchangeprivateapi.cpp
   src/exchangepublicapi.cpp
-  src/tradedamounts.cpp
-  src/tradeoptions.cpp
-  src/withdrawinfo.cpp
   test/exchangeprivateapi_test.cpp
 )
 
@@ -45,21 +44,4 @@ add_common_test(
   test/exchangepublicapi_test.cpp
 )
 
-add_unit_test(
-    ordersconstraints_test
-    src/ordersconstraints.cpp
-    test/ordersconstraints_test.cpp
-    LIBRARIES
-    coincenter_objects
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
 
-add_unit_test(
-  recentdeposit_test
-  src/recentdeposit.cpp
-  test/recentdeposit_test.cpp
-  LIBRARIES
-  coincenter_objects
-  coincenter_tools
-)

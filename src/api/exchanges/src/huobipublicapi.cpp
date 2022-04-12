@@ -98,7 +98,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
   return ret;
 }
 
-std::pair<ExchangePublic::MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::MarketsFunc::operator()() {
+std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/v1/common/symbols");
 
   MarketSet markets;
@@ -164,7 +164,7 @@ std::pair<ExchangePublic::MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> Hu
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-ExchangePublic::WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
+WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
@@ -213,7 +213,7 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
 }
 
-ExchangePublic::MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
+MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
   using HuobiAssetPairToStdMarketMap = std::unordered_map<string, Market>;
@@ -335,7 +335,7 @@ MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
-HuobiPublic::LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
+LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
   nbTrades = std::min(nbTrades, 2000);  // max authorized
   nbTrades = std::max(nbTrades, 1);     // min authorized
   json result =

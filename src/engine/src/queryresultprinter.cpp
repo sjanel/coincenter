@@ -1,7 +1,8 @@
-#include "printqueryresults.hpp"
+#include "queryresultprinter.hpp"
 
 #include "balanceperexchangeportfolio.hpp"
 #include "cct_string.hpp"
+#include "exchange.hpp"
 #include "simpletable.hpp"
 #include "stringhelpers.hpp"
 
@@ -20,7 +21,7 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
   }
   SimpleTable t("Exchange", std::move(marketsCol));
   for (const auto &[e, markets] : marketsPerExchange) {
-    for (const Market &m : markets) {
+    for (Market m : markets) {
       t.emplace_back(e->name(), m.str());
     }
   }
@@ -52,7 +53,7 @@ void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchan
   RETURN_IF_NO_PRINT;
   BalancePerExchangePortfolio totalBalance;
   for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
-    totalBalance.add(*exchangePtr, balancePortfolio);
+    totalBalance.add(exchangePtr->apiPrivate().exchangeName(), balancePortfolio);
   }
   totalBalance.print(std::cout, balancePerExchange.size() > 1);
 }

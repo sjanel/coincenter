@@ -7,21 +7,18 @@
 #include "cryptowatchapi.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
+#include "exchangepublicapitypes.hpp"
 
 namespace cct {
 
-using MarketOrderBookMap = api::ExchangePublic::MarketOrderBookMap;
-using MarketSet = api::ExchangePublic::MarketSet;
-using Orders = api::ExchangePrivate::Orders;
 using Deposit = CurrencyExchange::Deposit;
 using Withdraw = CurrencyExchange::Withdraw;
 using Type = CurrencyExchange::Type;
 using TradeInfo = api::TradeInfo;
 using OrderInfo = api::OrderInfo;
 using PlaceOrderInfo = api::PlaceOrderInfo;
-using ExchangePublic = api::ExchangePublic;
-using ExchangePrivate = api::ExchangePrivate;
 using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
+using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
 class ExchangeOrchestratorTest : public ::testing::Test {
  protected:
@@ -667,7 +664,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
   TradeOptions tradeOptions{priceOptions,     TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
                             Duration::zero(), TradeTypePolicy::kDefault};
   bool isPercentageTrade = false;
-  api::ExchangePublic::MarketOrderBookMap marketOrderBookMap;
+  MarketOrderBookMap marketOrderBookMap;
   MarketSet markets;
 };
 

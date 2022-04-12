@@ -11,6 +11,7 @@
 #include "cryptowatchapi.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 
 namespace cct::api {
@@ -18,16 +19,15 @@ namespace cct::api {
 template <class PublicExchangeT, class PrivateExchangeT>
 class TestAPI {
  public:
-  static ExchangePublic::MarketSet ComputeMarketSetSample(const ExchangePublic::MarketSet &markets,
-                                                          const CurrencyExchangeFlatSet &currencies) {
+  static MarketSet ComputeMarketSetSample(const MarketSet &markets, const CurrencyExchangeFlatSet &currencies) {
     static constexpr int kNbSamples = 1;
-    ExchangePublic::MarketSet consideredMarkets;
+    MarketSet consideredMarkets;
     std::ranges::copy_if(markets, std::inserter(consideredMarkets, consideredMarkets.end()), [&currencies](Market m) {
       auto cur1It = currencies.find(m.base());
       auto cur2It = currencies.find(m.quote());
       return cur1It != currencies.end() && cur2It != currencies.end() && (!cur1It->isFiat() || !cur2It->isFiat());
     });
-    ExchangePublic::MarketSet sampleMarkets;
+    MarketSet sampleMarkets;
     std::ranges::sample(consideredMarkets, std::inserter(sampleMarkets, sampleMarkets.end()), kNbSamples,
                         std::mt19937{std::random_device{}()});
     return sampleMarkets;
@@ -46,13 +46,12 @@ class TestAPI {
 
   CurrencyExchangeFlatSet currencies{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
                                                               : exchangePublic.queryTradableCurrencies()};
-  ExchangePublic::MarketSet markets{exchangePublic.queryTradableMarkets()};
-  ExchangePublic::MarketSet sampleMarkets{ComputeMarketSetSample(markets, currencies)};
-  ExchangePublic::MarketOrderBookMap approximatedMarketOrderbooks{exchangePublic.queryAllApproximatedOrderBooks(1)};
-  ExchangePublic::MarketPriceMap marketPriceMap{exchangePublic.queryAllPrices()};
-  ExchangePublic::WithdrawalFeeMap withdrawalFees{exchangePrivatePtr.get()
-                                                      ? exchangePrivatePtr.get()->queryWithdrawalFees()
-                                                      : exchangePublic.queryWithdrawalFees()};
+  MarketSet markets{exchangePublic.queryTradableMarkets()};
+  MarketSet sampleMarkets{ComputeMarketSetSample(markets, currencies)};
+  MarketOrderBookMap approximatedMarketOrderbooks{exchangePublic.queryAllApproximatedOrderBooks(1)};
+  MarketPriceMap marketPriceMap{exchangePublic.queryAllPrices()};
+  WithdrawalFeeMap withdrawalFees{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
+                                                           : exchangePublic.queryWithdrawalFees()};
 
   void testCurrencies() {
     ASSERT_FALSE(currencies.empty());
@@ -176,8 +175,7 @@ class TestAPI {
   void testOpenedOrders() {
     if (exchangePrivatePtr.get() && !sampleMarkets.empty()) {
       Market m = sampleMarkets.front();
-      ExchangePrivate::Orders baseOpenedOrders =
-          exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
+      Orders baseOpenedOrders = exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
       if (!baseOpenedOrders.empty()) {
         const Order &openedOrder = baseOpenedOrders.front();
         EXPECT_TRUE(openedOrder.market().canTrade(m.base()));
@@ -189,7 +187,7 @@ class TestAPI {
   void testTrade() {
     if (!sampleMarkets.empty()) {
       Market m = sampleMarkets.front();
-      ExchangePublic::LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
+      LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
       if (!lastTrades.empty() && exchangePrivatePtr.get()) {
         auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
           return lhs.amount() < rhs.amount();

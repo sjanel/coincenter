@@ -8,6 +8,7 @@
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 

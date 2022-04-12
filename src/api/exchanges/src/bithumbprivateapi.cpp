@@ -302,13 +302,13 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return w;
 }
 
-ExchangePrivate::Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
 
   SmallVector<CurrencyCode, 1> orderCurrencies;
 
   if (openedOrdersConstraints.isCur1Defined()) {
-    ExchangePublic::MarketSet markets;
+    MarketSet markets;
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 

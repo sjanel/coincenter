@@ -6,8 +6,11 @@
 
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
+#include "exchangepublicapitypes.hpp"
 
 namespace cct {
+
+using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
 namespace {
 
@@ -21,10 +24,7 @@ void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
   }
 }
 
-using MarketSet = api::ExchangePublic::MarketSet;
-
 using ExchangeAmountPairVector = SmallVector<std::pair<Exchange *, MonetaryAmount>, kTypicalNbPrivateAccounts>;
-using MarketsPath = api::ExchangePublic::MarketsPath;
 using ExchangeAmountMarketsPathVector =
     SmallVector<std::tuple<Exchange *, MonetaryAmount, MarketsPath>, kTypicalNbPrivateAccounts>;
 using ExchangeAmountToCurrency = std::tuple<Exchange *, MonetaryAmount, CurrencyCode, MarketsPath>;
@@ -448,7 +448,7 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
 
   MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
-  FixedCapacityVector<api::ExchangePublic::MarketOrderBookMap, kNbSupportedExchanges> marketOrderbooksPerPublicExchange(
+  FixedCapacityVector<MarketOrderBookMap, kNbSupportedExchanges> marketOrderbooksPerPublicExchange(
       publicExchanges.size());
 
   api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);

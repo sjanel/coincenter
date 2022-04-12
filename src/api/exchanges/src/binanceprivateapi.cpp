@@ -116,7 +116,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
 }
 
 bool BinancePrivate::checkMarketAppendSymbol(Market m, CurlPostData& params) {
-  ExchangePublic::MarketSet markets = _exchangePublic.queryTradableMarkets();
+  MarketSet markets = _exchangePublic.queryTradableMarkets();
   if (!markets.contains(m)) {
     m = m.reverse();
     if (!markets.contains(m)) {
@@ -127,7 +127,7 @@ bool BinancePrivate::checkMarketAppendSymbol(Market m, CurlPostData& params) {
   return true;
 }
 
-ExchangePrivate::Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   Orders openedOrders;
   CurlPostData params;
   if (openedOrdersConstraints.isMarketDefined()) {
@@ -140,7 +140,7 @@ ExchangePrivate::Orders BinancePrivate::queryOpenedOrders(const OrdersConstraint
 
   std::string_view cur1Str = openedOrdersConstraints.curStr1();
   std::string_view cur2Str = openedOrdersConstraints.curStr2();
-  ExchangePublic::MarketSet markets;
+  MarketSet markets;
   for (const json& orderDetails : result) {
     std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
     std::size_t cur1Pos = marketStr.find(cur1Str);
@@ -225,7 +225,7 @@ void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCon
   }
 }
 
-ExchangePublic::WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
+WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail");
   WithdrawalFeeMap ret;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {

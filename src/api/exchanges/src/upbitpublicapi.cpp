@@ -90,7 +90,7 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInf
   return true;
 }
 
-ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
+MarketSet UpbitPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
@@ -123,7 +123,7 @@ ExchangePublic::MarketSet UpbitPublic::MarketsFunc::operator()() {
   return ret;
 }
 
-ExchangePublic::WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
+WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfNotFound::kThrow);
   json jsonData = withdrawFeesFile.readJson();
@@ -138,8 +138,8 @@ ExchangePublic::WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
 }
 
 namespace {
-ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
-  ExchangePublic::MarketOrderBookMap ret;
+MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
+  MarketOrderBookMap ret;
   for (const json& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
@@ -179,7 +179,7 @@ ExchangePublic::MarketOrderBookMap ParseOrderBooks(const json& result, int depth
 }
 }  // namespace
 
-ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
+MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
   const MarketSet& markets = _marketsCache.get();
   string marketsStr;
   marketsStr.reserve(static_cast<string::size_type>(markets.size()) * 8);
@@ -193,7 +193,7 @@ ExchangePublic::MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(in
 }
 
 MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
-  ExchangePublic::MarketOrderBookMap marketOrderBookMap =
+  MarketOrderBookMap marketOrderBookMap =
       ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(m)}}), depth);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
@@ -208,7 +208,7 @@ MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
-UpbitPublic::LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
+LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
   json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(m)}});
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));

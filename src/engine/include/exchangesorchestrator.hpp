@@ -13,6 +13,7 @@ namespace cct {
 class ExchangesOrchestrator {
  public:
   using TradedAmountsVector = SmallVector<TradedAmounts, kTypicalNbPrivateAccounts>;
+  using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
   explicit ExchangesOrchestrator(std::span<Exchange> exchangesSpan) : _exchangeRetriever(exchangesSpan) {}
 

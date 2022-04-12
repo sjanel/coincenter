@@ -16,7 +16,7 @@
 #include "metricsexporter.hpp"
 #include "monitoringinfo.hpp"
 #include "ordersconstraints.hpp"
-#include "printqueryresults.hpp"
+#include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
 #include "tradedamounts.hpp"
 
@@ -29,6 +29,7 @@ class TradeOptions;
 class Coincenter {
  public:
   using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
+  using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 

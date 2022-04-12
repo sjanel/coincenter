@@ -5,6 +5,7 @@
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "timedef.hpp"
 #include "tradeinfo.hpp"
 

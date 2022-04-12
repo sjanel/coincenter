@@ -5,12 +5,15 @@
 #include "apikey.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresultvault.hpp"
-#include "cct_vector.hpp"
 #include "curlhandle.hpp"
+#include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "market.hpp"
+#include "monetaryamount.hpp"
 #include "order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
@@ -29,9 +32,6 @@ class APIKey;
 
 class ExchangePrivate : public ExchangeBase {
  public:
-  using WithdrawalFeeMap = ExchangePublic::WithdrawalFeeMap;
-  using Orders = vector<Order>;
-
   virtual ~ExchangePrivate() {}
 
   std::string_view keyName() const { return _apiKey.name(); }
@@ -72,7 +72,7 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Variation of 'trade' with already computed conversion path
   TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
-                      const ExchangePublic::MarketsPath &conversionPath);
+                      const MarketsPath &conversionPath);
 
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes (or hours with Bitcoin)

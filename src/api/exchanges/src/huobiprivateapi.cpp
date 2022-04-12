@@ -137,10 +137,10 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-ExchangePrivate::Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
 
-  ExchangePublic::MarketSet markets;
+  MarketSet markets;
 
   if (openedOrdersConstraints.isCur1Defined()) {
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),

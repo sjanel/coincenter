@@ -4,8 +4,10 @@
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
+
 namespace cct {
 
 class CoincenterInfo;

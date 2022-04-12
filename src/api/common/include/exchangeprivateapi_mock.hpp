@@ -3,6 +3,7 @@
 #include <gmock/gmock.h>
 
 #include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
 
 namespace cct::api {
 

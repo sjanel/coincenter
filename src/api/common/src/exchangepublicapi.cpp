@@ -95,9 +95,8 @@ class CurrencyDirFastestPathComparator {
 };
 }  // namespace
 
-ExchangePublic::MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                                            MarketSet &markets, const Fiats &fiats,
-                                                            bool considerStableCoinsAsFiats) {
+MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency, MarketSet &markets,
+                                            const Fiats &fiats, bool considerStableCoinsAsFiats) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
     log::warn("Cannot convert {} to itself", fromCurrency.str());
@@ -221,7 +220,7 @@ Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const Ma
   return m;
 }
 
-ExchangePublic::MarketPriceMap ExchangePublic::marketPriceMapFromMarketOrderBookMap(
+MarketPriceMap ExchangePublic::marketPriceMapFromMarketOrderBookMap(
     const MarketOrderBookMap &marketOrderBookMap) const {
   MarketPriceMap marketPriceMap;
   marketPriceMap.reserve(marketOrderBookMap.size());
