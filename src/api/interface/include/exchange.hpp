@@ -6,16 +6,12 @@
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 
 namespace cct {
 class Exchange {
  public:
   using ExchangePublic = api::ExchangePublic;
-  using WithdrawalFeeMap = api::ExchangePublic::WithdrawalFeeMap;
-  using MarketSet = api::ExchangePublic::MarketSet;
-  using MarketPriceMap = api::ExchangePublic::MarketPriceMap;
-  using MarketOrderBookMap = api::ExchangePublic::MarketOrderBookMap;
-  using LastTradesVector = api::ExchangePublic::LastTradesVector;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
   Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic);

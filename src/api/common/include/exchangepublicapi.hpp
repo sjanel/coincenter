@@ -2,21 +2,18 @@
 
 #include <optional>
 #include <string_view>
-#include <unordered_map>
 
-#include "cct_flatset.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
-#include "publictrade.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
@@ -30,13 +27,7 @@ class ExchangePublic : public ExchangeBase {
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
   static constexpr int kNbLastTradesDefault = 100;
 
-  using MarketSet = FlatSet<Market>;
   using Fiats = CryptowatchAPI::Fiats;
-  using MarketOrderBookMap = std::unordered_map<Market, MarketOrderBook>;
-  using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
-  using WithdrawalFeeMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
-  using LastTradesVector = vector<PublicTrade>;
-  using MarketsPath = SmallVector<Market, 3>;
 
   virtual ~ExchangePublic() {}
 

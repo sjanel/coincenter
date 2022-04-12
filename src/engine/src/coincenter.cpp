@@ -7,10 +7,11 @@
 #include "abstractmetricgateway.hpp"
 #include "coincentercommands.hpp"
 #include "coincenteroptions.hpp"
-#include "printqueryresults.hpp"
+#include "queryresultprinter.hpp"
 #include "stringoptionparser.hpp"
 
 namespace cct {
+using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
     : _coincenterInfo(coincenterInfo),

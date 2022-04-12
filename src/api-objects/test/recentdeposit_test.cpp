@@ -18,18 +18,6 @@ TEST(RecentDepositTestEmpty, Empty) {
 
 class RecentDepositTest : public ::testing::Test {
  protected:
-  RecentDepositTest()
-      : refTimePoint(Clock::now()),
-        recentDeposits{RecentDeposit(MonetaryAmount(37), refTimePoint - std::chrono::seconds(2)),
-                       RecentDeposit(MonetaryAmount("37.5"), refTimePoint - std::chrono::hours(2)),
-                       RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(8)),
-                       RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(1)),
-                       RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(12)),
-                       RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(1)),
-                       RecentDeposit(MonetaryAmount(33), refTimePoint - std::chrono::minutes(1)),
-                       RecentDeposit(MonetaryAmount("33.1"), refTimePoint - std::chrono::minutes(12)),
-                       RecentDeposit(MonetaryAmount("27.5"), refTimePoint - std::chrono::days(4))} {}
-
   virtual void SetUp() {}
   virtual void TearDown() {}
 
@@ -45,8 +33,16 @@ class RecentDepositTest : public ::testing::Test {
     EXPECT_EQ(*pRes, expected);
   }
 
-  TimePoint refTimePoint;
-  RecentDepositVector recentDeposits;
+  TimePoint refTimePoint{Clock::now()};
+  RecentDepositVector recentDeposits{RecentDeposit(MonetaryAmount(37), refTimePoint - std::chrono::seconds(2)),
+                                     RecentDeposit(MonetaryAmount("37.5"), refTimePoint - std::chrono::hours(2)),
+                                     RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(8)),
+                                     RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(1)),
+                                     RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(12)),
+                                     RecentDeposit(MonetaryAmount(38), refTimePoint - std::chrono::hours(1)),
+                                     RecentDeposit(MonetaryAmount(33), refTimePoint - std::chrono::minutes(1)),
+                                     RecentDeposit(MonetaryAmount("33.1"), refTimePoint - std::chrono::minutes(12)),
+                                     RecentDeposit(MonetaryAmount("27.5"), refTimePoint - std::chrono::days(4))};
 };
 
 TEST_F(RecentDepositTest, SelectClosestRecentDepositExactAmount1) {

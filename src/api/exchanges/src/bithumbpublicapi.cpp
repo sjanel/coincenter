@@ -72,7 +72,7 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
 
-ExchangePublic::MarketSet BithumbPublic::queryTradableMarkets() {
+MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
   if (!pMarketOrderbookMap || lastUpdatedTime + exchangeInfo().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
     pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
@@ -103,7 +103,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
   return *avgPrice;
 }
 
-ExchangePublic::WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
+WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
@@ -174,11 +174,10 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 }
 
 namespace {
-ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config,
-                                                 const ExchangeInfo& exchangeInfo,
-                                                 std::optional<Market> optM = std::nullopt,
-                                                 std::optional<int> optDepth = std::nullopt) {
-  ExchangePublic::MarketOrderBookMap ret;
+MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config, const ExchangeInfo& exchangeInfo,
+                                 std::optional<Market> optM = std::nullopt,
+                                 std::optional<int> optDepth = std::nullopt) {
+  MarketOrderBookMap ret;
   // 'all' seems to work as default for all public methods
   CurrencyCode base("all");
   CurrencyCode quote;
@@ -256,13 +255,12 @@ ExchangePublic::MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const C
 }
 }  // namespace
 
-ExchangePublic::MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()(int) {
+MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()(int) {
   return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
-  ExchangePublic::MarketOrderBookMap marketOrderBookMap =
-      GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, m, count);
+  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, m, count);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");
@@ -297,7 +295,7 @@ TimePoint EpochTime(const std::string& dateStr) {
 }
 }  // namespace
 
-BithumbPublic::LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
+LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
   json result = PublicQuery(_curlHandle, "/public/transaction_history", m.base(), m.quote());
   LastTradesVector ret;
   for (const json& detail : result) {

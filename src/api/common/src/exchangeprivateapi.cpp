@@ -39,7 +39,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
 }
 
 TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
-                                     const ExchangePublic::MarketsPath &conversionPath) {
+                                     const MarketsPath &conversionPath) {
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
   log::debug(options.str(realOrderPlacedInSimulationMode));
   const int nbTrades = static_cast<int>(conversionPath.size());

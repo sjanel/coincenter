@@ -4,16 +4,16 @@
 #include "simpletable.hpp"
 
 namespace cct {
-void BalancePerExchangePortfolio::add(const Exchange &exchange, const BalancePortfolio &balancePortfolio) {
+void BalancePerExchangePortfolio::add(ExchangeName &&exchangeName, const BalancePortfolio &balancePortfolio) {
   _balances.front() += balancePortfolio;
   _balances.push_back(balancePortfolio);
-  _exchanges.push_back(std::addressof(exchange));
+  _exchanges.push_back(std::move(exchangeName));
 }
 
-void BalancePerExchangePortfolio::add(const Exchange &exchange, BalancePortfolio &&balancePortfolio) {
+void BalancePerExchangePortfolio::add(ExchangeName &&exchangeName, BalancePortfolio &&balancePortfolio) {
   _balances.front() += balancePortfolio;
   _balances.push_back(std::move(balancePortfolio));
-  _exchanges.push_back(std::addressof(exchange));
+  _exchanges.push_back(std::move(exchangeName));
 }
 
 void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
@@ -35,10 +35,10 @@ void BalancePerExchangePortfolio::print(std::ostream &os, bool wide) const {
     }
 
     if (wide) {
-      for (const Exchange *e : _exchanges) {
-        string account(e->name());
+      for (const ExchangeName &e : _exchanges) {
+        string account(e.name());
         account.push_back('_');
-        account.append(e->keyName());
+        account.append(e.keyName());
         header.emplace_back(std::move(account));
       }
     }

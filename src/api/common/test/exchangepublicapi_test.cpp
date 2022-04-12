@@ -23,11 +23,8 @@ class ExchangePublicTest : public ::testing::Test {
 };
 
 namespace {
-using MarketsPath = ExchangePublic::MarketsPath;
 using CurrenciesPath = ExchangePublic::CurrenciesPath;
-using MarketSet = ExchangePublic::MarketSet;
 using Fiats = ExchangePublic::Fiats;
-using MarketOrderBookMap = ExchangePublic::MarketOrderBookMap;
 }  // namespace
 
 TEST_F(ExchangePublicTest, FindFastestConversionPath) {

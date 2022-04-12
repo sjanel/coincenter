@@ -127,7 +127,7 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
   return ret;
 }
 
-ExchangePublic::MarketSet BinancePublic::MarketsFunc::operator()() {
+MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeInfoCache.get();
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
@@ -223,7 +223,7 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json
 }
 }  // namespace
 
-ExchangePublic::WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
+WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const json& el : _globalInfosCache.get()) {
     std::string_view coinStr = el["coin"].get<std::string_view>();
@@ -391,7 +391,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
   return ret;
 }
 
-ExchangePublic::MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
+MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
@@ -454,7 +454,7 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(last24hVol, m.base());
 }
 
-BinancePublic::LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
+LastTradesVector BinancePublic::queryLastTrades(Market m, int nbTrades) {
   if (nbTrades > kMaxNbLastTrades) {
     log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, _name);
     nbTrades = kMaxNbLastTrades;

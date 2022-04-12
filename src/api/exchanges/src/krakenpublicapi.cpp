@@ -282,7 +282,7 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   return ret;
 }
 
-std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
+std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/public/AssetPairs");
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
@@ -325,7 +325,7 @@ std::pair<KrakenPublic::MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> Kra
   return ret;
 }
 
-ExchangePublic::MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
+MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   string allAssetPairs;
   const CurrencyExchangeFlatSet& krakenCurrencies = _tradableCurrenciesCache.get();
@@ -438,7 +438,7 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
   throw exception("Invalid data retrieved from ticker information");
 }
 
-KrakenPublic::LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
+LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
                       _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
   json result = PublicQuery(_curlHandle, "/public/Trades", {{"pair", krakenMarket.assetsPairStrUpper()}});

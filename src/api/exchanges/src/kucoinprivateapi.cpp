@@ -162,11 +162,11 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-ExchangePrivate::Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params{{"status", "active"}, {"tradeType", "TRADE"}};
 
   if (openedOrdersConstraints.isCur1Defined()) {
-    ExchangePublic::MarketSet markets;
+    MarketSet markets;
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 

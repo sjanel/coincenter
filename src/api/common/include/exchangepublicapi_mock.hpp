@@ -4,6 +4,7 @@
 
 #include "cryptowatchapi.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 
 namespace cct::api {

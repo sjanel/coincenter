@@ -7,6 +7,7 @@
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {

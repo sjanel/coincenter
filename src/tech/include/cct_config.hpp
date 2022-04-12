@@ -1,4 +1,3 @@
-
 #pragma once
 
 #if defined(__clang__) && defined(__clang_minor__)

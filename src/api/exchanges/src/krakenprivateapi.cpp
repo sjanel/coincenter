@@ -176,12 +176,12 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return w;
 }
 
-ExchangePrivate::Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   json data = PrivateQuery(_curlHandle, _apiKey, "/private/OpenOrders", {{"trades", "true"}});
   auto openedPartIt = data.find("open");
   Orders openedOrders;
   if (openedPartIt != data.end()) {
-    ExchangePublic::MarketSet markets;
+    MarketSet markets;
 
     for (const auto& [id, orderDetails] : openedPartIt->items()) {
       std::string_view marketStr = orderDetails["descr"]["pair"].get<std::string_view>();

@@ -5,6 +5,7 @@
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 
 namespace cct {
 

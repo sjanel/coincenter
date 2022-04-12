@@ -6,6 +6,7 @@
 #include "cct_const.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
+#include "exchangepublicapitypes.hpp"
 
 namespace cct {
 inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
@@ -25,7 +26,7 @@ class ExchangePrivateTest : public ::testing::Test {
 
   void tradeBaseExpectCalls() {
     EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
-    EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(ExchangePublic::MarketSet{m}));
+    EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(MarketSet{m}));
   }
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};

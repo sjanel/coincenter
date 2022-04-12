@@ -5,13 +5,13 @@
 #include "balanceportfolio.hpp"
 #include "cct_const.hpp"
 #include "cct_smallvector.hpp"
-#include "exchangeretriever.hpp"
+#include "exchangename.hpp"
 
 namespace cct {
 class BalancePerExchangePortfolio {
  public:
-  void add(const Exchange &exchange, const BalancePortfolio &balancePortfolio);
-  void add(const Exchange &exchange, BalancePortfolio &&balancePortfolio);
+  void add(ExchangeName &&exchangeName, const BalancePortfolio &balancePortfolio);
+  void add(ExchangeName &&exchangeName, BalancePortfolio &&balancePortfolio);
 
   /// Pretty print table of balance.
   /// @param wide if true, all exchange amount will be printed as well
@@ -22,7 +22,7 @@ class BalancePerExchangePortfolio {
   using BalancePortfolioVector = SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts + 1>;
 
   BalancePortfolioVector _balances{1};
-  ConstExchangeRetriever::SelectedExchanges _exchanges;
+  ExchangeNames _exchanges;
 };
 
 }  // namespace cct

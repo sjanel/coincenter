@@ -4,6 +4,7 @@
 
 #include "abstractmetricgateway.hpp"
 #include "curlmetrics.hpp"
+#include "exchange.hpp"
 
 #define RETURN_IF_NO_MONITORING \
   if (!_pMetricsGateway) return

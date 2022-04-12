@@ -90,7 +90,7 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
   return CurrencyExchangeFlatSet(std::move(currencies));
 }
 
-std::pair<ExchangePublic::MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
+std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/api/v1/symbols");
 
   MarketSet markets;
@@ -136,7 +136,7 @@ std::pair<ExchangePublic::MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> K
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-ExchangePublic::WithdrawalFeeMap KucoinPublic::queryWithdrawalFees() {
+WithdrawalFeeMap KucoinPublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : _tradableCurrenciesCache.get()) {
     ret.insert_or_assign(curDetail.currencyExchange.standardCode(), curDetail.withdrawalMinFee);
@@ -157,7 +157,7 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
 }
 
-ExchangePublic::MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
+MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
   json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
@@ -282,7 +282,7 @@ MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market m) {
   return MonetaryAmount(result["vol"].get<std::string_view>(), m.base());
 }
 
-KucoinPublic::LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
+LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
   json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(m));
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
