@@ -15,7 +15,7 @@
 namespace cct {
 
 MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, VolAndPriNbDecimals volAndPriNbDecimals)
-    : _market(market), _volAndPriNbDecimals(volAndPriNbDecimals), _isArtificiallyExtended(false) {
+    : _market(market), _volAndPriNbDecimals(volAndPriNbDecimals) {
   const int nbPrices = static_cast<int>(orderLines.size());
   _orders.reserve(nbPrices);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
@@ -411,13 +411,14 @@ std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::operator[](int relati
     auto [v11, v12] = (*this)[-1];
     auto [v21, v22] = (*this)[1];
     return std::make_pair(v11 + (v21 - v11) / 2, v12 + (v22 - v12) / 2);
-  } else if (relativePosToLimitPrice < 0) {
+  }
+  if (relativePosToLimitPrice < 0) {
     int pos = _lowestAskPricePos + relativePosToLimitPrice;
     return std::make_pair(priceAt(pos), amountAt(pos));
-  } else {  // > 0
-    int pos = _highestBidPricePos + relativePosToLimitPrice;
-    return std::make_pair(priceAt(pos), negAmountAt(pos));
   }
+  // > 0
+  int pos = _highestBidPricePos + relativePosToLimitPrice;
+  return std::make_pair(priceAt(pos), negAmountAt(pos));
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::convertBaseAmountToQuote(MonetaryAmount amountInBaseCurrency) const {

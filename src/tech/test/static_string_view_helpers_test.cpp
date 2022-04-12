@@ -3,7 +3,7 @@
 namespace cct {
 // JoinStringView
 namespace test1 {
-static_assert(JoinStringView_v<> == "");
+static_assert(JoinStringView_v<>.empty());
 }  // namespace test1
 
 namespace test2 {

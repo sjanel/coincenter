@@ -148,7 +148,7 @@ class ExchangePublic : public ExchangeBase {
   Market determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
                                              CurrencyCode filterCur2 = CurrencyCode());
 
-  MarketPriceMap marketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) const;
+  static MarketPriceMap MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap);
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 

@@ -60,14 +60,13 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
     if (it != _exchangePart->end()) {
       JsonIt optValIt = it->find(subOptionName1);
       if (optValIt != it->end()) {
-        if (subOptionName2 != "") {
-          JsonIt optValIt2 = optValIt->find(subOptionName2);
-          if (optValIt2 != optValIt->end()) {
-            return optValIt2;
-          }
-        } else {
+        if (subOptionName2.empty()) {
           // Exchange defined the option, it has priority, return it
           return optValIt;
+        }
+        JsonIt optValIt2 = optValIt->find(subOptionName2);
+        if (optValIt2 != optValIt->end()) {
+          return optValIt2;
         }
       }
     }
@@ -75,14 +74,13 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
   if (_hasDefaultPart) {
     JsonIt optValIt = _defaultPart->find(subOptionName1);
     if (optValIt != _defaultPart->end()) {
-      if (subOptionName2 != "") {
-        JsonIt optValIt2 = optValIt->find(subOptionName2);
-        if (optValIt2 != optValIt->end()) {
-          return optValIt2;
-        }
-      } else {
+      if (subOptionName2.empty()) {
         // Exchange defined the option, it has priority, return it
         return optValIt;
+      }
+      JsonIt optValIt2 = optValIt->find(subOptionName2);
+      if (optValIt2 != optValIt->end()) {
+        return optValIt2;
       }
     }
   }

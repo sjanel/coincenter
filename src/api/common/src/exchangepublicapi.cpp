@@ -220,8 +220,7 @@ Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const Ma
   return m;
 }
 
-MarketPriceMap ExchangePublic::marketPriceMapFromMarketOrderBookMap(
-    const MarketOrderBookMap &marketOrderBookMap) const {
+MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) {
   MarketPriceMap marketPriceMap;
   marketPriceMap.reserve(marketOrderBookMap.size());
   for (const auto &it : marketOrderBookMap) {

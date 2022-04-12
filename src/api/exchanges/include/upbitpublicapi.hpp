@@ -28,7 +28,7 @@ class UpbitPublic : public ExchangePublic {
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get(); }
 
-  MarketPriceMap queryAllPrices() override { return marketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
+  MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
@@ -58,7 +58,7 @@ class UpbitPublic : public ExchangePublic {
 
   static bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies);
 
-  MonetaryAmount sanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) const;
+  static MonetaryAmount SanitizeVolume(MonetaryAmount vol, MonetaryAmount pri);
 
   struct MarketsFunc {
 #ifndef CCT_AGGR_INIT_CXX20

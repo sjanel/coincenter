@@ -46,7 +46,7 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
   LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
   CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
-                                coincenterCommands.createMonitoringInfo(programName, cmdLineOptions));
+                                CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions));
 
   ExchangeSecretsInfo exchangesSecretsInfo;
   if (cmdLineOptions.nosecrets) {

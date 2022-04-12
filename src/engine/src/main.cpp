@@ -1,5 +1,4 @@
-#include <stdlib.h>
-
+#include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
 
@@ -10,10 +9,9 @@
 
 int main(int argc, const char* argv[]) {
   try {
+    auto parsedOptions = cct::CoincenterCommands::ParseOptions(argc, argv);
+
     cct::CoincenterCommands coincenterCommands;
-
-    auto parsedOptions = coincenterCommands.parseOptions(argc, argv);
-
     if (coincenterCommands.setFromOptions(parsedOptions)) {
       auto programName = std::filesystem::path(argv[0]).filename().string();
 

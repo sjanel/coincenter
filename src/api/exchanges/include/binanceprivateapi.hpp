@@ -57,10 +57,6 @@ class BinancePrivate : public ExchangePrivate {
  private:
   OrderInfo queryOrder(const OrderRef& orderRef, bool isCancel);
 
-  TradedAmounts queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) const;
-
-  TradedAmounts parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const;
-
   bool checkMarketAppendSymbol(Market m, CurlPostData& params);
 
   struct TradableCurrenciesCache {

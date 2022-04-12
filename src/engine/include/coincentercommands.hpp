@@ -21,10 +21,10 @@ class CoincenterCommands {
  public:
   CoincenterCommands() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
-  CoincenterCmdLineOptions parseOptions(int argc, const char *argv[]) const;
+  static CoincenterCmdLineOptions ParseOptions(int argc, const char *argv[]);
 
-  MonitoringInfo createMonitoringInfo(std::string_view programName,
-                                      const CoincenterCmdLineOptions &cmdLineOptions) const;
+  static MonitoringInfo CreateMonitoringInfo(std::string_view programName,
+                                             const CoincenterCmdLineOptions &cmdLineOptions);
 
   bool setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
 

@@ -197,7 +197,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     static constexpr std::string_view kBeginTable = "<table class=";
     begPos = withdrawalFeesCsv.find(kBeginTable, begPos + kBeginTableTitle.size());
     if (begPos != string::npos) {
-      static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<th scope=\"row\" class=\"align";
+      static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = R"(<th scope="row" class="align)";
 
       std::size_t searchPos = begPos + kBeginTable.size();
       while ((searchPos = withdrawalFeesCsv.find(kBeginWithdrawalFeeHtmlTag, searchPos)) != string::npos) {

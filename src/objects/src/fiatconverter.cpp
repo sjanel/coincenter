@@ -20,7 +20,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
     log::warn("If you want to use extensively coincenter, please create your own key by going to");
     log::warn("https://free.currencyconverterapi.com/free-api-key and place it in");
     log::warn("'{}/secret/{}' like this:", dataDir, kThirdPartySecretFileName);
-    log::warn("  {\"freecurrencyconverter\": \"<YourKey>\"}");
+    log::warn(R"(  {"freecurrencyconverter": "<YourKey>"})");
     log::warn("Using default key provided as a demo to the community");
     return string(kDefaultCommunityKey);
   }
@@ -33,7 +33,7 @@ File GetRatesCacheFile(std::string_view dataDir) {
   return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfNotFound::kNoThrow);
 }
 
-static constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";
+constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)

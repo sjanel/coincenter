@@ -21,7 +21,7 @@
 namespace cct::api {
 namespace {
 
-static constexpr int kMaxNbLastTrades = 1000;
+constexpr int kMaxNbLastTrades = 1000;
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
   string endpoint(method);
@@ -132,8 +132,8 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
   const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
-  for (auto it = exchangeInfoData.begin(), endIt = exchangeInfoData.end(); it != endIt; ++it) {
-    const json& symbol = it->second;
+  for (const auto& marketJsonPair : exchangeInfoData) {
+    const json& symbol = marketJsonPair.second;
     std::string_view baseAsset = symbol["baseAsset"].get<std::string_view>();
     std::string_view quoteAsset = symbol["quoteAsset"].get<std::string_view>();
     CurrencyCode base(baseAsset);
@@ -423,8 +423,8 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
 
 MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market m, int depth) {
   // Binance has a fixed range of authorized values for depth
-  constexpr int kAuthorizedDepths[] = {5, 10, 20, 50, 100, 500, 1000, 5000};
-  auto lb = std::lower_bound(std::begin(kAuthorizedDepths), std::end(kAuthorizedDepths), depth);
+  static constexpr int kAuthorizedDepths[] = {5, 10, 20, 50, 100, 500, 1000, 5000};
+  auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
   if (lb == std::end(kAuthorizedDepths)) {
     lb = std::next(std::end(kAuthorizedDepths), -1);
     log::error("Invalid depth {}, default to {}", depth, *lb);

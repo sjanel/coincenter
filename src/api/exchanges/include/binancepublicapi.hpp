@@ -41,7 +41,7 @@ class BinancePublic : public ExchangePublic {
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get(); }
 
-  MarketPriceMap queryAllPrices() override { return marketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
+  MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
   WithdrawalFeeMap queryWithdrawalFees() override;
 

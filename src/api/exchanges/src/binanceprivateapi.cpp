@@ -250,6 +250,40 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
 }
 
+namespace {
+TradedAmounts ParseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) {
+  MonetaryAmount price(fillDetail["price"].get<std::string_view>(), m.quote());
+  MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), m.base());
+  MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
+  TradedAmounts detailTradedInfo(fromCurrencyCode == m.quote() ? quantityTimesPrice : quantity,
+                                 fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
+  MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
+                     fillDetail["commissionAsset"].get<std::string_view>());
+  log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity.str(), price.str(), fee.str());
+  if (fee.currencyCode() == detailTradedInfo.tradedFrom.currencyCode()) {
+    detailTradedInfo.tradedFrom += fee;
+  } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
+    detailTradedInfo.tradedTo -= fee;
+  } else {
+    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
+  }
+  return detailTradedInfo;
+}
+
+TradedAmounts QueryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) {
+  CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
+  TradedAmounts ret(fromCurrencyCode, toCurrencyCode);
+
+  if (orderJson.contains("fills")) {
+    for (const json& fillDetail : orderJson["fills"]) {
+      ret += ParseTrades(m, fromCurrencyCode, fillDetail);
+    }
+  }
+
+  return ret;
+}
+}  // namespace
+
 PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
@@ -310,7 +344,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {
-      placeOrderInfo.tradedAmounts() += queryOrdersAfterPlace(m, fromCurrencyCode, result);
+      placeOrderInfo.tradedAmounts() += QueryOrdersAfterPlace(m, fromCurrencyCode, result);
     } else {
       log::error("{} rejected our place order with status {}", _exchangePublic.name(), status);
     }
@@ -350,44 +384,11 @@ OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, bool isCancel) {
     int64_t integralOrderId = FromString<int64_t>(orderRef.id);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
-        orderInfo.tradedAmounts += parseTrades(m, fromCurrencyCode, tradeDetails);
+        orderInfo.tradedAmounts += ParseTrades(m, fromCurrencyCode, tradeDetails);
       }
     }
   }
   return orderInfo;
-}
-
-TradedAmounts BinancePrivate::queryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode,
-                                                    const json& orderJson) const {
-  CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
-  TradedAmounts ret(fromCurrencyCode, toCurrencyCode);
-
-  if (orderJson.contains("fills")) {
-    for (const json& fillDetail : orderJson["fills"]) {
-      ret += parseTrades(m, fromCurrencyCode, fillDetail);
-    }
-  }
-
-  return ret;
-}
-
-TradedAmounts BinancePrivate::parseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) const {
-  MonetaryAmount price(fillDetail["price"].get<std::string_view>(), m.quote());
-  MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), m.base());
-  MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
-  TradedAmounts detailTradedInfo(fromCurrencyCode == m.quote() ? quantityTimesPrice : quantity,
-                                 fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
-  MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
-                     fillDetail["commissionAsset"].get<std::string_view>());
-  log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity.str(), price.str(), fee.str());
-  if (fee.currencyCode() == detailTradedInfo.tradedFrom.currencyCode()) {
-    detailTradedInfo.tradedFrom += fee;
-  } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
-    detailTradedInfo.tradedTo -= fee;
-  } else {
-    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
-  }
-  return detailTradedInfo;
 }
 
 InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {

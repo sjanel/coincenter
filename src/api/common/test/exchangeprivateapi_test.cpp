@@ -20,9 +20,9 @@ class ExchangePrivateTest : public ::testing::Test {
  protected:
   ExchangePrivateTest() = default;
 
-  virtual void SetUp() {}
+  void SetUp() override {}
 
-  virtual void TearDown() {}
+  void TearDown() override {}
 
   void tradeBaseExpectCalls() {
     EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));

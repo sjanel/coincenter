@@ -39,7 +39,8 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
   std::size_t dotPos = amountStr.find('.');
   int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
-  MonetaryAmount::AmountType decPart, integerPart;
+  MonetaryAmount::AmountType decPart;
+  MonetaryAmount::AmountType integerPart;
   if (dotPos == std::string_view::npos) {
     decPart = 0;
     integerPart = FromString<MonetaryAmount::AmountType>(amountStr);

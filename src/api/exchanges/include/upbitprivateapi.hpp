@@ -96,10 +96,6 @@ class UpbitPrivate : public ExchangePrivate {
     UpbitPublic& _exchangePublic;
   };
 
-  OrderInfo parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const;
-
-  bool isOrderClosed(const json& orderJson) const;
-
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;

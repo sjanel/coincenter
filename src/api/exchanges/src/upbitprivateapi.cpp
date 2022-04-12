@@ -243,102 +243,22 @@ void UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   }
 }
 
-PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
-                                        const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
-  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const Market m = tradeInfo.m;
-
-  const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
-  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
-
-  CurlPostData placePostData{{"market", UpbitPublic::ReverseMarketStr(m)}, {"side", askOrBid}, {"ord_type", orderType}};
-
-  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
-
-  UpbitPublic& exchangePublic = dynamic_cast<UpbitPublic&>(_exchangePublic);
-
-  if (fromCurrencyCode == m.quote()) {
-    // For 'buy', from amount is fee excluded
-    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
-    if (isTakerStrategy) {
-      from = exchangeInfo.applyFee(from, feeType);
-    } else {
-      volume = exchangeInfo.applyFee(volume, feeType);
-    }
+namespace {
+bool IsOrderClosed(const json& orderJson) {
+  std::string_view state = orderJson["state"].get<std::string_view>();
+  if (state == "done" || state == "cancel") {
+    return true;
   }
-
-  MonetaryAmount sanitizedVol = exchangePublic.sanitizeVolume(volume, price);
-  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
-  if (volume < sanitizedVol && !isSimulationWithRealOrder) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
-              sanitizedVol.str());
-    placeOrderInfo.setClosed();
-    return placeOrderInfo;
+  if (state == "wait" || state == "watch") {
+    return false;
   }
-
-  volume = sanitizedVol;
-
-  if (isTakerStrategy) {
-    // Upbit has an exotic way to distinguish buy and sell on the same market
-    if (fromCurrencyCode == m.base()) {
-      placePostData.append("volume", volume.amountStr());
-    } else {
-      placePostData.append("price", from.amountStr());
-    }
-  } else {
-    placePostData.append("volume", volume.amountStr());
-    placePostData.append("price", price.amountStr());
-  }
-
-  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
-
-  placeOrderInfo.orderInfo = parseOrderJson(placeOrderRes, fromCurrencyCode, m);
-  placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
-
-  // Upbit takes some time to match the market order - We should wait that it has been matched
-  bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
-  while (takerOrderNotClosed) {
-    json orderRes =
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", placeOrderInfo.orderId}});
-
-    placeOrderInfo.orderInfo = parseOrderJson(orderRes, fromCurrencyCode, m);
-
-    takerOrderNotClosed = !placeOrderInfo.orderInfo.isClosed;
-  }
-  return placeOrderInfo;
+  log::error("Unknown state {} to be handled for Upbit", state);
+  return true;
 }
 
-OrderInfo UpbitPrivate::cancelOrder(const OrderRef& orderRef) {
-  CurlPostData postData{{"uuid", orderRef.id}};
-  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
-  bool cancelledOrderClosed = isOrderClosed(orderRes);
-  while (!cancelledOrderClosed) {
-    orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
-    cancelledOrderClosed = isOrderClosed(orderRes);
-  }
-  return parseOrderJson(orderRes, orderRef.fromCur(), orderRef.m);
-}
-
-OrderInfo UpbitPrivate::queryOrderInfo(const OrderRef& orderRef) {
-  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderRef.id}});
-  const CurrencyCode fromCurrencyCode(orderRef.fromCur());
-  return parseOrderJson(orderRes, fromCurrencyCode, orderRef.m);
-}
-
-MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
-                             {{"currency", currencyCode.str()}});
-  std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
-  return MonetaryAmount(amountStr, currencyCode);
-}
-
-OrderInfo UpbitPrivate::parseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) const {
+OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) {
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == m.base() ? m.quote() : m.base()),
-                      isOrderClosed(orderJson));
+                      IsOrderClosed(orderJson));
 
   if (orderJson.contains("trades")) {
     CurrencyCode feeCurrencyCode(m.quote());  // TODO: to be confirmed (this is true at least for markets involving KRW)
@@ -367,16 +287,97 @@ OrderInfo UpbitPrivate::parseOrderJson(const json& orderJson, CurrencyCode fromC
   return orderInfo;
 }
 
-bool UpbitPrivate::isOrderClosed(const json& orderJson) const {
-  std::string_view state = orderJson["state"].get<std::string_view>();
-  if (state == "done" || state == "cancel") {
-    return true;
-  } else if (state == "wait" || state == "watch") {
-    return false;
-  } else {
-    log::error("Unknown state {} to be handled for Upbit", state);
-    return true;
+}  // namespace
+
+PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
+                                        const TradeInfo& tradeInfo) {
+  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
+  const Market m = tradeInfo.m;
+
+  const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
+  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
+
+  CurlPostData placePostData{{"market", UpbitPublic::ReverseMarketStr(m)}, {"side", askOrBid}, {"ord_type", orderType}};
+
+  PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
+
+  if (fromCurrencyCode == m.quote()) {
+    // For 'buy', from amount is fee excluded
+    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
+    if (isTakerStrategy) {
+      from = exchangeInfo.applyFee(from, feeType);
+    } else {
+      volume = exchangeInfo.applyFee(volume, feeType);
+    }
   }
+
+  MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
+  const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
+  if (volume < sanitizedVol && !isSimulationWithRealOrder) {
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+              sanitizedVol.str());
+    placeOrderInfo.setClosed();
+    return placeOrderInfo;
+  }
+
+  volume = sanitizedVol;
+
+  if (isTakerStrategy) {
+    // Upbit has an exotic way to distinguish buy and sell on the same market
+    if (fromCurrencyCode == m.base()) {
+      placePostData.append("volume", volume.amountStr());
+    } else {
+      placePostData.append("price", from.amountStr());
+    }
+  } else {
+    placePostData.append("volume", volume.amountStr());
+    placePostData.append("price", price.amountStr());
+  }
+
+  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
+
+  placeOrderInfo.orderInfo = ParseOrderJson(placeOrderRes, fromCurrencyCode, m);
+  placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
+
+  // Upbit takes some time to match the market order - We should wait that it has been matched
+  bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
+  while (takerOrderNotClosed) {
+    json orderRes =
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", placeOrderInfo.orderId}});
+
+    placeOrderInfo.orderInfo = ParseOrderJson(orderRes, fromCurrencyCode, m);
+
+    takerOrderNotClosed = !placeOrderInfo.orderInfo.isClosed;
+  }
+  return placeOrderInfo;
+}
+
+OrderInfo UpbitPrivate::cancelOrder(const OrderRef& orderRef) {
+  CurlPostData postData{{"uuid", orderRef.id}};
+  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
+  bool cancelledOrderClosed = IsOrderClosed(orderRes);
+  while (!cancelledOrderClosed) {
+    orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
+    cancelledOrderClosed = IsOrderClosed(orderRes);
+  }
+  return ParseOrderJson(orderRes, orderRef.fromCur(), orderRef.m);
+}
+
+OrderInfo UpbitPrivate::queryOrderInfo(const OrderRef& orderRef) {
+  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderRef.id}});
+  const CurrencyCode fromCurrencyCode(orderRef.fromCur());
+  return ParseOrderJson(orderRes, fromCurrencyCode, orderRef.m);
+}
+
+MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
+                             {{"currency", currencyCode.str()}});
+  std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
+  return MonetaryAmount(amountStr, currencyCode);
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {

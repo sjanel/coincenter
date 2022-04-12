@@ -62,7 +62,8 @@ using ExtractedDataFromMetricKey = std::tuple<std::map<std::string, std::string>
 
 inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
   ExtractedDataFromMetricKey ret;
-  std::string_view metricNameSV, metricHelpSV;
+  std::string_view metricNameSV;
+  std::string_view metricHelpSV;
   for (const auto& [k, v] : key) {
     if (k == kMetricNameKey) {
       metricNameSV = v;

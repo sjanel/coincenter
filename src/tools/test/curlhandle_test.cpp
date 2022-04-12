@@ -19,8 +19,8 @@ class KrakenBaseCurlHandle : public ::testing::Test {
 
   KrakenBaseCurlHandle() : handle(kKrakenUrlBase) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CurlHandle handle;
 };
@@ -45,8 +45,8 @@ class TestCurlHandle : public ::testing::Test {
 
   TestCurlHandle() : handle(kTestUrl) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CurlHandle handle;
 };

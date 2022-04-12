@@ -31,8 +31,8 @@ class MarketOrderBookTestCase1 : public ::testing::Test {
                             OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), true),
                             OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"), true)}) {
   }
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   MarketOrderBook marketOrderBook;
 };
@@ -142,8 +142,8 @@ class MarketOrderBookTestCase2 : public ::testing::Test {
                 OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.18", "KRW"), false),
                 OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.17", "KRW"), false),
                 OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"), false)}) {}
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   MarketOrderBook marketOrderBook;
 };
@@ -172,8 +172,8 @@ class MarketOrderBookTestCase3 : public ::testing::Test {
                 OrderBookLine(MonetaryAmount("37863.710", "XLM"), MonetaryAmount("0.000007100", "BTC"), false),
                 OrderBookLine(MonetaryAmount("169165.594", "XLM"), MonetaryAmount("0.000007090", "BTC"), false),
                 OrderBookLine(MonetaryAmount("204218.966", "XLM"), MonetaryAmount("0.000007080", "BTC"), false)}) {}
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   MarketOrderBook marketOrderBook;
 };
@@ -191,8 +191,8 @@ class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
   MarketOrderBookTestCaseExtended1()
       : marketOrderBook(MonetaryAmount("2300.45 EUR"), MonetaryAmount("193.09 ADA"), MonetaryAmount("2300.4 EUR"),
                         MonetaryAmount("41 ADA"), {2, 2}, 50) {}
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   MarketOrderBook marketOrderBook;
 };

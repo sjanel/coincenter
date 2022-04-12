@@ -61,7 +61,7 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
                             : nullptr),
       _monitoringInfo(monitoringInfo) {}
 
-CoincenterInfo::~CoincenterInfo() {}  // To have definition of MetricGateway
+CoincenterInfo::~CoincenterInfo() = default;  // To have definition of MetricGateway
 
 CurrencyCode CoincenterInfo::standardizeCurrencyCode(CurrencyCode currencyCode) const {
   auto it = _currencyEquiAcronymMap.find(currencyCode);

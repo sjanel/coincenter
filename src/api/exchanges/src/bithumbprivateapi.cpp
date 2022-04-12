@@ -434,7 +434,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       }
     }
     if (!isTakerStrategy) {
-      MonetaryAmount minOrderPrice = price, maxOrderPrice = price;
+      MonetaryAmount minOrderPrice = price;
+      MonetaryAmount maxOrderPrice = price;
       if (currencyOrderInfo.lastMinOrderPriceUpdatedTime + _currencyOrderInfoRefreshTime > nowTime &&
           currencyOrderInfo.minOrderPrice.currencyCode() == price.currencyCode()) {
         minOrderPrice = currencyOrderInfo.minOrderPrice;

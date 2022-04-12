@@ -46,8 +46,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet) {
       signaturePostdata.append(std::move(postdata));
-      // After a move, an object has unspecified but valid state. Let's call clear() to force it to be empty.
-      postdata.clear();
+      postdata = CurlPostData();
     } else {
       postDataFormat = CurlOptions::PostDataFormat::kJson;
     }
@@ -115,7 +114,8 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = ToLower(currencyCode.str());
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
                              {{"currency", lowerCaseCur}});
-  std::string_view address, tag;
+  std::string_view address;
+  std::string_view tag;
   ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
@@ -311,7 +311,9 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderRef& orderRef) {
   const json& data = res["data"];
   // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is
   // ambiguous on this point). Let's handle both just to be sure.
-  std::string_view filledAmount, filledCashAmount, filledFees;
+  std::string_view filledAmount;
+  std::string_view filledCashAmount;
+  std::string_view filledFees;
   if (data.contains("field-amount")) {
     filledAmount = data["field-amount"].get<std::string_view>();
     filledCashAmount = data["field-cash-amount"].get<std::string_view>();

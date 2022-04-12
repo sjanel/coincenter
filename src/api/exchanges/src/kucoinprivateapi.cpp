@@ -309,7 +309,8 @@ OrderInfo KucoinPrivate::queryOrderInfo(const OrderRef& orderRef) {
   MonetaryAmount matchedSize(data["dealSize"].get<std::string_view>(), m.base());
 
   // Fee is already deduced from the matched amount
-  MonetaryAmount fromAmount, toAmount;
+  MonetaryAmount fromAmount;
+  MonetaryAmount toAmount;
   MonetaryAmount dealFunds(data["dealFunds"].get<std::string_view>(), m.quote());
   if (fromCurrencyCode == m.base()) {
     // sell
