@@ -49,8 +49,8 @@ class CommandLineOptionsParserTest : public ::testing::Test {
   }
 
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   ParserType _parser;
 };
@@ -163,8 +163,8 @@ class CommandLineOptionsParserExtTest : public ::testing::Test {
   }
 
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   ExtParserType _parser;
 };

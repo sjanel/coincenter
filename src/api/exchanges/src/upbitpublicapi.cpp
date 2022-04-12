@@ -230,7 +230,7 @@ MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
   return MonetaryAmount(lastPrice, m.quote());
 }
 
-MonetaryAmount UpbitPublic::sanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) const {
+MonetaryAmount UpbitPublic::SanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) {
   // Upbit can return this error for big trades:
   // "최대매수금액 1000000000.0 KRW 보다 작은 주문을 입력해 주세요."
   // It means that total value of the order should not exceed 1000000000 KRW.

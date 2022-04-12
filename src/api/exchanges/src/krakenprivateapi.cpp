@@ -68,7 +68,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
     std::string_view msg = errorIt->front().get<std::string_view>();
     if (method.ends_with("CancelOrder") && msg == "EOrder:Unknown order") {
       log::warn("Unknown order from Kraken CancelOrder. Assuming closed order");
-      ret = "{\" error \":[],\" result \":{\" count \":1}}"_json;
+      ret = json::parse(R"({" error ":[]," result ":{" count ":1}})");
     } else {
       log::error("Full Kraken json error: '{}'", ret.dump());
       string ex("Kraken error: ");
@@ -129,7 +129,8 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  string address, tag;
+  string address;
+  string tag;
   for (const json& depositDetail : res) {
     for (const auto& [keyStr, valueStr] : depositDetail.items()) {
       if (keyStr == "address") {

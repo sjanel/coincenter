@@ -7,8 +7,8 @@ namespace cct {
 
 class BalancePortfolioTest1 : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   BalancePortfolio balancePortfolio;
 };
@@ -37,8 +37,8 @@ TEST_F(BalancePortfolioTest1, NoEquivalentCurrency2) {
 
 class BalancePortfolioTest2 : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   BalancePortfolioTest2() {
     balancePortfolio.add(MonetaryAmount("11704.5678 XRP"));

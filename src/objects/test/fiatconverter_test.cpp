@@ -68,14 +68,14 @@ string CurlHandle::query(std::string_view url, const CurlOptions &) {
   return j.dump();
 }
 
-CurlHandle::~CurlHandle() {}
+CurlHandle::~CurlHandle() = default;
 
 class FiatConverterTest : public ::testing::Test {
  protected:
   FiatConverterTest() : converter(coincenterInfo, std::chrono::milliseconds(1)) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CoincenterInfo coincenterInfo;
   FiatConverter converter;

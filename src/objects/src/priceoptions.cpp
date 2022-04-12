@@ -14,9 +14,15 @@ constexpr std::string_view kNibbleStr = "nibble";
 constexpr std::string_view kTakerStr = "taker";
 
 constexpr PriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
-  if (priceStrategyStr == kMakerStr) return PriceStrategy::kMaker;
-  if (priceStrategyStr == kNibbleStr) return PriceStrategy::kNibble;
-  if (priceStrategyStr == kTakerStr) return PriceStrategy::kTaker;
+  if (priceStrategyStr == kMakerStr) {
+    return PriceStrategy::kMaker;
+  }
+  if (priceStrategyStr == kNibbleStr) {
+    return PriceStrategy::kNibble;
+  }
+  if (priceStrategyStr == kTakerStr) {
+    return PriceStrategy::kTaker;
+  }
 
   throw invalid_argument("Unrecognized price strategy");
 }

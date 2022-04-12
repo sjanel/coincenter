@@ -12,8 +12,8 @@
 namespace cct::api {
 class ExchangePublicTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};

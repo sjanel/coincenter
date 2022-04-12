@@ -22,17 +22,23 @@ jobs:
         run: |
           sudo apt install libssl-dev libcurl4-gnutls-dev ninja-build
 
-      - name: Install GCC
+      - name: Install gcc
         run: |
           sudo apt install ${{matrix.compiler}}
         if: matrix.compiler == 'g++-11'
 
-      - name: Install Clang
+      - name: Install clang
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 13
         if: matrix.compiler == 'clang++-13'
+
+      - name: Install clang-tidy
+        run: |
+          sudo apt install clang-tidy-13
+          sudo ln -s /usr/bin/clang-tidy-13 /usr/bin/clang-tidy
+        if: matrix.compiler == 'clang++-13' && matrix.buildmode == 'Debug'
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build

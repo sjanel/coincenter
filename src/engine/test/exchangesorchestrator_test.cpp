@@ -24,7 +24,7 @@ class ExchangeOrchestratorTest : public ::testing::Test {
  protected:
   ExchangeOrchestratorTest() = default;
 
-  virtual void SetUp() {
+  void SetUp() override {
     for (MonetaryAmount a : amounts1) {
       balancePortfolio1.add(a);
     }
@@ -44,7 +44,7 @@ class ExchangeOrchestratorTest : public ::testing::Test {
     EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
   }
 
-  virtual void TearDown() {}
+  void TearDown() override {}
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
@@ -1224,7 +1224,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllExchanges) {
 TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
   MonetaryAmount grossAmount{1000, "XRP"};
   ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
-  ExchangeName toExchange = fromExchange;
+  const ExchangeName &toExchange = fromExchange;
   EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange), exception);
 }
 

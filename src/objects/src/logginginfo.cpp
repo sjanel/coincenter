@@ -8,7 +8,7 @@
 namespace cct {
 
 namespace {
-static constexpr int8_t kMaxLogLevel = 6;
+constexpr int8_t kMaxLogLevel = 6;
 
 int8_t LogPosFromLogStr(std::string_view logStr) {
   if (logStr.size() == 1) {

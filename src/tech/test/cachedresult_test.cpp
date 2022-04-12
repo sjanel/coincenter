@@ -41,8 +41,8 @@ class CachedResultTestBasic : public ::testing::Test {
  protected:
   CachedResultTestBasic() : cachedResult(CachedResultOptionsSteadyClock(kCacheTime, vault)) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CachedResultVaultSteadyClock vault;
   CachedResultSteadyClock<Incr> cachedResult;
@@ -75,8 +75,8 @@ class CachedResultTest : public ::testing::Test {
 
   CachedResultTest() : cachedResult(CachedResultOptionsSteadyClock(kCacheTime)) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CachedResType cachedResult;
 };

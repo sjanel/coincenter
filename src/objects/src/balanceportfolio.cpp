@@ -42,8 +42,10 @@ MonetaryAmount BalancePortfolio::get(CurrencyCode currencyCode) const {
 }
 
 BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &o) {
-  auto first1 = _sortedAmounts.begin(), last1 = _sortedAmounts.end();
-  auto first2 = o.begin(), last2 = o.end();
+  auto first1 = _sortedAmounts.begin();
+  auto last1 = _sortedAmounts.end();
+  auto first2 = o.begin();
+  auto last2 = o.end();
 
   while (first2 != last2) {
     if (first1 == last1) {

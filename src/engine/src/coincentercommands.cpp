@@ -13,7 +13,7 @@
 
 namespace cct {
 
-CoincenterCmdLineOptions CoincenterCommands::parseOptions(int argc, const char *argv[]) const {
+CoincenterCmdLineOptions CoincenterCommands::ParseOptions(int argc, const char *argv[]) {
   using OptValueType = CoincenterCmdLineOptions;
 
   auto parser = CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
@@ -28,8 +28,8 @@ CoincenterCmdLineOptions CoincenterCommands::parseOptions(int argc, const char *
   return parsedOptions;
 }
 
-MonitoringInfo CoincenterCommands::createMonitoringInfo(std::string_view programName,
-                                                        const CoincenterCmdLineOptions &cmdLineOptions) const {
+MonitoringInfo CoincenterCommands::CreateMonitoringInfo(std::string_view programName,
+                                                        const CoincenterCmdLineOptions &cmdLineOptions) {
   return MonitoringInfo(cmdLineOptions.useMonitoring, programName, cmdLineOptions.monitoringAddress,
                         cmdLineOptions.monitoringPort, cmdLineOptions.monitoringUsername,
                         cmdLineOptions.monitoringPassword);

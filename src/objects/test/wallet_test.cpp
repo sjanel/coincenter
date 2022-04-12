@@ -6,8 +6,8 @@ namespace cct {
 
 class WalletTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   WalletCheck walletCheck;
 };

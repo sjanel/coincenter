@@ -4,14 +4,7 @@
 
 namespace cct {
 namespace api {
-InitiatedWithdrawInfo::InitiatedWithdrawInfo(const Wallet &receivingWallet, WithdrawIdView withdrawId,
-                                             MonetaryAmount grossEmittedAmount)
-    : _receivingWallet(receivingWallet),
-      _withdrawIdOrMsgIfNotInitiated(withdrawId),
-      _initiatedTime(Clock::now()),
-      _grossEmittedAmount(grossEmittedAmount) {}
-
-InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet &&receivingWallet, WithdrawIdView withdrawId,
+InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, WithdrawIdView withdrawId,
                                              MonetaryAmount grossEmittedAmount)
     : _receivingWallet(std::move(receivingWallet)),
       _withdrawIdOrMsgIfNotInitiated(withdrawId),

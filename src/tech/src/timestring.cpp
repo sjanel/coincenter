@@ -1,7 +1,5 @@
 #include "timestring.hpp"
 
-#include <time.h>
-
 #include <chrono>
 #include <ctime>
 #include <iomanip>

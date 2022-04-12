@@ -11,7 +11,8 @@ namespace {
 ExchangeNames GetExchanges(std::string_view str) {
   ExchangeNames exchanges;
   if (!str.empty()) {
-    std::size_t first, last;
+    std::size_t first;
+    std::size_t last;
     for (first = 0, last = str.find(','); last != std::string_view::npos; last = str.find(',', last + 1)) {
       exchanges.emplace_back(std::string_view(str.begin() + first, str.begin() + last));
       first = last + 1;
@@ -121,7 +122,8 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
     bool currenciesShouldBeSet) const {
   std::size_t dashPos = _opt.find('-', 1);
   std::size_t commaPos = getNextCommaPos(dashPos == std::string_view::npos ? 0 : dashPos + 1, false);
-  CurrencyCode fromTradeCurrency, toTradeCurrency;
+  CurrencyCode fromTradeCurrency;
+  CurrencyCode toTradeCurrency;
   std::size_t startExchangesPos = 0;
   if (dashPos == std::string_view::npos && commaPos == std::string_view::npos && !_opt.empty()) {
     // Ambiguity to resolve - we assume there is no crypto acronym with the same name as an exchange

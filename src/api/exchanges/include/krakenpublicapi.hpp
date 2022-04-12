@@ -30,7 +30,7 @@ class KrakenPublic : public ExchangePublic {
 
   MonetaryAmount queryVolumeOrderMin(Market m) { return _marketsCache.get().second.find(m)->second.minVolumeOrder; }
 
-  MarketPriceMap queryAllPrices() override { return marketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
+  MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
 

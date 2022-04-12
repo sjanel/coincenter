@@ -48,9 +48,9 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
       auto& fiatsFile = data["fiats"];
       Fiats fiats;
       fiats.reserve(static_cast<Fiats::size_type>(fiatsFile.size()));
-      for (auto it = fiatsFile.begin(), endIt = fiatsFile.end(); it != endIt; ++it) {
-        log::debug("Reading fiat {} from cache file", it->get<std::string_view>());
-        fiats.emplace_hint(fiats.end(), std::move(it->get_ref<string&>()));
+      for (json& val : fiatsFile) {
+        log::debug("Reading fiat {} from cache file", val.get<std::string_view>());
+        fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
       }
       log::info("Loaded {} fiats from cache file", fiats.size());
       _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeepoch)));

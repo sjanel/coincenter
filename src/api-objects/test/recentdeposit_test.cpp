@@ -18,8 +18,8 @@ TEST(RecentDepositTestEmpty, Empty) {
 
 class RecentDepositTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   void testNull(MonetaryAmount ma) {
     RecentDeposit tested(ma, refTimePoint);

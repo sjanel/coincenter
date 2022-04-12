@@ -11,8 +11,8 @@ class CryptowatchAPITest : public ::testing::Test {
  protected:
   CryptowatchAPITest() : cryptowatchAPI(config) {}
 
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   CoincenterInfo config;
   CryptowatchAPI cryptowatchAPI;

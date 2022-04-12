@@ -135,7 +135,8 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   }
 
   CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
-  curl_slist *curlListPtr = nullptr, *oldCurlListPtr = nullptr;
+  curl_slist *curlListPtr = nullptr;
+  curl_slist *oldCurlListPtr = nullptr;
   for (const auto &[httpHeaderKey, httpHeaderValue] : opts.getHttpHeaders()) {
     // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
     // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the

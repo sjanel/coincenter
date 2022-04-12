@@ -1,9 +1,9 @@
 #include "cct_codec.hpp"
 
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 
+#include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
 
 namespace cct {
@@ -51,7 +51,6 @@ string B64Encode(std::string_view bindata) {
 
 string B64Decode(std::string_view ascdata) {
   string retval;
-  const std::string_view::const_iterator last = ascdata.end();
   int bits_collected = 0;
   unsigned int accumulator = 0;
 
@@ -62,16 +61,15 @@ string B64Decode(std::string_view ascdata) {
       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64, 64, 26, 27, 28, 29, 30, 31, 32,
       33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
 
-  for (std::string_view::const_iterator i = ascdata.begin(); i != last; ++i) {
-    const int c = *i;
-    if (std::isspace(c) || c == '=') {
+  for (char c : ascdata) {
+    if (isspace(c) || c == '=') {
       // Skip whitespace and padding. Be liberal in what you accept.
       continue;
     }
-    if (c > 127 || c < 0 || kReverseTable[c] > 63) {
+    if (c < 0 || kReverseTable[static_cast<unsigned char>(c)] > 63) {
       throw invalid_argument("This contains characters not legal in a base64 encoded string.");
     }
-    accumulator = (accumulator << 6) | kReverseTable[c];
+    accumulator = (accumulator << 6) | kReverseTable[static_cast<unsigned char>(c)];
     bits_collected += 6;
     if (bits_collected >= 8) {
       bits_collected -= 8;

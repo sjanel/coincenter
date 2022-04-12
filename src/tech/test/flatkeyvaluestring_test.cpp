@@ -117,8 +117,8 @@ TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(),
 
 class CurlOptionsCase1 : public ::testing::Test {
  protected:
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {}
+  void TearDown() override {}
 
   KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},
                   {"hola", "quetal"},   {"array1", "val1,,"}, {"array2", ",val1,val2,value,"},

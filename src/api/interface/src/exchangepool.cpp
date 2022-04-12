@@ -78,6 +78,6 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
   _exchanges.shrink_to_fit();
 }
 
-ExchangePool::~ExchangePool() {}
+ExchangePool::~ExchangePool() = default;
 
 }  // namespace cct
