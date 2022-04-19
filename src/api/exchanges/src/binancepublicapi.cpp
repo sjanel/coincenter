@@ -8,10 +8,10 @@
 #include <unordered_map>
 
 #include "apikey.hpp"
-#include "cct_codec.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "fiatconverter.hpp"

@@ -30,6 +30,12 @@ add_unit_test(
 )
 
 add_unit_test(
+    codec_test
+    src/codec.cpp
+    test/codec_test.cpp
+)
+
+add_unit_test(
     durationstring_test
     src/durationstring.cpp
     test/durationstring_test.cpp

@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "apikey.hpp"
-#include "cct_codec.hpp"
+#include "codec.hpp"
 #include "huobipublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
