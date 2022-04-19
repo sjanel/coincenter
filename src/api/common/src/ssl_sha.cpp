@@ -7,7 +7,7 @@
 #include <cstring>
 #include <memory>
 
-#include "cct_codec.hpp"
+#include "codec.hpp"
 
 namespace cct::ssl {
 namespace {

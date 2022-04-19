@@ -1,4 +1,4 @@
-#include "cct_codec.hpp"
+#include "codec.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -27,12 +27,11 @@ string B64Encode(std::string_view bindata) {
   std::size_t outpos = 0;
   int bits_collected = 0;
   unsigned int accumulator = 0;
-  const std::string_view::const_iterator binend = bindata.end();
 
   static constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-  for (std::string_view::const_iterator i = bindata.begin(); i != binend; ++i) {
-    accumulator = (accumulator << 8) | (*i & 0xffu);
+  for (char c : bindata) {
+    accumulator = (accumulator << 8) | (c & 0xffu);
     bits_collected += 8;
     while (bits_collected >= 6) {
       bits_collected -= 6;
@@ -44,7 +43,7 @@ string B64Encode(std::string_view bindata) {
     accumulator <<= 6 - bits_collected;
     retval[outpos++] = kB64Table[accumulator & 0x3fu];
   }
-  assert(outpos >= (retval.size() - 2));
+  assert(retval.empty() || outpos >= (retval.size() - 2));
   assert(outpos <= retval.size());
   return retval;
 }

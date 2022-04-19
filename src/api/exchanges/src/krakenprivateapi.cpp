@@ -4,10 +4,10 @@
 #include <thread>
 
 #include "apikey.hpp"
-#include "cct_codec.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "krakenpublicapi.hpp"
 #include "recentdeposit.hpp"

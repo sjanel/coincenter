@@ -7,12 +7,12 @@
 
 #include "apikey.hpp"
 #include "bithumbpublicapi.hpp"
-#include "cct_codec.hpp"
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
+#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
