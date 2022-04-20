@@ -48,7 +48,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
   json ret = json::parse(curlHandle.query(method, opts));
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
+
   static constexpr std::string_view kErrorKey = "error";
+
   auto errorIt = ret.find(kErrorKey);
   while (errorIt != ret.end() && !errorIt->empty() &&
          errorIt->front().get<std::string_view>() == "EAPI:Rate limit exceeded") {
@@ -229,14 +231,16 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
   return openedOrders;
 }
 
-void KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   if (openedOrdersConstraints.noConstraints()) {
-    PrivateQuery(_curlHandle, _apiKey, "/private/CancelAll");
-    return;
+    json cancelledOrders = PrivateQuery(_curlHandle, _apiKey, "/private/CancelAll");
+    return cancelledOrders["count"].get<int>();
   }
-  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const Order& o : openedOrders) {
     cancelOrderProcess(o.id());
   }
+  return openedOrders.size();
 }
 
 PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,

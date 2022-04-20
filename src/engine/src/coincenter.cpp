@@ -103,9 +103,12 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange);
       break;
     }
-    case CoincenterCommand::Type::kOrdersCancel:
-      cancelOrders(cmd.exchangeNames(), cmd.ordersConstraints());
+    case CoincenterCommand::Type::kOrdersCancel: {
+      NbCancelledOrdersPerExchange nbCancelledOrdersPerExchange =
+          cancelOrders(cmd.exchangeNames(), cmd.ordersConstraints());
+      _queryResultPrinter.printCancelledOrders(nbCancelledOrdersPerExchange);
       break;
+    }
     case CoincenterCommand::Type::kTrade: {
       if (cmd.cur2().isNeutral()) {
         trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
@@ -175,9 +178,9 @@ OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const ExchangeName
   return _exchangesOrchestrator.getOpenedOrders(privateExchangeNames, openedOrdersConstraints);
 }
 
-void Coincenter::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
-                              const OrdersConstraints &ordersConstraints) {
-  _exchangesOrchestrator.cancelOrders(privateExchangeNames, ordersConstraints);
+NbCancelledOrdersPerExchange Coincenter::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
+                                                      const OrdersConstraints &ordersConstraints) {
+  return _exchangesOrchestrator.cancelOrders(privateExchangeNames, ordersConstraints);
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {

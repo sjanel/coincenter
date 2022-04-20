@@ -189,17 +189,18 @@ Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
   return openedOrders;
 }
 
-void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
   bool isMarketDefined = openedOrdersConstraints.isMarketDefined();
   bool canUseCancelAllEndpoint = openedOrdersConstraints.isAtMostMarketDependent();
   if (isMarketDefined) {
     if (!checkMarketAppendSymbol(openedOrdersConstraints.market(), params)) {
-      return;
+      return 0;
     }
     if (canUseCancelAllEndpoint) {
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", std::move(params));
-      return;
+      json cancelledOrders =
+          PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", std::move(params));
+      return cancelledOrders.size();
     }
   }
 
@@ -208,21 +209,28 @@ void BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCon
   using OrdersByMarketMap = std::unordered_map<Market, SmallVector<Order, 3>>;
   OrdersByMarketMap ordersByMarketMap;
   std::for_each(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
-                [&ordersByMarketMap](Order&& o) { ordersByMarketMap[o.market()].push_back(std::move(o)); });
+                [&ordersByMarketMap](Order&& o) {
+                  Market m = o.market();
+                  ordersByMarketMap[m].push_back(std::move(o));
+                });
+  int nbOrdersCancelled = 0;
   for (const auto& [market, orders] : ordersByMarketMap) {
     if (!isMarketDefined) {
       params.set("symbol", market.assetsPairStrUpper());
     }
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
       params.erase("orderId");
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", params);
+      json cancelledOrders = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", params);
+      nbOrdersCancelled += cancelledOrders.size();
     } else {
       for (const Order& order : orders) {
         params.set("orderId", order.id());
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/order", params);
       }
+      nbOrdersCancelled += orders.size();
     }
   }
+  return nbOrdersCancelled;
 }
 
 WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {

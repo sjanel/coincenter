@@ -379,11 +379,13 @@ Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
   return openedOrders;
 }
 
-void BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   // No faster way to cancel several orders at once with Bithumb, doing a simple for loop
-  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+  Orders orders = queryOpenedOrders(openedOrdersConstraints);
+  for (const Order& o : orders) {
     cancelOrderProcess(OrderRef(o.id(), 0 /*userRef, unused*/, o.market(), o.side()));
   }
+  return orders.size();
 }
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,

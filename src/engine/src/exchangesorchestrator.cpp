@@ -173,15 +173,17 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const E
   return ret;
 }
 
-void ExchangesOrchestrator::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
-                                         const OrdersConstraints &ordersConstraints) {
+NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
+                                                                 const OrdersConstraints &ordersConstraints) {
   log::info("Cancel opened orders matching {} on {}", ordersConstraints.str(),
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges selectedExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  NbCancelledOrdersPerExchange nbOrdersCancelled(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), nbOrdersCancelled.begin(),
+                 [&](Exchange *e) { return std::make_pair(e, e->apiPrivate().cancelOpenedOrders(ordersConstraints)); });
 
-  std::for_each(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
-                [&](Exchange *e) { e->apiPrivate().cancelOpenedOrders(ordersConstraints); });
+  return nbOrdersCancelled;
 }
 
 ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {

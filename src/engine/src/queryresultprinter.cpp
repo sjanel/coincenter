@@ -84,6 +84,15 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
   t.print();
 }
 
+void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange) const {
+  RETURN_IF_NO_PRINT;
+  SimpleTable t("Exchange", "Account", "Number of cancelled orders");
+  for (const auto &[exchangePtr, nbCancelledOrders] : nbCancelledOrdersPerExchange) {
+    t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), nbCancelledOrders);
+  }
+  t.print();
+}
+
 void QueryResultPrinter::printConversionPath(Market m,
                                              const ConversionPathPerExchange &conversionPathsPerExchange) const {
   RETURN_IF_NO_PRINT;

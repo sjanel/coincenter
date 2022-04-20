@@ -56,7 +56,8 @@ class ExchangePrivate : public ExchangeBase {
   virtual Orders queryOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Cancel all opened orders on the exchange that matches given constraints
-  virtual void cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+  /// @return number of opened orders cancelled
+  virtual int cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.

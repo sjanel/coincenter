@@ -30,7 +30,8 @@ class ExchangesOrchestrator {
   OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 
-  void cancelOrders(std::span<const ExchangeName> privateExchangeNames, const OrdersConstraints &ordersConstraints);
+  NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
+                                            const OrdersConstraints &ordersConstraints);
 
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
 

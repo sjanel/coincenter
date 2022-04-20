@@ -219,18 +219,21 @@ Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
   return openedOrders;
 }
 
-void KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   if (openedOrdersConstraints.isMarketOnlyDependent() || openedOrdersConstraints.noConstraints()) {
     CurlPostData params;
     if (openedOrdersConstraints.isMarketDefined()) {
       params.append("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
     }
-    PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
-    return;
+    json cancelledOrders =
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
+    return cancelledOrders["cancelledOrderIds"].size();
   }
-  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const Order& o : openedOrders) {
     cancelOrderProcess(o.id());
   }
+  return openedOrders.size();
 }
 
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,

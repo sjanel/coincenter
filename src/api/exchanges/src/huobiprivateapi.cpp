@@ -199,10 +199,9 @@ Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
   return openedOrders;
 }
 
-void HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   if (openedOrdersConstraints.isOrderIdOnlyDependent()) {
-    batchCancel(openedOrdersConstraints.orderIdSet());
-    return;
+    return batchCancel(openedOrdersConstraints.orderIdSet());
   }
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
 
@@ -210,10 +209,10 @@ void HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   orderIds.reserve(openedOrders.size());
   std::transform(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
                  std::back_inserter(orderIds), [](Order&& order) -> OrderId&& { return std::move(order.id()); });
-  batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
+  return batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
 }
 
-void HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
+int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
   string csvOrderIdValues;
 
   int nbOrderIdPerRequest = 0;
@@ -233,6 +232,7 @@ void HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) 
   if (nbOrderIdPerRequest > 0) {
     PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, kBatchCancelEndpoint, {{"order-ids", csvOrderIdValues}});
   }
+  return orderIdSet.size();
 }
 
 PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
