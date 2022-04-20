@@ -22,11 +22,6 @@ ExchangeNames GetExchanges(std::string_view str) {
   return exchanges;
 }
 
-std::string_view StrBeforeComma(std::string_view opt, std::size_t startPos, std::size_t commaPos) {
-  return std::string_view(opt.begin() + startPos,
-                          commaPos == std::string_view::npos ? opt.end() : opt.begin() + commaPos);
-}
-
 std::string_view StrEnd(std::string_view opt, std::size_t startPos) {
   return std::string_view(opt.begin() + startPos, opt.end());
 }
@@ -121,30 +116,28 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(
     bool currenciesShouldBeSet) const {
   std::size_t dashPos = _opt.find('-', 1);
-  std::size_t commaPos = getNextCommaPos(dashPos == std::string_view::npos ? 0 : dashPos + 1, false);
   CurrencyCode fromTradeCurrency;
   CurrencyCode toTradeCurrency;
   std::size_t startExchangesPos = 0;
-  if (dashPos == std::string_view::npos && commaPos == std::string_view::npos && !_opt.empty()) {
-    // Ambiguity to resolve - we assume there is no crypto acronym with the same name as an exchange
-    if (!IsExchangeName(_opt)) {
-      fromTradeCurrency = CurrencyCode(_opt);
-      startExchangesPos = _opt.size();
+  if (_opt.empty()) {
+    // Do nothing
+  } else if (dashPos == std::string_view::npos) {
+    // There is no dash, ambiguity to be resolved, assuming there is no crypto acronym with the same name as an exchange
+    std::size_t pos = 0;
+    std::string_view token1 = GetNextStr(_opt, ',', pos);
+    if (!IsExchangeName(token1)) {
+      startExchangesPos = pos;
+      fromTradeCurrency = token1;
+      std::string_view token2 = GetNextStr(_opt, ',', pos);
+      if (!IsExchangeName(token2)) {
+        startExchangesPos = pos;
+        toTradeCurrency = token2;
+      }
     }
   } else {
-    // no ambiguity
-    if (commaPos == std::string_view::npos) {
-      commaPos = _opt.size();
-      startExchangesPos = commaPos;
-    } else {
-      startExchangesPos = commaPos + 1;
-    }
-    if (dashPos == std::string_view::npos) {
-      fromTradeCurrency = CurrencyCode(std::string_view(_opt.data(), commaPos));
-    } else {
-      fromTradeCurrency = CurrencyCode(std::string_view(_opt.data(), dashPos));
-      toTradeCurrency = CurrencyCode(StrBeforeComma(_opt, dashPos + 1, commaPos));
-    }
+    // No ambiguity possible, both currencies are set from first position
+    fromTradeCurrency = CurrencyCode(GetNextStr(_opt, '-', startExchangesPos));
+    toTradeCurrency = CurrencyCode(GetNextStr(_opt, ',', startExchangesPos));
   }
   if (currenciesShouldBeSet && (fromTradeCurrency.isNeutral() || toTradeCurrency.isNeutral())) {
     throw invalid_argument("Expected a dash");
