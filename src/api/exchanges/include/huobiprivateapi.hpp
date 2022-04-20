@@ -30,7 +30,7 @@ class HuobiPrivate : public ExchangePrivate {
 
   Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
-  void cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+  int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
  protected:
   bool isSimulatedOrderSupported() const override { return false; }
@@ -40,7 +40,7 @@ class HuobiPrivate : public ExchangePrivate {
 
   OrderInfo cancelOrder(const OrderRef& orderRef) override;
 
-  void batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet);
+  int batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet);
 
   OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
 

@@ -236,11 +236,13 @@ Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
   return openedOrders;
 }
 
-void UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   // No faster way to cancel several orders at once, doing a simple for loop
-  for (const Order& o : queryOpenedOrders(openedOrdersConstraints)) {
+  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const Order& o : openedOrders) {
     cancelOrder(OrderRef(o.id(), 0 /*userRef, unused*/, o.market(), o.side()));
   }
+  return openedOrders.size();
 }
 
 namespace {

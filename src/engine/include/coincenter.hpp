@@ -78,8 +78,9 @@ class Coincenter {
   OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 
-  /// Cancel orders on given list of exchanges following given constraints.
-  void cancelOrders(std::span<const ExchangeName> privateExchangeNames, const OrdersConstraints &ordersConstraints);
+  /// Cancel orders on given list of exchanges following given constraints
+  NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
+                                            const OrdersConstraints &ordersConstraints);
 
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);

@@ -21,6 +21,8 @@ class QueryResultPrinter {
 
   void printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange) const;
 
+  void printCancelledOrders(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange) const;
+
   void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 
   void printWithdrawFees(const WithdrawFeePerExchange &withdrawFeePerExchange) const;
