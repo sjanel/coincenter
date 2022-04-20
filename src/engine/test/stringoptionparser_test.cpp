@@ -151,7 +151,17 @@ TEST(StringOptionParserTest, GetCurrenciesPrivateExchanges) {
   EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrenciesPrivateExchanges(false),
             CurrenciesPrivateExchanges("EUR", CurrencyCode(),
                                        ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
+  EXPECT_EQ(
+      StringOptionParser("kucoin-toto,binance,huobi").getCurrenciesPrivateExchanges(false),
+      CurrenciesPrivateExchanges("KUCOIN", "TOTO", ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
+  EXPECT_EQ(StringOptionParser("kucoin,kraken,huobi").getCurrenciesPrivateExchanges(false),
+            CurrenciesPrivateExchanges(
+                CurrencyCode(), CurrencyCode(),
+                ExchangeNames({ExchangeName("kucoin"), ExchangeName("kraken"), ExchangeName("huobi")})));
+}
 
+TEST(StringOptionParserTest, GetCurrenciesPrivateExchangesWithCurrencies) {
+  using CurrenciesPrivateExchanges = StringOptionParser::CurrenciesPrivateExchanges;
   EXPECT_EQ(StringOptionParser("avax-btc").getCurrenciesPrivateExchanges(),
             CurrenciesPrivateExchanges("AVAX", "BTC", ExchangeNames()));
   EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrenciesPrivateExchanges(),
