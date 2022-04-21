@@ -42,8 +42,8 @@ class ExchangesOrchestrator {
 
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
 
-  TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                      std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
+                                 std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
                                const TradeOptions &tradeOptions);

@@ -13,6 +13,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "tradedamounts.hpp"
 #include "wallet.hpp"
 
 namespace cct {
@@ -28,6 +29,8 @@ using MonetaryAmountPerExchange =
     FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
 
 using LastTradesPerExchange = FixedCapacityVector<std::pair<const Exchange *, LastTradesVector>, kNbSupportedExchanges>;
+
+using TradedAmountsPerExchange = SmallVector<std::pair<const Exchange *, TradedAmounts>, kTypicalNbPrivateAccounts>;
 
 using ExchangeTickerMaps = FixedCapacityVector<std::pair<const Exchange *, MarketOrderBookMap>, kNbSupportedExchanges>;
 
