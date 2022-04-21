@@ -56,10 +56,11 @@ class OrdersConstraints {
                              Duration minAge = Duration(), Duration maxAge = Duration(),
                              OrderIdSet &&ordersIdSet = OrderIdSet());
 
+  TimePoint placedBefore() const { return _placedBefore; }
   TimePoint placedAfter() const { return _placedAfter; }
 
   bool isPlacedTimeAfterDefined() const { return _placedAfter != TimePoint::min(); }
-  bool isPlacedTimeBeforeDefined() const { return _placedBefore != TimePoint::min(); }
+  bool isPlacedTimeBeforeDefined() const { return _placedBefore != TimePoint::max(); }
 
   bool validatePlacedTime(TimePoint t) const { return t >= _placedAfter && t <= _placedBefore; }
 
