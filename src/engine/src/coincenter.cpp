@@ -198,8 +198,9 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m, Ex
   return _exchangesOrchestrator.getExchangesTradingMarket(m, exchangeNames);
 }
 
-TradedAmounts Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
+                                           std::span<const ExchangeName> privateExchangeNames,
+                                           const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.trade(startAmount, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions);
 }
 

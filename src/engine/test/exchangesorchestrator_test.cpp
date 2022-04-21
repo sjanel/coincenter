@@ -678,7 +678,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuy) {
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
 
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
-            tradedAmounts);
+            TradedAmountsPerExchange(1, std::make_pair(&exchange1, tradedAmounts)));
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
@@ -699,7 +699,7 @@ TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
                     AllOrderBooks::kExpectNoCall, true);
 
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
-            TradedAmounts(from.currencyCode(), toCurrency));
+            TradedAmountsPerExchange{});
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
@@ -719,9 +719,10 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
                                                    OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
   TradedAmounts tradedAmounts4 = expectSingleTrade(4, from * ratio4, toCurrency, side, TradableMarkets::kNoExpectation,
                                                    OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
-  TradedAmounts tradedAmounts = tradedAmounts3 + tradedAmounts4;
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange3, tradedAmounts3),
+                                                    std::make_pair(&exchange4, tradedAmounts4)};
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuy) {
@@ -746,9 +747,11 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuy) {
   TradedAmounts tradedAmounts3 = expectSingleTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3;
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange2, tradedAmounts2),
+                                                    std::make_pair(&exchange1, tradedAmounts1),
+                                                    std::make_pair(&exchange3, tradedAmounts3)};
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, ExchangeNames{}, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
@@ -766,8 +769,8 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   MonetaryAmount from2(6750, fromCurrency);
   MonetaryAmount from3(4250, fromCurrency);
   MonetaryAmount from4("107.5", fromCurrency);
-  TradedAmounts tradedAmounts1 = expectSingleTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
-                                                   OrderBook::kExpectNoCall, AllOrderBooks::kExpectNoCall, false);
+  expectSingleTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
+                    AllOrderBooks::kExpectNoCall, false);
   TradedAmounts tradedAmounts2 = expectSingleTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
   TradedAmounts tradedAmounts3 = expectSingleTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
@@ -775,9 +778,12 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   TradedAmounts tradedAmounts4 = expectSingleTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation,
                                                    OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
-  TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange2, tradedAmounts2),
+                                                    std::make_pair(&exchange3, tradedAmounts3),
+                                                    std::make_pair(&exchange4, tradedAmounts4)};
+
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, ExchangeNames{}, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
@@ -817,11 +823,14 @@ TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
                                                    OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
   TradedAmounts tradedAmounts8 = expectSingleTrade(8, from1, toCurrency, side, TradableMarkets::kNoExpectation,
                                                    OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
+  TradedAmountsPerExchange tradedAmountsPerExchange{
+      std::make_pair(&exchange2, tradedAmounts2), std::make_pair(&exchange1, tradedAmounts1),
+      std::make_pair(&exchange8, tradedAmounts8), std::make_pair(&exchange5, tradedAmounts5),
+      std::make_pair(&exchange6, tradedAmounts6), std::make_pair(&exchange7, tradedAmounts7),
+      std::make_pair(&exchange3, tradedAmounts3), std::make_pair(&exchange4, tradedAmounts4)};
 
-  TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts2 + tradedAmounts3 + tradedAmounts4 + tradedAmounts5 +
-                                tradedAmounts6 + tradedAmounts7 + tradedAmounts8;
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, ExchangeNames{}, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
@@ -833,15 +842,15 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
 
   EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  TradedAmounts tradedAmounts =
+  TradedAmounts tradedAmounts3 =
       expectSingleTrade(3, MonetaryAmount(1500, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   constexpr bool isPercentageTrade = true;
-
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange3, tradedAmounts3)};
   EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
@@ -864,11 +873,12 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
       expectSingleTrade(3, balancePortfolio3.get(fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts3;
   constexpr bool isPercentageTrade = true;
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange1, tradedAmounts1),
+                                                    std::make_pair(&exchange3, tradedAmounts3)};
   EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
@@ -898,11 +908,13 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
       expectSingleTrade(4, balancePortfolio4.get(fromCurrency), toCurrency, side, TradableMarkets::kNoExpectation,
                         OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
-  TradedAmounts tradedAmounts = tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
   constexpr bool isPercentageTrade = true;
+  TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange2, tradedAmounts2),
+                                                    std::make_pair(&exchange3, tradedAmounts3),
+                                                    std::make_pair(&exchange4, tradedAmounts4)};
   EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
                                         privateExchangeNames, tradeOptions),
-            tradedAmounts);
+            tradedAmountsPerExchange);
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {

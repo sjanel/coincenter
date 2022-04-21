@@ -329,16 +329,16 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
   return exchangeAmountPairVector;
 }
 
-TradedAmounts LaunchAndCollectTrades(ExchangeAmountMarketsPathVector::iterator first,
-                                     ExchangeAmountMarketsPathVector::iterator last, CurrencyCode fromCurrency,
-                                     CurrencyCode toCurrency, const TradeOptions &tradeOptions) {
-  SmallVector<TradedAmounts, kTypicalNbPrivateAccounts> tradeAmountsPerExchange(std::distance(first, last));
-  std::transform(std::execution::par, first, last, tradeAmountsPerExchange.begin(),
-                 [toCurrency, &tradeOptions](auto &t) {
-                   return std::get<0>(t)->apiPrivate().trade(std::get<1>(t), toCurrency, tradeOptions, std::get<2>(t));
-                 });
-  return std::accumulate(tradeAmountsPerExchange.begin(), tradeAmountsPerExchange.end(),
-                         TradedAmounts(fromCurrency, toCurrency));
+TradedAmountsPerExchange LaunchAndCollectTrades(ExchangeAmountMarketsPathVector::iterator first,
+                                                ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
+                                                const TradeOptions &tradeOptions) {
+  TradedAmountsPerExchange tradeAmountsPerExchange(std::distance(first, last));
+  std::transform(
+      std::execution::par, first, last, tradeAmountsPerExchange.begin(), [toCurrency, &tradeOptions](auto &t) {
+        Exchange *e = std::get<0>(t);
+        return std::make_pair(e, e->apiPrivate().trade(std::get<1>(t), toCurrency, tradeOptions, std::get<2>(t)));
+      });
+  return tradeAmountsPerExchange;
 }
 
 template <class Iterator>
@@ -371,13 +371,16 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
 
 }  // namespace
 
-TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                                           std::span<const ExchangeName> privateExchangeNames,
-                                           const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPercentageTrade,
+                                                      CurrencyCode toCurrency,
+                                                      std::span<const ExchangeName> privateExchangeNames,
+                                                      const TradeOptions &tradeOptions) {
   if (privateExchangeNames.size() == 1 && !isPercentageTrade) {
     // In this special case we don't need to call the balance - call trade directly
     Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeNames.front());
-    return exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions);
+    return TradedAmountsPerExchange(
+        1,
+        std::make_pair(std::addressof(exchange), exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions)));
   }
 
   const CurrencyCode fromCurrency = startAmount.currencyCode();
@@ -390,8 +393,8 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
   auto it = exchangeAmountMarketsPathVector.begin();
   if (!exchangeAmountMarketsPathVector.empty()) {
     // Sort exchanges from largest to lowest available amount (should be after filter on markets and conversion paths)
-    std::ranges::sort(exchangeAmountMarketsPathVector,
-                      [](const auto &lhs, const auto &rhs) { return std::get<1>(lhs) > std::get<1>(rhs); });
+    std::ranges::stable_sort(exchangeAmountMarketsPathVector,
+                             [](const auto &lhs, const auto &rhs) { return std::get<1>(lhs) > std::get<1>(rhs); });
 
     // Locate the point where there is enough available amount to trade for this currency
     if (isPercentageTrade) {
@@ -417,7 +420,7 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
   }
 
   /// We have enough total available amount. Launch all trades in parallel
-  return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), it, fromCurrency, toCurrency, tradeOptions);
+  return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), it, toCurrency, tradeOptions);
 }
 
 TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,

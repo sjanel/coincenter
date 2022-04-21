@@ -92,8 +92,8 @@ class Coincenter {
   /// If no exchange name is given, it will attempt to trade given amount on all exchanges with the sufficient balance.
   /// If exactly one private exchange is given, balance will not be queried and trade will be launched without balance
   /// check.
-  TradedAmounts trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                      std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
+                                 std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
   TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
                                const TradeOptions &tradeOptions);
