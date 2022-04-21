@@ -110,11 +110,7 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       break;
     }
     case CoincenterCommand::Type::kTrade: {
-      if (cmd.cur2().isNeutral()) {
-        trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
-      } else {
-        tradeAll(cmd.cur1(), cmd.cur2(), cmd.exchangeNames(), cmd.tradeOptions());
-      }
+      trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
       break;
     }
     case CoincenterCommand::Type::kBuy: {
@@ -217,12 +213,6 @@ Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount
                                                       std::span<const ExchangeName> privateExchangeNames,
                                                       const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.smartSell(startAmount, isPercentageTrade, privateExchangeNames, tradeOptions);
-}
-
-TradedAmounts Coincenter::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                   std::span<const ExchangeName> privateExchangeNames,
-                                   const TradeOptions &tradeOptions) {
-  return _exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions);
 }
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,

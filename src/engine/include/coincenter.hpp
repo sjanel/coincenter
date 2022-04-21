@@ -101,13 +101,6 @@ class Coincenter {
   TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                 std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  /// A Multi trade is similar to a single trade, at the difference that it retrieves the fastest currency
-  /// conversion path and will launch several 'single' trades to reach that final goal. Example:
-  ///  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets will make 2 trades on these
-  ///    markets.
-  TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                         std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
-
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName);

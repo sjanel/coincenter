@@ -199,7 +199,10 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
       }
     } else if (isTradeAll) {
       auto [fromTradeCurrency, toTradeCurrency, exchanges] = optParser.getCurrenciesPrivateExchanges();
-      coincenterCommand.setCur1(fromTradeCurrency).setCur2(toTradeCurrency).setExchangeNames(std::move(exchanges));
+      coincenterCommand.setAmount(MonetaryAmount(100, fromTradeCurrency))
+          .setPercentageAmount(true)
+          .setCur1(toTradeCurrency)
+          .setExchangeNames(std::move(exchanges));
     } else {
       auto [startTradeAmount, isPercentage, toTradeCurrency, exchanges] =
           optParser.getMonetaryAmountCurrencyPrivateExchanges();
