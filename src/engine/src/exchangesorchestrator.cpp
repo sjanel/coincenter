@@ -420,16 +420,6 @@ TradedAmounts ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPe
   return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), it, fromCurrency, toCurrency, tradeOptions);
 }
 
-TradedAmounts ExchangesOrchestrator::tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                                              std::span<const ExchangeName> privateExchangeNames,
-                                              const TradeOptions &tradeOptions) {
-  ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
-      _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
-
-  return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(),
-                                fromCurrency, toCurrency, tradeOptions);
-}
-
 TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
                                                     std::span<const ExchangeName> privateExchangeNames,
                                                     const TradeOptions &tradeOptions) {

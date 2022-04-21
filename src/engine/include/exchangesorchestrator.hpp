@@ -51,9 +51,6 @@ class ExchangesOrchestrator {
   TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                 std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmounts tradeAll(CurrencyCode fromCurrency, CurrencyCode toCurrency,
-                         std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
-
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
                         Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawInfoRefreshTime);

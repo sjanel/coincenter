@@ -837,7 +837,10 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
       expectSingleTrade(3, MonetaryAmount(1500, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
+  constexpr bool isPercentageTrade = true;
+
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+                                        privateExchangeNames, tradeOptions),
             tradedAmounts);
 }
 
@@ -862,7 +865,9 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
                         OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
   TradedAmounts tradedAmounts = tradedAmounts1 + tradedAmounts3;
-  EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
+  constexpr bool isPercentageTrade = true;
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+                                        privateExchangeNames, tradeOptions),
             tradedAmounts);
 }
 
@@ -894,7 +899,9 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
                         OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
   TradedAmounts tradedAmounts = tradedAmounts2 + tradedAmounts3 + tradedAmounts4;
-  EXPECT_EQ(exchangesOrchestrator.tradeAll(fromCurrency, toCurrency, privateExchangeNames, tradeOptions),
+  constexpr bool isPercentageTrade = true;
+  EXPECT_EQ(exchangesOrchestrator.trade(MonetaryAmount(100, fromCurrency), isPercentageTrade, toCurrency,
+                                        privateExchangeNames, tradeOptions),
             tradedAmounts);
 }
 
