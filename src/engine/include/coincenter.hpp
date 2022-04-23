@@ -28,7 +28,6 @@ class TradeOptions;
 
 class Coincenter {
  public:
-  using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
@@ -95,11 +94,12 @@ class Coincenter {
   TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                                  std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
-                               const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
+                                    const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                     std::span<const ExchangeName> privateExchangeNames,
+                                     const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,

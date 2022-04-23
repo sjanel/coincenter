@@ -204,15 +204,15 @@ TradedAmountsPerExchange Coincenter::trade(MonetaryAmount startAmount, bool isPe
   return _exchangesOrchestrator.trade(startAmount, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions);
 }
 
-Coincenter::TradedAmountsVector Coincenter::smartBuy(MonetaryAmount endAmount,
-                                                     std::span<const ExchangeName> privateExchangeNames,
-                                                     const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange Coincenter::smartBuy(MonetaryAmount endAmount,
+                                              std::span<const ExchangeName> privateExchangeNames,
+                                              const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions);
 }
 
-Coincenter::TradedAmountsVector Coincenter::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                      std::span<const ExchangeName> privateExchangeNames,
-                                                      const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange Coincenter::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                               std::span<const ExchangeName> privateExchangeNames,
+                                               const TradeOptions &tradeOptions) {
   return _exchangesOrchestrator.smartSell(startAmount, isPercentageTrade, privateExchangeNames, tradeOptions);
 }
 

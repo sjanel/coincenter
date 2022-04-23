@@ -32,7 +32,6 @@ using ExchangeAmountToCurrencyToAmount =
     std::tuple<Exchange *, MonetaryAmount, CurrencyCode, MarketsPath, MonetaryAmount>;
 using ExchangeAmountToCurrencyVector = SmallVector<ExchangeAmountToCurrency, kTypicalNbPrivateAccounts>;
 using ExchangeAmountToCurrencyToAmountVector = SmallVector<ExchangeAmountToCurrencyToAmount, kTypicalNbPrivateAccounts>;
-using TradedAmountsVector = ExchangesOrchestrator::TradedAmountsVector;
 
 template <class VecWithExchangeFirstPos>
 ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetriever exchangeRetriever,
@@ -342,10 +341,11 @@ TradedAmountsPerExchange LaunchAndCollectTrades(ExchangeAmountMarketsPathVector:
 }
 
 template <class Iterator>
-TradedAmountsVector LaunchAndCollectTrades(Iterator first, Iterator last, const TradeOptions &tradeOptions) {
-  TradedAmountsVector tradeAmountsPerExchange(std::distance(first, last));
+TradedAmountsPerExchange LaunchAndCollectTrades(Iterator first, Iterator last, const TradeOptions &tradeOptions) {
+  TradedAmountsPerExchange tradeAmountsPerExchange(std::distance(first, last));
   std::transform(std::execution::par, first, last, tradeAmountsPerExchange.begin(), [&tradeOptions](auto &t) {
-    return std::get<0>(t)->apiPrivate().trade(std::get<1>(t), std::get<2>(t), tradeOptions, std::get<3>(t));
+    Exchange *e = std::get<0>(t);
+    return std::make_pair(e, e->apiPrivate().trade(std::get<1>(t), std::get<2>(t), tradeOptions, std::get<3>(t)));
   });
   return tradeAmountsPerExchange;
 }
@@ -423,19 +423,19 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
   return LaunchAndCollectTrades(exchangeAmountMarketsPathVector.begin(), it, toCurrency, tradeOptions);
 }
 
-TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
-                                                    std::span<const ExchangeName> privateExchangeNames,
-                                                    const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
+                                                         std::span<const ExchangeName> privateExchangeNames,
+                                                         const TradeOptions &tradeOptions) {
   const CurrencyCode toCurrency = endAmount.currencyCode();
   BalancePerExchange balancePerExchange = getBalance(privateExchangeNames);
 
   // Keep only exchanges which have some amount on at least one of the preferred payment currencies
   SmallVector<bool, kTypicalNbPrivateAccounts> exchangesWithSomePreferredPaymentCurrency(balancePerExchange.size());
-  std::transform(balancePerExchange.begin(), balancePerExchange.end(),
-                 exchangesWithSomePreferredPaymentCurrency.begin(), [](auto &exchangeBalancePair) {
-                   return std::ranges::any_of(exchangeBalancePair.first->exchangeInfo().preferredPaymentCurrencies(),
-                                              [&](CurrencyCode c) { return exchangeBalancePair.second.hasSome(c); });
-                 });
+  std::ranges::transform(
+      balancePerExchange, exchangesWithSomePreferredPaymentCurrency.begin(), [](auto &exchangeBalancePair) {
+        return std::ranges::any_of(exchangeBalancePair.first->exchangeInfo().preferredPaymentCurrencies(),
+                                   [&](CurrencyCode c) { return exchangeBalancePair.second.hasSome(c); });
+      });
   FilterVector(balancePerExchange, exchangesWithSomePreferredPaymentCurrency);
 
   ExchangeRetriever::PublicExchangesVec publicExchanges =
@@ -504,8 +504,8 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
       }
     }
     // Sort exchanges from largest to lowest end amount
-    std::sort(trades.begin() + nbTrades, trades.end(),
-              [](const auto &lhs, const auto &rhs) { return std::get<4>(lhs) > std::get<4>(rhs); });
+    std::stable_sort(trades.begin() + nbTrades, trades.end(),
+                     [](const auto &lhs, const auto &rhs) { return std::get<4>(lhs) > std::get<4>(rhs); });
     int nbTradesToKeep = 0;
     for (auto &[pExchange, startAmount, tradeToCurrency, conversionPath, tradeEndAmount] : trades) {
       if (tradeEndAmount > remEndAmount) {
@@ -536,9 +536,9 @@ TradedAmountsVector ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
 }
 
-TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                     std::span<const ExchangeName> privateExchangeNames,
-                                                     const TradeOptions &tradeOptions) {
+TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                                          std::span<const ExchangeName> privateExchangeNames,
+                                                          const TradeOptions &tradeOptions) {
   const CurrencyCode fromCurrency = startAmount.currencyCode();
   // Retrieve amount per start amount currency for each exchange
   ExchangeAmountPairVector exchangeAmountPairVector =
@@ -548,8 +548,8 @@ TradedAmountsVector ExchangesOrchestrator::smartSell(MonetaryAmount startAmount,
   MonetaryAmount remStartAmount = startAmount;
   if (!exchangeAmountPairVector.empty()) {
     // Sort exchanges from largest to lowest available amount
-    std::ranges::sort(exchangeAmountPairVector,
-                      [](const auto &lhs, const auto &rhs) { return lhs.second > rhs.second; });
+    std::ranges::stable_sort(exchangeAmountPairVector,
+                             [](const auto &lhs, const auto &rhs) { return lhs.second > rhs.second; });
 
     ExchangeRetriever::PublicExchangesVec publicExchanges =
         SelectUniquePublicExchanges(_exchangeRetriever, exchangeAmountPairVector, false);  // unsorted
