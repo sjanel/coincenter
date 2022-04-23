@@ -3,7 +3,6 @@
 #include <optional>
 #include <span>
 
-#include "cct_smallvector.hpp"
 #include "exchangeretriever.hpp"
 #include "market.hpp"
 #include "queryresulttypes.hpp"
@@ -12,7 +11,6 @@
 namespace cct {
 class ExchangesOrchestrator {
  public:
-  using TradedAmountsVector = SmallVector<TradedAmounts, kTypicalNbPrivateAccounts>;
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
   explicit ExchangesOrchestrator(std::span<Exchange> exchangesSpan) : _exchangeRetriever(exchangesSpan) {}
@@ -45,11 +43,12 @@ class ExchangesOrchestrator {
   TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                                  std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
-                               const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
+                                    const TradeOptions &tradeOptions);
 
-  TradedAmountsVector smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+  TradedAmountsPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                     std::span<const ExchangeName> privateExchangeNames,
+                                     const TradeOptions &tradeOptions);
 
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
