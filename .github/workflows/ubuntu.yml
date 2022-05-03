@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt install libssl-dev libcurl4-gnutls-dev ninja-build
+          sudo apt update && sudo apt install libcurl4-gnutls-dev ninja-build
 
       - name: Install gcc
         run: |
