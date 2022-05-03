@@ -54,10 +54,35 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "/v2/reference/currencies"); }
 
+HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
+  WithdrawParams withdrawParams;
+  for (const json& curDetail : _tradableCurrenciesCache.get()) {
+    std::string_view curStr = curDetail["currency"].get<std::string_view>();
+    if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curStr))) {
+      for (const json& chainDetail : curDetail["chains"]) {
+        std::string_view chainName = chainDetail["chain"].get<std::string_view>();
+        std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
+        if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
+          log::debug("Discarding chain {} for {}", chainName, cur.str());
+          continue;
+        }
+
+        withdrawParams.minWithdrawAmt = MonetaryAmount(chainDetail["minWithdrawAmt"].get<std::string_view>(), cur);
+        withdrawParams.maxWithdrawAmt = MonetaryAmount(chainDetail["maxWithdrawAmt"].get<std::string_view>(), cur);
+        withdrawParams.withdrawPrecision = chainDetail["withdrawPrecision"].get<int8_t>();
+
+        return withdrawParams;
+      }
+      break;
+    }
+  }
+  log::error("Unable to find {} chain for withdraw parameters on Huobi. Use default values");
+  return withdrawParams;
+}
+
 CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
-  const json& result = _tradableCurrenciesCache.get();
   CurrencyExchangeVector currencies;
-  for (const json& curDetail : result) {
+  for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view statusStr = curDetail["instStatus"].get<std::string_view>();
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     if (statusStr != "normal") {
@@ -70,7 +95,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
       std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
       if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
-        log::debug("Discarding chain {}", chainName);
+        log::debug("Discarding chain {} for {}", chainName, cur.str());
         continue;
       }
       std::string_view depositAllowedStr = chainDetail["depositStatus"].get<std::string_view>();

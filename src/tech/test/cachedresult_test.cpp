@@ -39,13 +39,11 @@ using CachedResultVaultSteadyClock = CachedResultVaultT<std::chrono::steady_cloc
 
 class CachedResultTestBasic : public ::testing::Test {
  protected:
-  CachedResultTestBasic() : cachedResult(CachedResultOptionsSteadyClock(kCacheTime, vault)) {}
-
   void SetUp() override {}
   void TearDown() override {}
 
   CachedResultVaultSteadyClock vault;
-  CachedResultSteadyClock<Incr> cachedResult;
+  CachedResultSteadyClock<Incr> cachedResult{CachedResultOptionsSteadyClock(kCacheTime, vault)};
 };
 
 TEST_F(CachedResultTestBasic, GetCache) {
