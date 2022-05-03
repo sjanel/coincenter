@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <execution>
+#include <iostream>
 #include <thread>
 
 #include "apikey.hpp"
@@ -668,7 +669,20 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
       continue;
     }
     MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
-    int64_t microsecondsSinceEpoch = trx["transfer_date"].get<int64_t>();
+    // In the official documentation, transfer_date field is an integer.
+    // But in fact (as of 2022) it's a string. Let's support both types to be safe.
+    auto transferDateIt = trx.find("transfer_date");
+    if (transferDateIt == trx.end()) {
+      throw exception("Was expecting 'transfer_date' parameter");
+    }
+    int64_t microsecondsSinceEpoch;
+    if (transferDateIt->is_string()) {
+      microsecondsSinceEpoch = FromString<int64_t>(transferDateIt->get<std::string_view>());
+    } else if (transferDateIt->is_number_integer()) {
+      microsecondsSinceEpoch = transferDateIt->get<int64_t>();
+    } else {
+      throw exception("Cannot understand 'transfer_date' parameter type");
+    }
 
     TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
 
