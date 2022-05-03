@@ -79,8 +79,9 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
 
 ### External libraries
 
-`coincenter` uses various external open source libraries. 
-In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically. If you are building frequently `coincenter` you can install them to speed up its compilation.
+`coincenter` uses various external open source libraries.
+In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically. 
+If you are building frequently `coincenter` you can install them to speed up its compilation.
 
 | Library                                                        | Description                                        | License              |
 | -------------------------------------------------------------- | -------------------------------------------------- | -------------------- |
@@ -104,11 +105,12 @@ Other compilers have not been tested yet.
 
 #### cmake build options
 
-| Option             | Default              | Description                                     |
-| ------------------ | -------------------- | ----------------------------------------------- |
-| `CCT_ENABLE_TESTS` | `ON` if main project | Build and launch unit tests                     |
-| `CCT_BUILD_EXEC`   | `ON` if main project | Build an executable instead of a static library |
-| `CCT_ENABLE_ASAN`  | `ON` if Debug mode   | Compile with AddressSanitizer                   |
+| Option                  | Default                                                | Description                                     |
+| ----------------------- | ------------------------------------------------------ | ----------------------------------------------- |
+| `CCT_ENABLE_TESTS`      | `ON` if main project                                   | Build and launch unit tests                     |
+| `CCT_BUILD_EXEC`        | `ON` if main project                                   | Build an executable instead of a static library |
+| `CCT_ENABLE_ASAN`       | `ON` if Debug mode                                     | Compile with AddressSanitizer                   |
+| `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 ```
