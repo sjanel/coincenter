@@ -89,12 +89,10 @@ class HuobiPublic : public ExchangePublic {
 #endif
 
     struct MarketInfo {
-      MarketInfo() noexcept : maxOrderValueUSDT(std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT") {}
-
       VolAndPriNbDecimals volAndPriNbDecimals;
 
       MonetaryAmount minOrderValue;
-      MonetaryAmount maxOrderValueUSDT;
+      MonetaryAmount maxOrderValueUSDT{std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT"};
 
       MonetaryAmount limitMinOrderAmount;
       MonetaryAmount limitMaxOrderAmount;
@@ -157,6 +155,14 @@ class HuobiPublic : public ExchangePublic {
 
     CurlHandle& _curlHandle;
   };
+
+  struct WithdrawParams {
+    MonetaryAmount minWithdrawAmt;
+    MonetaryAmount maxWithdrawAmt;
+    int8_t withdrawPrecision = std::numeric_limits<int8_t>::max();
+  };
+
+  WithdrawParams getWithdrawParams(CurrencyCode cur);
 
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;

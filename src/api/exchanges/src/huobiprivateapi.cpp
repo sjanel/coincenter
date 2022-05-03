@@ -339,6 +339,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(const OrderRef& orderRef) {
 InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   string lowerCaseCur = ToLower(currencyCode.str());
+  HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
 
   json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
                                                "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
@@ -361,8 +362,32 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     withdrawPostData.append("addr-tag", wallet.tag());
   }
 
-  MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(grossAmount.currencyCode()));
+  MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(currencyCode));
+  HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - fee;
+  if (!withdrawParams.minWithdrawAmt.isDefault() && netEmittedAmount < withdrawParams.minWithdrawAmt) {
+    string err("Minimum withdraw amount for ");
+    err.append(currencyCode.str())
+        .append(" on Huobi is ")
+        .append(withdrawParams.minWithdrawAmt.amountStr())
+        .append(", cannot withdraw ")
+        .append(netEmittedAmount.str());
+    throw exception(std::move(err));
+  } else if (!withdrawParams.maxWithdrawAmt.isDefault() && netEmittedAmount > withdrawParams.maxWithdrawAmt) {
+    string err("Maximum withdraw amount for ");
+    err.append(currencyCode.str())
+        .append(" on Huobi is ")
+        .append(withdrawParams.maxWithdrawAmt.amountStr())
+        .append(", cannot withdraw ")
+        .append(netEmittedAmount.str());
+    throw exception(std::move(err));
+  }
+  if (netEmittedAmount.nbDecimals() > withdrawParams.withdrawPrecision) {
+    log::warn("Withdraw amount precision for Huobi is {} - truncating {}", withdrawParams.withdrawPrecision,
+              netEmittedAmount.str());
+    netEmittedAmount.truncate(withdrawParams.withdrawPrecision);
+    grossAmount.truncate(withdrawParams.withdrawPrecision);
+  }
 
   withdrawPostData.append("amount", netEmittedAmount.amountStr());
   withdrawPostData.append("currency", lowerCaseCur);
