@@ -19,25 +19,53 @@ namespace {
 /// Theorem 15
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
+inline void RemovePrefixSpaces(std::string_view &str) {
+  str.remove_prefix(std::find_if_not(str.begin(), str.end(), [](char c) { return c == ' '; }) - str.begin());
+}
+inline void RemoveTrailing(std::string_view &str, char r) {
+  str.remove_suffix(std::find_if_not(str.rbegin(), str.rend(), [r](char c) { return c == r; }) - str.rbegin());
+}
+
+inline bool ParseNegativeChar(std::string_view &amountStr) {
+  bool isNeg = false;
+  if (amountStr.front() < '0') {
+    static_assert('-' < '0' && '+' < '0' && '.' < '0' && ' ' < '0');
+    switch (amountStr.front()) {
+      case '-':
+        isNeg = true;
+        [[fallthrough]];
+      case '+':  // Let's accept inputs like: "+3" -> "3"
+        // Remove at least one char + possible spaces after it
+        amountStr.remove_prefix(
+            std::find_if_not(amountStr.begin() + 1, amountStr.end(), [](char c) { return c == ' '; }) -
+            amountStr.begin());
+        break;
+      case '.':  // Let's accept inputs like: ".5" -> "0.5"
+        break;
+      default: {
+        string ex("Parsing error, unexpected first char ");
+        ex.push_back(amountStr.front());
+        throw exception(std::move(ex));
+      }
+    }
+  }
+  return isNeg;
+}
+
 /// Converts a string into a fixed precision integral containing both the integer and decimal part.
 /// @param amountStr the string to convert
 /// @param heuristicRoundingFromDouble if true, more than 5 consecutive zeros or 9 in the decimals part will be rounded
 inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
                                                                            bool heuristicRoundingFromDouble = false) {
-  assert(!amountStr.empty());
-  char firstChar = amountStr.front();
-  bool isNeg = false;
-  if (firstChar == '-') {
-    isNeg = true;
-    amountStr.remove_prefix(1);
-  } else if (firstChar != '.' && !isdigit(firstChar)) {
-    string ex("Parsing error, unexpected first char ");
-    ex.push_back(firstChar);
-    throw exception(std::move(ex));
-  }
+  std::pair<MonetaryAmount::AmountType, int8_t> ret;
+  ret.second = 0;
 
+  if (amountStr.empty()) {
+    ret.first = 0;
+    return ret;
+  }
+  const bool isNeg = ParseNegativeChar(amountStr);
   std::size_t dotPos = amountStr.find('.');
-  int8_t nbDecimals = 0;
   MonetaryAmount::AmountType roundingUpNinesDouble = 0;
   MonetaryAmount::AmountType decPart;
   MonetaryAmount::AmountType integerPart;
@@ -45,9 +73,8 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
     decPart = 0;
     integerPart = FromString<MonetaryAmount::AmountType>(amountStr);
   } else {
-    while (amountStr.back() == '0') {
-      amountStr.remove_suffix(1);
-    }
+    // Remove trailing zeros
+    RemoveTrailing(amountStr, '0');
     if (heuristicRoundingFromDouble && (amountStr.size() - dotPos - 1) == kNbMaxDoubleDecimals) {
       std::size_t bestFindPos = 0;
       for (std::string_view pattern : {"000", "999"}) {
@@ -71,12 +98,12 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
         }
       }
     }
-    nbDecimals = static_cast<int8_t>(amountStr.size() - dotPos - 1);
+    ret.second = static_cast<int8_t>(amountStr.size() - dotPos - 1);
     // dotPos is still valid as we erased only past elements
     if (amountStr.size() > std::numeric_limits<MonetaryAmount::AmountType>::digits10 + 1) {
       int8_t nbDigitsToRemove =
           static_cast<int8_t>(amountStr.size() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1);
-      if (nbDigitsToRemove > nbDecimals) {
+      if (nbDigitsToRemove > ret.second) {
         string ex("Received amount string ");
         ex.append(amountStr).append(" whose integral part is too big");
         throw exception(std::move(ex));
@@ -84,42 +111,46 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
       log::trace("Received amount string '{}' too big for MonetaryAmount, truncating {} digits", amountStr,
                  nbDigitsToRemove);
       amountStr.remove_suffix(nbDigitsToRemove);
-      nbDecimals -= nbDigitsToRemove;
+      ret.second -= nbDigitsToRemove;
     }
     std::string_view decPartStr = amountStr.substr(dotPos + 1);
     decPart = decPartStr.empty() ? 0 : FromString<MonetaryAmount::AmountType>(decPartStr);
-    integerPart = FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.data(), amountStr.data() + dotPos));
+    if (dotPos == 0) {
+      integerPart = 0;
+    } else {
+      integerPart =
+          FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.data(), amountStr.data() + dotPos));
+    }
   }
 
-  MonetaryAmount::AmountType integralAmount = integerPart * ipow(10, nbDecimals) + decPart + roundingUpNinesDouble;
+  ret.first = integerPart * ipow(10, ret.second) + decPart + roundingUpNinesDouble;
   if (isNeg) {
-    integralAmount *= -1;
+    ret.first *= -1;
   }
-  return {integralAmount, nbDecimals};
+  return ret;
 }
 
 }  // namespace
 
 MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
-  if (amountCurrencyStr.empty()) {
-    _amount = 0;
-    _nbDecimals = 0;
-  } else {
-    auto last = amountCurrencyStr.begin() + 1;  // skipping optional '-'
-    auto endIt = amountCurrencyStr.end();
-    while (last != endIt && (isdigit(*last) || *last == '.')) {
-      ++last;
-    }
-    std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(std::string_view(amountCurrencyStr.begin(), last));
-    while (last != endIt && *last == ' ') {
-      ++last;
-    }
-    _currencyCode = CurrencyCode(std::string_view(last, endIt));
-    assert(isSane());
+  RemovePrefixSpaces(amountCurrencyStr);
+  RemoveTrailing(amountCurrencyStr, ' ');
+
+  auto last = amountCurrencyStr.begin();
+  auto endIt = amountCurrencyStr.end();
+  while (last != endIt && *last <= '9') {  // Trick: all '.', '+', '-' are before digits in the ASCII code
+    ++last;
   }
+  std::string_view amountStr(amountCurrencyStr.begin(), last);
+  RemoveTrailing(amountStr, ' ');
+  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
+  _currencyCode = CurrencyCode(std::string_view(last, endIt));
+  assert(isSane());
 }
 
 MonetaryAmount::MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode) : _currencyCode(currencyCode) {
+  RemovePrefixSpaces(amountStr);
+  RemoveTrailing(amountStr, ' ');
   std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
   assert(isSane());
 }

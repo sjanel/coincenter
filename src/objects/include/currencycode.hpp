@@ -26,12 +26,14 @@ class CurrencyCode {
   constexpr CurrencyCode() noexcept : _data() {}
 
   /// Constructs a currency code from a static char array.
+  /// Note: spaces are not skipped. If any, there will be captured as part of the code, which is probably unexpected.
   template <unsigned N, std::enable_if_t<N <= kAcronymMaxLen + 1, bool> = true>
   constexpr CurrencyCode(const char (&acronym)[N]) noexcept {
     set(acronym);
   }
 
   /// Constructs a currency code from given string.
+  /// Note: spaces are not skipped. If any, there will be captured as part of the code, which is probably unexpected.
   constexpr CurrencyCode(std::string_view acronym) {
     if (_data.size() < acronym.size()) {
       if (!std::is_constant_evaluated()) {

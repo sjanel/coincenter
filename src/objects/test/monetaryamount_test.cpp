@@ -297,4 +297,10 @@ TEST(MonetaryAmountTest, NegativeAmountStr) {
   EXPECT_EQ(MonetaryAmount("-0.0").amountStr(), "0");
 }
 
+TEST(MonetaryAmountTest, ExoticInput) {
+  EXPECT_EQ(MonetaryAmount(" + 4.6   EUr "), MonetaryAmount("4.6EUR"));
+  EXPECT_EQ(MonetaryAmount(" - .9   f&g "), MonetaryAmount("-0.9F&G"));
+  EXPECT_THROW(MonetaryAmount("--.9"), exception);
+}
+
 }  // namespace cct
