@@ -7,6 +7,7 @@ on:
 
 jobs:
   docker-publish:
+    name: Publish Docker image to public Docker hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

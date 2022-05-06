@@ -1,11 +1,11 @@
-[![alpine](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/alpine_docker.yml)
-[![macos](https://github.com/sjanel/coincenter/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/macos.yml)
-[![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
-[![windows](https://github.com/sjanel/coincenter/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/windows.yml)
+[![alpine](https://github.com/sjanel/coincenter/actions/workflows/alpine-docker.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/alpine-docker.yml)
+[![macos](https://github.com/sjanel/coincenter/actions/workflows/macos.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/macos.yml)
+[![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
+[![windows](https://github.com/sjanel/coincenter/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/windows.yml)
 
-[![formatted](https://github.com/sjanel/coincenter/actions/workflows/clang-format-check.yml/badge.svg?branch=master)](https://github.com/sjanel/coincenter/actions/workflows/clang-format-check.yml)
+[![formatted](https://github.com/sjanel/coincenter/actions/workflows/clang-format-check.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/clang-format-check.yml)
 
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/sjanel/coincenter/master/LICENSE)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/sjanel/coincenter/main/LICENSE)
 [![GitHub Releases](https://img.shields.io/github/release/sjanel/coincenter.svg)](https://github.com/sjanel/coincenter/releases)
 
 coincenter

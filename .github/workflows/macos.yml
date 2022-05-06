@@ -1,4 +1,4 @@
-name: macOS
+name: MacOS
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   xcode:
+    name: Build on MacOS
     runs-on: macos-latest
 
     steps:

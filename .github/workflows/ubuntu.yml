@@ -7,7 +7,8 @@ on:
   pull_request:
 
 jobs:
-  ci_ubuntu_build:
+  ubuntu-build:
+    name: Build on Ubuntu
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -33,12 +34,6 @@ jobs:
           chmod +x llvm.sh
           sudo ./llvm.sh 13
         if: matrix.compiler == 'clang++-13'
-
-      - name: Install clang-tidy
-        run: |
-          sudo apt install clang-tidy-13
-          sudo ln -s /usr/bin/clang-tidy-13 /usr/bin/clang-tidy
-        if: matrix.compiler == 'clang++-13' && matrix.buildmode == 'Debug'
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
