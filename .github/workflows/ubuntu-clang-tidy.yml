@@ -46,13 +46,3 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ninja
-
-      - name: Local Tests
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --exclude-regex api_test
-
-      - name: Public API Tests # Tries several times to avoid random timeout errors not coming from coincenter
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --tests-regex api_test --repeat until-pass:10
