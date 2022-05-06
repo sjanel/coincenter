@@ -20,4 +20,4 @@ jobs:
 
       - name: Docker build
         working-directory: ${{github.workspace}}
-        run: docker build --build-arg TEST=${{matrix.withtests}} -t coincenter .
+        run: docker build --build-arg BUILD_TEST=${{matrix.withtests}} -t coincenter .
