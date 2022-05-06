@@ -39,7 +39,6 @@ jobs:
 
           ctest
           sudo cmake --install .
-
         if: matrix.build-prometheus-from-source == 0
 
       - name: Create Build Environment
