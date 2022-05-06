@@ -16,8 +16,6 @@ class Market {
  public:
   using TradableAssets = std::array<CurrencyCode, 2>;
 
-  explicit Market(std::pair<CurrencyCode, CurrencyCode> curPair) : Market(curPair.first, curPair.second) {}
-
   Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
   Market(CurrencyCode first, CurrencyCode second) : _assets({first, second}) {}
