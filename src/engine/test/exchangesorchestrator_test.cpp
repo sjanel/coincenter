@@ -3,11 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_const.hpp"
-#include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
-#include "exchangeprivateapi_mock.hpp"
-#include "exchangepublicapi_mock.hpp"
-#include "exchangepublicapitypes.hpp"
+#include "exchangedata_test.hpp"
 
 namespace cct {
 
@@ -19,108 +15,9 @@ using OrderInfo = api::OrderInfo;
 using PlaceOrderInfo = api::PlaceOrderInfo;
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-class ExchangeOrchestratorTest : public ::testing::Test {
+class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangeOrchestratorTest() = default;
-
-  void SetUp() override {
-    for (MonetaryAmount a : amounts1) {
-      balancePortfolio1.add(a);
-    }
-    for (MonetaryAmount a : amounts2) {
-      balancePortfolio2.add(a);
-    }
-    for (MonetaryAmount a : amounts3) {
-      balancePortfolio3.add(a);
-    }
-    for (MonetaryAmount a : amounts4) {
-      balancePortfolio4.add(a);
-    }
-
-    EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-  }
-
-  void TearDown() override {}
-
-  LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
-  api::CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kProd, Duration::max(), true};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
-  api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, cryptowatchAPI, coincenterInfo};
-  api::MockExchangePublic exchangePublic3{kSupportedExchanges[2], fiatConverter, cryptowatchAPI, coincenterInfo};
-  api::APIKey key1{"test1", "testuser1", "", "", ""};
-  api::APIKey key2{"test2", "testuser2", "", "", ""};
-  api::APIKey key3{"test3", "testuser3", "", "", ""};
-  api::APIKey key4{"test4", "testuser4", "", "", ""};
-  api::APIKey key5{"test5", "testuser5", "", "", ""};
-  api::MockExchangePrivate exchangePrivate1{exchangePublic1, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate2{exchangePublic2, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate3{exchangePublic3, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate4{exchangePublic3, coincenterInfo, key2};
-  api::MockExchangePrivate exchangePrivate5{exchangePublic3, coincenterInfo, key3};
-  api::MockExchangePrivate exchangePrivate6{exchangePublic3, coincenterInfo, key4};
-  api::MockExchangePrivate exchangePrivate7{exchangePublic3, coincenterInfo, key5};
-  api::MockExchangePrivate exchangePrivate8{exchangePublic1, coincenterInfo, key2};
-  Exchange exchange1{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
-  Exchange exchange2{coincenterInfo.exchangeInfo(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
-  Exchange exchange3{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
-  Exchange exchange4{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
-  Exchange exchange5{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
-  Exchange exchange6{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
-  Exchange exchange7{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
-  Exchange exchange8{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
-  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&exchange1, 8)};
-
-  Market m1{"ETH", "EUR"};
-  Market m2{"BTC", "EUR"};
-  Market m3{"XRP", "BTC"};
-
-  VolAndPriNbDecimals volAndPriDec{2, 2};
-  int depth = 10;
-  int64_t nbSecondsSinceEpoch = 0;
-
-  MonetaryAmount askPrice1{"2300.45 EUR"};
-  MonetaryAmount bidPrice1{"2300.4 EUR"};
-  MarketOrderBook marketOrderBook10{
-      askPrice1, MonetaryAmount("1.09 ETH"), bidPrice1, MonetaryAmount("41 ETH"), volAndPriDec, depth};
-  MarketOrderBook marketOrderBook11{MonetaryAmount{"2301.15EUR"},
-                                    MonetaryAmount("0.4 ETH"),
-                                    MonetaryAmount{"2301.05EUR"},
-                                    MonetaryAmount("17 ETH"),
-                                    volAndPriDec,
-                                    depth - 2};
-
-  MonetaryAmount askPrice2{"31056.67 EUR"};
-  MonetaryAmount bidPrice2{"31056.66 EUR"};
-  MarketOrderBook marketOrderBook20{
-      askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec, depth};
-  MarketOrderBook marketOrderBook21{MonetaryAmount{"31051.02 EUR"},
-                                    MonetaryAmount("0.409BTC"),
-                                    MonetaryAmount{"31051.01 EUR"},
-                                    MonetaryAmount("1.9087 BTC"),
-                                    volAndPriDec,
-                                    depth + 1};
-
-  MonetaryAmount askPrice3{"0.37 BTC"};
-  MonetaryAmount bidPrice3{"0.36 BTC"};
-  MarketOrderBook marketOrderBook3{
-      askPrice3, MonetaryAmount("916.4XRP"), bidPrice3, MonetaryAmount("3494XRP"), volAndPriDec, depth};
-
-  const MonetaryAmount amounts1[4] = {MonetaryAmount("1500XRP"), MonetaryAmount("15BTC"), MonetaryAmount("1.5ETH"),
-                                      MonetaryAmount("5000USDT")};
-  const MonetaryAmount amounts2[4] = {MonetaryAmount("37SOL"), MonetaryAmount("1887565SHIB"), MonetaryAmount("0.5BTC"),
-                                      MonetaryAmount("6750USDT")};
-  const MonetaryAmount amounts3[5] = {MonetaryAmount("0.6ETH"), MonetaryAmount("1000XLM"), MonetaryAmount("0.01AVAX"),
-                                      MonetaryAmount("1500EUR"), MonetaryAmount("4250USDT")};
-  const MonetaryAmount amounts4[6] = {MonetaryAmount("147ADA"),     MonetaryAmount("4.76DOT"),
-                                      MonetaryAmount("15004MATIC"), MonetaryAmount("155USD"),
-                                      MonetaryAmount("107.5USDT"),  MonetaryAmount("1200EUR")};
-
-  BalancePortfolio balancePortfolio1, balancePortfolio2, balancePortfolio3, balancePortfolio4, emptyBalance;
+  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
 };
 
 TEST_F(ExchangeOrchestratorTest, TickerInformation) {
@@ -512,14 +409,15 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount vol(from, m.base());
     MonetaryAmount pri(1, m.quote());
 
-    MonetaryAmount maxVol(std::numeric_limits<MonetaryAmount::AmountType>::max(), m.base(), volAndPriDec.volNbDecimals);
+    MonetaryAmount maxVol(std::numeric_limits<MonetaryAmount::AmountType>::max(), m.base(),
+                          volAndPriDec1.volNbDecimals);
 
     MonetaryAmount tradedTo(from, toCurrency);
 
-    MonetaryAmount deltaPri(1, pri.currencyCode(), volAndPriDec.priNbDecimals);
+    MonetaryAmount deltaPri(1, pri.currencyCode(), volAndPriDec1.priNbDecimals);
     MonetaryAmount askPrice = side == TradeSide::kBuy ? pri : pri + deltaPri;
     MonetaryAmount bidPrice = side == TradeSide::kSell ? pri : pri - deltaPri;
-    MarketOrderBook marketOrderbook{askPrice, maxVol, bidPrice, maxVol, volAndPriDec, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook{askPrice, maxVol, bidPrice, maxVol, volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
     TradedAmounts tradedAmounts(from, tradedTo);
     OrderId orderId("OrderId # 0");
@@ -585,23 +483,23 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount pri2(1, m2.quote());
 
     MonetaryAmount maxVol1(std::numeric_limits<MonetaryAmount::AmountType>::max(), m1.base(),
-                           volAndPriDec.volNbDecimals);
+                           volAndPriDec1.volNbDecimals);
     MonetaryAmount maxVol2(std::numeric_limits<MonetaryAmount::AmountType>::max(), m2.base(),
-                           volAndPriDec.volNbDecimals);
+                           volAndPriDec1.volNbDecimals);
 
     MonetaryAmount tradedTo1(from, interCur);
     MonetaryAmount tradedTo2(from, toCurrency);
 
-    MonetaryAmount deltaPri1(1, pri1.currencyCode(), volAndPriDec.priNbDecimals);
-    MonetaryAmount deltaPri2(1, pri2.currencyCode(), volAndPriDec.priNbDecimals);
+    MonetaryAmount deltaPri1(1, pri1.currencyCode(), volAndPriDec1.priNbDecimals);
+    MonetaryAmount deltaPri2(1, pri2.currencyCode(), volAndPriDec1.priNbDecimals);
     MonetaryAmount askPrice1 = side == TradeSide::kBuy ? pri1 : pri1 + deltaPri1;
     MonetaryAmount askPrice2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
     MonetaryAmount bidPrice1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
     MonetaryAmount bidPrice2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
-    MarketOrderBook marketOrderbook1{askPrice1, maxVol1,      bidPrice1,
-                                     maxVol1,   volAndPriDec, MarketOrderBook::kDefaultDepth};
-    MarketOrderBook marketOrderbook2{askPrice2, maxVol2,      bidPrice2,
-                                     maxVol2,   volAndPriDec, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook1{askPrice1, maxVol1,       bidPrice1,
+                                     maxVol1,   volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook2{askPrice2, maxVol2,       bidPrice2,
+                                     maxVol2,   volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
     TradedAmounts tradedAmounts1(from, vol2);
     TradedAmounts tradedAmounts2(MonetaryAmount(from, interCur), tradedTo2);

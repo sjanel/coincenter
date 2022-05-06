@@ -96,6 +96,21 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   bidVolume = bidVolume.round(volRound, roundType);
   bidVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
 
+  if (askVolume.isZero()) {
+    string err("Number of decimals ");
+    err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
+        .append(" is too small for given start volume ")
+        .append(askVolume.str());
+    throw exception(std::move(err));
+  }
+  if (bidVolume.isZero()) {
+    string err("Number of decimals ");
+    err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
+        .append(" is too small for given start volume ")
+        .append(bidVolume.str());
+    throw exception(std::move(err));
+  }
+
   std::optional<AmountType> optStepPrice = (askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
   if (!optStepPrice) {
     string err("Invalid number of decimals ");
