@@ -178,8 +178,8 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
 
     // Use avg traded volume by second as ask/bid vol
-    MonetaryAmount askVol =
-        (dayVolume / (2 * 24 * 3600)).round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kNearest);
+    MonetaryAmount askVol = dayVolume / (2 * 24 * 3600);
+    askVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kNearest);
     if (askVol.isZero()) {
       askVol = marketInfo.baseIncrement;
     }
@@ -251,7 +251,7 @@ MonetaryAmount KucoinPublic::sanitizePrice(Market m, MonetaryAmount pri) {
   if (pri < marketInfo.priceIncrement) {
     sanitizedPri = marketInfo.priceIncrement;
   } else {
-    sanitizedPri = pri.round(marketInfo.priceIncrement, MonetaryAmount::RoundType::kNearest);
+    sanitizedPri.round(marketInfo.priceIncrement, MonetaryAmount::RoundType::kNearest);
   }
   if (sanitizedPri != pri) {
     log::debug("Sanitize price {} -> {}", pri.str(), sanitizedPri.str());
@@ -269,7 +269,7 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
   } else if (sanitizedVol > marketInfo.baseMaxSize) {
     sanitizedVol = marketInfo.baseMaxSize;
   } else {
-    sanitizedVol = sanitizedVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kDown);
+    sanitizedVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kDown);
   }
   if (sanitizedVol != vol) {
     log::debug("Sanitize volume {} -> {}", vol.str(), sanitizedVol.str());

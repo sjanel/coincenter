@@ -254,19 +254,23 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
       continue;
     }
     Market m = it->second;
-    MonetaryAmount askPri(tickerDetails["ask"].get<double>(), m.quote());
-    MonetaryAmount bidPri(tickerDetails["bid"].get<double>(), m.quote());
-    MonetaryAmount askVol(tickerDetails["askSize"].get<double>(), m.base());
-    MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), m.base());
+    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+    VolAndPriNbDecimals volAndPriNbDecimals = marketInfo.volAndPriNbDecimals;
+    MonetaryAmount askPri(tickerDetails["ask"].get<double>(), m.quote(), MonetaryAmount::RoundType::kNearest,
+                          volAndPriNbDecimals.priNbDecimals);
+    MonetaryAmount bidPri(tickerDetails["bid"].get<double>(), m.quote(), MonetaryAmount::RoundType::kNearest,
+                          volAndPriNbDecimals.priNbDecimals);
+    MonetaryAmount askVol(tickerDetails["askSize"].get<double>(), m.base(), MonetaryAmount::RoundType::kUp,
+                          volAndPriNbDecimals.volNbDecimals);
+    MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), m.base(), MonetaryAmount::RoundType::kUp,
+                          volAndPriNbDecimals.volNbDecimals);
 
     if (bidVol.isZero() || askVol.isZero()) {
       log::trace("No volume for {}", m.str());
       continue;
     }
 
-    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
-
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
+    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Huobi ticker information from {} markets", ret.size());
@@ -334,8 +338,7 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
 
   if (sanitizedVol.toNeutral() * sanitizedPrice < marketInfo.minOrderValue) {
     sanitizedVol = MonetaryAmount(marketInfo.minOrderValue / sanitizedPrice, sanitizedVol.currencyCode());
-    MonetaryAmount step(1, sanitizedVol.currencyCode(), marketInfo.volAndPriNbDecimals.volNbDecimals);
-    sanitizedVol = sanitizedVol.round(step, MonetaryAmount::RoundType::kUp);
+    sanitizedVol.round(marketInfo.volAndPriNbDecimals.volNbDecimals, MonetaryAmount::RoundType::kUp);
   } else {
     sanitizedVol.truncate(marketInfo.volAndPriNbDecimals.volNbDecimals);
   }

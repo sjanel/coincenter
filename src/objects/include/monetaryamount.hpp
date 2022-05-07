@@ -29,6 +29,7 @@ namespace cct {
 class MonetaryAmount {
  public:
   using AmountType = int64_t;
+  enum class RoundType { kDown, kUp, kNearest };
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
@@ -47,6 +48,9 @@ class MonetaryAmount {
   /// Construct a new MonetaryAmount from a double.
   /// Precision is calculated automatically.
   explicit MonetaryAmount(double amount, CurrencyCode currencyCode = CurrencyCode());
+
+  /// Construct a new MonetaryAmount from a double, with provided rounding and expected precision.
+  MonetaryAmount(double amount, CurrencyCode currencyCode, RoundType roundType, int8_t nbDecimals);
 
   /// Constructs a new MonetaryAmount from an integral representation which is already multiplied by given
   /// number of decimals
@@ -106,12 +110,14 @@ class MonetaryAmount {
   /// @return a monetary amount in the currency of given price
   MonetaryAmount convertTo(MonetaryAmount p) const { return p * toNeutral(); }
 
-  enum class RoundType { kDown, kUp, kNearest };
-
-  /// Rounds current monetary amount according to given step amount and return the result.
+  /// Rounds current monetary amount according to given step amount.
+  /// CurrencyCode of 'step' is unused.
   /// Example: 123.45 with 0.1 as step will return 123.4.
   /// Assumption: 'step' should be strictly positive amount
-  MonetaryAmount round(MonetaryAmount step, RoundType roundType) const;
+  void round(MonetaryAmount step, RoundType roundType);
+
+  /// Rounds current monetary amount according to given precision (number of decimals)
+  void round(int8_t nbDecimals, RoundType roundType);
 
   std::strong_ordering operator<=>(const MonetaryAmount &o) const;
 
