@@ -82,19 +82,11 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
     throw exception(std::move(err));
   }
   static constexpr MonetaryAmount::RoundType roundType = MonetaryAmount::RoundType::kNearest;
-  MonetaryAmount priRound(1, CurrencyCode(), _volAndPriNbDecimals.priNbDecimals);
 
-  askPrice = askPrice.round(priRound, roundType);
-  askPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
-  bidPrice = bidPrice.round(priRound, roundType);
-  bidPrice.truncate(_volAndPriNbDecimals.priNbDecimals);
-
-  MonetaryAmount volRound(1, CurrencyCode(), _volAndPriNbDecimals.volNbDecimals);
-
-  askVolume = askVolume.round(volRound, roundType);
-  askVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
-  bidVolume = bidVolume.round(volRound, roundType);
-  bidVolume.truncate(_volAndPriNbDecimals.volNbDecimals);
+  askPrice.round(_volAndPriNbDecimals.priNbDecimals, roundType);
+  bidPrice.round(_volAndPriNbDecimals.priNbDecimals, roundType);
+  askVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
+  bidVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
 
   if (askVolume.isZero()) {
     string err("Number of decimals ");

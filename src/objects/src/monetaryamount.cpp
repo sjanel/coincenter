@@ -162,6 +162,11 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode) : _curr
   assert(isSane());
 }
 
+MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundType roundType, int8_t nbDecimals)
+    : MonetaryAmount(amount, currencyCode) {
+  round(nbDecimals, roundType);
+}
+
 std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecimals) const {
   assert(nbDecimals >= 0);
   AmountType integralAmount = _amount;
@@ -180,8 +185,8 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
 
 namespace {
 
-inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,
-                                      int8_t lhsNbDecimals, int8_t rhsNbDecimals) {
+constexpr int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,
+                                         int8_t lhsNbDecimals, int8_t rhsNbDecimals) {
   int lhsNbDigits = ndigits(lhsAmount);
   int rhsNbDigits = ndigits(rhsAmount);
   while (lhsNbDecimals != rhsNbDecimals) {
@@ -191,7 +196,6 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
         ++lhsNbDigits;
         lhsAmount *= 10;
       } else {
-        log::trace("Reaching numeric limits of MonetaryAmount for {} & {}, truncate", lhsAmount, rhsAmount);
         --rhsNbDecimals;
         --rhsNbDigits;
         rhsAmount /= 10;
@@ -202,7 +206,6 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
         ++rhsNbDigits;
         rhsAmount *= 10;
       } else {
-        log::trace("Reaching numeric limits of MonetaryAmount for {} & {}, truncate", lhsAmount, rhsAmount);
         --lhsNbDecimals;
         --lhsNbDigits;
         lhsAmount /= 10;
@@ -213,28 +216,60 @@ inline int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, Mon
 }
 }  // namespace
 
-MonetaryAmount MonetaryAmount::round(MonetaryAmount step, RoundType roundType) const {
-  AmountType lhsAmount = _amount;
+void MonetaryAmount::round(MonetaryAmount step, RoundType roundType) {
   AmountType rhsAmount = step._amount;
   assert(rhsAmount > 0);
-  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, step._nbDecimals);
-  AmountType epsilon = lhsAmount % rhsAmount;
-  AmountType resAmount = lhsAmount - epsilon;
+  _nbDecimals = SafeConvertSameDecimals(_amount, rhsAmount, _nbDecimals, step._nbDecimals);
+  AmountType epsilon = _amount % rhsAmount;
   if (epsilon != 0) {
-    if (lhsAmount < 0) {
-      if (resAmount >= std::numeric_limits<AmountType>::min() + rhsAmount &&  // Protection against overflow
-          (roundType == RoundType::kDown || (roundType == RoundType::kNearest && -epsilon >= rhsAmount / 2U))) {
-        resAmount -= rhsAmount;
+    _amount -= epsilon;
+    if (_amount + epsilon < 0) {
+      if (_amount >= std::numeric_limits<AmountType>::min() + rhsAmount &&  // Protection against overflow
+          (roundType == RoundType::kDown || (roundType == RoundType::kNearest && rhsAmount < -2 * epsilon))) {
+        _amount -= rhsAmount;
       }
     } else {
-      if (resAmount <= std::numeric_limits<AmountType>::max() - rhsAmount &&  // Protection against overflow
-          (roundType == RoundType::kUp || (roundType == RoundType::kNearest && epsilon >= rhsAmount / 2U))) {
-        resAmount += rhsAmount;
+      if (_amount <= std::numeric_limits<AmountType>::max() - rhsAmount &&  // Protection against overflow
+          (roundType == RoundType::kUp || (roundType == RoundType::kNearest && 2 * epsilon >= rhsAmount))) {
+        _amount += rhsAmount;
+      }
+    }
+  }
+  sanitizeDecimals(_nbDecimals);
+}
+
+void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
+  for (; _nbDecimals < nbDecimals; ++_nbDecimals) {
+    if (_amount > std::numeric_limits<AmountType>::max() / 10 ||
+        _amount < std::numeric_limits<AmountType>::min() / 10) {
+      nbDecimals = _nbDecimals;
+      log::debug("Desired rounding cannot be applied");
+      break;
+    }
+    _amount *= 10;
+  }
+  if (nbDecimals < _nbDecimals) {
+    const AmountType epsilon = ipow(10, _nbDecimals - nbDecimals);
+    if (_amount < 0) {
+      if (roundType != RoundType::kUp) {
+        const AmountType r = epsilon + (_amount % epsilon);
+        if (_amount >= std::numeric_limits<AmountType>::min() + r &&  // Protection against overflow
+            (roundType == RoundType::kDown || 2 * r < epsilon)) {
+          _amount -= r;
+        }
+      }
+    } else {
+      if (roundType != RoundType::kDown) {
+        const AmountType r = epsilon - (_amount % epsilon);
+        if (  //_amount <= std::numeric_limits<AmountType>::max() - r &&  // Protection against overflow
+            (roundType == RoundType::kUp || 2 * r <= epsilon)) {
+          _amount += r;
+        }
       }
     }
   }
 
-  return MonetaryAmount(resAmount, _currencyCode, resNbDecimals);
+  sanitizeDecimals(nbDecimals);
 }
 
 std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const {

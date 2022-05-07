@@ -278,11 +278,10 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
       log::debug("Too small price {} increased to {} for {}", ret.str(), minPrice.str(), m.str());
       ret = minPrice;
     } else {
-      MonetaryAmount roundedPri = ret.round(tickSize, MonetaryAmount::RoundType::kDown);
-      if (roundedPri != ret) {
-        log::debug("Rounded {} into {} according to {}", ret.str(), roundedPri.str(), m.str());
+      ret.round(tickSize, MonetaryAmount::RoundType::kDown);
+      if (ret != pri) {
+        log::debug("Rounded {} into {} according to {}", pri.str(), ret.str(), m.str());
       }
-      ret = roundedPri;
     }
   }
 
@@ -371,14 +370,13 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
         log::debug("Too small volume {} increased to {} for {}", ret.str(), minQty.str(), m.str());
         ret = minQty;
       } else if (!stepSize.isZero()) {
-        MonetaryAmount roundedVol = ret.round(stepSize, MonetaryAmount::RoundType::kDown);
-        if (roundedVol < minVolumeAfterMinNotional) {
-          roundedVol = ret.round(stepSize, MonetaryAmount::RoundType::kUp);
+        ret.round(stepSize, MonetaryAmount::RoundType::kDown);
+        if (ret < minVolumeAfterMinNotional) {
+          ret.round(stepSize, MonetaryAmount::RoundType::kUp);
         }
-        if (roundedVol != ret) {
-          log::debug("Rounded {} into {} according to {}", ret.str(), roundedVol.str(), m.str());
+        if (ret != vol) {
+          log::debug("Rounded {} into {} according to {}", vol.str(), ret.str(), m.str());
         }
-        ret = roundedVol;
       }
     }
   }
