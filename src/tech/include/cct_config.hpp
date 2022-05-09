@@ -16,13 +16,9 @@
 #define CCT_UNLIKELY(x) (!!(x))
 #endif
 
-#if defined(CCT_GCC) && CCT_GCC < 40600
-#define CCT_PUSH_WARNING
-#define CCT_POP_WARNING
-#else
 #define CCT_PUSH_WARNING _Pragma("GCC diagnostic push")
 #define CCT_POP_WARNING _Pragma("GCC diagnostic pop")
-#endif
+
 #define CCT_DISABLE_WARNING_INTERNAL(warningName) #warningName
 #define CCT_DISABLE_WARNING(warningName) _Pragma(CCT_DISABLE_WARNING_INTERNAL(GCC diagnostic ignored warningName))
 #ifdef CCT_CLANG
@@ -58,7 +54,7 @@
 #define CCT_COMPILER_NAME "MSVC"
 #define CCT_COMPILER_VERSION CCT_COMPILER_NAME " " CCT_STRINGIFY(_MSC_FULL_VER)
 #else
-#error "Unknown compiler"
+#error "Unknown compiler. Only clang, gcc and MSVC are supported."
 #endif
 
 #ifndef CCT_CLANG

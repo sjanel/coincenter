@@ -227,7 +227,7 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     }
     json cancelledOrders =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
-    return cancelledOrders["cancelledOrderIds"].size();
+    return static_cast<int>(cancelledOrders["cancelledOrderIds"].size());
   }
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
   for (const Order& o : openedOrders) {

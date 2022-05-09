@@ -10,8 +10,7 @@
 namespace cct {
 class BalancePerExchangePortfolio {
  public:
-  void add(ExchangeName &&exchangeName, const BalancePortfolio &balancePortfolio);
-  void add(ExchangeName &&exchangeName, BalancePortfolio &&balancePortfolio);
+  void add(ExchangeName exchangeName, BalancePortfolio balancePortfolio);
 
   /// Pretty print table of balance.
   /// @param wide if true, all exchange amount will be printed as well

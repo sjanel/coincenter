@@ -58,7 +58,7 @@ class ExchangeRetrieverBase {
     SelectedExchanges ret;
     if (names.empty()) {
       ret.resize(static_cast<typename SelectedExchanges::size_type>(_exchanges.size()));
-      std::ranges::transform(_exchanges, ret.begin(), static_cast<ExchangeT *(*)(ExchangeT &)>(std::addressof));
+      std::ranges::transform(_exchanges, ret.begin(), [](ExchangeT &e) { return &e; });
     } else {
       switch (order) {
         case Order::kInitial:

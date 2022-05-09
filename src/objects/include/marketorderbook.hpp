@@ -163,6 +163,7 @@ class MarketOrderBook {
     AmountType price = 0;
   };
 
+  // Use a SmallVector to avoid memory allocation for all order book requests (ticker)
   using AmountPriceVector = SmallVector<AmountPrice, 2 * 1>;
 
  public:
