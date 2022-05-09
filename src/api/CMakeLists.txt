@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
   jwt-cpp
   GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp
-  GIT_TAG        v0.5.1
+  GIT_TAG        v0.6.0
 )
 
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
