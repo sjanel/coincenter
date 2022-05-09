@@ -19,7 +19,7 @@ namespace {
 constexpr char kColumnSep = '|';
 constexpr char kLineSep = '-';
 
-enum class AlignTo { kLeft, kRight };
+enum class AlignTo : int8_t { kLeft, kRight };
 
 /// Helper function to align to left or right
 class Align {
@@ -36,10 +36,10 @@ class Align {
 };
 }  // namespace
 
-size_type SimpleTable::Cell::size() const noexcept {
+SimpleTable::size_type SimpleTable::Cell::size() const noexcept {
   switch (_data.index()) {
     case 0:
-      return static_cast<size_type>(std::get<string>(_data).size());
+      return static_cast<size_type>(std::get<string_type>(_data).size());
     case 1:
       return static_cast<size_type>(std::get<std::string_view>(_data).size());
     case 2:
@@ -53,7 +53,7 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
   os << ' ' << Align(AlignTo::kLeft) << std::setw(maxCellWidth);
   switch (_data.index()) {
     case 0:
-      os << std::get<string>(_data);
+      os << std::get<string_type>(_data);
       break;
     case 1:
       os << std::get<std::string_view>(_data);
@@ -93,7 +93,7 @@ void SimpleTable::print(std::ostream &os) const {
   }
   const size_type sumWidths = std::accumulate(maxWidthPerColumn.begin(), maxWidthPerColumn.end(), 0U);
   const size_type maxTableWidth = sumWidths + nbColumns * 3 + 1;
-  const string lineSep(maxTableWidth, kLineSep);
+  const Cell::string_type lineSep(maxTableWidth, kLineSep);
 
   os << lineSep << std::endl;
 
