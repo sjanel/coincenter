@@ -200,7 +200,7 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     if (canUseCancelAllEndpoint) {
       json cancelledOrders =
           PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", std::move(params));
-      return cancelledOrders.size();
+      return static_cast<int>(cancelledOrders.size());
     }
   }
 
@@ -221,7 +221,7 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
       params.erase("orderId");
       json cancelledOrders = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", params);
-      nbOrdersCancelled += cancelledOrders.size();
+      nbOrdersCancelled += static_cast<int>(cancelledOrders.size());
     } else {
       for (const Order& order : orders) {
         params.set("orderId", order.id());

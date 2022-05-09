@@ -7,13 +7,15 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#ifdef CCT_MSVC
+#include <string>
+#endif
 
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
-using size_type = uint32_t;
 
 /// Simple, lightweight and fast table with dynamic number of columns.
 /// No checks are made about the number of columns for each Row, it's up to client's responsibility to make sure they
@@ -28,15 +30,28 @@ class SimpleTable {
   class Cell {
    public:
     using IntegralType = int64_t;
-    using value_type = std::variant<string, std::string_view, IntegralType>;
+#ifdef CCT_MSVC
+    // folly::string does not support operator<< correctly with alignments with MSVC. Hence we use std::string
+    // in SimpleTable to guarantee correct alignment of formatted table. Referenced in this issue:
+    // https://github.com/facebook/folly/issues/1681
+    using string_type = std::string;
+#else
+    using string_type = string;
+#endif
+    using value_type = std::variant<string_type, std::string_view, IntegralType>;
+    using size_type = uint32_t;
 
     explicit Cell(std::string_view v) : _data(v) {}
 
     explicit Cell(const char *v) : _data(std::string_view(v)) {}
 
-    explicit Cell(const string &v) : _data(v) {}
+#ifdef CCT_MSVC
+    explicit Cell(const string &v) : _data(std::string(v.data(), v.size())) {}
+#else
+    explicit Cell(const string_type &v) : _data(v) {}
 
-    explicit Cell(string &&v) : _data(std::move(v)) {}
+    explicit Cell(string_type &&v) : _data(std::move(v)) {}
+#endif
 
     explicit Cell(IntegralType v) : _data(v) {}
 
@@ -44,7 +59,11 @@ class SimpleTable {
 
     void swap(Cell &o) noexcept { _data.swap(o._data); }
 
-    using trivially_relocatable = is_trivially_relocatable<string>::type;
+    using trivially_relocatable = is_trivially_relocatable<string_type>::type;
+
+    bool operator==(const Cell &) const = default;
+
+    auto operator<=>(const Cell &) const = default;
 
    private:
     friend class Row;
@@ -58,6 +77,7 @@ class SimpleTable {
   class Row {
    public:
     using value_type = Cell;
+    using size_type = uint32_t;
     using iterator = vector<value_type>::iterator;
     using const_iterator = vector<value_type>::const_iterator;
 
@@ -98,6 +118,11 @@ class SimpleTable {
 
     using trivially_relocatable = is_trivially_relocatable<vector<value_type>>::type;
 
+    bool operator==(const Row &) const = default;
+
+    // TODO: to be replaced by spaceship defaulted operator once vector supports it
+    bool operator<(const Row &o) const { return _cells < o._cells; }
+
    private:
     friend class SimpleTable;
 
@@ -107,6 +132,8 @@ class SimpleTable {
   };
 
   using value_type = Row;
+  using size_type = uint32_t;
+  using iterator = vector<Row>::iterator;
   using const_iterator = vector<Row>::const_iterator;
 
   SimpleTable() noexcept = default;
@@ -116,8 +143,11 @@ class SimpleTable {
     _rows.emplace_back(std::forward<Args &&>(args)...);
   }
 
-  const_iterator begin() const { return _rows.begin(); }
-  const_iterator end() const { return _rows.end(); }
+  iterator begin() noexcept { return _rows.begin(); }
+  iterator end() noexcept { return _rows.end(); }
+
+  const_iterator begin() const noexcept { return _rows.begin(); }
+  const_iterator end() const noexcept { return _rows.end(); }
 
   const value_type &front() const { return _rows.front(); }
   const value_type &back() const { return _rows.back(); }

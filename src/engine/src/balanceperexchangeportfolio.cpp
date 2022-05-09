@@ -4,13 +4,8 @@
 #include "simpletable.hpp"
 
 namespace cct {
-void BalancePerExchangePortfolio::add(ExchangeName &&exchangeName, const BalancePortfolio &balancePortfolio) {
-  _balances.front() += balancePortfolio;
-  _balances.push_back(balancePortfolio);
-  _exchanges.push_back(std::move(exchangeName));
-}
 
-void BalancePerExchangePortfolio::add(ExchangeName &&exchangeName, BalancePortfolio &&balancePortfolio) {
+void BalancePerExchangePortfolio::add(ExchangeName exchangeName, BalancePortfolio balancePortfolio) {
   _balances.front() += balancePortfolio;
   _balances.push_back(std::move(balancePortfolio));
   _exchanges.push_back(std::move(exchangeName));
