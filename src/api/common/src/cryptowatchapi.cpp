@@ -28,7 +28,7 @@ const json& CollectResults(const json& dataJson) {
 }
 
 File GetFiatCacheFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, "fiatcache.json", File::IfNotFound::kNoThrow);
+  return File(dataDir, File::Type::kCache, "fiatcache.json", File::IfError::kNoThrow);
 }
 
 constexpr std::string_view kCryptowatchBaseUrl = "https://api.cryptowat.ch";

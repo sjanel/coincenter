@@ -19,7 +19,7 @@ namespace cct {
 namespace {
 CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(std::string_view dataDir) {
   File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
-                                      File::IfNotFound::kThrow);
+                                      File::IfError::kThrow);
   json jsonData = currencyAcronymsTranslatorFile.readJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
@@ -30,7 +30,7 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
 }
 
 CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
-  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfNotFound::kThrow);
+  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
   json jsonData = stableCoinsFile.readJson();
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {

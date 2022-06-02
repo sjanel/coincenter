@@ -13,7 +13,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr std::string_view kDefaultCommunityKey = "b25453de7984135a084b";
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
-  File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfNotFound::kNoThrow);
+  File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
   json data = thirdPartySecret.readJson();
   if (data.empty() || data["freecurrencyconverter"].get<std::string_view>() == kDefaultCommunityKey) {
     log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecretFileName);
@@ -30,7 +30,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
 constexpr std::string_view kRatesCacheFile = "ratescache.json";
 
 File GetRatesCacheFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfNotFound::kNoThrow);
+  return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow);
 }
 
 constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";

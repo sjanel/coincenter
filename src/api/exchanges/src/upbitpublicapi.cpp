@@ -125,7 +125,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
 
 WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
-  File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfNotFound::kThrow);
+  File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
   json jsonData = withdrawFeesFile.readJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
