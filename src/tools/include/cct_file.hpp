@@ -7,10 +7,10 @@ namespace cct {
 
 class File {
  public:
-  enum class Type { kCache, kSecret, kStatic };
-  enum class IfNotFound { kThrow, kNoThrow };
+  enum class Type : int8_t { kCache, kSecret, kStatic };
+  enum class IfError : int8_t { kThrow, kNoThrow };
 
-  File(std::string_view dataDir, Type type, std::string_view name, IfNotFound ifNotFound);
+  File(std::string_view dataDir, Type type, std::string_view name, IfError ifError);
 
   string read() const;
 
@@ -20,7 +20,7 @@ class File {
 
  private:
   string _filePath;
-  IfNotFound _ifNotFound;
+  IfError _ifError;
 };
 
 }  // namespace cct

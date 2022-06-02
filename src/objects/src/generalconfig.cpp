@@ -14,7 +14,7 @@ GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQ
       _apiOutputType(apiOutputType) {}
 
 json GeneralConfig::LoadFile(std::string_view dataDir) {
-  File generalConfigFile(dataDir, File::Type::kStatic, GeneralConfig::kFilename, File::IfNotFound::kNoThrow);
+  File generalConfigFile(dataDir, File::Type::kStatic, GeneralConfig::kFilename, File::IfError::kNoThrow);
   static const json kDefaultGeneralConfig = R"(
 {
   "apiOutputType": "table",

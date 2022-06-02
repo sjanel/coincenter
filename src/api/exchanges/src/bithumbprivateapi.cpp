@@ -234,7 +234,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, "bithumbcurrencyinfocache.json", File::IfNotFound::kNoThrow);
+  return File(dataDir, File::Type::kCache, "bithumbcurrencyinfocache.json", File::IfError::kNoThrow);
 }
 
 }  // namespace

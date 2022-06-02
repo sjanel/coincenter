@@ -92,7 +92,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
   } else {
     std::string_view secretFileName = GetSecretFileName(runMode);
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
-                     runMode == settings::RunMode::kProd ? File::IfNotFound::kNoThrow : File::IfNotFound::kThrow);
+                     runMode == settings::RunMode::kProd ? File::IfError::kNoThrow : File::IfError::kThrow);
     json jsonData = secretsFile.readJson();
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();

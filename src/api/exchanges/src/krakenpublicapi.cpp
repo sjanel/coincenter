@@ -68,7 +68,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 }
 
 File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfNotFound::kNoThrow);
+  return File(dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfError::kNoThrow);
 }
 
 constexpr std::string_view kUrlWithdrawFee1 = "https://withdrawalfees.com/exchanges/kraken";

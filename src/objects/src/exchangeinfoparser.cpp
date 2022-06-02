@@ -13,7 +13,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {
     case LoadConfiguration::ExchangeConfigFileType::kProd: {
       std::string_view filename = loadConfiguration.exchangeConfigFile();
-      File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfNotFound::kNoThrow);
+      File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfError::kNoThrow);
       json jsonData = ExchangeInfoDefault::Prod();
       json exchangeConfigJsonData = exchangeConfigFile.readJson();
       if (exchangeConfigJsonData.empty()) {
