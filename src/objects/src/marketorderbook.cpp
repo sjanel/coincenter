@@ -510,13 +510,13 @@ std::optional<MonetaryAmount> ComputeRelativePrice(bool isBuy, const MarketOrder
 }
 }  // namespace
 
-std::optional<MonetaryAmount> MarketOrderBook::computeLimitPrice(MonetaryAmount from,
+std::optional<MonetaryAmount> MarketOrderBook::computeLimitPrice(CurrencyCode fromCurrencyCode,
                                                                  const PriceOptions& priceOptions) const {
   if (empty()) {
     return std::nullopt;
   }
   if (priceOptions.isRelativePrice()) {
-    const bool isBuy = from.currencyCode() == _market.quote();
+    const bool isBuy = fromCurrencyCode == _market.quote();
     return ComputeRelativePrice(isBuy, *this, priceOptions.relativePrice());
   }
   CurrencyCode marketCode = _market.base();
@@ -527,7 +527,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeLimitPrice(MonetaryAmount 
       marketCode = _market.quote();
       [[fallthrough]];
     case PriceStrategy::kMaker:
-      return from.currencyCode() == marketCode ? lowestAskPrice() : highestBidPrice();
+      return fromCurrencyCode == marketCode ? lowestAskPrice() : highestBidPrice();
     default:
       unreachable();
   }

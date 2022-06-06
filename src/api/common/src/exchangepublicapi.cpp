@@ -179,10 +179,10 @@ ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode f
   return ret;
 }
 
-std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market m, MonetaryAmount from,
+std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market m, CurrencyCode fromCurrencyCode,
                                                                      const PriceOptions &priceOptions) {
   int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
-  return queryOrderBook(m, depth).computeLimitPrice(from, priceOptions);
+  return queryOrderBook(m, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
 }
 
 std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from,
