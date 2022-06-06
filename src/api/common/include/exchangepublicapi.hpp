@@ -123,7 +123,8 @@ class ExchangePublic : public ExchangeBase {
   CurrenciesPath findCurrenciesPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                                     bool considerStableCoinsAsFiats = false);
 
-  std::optional<MonetaryAmount> computeLimitOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
+  std::optional<MonetaryAmount> computeLimitOrderPrice(Market m, CurrencyCode fromCurrencyCode,
+                                                       const PriceOptions &priceOptions);
 
   std::optional<MonetaryAmount> computeAvgOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
 

@@ -138,7 +138,8 @@ class MarketOrderBook {
   MonetaryAmount getHighestTheoreticalPrice() const;
   MonetaryAmount getLowestTheoreticalPrice() const;
 
-  std::optional<MonetaryAmount> computeLimitPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
+  std::optional<MonetaryAmount> computeLimitPrice(CurrencyCode fromCurrencyCode,
+                                                  const PriceOptions& priceOptions) const;
 
   std::optional<MonetaryAmount> computeAvgPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
 

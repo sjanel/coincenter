@@ -126,7 +126,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, CurrencyCode toC
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
         lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
       // Let's see if we need to change the price if limit price has changed.
-      optPrice = _exchangePublic.computeLimitOrderPrice(m, from, options.priceOptions());
+      optPrice = _exchangePublic.computeLimitOrderPrice(m, fromCurrency, options.priceOptions());
       if (optPrice) {
         price = *optPrice;
         updatePriceNeeded =
