@@ -20,10 +20,10 @@ namespace {
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
 inline void RemovePrefixSpaces(std::string_view &str) {
-  str.remove_prefix(std::find_if_not(str.begin(), str.end(), [](char c) { return c == ' '; }) - str.begin());
+  str.remove_prefix(std::find_if(str.begin(), str.end(), [](char c) { return c != ' '; }) - str.begin());
 }
 inline void RemoveTrailing(std::string_view &str, char r) {
-  str.remove_suffix(std::find_if_not(str.rbegin(), str.rend(), [r](char c) { return c == r; }) - str.rbegin());
+  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [r](char c) { return c != r; }) - str.rbegin());
 }
 
 inline bool ParseNegativeChar(std::string_view &amountStr) {

@@ -138,6 +138,11 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   return foundIt->second;
 }
 
+namespace {
+constexpr std::string_view kParseError1Msg =
+    "Parse error from source 1 - either site information unavailable or code to be updated";
+}
+
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {
   string withdrawalFeesCsv = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
 
@@ -152,12 +157,24 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
       static constexpr std::string_view kBeginFeeHtmlTag = "<div class=fee>";
       static constexpr std::string_view kEndHtmlTag = "</div>";
 
+      MonetaryAmount ret;
+
       begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos);
-      assert(begPos != string::npos);
+      if (begPos == string::npos) {
+        log::error(kParseError1Msg);
+        return ret;
+      }
       begPos += kBeginFeeHtmlTag.size();
+      // There are sometimes strange characters at beginning of the amount
+      while (!isdigit(withdrawalFeesCsv[begPos])) {
+        ++begPos;
+      }
       std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
-      assert(endPos != string::npos);
-      MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
+      if (endPos == string::npos) {
+        log::error(kParseError1Msg);
+        return ret;
+      }
+      ret = MonetaryAmount(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
       begPos = endPos + kEndHtmlTag.size();
       return ret;
     };
@@ -165,15 +182,27 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     // Locate withdrawal fee
     searchPos += kBeginWithdrawalFeeHtmlTag.size();
     MonetaryAmount withdrawalFee = parseNextFee(searchPos);
+    if (withdrawalFee.currencyCode().isNeutral()) {
+      ret.first.clear();
+      break;
+    }
 
     log::trace("Updated Kraken withdrawal fee {} from first source", withdrawalFee.str());
     ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
 
     // Locate min withdrawal
     searchPos = withdrawalFeesCsv.find(kBeginMinWithdrawalHtmlTag, searchPos) + kBeginMinWithdrawalHtmlTag.size();
-    assert(searchPos != string::npos);
+    if (searchPos == string::npos) {
+      log::error(kParseError1Msg);
+      ret.first.clear();
+      break;
+    }
 
     MonetaryAmount minWithdrawal = parseNextFee(searchPos);
+    if (minWithdrawal.currencyCode().isNeutral()) {
+      ret.first.clear();
+      break;
+    }
 
     log::trace("Updated Kraken min withdrawal {} from first source", minWithdrawal.str());
     ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
