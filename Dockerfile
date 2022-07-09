@@ -1,5 +1,5 @@
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM alpine:3.15.4 AS build
+FROM alpine:3.16.0 AS build
 
 # Install base & build dependencies
 RUN apk add g++ libc-dev curl-dev cmake ninja git
@@ -34,7 +34,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
 RUN ldd coincenter | tr -s '[:blank:]' '\n' | grep '^/' | xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM alpine:3.15.4
+FROM alpine:3.16.0
 # TODO: using alpine instead of scratch only to install the ca certificate. How could we install certificate from scratch?
 
 # Install needed certificate for curl to work with https
