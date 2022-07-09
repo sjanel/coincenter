@@ -8,6 +8,7 @@
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "durationstring.hpp"
+#include "monetaryamount.hpp"
 
 namespace cct {
 class LoadConfiguration;
@@ -25,6 +26,7 @@ class TopLevelOption {
 
   using JsonIt = json::const_iterator;
   using CurrencyVector = vector<CurrencyCode>;
+  using MonetaryAmountVector = vector<MonetaryAmount>;
 
   TopLevelOption(const json& jsonData, std::string_view optionName);
 
@@ -55,14 +57,44 @@ class TopLevelOption {
   /// Create an unordered aggregation of currencies from array string values of all option levels
   CurrencyVector getUnorderedCurrencyUnion(std::string_view exchangeName, std::string_view subOptionName) const;
 
-  /// Get the ordered aggregation of currencies from array string values traversing the config options from bottom to
-  /// up.
+  /// Get the array of currencies from array string values traversing the config options from bottom to up.
   CurrencyVector getCurrenciesArray(std::string_view exchangeName, std::string_view subOptionName1,
-                                    std::string_view subOptionName2 = "") const;
+                                    std::string_view subOptionName2 = "") const {
+    return getArray<CurrencyCode>(exchangeName, subOptionName1, subOptionName2);
+  }
+
+  /// Get the array of monetary amounts
+  MonetaryAmountVector getMonetaryAmountsArray(std::string_view exchangeName, std::string_view subOptionName1,
+                                               std::string_view subOptionName2 = "") const {
+    return getArray<MonetaryAmount>(exchangeName, subOptionName1, subOptionName2);
+  }
 
  private:
   JsonIt get(std::string_view exchangeName, std::string_view subOptionName1,
              std::string_view subOptionName2 = "") const;
+
+  template <class ValueType>
+  vector<ValueType> getArray(std::string_view exchangeName, std::string_view subOptionName1,
+                             std::string_view subOptionName2 = "") const {
+    JsonIt optValIt = get(exchangeName, subOptionName1, subOptionName2);
+    if (!optValIt->is_array()) {
+      string errMsg(subOptionName1);
+      if (!subOptionName2.empty()) {
+        errMsg.push_back('.');
+        errMsg.append(subOptionName2);
+      }
+      errMsg.append(" should be an array for ");
+      errMsg.append(exchangeName);
+      throw exception(std::move(errMsg));
+    }
+
+    vector<ValueType> ret;
+    ret.reserve(optValIt->size());
+    for (const auto& val : *optValIt) {
+      ret.emplace_back(val.get<std::string_view>());
+    }
+    return ret;
+  }
 
   JsonIt _defaultPart;
   JsonIt _exchangePart;

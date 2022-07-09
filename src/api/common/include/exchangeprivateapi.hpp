@@ -99,6 +99,10 @@ class ExchangePrivate : public ExchangeBase {
     return _exchangePublic.queryWithdrawalFee(currencyCode);
   }
 
+  /// Attempts to clean small remaining amount on 'currencyCode' of this exchange.
+  /// Returns the amounts actually traded
+  TradedAmountsVector queryDustSweeper(CurrencyCode currencyCode);
+
   ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.name(), _apiKey.name()); }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
@@ -143,6 +147,15 @@ class ExchangePrivate : public ExchangeBase {
   /// Check if withdraw has been received by 'this' exchange
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                   const SentWithdrawInfo &sentWithdrawInfo) = 0;
+
+  /// Returns the minimum amount that can be sold on the market represented by {vol.currencyCode(), toCurrency},
+  /// in a wish to sell all 'vol' amount on this market.
+  /// This method is internal and used by dust sweeper process, it should not be called independently.
+  /// Implementation can actually query the market sell, as the final aim is to sell 'vol' amount. In this case,
+  /// 'vol' can be returned, caller will deduce that sell has been done already.
+  /// @return empty TradedAmounts if error occurred. Otherwise, if order has not been placed,
+  ///         tradedFrom will be set to sanitized volume. If order placed and matched, it returns the traded amounts.
+  virtual TradedAmounts tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) = 0;
 
   TradedAmounts marketTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
 

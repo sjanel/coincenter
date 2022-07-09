@@ -54,6 +54,8 @@ class UpbitPrivate : public ExchangePrivate {
   bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
+  TradedAmounts tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) override;
+
  private:
   struct TradableCurrenciesFunc {
 #ifndef CCT_AGGR_INIT_CXX20
@@ -95,6 +97,9 @@ class UpbitPrivate : public ExchangePrivate {
     const APIKey& _apiKey;
     UpbitPublic& _exchangePublic;
   };
+
+  void applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
+                MonetaryAmount& volume);
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

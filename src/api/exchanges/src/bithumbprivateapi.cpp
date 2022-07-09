@@ -691,6 +691,39 @@ bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
+TradedAmounts BithumbPrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+  if (!optPrice) {
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts();
+  }
+  MonetaryAmount priceForMinNotional = *optPrice;
+
+  TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / priceForMinNotional, m.base()));
+  TradeInfo tradeInfo(0UL, m, side, TradeOptions(priceOptions));
+  PlaceOrderInfo placeOrderInfo = placeOrder(amountToSell, volume, priceForMinNotional, tradeInfo);
+  TradedAmounts tradedAmounts = placeOrderInfo.tradedAmounts();
+  MonetaryAmount sanitizedVol = volume;
+  if (placeOrderInfo.isClosed() && placeOrderInfo.tradedAmounts().isZero()) {
+    auto currencyOrderInfoIt = _currencyOrderInfoMap.find(m.base());
+    if (currencyOrderInfoIt == _currencyOrderInfoMap.end()) {
+      string err("CurrencyOrderInfo should have been filled for ");
+      err.append(m.baseStr());
+      throw exception(std::move(err));
+    }
+    if (sanitizedVol < currencyOrderInfoIt->second.minOrderSize) {
+      sanitizedVol = currencyOrderInfoIt->second.minOrderSize;
+    }
+    tradedAmounts.tradedFrom = sanitizedVol;
+  }
+
+  return tradedAmounts;
+}
+
 void BithumbPrivate::updateCacheFile() const {
   json data;
   for (const auto& [currencyCode, currencyOrderInfo] : _currencyOrderInfoMap) {

@@ -308,10 +308,11 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
   MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(m, volume, price, isTakerStrategy);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
+
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
     static constexpr CurrencyCode kBinanceCoinCur("BNB");
-    if (!isSimulation && m.canTrade(kBinanceCoinCur) && from.currencyCode() != kBinanceCoinCur) {
+    if (!isSimulation && toCurrencyCode == kBinanceCoinCur) {
       // Use special Binance Dust transfer
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}",
                 kBinanceCoinCur.str());
@@ -333,6 +334,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     return placeOrderInfo;
   }
   volume = sanitizedVol;
+
   CurlPostData placePostData{
       {"symbol", m.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
@@ -485,6 +487,35 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+}
+
+TradedAmounts BinancePrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  constexpr bool isTakerStrategy = true;
+  BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
+  MonetaryAmount priceForMinNotional;  // will be set automatically if needed for taker order
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  if (!isSell) {
+    std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+    if (!optPrice) {
+      log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+      return TradedAmounts();
+    }
+    priceForMinNotional = *optPrice;
+  }
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / priceForMinNotional, m.base()));
+  MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(m, volume, priceForMinNotional, isTakerStrategy);
+  TradedAmounts tradedAmounts;
+  if (sanitizedVol == volume) {
+    TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+    TradeInfo tradeInfo(0UL, m, side, TradeOptions(priceOptions));
+    // We don't care about the price for a taker order
+    tradedAmounts = placeOrder(amountToSell, volume, priceForMinNotional, tradeInfo).tradedAmounts();
+  } else {
+    tradedAmounts.tradedFrom = sanitizedVol;
+  }
+  return tradedAmounts;
 }
 
 }  // namespace cct::api

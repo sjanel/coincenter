@@ -97,10 +97,8 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/Balance");
   // Kraken returns an empty array in case of account with no balance at all
   for (const auto& [curCode, amountStr] : res.items()) {
-    string amount = amountStr;
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(curCode));
-
-    addBalance(balancePortfolio, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
+    addBalance(balancePortfolio, MonetaryAmount(amountStr.get<std::string_view>(), currencyCode), equiCurrency);
   }
   return balancePortfolio;
 }
@@ -453,6 +451,39 @@ bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+}
+
+TradedAmounts KrakenPrivate::tryMarketSellOrReturnMinOrderSize(MonetaryAmount amountToSell, Market m) {
+  KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);
+  CurrencyCode cur = amountToSell.currencyCode();
+  const bool isSell = cur == m.base();
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeLimitOrderPrice(m, cur, priceOptions);
+  if (!optPrice) {
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    return TradedAmounts();
+  }
+  MonetaryAmount price = *optPrice;
+
+  MonetaryAmount volume(isSell ? amountToSell : MonetaryAmount(amountToSell / price, m.base()));
+  MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(m);
+  TradedAmounts tradedAmounts;
+  if (volume < orderMin) {
+    tradedAmounts.tradedFrom = orderMin;
+  } else {
+    auto volAndPriNbDecimals = krakenPublic._marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
+    MonetaryAmount sanitizedVol = volume;
+    sanitizedVol.truncate(volAndPriNbDecimals.volNbDecimals);
+    if (sanitizedVol == volume) {
+      TradeSide side = isSell ? TradeSide::kSell : TradeSide::kBuy;
+      tradedAmounts =
+          placeOrder(amountToSell, volume, price, TradeInfo(0UL, m, side, TradeOptions(priceOptions))).tradedAmounts();
+    } else {
+      tradedAmounts.tradedFrom = sanitizedVol;
+    }
+  }
+
+  return tradedAmounts;
 }
 
 }  // namespace cct::api

@@ -56,6 +56,13 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "dustAmountsThreshold": [
+        "1 EUR",
+        "1 USD",
+        "1 USDT",
+        "1000 KRW",
+        "0.000001 BTC"
+      ],
       "multiTradeAllowedByDefault": false,
       "privateAPIRate": "1000ms",
       "publicAPIRate": "1000ms",
@@ -168,6 +175,11 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "dustAmountsThreshold": [
+        "1 USDT",
+        "1000 KRW",
+        "0.000001 BTC"
+      ],
       "multiTradeAllowedByDefault": true,
       "privateAPIRate": "1055ms",
       "publicAPIRate": "1236ms",
