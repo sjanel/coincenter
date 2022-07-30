@@ -199,14 +199,25 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
       std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
       if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
-        log::debug("Discarding chain '{}'", chainName);
+        log::debug("Discarding chain '{}' as not supported", chainName);
         continue;
       }
-      std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
-      MonetaryAmount withdrawFee(withdrawFeeStr, cur);
-
-      log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
-      ret.insert_or_assign(cur, withdrawFee);
+      auto withdrawFeeTypeIt = chainDetail.find("withdrawFeeType");
+      if (withdrawFeeTypeIt != chainDetail.end()) {
+        std::string_view withdrawFeeTypeStr = withdrawFeeTypeIt->get<std::string_view>();
+        if (withdrawFeeTypeStr == "fixed") {
+          std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
+          MonetaryAmount withdrawFee(withdrawFeeStr, cur);
+          log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
+          ret.insert_or_assign(cur, withdrawFee);
+        } else if (withdrawFeeTypeStr == "rate") {
+          log::debug("Unsupported rate withdraw fee for {}", _name);
+          ret.insert_or_assign(cur, MonetaryAmount(0, cur));
+        } else if (withdrawFeeTypeStr == "circulated") {
+          log::debug("Unsupported circulated withdraw fee for {}", _name);
+          ret.insert_or_assign(cur, MonetaryAmount(0, cur));
+        }
+      }
 
       foundChainWithSameName = true;
       break;
