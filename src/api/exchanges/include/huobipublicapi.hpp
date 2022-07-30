@@ -32,6 +32,8 @@ class HuobiPublic : public ExchangePublic {
 
   HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
+  bool healthCheck() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode standardCode) override {
@@ -166,6 +168,7 @@ class HuobiPublic : public ExchangePublic {
 
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;
+  CurlHandle _healthCheckCurlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;

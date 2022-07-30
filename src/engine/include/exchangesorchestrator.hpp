@@ -15,6 +15,8 @@ class ExchangesOrchestrator {
 
   explicit ExchangesOrchestrator(std::span<Exchange> exchangesSpan) : _exchangeRetriever(exchangesSpan) {}
 
+  ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
+
   ExchangeTickerMaps getTickerInformation(ExchangeNameSpan exchangeNames);
 
   MarketOrderBookConversionRates getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,

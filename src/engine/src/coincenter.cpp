@@ -46,6 +46,11 @@ void Coincenter::process(const CoincenterCommands &coincenterCommands) {
 
 void Coincenter::processCommand(const CoincenterCommand &cmd) {
   switch (cmd.type()) {
+    case CoincenterCommandType::kHealthCheck: {
+      ExchangeHealthCheckStatus healthCheckStatus = healthCheck(cmd.exchangeNames());
+      _queryResultPrinter.printHealthCheck(healthCheckStatus);
+      break;
+    }
     case CoincenterCommandType::kMarkets: {
       MarketsPerExchange marketsPerExchange = getMarketsPerExchange(cmd.cur1(), cmd.cur2(), cmd.exchangeNames());
       _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
@@ -154,6 +159,14 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
     default:
       throw exception("Unknown command type");
   }
+}
+
+ExchangeHealthCheckStatus Coincenter::healthCheck(ExchangeNameSpan exchangeNames) {
+  ExchangeHealthCheckStatus ret = _exchangesOrchestrator.healthCheck(exchangeNames);
+
+  _metricsExporter.exportHealthCheckMetrics(ret);
+
+  return ret;
 }
 
 ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNames) {

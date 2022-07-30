@@ -48,6 +48,57 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
   std::ostringstream ss;
 };
 
+class QueryResultPrinterHealthCheckTest : public QueryResultPrinterTest {
+ protected:
+  ExchangeHealthCheckStatus healthCheckPerExchange{{&exchange1, true}, {&exchange4, false}};
+};
+
+TEST_F(QueryResultPrinterHealthCheckTest, FormattedTable) {
+  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printHealthCheck(healthCheckPerExchange);
+  static constexpr std::string_view kExpected = R"(
+----------------------------------
+| Exchange | Health Check status |
+----------------------------------
+| binance  | OK                  |
+| huobi    | Not OK!             |
+----------------------------------
+)";
+
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterHealthCheckTest, EmptyJson) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(ExchangeHealthCheckStatus{});
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "HealthCheck"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterHealthCheckTest, Json) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(healthCheckPerExchange);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "HealthCheck"
+  },
+  "out": {
+    "binance": true,
+    "huobi": false
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterHealthCheckTest, NoPrint) {
+  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printHealthCheck(healthCheckPerExchange);
+  expectNoStr();
+}
+
 class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
  protected:
   CurrencyCode cur1{"XRP"};

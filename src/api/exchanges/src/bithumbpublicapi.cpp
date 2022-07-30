@@ -18,6 +18,8 @@
 namespace cct::api {
 namespace {
 
+static constexpr std::string_view kStatusOKStr = "0000";
+
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string methodUrl(endpoint);
@@ -36,7 +38,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
   auto errorIt = ret.find("status");
   if (errorIt != ret.end()) {
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
-    if (statusCode != "0000") {                                      // "0000" stands for: request OK
+    if (statusCode != kStatusOKStr) {                                // "0000" stands for: request OK
       log::error("Full Bithumb json error: '{}'", ret.dump());
       auto msgIt = ret.find("message");
       throw exception("Bithumb error: {}, msg: {}", statusCode,
@@ -65,6 +67,19 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
       _tradedVolumeCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
+
+bool BithumbPublic::healthCheck() {
+  json result = json::parse(
+      _curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
+  auto statusIt = result.find("status");
+  if (statusIt == result.end()) {
+    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    return false;
+  }
+  std::string_view statusStr = statusIt->get<std::string_view>();
+  log::info("{} status: {}", _name, statusStr);
+  return statusStr == kStatusOKStr;
+}
 
 MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();

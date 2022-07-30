@@ -50,6 +50,17 @@ ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetrie
 
 }  // namespace
 
+ExchangeHealthCheckStatus ExchangesOrchestrator::healthCheck(ExchangeNameSpan exchangeNames) {
+  log::info("Health check for {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  ExchangeHealthCheckStatus ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [](Exchange *e) { return std::make_pair(e, e->healthCheck()); });
+
+  return ret;
+}
+
 ExchangeTickerMaps ExchangesOrchestrator::getTickerInformation(ExchangeNameSpan exchangeNames) {
   log::info("Ticker information for {}", ConstructAccumulatedExchangeNames(exchangeNames));
 

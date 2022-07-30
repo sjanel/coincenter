@@ -14,6 +14,7 @@ class MockExchangePublic : public ExchangePublic {
                      const CoincenterInfo &config)
       : ExchangePublic(name, fiatConverter, cryptowatchApi, config) {}
 
+  MOCK_METHOD(bool, healthCheck, (), (override));
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
   MOCK_METHOD(CurrencyExchange, convertStdCurrencyToCurrencyExchange, (CurrencyCode currencyCode), (override));
   MOCK_METHOD(MarketSet, queryTradableMarkets, (), (override));

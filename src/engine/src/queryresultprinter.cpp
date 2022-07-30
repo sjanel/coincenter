@@ -22,6 +22,32 @@ QueryResultPrinter::QueryResultPrinter(ApiOutputType apiOutputType)
 QueryResultPrinter::QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType)
     : _pOs(&os), _outputLogger(log::get(LoggingInfo::kOutputLoggerName)), _apiOutputType(apiOutputType) {}
 
+void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healthCheckPerExchange) const {
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable t("Exchange", "Health Check status");
+      for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
+        t.emplace_back(e->name(), healthCheckValue ? "OK" : "Not OK!");
+      }
+      printTable(t);
+      break;
+    }
+    case ApiOutputType::kJson: {
+      json in;
+      in.emplace("req", CoincenterCommandTypeToString(CoincenterCommandType::kHealthCheck));
+
+      json out = json::object();
+      for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
+        out.emplace(e->name(), healthCheckValue);
+      }
+      printJson(std::move(in), std::move(out));
+      break;
+    }
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+}
+
 void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
                                       const MarketsPerExchange &marketsPerExchange) const {
   switch (_apiOutputType) {

@@ -17,6 +17,16 @@ MetricsExporter::MetricsExporter(AbstractMetricGateway *pMetricsGateway) : _pMet
   }
 }
 
+void MetricsExporter::exportHealthCheckMetrics(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
+  RETURN_IF_NO_MONITORING;
+  MetricKey key = CreateMetricKey("health_check", "Is exchange status OK?");
+  for (const auto &[exchangePtr, healthCheckResult] : healthCheckPerExchange) {
+    const Exchange &exchange = *exchangePtr;
+    key.set("exchange", exchange.name());
+    _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, static_cast<double>(healthCheckResult));
+  }
+}
+
 void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("available_balance", "Available balance in the exchange account");

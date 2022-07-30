@@ -14,6 +14,17 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
   ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
 };
 
+TEST_F(ExchangeOrchestratorTest, HealthCheck) {
+  EXPECT_CALL(exchangePublic1, healthCheck()).WillOnce(testing::Return(true));
+  EXPECT_CALL(exchangePublic2, healthCheck()).WillOnce(testing::Return(false));
+
+  const ExchangeName kTestedExchanges12[] = {ExchangeName(kSupportedExchanges[0]),
+                                             ExchangeName(kSupportedExchanges[1])};
+
+  ExchangeHealthCheckStatus expectedHealthCheck = {{&exchange1, true}, {&exchange2, false}};
+  EXPECT_EQ(exchangesOrchestrator.healthCheck(kTestedExchanges12), expectedHealthCheck);
+}
+
 TEST_F(ExchangeOrchestratorTest, TickerInformation) {
   const MarketOrderBookMap marketOrderbookMap1 = {{m1, marketOrderBook10}, {m2, marketOrderBook20}};
   EXPECT_CALL(exchangePublic1, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderbookMap1));

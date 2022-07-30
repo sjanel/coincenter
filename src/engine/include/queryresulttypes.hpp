@@ -35,6 +35,8 @@ using TradedAmountsPerExchange = SmallVector<std::pair<const Exchange *, TradedA
 using TradedAmountsVectorWithFinalAmountPerExchange =
     SmallVector<std::pair<const Exchange *, TradedAmountsVectorWithFinalAmount>, kTypicalNbPrivateAccounts>;
 
+using ExchangeHealthCheckStatus = FixedCapacityVector<std::pair<const Exchange *, bool>, kNbSupportedExchanges>;
+
 using ExchangeTickerMaps = FixedCapacityVector<std::pair<const Exchange *, MarketOrderBookMap>, kNbSupportedExchanges>;
 
 using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;

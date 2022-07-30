@@ -27,6 +27,8 @@ class QueryResultPrinter {
   /// @brief  Creates a QueryResultPrinter that will output result in given ostream
   QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType);
 
+  void printHealthCheck(const ExchangeHealthCheckStatus &healthCheckPerExchange) const;
+
   void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
 
   void printMarketOrderBooks(Market m, CurrencyCode equiCurrencyCode, std::optional<int> depth,

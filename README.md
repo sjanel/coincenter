@@ -55,6 +55,7 @@ Main features:
     - [Format](#format)
     - [Logging](#logging)
   - [Public requests](#public-requests)
+    - [Health check](#health-check)
     - [Markets](#markets)
       - [Examples](#examples)
     - [Ticker information](#ticker-information)
@@ -149,6 +150,11 @@ For this, you can configure statically the default level for each in the [config
 It is also overridable on the command line, with options `--log <log-level>` and `--log-file <log-level>`.
 
 ## Public requests
+
+### Health check
+
+`--health-check` pings the exchanges and checks if it is up and running.
+It is the first thing that is checked in exchanges unit tests, hence if the health check fails for an exchange, the tests are skipped for the exchange.
 
 ### Markets
 

@@ -79,6 +79,15 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
       _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _commonInfo) {}
 
+bool BinancePublic::healthCheck() {
+  json result = json::parse(
+      _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
+  if (!result.empty()) {
+    log::error("{} health check is not empty: {}", _name, result.dump());
+  }
+  return result.empty();
+}
+
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
                                       settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),

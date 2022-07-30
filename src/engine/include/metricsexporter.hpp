@@ -12,6 +12,8 @@ class MetricsExporter {
  public:
   explicit MetricsExporter(AbstractMetricGateway *pMetricsGateway);
 
+  void exportHealthCheckMetrics(const ExchangeHealthCheckStatus &healthCheckPerExchange);
+
   void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency);
 
   void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps);
