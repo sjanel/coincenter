@@ -33,6 +33,8 @@ class Coincenter {
 
   void process(const CoincenterCommands &opts);
 
+  ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
+
   /// Retrieve the markets for given selected public exchanges, or all if empty.
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 

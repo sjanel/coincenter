@@ -5,6 +5,8 @@
 namespace cct {
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
   switch (type) {
+    case CoincenterCommandType::kHealthCheck:
+      return "HealthCheck";
     case CoincenterCommandType::kMarkets:
       return "Markets";
     case CoincenterCommandType::kConversionPath:

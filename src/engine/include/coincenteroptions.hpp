@@ -135,6 +135,8 @@ struct CoincenterCmdLineOptions {
   std::string_view orderbook;
   std::string_view orderbookCur;
 
+  std::optional<std::string_view> healthCheck;
+
   std::optional<std::string_view> ticker;
 
   std::string_view conversionPath;
@@ -231,6 +233,11 @@ struct CoincenterAllowedOptions {
        &OptValueType::repeats},
       {{{"General", 9}, "--repeat-time", "<time>", CoincenterCmdLineOptions::kRepeat}, &OptValueType::repeatTime},
       {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
+      {{{"Public queries", 20},
+        "--health-check",
+        "<[exch1,...]>",
+        "Simple health check for all exchanges or specified ones"},
+       &OptValueType::healthCheck},
       {{{"Public queries", 20},
         "--markets",
         'm',

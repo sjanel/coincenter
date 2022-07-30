@@ -55,6 +55,24 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
       _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
+bool KucoinPublic::healthCheck() {
+  json result =
+      json::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
+  auto dataIt = result.find("data");
+  if (dataIt == result.end()) {
+    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    return false;
+  }
+  auto statusIt = dataIt->find("status");
+  if (statusIt == dataIt->end()) {
+    log::error("Unexpected answer from {} status: {}", _name, dataIt->dump());
+    return false;
+  }
+  std::string_view statusStr = statusIt->get<std::string_view>();
+  log::info("{} status: {}", _name, statusStr);
+  return statusStr == "open";
+}
+
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/api/v1/currencies");
   vector<CurrencyInfo> currencyInfos;

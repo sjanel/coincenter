@@ -71,6 +71,11 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
 
   _repeatTime = cmdLineOptions.repeatTime;
 
+  if (cmdLineOptions.healthCheck) {
+    StringOptionParser anyParser(*cmdLineOptions.healthCheck);
+    _commands.emplace_back(CoincenterCommandType::kHealthCheck).setExchangeNames(anyParser.getExchanges());
+  }
+
   if (!cmdLineOptions.markets.empty()) {
     StringOptionParser anyParser(cmdLineOptions.markets);
     auto [cur1, cur2, exchanges] = anyParser.getCurrenciesPublicExchanges();

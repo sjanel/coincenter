@@ -54,6 +54,17 @@ UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConver
       _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
+bool UpbitPublic::healthCheck() {
+  json result = json::parse(_curlHandle.query(
+      "/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}}, UpbitPublic::kUserAgent)));
+  auto errorIt = result.find("error");
+  if (errorIt != result.end()) {
+    log::error("Error in {} status: {}", _name, errorIt->dump());
+    return false;
+  }
+  return !result.empty() && result.is_array() && result.front().find("timestamp") != result.front().end();
+}
+
 MonetaryAmount UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& map = _withdrawalFeesCache.get();
   auto it = map.find(currencyCode);
@@ -95,7 +106,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::string_view marketWarningStr = marketDetails["market_warning"].get<std::string_view>();
     if (marketWarningStr != "NONE") {
-      log::debug("Discard Upbit market {} as it has a warning {}", marketStr, marketWarningStr);
+      log::debug("Discard Upbit market {} as it has warning {}", marketStr, marketWarningStr);
       continue;
     }
     // Upbit markets are inverted

@@ -33,6 +33,8 @@ class KucoinPublic : public ExchangePublic {
 
   KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
 
+  bool healthCheck() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode standardCode) override {

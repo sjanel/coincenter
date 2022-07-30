@@ -20,6 +20,8 @@ class KrakenPublic : public ExchangePublic {
  public:
   KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
+  bool healthCheck() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) override {

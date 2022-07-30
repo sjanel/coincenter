@@ -31,6 +31,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
   return returnData ? ret["data"] : ret["tick"];
 }
 
+static constexpr std::string_view kHealthCheckBaseUrl[] = {"https://status.huobigroup.com"};
+
 }  // namespace
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
@@ -38,6 +40,8 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.publicAPIRate(), config.getRunMode()),
+      _healthCheckCurlHandle(kHealthCheckBaseUrl, config.metricGatewayPtr(), _exchangeInfo.publicAPIRate(),
+                             config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle),
       _marketsCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
@@ -51,6 +55,25 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
           CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault), _curlHandle),
       _tickerCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
+
+bool HuobiPublic::healthCheck() {
+  json result = json::parse(_healthCheckCurlHandle.query("/api/v2/summary.json",
+                                                         CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
+  auto statusIt = result.find("status");
+  if (statusIt == result.end()) {
+    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    return false;
+  }
+  auto descriptionIt = statusIt->find("description");
+  if (descriptionIt == statusIt->end()) {
+    log::error("Unexpected answer from {} status: {}", _name, statusIt->dump());
+    return false;
+  }
+  std::string_view statusStr = descriptionIt->get<std::string_view>();
+  log::info("{} status: {}", _name, statusStr);
+  auto incidentsIt = result.find("incidents");
+  return incidentsIt != result.end() && incidentsIt->empty();
+}
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "/v2/reference/currencies"); }
 

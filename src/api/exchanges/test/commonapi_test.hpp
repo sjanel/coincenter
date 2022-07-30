@@ -55,17 +55,20 @@ class TestAPI {
   std::unique_ptr<PrivateExchangeT> exchangePrivatePtr{
       CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)};
 
-  CurrencyExchangeFlatSet currencies{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
-                                                              : exchangePublic.queryTradableCurrencies()};
-  MarketSet markets{exchangePublic.queryTradableMarkets()};
-  MarketSet sampleMarkets{ComputeMarketSetSample(markets, currencies)};
-  CurrencyExchangeFlatSet sampleCurrencies{ComputeCurrencyExchangeSample(markets, currencies)};
-  MarketOrderBookMap approximatedMarketOrderbooks{exchangePublic.queryAllApproximatedOrderBooks(1)};
-  MarketPriceMap marketPriceMap{exchangePublic.queryAllPrices()};
-  WithdrawalFeeMap withdrawalFees{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
-                                                           : exchangePublic.queryWithdrawalFees()};
+  CurrencyExchangeFlatSet currencies;
+  MarketSet markets;
+  MarketSet sampleMarkets;
+  bool exchangeStatusOK = false;
+
+  void testHealthCheck() { exchangeStatusOK = exchangePublic.healthCheck(); }
 
   void testCurrencies() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
+    currencies = exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
+                                          : exchangePublic.queryTradableCurrencies();
     ASSERT_FALSE(currencies.empty());
     EXPECT_TRUE(
         std::ranges::none_of(currencies, [](const CurrencyExchange &c) { return c.standardCode().str().empty(); }));
@@ -81,12 +84,22 @@ class TestAPI {
   }
 
   void testMarkets() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
+    markets = exchangePublic.queryTradableMarkets();
+    sampleMarkets = ComputeMarketSetSample(markets, currencies);
     for (Market m : sampleMarkets) {
       testMarket(m);
     }
   }
 
   void testMarket(Market m) {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     log::info("Test {} market", m);
     ASSERT_FALSE(markets.empty());
     static constexpr int kCountDepthOrderBook = 5;
@@ -100,14 +113,22 @@ class TestAPI {
     EXPECT_NO_THROW(exchangePublic.queryLast24hVolume(m));
     EXPECT_NO_THROW(exchangePublic.queryLastPrice(m));
 
+    MarketOrderBookMap approximatedMarketOrderbooks = exchangePublic.queryAllApproximatedOrderBooks(1);
+
     auto approximatedOrderbookIt = approximatedMarketOrderbooks.find(m);
     ASSERT_NE(approximatedOrderbookIt, approximatedMarketOrderbooks.end());
+
+    MarketPriceMap marketPriceMap = exchangePublic.queryAllPrices();
 
     auto marketPriceIt = marketPriceMap.find(m);
     ASSERT_NE(marketPriceIt, marketPriceMap.end());
   }
 
   void testWithdrawalFees() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     CurrencyExchangeFlatSet withdrawableCryptos;
     std::ranges::copy_if(currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
                          [this](const CurrencyExchange &c) {
@@ -125,6 +146,9 @@ class TestAPI {
         sample = std::move(withdrawableCryptos);
       }
 
+      WithdrawalFeeMap withdrawalFees = exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
+                                                                 : exchangePublic.queryWithdrawalFees();
+
       for (const CurrencyExchange &curExchange : sample) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Withdrawal fee test", cur);
@@ -141,12 +165,20 @@ class TestAPI {
   }
 
   void testBalance() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     if (exchangePrivatePtr.get()) {
       EXPECT_NO_THROW(exchangePrivatePtr.get()->getAccountBalance());
     }
   }
 
   void testDepositWallet() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     if (exchangePrivatePtr.get()) {
       CurrencyExchangeFlatSet depositableCryptos;
       std::ranges::copy_if(
@@ -185,6 +217,10 @@ class TestAPI {
   }
 
   void testOpenedOrders() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     if (exchangePrivatePtr.get() && !sampleMarkets.empty()) {
       Market m = sampleMarkets.front();
       Orders baseOpenedOrders = exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
@@ -197,8 +233,12 @@ class TestAPI {
   }
 
   void testRecentDeposits() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     if (exchangePrivatePtr.get()) {
-      for (const CurrencyExchange &curExchange : sampleCurrencies) {
+      for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent deposits test", cur);
         Deposits deposits = exchangePrivatePtr.get()->queryRecentDeposits(DepositsConstraints(cur));
@@ -210,6 +250,10 @@ class TestAPI {
   }
 
   void testTrade() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
     if (!sampleMarkets.empty()) {
       Market m = sampleMarkets.front();
       LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
@@ -245,6 +289,7 @@ class TestAPI {
 };
 
 #define CCT_TEST_ALL(TestAPIType, testAPI)                                  \
+  TEST(TestAPIType##Test, HealthCheck) { testAPI.testHealthCheck(); }       \
   TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }         \
   TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }               \
   TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); } \

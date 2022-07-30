@@ -31,6 +31,8 @@ class BinancePublic : public ExchangePublic {
   BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                 api::CryptowatchAPI& cryptowatchAPI);
 
+  bool healthCheck() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override {
     return queryTradableCurrencies(_globalInfosCache.get());
   }

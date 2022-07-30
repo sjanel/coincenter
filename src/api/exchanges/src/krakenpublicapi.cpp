@@ -125,6 +125,29 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
   }
 }
 
+bool KrakenPublic::healthCheck() {
+  json result = json::parse(
+      _curlHandle.query("/public/SystemStatus", CurlOptions(HttpRequestType::kGet, KrakenPublic::kUserAgent)));
+  auto errorIt = result.find("error");
+  if (errorIt != result.end() && !errorIt->empty()) {
+    log::error("Error in {} status: {}", _name, errorIt->dump());
+    return false;
+  }
+  auto resultIt = result.find("result");
+  if (resultIt == result.end()) {
+    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    return false;
+  }
+  auto statusIt = resultIt->find("status");
+  if (statusIt == resultIt->end()) {
+    log::error("Unexpected answer from {} status: {}", _name, resultIt->dump());
+    return false;
+  }
+  std::string_view statusStr = statusIt->get<std::string_view>();
+  log::info("{} status: {}", _name, statusStr);
+  return statusStr == "online";
+}
+
 MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
   auto foundIt = withdrawalFeeMaps.find(currencyCode);

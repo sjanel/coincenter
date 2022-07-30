@@ -5,6 +5,8 @@
 namespace cct {
 bool CoincenterCommand::isPublic() const {
   switch (_type) {
+    case CoincenterCommandType::kHealthCheck:
+      [[fallthrough]];
     case CoincenterCommandType::kMarkets:
       [[fallthrough]];
     case CoincenterCommandType::kConversionPath:

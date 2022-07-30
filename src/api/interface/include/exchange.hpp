@@ -44,6 +44,8 @@ class Exchange {
 
   bool hasPrivateAPI() const { return _pExchangePrivate; }
 
+  bool healthCheck() { return _exchangePublic.healthCheck(); }
+
   CurrencyExchangeFlatSet queryTradableCurrencies() {
     return hasPrivateAPI() ? _pExchangePrivate->queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
   }

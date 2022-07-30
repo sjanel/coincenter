@@ -32,6 +32,10 @@ class ExchangePublic : public ExchangeBase {
 
   virtual ~ExchangePublic() {}
 
+  /// Check if public exchange is responding to basic health check, return true in this case.
+  /// Exchange that implements the HealthCheck do not need to add a retry mechanism.
+  virtual bool healthCheck() = 0;
+
   /// Retrieve the possible currencies known by current exchange.
   /// If some information is not known without any private key, information can be returned partially.
   virtual CurrencyExchangeFlatSet queryTradableCurrencies() = 0;
