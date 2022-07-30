@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include "apikeysprovider.hpp"
-#include "cct_smallvector.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "exchange.hpp"
