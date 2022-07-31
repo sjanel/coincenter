@@ -1,26 +1,29 @@
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required(VERSION 3.15)
 
 project(coincenter VERSION 3.16.1
-                   DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
-                   LANGUAGES CXX)
+  DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
+  LANGUAGES CXX)
 
 # Use ccache if available
 find_program(CCACHE_PROGRAM ccache)
+
 if(CCACHE_PROGRAM)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
-##
-## MAIN_PROJECT CHECK
-## determine if coincenter is built as a subproject or if it is the main project
-##
+#
+# MAIN_PROJECT CHECK
+# determine if coincenter is built as a subproject or if it is the main project
+#
 set(MAIN_PROJECT OFF)
-if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(MAIN_PROJECT ON)
 endif()
 
 set(CCT_ASAN_BUILD OFF)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # In Debug, activate asan by default
   set(CCT_ASAN_BUILD ON)
   find_program(CLANG_TIDY "clang-tidy")
@@ -34,7 +37,7 @@ option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp source
 
 set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter")
 
-if (EXISTS ${CCT_DATA_DIR})
+if(EXISTS ${CCT_DATA_DIR})
   message(STATUS "Using Data directory ${CCT_DATA_DIR}")
 else()
   message(NOTICE "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container")
@@ -57,7 +60,7 @@ else()
   FetchContent_Declare(
     amadeusamc
     GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-    GIT_TAG        v2.4.1
+    GIT_TAG v2.4.1
   )
 
   FetchContent_MakeAvailable(amadeusamc)
@@ -65,13 +68,14 @@ endif()
 
 if(CCT_ENABLE_TESTS)
   find_package(GTest CONFIG)
-  if (NOT GTest_FOUND)
+
+  if(NOT GTest_FOUND)
     message(STATUS "Could not find local installation of Gtest, fetching sources")
-  
+
     FetchContent_Declare(
       googletest
       GIT_REPOSITORY https://github.com/google/googletest.git
-      GIT_TAG        release-1.11.0
+      GIT_TAG release-1.12.1
     )
 
     FetchContent_MakeAvailable(googletest)
@@ -83,45 +87,45 @@ endif()
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
-  GIT_TAG        v3.10.5
+  GIT_TAG v3.10.5
 )
 
 FetchContent_MakeAvailable(json)
 
 find_package(spdlog CONFIG)
-if (NOT spdlog_FOUND)
+
+if(NOT spdlog_FOUND)
   message(STATUS "Could not find local installation of spdlog, fetching sources")
 
   FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG        v1.10.0
+    GIT_TAG v1.10.0
   )
 
   FetchContent_MakeAvailable(spdlog)
 endif()
 
-if (CCT_BUILD_PROMETHEUS_FROM_SRC)
-
+if(CCT_BUILD_PROMETHEUS_FROM_SRC)
   # Disable Prometheus testing
   set(ENABLE_TESTING OFF)
 
   # Pull mode not used for the moment
   set(ENABLE_PULL OFF)
-  
+
   FetchContent_Declare(
     prometheus-cpp
     GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
-    GIT_TAG        v1.0.0
+    GIT_TAG v1.0.1
   )
 
   FetchContent_MakeAvailable(prometheus-cpp)
 
   set(CCT_ENABLE_PROMETHEUS ON)
 else()
-
   find_package(prometheus-cpp CONFIG)
-  if (prometheus-cpp_FOUND)
+
+  if(prometheus-cpp_FOUND)
     message(STATUS "Linking with prometheus-cpp")
 
     set(CCT_ENABLE_PROMETHEUS ON)
@@ -130,7 +134,7 @@ else()
   endif()
 endif()
 
-# Unit Tests 
+# Unit Tests
 
 #[[ Create an executable
 Syntax:
@@ -146,31 +150,34 @@ add_exe(myexe src1.cpp
    DEFINITIONS UNIT_TEST)
 #]]
 function(add_exe name)
-   set(cur_var "sources")
-   set(exe_sources "")
-   set(exe_libraries "")
-   set(exe_definitions "")
-   set(exe_include_dirs "")
-   foreach(arg IN LISTS ARGN)
-      if (arg STREQUAL "LIBRARIES")
-         set(cur_var "libraries")
-      elseif (arg STREQUAL "DEFINITIONS")
-         set(cur_var "definitions")
-      else()
-         list(APPEND exe_${cur_var} ${arg})
-         if (cur_var STREQUAL "sources")
-            get_filename_component(src_dir ${arg} DIRECTORY)
-            list(APPEND exe_include_dirs ${src_dir})
-         endif()
+  set(cur_var "sources")
+  set(exe_sources "")
+  set(exe_libraries "")
+  set(exe_definitions "")
+  set(exe_include_dirs "")
+
+  foreach(arg IN LISTS ARGN)
+    if(arg STREQUAL "LIBRARIES")
+      set(cur_var "libraries")
+    elseif(arg STREQUAL "DEFINITIONS")
+      set(cur_var "definitions")
+    else()
+      list(APPEND exe_${cur_var} ${arg})
+
+      if(cur_var STREQUAL "sources")
+        get_filename_component(src_dir ${arg} DIRECTORY)
+        list(APPEND exe_include_dirs ${src_dir})
       endif()
-   endforeach()
-   add_executable(${name} ${exe_sources})
-   set_target_properties(${name} PROPERTIES
-       COMPILE_DEFINITIONS "${exe_definitions}"
-       BUILD_RPATH "${runtime_path}")
-   target_link_libraries(${name} PRIVATE ${exe_libraries})
-   list(REMOVE_DUPLICATES exe_include_dirs)
-   target_include_directories(${name} PRIVATE ${exe_include_dirs} ${all_includes})
+    endif()
+  endforeach()
+
+  add_executable(${name} ${exe_sources})
+  set_target_properties(${name} PROPERTIES
+    COMPILE_DEFINITIONS "${exe_definitions}"
+    BUILD_RPATH "${runtime_path}")
+  target_link_libraries(${name} PRIVATE ${exe_libraries})
+  list(REMOVE_DUPLICATES exe_include_dirs)
+  target_include_directories(${name} PRIVATE ${exe_include_dirs} ${all_includes})
 endfunction()
 
 #[[ Create a unit test
@@ -185,41 +192,47 @@ add_unit_test(myexe src1.cpp)
 add_unit_test(myexe src1.cpp DEFINITIONS UNIT_TEST)
 #]]
 function(add_unit_test name)
-   set(oneValueArgs)
-   set(multiValueArgs)
-   cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
+  set(oneValueArgs)
+  set(multiValueArgs)
+  cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
 
-   if(CCT_ENABLE_TESTS)
-     add_exe(${name} ${MY_UNPARSED_ARGUMENTS})
-     target_link_libraries(${name} PRIVATE GTest::gtest GTest::gmock GTest::gmock_main)
-     if (LINK_AMC)
-       target_link_libraries(${name} PRIVATE amc::amc)
-     endif()
-     target_include_directories(${name} PRIVATE include)
-     target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/tools/include)
+  if(CCT_ENABLE_TESTS)
+    add_exe(${name} ${MY_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name} PRIVATE GTest::gtest GTest::gmock GTest::gmock_main)
 
-     add_test(NAME ${name} COMMAND ${name})
-     set_tests_properties(${name} PROPERTIES
-                          ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1 abort_on_error=1 print_stacktrace=1;\
+    if(LINK_AMC)
+      target_link_libraries(${name} PRIVATE amc::amc)
+    endif()
+
+    target_include_directories(${name} PRIVATE include)
+    target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/tools/include)
+
+    add_test(NAME ${name} COMMAND ${name})
+    set_tests_properties(${name} PROPERTIES
+      ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1 abort_on_error=1 print_stacktrace=1;\
                           LSAN_OPTIONS=detect_leaks=1 malloc_context_size=2 print_suppressions=0"
-                        WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY})
-   endif()
+      WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY})
+  endif()
 endfunction()
 
-if (MSVC)
+if(MSVC)
   add_compile_options(/W4)
+
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
   add_compile_definitions(NOMINMAX)
 else()
   add_compile_options(-Wall -Wextra -pedantic)
-  if (CCT_ENABLE_ASAN)
+
+  if(CCT_ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
     add_link_options(-fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
     message(STATUS "Activate asan")
   endif()
-  if (CCT_ENABLE_CLANG_TIDY)
+
+  if(CCT_ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY "clang-tidy")
-    if (CLANG_TIDY)
+
+    if(CLANG_TIDY)
       message(STATUS "Activate clang-tidy")
       set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
     else()
@@ -232,11 +245,11 @@ endif()
 add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
 add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
 
-if (CCT_ENABLE_PROMETHEUS)
+if(CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
 endif()
 
-# Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation 
+# Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation
 # (beware of cyclic dependencies)
 add_subdirectory(src/tech)
 add_subdirectory(src/monitoring)
