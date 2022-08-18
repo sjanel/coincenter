@@ -30,23 +30,27 @@ class Market {
 
   /// Computes the reverse market.
   /// Example: return XRP/BTC for a market BTC/XRP
-  Market reverse() const { return Market(_assets.back(), _assets.front()); }
+  Market reverse() const { return Market(_assets[1], _assets[0]); }
 
   /// Get the base CurrencyCode of this Market.
   /// Beware: do not use this method to get a string view of the Currency, prefer 'baseStr' instead as it returns a
   /// CurrencyCode by copy.
-  CurrencyCode base() const { return _assets.front(); }
+  CurrencyCode base() const { return _assets[0]; }
 
   /// Get the quote CurrencyCode of this Market.
   /// Beware: do not use this method to get a string view of the Currency, prefer 'quoteStr' instead as it returns a
   /// CurrencyCode by copy.
-  CurrencyCode quote() const { return _assets.back(); }
+  CurrencyCode quote() const { return _assets[1]; }
+
+  /// Given 'c' a currency traded in this Market, return the other currency it is paired with.
+  /// If 'c' is not traded by this market, return the second currency.
+  CurrencyCode opposite(CurrencyCode c) const { return _assets[1] == c ? _assets[0] : _assets[1]; }
 
   /// Returns a string_view on the base currency of this market.
-  std::string_view baseStr() const { return _assets.front().str(); }
+  std::string_view baseStr() const { return _assets[0].str(); }
 
   /// Returns a string_view on the quote currency of this market.
-  std::string_view quoteStr() const { return _assets.back().str(); }
+  std::string_view quoteStr() const { return _assets[1].str(); }
 
   bool canTrade(MonetaryAmount a) const { return canTrade(a.currencyCode()); }
   bool canTrade(CurrencyCode c) const { return base() == c || quote() == c; }

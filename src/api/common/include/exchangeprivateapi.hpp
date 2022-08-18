@@ -144,7 +144,7 @@ class ExchangePrivate : public ExchangeBase {
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                   const SentWithdrawInfo &sentWithdrawInfo) = 0;
 
-  TradedAmounts marketTrade(MonetaryAmount from, CurrencyCode toCurrencyCode, const TradeOptions &options, Market m);
+  TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &options, Market m);
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault{_exchangePublic._cachedResultVault};
