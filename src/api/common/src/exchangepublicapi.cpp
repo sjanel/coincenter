@@ -143,7 +143,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
       if (m.canTrade(lastCurrencyCode)) {
         CurrencyDirPath &newPath = searchPaths.emplace_back(path);
         const bool isLastRealMarketReversed = lastCurrencyCode == m.quote();
-        const CurrencyCode newCur = lastCurrencyCode == m.base() ? m.quote() : m.base();
+        const CurrencyCode newCur = m.opposite(lastCurrencyCode);
         newPath.emplace_back(newCur, isLastRealMarketReversed);
         std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
       }

@@ -59,9 +59,9 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
     Market m = conversionPath[tradePos];
-    toCurrency = avAmount.currencyCode() == m.base() ? m.quote() : m.base();
-    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(), toCurrency.str());
-    TradedAmounts stepTradedAmounts = marketTrade(avAmount, toCurrency, options, m);
+    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(),
+              m.opposite(avAmount.currencyCode()).str());
+    TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, m);
     avAmount = stepTradedAmounts.tradedTo;
     if (avAmount.isZero()) {
       break;
@@ -76,12 +76,12 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   return tradedAmounts;
 }
 
-TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
-                                           Market m) {
+TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &options, Market m) {
   const TimePoint timerStart = Clock::now();
   const CurrencyCode fromCurrency = from.currencyCode();
 
   std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(m, from, options.priceOptions());
+  const CurrencyCode toCurrency = m.opposite(fromCurrency);
   if (!optPrice) {
     log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
     return TradedAmounts(fromCurrency, toCurrency);
