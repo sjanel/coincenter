@@ -291,6 +291,20 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
 
 }  // namespace
 
+void UpbitPrivate::applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
+                            MonetaryAmount& volume) {
+  if (fromCurrencyCode == m.quote()) {
+    // For 'buy', from amount is fee excluded
+    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
+    if (isTakerStrategy) {
+      from = exchangeInfo.applyFee(from, feeType);
+    } else {
+      volume = exchangeInfo.applyFee(volume, feeType);
+    }
+  }
+}
+
 PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
@@ -306,16 +320,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  if (fromCurrencyCode == m.quote()) {
-    // For 'buy', from amount is fee excluded
-    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
-    if (isTakerStrategy) {
-      from = exchangeInfo.applyFee(from, feeType);
-    } else {
-      volume = exchangeInfo.applyFee(volume, feeType);
-    }
-  }
+  applyFee(m, fromCurrencyCode, isTakerStrategy, from, volume);
 
   MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;

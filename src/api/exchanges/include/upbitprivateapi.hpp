@@ -96,6 +96,9 @@ class UpbitPrivate : public ExchangePrivate {
     UpbitPublic& _exchangePublic;
   };
 
+  void applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
+                MonetaryAmount& volume);
+
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;

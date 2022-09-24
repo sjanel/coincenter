@@ -403,4 +403,5 @@ bool KucoinPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWit
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
+
 }  // namespace cct::api

@@ -266,7 +266,7 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   EXPECT_CALL(exchangePrivate, launchWithdraw(grossAmount, std::move(receivingWallet)))
       .WillOnce(testing::Return(initiatedWithdrawInfo));
 
-  MonetaryAmount fee("0.01 ETH");
+  MonetaryAmount fee(1, "ETH", 2);
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
   SentWithdrawInfo unsentWithdrawInfo(netEmittedAmount, false);

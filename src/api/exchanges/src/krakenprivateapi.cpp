@@ -97,10 +97,8 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/Balance");
   // Kraken returns an empty array in case of account with no balance at all
   for (const auto& [curCode, amountStr] : res.items()) {
-    string amount = amountStr;
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(curCode));
-
-    addBalance(balancePortfolio, MonetaryAmount(std::move(amount), currencyCode), equiCurrency);
+    addBalance(balancePortfolio, MonetaryAmount(amountStr.get<std::string_view>(), currencyCode), equiCurrency);
   }
   return balancePortfolio;
 }
