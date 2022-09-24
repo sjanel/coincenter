@@ -11,29 +11,36 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
     endPos = sizeStr.size();
   }
   int64_t v = FromString<int64_t>(std::string_view(sizeStr.begin(), sizeStr.begin() + endPos));
+  if (v < 0) {
+    throw exception("Number of bytes cannot be negative");
+  }
   int64_t multiplier = 1;
-  endPos = sizeStr.find_first_of("TGMkK.", endPos);
-  if (endPos != std::string_view::npos) {
+  if (endPos != sizeStr.size()) {
     bool iMultiplier = endPos + 1 < sizeStr.size() && sizeStr[endPos + 1] == 'i';
+    int64_t multiplierBase = iMultiplier ? 1024L : 1000L;
     switch (sizeStr[endPos]) {
       case '.':
         throw exception("Decimal number not accepted for number of bytes parsing");
       case 'T':
-        multiplier = iMultiplier ? 1099511627776L : 1000000000000L;
-        break;
+        multiplier *= multiplierBase;
+        [[fallthrough]];
       case 'G':
-        multiplier = iMultiplier ? 1073741824L : 1000000000L;
-        break;
+        multiplier *= multiplierBase;
+        [[fallthrough]];
       case 'M':
-        multiplier = iMultiplier ? 1048576L : 1000000L;
-        break;
+        multiplier *= multiplierBase;
+        [[fallthrough]];
       case 'K':
         [[fallthrough]];
       case 'k':
-        multiplier = iMultiplier ? 1024L : 1000L;
+        multiplier *= multiplierBase;
         break;
-      default:
-        break;
+      default: {
+        string msg("Invalid suffix ");
+        msg.push_back(sizeStr[endPos]);
+        msg.append(" for number of bytes parsing");
+        throw exception(std::move(msg));
+      }
     }
   }
 

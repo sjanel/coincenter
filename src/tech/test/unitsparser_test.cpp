@@ -21,5 +21,9 @@ TEST(UnitsParser, ParseNumberOfBytes1024Multipliers) {
   EXPECT_EQ(ParseNumberOfBytes("2Ti"), 2199023255552L);
 }
 
-TEST(UnitsParser, ParseNumberOfBytesInvalidInput) { EXPECT_THROW(ParseNumberOfBytes("12.5M"), exception); }
+TEST(UnitsParser, ParseNumberOfBytesInvalidInput) {
+  EXPECT_THROW(ParseNumberOfBytes("12.5M"), exception);
+  EXPECT_THROW(ParseNumberOfBytes("400m"), exception);
+  EXPECT_THROW(ParseNumberOfBytes("-30"), exception);
+}
 }  // namespace cct
