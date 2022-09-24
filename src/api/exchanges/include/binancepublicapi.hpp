@@ -63,7 +63,7 @@ class BinancePublic : public ExchangePublic {
 
   MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount sanitizedPrice, bool isTakerOrder);
+  MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount priceForMinNotional, bool isTakerOrder);
 
  private:
   friend class BinancePrivate;
