@@ -53,14 +53,12 @@ find_package(amc CONFIG)
 if(amc_FOUND)
   set(LINK_AMC FALSE)
 else()
-  message(STATUS "Could not find local installation of amc, fetching sources")
-
   set(LINK_AMC TRUE)
 
   FetchContent_Declare(
     amadeusamc
     GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-    GIT_TAG v2.4.1
+    GIT_TAG v2.5.0
   )
 
   FetchContent_MakeAvailable(amadeusamc)
