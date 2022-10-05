@@ -67,6 +67,8 @@ class WithdrawInfo {
 
   const Wallet &receivingWallet() const { return _receivingWallet; }
 
+  MonetaryAmount grossAmount() const { return _grossAmount; }
+
   MonetaryAmount netEmittedAmount() const { return _netEmittedAmount; }
 
   const WithdrawId &withdrawId() const;
@@ -80,6 +82,7 @@ class WithdrawInfo {
   WithdrawId _withdrawIdOrMsgIfNotInitiated;
   TimePoint _initiatedTime{};        // The time at which withdraw has been ordered from the source exchange
   TimePoint _receivedTime{};         // time at which destination provides received funds as available for trade
+  MonetaryAmount _grossAmount;       // Gross amount including fees which will be considered for the withdraw
   MonetaryAmount _netEmittedAmount;  // fee deduced amount that destination will receive
 };
 }  // namespace cct

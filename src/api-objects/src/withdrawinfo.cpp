@@ -18,6 +18,7 @@ WithdrawInfo::WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawIn
       _withdrawIdOrMsgIfNotInitiated(initiatedWithdrawInfo.withdrawId()),
       _initiatedTime(initiatedWithdrawInfo.initiatedTime()),
       _receivedTime(receivedTime),
+      _grossAmount(initiatedWithdrawInfo.grossEmittedAmount()),
       _netEmittedAmount(sentWithdrawInfo.netEmittedAmount()) {}
 
 const WithdrawId &WithdrawInfo::withdrawId() const {
