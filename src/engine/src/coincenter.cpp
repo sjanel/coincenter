@@ -135,7 +135,7 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
     case CoincenterCommandType::kWithdraw: {
       WithdrawInfo withdrawInfo =
           withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(), cmd.exchangeNames().back());
-      _queryResultPrinter.printWithdraw(withdrawInfo, cmd.amount(), cmd.isPercentageAmount(),
+      _queryResultPrinter.printWithdraw(withdrawInfo, withdrawInfo.grossAmount(), cmd.isPercentageAmount(),
                                         cmd.exchangeNames().front(), cmd.exchangeNames().back());
       break;
     }
