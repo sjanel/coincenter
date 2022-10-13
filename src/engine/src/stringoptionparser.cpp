@@ -96,7 +96,8 @@ StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() con
                          GetExchanges(StrEnd(_opt, startExchangesPos))};
 }
 
-StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPrivateExchanges() const {
+StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPrivateExchanges(
+    CurrencyIs currencyIs) const {
   std::string_view exchangesStr = _opt;
   std::string_view curStr;
   std::size_t commaPos = getNextCommaPos(0, false);
@@ -108,6 +109,9 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
     } else {
       exchangesStr = std::string_view(_opt.begin() + commaPos + 1, _opt.end());
     }
+  }
+  if (curStr.empty() && currencyIs == CurrencyIs::kMandatory) {
+    throw invalid_argument("Expected a currency code first");
   }
 
   return CurrencyPrivateExchanges(CurrencyCode(curStr), GetExchanges(exchangesStr));

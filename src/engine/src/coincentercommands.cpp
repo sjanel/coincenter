@@ -105,7 +105,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
 
   if (cmdLineOptions.balance) {
     StringOptionParser anyParser(*cmdLineOptions.balance);
-    auto [balanceCurrencyCode, exchanges] = anyParser.getCurrencyPrivateExchanges();
+    auto [balanceCurrencyCode, exchanges] =
+        anyParser.getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
     _commands.emplace_back(CoincenterCommandType::kBalance)
         .setCur1(balanceCurrencyCode)
         .setExchangeNames(std::move(exchanges));
@@ -187,7 +188,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     StringOptionParser optParser(tradeArgs);
     if (isSmartTrade) {
       if (!cmdLineOptions.sellAll.empty()) {
-        auto [fromTradeCurrency, exchanges] = optParser.getCurrencyPrivateExchanges();
+        auto [fromTradeCurrency, exchanges] =
+            optParser.getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory);
         coincenterCommand.setAmount(MonetaryAmount(100, fromTradeCurrency))
             .setPercentageAmount(true)
             .setExchangeNames(std::move(exchanges));
@@ -219,7 +221,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
 
   if (!cmdLineOptions.depositInfo.empty()) {
     StringOptionParser anyParser(cmdLineOptions.depositInfo);
-    auto [depositCurrency, exchanges] = anyParser.getCurrencyPrivateExchanges();
+    auto [depositCurrency, exchanges] =
+        anyParser.getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory);
     _commands.emplace_back(CoincenterCommandType::kDepositInfo)
         .setCur1(depositCurrency)
         .setExchangeNames(std::move(exchanges));

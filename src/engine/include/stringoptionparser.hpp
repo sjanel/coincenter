@@ -22,13 +22,15 @@ class StringOptionParser {
   using CurrencyPublicExchanges = std::pair<CurrencyCode, ExchangeNames>;
   using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
 
+  enum class CurrencyIs : int8_t { kMandatory, kOptional };
+
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
   ExchangeNames getExchanges() const;
 
   MarketExchanges getMarketExchanges() const;
 
-  CurrencyPrivateExchanges getCurrencyPrivateExchanges() const;
+  CurrencyPrivateExchanges getCurrencyPrivateExchanges(CurrencyIs currencyIs) const;
 
   auto getMonetaryAmountPrivateExchanges() const {
     auto ret = getMonetaryAmountCurrencyPrivateExchanges(false);
