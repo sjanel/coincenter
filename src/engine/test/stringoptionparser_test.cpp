@@ -14,19 +14,26 @@ TEST(StringOptionParserTest, GetExchanges) {
 }
 
 TEST(StringOptionParserTest, GetCurrencyPrivateExchanges) {
-  EXPECT_EQ(StringOptionParser("").getCurrencyPrivateExchanges(), std::make_pair(CurrencyCode(), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur").getCurrencyPrivateExchanges(),
+  auto optionalCur = StringOptionParser::CurrencyIs::kOptional;
+  EXPECT_EQ(StringOptionParser("").getCurrencyPrivateExchanges(optionalCur),
+            std::make_pair(CurrencyCode(), ExchangeNames()));
+  EXPECT_EQ(StringOptionParser("eur").getCurrencyPrivateExchanges(optionalCur),
             std::make_pair(CurrencyCode("EUR"), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("kraken1").getCurrencyPrivateExchanges(),
+  EXPECT_EQ(StringOptionParser("kraken1").getCurrencyPrivateExchanges(optionalCur),
             std::make_pair(CurrencyCode("kraken1"), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").getCurrencyPrivateExchanges(),
+  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
             std::make_pair(CurrencyCode(), ExchangeNames({ExchangeName("bithumb"), ExchangeName("binance", "user1")})));
-  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").getCurrencyPrivateExchanges(),
+  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
             std::make_pair(CurrencyCode(), ExchangeNames({ExchangeName("binance", "user2"), ExchangeName("bithumb"),
                                                           ExchangeName("binance", "user1")})));
   EXPECT_EQ(
-      StringOptionParser("krw,Bithumb,binance_user1").getCurrencyPrivateExchanges(),
+      StringOptionParser("krw,Bithumb,binance_user1")
+          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
       std::make_pair(CurrencyCode("KRW"), ExchangeNames({ExchangeName("bithumb"), ExchangeName("binance", "user1")})));
+
+  EXPECT_THROW(StringOptionParser("binance_user1,bithumb")
+                   .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
+               invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMarketExchanges) {
