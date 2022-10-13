@@ -138,8 +138,8 @@ Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
   }
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", std::move(params));
 
-  std::string_view cur1Str = openedOrdersConstraints.curStr1();
-  std::string_view cur2Str = openedOrdersConstraints.curStr2();
+  auto cur1Str = openedOrdersConstraints.curStr1();
+  auto cur2Str = openedOrdersConstraints.curStr2();
   MarketSet markets;
   for (const json& orderDetails : result) {
     std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
@@ -253,7 +253,7 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   }
   const json& withdrawFeeDetails = result[string(currencyCode.str())];
   if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
-    log::error("{} is currently unavailable for withdraw from {}", currencyCode.str(), _exchangePublic.name());
+    log::error("{} is currently unavailable for withdraw from {}", currencyCode, _exchangePublic.name());
   }
   return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
 }
@@ -314,8 +314,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     static constexpr CurrencyCode kBinanceCoinCur("BNB");
     if (!isSimulation && toCurrencyCode == kBinanceCoinCur) {
       // Use special Binance Dust transfer
-      log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}",
-                kBinanceCoinCur.str());
+      log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}", kBinanceCoinCur);
       json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/asset/dust",
                                  {{"asset", from.currencyStr()}});
       if (!result.contains("transferResult") || result["transferResult"].empty()) {
@@ -326,8 +325,8 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {
-      log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(),
-                toCurrencyCode.str(), sanitizedVol.str());
+      log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
+                sanitizedVol.str());
     }
 
     placeOrderInfo.setClosed();

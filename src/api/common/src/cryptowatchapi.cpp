@@ -88,7 +88,7 @@ CryptowatchAPI::Fiats CryptowatchAPI::FiatsFunc::operator()() {
     auto foundIt = assetDetails.find("fiat");
     if (foundIt != assetDetails.end() && foundIt->get<bool>()) {
       CurrencyCode fiatCode(assetDetails["symbol"].get<std::string_view>());
-      log::debug("Storing fiat {}", fiatCode.str());
+      log::debug("Storing fiat {}", fiatCode);
       fiats.insert(std::move(fiatCode));
     }
   }

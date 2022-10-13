@@ -27,7 +27,8 @@ void BalancePerExchangePortfolio::printTable(std::ostream &os, bool wide) const 
     total.sortByDecreasingEquivalentAmount();
 
     string balanceEqCur("Total ");
-    balanceEqCur.append(balanceCurrencyCode.str()).append(" eq");
+    balanceCurrencyCode.appendStr(balanceEqCur);
+    balanceEqCur.append(" eq");
     header.emplace_back(std::move(balanceEqCur));
   }
 

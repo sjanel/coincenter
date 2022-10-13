@@ -56,7 +56,7 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
     }
   }
 
-  log::error("Unknown currency {} for wallet", currency.str());
+  log::error("Unknown currency {} for wallet", currency);
   return false;
 }
 
@@ -94,7 +94,7 @@ Wallet::Wallet(ExchangeName &&exchangeName, CurrencyCode currency, string &&addr
 string Wallet::str() const {
   string ret(_exchangeName.str());
   ret.append(" wallet of ");
-  ret.append(_currency.str());
+  _currency.appendStr(ret);
   ret.append(" [");
   ret.append(address());
   ret.push_back(']');

@@ -95,7 +95,7 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
   const ExchangeInfo::CurrencySet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
   for (const json& el : data) {
     std::string_view coin = el["coin"].get<std::string_view>();
-    if (coin.size() > CurrencyCode::kAcronymMaxLen) {
+    if (coin.size() > CurrencyCode::kMaxLen) {
       continue;
     }
     CurrencyCode cur(coin);
@@ -165,7 +165,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
       log::trace("Discard {}-{} as coincenter does not support leveraged markets", baseAsset, quoteAsset);
       continue;
     }
-    if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
+    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
@@ -227,7 +227,7 @@ WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const json& el : _globalInfosCache.get()) {
     std::string_view coinStr = el["coin"].get<std::string_view>();
-    if (coinStr.size() > CurrencyCode::kAcronymMaxLen) {
+    if (coinStr.size() > CurrencyCode::kMaxLen) {
       continue;
     }
     CurrencyCode cur(coinStr);
@@ -249,7 +249,7 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
     }
   }
   string ex("Unable to find withdrawal fee for ");
-  ex.append(currencyCode.str());
+  currencyCode.appendStr(ex);
   throw exception(std::move(ex));
 }
 

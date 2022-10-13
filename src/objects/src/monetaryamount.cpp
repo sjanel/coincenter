@@ -36,9 +36,8 @@ inline bool ParseNegativeChar(std::string_view &amountStr) {
         [[fallthrough]];
       case '+':  // Let's accept inputs like: "+3" -> "3"
         // Remove at least one char + possible spaces after it
-        amountStr.remove_prefix(
-            std::find_if_not(amountStr.begin() + 1, amountStr.end(), [](char c) { return c == ' '; }) -
-            amountStr.begin());
+        amountStr.remove_prefix(std::find_if(amountStr.begin() + 1, amountStr.end(), [](char c) { return c != ' '; }) -
+                                amountStr.begin());
         break;
       case '.':  // Let's accept inputs like: ".5" -> "0.5"
         break;
@@ -143,23 +142,26 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   }
   std::string_view amountStr(amountCurrencyStr.begin(), last);
   RemoveTrailing(amountStr, ' ');
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
-  _currencyCode = CurrencyCode(std::string_view(last, endIt));
-  assert(isSane());
+  int8_t nbDecimals;
+  std::tie(_amount, nbDecimals) = AmountIntegralFromStr(amountStr);
+  _curWithDecimals = CurrencyCode(std::string_view(last, endIt));
+  sanitizeDecimals(nbDecimals, maxNbDecimals());
 }
 
-MonetaryAmount::MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode) : _currencyCode(currencyCode) {
+MonetaryAmount::MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode) : _curWithDecimals(currencyCode) {
   RemovePrefixSpaces(amountStr);
   RemoveTrailing(amountStr, ' ');
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
-  assert(isSane());
+  int8_t nbDecimals;
+  std::tie(_amount, nbDecimals) = AmountIntegralFromStr(amountStr);
+  sanitizeDecimals(nbDecimals, maxNbDecimals());
 }
 
-MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode) : _currencyCode(currencyCode) {
+MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode) : _curWithDecimals(currencyCode) {
   std::stringstream amtBuf;
   amtBuf << std::setprecision(kNbMaxDoubleDecimals) << std::fixed << amount;
-  std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amtBuf.str(), true);
-  assert(isSane());
+  int8_t nbDecimals;
+  std::tie(_amount, nbDecimals) = AmountIntegralFromStr(amtBuf.str(), true);
+  sanitizeDecimals(nbDecimals, maxNbDecimals());
 }
 
 MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundType roundType, int8_t nbDecimals)
@@ -170,10 +172,11 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundTy
 std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecimals) const {
   assert(nbDecimals >= 0);
   AmountType integralAmount = _amount;
-  for (; nbDecimals < _nbDecimals; ++nbDecimals) {
+  const int8_t ourNbDecimals = this->nbDecimals();
+  for (; nbDecimals < ourNbDecimals; ++nbDecimals) {
     integralAmount /= 10;
   }
-  for (; _nbDecimals < nbDecimals; --nbDecimals) {
+  for (; ourNbDecimals < nbDecimals; --nbDecimals) {
     if (integralAmount > std::numeric_limits<AmountType>::max() / 10 ||
         integralAmount < std::numeric_limits<AmountType>::min() / 10) {
       return std::nullopt;
@@ -219,7 +222,7 @@ constexpr int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, 
 void MonetaryAmount::round(MonetaryAmount step, RoundType roundType) {
   AmountType rhsAmount = step._amount;
   assert(rhsAmount > 0);
-  _nbDecimals = SafeConvertSameDecimals(_amount, rhsAmount, _nbDecimals, step._nbDecimals);
+  int8_t nowNbDecimals = SafeConvertSameDecimals(_amount, rhsAmount, nbDecimals(), step.nbDecimals());
   AmountType epsilon = _amount % rhsAmount;
   if (epsilon != 0) {
     _amount -= epsilon;
@@ -235,21 +238,22 @@ void MonetaryAmount::round(MonetaryAmount step, RoundType roundType) {
       }
     }
   }
-  sanitizeDecimals(_nbDecimals);
+  sanitizeDecimals(nowNbDecimals, nowNbDecimals);
 }
 
 void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
-  for (; _nbDecimals < nbDecimals; ++_nbDecimals) {
+  int8_t currentNbDecimals = this->nbDecimals();
+  for (; currentNbDecimals < nbDecimals; ++currentNbDecimals) {
     if (_amount > std::numeric_limits<AmountType>::max() / 10 ||
         _amount < std::numeric_limits<AmountType>::min() / 10) {
-      nbDecimals = _nbDecimals;
+      nbDecimals = currentNbDecimals;
       log::debug("Desired rounding cannot be applied");
       break;
     }
     _amount *= 10;
   }
-  if (nbDecimals < _nbDecimals) {
-    const AmountType epsilon = ipow(10, _nbDecimals - nbDecimals);
+  if (nbDecimals < currentNbDecimals) {
+    const AmountType epsilon = ipow(10, currentNbDecimals - nbDecimals);
     if (_amount < 0) {
       if (roundType != RoundType::kUp) {
         const AmountType r = epsilon + (_amount % epsilon);
@@ -269,14 +273,16 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
     }
   }
 
-  sanitizeDecimals(nbDecimals);
+  sanitizeDecimals(currentNbDecimals, nbDecimals);
 }
 
 std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const {
-  if (CCT_UNLIKELY(_currencyCode != o._currencyCode)) {
+  if (currencyCode() != o.currencyCode()) {
     throw exception("Cannot compare amounts with different currency");
   }
-  if (_nbDecimals == o._nbDecimals) {
+  int8_t lhsNbDecimals = nbDecimals();
+  int8_t rhsNbDecimals = o.nbDecimals();
+  if (lhsNbDecimals == rhsNbDecimals) {
     return _amount <=> o._amount;
   }
   AmountType lhsIntAmount = integerPart();
@@ -285,8 +291,7 @@ std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const 
     return lhsIntAmount <=> rhsIntAmount;
   }
   // Same integral part, so expanding one's number of decimals towards the other one is safe
-  auto adjustDecimals = [](AmountType lhsAmount, AmountType rhsAmount, int8_t lhsNbD,
-                           int8_t rhsNbD) -> std::pair<AmountType, AmountType> {
+  auto adjustDecimals = [](AmountType lhsAmount, AmountType rhsAmount, int8_t lhsNbD, int8_t rhsNbD) {
     for (int8_t nbD = lhsNbD; nbD < rhsNbD; ++nbD) {
       assert(lhsAmount <= (std::numeric_limits<AmountType>::max() / 10) &&
              (lhsAmount >= (std::numeric_limits<AmountType>::min() / 10)));
@@ -297,30 +302,29 @@ std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const 
              (rhsAmount >= (std::numeric_limits<AmountType>::min() / 10)));
       rhsAmount *= 10;
     }
-    return {lhsAmount, rhsAmount};
+    return lhsAmount <=> rhsAmount;
   };
-  auto amounts = adjustDecimals(_amount, o._amount, _nbDecimals, o._nbDecimals);
-  return amounts.first <=> amounts.second;
+  return adjustDecimals(_amount, o._amount, lhsNbDecimals, rhsNbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
-  if (CCT_UNLIKELY(_currencyCode != o._currencyCode)) {
+  if (currencyCode() != o.currencyCode()) {
     throw exception("Addition is only possible on amounts with same currency");
   }
   AmountType lhsAmount = _amount;
   AmountType rhsAmount = o._amount;
-  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, _nbDecimals, o._nbDecimals);
+  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, nbDecimals(), o.nbDecimals());
   AmountType resAmount = lhsAmount + rhsAmount;
   if (resAmount >= kMaxAmountFullNDigits || resAmount <= -kMaxAmountFullNDigits) {
     resAmount /= 10;
     --resNbDecimals;
   }
-  return MonetaryAmount(resAmount, _currencyCode, resNbDecimals);
+  return MonetaryAmount(resAmount, _curWithDecimals, resNbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
   AmountType amount = _amount;
-  int8_t nbDecimals = _nbDecimals;
+  int8_t nbDecs = nbDecimals();
   if (mult < -1 || mult > 1) {  // for * -1, * 0 and * -1 result is trivial without overflow
     // Beware of overflows, they can come faster than we think with multiplications.
     int nbDigitsMult = ndigits(mult);
@@ -329,35 +333,28 @@ MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
     if (nbDigitsToTruncate > 0) {
       log::trace("Reaching numeric limits of MonetaryAmount for {} * {}, truncate {} digits", _amount, mult,
                  nbDigitsToTruncate);
-      if (nbDecimals >= nbDigitsToTruncate) {
-        while (nbDigitsToTruncate > 0) {
-          --nbDecimals;
-          amount /= 10;
-          --nbDigitsToTruncate;
-        }
+      amount /= ipow(10, static_cast<uint8_t>(nbDigitsToTruncate));
+      if (nbDecs >= nbDigitsToTruncate) {
+        nbDecs -= nbDigitsToTruncate;
       } else {
         log::warn("Cannot truncate decimal part, I need to truncate integral part");
-        while (nbDigitsToTruncate > 0) {
-          amount /= 10;
-          --nbDigitsToTruncate;
-        }
       }
+      nbDigitsToTruncate = 0;
     }
   }
-  return MonetaryAmount(amount * mult, _currencyCode, nbDecimals);
+  return MonetaryAmount(amount * mult, _curWithDecimals, nbDecs);
 }
 
 MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
-  AmountType lhsAmount = _amount;
-  AmountType rhsAmount = mult._amount;
-  int8_t lhsNbDecimals = _nbDecimals;
-  int8_t rhsNbDecimals = mult._nbDecimals;
-  int lhsNbDigits = ndigits(_amount);
-  int rhsNbDigits = ndigits(mult._amount);
-  CurrencyCode resCurrency = _currencyCode.isNeutral() ? mult.currencyCode() : _currencyCode;
-  if (CCT_UNLIKELY(!_currencyCode.isNeutral() && !mult.currencyCode().isNeutral())) {
+  if (!_curWithDecimals.isNeutral() && !mult._curWithDecimals.isNeutral()) {
     throw exception("Cannot multiply two non neutral MonetaryAmounts");
   }
+  AmountType lhsAmount = _amount;
+  AmountType rhsAmount = mult._amount;
+  int8_t lhsNbDecimals = nbDecimals();
+  int8_t rhsNbDecimals = mult.nbDecimals();
+  int lhsNbDigits = ndigits(_amount);
+  int rhsNbDigits = ndigits(mult._amount);
 
   while (lhsNbDigits + rhsNbDigits > std::numeric_limits<AmountType>::digits10) {
     // We need to truncate, choose the MonetaryAmount with the highest number of decimals in priority
@@ -384,24 +381,25 @@ MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
       }
     }
   }
-
+  CurrencyCode resCurrency = _curWithDecimals.isNeutral() ? mult._curWithDecimals : _curWithDecimals;
   return MonetaryAmount(lhsAmount * rhsAmount, resCurrency, lhsNbDecimals + rhsNbDecimals);
 }
 
 MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
-  AmountType lhsAmount = _amount;
-  AmountType rhsAmount = div._amount;
-  assert(rhsAmount != 0);
-  const int negMult = ((lhsAmount < 0 && rhsAmount > 0) || (lhsAmount > 0 && rhsAmount < 0)) ? -1 : 1;
   CurrencyCode resCurrency;
-  if (!_currencyCode.isNeutral() && !div.currencyCode().isNeutral()) {
-    if (CCT_UNLIKELY(_currencyCode != div.currencyCode())) {
+  if (!_curWithDecimals.isNeutral() && !div._curWithDecimals.isNeutral()) {
+    if (CCT_UNLIKELY(currencyCode() != div.currencyCode())) {
       throw exception("Cannot divide two non neutral MonetaryAmounts of different currency");
     }
     // Divide same currency have a neutral result
   } else {
-    resCurrency = _currencyCode.isNeutral() ? div.currencyCode() : _currencyCode;
+    resCurrency = _curWithDecimals.isNeutral() ? div._curWithDecimals : _curWithDecimals;
   }
+
+  AmountType lhsAmount = _amount;
+  AmountType rhsAmount = div._amount;
+  assert(rhsAmount != 0);
+  const int negMult = ((lhsAmount < 0 && rhsAmount > 0) || (lhsAmount > 0 && rhsAmount < 0)) ? -1 : 1;
 
   // Switch to an unsigned temporarily to ensure that lhs > rhs before the divide.
   // Indeed, on 64 bits the unsigned integral type can hold one more digit than its signed counterpart.
@@ -413,12 +411,12 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
       static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow(10, static_cast<uint8_t>(lhsNbDigitsToAdd));
   UnsignedAmountType rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
 
-  int8_t lhsNbDecimals = _nbDecimals + lhsNbDigitsToAdd;
+  int8_t lhsNbDecimals = nbDecimals() + lhsNbDigitsToAdd;
 
   lhsNbDigits += lhsNbDigitsToAdd;
 
   UnsignedAmountType totalIntPart = 0;
-  int8_t nbDecimals = lhsNbDecimals - div._nbDecimals;
+  int8_t nbDecs = lhsNbDecimals - div.nbDecimals();
   int8_t totalPartNbDigits;
   do {
     totalIntPart += lhs / rhs;  // Add integral part
@@ -432,41 +430,43 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     if (nbDigitsToAdd == 0) {
       break;
     }
-    const auto kMultPower = ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(nbDigitsToAdd));
-    totalIntPart *= kMultPower;
-    lhs *= kMultPower;
-    nbDecimals += nbDigitsToAdd;
+    const auto multPower = ipow(10, static_cast<uint8_t>(nbDigitsToAdd));
+    totalIntPart *= multPower;
+    lhs *= multPower;
+    nbDecs += nbDigitsToAdd;
   } while (true);
 
-  if (nbDecimals < 0) {
+  if (nbDecs < 0) {
     throw exception("Overflow during divide");
   }
 
   const int8_t nbDigitsTruncate = totalPartNbDigits - std::numeric_limits<AmountType>::digits10;
   if (nbDigitsTruncate > 0) {
-    if (nbDecimals < nbDigitsTruncate) {
+    if (nbDecs < nbDigitsTruncate) {
       throw exception("Overflow during divide");
     }
-    totalIntPart /= ipow(static_cast<UnsignedAmountType>(10), static_cast<uint8_t>(nbDigitsTruncate));
-    nbDecimals -= nbDigitsTruncate;
+    totalIntPart /= ipow(10, static_cast<uint8_t>(nbDigitsTruncate));
+    nbDecs -= nbDigitsTruncate;
   }
 
-  return MonetaryAmount(totalIntPart * negMult, resCurrency, nbDecimals);
+  return MonetaryAmount(static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs);
 }
 
 string MonetaryAmount::amountStr() const {
   const int isNeg = static_cast<int>(_amount < 0);
   const int nbDigits = ndigits(_amount);
+  const int nbDecs = nbDecimals();
+  const int nbZeros = std::max(0, nbDecs + 1 - nbDigits);
 
-  string ret(static_cast<size_t>(isNeg) + nbDigits, '-');
-  std::to_chars(ret.data(), ret.data() + ret.size(), _amount);
+  string ret(static_cast<string::size_type>(isNeg + nbZeros + nbDigits), '0');
+  std::to_chars(ret.data() + nbZeros, ret.data() + ret.size(), _amount);
 
-  if (_nbDecimals + 1 > nbDigits) {
-    ret.insert(ret.begin() + isNeg, _nbDecimals + 1 - nbDigits, '0');
+  if (isNeg > 0 && nbZeros > 0) {
+    std::swap(ret.front(), ret[nbZeros]);
   }
 
-  if (_nbDecimals > 0) {
-    ret.insert(ret.end() - _nbDecimals, '.');
+  if (nbDecs > 0) {
+    ret.insert(ret.end() - nbDecs, '.');
   }
 
   return ret;
@@ -474,9 +474,9 @@ string MonetaryAmount::amountStr() const {
 
 string MonetaryAmount::str() const {
   string ret = amountStr();
-  if (!_currencyCode.isNeutral()) {
+  if (!_curWithDecimals.isNeutral()) {
     ret.push_back(' ');
-    ret.append(_currencyCode.str());
+    _curWithDecimals.appendStr(ret);
   }
   return ret;
 }

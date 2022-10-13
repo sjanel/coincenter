@@ -80,8 +80,8 @@ class OrdersConstraints {
 
   Market market() const { return Market(_cur1, _cur2); }
 
-  std::string_view curStr1() const { return _cur1.str(); }
-  std::string_view curStr2() const { return _cur2.str(); }
+  string curStr1() const { return _cur1.str(); }
+  string curStr2() const { return _cur2.str(); }
 
   CurrencyCode cur1() const { return _cur1; }
   CurrencyCode cur2() const { return _cur2; }

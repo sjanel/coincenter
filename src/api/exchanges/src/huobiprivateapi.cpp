@@ -261,7 +261,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(m, fromCurrencyCode, volume, price, isTakerStrategy);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
               sanitizedVol.str());
     placeOrderInfo.setClosed();
     return placeOrderInfo;
@@ -367,16 +367,16 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   MonetaryAmount netEmittedAmount = grossAmount - fee;
   if (!withdrawParams.minWithdrawAmt.isDefault() && netEmittedAmount < withdrawParams.minWithdrawAmt) {
     string err("Minimum withdraw amount for ");
-    err.append(currencyCode.str())
-        .append(" on Huobi is ")
+    currencyCode.appendStr(err);
+    err.append(" on Huobi is ")
         .append(withdrawParams.minWithdrawAmt.amountStr())
         .append(", cannot withdraw ")
         .append(netEmittedAmount.str());
     throw exception(std::move(err));
   } else if (!withdrawParams.maxWithdrawAmt.isDefault() && netEmittedAmount > withdrawParams.maxWithdrawAmt) {
     string err("Maximum withdraw amount for ");
-    err.append(currencyCode.str())
-        .append(" on Huobi is ")
+    currencyCode.appendStr(err);
+    err.append(" on Huobi is ")
         .append(withdrawParams.maxWithdrawAmt.amountStr())
         .append(", cannot withdraw ")
         .append(netEmittedAmount.str());

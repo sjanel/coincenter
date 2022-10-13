@@ -66,7 +66,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
                                                                           std::optional<int> depth) {
   log::info("Order book of {} on {} requested{}{}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames),
             equiCurrencyCode.isNeutral() ? "" : " with equi currency ",
-            equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode.str());
+            equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode);
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
@@ -81,8 +81,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
                                      : e->apiPublic().convert(MonetaryAmount(1, m.quote()), equiCurrencyCode);
     MarketOrderBook marketOrderBook(depth ? e->queryOrderBook(m, *depth) : e->queryOrderBook(m));
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
-      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quoteStr(), equiCurrencyCode.str(),
-                e->name());
+      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote(), equiCurrencyCode, e->name());
     }
     return std::make_tuple(e->name(), std::move(marketOrderBook), optConversionRate);
   };
@@ -94,7 +93,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
 BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeName> privateExchangeNames,
                                                      CurrencyCode equiCurrency) {
   log::info("Query balance from {}{}{}", ConstructAccumulatedExchangeNames(privateExchangeNames),
-            equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency.str());
+            equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency);
 
   ExchangeRetriever::SelectedExchanges balanceExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
@@ -114,7 +113,7 @@ BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeNam
 
 WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const ExchangeName> privateExchangeNames,
                                                         CurrencyCode depositCurrency) {
-  log::info("Query {} deposit information from {}", depositCurrency.str(),
+  log::info("Query {} deposit information from {}", depositCurrency,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges depositInfoExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
@@ -129,9 +128,9 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const Exchange
       return false;
     }
     if (curIt->canDeposit()) {
-      log::debug("{} can currently be deposited on {}", curIt->standardCode().str(), e->name());
+      log::debug("{} can currently be deposited on {}", curIt->standardCode(), e->name());
     } else {
-      log::info("{} cannot currently be deposited on {}", curIt->standardCode().str(), e->name());
+      log::info("{} cannot currently be deposited on {}", curIt->standardCode(), e->name());
     }
     return curIt->canDeposit();
   };
@@ -196,10 +195,10 @@ ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market m, Ex
 
 MarketsPerExchange ExchangesOrchestrator::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
                                                                 ExchangeNameSpan exchangeNames) {
-  string curStr(cur1.str());
+  string curStr = cur1.str();
   if (!cur2.isNeutral()) {
     curStr.push_back('-');
-    curStr.append(cur2.str());
+    cur2.appendStr(curStr);
   }
   log::info("Query markets with {} from {}", curStr, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
@@ -303,8 +302,8 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
          tradeOptions.isMultiTradeAllowed(pExchangePublic->exchangeInfo().multiTradeAllowedByDefault()))) {
       ret.emplace_back(exchangeAmountPair.first, exchangeAmountPair.second, std::move(marketsPath));
     } else {
-      log::warn("{} is not convertible{} to {} on {}", fromCurrency.str(),
-                nbMarketsInPath == 0 ? "" : "directly (and multi trade is not allowed)", toCurrency.str(),
+      log::warn("{} is not convertible{} to {} on {}", fromCurrency,
+                nbMarketsInPath == 0 ? "" : "directly (and multi trade is not allowed)", toCurrency,
                 pExchangePublic->name());
     }
   }
@@ -412,7 +411,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
   }
 
   if (currentTotalAmount.isZero()) {
-    log::warn("No available {} to trade", fromCurrency.str());
+    log::warn("No available {} to trade", fromCurrency);
   } else if (currentTotalAmount < startAmount) {
     log::warn("Will trade {} < {} amount", currentTotalAmount.str(), startAmount.str());
   }
@@ -615,7 +614,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
   }
 
   if (remStartAmount == startAmount) {
-    log::warn("No available amount of {} to sell", startAmount.currencyCode().str());
+    log::warn("No available amount of {} to sell", startAmount.currencyCode());
   } else if (!remStartAmount.isZero()) {
     log::warn("Will trade {} < {} amount", (startAmount - remStartAmount).str(), startAmount.str());
   }
@@ -628,7 +627,7 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
                                              const ExchangeName &toPrivateExchangeName, Duration withdrawRefreshTime) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (isPercentageWithdraw) {
-    log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode.str(),
+    log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode,
               fromPrivateExchangeName.str(), toPrivateExchangeName.str());
   } else {
     log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
@@ -647,13 +646,15 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
 
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
     string errMsg("It's currently not possible to withdraw ");
-    errMsg.append(currencyCode.str()).append(" from ").append(fromPrivateExchangeName.str());
+    currencyCode.appendStr(errMsg);
+    errMsg.append(" from ").append(fromPrivateExchangeName.str());
     log::error(errMsg);
     return WithdrawInfo(std::move(errMsg));
   }
   if (!toExchange.canDeposit(currencyCode, currencyExchangeSets.back())) {
     string errMsg("It's currently not possible to deposit ");
-    errMsg.append(currencyCode.str()).append(" to ").append(fromPrivateExchangeName.str());
+    currencyCode.appendStr(errMsg);
+    errMsg.append(" to ").append(fromPrivateExchangeName.str());
     log::error(errMsg);
     return WithdrawInfo(std::move(errMsg));
   }
@@ -668,7 +669,7 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
                                                                  ExchangeNameSpan exchangeNames) {
-  log::info("{} withdraw fees for {}", currencyCode.str(), ConstructAccumulatedExchangeNames(exchangeNames));
+  log::info("{} withdraw fees for {}", currencyCode, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames, true);
 
   MonetaryAmountPerExchange withdrawFeePerExchange(selectedExchanges.size());

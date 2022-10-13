@@ -99,7 +99,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
                                             const Fiats &fiats, bool considerStableCoinsAsFiats) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
-    log::warn("Cannot convert {} to itself", fromCurrency.str());
+    log::warn("Cannot convert {} to itself", fromCurrency);
     return ret;
   }
 
@@ -239,7 +239,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
 
   if (!filterCur.isNeutral()) {
     std::size_t firstCurLen;
-    std::string_view curStr = filterCur.str();
+    auto curStr = filterCur.str();
     std::size_t curPos = marketStr.find(curStr);
     if (curPos == 0) {
       firstCurLen = curStr.size();
@@ -317,7 +317,7 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
     if (tryAppendBaseCurrency(filterCur2)) {
       tryAppendQuoteCurrency(filterCur2, filterCur1);
     } else {
-      log::debug("Cannot find {} among {} markets", filterCur1.str(), name());
+      log::debug("Cannot find {} among {} markets", filterCur1, name());
     }
   }
   return ret;

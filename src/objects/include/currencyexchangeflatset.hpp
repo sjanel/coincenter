@@ -63,7 +63,7 @@ class CurrencyExchangeFlatSet {
     const_iterator it = find(standardCode);
     if (it == _set.end()) {
       string ex("Unknown ");
-      ex.append(standardCode.str());
+      standardCode.appendStr(ex);
       throw exception(std::move(ex));
     }
     return *it;

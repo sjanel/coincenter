@@ -21,7 +21,7 @@ bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlat
   }
   auto lb = currencyExchangeSet.find(currencyCode);
   if (lb == currencyExchangeSet.end()) {
-    log::trace("{} cannot be withdrawed from {}", currencyCode.str(), name());
+    log::trace("{} cannot be withdrawed from {}", currencyCode, name());
     return false;
   }
   return lb->canWithdraw();
@@ -30,7 +30,7 @@ bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlat
 bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
   auto lb = currencyExchangeSet.find(currencyCode);
   if (lb == currencyExchangeSet.end()) {
-    log::trace("{} cannot be deposited on {}", currencyCode.str(), name());
+    log::trace("{} cannot be deposited on {}", currencyCode, name());
     return false;
   }
   return lb->canDeposit();

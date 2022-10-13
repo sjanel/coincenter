@@ -61,7 +61,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
   CurrencyCode standardCode(config.standardizeCurrencyCode(krakenAltName));
   if (excludedCurrencies.contains(standardCode)) {
     // Forbidden currency, do not consider its market
-    log::trace("Discard {} excluded by config", standardCode.str());
+    log::trace("Discard {} excluded by config", standardCode);
     return false;
   }
   return true;
@@ -132,7 +132,7 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
   auto foundIt = withdrawalFeeMaps.find(currencyCode);
   if (foundIt == withdrawalFeeMaps.end()) {
-    log::error("Unable to find {} withdrawal fee for {}", name(), currencyCode.str());
+    log::error("Unable to find {} withdrawal fee for {}", name(), currencyCode);
     return MonetaryAmount(0, currencyCode);
   }
   return foundIt->second;
@@ -367,12 +367,18 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   for (Market m : markets) {
     auto lb = krakenCurrencies.find(m.base());
     if (lb == krakenCurrencies.end()) {
-      throw exception("Cannot find " + string(m.baseStr()) + " in Kraken currencies");
+      string msg("Cannot find ");
+      m.base().appendStr(msg);
+      msg.append(" in Kraken currencies");
+      throw exception(std::move(msg));
     }
     CurrencyExchange krakenCurrencyExchangeBase = *lb;
     lb = krakenCurrencies.find(m.quote());
     if (lb == krakenCurrencies.end()) {
-      throw exception("Cannot find " + string(m.quoteStr()) + " in Kraken currencies");
+      string msg("Cannot find ");
+      m.quote().appendStr(msg);
+      msg.append(" in Kraken currencies");
+      throw exception(std::move(msg));
     }
     CurrencyExchange krakenCurrencyExchangeQuote = *lb;
     Market krakenMarket(krakenCurrencyExchangeBase.altCode(), krakenCurrencyExchangeQuote.altCode());
@@ -421,15 +427,21 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   CurrencyExchangeFlatSet krakenCurrencies = _tradableCurrenciesCache.get();
   auto lb = krakenCurrencies.find(m.base());
   if (lb == krakenCurrencies.end()) {
-    throw exception("Cannot find " + string(m.baseStr()) + " in Kraken currencies");
+    string msg("Cannot find ");
+    m.base().appendStr(msg);
+    msg.append(" in Kraken currencies");
+    throw exception(std::move(msg));
   }
   CurrencyExchange krakenCurrencyExchangeBase = *lb;
   lb = krakenCurrencies.find(m.quote());
   if (lb == krakenCurrencies.end()) {
-    throw exception("Cannot find " + string(m.quoteStr()) + " in Kraken currencies");
+    string msg("Cannot find ");
+    m.quote().appendStr(msg);
+    msg.append(" in Kraken currencies");
+    throw exception(std::move(msg));
   }
   CurrencyExchange krakenCurrencyExchangeQuote = *lb;
-  string krakenAssetPair(krakenCurrencyExchangeBase.altStr());
+  string krakenAssetPair = krakenCurrencyExchangeBase.altStr();
   krakenAssetPair.append(krakenCurrencyExchangeQuote.altStr());
   json result = PublicQuery(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
   const json& entry = result.front();
@@ -494,7 +506,7 @@ void KrakenPublic::updateCacheFile() const {
     json data;
     data["timeepoch"] = std::chrono::duration_cast<std::chrono::seconds>(latestUpdate.time_since_epoch()).count();
     for (const auto& [curCode, withdrawFee] : withdrawalInfoMaps.first) {
-      string curCodeStr(curCode.str());
+      string curCodeStr = curCode.str();
       data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
       data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
     }

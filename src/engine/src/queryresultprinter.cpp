@@ -33,10 +33,10 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       string marketsCol("Markets with ");
-      marketsCol.append(cur1.str());
+      cur1.appendStr(marketsCol);
       if (!cur2.isNeutral()) {
         marketsCol.push_back('-');
-        marketsCol.append(cur2.str());
+        cur2.appendStr(marketsCol);
       }
       SimpleTable t("Exchange", std::move(marketsCol));
       for (const auto &[e, markets] : marketsPerExchange) {
@@ -587,12 +587,12 @@ void QueryResultPrinter::printLastTrades(Market m, int nbLastTrades,
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       for (const auto &[exchangePtr, lastTrades] : lastTradesPerExchange) {
-        string buyTitle(m.baseStr());
+        string buyTitle = m.base().str();
+        string sellTitle = buyTitle;
         buyTitle.append(" buys");
-        string sellTitle(m.baseStr());
         sellTitle.append(" sells");
         string priceTitle("Price in ");
-        priceTitle.append(m.quoteStr());
+        m.quote().appendStr(priceTitle);
 
         string title(exchangePtr->name());
         title.append(" trades - UTC");

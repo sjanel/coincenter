@@ -29,7 +29,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       } else {
-        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency.str(), _exchangePublic.name());
+        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency, _exchangePublic.name());
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
       log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
@@ -45,22 +45,22 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   const int nbTrades = static_cast<int>(conversionPath.size());
   const bool isMultiTradeAllowed = options.isMultiTradeAllowed(exchangeInfo().multiTradeAllowedByDefault());
   log::info("{}rade {} -> {} on {}_{} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from.str(),
-            toCurrency.str(), _exchangePublic.name(), keyName());
+            toCurrency, _exchangePublic.name(), keyName());
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
-    log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency.str(), _exchangePublic.name());
+    log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency, _exchangePublic.name());
     return tradedAmounts;
   }
   if (nbTrades > 1 && !isMultiTradeAllowed) {
     log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from.str(),
-               toCurrency.str(), nbTrades);
+               toCurrency, nbTrades);
     return tradedAmounts;
   }
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
     Market m = conversionPath[tradePos];
     log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(),
-              m.opposite(avAmount.currencyCode()).str());
+              m.opposite(avAmount.currencyCode()));
     TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, m);
     avAmount = stepTradedAmounts.tradedTo;
     if (avAmount.isZero()) {

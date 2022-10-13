@@ -167,7 +167,7 @@ BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateE
                                           CurrencyCode equiCurrency) {
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
-    log::warn("Consider {} instead of stable coin {} as equivalent currency", optEquiCur->str(), equiCurrency.str());
+    log::warn("Consider {} instead of stable coin {} as equivalent currency", *optEquiCur, equiCurrency);
     equiCurrency = *optEquiCur;
   }
 
