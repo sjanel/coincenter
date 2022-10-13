@@ -30,13 +30,13 @@ string CurrencyExchange::str() const {
   if (_exchangeCode != _standardCode || _altCode != _standardCode) {
     ret.push_back('(');
     if (_exchangeCode != _standardCode) {
-      ret.append(_exchangeCode.str());
+      _exchangeCode.appendStr(ret);
     }
     if (_altCode != _standardCode) {
       if (_exchangeCode != _standardCode) {
         ret.push_back(',');
       }
-      ret.append(_altCode.str());
+      _altCode.appendStr(ret);
     }
     ret.push_back(')');
   }

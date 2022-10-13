@@ -112,7 +112,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
       log::trace("Discard {}-{} excluded by config", baseAsset, quoteAsset);
       continue;
     }
-    if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
+    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
@@ -152,7 +152,9 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& currencyInfoSet = _tradableCurrenciesCache.get();
   auto it = currencyInfoSet.find(TradableCurrenciesFunc::CurrencyInfo(currencyCode));
   if (it == currencyInfoSet.end()) {
-    throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
+    string msg("Unable to find withdrawal fee for ");
+    currencyCode.appendStr(msg);
+    throw exception(std::move(msg));
   }
   return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
 }

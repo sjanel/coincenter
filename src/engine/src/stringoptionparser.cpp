@@ -5,6 +5,7 @@
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 namespace {
@@ -76,7 +77,6 @@ auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPerce
   }
   return std::make_pair(std::move(startAmount), isPercentage);
 }
-
 }  // namespace
 
 ExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
@@ -131,11 +131,11 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
     std::string_view token1 = GetNextStr(_opt, ',', pos);
     if (!IsExchangeName(token1)) {
       startExchangesPos = pos;
-      fromTradeCurrency = token1;
+      fromTradeCurrency = CurrencyCode(token1);
       std::string_view token2 = GetNextStr(_opt, ',', pos);
       if (!IsExchangeName(token2)) {
         startExchangesPos = pos;
-        toTradeCurrency = token2;
+        toTradeCurrency = CurrencyCode(token2);
       }
     }
   } else {

@@ -34,9 +34,9 @@ class CurrencyExchange {
   CurrencyExchange(CurrencyCode standardCode, CurrencyCode exchangeCode, CurrencyCode altCode, Deposit deposit,
                    Withdraw withdraw, Type type);
 
-  std::string_view standardStr() const { return _standardCode.str(); }
-  std::string_view exchangeStr() const { return _exchangeCode.str(); }
-  std::string_view altStr() const { return _altCode.str(); }
+  string standardStr() const { return _standardCode.str(); }
+  string exchangeStr() const { return _exchangeCode.str(); }
+  string altStr() const { return _altCode.str(); }
 
   string str() const;
 

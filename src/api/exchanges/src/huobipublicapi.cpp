@@ -115,7 +115,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::debug("Cannot find {} main chain in Huobi, discarding currency", cur.str());
+      log::debug("Cannot find {} main chain in Huobi, discarding currency", cur);
     }
   }
   CurrencyExchangeFlatSet ret(std::move(currencies));
@@ -150,7 +150,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
       log::trace("Trading is {} for market {}-{}", stateStr, baseAsset, quoteAsset);
       continue;
     }
-    if (baseAsset.size() > CurrencyCode::kAcronymMaxLen || quoteAsset.size() > CurrencyCode::kAcronymMaxLen) {
+    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
@@ -247,7 +247,9 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       }
     }
   }
-  throw exception("Unable to find withdrawal fee for " + string(currencyCode.str()));
+  string msg("Unable to find withdrawal fee for ");
+  currencyCode.appendStr(msg);
+  throw exception(std::move(msg));
 }
 
 MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {

@@ -22,10 +22,10 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string methodUrl(endpoint);
   methodUrl.push_back('/');
-  methodUrl.append(base.str());
+  base.appendStr(methodUrl);
   if (!quote.isNeutral()) {
     methodUrl.push_back('_');
-    methodUrl.append(quote.str());
+    quote.appendStr(methodUrl);
   }
   if (!urlOpts.empty()) {
     methodUrl.push_back('?');
@@ -216,7 +216,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
         baseCurrencyCode = CurrencyCode(config.standardizeCurrencyCode(baseOrSpecial));
         if (excludedCurrencies.contains(baseCurrencyCode)) {
           // Forbidden currency, do not consider its market
-          log::trace("Discard {} excluded by config", baseCurrencyCode.str());
+          log::trace("Discard {} excluded by config", baseCurrencyCode);
           continue;
         }
         asksBids[0] = std::addressof(asksAndBids["asks"]);

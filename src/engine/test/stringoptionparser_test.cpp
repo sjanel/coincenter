@@ -31,6 +31,8 @@ TEST(StringOptionParserTest, GetCurrencyPrivateExchanges) {
           .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
       std::make_pair(CurrencyCode("KRW"), ExchangeNames({ExchangeName("bithumb"), ExchangeName("binance", "user1")})));
 
+  EXPECT_THROW(StringOptionParser("toolongcurrency,Bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
+               invalid_argument);
   EXPECT_THROW(StringOptionParser("binance_user1,bithumb")
                    .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
                invalid_argument);
@@ -42,6 +44,8 @@ TEST(StringOptionParserTest, GetMarketExchanges) {
   EXPECT_EQ(StringOptionParser("dash-krw,bithumb,upbit").getMarketExchanges(),
             StringOptionParser::MarketExchanges(Market("DASH", "KRW"),
                                                 ExchangeNames({ExchangeName("bithumb"), ExchangeName("upbit")})));
+
+  EXPECT_THROW(StringOptionParser("dash-toolongcurrency,bithumb,upbit").getMarketExchanges(), invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountPrivateExchanges) {

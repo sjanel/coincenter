@@ -20,8 +20,10 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
   _orders.reserve(nbPrices);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
     for (const OrderBookLine& l : orderLines) {
-      _volAndPriNbDecimals.volNbDecimals = std::min(_volAndPriNbDecimals.volNbDecimals, l._amount.maxNbDecimals());
-      _volAndPriNbDecimals.priNbDecimals = std::min(_volAndPriNbDecimals.priNbDecimals, l._price.maxNbDecimals());
+      _volAndPriNbDecimals.volNbDecimals =
+          std::min(_volAndPriNbDecimals.volNbDecimals, l._amount.currentMaxNbDecimals());
+      _volAndPriNbDecimals.priNbDecimals =
+          std::min(_volAndPriNbDecimals.priNbDecimals, l._price.currentMaxNbDecimals());
     }
   }
   if (nbPrices == 0) {
@@ -568,15 +570,17 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
 void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
                             std::optional<MonetaryAmount> conversionPriceRate) const {
   string h1("Sellers of ");
-  h1.append(_market.baseStr()).append(" (asks)");
+  string baseStr = _market.base().str();
+  h1.append(baseStr).append(" (asks)");
   string h2(exchangeName);
-  h2.append(" ").append(_market.baseStr()).append(" price in ").append(_market.quoteStr());
+  h2.append(" ").append(baseStr).append(" price in ");
+  _market.quote().appendStr(h2);
   string h3(exchangeName);
   if (conversionPriceRate) {
-    h3.append(" ").append(_market.baseStr()).append(" price in ").append(conversionPriceRate->currencyStr());
+    h3.append(" ").append(baseStr).append(" price in ").append(conversionPriceRate->currencyStr());
   }
   string h4("Buyers of ");
-  h4.append(_market.baseStr()).append(" (bids)");
+  h4.append(baseStr).append(" (bids)");
 
   SimpleTable t;
   if (conversionPriceRate) {

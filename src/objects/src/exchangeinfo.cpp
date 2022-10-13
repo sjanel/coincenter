@@ -15,7 +15,7 @@ string BuildCurrenciesString(std::span<const CurrencyCode> currencies) {
     if (ret.size() > 1) {
       ret.push_back(',');
     }
-    ret.append(c.str());
+    c.appendStr(ret);
   }
   ret.push_back(']');
   return ret;

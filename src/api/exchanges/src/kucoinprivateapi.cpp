@@ -142,7 +142,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v2/deposit-addresses",
                              {{"currency", currencyCode.str()}});
   if (result.empty()) {
-    log::info("No deposit address for {} in {}, creating one", currencyCode.str(), _kucoinPublic.name());
+    log::info("No deposit address for {} in {}, creating one", currencyCode, _kucoinPublic.name());
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/deposit-addresses",
                           {{"currency", currencyCode.str()}});
   } else {
@@ -258,7 +258,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(m, volume);
   if (volume < sanitizedVol) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
               sanitizedVol.str());
     placeOrderInfo.setClosed();
     return placeOrderInfo;

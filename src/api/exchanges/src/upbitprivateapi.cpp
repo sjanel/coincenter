@@ -102,10 +102,10 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
         depositStatus = CurrencyExchange::Deposit::kAvailable;
       }
       if (withdrawStatus == CurrencyExchange::Withdraw::kUnavailable) {
-        log::debug("{} cannot be withdrawn from Upbit", cur.str());
+        log::debug("{} cannot be withdrawn from Upbit", cur);
       }
       if (depositStatus == CurrencyExchange::Deposit::kUnavailable) {
-        log::debug("{} cannot be deposited to Upbit", cur.str());
+        log::debug("{} cannot be deposited to Upbit", cur);
       }
       currencies.emplace_back(cur, cur, cur, depositStatus, withdrawStatus,
                               _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
@@ -136,7 +136,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     std::string_view name = (*errorIt)["name"].get<std::string_view>();
     std::string_view msg = (*errorIt)["message"].get<std::string_view>();
     if (name == "coin_address_not_found") {
-      log::warn("No deposit address found for {}, generating a new one", currencyCode.str());
+      log::warn("No deposit address found for {}, generating a new one", currencyCode);
       generateDepositAddressNeeded = true;
     } else {
       string err("error: ");
@@ -167,7 +167,8 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   auto addressIt = result.find("deposit_address");
   if (addressIt == result.end() || addressIt->is_null()) {
     string err("Deposit address for ");
-    err.append(currencyCode.str()).append(" is undefined");
+    currencyCode.appendStr(err);
+    err.append(" is undefined");
     throw exception(std::move(err));
   }
   std::string_view tag;
@@ -325,7 +326,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
               sanitizedVol.str());
     placeOrderInfo.setClosed();
     return placeOrderInfo;
@@ -419,7 +420,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   // 'canceled'}
   const bool isCanceled = stateUpperStr == "CANCELED";
   if (isCanceled) {
-    log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode.str());
+    log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode);
   }
   const bool isDone = stateUpperStr == "DONE";
   return SentWithdrawInfo(netEmittedAmount, isDone || isCanceled);

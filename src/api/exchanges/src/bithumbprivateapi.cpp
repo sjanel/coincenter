@@ -281,7 +281,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   json ret = PrivateQuery(_curlHandle, _apiKey, kWalletAddressEndpointStr, {{"currency", currencyCode.str()}});
   if (ret.empty()) {
     string err("Bithumb wallet is not created for ");
-    err.append(currencyCode.str());
+    currencyCode.appendStr(err);
     err.append(", it should be done with the UI first (no way to do it via API).");
     throw exception(std::move(err));
   }
@@ -315,7 +315,7 @@ Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
     if (!filterMarket.base().isNeutral()) {
       orderCurrencies.push_back(filterMarket.base());
       if (!filterMarket.quote().isNeutral()) {
-        params.append(kPaymentCurParamStr, filterMarket.quoteStr());
+        params.append(kPaymentCurParamStr, filterMarket.quote().str());
       }
     }
   } else {
@@ -399,7 +399,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   const Market m = tradeInfo.m;
 
   // It seems Bithumb uses "standard" currency codes, no need to translate them
-  CurlPostData placePostData{{kOrderCurrencyParamStr, m.baseStr()}, {kPaymentCurParamStr, m.quoteStr()}};
+  CurlPostData placePostData{{kOrderCurrencyParamStr, m.base().str()}, {kPaymentCurParamStr, m.quote().str()}};
   const std::string_view orderType = fromCurrencyCode == m.base() ? "ask" : "bid";
 
   string endpoint("/trade/");
@@ -430,7 +430,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       volume.truncate(nbMaxDecimalsUnits);
       if (volume.isZero()) {
         log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
-                  toCurrencyCode.str(), static_cast<int>(nbMaxDecimalsUnits));
+                  toCurrencyCode, static_cast<int>(nbMaxDecimalsUnits));
         placeOrderInfo.setClosed();
         return placeOrderInfo;
       }
@@ -455,8 +455,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           }
           placePostData.set("price", price.amountStr());
         } else {
-          log::warn("No trade of {} into {} because {} is outside price bounds [{}, {}]", volume.str(),
-                    toCurrencyCode.str(), price.str(), minOrderPrice.str(), maxOrderPrice.str());
+          log::warn("No trade of {} into {} because {} is outside price bounds [{}, {}]", volume.str(), toCurrencyCode,
+                    price.str(), minOrderPrice.str(), maxOrderPrice.str());
           placeOrderInfo.setClosed();
           return placeOrderInfo;
         }
@@ -474,7 +474,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
         log::error("Unexpected currency for min order size {}", size.str());
       }
       if (size < currencyOrderInfo.minOrderSize && !isSimulationWithRealOrder) {
-        log::warn("No trade of {} into {} because {} is lower than min order {}", volume.str(), toCurrencyCode.str(),
+        log::warn("No trade of {} into {} because {} is lower than min order {}", volume.str(), toCurrencyCode,
                   size.str(), currencyOrderInfo.minOrderSize.str());
         placeOrderInfo.setClosed();
         return placeOrderInfo;
@@ -503,8 +503,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
           placePostData.set("units", volume.amountStr());
         } else {
-          log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(),
-                    toCurrencyCode.str(), currencyOrderInfo.minOrderSize.str());
+          log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(), toCurrencyCode,
+                    currencyOrderInfo.minOrderSize.str());
           break;
         }
       } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
@@ -516,7 +516,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           }
         } else {
           log::warn("No trade of {} into {} because min order price is {} for this market", volume.str(),
-                    toCurrencyCode.str(), currencyOrderInfo.minOrderPrice.str());
+                    toCurrencyCode, currencyOrderInfo.minOrderPrice.str());
           break;
         }
       } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
@@ -528,7 +528,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           }
         } else {
           log::warn("No trade of {} into {} because max order price is {} for this market", volume.str(),
-                    toCurrencyCode.str(), currencyOrderInfo.maxOrderPrice.str());
+                    toCurrencyCode, currencyOrderInfo.maxOrderPrice.str());
           break;
         }
       } else {
@@ -557,8 +557,8 @@ OrderInfo BithumbPrivate::cancelOrder(const OrderRef& orderRef) {
 namespace {
 CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view id) {
   CurlPostData ret;
-  std::string_view baseStr = m.baseStr();
-  std::string_view quoteStr = m.quoteStr();
+  auto baseStr = m.base().str();
+  auto quoteStr = m.quote().str();
   ret.reserve(kOrderCurrencyParamStr.size() + kPaymentCurParamStr.size() + kTypeParamStr.size() +
               kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + id.size() + 10U);
   ret.append(kOrderCurrencyParamStr, baseStr);

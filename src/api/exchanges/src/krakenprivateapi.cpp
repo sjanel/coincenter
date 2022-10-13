@@ -107,7 +107,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
   if (res.empty()) {
-    throw exception("No deposit method found on Kraken for " + string(currencyCode.str()));
+    string msg("No deposit method found on Kraken for ");
+    currencyCode.appendStr(msg);
+    throw exception(std::move(msg));
   }
   // Don't keep a view on 'method' value, we will override json data just below. We can just steal the string.
   string method = std::move(res.front()["method"].get_ref<string&>());
@@ -115,12 +117,12 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
                      {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
     // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
-    log::warn("No deposit address found on {} for {}, creating a new one", _exchangePublic.name(), currencyCode.str());
+    log::warn("No deposit address found on {} for {}, creating a new one", _exchangePublic.name(), currencyCode);
     res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
       string err("Cannot create a new deposit address on Kraken for ");
-      err.append(currencyCode.str());
+      currencyCode.appendStr(err);
       throw exception(std::move(err));
     }
   }
@@ -155,7 +157,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       } else {
         // Heuristic: this last field may change key name and is optional (tag for XRP, memo for EOS for instance)
         if (!tag.empty()) {
-          throw exception("Tag already set / unknown key information for " + string(currencyCode.str()));
+          string msg("Tag already set / unknown key information for ");
+          currencyCode.appendStr(msg);
+          throw exception(std::move(msg));
         }
         if (valueStr.is_number_integer()) {
           SetString(tag, static_cast<long>(valueStr));
@@ -266,7 +270,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
   if (volume < orderMin) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode.str(),
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
               orderMin.str());
     placeOrderInfo.setClosed();
     return placeOrderInfo;
@@ -398,7 +402,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 
   string krakenWalletName(wallet.exchangeName().str());
   krakenWalletName.push_back('_');
-  krakenWalletName.append(currencyCode.str());
+  currencyCode.appendStr(krakenWalletName);
   std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);
 
   json withdrawData = PrivateQuery(

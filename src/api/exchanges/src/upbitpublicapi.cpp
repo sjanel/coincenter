@@ -84,7 +84,7 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
 bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies) {
   if (excludedCurrencies.contains(standardCode)) {
     // Forbidden currency, do not consider its market
-    log::trace("Discard {} excluded by config", standardCode.str());
+    log::trace("Discard {} excluded by config", standardCode);
     return false;
   }
   return true;

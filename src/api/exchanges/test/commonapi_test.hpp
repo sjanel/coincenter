@@ -115,14 +115,14 @@ class TestAPI {
 
       for (const CurrencyExchange &curExchange : sample) {
         CurrencyCode cur(curExchange.standardCode());
-        log::info("Choosing {} as random currency code for Withdrawal fee test", cur.str());
+        log::info("Choosing {} as random currency code for Withdrawal fee test", cur);
         auto withdrawalFeeIt = withdrawalFees.find(cur);
         if (exchangePublic.isWithdrawalFeesSourceReliable() || withdrawalFeeIt != withdrawalFees.end()) {
           ASSERT_NE(withdrawalFeeIt, withdrawalFees.end());
           EXPECT_GE(withdrawalFeeIt->second, MonetaryAmount(0, withdrawalFeeIt->second.currencyCode()));
           break;
         } else {
-          log::warn("{} withdrawal fee is not known (unreliable source), trying another one", cur.str());
+          log::warn("{} withdrawal fee is not known (unreliable source), trying another one", cur);
         }
       }
     }
@@ -155,7 +155,7 @@ class TestAPI {
 
         for (const CurrencyExchange &curExchange : sample) {
           CurrencyCode cur(curExchange.standardCode());
-          log::info("Choosing {} as random currency code for Deposit wallet test", cur.str());
+          log::info("Choosing {} as random currency code for Deposit wallet test", cur);
           try {
             Wallet w = exchangePrivatePtr.get()->queryDepositWallet(cur);
             EXPECT_FALSE(w.address().empty());
@@ -164,7 +164,7 @@ class TestAPI {
             if (exchangePrivatePtr.get()->canGenerateDepositAddress()) {
               throw;
             } else {
-              log::info("Wallet for {} is not generated, taking next one", cur.str());
+              log::info("Wallet for {} is not generated, taking next one", cur);
             }
           }
         }

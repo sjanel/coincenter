@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 
 namespace cct {
 
@@ -101,6 +102,8 @@ TEST(MonetaryAmountTest, Arithmetic) {
 
 TEST(MonetaryAmountTest, Comparison) {
   EXPECT_LT(MonetaryAmount("0.49999999999976", "KRW"), MonetaryAmount("14183417.9174094504", "KRW"));
+  EXPECT_LT(MonetaryAmount("0.00326358030948980448", "EUR"), MonetaryAmount("0.102", "EUR"));
+  EXPECT_LT(MonetaryAmount("0.00326358030948980448", "Magic4Life"), MonetaryAmount("0.102", "Magic4Life"));
 }
 
 TEST(MonetaryAmountTest, OverflowProtectionDecimalPart) {
@@ -127,20 +130,24 @@ TEST(MonetaryAmountTest, OverflowProtectionSub) {
   EXPECT_EQ(lhs -= rhs, MonetaryAmount("-18050022.9509450472", "BTC"));
 }
 
-TEST(MonetaryAmountTest, OverflowProtectionMultiplication) {
-  EXPECT_EQ(MonetaryAmount("-9472902.80094504728", "BTC") * 3, MonetaryAmount("-28418708.4028351416", "BTC"));
-  EXPECT_EQ(MonetaryAmount("9472902.80094504728", "BTC") * -42, MonetaryAmount("-397861917.639691974", "BTC"));
+TEST(MonetaryAmountTest, Multiply) {
+  EXPECT_EQ(MonetaryAmount("3.25", CurrencyCode("ETH")) * MonetaryAmount("4.578"),
+            MonetaryAmount("14.8785", CurrencyCode("ETH")));
+  EXPECT_EQ(MonetaryAmount("79871.9000917457") * MonetaryAmount("-34.141590974"),
+            MonetaryAmount("-2726953.66542788469"));
+  EXPECT_THROW(MonetaryAmount(1, "EUR") * MonetaryAmount(2, "ETH"), exception);
+}
 
-  EXPECT_LT(MonetaryAmount("0.00326358030948980448 BTC"), MonetaryAmount("0.102 BTC"));
-  EXPECT_EQ(MonetaryAmount("0.00427734447678 BTC") * MonetaryAmount("0.9974"),
-            MonetaryAmount("0.00426622338114037 BTC"));
-  EXPECT_EQ(MonetaryAmount("38.0566894350664") * MonetaryAmount("0.00008795 BTC"),
-            MonetaryAmount("0.00334708583581405 BTC"));
-  EXPECT_EQ(MonetaryAmount("0.00353598978800261 ETH") / MonetaryAmount("19.65 ETH"),
-            MonetaryAmount("0.00017994858972023"));
-  EXPECT_EQ(MonetaryAmount("0.00000598978800261 ETH") / MonetaryAmount("19.65 ETH"),
-            MonetaryAmount("0.00000030482381692"));
-  EXPECT_EQ(MonetaryAmount("0.00000598978800261 ETH") / 17, MonetaryAmount("0.00000035234047074 ETH"));
+TEST(MonetaryAmountTest, OverflowProtectionMultiplication) {
+  for (CurrencyCode cur : {CurrencyCode("ETH"), CurrencyCode("Magic4Life")}) {
+    EXPECT_EQ(MonetaryAmount("-9472902.80094504728", cur) * 3, MonetaryAmount("-28418708.4028351416", cur));
+    EXPECT_EQ(MonetaryAmount("9472902.80094504728", cur) * -42, MonetaryAmount("-397861917.639691974", cur));
+
+    EXPECT_EQ(MonetaryAmount("0.00427734447678", cur) * MonetaryAmount("0.9974"),
+              MonetaryAmount("0.00426622338114037", cur));
+    EXPECT_EQ(MonetaryAmount("38.0566894350664") * MonetaryAmount("0.00008795", cur),
+              MonetaryAmount("0.00334708583581405", cur));
+  }
 }
 
 TEST(MonetaryAmountTest, Divide) {
@@ -170,12 +177,21 @@ TEST(MonetaryAmountTest, Divide) {
             MonetaryAmount("0.00000000108420217"));
 }
 
-TEST(MonetaryAmountTest, Multiply) {
-  EXPECT_EQ(MonetaryAmount("3.25", CurrencyCode("ETH")) * MonetaryAmount("4.578"),
-            MonetaryAmount("14.8785", CurrencyCode("ETH")));
-  EXPECT_EQ(MonetaryAmount("79871.9000917457") * MonetaryAmount("-34.141590974"),
-            MonetaryAmount("-2726953.66542788469"));
-  EXPECT_THROW(MonetaryAmount(1, "EUR") * MonetaryAmount(2, "ETH"), exception);
+TEST(MonetaryAmountTest, OverflowProtectionDivide) {
+  for (CurrencyCode cur : {CurrencyCode(), CurrencyCode("ETH")}) {
+    EXPECT_EQ(MonetaryAmount("0.00353598978800261", cur) / MonetaryAmount("19.65", cur),
+              MonetaryAmount("0.00017994858972023"));
+    EXPECT_EQ(MonetaryAmount("0.00000598978800261", cur) / MonetaryAmount("19.65", cur),
+              MonetaryAmount("0.00000030482381692"));
+    EXPECT_EQ(MonetaryAmount("0.00000598978800261", cur) / 17, MonetaryAmount("0.00000035234047074", cur));
+  }
+
+  EXPECT_EQ(MonetaryAmount("0.003535989788002", "Magic4Life") / MonetaryAmount("19.65", "Magic4Life"),
+            MonetaryAmount("0.0001799485897202"));
+  EXPECT_EQ(MonetaryAmount("0.00000598978800261", "Magic4Life") / MonetaryAmount("19.65", "Magic4Life"),
+            MonetaryAmount("0.00000030482381689"));
+  EXPECT_EQ(MonetaryAmount("0.00000598978800261", "Magic4Life") / 17,
+            MonetaryAmount("0.00000035234047074", "Magic4Life"));
 }
 
 TEST(MonetaryAmountTest, Convert) {
@@ -190,19 +206,31 @@ TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("746REPV2"), MonetaryAmount("746", "REPV2"));
 }
 
+TEST(MonetaryAmountTest, StringConstructorAmbiguity) {
+  EXPECT_EQ(MonetaryAmount("804.621INCH"), MonetaryAmount("804.621", "INCH"));
+  EXPECT_EQ(MonetaryAmount("804.62", "1INCH"), MonetaryAmount("804.62", "1INCH"));
+}
+
+TEST(MonetaryAmountTest, CurrencyTooLong) {
+  EXPECT_THROW(MonetaryAmount("804.62 thiscuristoolong"), exception);
+  EXPECT_THROW(MonetaryAmount("-210.50magicNumber"), exception);
+}
+
 TEST(MonetaryAmountTest, Zero) {
   EXPECT_TRUE(MonetaryAmount("0EUR").isZero());
   EXPECT_FALSE(MonetaryAmount("0.0001EUR").isZero());
 }
 
 TEST(MonetaryAmountTest, RoundingPositiveDown) {
-  MonetaryAmount a("12.35 EUR");
-  a.round(1, MonetaryAmount::RoundType::kDown);
-  EXPECT_EQ(a, MonetaryAmount("12.3 EUR"));
+  for (CurrencyCode cur : {CurrencyCode("EUR"), CurrencyCode("MAGIC4LIFE")}) {
+    MonetaryAmount a("12.35", cur);
+    a.round(1, MonetaryAmount::RoundType::kDown);
+    EXPECT_EQ(a, MonetaryAmount("12.3", cur));
 
-  a = MonetaryAmount("12.354 EUR");
-  a.round(1, MonetaryAmount::RoundType::kDown);
-  EXPECT_EQ(a, MonetaryAmount("12.3 EUR"));
+    a = MonetaryAmount("12.354", cur);
+    a.round(1, MonetaryAmount::RoundType::kDown);
+    EXPECT_EQ(a, MonetaryAmount("12.3", cur));
+  }
 }
 
 TEST(MonetaryAmountTest, StepRoundingPositiveDown) {

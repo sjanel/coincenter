@@ -34,11 +34,11 @@ OrdersConstraints::OrdersConstraints(CurrencyCode cur1, CurrencyCode cur2, Durat
 string OrdersConstraints::str() const {
   string ret;
   if (isCur1Defined()) {
-    ret.append(_cur1.str());
+    _cur1.appendStr(ret);
   }
   if (isCur2Defined()) {
     ret.push_back('-');
-    ret.append(_cur2.str());
+    _cur2.appendStr(ret);
   }
   if (ret.empty()) {
     ret.append("any");
