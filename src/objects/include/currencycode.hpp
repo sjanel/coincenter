@@ -20,8 +20,6 @@ class CurrencyCode {
  public:
   static constexpr int kAcronymMaxLen = 7;
 
-  using AcronymType = std::array<char, kAcronymMaxLen>;  // warning: not null terminated
-
   /// Constructs a neutral currency code.
   constexpr CurrencyCode() noexcept : _data() {}
 
@@ -33,6 +31,7 @@ class CurrencyCode {
   }
 
   /// Constructs a currency code from given string.
+  /// If number of chars in 'acronym' is higher than 'kAcronymMaxLen', currency code will be truncated silently.
   /// Note: spaces are not skipped. If any, there will be captured as part of the code, which is probably unexpected.
   constexpr CurrencyCode(std::string_view acronym) {
     if (_data.size() < acronym.size()) {
@@ -44,7 +43,12 @@ class CurrencyCode {
     set(acronym);
   }
 
+  /// Constructs a currency code from given string, with no truncation possible.
+  /// If str is too long, invalid_argument exception will be thrown
+  static CurrencyCode fromStrSafe(std::string_view acronym);
+
   constexpr uint64_t size() const { return std::ranges::find(_data, '\0') - _data.begin(); }
+  constexpr uint64_t length() const { return size(); }
 
   /// Get a string view of this CurrencyCode, trimmed.
   constexpr std::string_view str() const { return std::string_view(_data.begin(), std::ranges::find(_data, '\0')); }
@@ -73,7 +77,7 @@ class CurrencyCode {
   }
 
  private:
-  AcronymType _data;
+  std::array<char, kAcronymMaxLen> _data;  // warning: not always null terminated
 
   constexpr inline void set(std::string_view acronym) {
     // Fill extra chars to 0 is important as we always read them for code generation

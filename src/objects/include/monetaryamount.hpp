@@ -16,10 +16,11 @@
 namespace cct {
 
 /// Represents a fixed-precision decimal amount with a currency (fiat or coin).
-///
-/// This object aims to provide high performance operations as well as predictive and precise basic arithmetic (as
-/// opposed to double).
-/// In addition, it is light (only 16 bytes) and can be passed by copy instead of reference.
+/// It is designed to be
+///  - fast
+///  - small (16 bytes only). Thus can be passed by copy instead of reference
+///  - precise (amount is stored in a int64_t)
+///  - optimized, predictive and exact for additions and subtractions (if no overflow during the operation)
 ///
 /// It is easy and straightforward to use with string_view constructor and partial constexpr support.
 ///
@@ -29,7 +30,7 @@ namespace cct {
 class MonetaryAmount {
  public:
   using AmountType = int64_t;
-  enum class RoundType { kDown, kUp, kNearest };
+  enum class RoundType : int8_t { kDown, kUp, kNearest };
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0), _nbDecimals(0) {}
@@ -62,6 +63,7 @@ class MonetaryAmount {
 
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
   /// If it's not present, assume default CurrencyCode.
+  /// If the currency is too long to fit in a CurrencyCode, exception invalid_argument will be raised
   /// If given string is empty, it is equivalent to a default constructor.
   /// Examples: "10.5EUR" -> 10.5 units of currency EUR
   ///           "45 KRW" -> 45 units of currency KRW
@@ -250,7 +252,7 @@ class MonetaryAmount {
 };
 
 static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small");
-static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount should be fast to copy");
+static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount should be trivially copyable");
 
 inline MonetaryAmount operator*(MonetaryAmount::AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 

@@ -69,14 +69,13 @@ auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPerce
   if (isPercentage) {
     assert(sepWithPercentageAtLast.back() == '%');
     std::string_view sepWithoutPercentage(sepWithPercentageAtLast.begin(), sepWithPercentageAtLast.end() - 1);
-    startAmount = MonetaryAmount(startAmount, CurrencyCode(GetNextStr(opt, sepWithoutPercentage, pos)));
+    startAmount = MonetaryAmount(startAmount, CurrencyCode::fromStrSafe(GetNextStr(opt, sepWithoutPercentage, pos)));
     if (startAmount.abs().toNeutral() > MonetaryAmount(100)) {
       throw invalid_argument("A percentage cannot be larger than 100");
     }
   }
   return std::make_pair(std::move(startAmount), isPercentage);
 }
-
 }  // namespace
 
 ExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
@@ -91,9 +90,10 @@ StringOptionParser::MarketExchanges StringOptionParser::getMarketExchanges() con
   std::size_t startExchangesPos =
       commaPos == std::string_view::npos ? _opt.size() : _opt.find_first_not_of(' ', commaPos + 1);
 
-  return MarketExchanges{Market(CurrencyCode(std::string_view(marketStr.begin(), marketStr.begin() + dashPos)),
-                                CurrencyCode(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()))),
-                         GetExchanges(StrEnd(_opt, startExchangesPos))};
+  return MarketExchanges{
+      Market(CurrencyCode::fromStrSafe(std::string_view(marketStr.begin(), marketStr.begin() + dashPos)),
+             CurrencyCode::fromStrSafe(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()))),
+      GetExchanges(StrEnd(_opt, startExchangesPos))};
 }
 
 StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPrivateExchanges(
@@ -114,7 +114,7 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
     throw invalid_argument("Expected a currency code first");
   }
 
-  return CurrencyPrivateExchanges(CurrencyCode(curStr), GetExchanges(exchangesStr));
+  return CurrencyPrivateExchanges(CurrencyCode::fromStrSafe(curStr), GetExchanges(exchangesStr));
 }
 
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(
@@ -131,17 +131,17 @@ StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrencies
     std::string_view token1 = GetNextStr(_opt, ',', pos);
     if (!IsExchangeName(token1)) {
       startExchangesPos = pos;
-      fromTradeCurrency = token1;
+      fromTradeCurrency = CurrencyCode::fromStrSafe(token1);
       std::string_view token2 = GetNextStr(_opt, ',', pos);
       if (!IsExchangeName(token2)) {
         startExchangesPos = pos;
-        toTradeCurrency = token2;
+        toTradeCurrency = CurrencyCode::fromStrSafe(token2);
       }
     }
   } else {
     // No ambiguity possible, both currencies are set from first position
-    fromTradeCurrency = CurrencyCode(GetNextStr(_opt, '-', startExchangesPos));
-    toTradeCurrency = CurrencyCode(GetNextStr(_opt, ',', startExchangesPos));
+    fromTradeCurrency = CurrencyCode::fromStrSafe(GetNextStr(_opt, '-', startExchangesPos));
+    toTradeCurrency = CurrencyCode::fromStrSafe(GetNextStr(_opt, ',', startExchangesPos));
   }
   if (currenciesShouldBeSet && (fromTradeCurrency.isNeutral() || toTradeCurrency.isNeutral())) {
     throw invalid_argument("Expected a dash");
@@ -155,7 +155,7 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
   auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, "-,%", pos);
   CurrencyCode toTradeCurrency;
   if (withCurrency) {
-    toTradeCurrency = CurrencyCode(GetNextStr(_opt, ',', pos));
+    toTradeCurrency = CurrencyCode::fromStrSafe(GetNextStr(_opt, ',', pos));
   }
 
   return std::make_tuple(startAmount, isPercentage, toTradeCurrency, GetExchanges(GetNextStr(_opt, '\0', pos)));
@@ -163,7 +163,7 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
 
 StringOptionParser::CurrencyFromToPrivateExchange StringOptionParser::getCurrencyFromToPrivateExchange() const {
   std::size_t pos = 0;
-  CurrencyCode cur(GetNextStr(_opt, ',', pos));
+  auto cur = CurrencyCode::fromStrSafe(GetNextStr(_opt, ',', pos));
   ExchangeName from(GetNextStr(_opt, '-', pos));
   // Warning: in C++, order of evaluation of parameters is unspecified. Because GetNextStr has side
   // effects (it modifies 'pos') we need temporary variables here
@@ -191,9 +191,9 @@ StringOptionParser::CurrencyPublicExchanges StringOptionParser::getCurrencyPubli
   std::size_t firstCommaPos = getNextCommaPos(0, false);
   CurrencyPublicExchanges ret;
   if (firstCommaPos == std::string_view::npos) {
-    ret.first = CurrencyCode(_opt);
+    ret.first = CurrencyCode::fromStrSafe(_opt);
   } else {
-    ret.first = CurrencyCode(std::string_view(_opt.begin(), _opt.begin() + firstCommaPos));
+    ret.first = CurrencyCode::fromStrSafe(std::string_view(_opt.begin(), _opt.begin() + firstCommaPos));
     ret.second = GetExchanges(StrEnd(_opt, firstCommaPos + 1));
   }
   return ret;
@@ -209,10 +209,11 @@ StringOptionParser::CurrenciesPublicExchanges StringOptionParser::getCurrenciesP
     std::get<2>(ret) = GetExchanges(StrEnd(_opt, firstCommaPos + 1));
   }
   if (dashPos == std::string_view::npos) {
-    std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), firstCommaPos));
+    std::get<0>(ret) = CurrencyCode::fromStrSafe(std::string_view(_opt.data(), firstCommaPos));
   } else {
-    std::get<0>(ret) = CurrencyCode(std::string_view(_opt.data(), dashPos));
-    std::get<1>(ret) = CurrencyCode(std::string_view(_opt.begin() + dashPos + 1, _opt.begin() + firstCommaPos));
+    std::get<0>(ret) = CurrencyCode::fromStrSafe(std::string_view(_opt.data(), dashPos));
+    std::get<1>(ret) =
+        CurrencyCode::fromStrSafe(std::string_view(_opt.begin() + dashPos + 1, _opt.begin() + firstCommaPos));
   }
   return ret;
 }

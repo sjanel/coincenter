@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 
 namespace cct {
 
@@ -188,6 +189,11 @@ TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("-210.50 CAKE"), MonetaryAmount("-210.50", "CAKE"));
   EXPECT_EQ(MonetaryAmount("05AUD"), MonetaryAmount(5, "AUD"));
   EXPECT_EQ(MonetaryAmount("746REPV2"), MonetaryAmount("746", "REPV2"));
+}
+
+TEST(MonetaryAmountTest, CurrencyTooLong) {
+  EXPECT_THROW(MonetaryAmount("804.62 toolongcur"), invalid_argument);
+  EXPECT_THROW(MonetaryAmount("-210.50iamtoolo"), invalid_argument);
 }
 
 TEST(MonetaryAmountTest, Zero) {

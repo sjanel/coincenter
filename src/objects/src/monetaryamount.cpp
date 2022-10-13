@@ -144,7 +144,7 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   std::string_view amountStr(amountCurrencyStr.begin(), last);
   RemoveTrailing(amountStr, ' ');
   std::tie(_amount, _nbDecimals) = AmountIntegralFromStr(amountStr);
-  _currencyCode = CurrencyCode(std::string_view(last, endIt));
+  _currencyCode = CurrencyCode::fromStrSafe(std::string_view(last, endIt));
   assert(isSane());
 }
 
