@@ -375,7 +375,7 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
       throw exception("Cannot find " + string(m.quoteStr()) + " in Kraken currencies");
     }
     CurrencyExchange krakenCurrencyExchangeQuote = *lb;
-    Market krakenMarket(krakenCurrencyExchangeBase.altStr(), krakenCurrencyExchangeQuote.altStr());
+    Market krakenMarket(krakenCurrencyExchangeBase.altCode(), krakenCurrencyExchangeQuote.altCode());
     string assetPairStr = krakenMarket.assetsPairStrUpper();
     if (!allAssetPairs.empty()) {
       allAssetPairs.push_back(',');
@@ -395,8 +395,8 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
     }
 
     Market m = krakenAssetPairToStdMarketMap.find(krakenAssetPair)->second;
-    m = Market(CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.baseStr())),
-               CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.quoteStr())));
+    m = Market(CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.base())),
+               CurrencyCode(_coincenterInfo.standardizeCurrencyCode(m.quote())));
     //  a = ask array(<price>, <whole lot volume>, <lot volume>)
     //  b = bid array(<price>, <whole lot volume>, <lot volume>)
     const json& askDetails = assetPairDetails["a"];
@@ -456,8 +456,8 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
 }
 
 KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market m) {
-  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
-                      _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
+  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altCode(),
+                      _tradableCurrenciesCache.get().getOrThrow(m.quote()).altCode());
   json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
   for (const auto& [krakenAssetPair, details] : result.items()) {
     std::string_view last24hVol = details["v"][1].get<std::string_view>();
@@ -468,8 +468,8 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 }
 
 LastTradesVector KrakenPublic::queryLastTrades(Market m, int) {
-  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altStr(),
-                      _tradableCurrenciesCache.get().getOrThrow(m.quote()).altStr());
+  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(m.base()).altCode(),
+                      _tradableCurrenciesCache.get().getOrThrow(m.quote()).altCode());
   json result = PublicQuery(_curlHandle, "/public/Trades", {{"pair", krakenMarket.assetsPairStrUpper()}});
   LastTradesVector ret;
   for (const json& det : result.front()) {

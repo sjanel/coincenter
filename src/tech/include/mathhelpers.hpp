@@ -75,6 +75,7 @@ template <class T>
 concept UnsignedIntegral = std::integral<T> && !std::is_signed_v<T>;
 
 /// Return the number of digits of given integral.
+/// The minus sign is not counted.
 /// Uses dichotomy for highest performance as possible.
 constexpr int ndigits(SignedIntegral auto n) noexcept {
   using T = decltype(n);

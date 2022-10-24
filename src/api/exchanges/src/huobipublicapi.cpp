@@ -167,21 +167,22 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
 
     marketInfo.volAndPriNbDecimals = VolAndPriNbDecimals(volNbDec, priNbDec);
 
-    marketInfo.minOrderValue = MonetaryAmount(marketDetails["min-order-value"].get<double>(), m.quote());
-    if (marketDetails.contains("max-order-value")) {  // in USDT
-      marketInfo.maxOrderValueUSDT = MonetaryAmount(marketDetails["max-order-value"].get<double>(), "USDT");
+    marketInfo.minOrderValue = MonetaryAmount(marketDetails["min-order-value"].get<double>(), quote);
+    auto maxOrderValueIt = marketDetails.find("max-order-value");
+    if (maxOrderValueIt != marketDetails.end()) {  // in USDT
+      marketInfo.maxOrderValueUSDT = MonetaryAmount(maxOrderValueIt->get<double>(), "USDT");
     }
 
-    marketInfo.limitMinOrderAmount = MonetaryAmount(marketDetails["limit-order-min-order-amt"].get<double>(), m.base());
-    marketInfo.limitMaxOrderAmount = MonetaryAmount(marketDetails["limit-order-max-order-amt"].get<double>(), m.base());
+    marketInfo.limitMinOrderAmount = MonetaryAmount(marketDetails["limit-order-min-order-amt"].get<double>(), base);
+    marketInfo.limitMaxOrderAmount = MonetaryAmount(marketDetails["limit-order-max-order-amt"].get<double>(), base);
 
     marketInfo.sellMarketMinOrderAmount =
-        MonetaryAmount(marketDetails["sell-market-min-order-amt"].get<double>(), m.base());
+        MonetaryAmount(marketDetails["sell-market-min-order-amt"].get<double>(), base);
     marketInfo.sellMarketMaxOrderAmount =
-        MonetaryAmount(marketDetails["sell-market-max-order-amt"].get<double>(), m.base());
+        MonetaryAmount(marketDetails["sell-market-max-order-amt"].get<double>(), base);
 
     marketInfo.buyMarketMaxOrderValue =
-        MonetaryAmount(marketDetails["buy-market-max-order-value"].get<double>(), m.quote());
+        MonetaryAmount(marketDetails["buy-market-max-order-value"].get<double>(), quote);
 
     marketInfoMap.insert_or_assign(m, std::move(marketInfo));
   }

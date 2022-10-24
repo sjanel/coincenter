@@ -253,7 +253,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(m);
   CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.base());
   CurrencyExchange krakenCurrencyQuote = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.quote());
-  Market krakenMarket(krakenCurrencyBase.altStr(), krakenCurrencyQuote.altStr());
+  Market krakenMarket(krakenCurrencyBase.altCode(), krakenCurrencyQuote.altCode());
   const std::string_view orderType = fromCurrencyCode == m.base() ? "sell" : "buy";
 
   auto volAndPriNbDecimals = krakenPublic._marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
