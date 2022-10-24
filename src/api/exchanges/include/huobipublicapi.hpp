@@ -92,7 +92,7 @@ class HuobiPublic : public ExchangePublic {
       VolAndPriNbDecimals volAndPriNbDecimals;
 
       MonetaryAmount minOrderValue;
-      MonetaryAmount maxOrderValueUSDT{std::numeric_limits<MonetaryAmount::AmountType>::max(), "USDT"};
+      MonetaryAmount maxOrderValueUSDT;
 
       MonetaryAmount limitMinOrderAmount;
       MonetaryAmount limitMaxOrderAmount;
