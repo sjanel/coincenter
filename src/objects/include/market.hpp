@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/fmt/bundled/format.h>
+
 #include <array>
 #include <ostream>
 #include <utility>
@@ -63,6 +65,22 @@ class Market {
   TradableAssets _assets;
 };
 }  // namespace cct
+
+template <>
+struct fmt::formatter<cct::Market> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin(), end = ctx.end();
+    if (it != end && *it != '}') {
+      throw format_error("invalid format");
+    }
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const cct::Market& m, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}-{}", m.base(), m.quote());
+  }
+};
 
 namespace std {
 template <>

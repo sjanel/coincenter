@@ -232,7 +232,7 @@ WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
     }
     CurrencyCode cur(coinStr);
     MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
-    log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
+    log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
     ret.insert_or_assign(cur, withdrawFee);
   }
 
@@ -272,15 +272,15 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
     MonetaryAmount tickSize((*priceFilter)["tickSize"].get<std::string_view>(), ret.currencyCode());
 
     if (ret > maxPrice) {
-      log::debug("Too big price {} capped to {} for {}", ret.str(), maxPrice.str(), m.str());
+      log::debug("Too big price {} capped to {} for {}", ret, maxPrice, m);
       ret = maxPrice;
     } else if (ret < minPrice) {
-      log::debug("Too small price {} increased to {} for {}", ret.str(), minPrice.str(), m.str());
+      log::debug("Too small price {} increased to {} for {}", ret, minPrice, m);
       ret = minPrice;
     } else {
       ret.round(tickSize, MonetaryAmount::RoundType::kDown);
       if (ret != pri) {
-        log::debug("Rounded {} into {} according to {}", pri.str(), ret.str(), m.str());
+        log::debug("Rounded {} into {} according to {}", pri, ret, m);
       }
     }
   }
@@ -288,7 +288,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {
   VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), m);
   ret.truncate(volAndPriNbDecimals.priNbDecimals);
   if (pri != ret) {
-    log::warn("Sanitize price {} -> {}", pri.str(), ret.str());
+    log::warn("Sanitize price {} -> {}", pri, ret);
   }
   return ret;
 }
@@ -319,7 +319,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
             // price should be the last matched price
             LastTradesVector lastTrades = queryLastTrades(m, 1);
             if (lastTrades.empty()) {
-              log::error("Unable to retrieve last trades from {}, use average price instead for min notional", m.str());
+              log::error("Unable to retrieve last trades from {}, use average price instead for min notional", m);
               json result =
                   PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", m.assetsPairStrUpper()}});
               priceForMinNotional = MonetaryAmount(result["price"].get<std::string_view>(), m.quote());
@@ -348,8 +348,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
     MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForMinNotional.toNeutral();
     minVolumeAfterMinNotional = MonetaryAmount(minNotional / priceForMinNotional, ret.currencyCode());
     if (priceTimesQuantity < minNotional) {
-      log::debug("Too small min price * quantity. {} increased to {} for {}", ret.str(),
-                 minVolumeAfterMinNotional.str(), m.str());
+      log::debug("Too small min price * quantity. {} increased to {} for {}", ret, minVolumeAfterMinNotional, m);
       ret = minVolumeAfterMinNotional;
     }
   }
@@ -364,18 +363,18 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
       MonetaryAmount stepSize((*lotFilterPtr)["stepSize"].get<std::string_view>(), ret.currencyCode());
 
       if (ret > maxQty) {
-        log::debug("Too big volume {} capped to {} for {}", ret.str(), maxQty.str(), m.str());
+        log::debug("Too big volume {} capped to {} for {}", ret, maxQty, m);
         ret = maxQty;
       } else if (ret < minQty) {
-        log::debug("Too small volume {} increased to {} for {}", ret.str(), minQty.str(), m.str());
+        log::debug("Too small volume {} increased to {} for {}", ret, minQty, m);
         ret = minQty;
-      } else if (!stepSize.isZero()) {
+      } else if (stepSize != 0) {
         ret.round(stepSize, MonetaryAmount::RoundType::kDown);
         if (ret < minVolumeAfterMinNotional) {
           ret.round(stepSize, MonetaryAmount::RoundType::kUp);
         }
         if (ret != vol) {
-          log::debug("Rounded {} into {} according to {}", vol.str(), ret.str(), m.str());
+          log::debug("Rounded {} into {} according to {}", vol, ret, m);
         }
       }
     }
@@ -384,7 +383,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market m, MonetaryAmount vol, Monet
   VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), m);
   ret.truncate(volAndPriNbDecimals.volNbDecimals);
   if (ret != vol) {
-    log::warn("Sanitize volume {} -> {}", vol.str(), ret.str());
+    log::warn("Sanitize volume {} -> {}", vol, ret);
   }
   return ret;
 }

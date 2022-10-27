@@ -29,6 +29,12 @@ struct CurrencyCodeConstants {
 
   static constexpr char kFirstAuthorizedLetter = 33;  // '!'
   static constexpr char kLastAuthorizedLetter = 95;   // '_'
+
+  static constexpr char CharAt(uint64_t data, int pos) noexcept {
+    return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1))) &
+                             ((1ULL << kNbBitsChar) - 1ULL)) +
+           kFirstAuthorizedLetter - 1;
+  }
 };
 
 class CurrencyCodeIterator {
@@ -63,13 +69,7 @@ class CurrencyCodeIterator {
     return oldSelf;
   }
 
-  char operator*() const noexcept {
-    return static_cast<char>((_data >> (CurrencyCodeConstants::kNbBitsNbDecimals +
-                                        CurrencyCodeConstants::kNbBitsChar *
-                                            (CurrencyCodeConstants::kMaxLen - static_cast<int>(_pos) - 1))) &
-                             ((1ULL << CurrencyCodeConstants::kNbBitsChar) - 1ULL)) +
-           CurrencyCodeConstants::kFirstAuthorizedLetter - 1;
-  }
+  char operator*() const noexcept { return CurrencyCodeConstants::CharAt(_data, static_cast<int>(_pos)); }
 
  private:
   friend class CurrencyCode;
@@ -88,7 +88,7 @@ class CurrencyCodeIterator {
 class CurrencyCode {
  public:
   using iterator = CurrencyCodeIterator;
-  using const_iterator = CurrencyCodeIterator;
+  using const_iterator = iterator;
 
   static constexpr auto kMaxLen = CurrencyCodeConstants::kMaxLen;
 
@@ -109,8 +109,8 @@ class CurrencyCode {
     _data = ComputeData(acronym);
   }
 
-  CurrencyCodeIterator begin() const { return CurrencyCodeIterator(_data); }
-  CurrencyCodeIterator end() const { return CurrencyCodeIterator(_data, size()); }
+  const_iterator begin() const { return const_iterator(_data); }
+  const_iterator end() const { return const_iterator(_data, size()); }
 
   constexpr uint64_t size() const {
     uint64_t s = 0;
@@ -131,13 +131,18 @@ class CurrencyCode {
   }
 
   /// Append currency string reprensentation to given string.
-  void appendStr(string &s) const {
+  void appendStr(string &s) const { append(std::back_inserter(s)); }
+
+  /// Append currency string reprensentation to given output iterator
+  template <class OutputIt>
+  void append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = (*this)[charPos];
       if (c == CurrencyCodeConstants::kFirstAuthorizedLetter - 1) {
         break;
       }
-      s.push_back(c);
+      *it = c;
+      ++it;
     }
   }
 
@@ -146,12 +151,7 @@ class CurrencyCode {
 
   constexpr bool isNeutral() const noexcept { return !(_data & CurrencyCodeConstants::kFirstCharMask); }
 
-  constexpr char operator[](uint32_t pos) const {
-    return static_cast<char>((_data >> (CurrencyCodeConstants::kNbBitsNbDecimals +
-                                        CurrencyCodeConstants::kNbBitsChar * (kMaxLen - static_cast<int>(pos) - 1))) &
-                             ((1ULL << CurrencyCodeConstants::kNbBitsChar) - 1ULL)) +
-           CurrencyCodeConstants::kFirstAuthorizedLetter - 1;
-  }
+  constexpr char operator[](uint32_t pos) const { return CurrencyCodeConstants::CharAt(_data, static_cast<int>(pos)); }
 
   constexpr auto operator<=>(const CurrencyCode &) const = default;
 
@@ -258,15 +258,9 @@ struct fmt::formatter<cct::CurrencyCode> {
     return it;
   }
 
-  // Formats the point p using the parsed format specification (presentation)
-  // stored in this formatter.
   template <typename FormatContext>
   auto format(const cct::CurrencyCode &cur, FormatContext &ctx) const -> decltype(ctx.out()) {
-    // ctx.out() is an output iterator to write to.
-    for (char c : cur) {
-      *ctx.out() = c;
-      ++ctx.out();
-    }
+    cur.append(ctx.out());
     return ctx.out();
   }
 };

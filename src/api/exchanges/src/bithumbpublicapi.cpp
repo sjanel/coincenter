@@ -97,7 +97,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
   // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
   std::optional<MonetaryAmount> avgPrice = queryOrderBook(m).averagePrice();
   if (!avgPrice) {
-    log::error("Empty order book for {} on {} cannot compute average price", m.str(), _name);
+    log::error("Empty order book for {} on {} cannot compute average price", m, _name);
     return MonetaryAmount(0, m.quote());
   }
   return *avgPrice;
@@ -136,7 +136,7 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
     endP = s.find('<', p);
     std::string_view withdrawFee(s.begin() + p, s.begin() + endP);
     MonetaryAmount ma(withdrawFee, coinAcro);
-    log::debug("Updated Bithumb withdrawal fees {}", ma.str());
+    log::debug("Updated Bithumb withdrawal fees {}", ma);
     ret.insert_or_assign(std::move(coinAcro), std::move(ma));
   }
   if (ret.empty()) {

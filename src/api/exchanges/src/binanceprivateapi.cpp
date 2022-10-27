@@ -267,13 +267,13 @@ TradedAmounts ParseTrades(Market m, CurrencyCode fromCurrencyCode, const json& f
                                  fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
   MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
                      fillDetail["commissionAsset"].get<std::string_view>());
-  log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity.str(), price.str(), fee.str());
+  log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity, price, fee);
   if (fee.currencyCode() == detailTradedInfo.tradedFrom.currencyCode()) {
     detailTradedInfo.tradedFrom += fee;
   } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
     detailTradedInfo.tradedTo -= fee;
   } else {
-    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m.str());
+    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m);
   }
   return detailTradedInfo;
 }
@@ -325,8 +325,8 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {
-      log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
-                sanitizedVol.str());
+      log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
+                sanitizedVol);
     }
 
     placeOrderInfo.setClosed();

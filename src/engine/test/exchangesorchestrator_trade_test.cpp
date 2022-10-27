@@ -50,7 +50,7 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
   }                                                                                                                 \
                                                                                                                     \
   EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));                 \
-  if (makeMarketAvailable && from.isStrictlyPositive()) {                                                           \
+  if (makeMarketAvailable && from > 0) {                                                                            \
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).WillOnce(testing::Return(placeOrderInfo)); \
   } else {                                                                                                          \
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, testing::_)).Times(0);                                  \
@@ -94,7 +94,7 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
   }                                                                                                                    \
                                                                                                                        \
   EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));                    \
-  if (makeMarketAvailable && from.isStrictlyPositive()) {                                                              \
+  if (makeMarketAvailable && from > 0) {                                                                               \
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol2, pri2, testing::_)).WillOnce(testing::Return(placeOrderInfo1)); \
     EXPECT_CALL(exchangePrivate, placeOrder(MonetaryAmount(from, interCur), vol1, pri1, testing::_))                   \
         .WillOnce(testing::Return(placeOrderInfo2));                                                                   \

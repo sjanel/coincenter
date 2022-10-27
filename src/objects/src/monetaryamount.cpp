@@ -186,6 +186,11 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
   return integralAmount;
 }
 
+constexpr MonetaryAmount::AmountType MonetaryAmount::decimalPart() const {
+  auto div = ipow(10, static_cast<uint8_t>(nbDecimals()));
+  return _amount - (_amount / div) * div;
+}
+
 namespace {
 
 constexpr int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,

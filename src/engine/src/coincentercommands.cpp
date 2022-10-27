@@ -195,7 +195,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
             .setExchangeNames(std::move(exchanges));
       } else {
         auto [amount, isPercentage, exchanges] = optParser.getMonetaryAmountPrivateExchanges();
-        if (amount.isNegativeOrZero()) {
+        if (amount <= 0) {
           throw invalid_argument("Start trade amount should be positive");
         }
         coincenterCommand.setAmount(amount).setPercentageAmount(isPercentage).setExchangeNames(std::move(exchanges));
@@ -209,7 +209,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     } else {
       auto [startTradeAmount, isPercentage, toTradeCurrency, exchanges] =
           optParser.getMonetaryAmountCurrencyPrivateExchanges();
-      if (startTradeAmount.isNegativeOrZero()) {
+      if (startTradeAmount <= 0) {
         throw invalid_argument("Start trade amount should be positive");
       }
       coincenterCommand.setAmount(startTradeAmount)

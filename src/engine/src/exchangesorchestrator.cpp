@@ -64,7 +64,7 @@ ExchangeTickerMaps ExchangesOrchestrator::getTickerInformation(ExchangeNameSpan 
 MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
                                                                           CurrencyCode equiCurrencyCode,
                                                                           std::optional<int> depth) {
-  log::info("Order book of {} on {} requested{}{}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames),
+  log::info("Order book of {} on {} requested{}{}", m, ConstructAccumulatedExchangeNames(exchangeNames),
             equiCurrencyCode.isNeutral() ? "" : " with equi currency ",
             equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode);
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
@@ -183,7 +183,7 @@ NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(std::span<const
 }
 
 ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
-  log::info("Query {} conversion path from {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
+  log::info("Query {} conversion path from {}", m, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   ConversionPathPerExchange conversionPathPerExchange(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(),
@@ -317,7 +317,7 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
 
   for (const auto &exchangeBalancePair : balancePerExchange) {
     MonetaryAmount avAmount = exchangeBalancePair.second.get(fromCurrency);
-    if (avAmount.isStrictlyPositive()) {
+    if (avAmount > 0) {
       exchangeAmountPairVector.emplace_back(exchangeBalancePair.first, avAmount);
     }
   }
@@ -410,10 +410,10 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
     }
   }
 
-  if (currentTotalAmount.isZero()) {
+  if (currentTotalAmount == 0) {
     log::warn("No available {} to trade", fromCurrency);
   } else if (currentTotalAmount < startAmount) {
-    log::warn("Will trade {} < {} amount", currentTotalAmount.str(), startAmount.str());
+    log::warn("Will trade {} < {} amount", currentTotalAmount, startAmount);
   }
 
   /// We have enough total available amount. Launch all trades in parallel
@@ -479,7 +479,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
           continue;
         }
         MonetaryAmount avAmount = balance.get(fromCurrency);
-        if (avAmount.isStrictlyPositive() &&
+        if (avAmount > 0 &&
             std::none_of(trades.begin(), trades.begin() + nbTrades, [pExchange, fromCurrency](const auto &v) {
               return std::get<0>(v) == pExchange && std::get<1>(v).currencyCode() == fromCurrency;
             })) {
@@ -511,23 +511,23 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
       }
       remEndAmount -= tradeEndAmount;
 
-      log::debug("Validating max trade of {} to {} on {}_{}", startAmount.str(), tradeEndAmount.str(),
-                 pExchange->name(), pExchange->keyName());
+      log::debug("Validating max trade of {} to {} on {}_{}", startAmount, tradeEndAmount, pExchange->name(),
+                 pExchange->keyName());
 
       ++nbTradesToKeep;
-      if (remEndAmount.isZero()) {
+      if (remEndAmount == 0) {
         break;
       }
     }
     trades.erase(trades.begin() + nbTradesToKeep, trades.end());
 
-    if (remEndAmount.isZero() || !continuingHigherStepsPossible) {
+    if (remEndAmount == 0 || !continuingHigherStepsPossible) {
       break;
     }
   }
 
-  if (!remEndAmount.isZero()) {
-    log::warn("Will trade {} < {} amount", (endAmount - remEndAmount).str(), endAmount.str());
+  if (remEndAmount != 0) {
+    log::warn("Will trade {} < {} amount", endAmount - remEndAmount, endAmount);
   }
 
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
@@ -574,7 +574,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
       bool continuingHigherStepsPossible = false;
       int exchangePos = 0;
       for (auto &[pExchange, avAmount] : exchangeAmountPairVector) {
-        if (avAmount.isZero() ||  // It can be set to 0 in below code
+        if (avAmount == 0 ||  // It can be set to 0 in below code
             (nbSteps > 1 &&
              !tradeOptions.isMultiTradeAllowed(pExchange->exchangeInfo().multiTradeAllowedByDefault()))) {
           ++exchangePos;
@@ -597,17 +597,17 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
             remStartAmount -= fromAmount;
             trades.emplace_back(pExchange, fromAmount, toCurrency, std::move(path));
             avAmount = MonetaryAmount(0, fromCurrency);
-            if (remStartAmount.isZero()) {
+            if (remStartAmount == 0) {
               break;
             }
           }
         }
-        if (remStartAmount.isZero()) {
+        if (remStartAmount == 0) {
           break;
         }
         ++exchangePos;
       }
-      if (remStartAmount.isZero() || !continuingHigherStepsPossible) {
+      if (remStartAmount == 0 || !continuingHigherStepsPossible) {
         break;
       }
     }
@@ -615,8 +615,8 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
 
   if (remStartAmount == startAmount) {
     log::warn("No available amount of {} to sell", startAmount.currencyCode());
-  } else if (!remStartAmount.isZero()) {
-    log::warn("Will trade {} < {} amount", (startAmount - remStartAmount).str(), startAmount.str());
+  } else if (remStartAmount != 0) {
+    log::warn("Will trade {} < {} amount", startAmount - remStartAmount, startAmount);
   }
 
   return LaunchAndCollectTrades(trades.begin(), trades.end(), tradeOptions);
@@ -630,7 +630,7 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
     log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode,
               fromPrivateExchangeName.str(), toPrivateExchangeName.str());
   } else {
-    log::info("Withdraw gross {} from {} to {} requested", grossAmount.str(), fromPrivateExchangeName.str(),
+    log::info("Withdraw gross {} from {} to {} requested", grossAmount, fromPrivateExchangeName.str(),
               toPrivateExchangeName.str());
   }
 
@@ -681,7 +681,7 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode cu
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchange(Market m,
                                                                                    ExchangeNameSpan exchangeNames) {
-  log::info("Query last 24h traded volume of {} pair on {}", m.str(), ConstructAccumulatedExchangeNames(exchangeNames));
+  log::info("Query last 24h traded volume of {} pair on {}", m, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
   MonetaryAmountPerExchange tradedVolumePerExchange(selectedExchanges.size());
@@ -693,7 +693,7 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchan
 
 LastTradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames,
                                                                       int nbLastTrades) {
-  log::info("Query {} last trades on {} volume from {}", nbLastTrades, m.str(),
+  log::info("Query {} last trades on {} volume from {}", nbLastTrades, m,
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(m, exchangeNames);
 
