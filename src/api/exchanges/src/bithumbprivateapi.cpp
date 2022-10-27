@@ -329,7 +329,7 @@ Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
         CurrencyCode cur(std::string_view(key.begin() + kPrefixKey.size(), key.end()));
         if (cur != "KRW") {
           MonetaryAmount amount(value.get<std::string_view>(), cur);
-          if (!amount.isZero()) {
+          if (amount != 0) {
             orderCurrencies.push_back(cur);
           }
         }
@@ -428,9 +428,9 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     if (currencyOrderInfo.lastNbDecimalsUpdatedTime + _currencyOrderInfoRefreshTime > nowTime) {
       int8_t nbMaxDecimalsUnits = currencyOrderInfo.nbDecimals;
       volume.truncate(nbMaxDecimalsUnits);
-      if (volume.isZero()) {
-        log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume.str(),
-                  toCurrencyCode, static_cast<int>(nbMaxDecimalsUnits));
+      if (volume == 0) {
+        log::warn("No trade of {} into {} because min number of decimals is {} for this market", volume, toCurrencyCode,
+                  static_cast<int>(nbMaxDecimalsUnits));
         placeOrderInfo.setClosed();
         return placeOrderInfo;
       }
@@ -455,8 +455,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           }
           placePostData.set("price", price.amountStr());
         } else {
-          log::warn("No trade of {} into {} because {} is outside price bounds [{}, {}]", volume.str(), toCurrencyCode,
-                    price.str(), minOrderPrice.str(), maxOrderPrice.str());
+          log::warn("No trade of {} into {} because {} is outside price bounds [{}, {}]", volume, toCurrencyCode, price,
+                    minOrderPrice, maxOrderPrice);
           placeOrderInfo.setClosed();
           return placeOrderInfo;
         }
@@ -471,11 +471,11 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       } else if (price.currencyCode() == minOrderSizeCur) {
         size = volume.toNeutral() * price;
       } else {
-        log::error("Unexpected currency for min order size {}", size.str());
+        log::error("Unexpected currency for min order size {}", size);
       }
       if (size < currencyOrderInfo.minOrderSize && !isSimulationWithRealOrder) {
-        log::warn("No trade of {} into {} because {} is lower than min order {}", volume.str(), toCurrencyCode,
-                  size.str(), currencyOrderInfo.minOrderSize.str());
+        log::warn("No trade of {} into {} because {} is lower than min order {}", volume, toCurrencyCode, size,
+                  currencyOrderInfo.minOrderSize);
         placeOrderInfo.setClosed();
         return placeOrderInfo;
       }
@@ -503,8 +503,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
           volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
           placePostData.set("units", volume.amountStr());
         } else {
-          log::warn("No trade of {} into {} because min order size is {} for this market", volume.str(), toCurrencyCode,
-                    currencyOrderInfo.minOrderSize.str());
+          log::warn("No trade of {} into {} because min order size is {} for this market", volume, toCurrencyCode,
+                    currencyOrderInfo.minOrderSize);
           break;
         }
       } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
@@ -515,8 +515,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
             placePostData.set("price", price.amountStr());
           }
         } else {
-          log::warn("No trade of {} into {} because min order price is {} for this market", volume.str(),
-                    toCurrencyCode, currencyOrderInfo.minOrderPrice.str());
+          log::warn("No trade of {} into {} because min order price is {} for this market", volume, toCurrencyCode,
+                    currencyOrderInfo.minOrderPrice);
           break;
         }
       } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
@@ -527,8 +527,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
             placePostData.set("price", price.amountStr());
           }
         } else {
-          log::warn("No trade of {} into {} because max order price is {} for this market", volume.str(),
-                    toCurrencyCode, currencyOrderInfo.maxOrderPrice.str());
+          log::warn("No trade of {} into {} because max order price is {} for this market", volume, toCurrencyCode,
+                    currencyOrderInfo.maxOrderPrice);
           break;
         }
       } else {
@@ -632,7 +632,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
       MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
       if (realFee != withdrawFee) {
-        log::warn("Bithumb withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
+        log::warn("Bithumb withdraw fee is {} instead of parsed {}", realFee, withdrawFee);
       }
       std::size_t first = unitsStr.find_first_of("0123456789");
       if (first == std::string_view::npos) {
@@ -646,12 +646,13 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
       // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
       // Let's not implement this for now unless it becomes an issue
-      log::debug("Bithumb: similar withdraw found with different amount {} (expected {})", consumedAmt.str(),
-                 initiatedWithdrawInfo.grossEmittedAmount().str());
+      log::debug("Bithumb: similar withdraw found with different amount {} (expected {})", consumedAmt,
+                 initiatedWithdrawInfo.grossEmittedAmount());
     }
   }
-  throw exception("Bithumb: unable to find withdrawal confirmation of " +
-                  initiatedWithdrawInfo.grossEmittedAmount().str());
+  string msg("Bithumb: unable to find withdrawal confirmation of ");
+  msg.append(initiatedWithdrawInfo.grossEmittedAmount().str());
+  throw exception(std::move(msg));
 }
 
 bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,

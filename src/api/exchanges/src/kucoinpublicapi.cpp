@@ -140,7 +140,7 @@ WithdrawalFeeMap KucoinPublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
   for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : _tradableCurrenciesCache.get()) {
     ret.insert_or_assign(curDetail.currencyExchange.standardCode(), curDetail.withdrawalMinFee);
-    log::trace("Retrieved {} withdrawal fee {}", _name, curDetail.withdrawalMinFee.str());
+    log::trace("Retrieved {} withdrawal fee {}", _name, curDetail.withdrawalMinFee);
   }
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
@@ -166,15 +166,15 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   for (const json& tickerDetails : data["ticker"]) {
     Market m(tickerDetails["symbol"].get<std::string_view>(), '-');
     if (!markets.contains(m)) {
-      log::trace("Market {} is not present", m.str());
+      log::trace("Market {} is not present", m);
       continue;
     }
     MonetaryAmount askPri(tickerDetails["sell"].get<std::string_view>(), m.quote());
     MonetaryAmount bidPri(tickerDetails["buy"].get<std::string_view>(), m.quote());
     // There is no volume in the response, we need to emulate it, based on the 24h volume
     MonetaryAmount dayVolume(tickerDetails["vol"].get<std::string_view>(), m.base());
-    if (dayVolume.isZero()) {
-      log::trace("No volume for {}", m.str());
+    if (dayVolume == 0) {
+      log::trace("No volume for {}", m);
       continue;
     }
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
@@ -182,7 +182,7 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
     // Use avg traded volume by second as ask/bid vol
     MonetaryAmount askVol = dayVolume / (2 * 24 * 3600);
     askVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kNearest);
-    if (askVol.isZero()) {
+    if (askVol == 0) {
       askVol = marketInfo.baseIncrement;
     }
     MonetaryAmount bidVol = askVol;
@@ -256,7 +256,7 @@ MonetaryAmount KucoinPublic::sanitizePrice(Market m, MonetaryAmount pri) {
     sanitizedPri.round(marketInfo.priceIncrement, MonetaryAmount::RoundType::kNearest);
   }
   if (sanitizedPri != pri) {
-    log::debug("Sanitize price {} -> {}", pri.str(), sanitizedPri.str());
+    log::debug("Sanitize price {} -> {}", pri, sanitizedPri);
   }
   return sanitizedPri;
 }
@@ -274,7 +274,7 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
     sanitizedVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kDown);
   }
   if (sanitizedVol != vol) {
-    log::debug("Sanitize volume {} -> {}", vol.str(), sanitizedVol.str());
+    log::debug("Sanitize volume {} -> {}", vol, sanitizedVol);
   }
   return sanitizedVol;
 }

@@ -75,7 +75,7 @@ class TestAPI {
   }
 
   void testMarket(Market m) {
-    log::info("Test {} market", m.str());
+    log::info("Test {} market", m);
     ASSERT_FALSE(markets.empty());
     static constexpr int kCountDepthOrderBook = 5;
     MarketOrderBook marketOrderBook = exchangePublic.queryOrderBook(m, kCountDepthOrderBook);
@@ -197,9 +197,8 @@ class TestAPI {
         TradeOptions tradeOptions(TradeMode::kSimulation);
         MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
         MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
-        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo,
-                  MonetaryAmount(0, m.quote()));
-        EXPECT_FALSE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom.isZero());
+        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo, 0);
+        EXPECT_NE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom, 0);
       }
     }
   }

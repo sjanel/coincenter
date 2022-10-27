@@ -209,7 +209,7 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
         if (withdrawFeeTypeStr == "fixed") {
           std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
           MonetaryAmount withdrawFee(withdrawFeeStr, cur);
-          log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee.str());
+          log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
           ret.insert_or_assign(cur, withdrawFee);
         } else if (withdrawFeeTypeStr == "rate") {
           log::debug("Unsupported rate withdraw fee for {}", _name);
@@ -279,8 +279,8 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
     MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), m.base(), MonetaryAmount::RoundType::kUp,
                           volAndPriNbDecimals.volNbDecimals);
 
-    if (bidVol.isZero() || askVol.isZero()) {
-      log::trace("No volume for {}", m.str());
+    if (bidVol == 0 || askVol == 0) {
+      log::trace("No volume for {}", m);
       continue;
     }
 
@@ -339,7 +339,7 @@ MonetaryAmount HuobiPublic::sanitizePrice(Market m, MonetaryAmount pri) {
     sanitizedPri.truncate(priNbDecimals);
   }
   if (sanitizedPri != pri) {
-    log::warn("Sanitize price {} -> {}", pri.str(), sanitizedPri.str());
+    log::warn("Sanitize price {} -> {}", pri, sanitizedPri);
   }
   return sanitizedPri;
 }
@@ -366,7 +366,7 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
     }
   }
   if (sanitizedVol != vol) {
-    log::warn("Sanitize volume {} -> {}", vol.str(), sanitizedVol.str());
+    log::warn("Sanitize volume {} -> {}", vol, sanitizedVol);
   }
   return sanitizedVol;
 }

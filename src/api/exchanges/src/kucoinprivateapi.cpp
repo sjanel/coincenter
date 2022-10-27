@@ -65,7 +65,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount amount, std::string_view fromStr,
                    std::string_view toStr) {
-  log::info("Perform inner transfer of {} to {} account", amount.str(), toStr);
+  log::info("Perform inner transfer of {} to {} account", amount, toStr);
   PrivateQuery(curlHandle, apiKey, HttpRequestType::kPost, "/api/v2/accounts/inner-transfer",
                {{"clientOid", Nonce_TimeSinceEpochInMs()},  // Not really needed, but it's mandatory apparently
                 {"currency", amount.currencyStr()},
@@ -91,15 +91,14 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
     }
   }
   if (totalAvailableAmount < expectedAmount) {
-    log::error("Insufficient funds to place in '{}' ({} < {})", accountName, totalAvailableAmount.str(),
-               expectedAmount.str());
+    log::error("Insufficient funds to place in '{}' ({} < {})", accountName, totalAvailableAmount, expectedAmount);
     return false;
   }
   if (amountInTargetAccount < expectedAmount) {
     for (const json& balanceDetail : balanceCur) {
       std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
       MonetaryAmount av(balanceDetail["available"].get<std::string_view>(), cur);
-      if (typeStr != accountName && !av.isZero()) {
+      if (typeStr != accountName && av != 0) {
         MonetaryAmount remainingAmountToInnerTransfer = expectedAmount - amountInTargetAccount;
         if (av < remainingAmountToInnerTransfer) {
           InnerTransfer(curlHandle, apiKey, av, typeStr, accountName);
@@ -132,7 +131,7 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
     CurrencyCode currencyCode(
         _coincenterInfo.standardizeCurrencyCode(CurrencyCode(balanceDetail["currency"].get<std::string_view>())));
     MonetaryAmount amount(balanceDetail["available"].get<std::string_view>(), currencyCode);
-    log::debug("{} in account '{}' on {}", amount.str(), typeStr, _exchangePublic.name());
+    log::debug("{} in account '{}' on {}", amount, typeStr, _exchangePublic.name());
     this->addBalance(balancePortfolio, amount, equiCurrency);
   }
   return balancePortfolio;
@@ -258,8 +257,8 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(m, volume);
   if (volume < sanitizedVol) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
-              sanitizedVol.str());
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
+              sanitizedVol);
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }

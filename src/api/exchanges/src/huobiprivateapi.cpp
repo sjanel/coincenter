@@ -104,7 +104,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
     if (typeStr == "trade") {
       this->addBalance(balancePortfolio, amount, equiCurrency);
     } else {
-      log::debug("Do not consider {} as it is {} on {}", amount.str(), typeStr, _exchangePublic.name());
+      log::debug("Do not consider {} as it is {} on {}", amount, typeStr, _exchangePublic.name());
     }
   }
   return balancePortfolio;
@@ -261,8 +261,8 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(m, fromCurrencyCode, volume, price, isTakerStrategy);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
-              sanitizedVol.str());
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
+              sanitizedVol);
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
@@ -384,7 +384,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   }
   if (netEmittedAmount.nbDecimals() > withdrawParams.withdrawPrecision) {
     log::warn("Withdraw amount precision for Huobi is {} - truncating {}", withdrawParams.withdrawPrecision,
-              netEmittedAmount.str());
+              netEmittedAmount);
     netEmittedAmount.truncate(withdrawParams.withdrawPrecision);
     grossAmount.truncate(withdrawParams.withdrawPrecision);
   }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/fmt/bundled/format.h>
+
 #include <concepts>
 #include <cstdint>
 #include <limits>
@@ -106,9 +108,7 @@ class MonetaryAmount {
   /// Warning: starting zeros will not be part of the returned value. Use nbDecimals to retrieve the number of decimals
   /// of this MonetaryAmount.
   /// Example: "45.046" decimalPart() = 46
-  constexpr AmountType decimalPart() const {
-    return _amount - integerPart() * ipow(10, static_cast<uint8_t>(nbDecimals()));
-  }
+  constexpr AmountType decimalPart() const;
 
   /// Get the amount of this MonetaryAmount in double format.
   constexpr double toDouble() const {
@@ -156,13 +156,16 @@ class MonetaryAmount {
 
   constexpr bool operator==(const MonetaryAmount &o) const = default;
 
-  /// True if amount is 0
-  constexpr bool isZero() const noexcept { return _amount == 0; }
+  constexpr bool operator==(AmountType amount) const { return _amount == amount && nbDecimals() == 0; }
+  friend constexpr bool operator==(AmountType amount, MonetaryAmount rhs) { return rhs == amount; }
 
-  constexpr bool isPositiveOrZero() const noexcept { return _amount >= 0; }
-  constexpr bool isNegativeOrZero() const noexcept { return _amount <= 0; }
-  constexpr bool isStrictlyPositive() const noexcept { return _amount > 0; }
-  constexpr bool isStrictlyNegative() const noexcept { return _amount < 0; }
+  constexpr auto operator<=>(AmountType amount) const {
+    return _amount <=> amount * ipow(10, static_cast<uint8_t>(nbDecimals()));
+  }
+
+  friend constexpr auto operator<=>(AmountType amount, MonetaryAmount o) {
+    return amount * ipow(10, static_cast<uint8_t>(o.nbDecimals())) <=> o._amount;
+  }
 
   constexpr MonetaryAmount abs() const noexcept {
     return MonetaryAmount(true, _amount < 0 ? -_amount : _amount, _curWithDecimals);
@@ -184,6 +187,8 @@ class MonetaryAmount {
   }
 
   MonetaryAmount operator*(AmountType mult) const;
+
+  friend MonetaryAmount operator*(AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 
   /// Multiplication involving 2 MonetaryAmounts *must* have at least one 'Neutral' currency.
   /// This is to remove ambiguity on the resulting currency:
@@ -287,6 +292,20 @@ class MonetaryAmount {
 static_assert(sizeof(MonetaryAmount) <= 16, "MonetaryAmount size should stay small");
 static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount should be trivially copyable");
 
-inline MonetaryAmount operator*(MonetaryAmount::AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
-
 }  // namespace cct
+
+template <>
+struct fmt::formatter<cct::MonetaryAmount> {
+  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin(), end = ctx.end();
+    if (it != end && *it != '}') {
+      throw format_error("invalid format");
+    }
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const cct::MonetaryAmount &a, FormatContext &ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{} {}", a.amountStr(), a.currencyCode());
+  }
+};

@@ -270,8 +270,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
   if (volume < orderMin) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
-              orderMin.str());
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode, orderMin);
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
@@ -319,7 +318,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
       orderDescriptionStr.begin() + orderType.size() + 1,
       orderDescriptionStr.begin() + orderDescriptionStr.find(' ', orderType.size() + 1));
   MonetaryAmount krakenVolume(krakenTruncatedAmount, m.base());
-  log::debug("Kraken adjusted volume: {}", krakenVolume.str());
+  log::debug("Kraken adjusted volume: {}", krakenVolume);
 
   placeOrderInfo.orderInfo =
       queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId),
@@ -350,7 +349,7 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderRef& orderRef, QueryOrder que
   MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), m.base());  // always in base currency
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode), !orderInOpenedPart);
   // Avoid division by 0 as the price is returned as 0.
-  if (!tradedVol.isZero()) {
+  if (tradedVol != 0) {
     MonetaryAmount tradedCost(orderJson["cost"].get<std::string_view>(), m.quote());  // always in quote currency
     MonetaryAmount fee(orderJson["fee"].get<std::string_view>(), m.quote());          // always in quote currency
 
@@ -424,15 +423,16 @@ SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
     if (withdrawId == initiatedWithdrawInfo.withdrawId()) {
       MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
       if (realFee != withdrawFee) {
-        log::warn("Kraken withdraw fee is {} instead of parsed {}", realFee.str(), withdrawFee.str());
+        log::warn("Kraken withdraw fee is {} instead of parsed {}", realFee, withdrawFee);
       }
       std::string_view status = trx["status"].get<std::string_view>();
       MonetaryAmount netWithdrawAmount(trx["amount"].get<std::string_view>(), currencyCode);
       return SentWithdrawInfo(netWithdrawAmount, status == "Success");
     }
   }
-  throw exception("Kraken: unable to find withdrawal confirmation of " +
-                  initiatedWithdrawInfo.grossEmittedAmount().str());
+  string msg("Kraken: unable to find withdrawal confirmation of ");
+  msg.append(initiatedWithdrawInfo.grossEmittedAmount().str());
+  throw exception(std::move(msg));
 }
 
 bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,

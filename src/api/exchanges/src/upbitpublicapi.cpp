@@ -117,7 +117,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
       continue;
     }
     auto mkIt = ret.emplace(base, quote).first;
-    log::debug("Retrieved Upbit market {}", mkIt->str());
+    log::debug("Retrieved Upbit market {}", *mkIt);
   }
   log::info("Retrieved {} markets from Upbit", ret.size());
   return ret;
@@ -130,7 +130,7 @@ WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);
-    log::debug("Updated Upbit withdrawal fees {}", ma.str());
+    log::debug("Updated Upbit withdrawal fees {}", ma);
     ret.insert_or_assign(coinAcro, ma);
   }
   log::info("Updated Upbit withdrawal fees for {} coins", ret.size());
@@ -238,9 +238,9 @@ MonetaryAmount UpbitPublic::SanitizeVolume(MonetaryAmount vol, MonetaryAmount pr
   static constexpr MonetaryAmount kMaximumOrderValue = MonetaryAmount(1000000000, CurrencyCode("KRW"));
   MonetaryAmount ret = vol;
   if (pri.currencyCode() == kMaximumOrderValue.currencyCode() && vol.toNeutral() * pri > kMaximumOrderValue) {
-    log::debug("{} / {} = {}", kMaximumOrderValue.str(), pri.str(), (kMaximumOrderValue / pri).str());
+    log::debug("{} / {} = {}", kMaximumOrderValue, pri, kMaximumOrderValue / pri);
     ret = MonetaryAmount(kMaximumOrderValue / pri, vol.currencyCode());
-    log::debug("Order too big, decrease volume {} to {}", vol.str(), ret.str());
+    log::debug("Order too big, decrease volume {} to {}", vol, ret);
   } else {
     /// Value found in this page:
     /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
@@ -264,7 +264,7 @@ MonetaryAmount UpbitPublic::SanitizeVolume(MonetaryAmount vol, MonetaryAmount pr
     }
   }
   if (ret != vol) {
-    log::warn("Sanitize volume {} -> {}", vol.str(), ret.str());
+    log::warn("Sanitize volume {} -> {}", vol, ret);
   }
   return ret;
 }

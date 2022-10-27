@@ -44,12 +44,12 @@ TEST(MonetaryAmountTest, TenDecimals) {
   EXPECT_EQ(mamount2.str(), "-25003.4567346 BTC");
 
   MonetaryAmount mamount3(0, btcCode, nbDecimals);
-  EXPECT_TRUE(mamount3.isZero());
+  EXPECT_EQ(mamount3, 0);
   EXPECT_EQ(mamount3.integerPart(), 0);
   EXPECT_EQ(mamount3.str(), "0 BTC");
 
   mamount1 = MonetaryAmount("0.0620089", btcCode);
-  EXPECT_FALSE(mamount1.isZero());
+  EXPECT_NE(mamount1, 0);
   EXPECT_EQ(mamount1.nbDecimals(), 7);
   EXPECT_EQ(*MonetaryAmount("-314.451436574563", btcCode).amount(nbDecimals), -3144514365745);
   mamount1 = MonetaryAmount("-314.451436574563", btcCode);
@@ -104,6 +104,30 @@ TEST(MonetaryAmountTest, Comparison) {
   EXPECT_LT(MonetaryAmount("0.49999999999976", "KRW"), MonetaryAmount("14183417.9174094504", "KRW"));
   EXPECT_LT(MonetaryAmount("0.00326358030948980448", "EUR"), MonetaryAmount("0.102", "EUR"));
   EXPECT_LT(MonetaryAmount("0.00326358030948980448", "Magic4Life"), MonetaryAmount("0.102", "Magic4Life"));
+}
+
+TEST(MonetaryAmountTest, IntegralComparison) {
+  EXPECT_EQ(MonetaryAmount("2.00 EUR"), 2);
+  EXPECT_EQ(-4, MonetaryAmount("-4.0000 EUR"));
+
+  EXPECT_NE(MonetaryAmount("2.03 EUR"), 2);
+  EXPECT_NE(-4, MonetaryAmount("-3.9991 EUR"));
+
+  EXPECT_LT(MonetaryAmount("-0.5 KRW"), 0);
+  EXPECT_LT(65, MonetaryAmount("67.5555 KRW"));
+
+  EXPECT_GT(MonetaryAmount("-4092.3 KRW"), -4093);
+  EXPECT_GT(11, MonetaryAmount("5.42"));
+
+  EXPECT_LE(MonetaryAmount("-0.5 KRW"), 0);
+  EXPECT_LE(MonetaryAmount("-0.0 KRW"), 0);
+  EXPECT_LE(65, MonetaryAmount("67.5555 KRW"));
+  EXPECT_LE(67, MonetaryAmount("67 KRW"));
+
+  EXPECT_GE(MonetaryAmount("-4092.3 KRW"), -4093);
+  EXPECT_GE(MonetaryAmount("-504.0 KRW"), -504);
+  EXPECT_GE(11, MonetaryAmount("5.42"));
+  EXPECT_GE(7, MonetaryAmount("7"));
 }
 
 TEST(MonetaryAmountTest, OverflowProtectionDecimalPart) {
@@ -217,8 +241,8 @@ TEST(MonetaryAmountTest, CurrencyTooLong) {
 }
 
 TEST(MonetaryAmountTest, Zero) {
-  EXPECT_TRUE(MonetaryAmount("0EUR").isZero());
-  EXPECT_FALSE(MonetaryAmount("0.0001EUR").isZero());
+  EXPECT_EQ(MonetaryAmount("0EUR"), 0);
+  EXPECT_NE(MonetaryAmount("0.0001EUR"), 0);
 }
 
 TEST(MonetaryAmountTest, RoundingPositiveDown) {
@@ -511,7 +535,7 @@ TEST(MonetaryAmountTest, Truncate) {
   EXPECT_EQ(a, MonetaryAmount("0.000082"));
   a.truncate(4);
   EXPECT_EQ(a, MonetaryAmount());
-  EXPECT_TRUE(a.isZero());
+  EXPECT_EQ(0, a);
 
   a = MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode(), 18);
   a.round(MonetaryAmount(1, CurrencyCode(), 4), MonetaryAmount::RoundType::kNearest);

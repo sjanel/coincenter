@@ -116,8 +116,8 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
         MonetaryAmount withdrawMin(val["min"].get<std::string_view>(), cur);
         MonetaryAmount withdrawFee(val["fee"].get<std::string_view>(), cur);
 
-        log::trace("Updated {} withdrawal fee {} from cache", _name, withdrawFee.str());
-        log::trace("Updated {} min withdraw {} from cache", _name, withdrawMin.str());
+        log::trace("Updated {} withdrawal fee {} from cache", _name, withdrawFee);
+        log::trace("Updated {} min withdraw {} from cache", _name, withdrawMin);
 
         withdrawalInfoMaps.first.insert_or_assign(cur, withdrawFee);
         withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
@@ -187,7 +187,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
       break;
     }
 
-    log::trace("Updated Kraken withdrawal fee {} from first source", withdrawalFee.str());
+    log::trace("Updated Kraken withdrawal fee {} from first source", withdrawalFee);
     ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
 
     // Locate min withdrawal
@@ -204,7 +204,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
       break;
     }
 
-    log::trace("Updated Kraken min withdrawal {} from first source", minWithdrawal.str());
+    log::trace("Updated Kraken min withdrawal {} from first source", minWithdrawal);
     ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
   }
   if (ret.first.empty() || ret.second.empty()) {
@@ -259,8 +259,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
         searchPos += kBeginWithdrawalFeeHtmlTag.size();
         MonetaryAmount withdrawalFee = parseNextFee(searchPos);
 
-        log::trace("Updated Kraken withdrawal fee {} from source 2, simulate min withdrawal amount",
-                   withdrawalFee.str());
+        log::trace("Updated Kraken withdrawal fee {} from source 2, simulate min withdrawal amount", withdrawalFee);
         ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
 
         ret.second.insert_or_assign(withdrawalFee.currencyCode(), 3 * withdrawalFee);
@@ -345,7 +344,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
       continue;
     }
     auto mkIt = ret.first.emplace(base, quote).first;
-    log::debug("Retrieved Kraken market {}", mkIt->str());
+    log::debug("Retrieved Kraken market {}", *mkIt);
     MonetaryAmount orderMin(value["ordermin"].get<std::string_view>(), base);
     ret.second.insert_or_assign(
         *mkIt, MarketInfo{VolAndPriNbDecimals(value["lot_decimals"], value["pair_decimals"]), orderMin});
@@ -414,7 +413,7 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
 
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
 
-    if (!bidVol.isZero() && !askVol.isZero()) {
+    if (bidVol != 0 && askVol != 0) {
       ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
     }
   }

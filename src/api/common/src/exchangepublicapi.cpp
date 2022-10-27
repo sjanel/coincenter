@@ -304,7 +304,7 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
   auto tryAppendQuoteCurrency = [&](CurrencyCode cur1, CurrencyCode cur2) {
     ret = Market(cur1, cur2);
     if (!markets.contains(ret)) {
-      log::debug("No market {} on {}", name(), ret.str());
+      log::debug("No market {} on {}", name(), ret);
       ret = Market(cur1, CurrencyCode());
     }
   };

@@ -326,8 +326,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
-    log::warn("No trade of {} into {} because min vol order is {} for this market", volume.str(), toCurrencyCode,
-              sanitizedVol.str());
+    log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
+              sanitizedVol);
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
@@ -409,7 +409,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount realFee(result["fee"].get<std::string_view>(), currencyCode);
   if (realFee != withdrawFee) {
-    log::error("{} withdraw fee is {} instead of {}", _exchangePublic.name(), realFee.str(), withdrawFee.str());
+    log::error("{} withdraw fee is {} instead of {}", _exchangePublic.name(), realFee, withdrawFee);
   }
   MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
 

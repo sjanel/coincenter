@@ -27,7 +27,7 @@ string Market::assetsPairStr(char sep, bool lowerCase) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Market& mk) {
-  os << mk.str();
+  os << mk.base() << '-' << mk.quote();
   return os;
 }
 

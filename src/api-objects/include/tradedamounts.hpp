@@ -23,8 +23,6 @@ struct TradedAmounts {
 
   bool operator==(const TradedAmounts &) const = default;
 
-  bool isZero() const { return tradedFrom.isZero() && tradedTo.isZero(); }
-
   string str() const;
 
   MonetaryAmount tradedFrom;  // In currency of 'from' amount

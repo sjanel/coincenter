@@ -33,7 +33,7 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
     for (const OrderBookLine& l : orderLines) {
       assert(l._amount.currencyCode() == market.base() && l._price.currencyCode() == market.quote());
       // amounts cannot be nullopt here
-      if (l._amount.isZero()) {
+      if (l._amount == 0) {
         // Just ignore empty lines
         continue;
       }
@@ -73,12 +73,12 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
 
   static constexpr std::string_view kErrNegVolumeMsg = " for MarketOrderbook creation, should be strictly positive";
 
-  if (askVolume.isNegativeOrZero()) {
+  if (askVolume <= 0) {
     string err("Invalid ask volume ");
     err.append(askVolume.str()).append(kErrNegVolumeMsg);
     throw exception(std::move(err));
   }
-  if (bidVolume.isNegativeOrZero()) {
+  if (bidVolume <= 0) {
     string err("Invalid bid volume ");
     err.append(bidVolume.str()).append(kErrNegVolumeMsg);
     throw exception(std::move(err));
@@ -90,14 +90,14 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   askVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
   bidVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
 
-  if (askVolume.isZero()) {
+  if (askVolume == 0) {
     string err("Number of decimals ");
     err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
         .append(" is too small for given start volume ")
         .append(askVolume.str());
     throw exception(std::move(err));
   }
-  if (bidVolume.isZero()) {
+  if (bidVolume == 0) {
     string err("Number of decimals ");
     err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
         .append(" is too small for given start volume ")
@@ -249,7 +249,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::warn("Not enough amount to buy {} on market {}", a.str().c_str(), _market.str().c_str());
+    log::warn("Not enough amount to buy {} on market {}", a, _market);
     return ret;
   }
   const AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -269,8 +269,8 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
       ret.emplace_back(negAmountAt(pos), price);
     }
   }
-  log::warn("Not enough amount to buy {} on market {} ({} max)", a.str().c_str(), _market.str().c_str(),
-            MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals).str().c_str());
+  log::warn("Not enough amount to buy {} on market {} ({} max)", a, _market,
+            MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals));
   ret.clear();
   return ret;
 }
@@ -331,7 +331,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::debug("Not enough amount to sell {} on market {}", a.str().c_str(), _market.str().c_str());
+    log::debug("Not enough amount to sell {} on market {}", a, _market);
     return ret;
   }
   const AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -348,7 +348,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
     integralAmountRep += _orders[pos].amount;
     ret.emplace_back(amountAt(pos), price);
   }
-  log::debug("Not enough amount to sell {} on market {}", a.str().c_str(), _market.str().c_str());
+  log::debug("Not enough amount to sell {} on market {}", a, _market);
   ret.clear();
   return ret;
 }
@@ -554,7 +554,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
       if (optRet) {
         return optRet;
       }
-      log::warn("{} is too big to be matched immediately on {}, return limit price instead", from.str(), _market.str());
+      log::warn("{} is too big to be matched immediately on {}, return limit price instead", from, _market);
       [[fallthrough]];
     }
     case PriceStrategy::kNibble:

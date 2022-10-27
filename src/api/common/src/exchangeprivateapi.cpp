@@ -19,9 +19,9 @@ BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
 }
 
 void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
-  if (!amount.isZero()) {
+  if (amount != 0) {
     if (equiCurrency.isNeutral()) {
-      log::debug("{} Balance {}", _exchangePublic.name(), amount.str());
+      log::debug("{} Balance {}", _exchangePublic.name(), amount);
       balancePortfolio.add(amount);
     } else {
       std::optional<MonetaryAmount> optConvertedAmountEquiCurrency = _exchangePublic.convert(amount, equiCurrency);
@@ -32,7 +32,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
         log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency, _exchangePublic.name());
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
-      log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount.str(), equivalentInMainCurrency.str());
+      log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount, equivalentInMainCurrency);
       balancePortfolio.add(amount, equivalentInMainCurrency);
     }
   }
@@ -44,26 +44,25 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   log::debug(options.str(realOrderPlacedInSimulationMode));
   const int nbTrades = static_cast<int>(conversionPath.size());
   const bool isMultiTradeAllowed = options.isMultiTradeAllowed(exchangeInfo().multiTradeAllowedByDefault());
-  log::info("{}rade {} -> {} on {}_{} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from.str(),
+  log::info("{}rade {} -> {} on {}_{} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from,
             toCurrency, _exchangePublic.name(), keyName());
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
-    log::warn("Cannot trade {} into {} on {}", from.str(), toCurrency, _exchangePublic.name());
+    log::warn("Cannot trade {} into {} on {}", from, toCurrency, _exchangePublic.name());
     return tradedAmounts;
   }
   if (nbTrades > 1 && !isMultiTradeAllowed) {
-    log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from.str(),
-               toCurrency, nbTrades);
+    log::error("Can only convert {} to {} in {} steps, but multi trade is not allowed, aborting", from, toCurrency,
+               nbTrades);
     return tradedAmounts;
   }
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
     Market m = conversionPath[tradePos];
-    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount.str(),
-              m.opposite(avAmount.currencyCode()));
+    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount, m.opposite(avAmount.currencyCode()));
     TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, m);
     avAmount = stepTradedAmounts.tradedTo;
-    if (avAmount.isZero()) {
+    if (avAmount == 0) {
       break;
     }
     if (tradePos == 0) {
@@ -83,7 +82,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(m, from, options.priceOptions());
   const CurrencyCode toCurrency = m.opposite(fromCurrency);
   if (!optPrice) {
-    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m.str());
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m);
     return TradedAmounts(fromCurrency, toCurrency);
   }
 
@@ -139,7 +138,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       OrderInfo cancelledOrderInfo = cancelOrder(orderRef);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
       from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
-      if (from.isZero()) {
+      if (from == 0) {
         log::debug("Order {} matched with last traded amounts {} while cancelling", placeOrderInfo.orderId,
                    cancelledOrderInfo.tradedAmounts.str());
         break;
@@ -168,10 +167,10 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
             throw exception("Impossible to compute new average order price");
           }
           price = *optPrice;
-          log::info("Reached emergency time, make a last taker order at price {}", price.str());
+          log::info("Reached emergency time, make a last taker order at price {}", price);
         } else {
           lastPriceUpdateTime = Clock::now();
-          log::info("Limit price changed from {} to {}, update order", lastPrice.str(), price.str());
+          log::info("Limit price changed from {} to {}, update order", lastPrice, price);
         }
 
         lastPrice = price;
@@ -197,7 +196,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
-  log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount.str(),
+  log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount,
             initiatedWithdrawInfo.receivingWallet().str(), _exchangePublic.name(),
             targetExchange._exchangePublic.name());
   enum class NextAction { kCheckSender, kCheckReceiver, kTerminate };
@@ -223,7 +222,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
         break;
     }
   } while (action != NextAction::kTerminate);
-  log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount().str(),
+  log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount(),
             initiatedWithdrawInfo.receivingWallet().exchangeName().str(),
             initiatedWithdrawInfo.receivingWallet().address());
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
@@ -237,7 +236,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
     if (exchangeInfo().placeSimulateRealOrder()) {
-      log::debug("Place simulate real order - price {} will be overriden", price.str());
+      log::debug("Place simulate real order - price {} will be overriden", price);
       MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(m);
       if (isSell) {
         price = marketOrderbook.getHighestTheoreticalPrice();
@@ -251,7 +250,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
     }
   }
 
-  log::debug("Place new order {} at price {}", volume.str(), price.str());
+  log::debug("Place new order {} at price {}", volume, price);
   PlaceOrderInfo placeOrderInfo = placeOrder(from, volume, price, tradeInfo);
   if (tradeInfo.options.isSimulation() && isSimulatedOrderSupported()) {
     // Override the placeOrderInfo in simulation mode to centralize code which is same for all exchanges
