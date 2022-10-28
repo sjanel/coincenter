@@ -1,8 +1,11 @@
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
 FROM alpine:3.16.2 AS build
 
-# Install base & build dependencies
-RUN apk add g++ libc-dev curl-dev cmake ninja git
+# Install base & build dependencies, needed certificates for curl to work with https
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache g++ libc-dev curl-dev cmake ninja git ca-certificates && \
+    rm -rf /var/cache/apk/*
 
 # Set default directory for application
 WORKDIR /app
@@ -34,11 +37,10 @@ RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
 RUN ldd coincenter | tr -s '[:blank:]' '\n' | grep '^/' | xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM alpine:3.16.2
-# TODO: using alpine instead of scratch only to install the ca certificate. How could we install certificate from scratch?
+FROM scratch
 
-# Install needed certificate for curl to work with https
-RUN apk add ca-certificates && rm -rf /var/cache/apk/*
+# Copy certificates
+COPY --from=build /etc/ssl/certs /etc/ssl/certs
 
 # Copy the dependencies from executable to new scratch image, keeping same path
 COPY --from=build /app/bin/deps /
