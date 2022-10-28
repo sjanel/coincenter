@@ -23,10 +23,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&&
   auto errorIt = ret.find("error");
   if (errorIt != ret.end() && !errorIt->empty()) {
     log::error("Full Kraken json error: '{}'", ret.dump());
-    std::string_view msg = errorIt->front().get<std::string_view>();
-    string ex("Kraken error: ");
-    ex.append(msg);
-    throw exception(std::move(ex));
+    throw exception("Kraken error: {}", errorIt->front().get<std::string_view>());
   }
   return ret["result"];
 }
@@ -366,18 +363,12 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   for (Market m : markets) {
     auto lb = krakenCurrencies.find(m.base());
     if (lb == krakenCurrencies.end()) {
-      string msg("Cannot find ");
-      m.base().appendStr(msg);
-      msg.append(" in Kraken currencies");
-      throw exception(std::move(msg));
+      throw exception("Cannot find {} in Kraken currencies", m.base());
     }
     CurrencyExchange krakenCurrencyExchangeBase = *lb;
     lb = krakenCurrencies.find(m.quote());
     if (lb == krakenCurrencies.end()) {
-      string msg("Cannot find ");
-      m.quote().appendStr(msg);
-      msg.append(" in Kraken currencies");
-      throw exception(std::move(msg));
+      throw exception("Cannot find {} in Kraken currencies", m.quote());
     }
     CurrencyExchange krakenCurrencyExchangeQuote = *lb;
     Market krakenMarket(krakenCurrencyExchangeBase.altCode(), krakenCurrencyExchangeQuote.altCode());
@@ -426,18 +417,12 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market m, int count) {
   CurrencyExchangeFlatSet krakenCurrencies = _tradableCurrenciesCache.get();
   auto lb = krakenCurrencies.find(m.base());
   if (lb == krakenCurrencies.end()) {
-    string msg("Cannot find ");
-    m.base().appendStr(msg);
-    msg.append(" in Kraken currencies");
-    throw exception(std::move(msg));
+    throw exception("Cannot find {} in Kraken currencies", m.base());
   }
   CurrencyExchange krakenCurrencyExchangeBase = *lb;
   lb = krakenCurrencies.find(m.quote());
   if (lb == krakenCurrencies.end()) {
-    string msg("Cannot find ");
-    m.quote().appendStr(msg);
-    msg.append(" in Kraken currencies");
-    throw exception(std::move(msg));
+    throw exception("Cannot find {} in Kraken currencies", m.quote());
   }
   CurrencyExchange krakenCurrencyExchangeQuote = *lb;
   string krakenAssetPair = krakenCurrencyExchangeBase.altStr();

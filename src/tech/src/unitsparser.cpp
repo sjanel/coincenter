@@ -35,12 +35,8 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
       case 'k':
         multiplier *= multiplierBase;
         break;
-      default: {
-        string msg("Invalid suffix ");
-        msg.push_back(sizeStr[endPos]);
-        msg.append(" for number of bytes parsing");
-        throw exception(std::move(msg));
-      }
+      default:
+        throw exception("Invalid suffix '{}' for number of bytes parsing", sizeStr[endPos]);
     }
   }
 

@@ -19,10 +19,7 @@ string Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& p
 const json& CollectResults(const json& dataJson) {
   auto errIt = dataJson.find("error");
   if (errIt != dataJson.end() && !errIt->empty()) {
-    std::string_view errMsg = errIt->front().get<std::string_view>();
-    string ex("Cryptowatch::query error: ");
-    ex.append(errMsg);
-    throw exception(std::move(ex));
+    throw exception("Cryptowatch::query error: {}", errIt->front().get<std::string_view>());
   }
   return dataJson["result"];
 }

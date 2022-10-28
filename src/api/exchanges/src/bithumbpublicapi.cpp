@@ -38,15 +38,9 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
     if (statusCode != "0000") {                                      // "0000" stands for: request OK
       log::error("Full Bithumb json error: '{}'", ret.dump());
-      string err("Bithumb error: ");
-      err.append(statusCode);
       auto msgIt = ret.find("message");
-      if (msgIt != ret.end()) {
-        err.append(" \"");
-        err.append(msgIt->get<std::string_view>());
-        err.push_back('\"');
-      }
-      throw exception(std::move(err));
+      throw exception("Bithumb error: {}, msg: {}", statusCode,
+                      msgIt != ret.end() ? msgIt->get<std::string_view>() : "null");
     }
   }
   return ret["data"];
@@ -88,7 +82,7 @@ MonetaryAmount BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& map = _withdrawalFeesCache.get();
   auto it = map.find(currencyCode);
   if (it == map.end()) {
-    throw exception("Unable to find currency code in withdrawal fees");
+    throw exception("Unable to find {} in withdrawal fees", currencyCode);
   }
   return it->second;
 }
@@ -263,7 +257,7 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
   MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, m, count);
   auto it = marketOrderBookMap.find(m);
   if (it == marketOrderBookMap.end()) {
-    throw exception("Unexpected answer from get OrderBooks");
+    throw exception("Cannot find {} in market order book map", m);
   }
   return it->second;
 }

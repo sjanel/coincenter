@@ -181,9 +181,7 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   TimePoint t1 = Clock::now();
   const CURLcode res = curl_easy_perform(curl);  // Get reply
   if (res != CURLE_OK) {
-    string ex("Unexpected response from curl: Error ");
-    AppendString(ex, static_cast<int>(res));
-    throw exception(std::move(ex));
+    throw exception("Unexpected response from curl: Error {}", static_cast<int>(res));
   }
 
   uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<std::chrono::milliseconds>(t1).count());

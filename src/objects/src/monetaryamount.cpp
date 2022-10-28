@@ -41,11 +41,8 @@ inline bool ParseNegativeChar(std::string_view &amountStr) {
         break;
       case '.':  // Let's accept inputs like: ".5" -> "0.5"
         break;
-      default: {
-        string ex("Parsing error, unexpected first char ");
-        ex.push_back(amountStr.front());
-        throw exception(std::move(ex));
-      }
+      default:
+        throw exception("Parsing error, unexpected first char {}", amountStr.front());
     }
   }
   return isNeg;
@@ -103,9 +100,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
       int8_t nbDigitsToRemove =
           static_cast<int8_t>(amountStr.size() - std::numeric_limits<MonetaryAmount::AmountType>::digits10 - 1);
       if (nbDigitsToRemove > ret.second) {
-        string ex("Received amount string ");
-        ex.append(amountStr).append(" whose integral part is too big");
-        throw exception(std::move(ex));
+        throw exception("Received amount string {} whose integral part is too big", amountStr);
       }
       log::trace("Received amount string '{}' too big for MonetaryAmount, truncating {} digits", amountStr,
                  nbDigitsToRemove);

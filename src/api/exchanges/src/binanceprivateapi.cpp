@@ -56,11 +56,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       statusCode = ret["code"];
     }
     log::error("Full Binance json error: '{}'", ret.dump());
-    string ex("Error: ");
-    ex.append(MonetaryAmount(statusCode).amountStr());
-    ex.append(", msg: ");
-    ex.append(ret["msg"].get<std::string_view>());
-    throw exception(std::move(ex));
+    throw exception("Error: {}, msg: {}", MonetaryAmount(statusCode), ret["msg"].get<std::string_view>());
   }
   return ret;
 }

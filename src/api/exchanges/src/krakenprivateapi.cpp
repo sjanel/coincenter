@@ -73,9 +73,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
       ret = json::parse(R"({" error ":[]," result ":{" count ":1}})");
     } else {
       log::error("Full Kraken json error: '{}'", ret.dump());
-      string ex("Kraken error: ");
-      ex.append(msg);
-      throw exception(std::move(ex));
+      throw exception("Kraken error: {}", msg);
     }
   }
   return ret["result"];
@@ -107,9 +105,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
   if (res.empty()) {
-    string msg("No deposit method found on Kraken for ");
-    currencyCode.appendStr(msg);
-    throw exception(std::move(msg));
+    throw exception("No deposit method found on Kraken for {}", currencyCode);
   }
   // Don't keep a view on 'method' value, we will override json data just below. We can just steal the string.
   string method = std::move(res.front()["method"].get_ref<string&>());
@@ -121,9 +117,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
-      string err("Cannot create a new deposit address on Kraken for ");
-      currencyCode.appendStr(err);
-      throw exception(std::move(err));
+      throw exception("Cannot create a new deposit address on Kraken for {}", currencyCode);
     }
   }
   ExchangeName exchangeName(_exchangePublic.name(), _apiKey.name());
@@ -157,9 +151,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       } else {
         // Heuristic: this last field may change key name and is optional (tag for XRP, memo for EOS for instance)
         if (!tag.empty()) {
-          string msg("Tag already set / unknown key information for ");
-          currencyCode.appendStr(msg);
-          throw exception(std::move(msg));
+          throw exception("Tag already set / unknown key information for {}", currencyCode);
         }
         if (valueStr.is_number_integer()) {
           SetString(tag, static_cast<long>(valueStr));
@@ -388,7 +380,7 @@ json KrakenPrivate::queryOrdersData(int64_t userRef, const OrderId& orderId, Que
         log::warn("{} is not present in opened nor closed orders, retry {}", orderId, nbRetries);
         continue;
       }
-      throw exception("I lost contact with Kraken order " + orderId);
+      throw exception("I lost contact with Kraken order {}", orderId);
     }
     return data;
 
@@ -430,9 +422,7 @@ SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
       return SentWithdrawInfo(netWithdrawAmount, status == "Success");
     }
   }
-  string msg("Kraken: unable to find withdrawal confirmation of ");
-  msg.append(initiatedWithdrawInfo.grossEmittedAmount().str());
-  throw exception(std::move(msg));
+  throw exception("Kraken: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
 }
 
 bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,

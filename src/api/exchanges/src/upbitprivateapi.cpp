@@ -139,9 +139,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       log::warn("No deposit address found for {}, generating a new one", currencyCode);
       generateDepositAddressNeeded = true;
     } else {
-      string err("error: ");
-      err.append(name).append(", msg: ").append(msg);
-      throw exception(std::move(err));
+      throw exception("Upbit error: {}, msg: {}", name, msg);
     }
   }
   if (generateDepositAddressNeeded) {
@@ -166,10 +164,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
   auto addressIt = result.find("deposit_address");
   if (addressIt == result.end() || addressIt->is_null()) {
-    string err("Deposit address for ");
-    currencyCode.appendStr(err);
-    err.append(" is undefined");
-    throw exception(std::move(err));
+    throw exception("Deposit address for {} is undefined", currencyCode);
   }
   std::string_view tag;
   auto secondaryAddressIt = result.find("secondary_address");

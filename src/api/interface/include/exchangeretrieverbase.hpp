@@ -36,17 +36,14 @@ class ExchangeRetrieverBase {
     for (ExchangeT &exchange : _exchanges) {
       if (exchange.matches(exchangeName)) {
         if (pExchange) {
-          string ex("Several private exchanges found for ");
-          ex.append(exchangeName.str()).append(" - remove ambiguity by specifying key name");
-          throw exception(std::move(ex));
+          throw exception("Several private exchanges found for {} - remove ambiguity by specifying key name",
+                          exchangeName.str());
         }
         pExchange = std::addressof(exchange);
       }
     }
     if (!pExchange) {
-      string ex("Cannot find exchange ");
-      ex.append(exchangeName.str());
-      throw exception(std::move(ex));
+      throw exception("Cannot find exchange {:ek}", exchangeName);
     }
     return *pExchange;
   }
@@ -79,10 +76,7 @@ class ExchangeRetrieverBase {
               ret.push_back(std::addressof(*foundIt));
             }
             if (ret.size() == oldSize) {
-              string ex("Unable to find ");
-              ex.append(ToString(n));
-              ex.append(" in the exchange list");
-              throw exception(std::move(ex));
+              throw exception("Unable to find {} in the exchange list", n);
             }
           }
           break;

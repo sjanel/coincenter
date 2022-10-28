@@ -28,9 +28,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
   auto errorIt = ret.find("code");
   if (errorIt != ret.end() && errorIt->get<std::string_view>() != "200000") {
     log::error("Full Kucoin json error: '{}'", ret.dump());
-    string err("Kucoin error: ");
-    err.append(errorIt->get<std::string_view>());
-    throw exception(std::move(err));
+    throw exception("Kucoin error: {}", errorIt->get<std::string_view>());
   }
   return ret["data"];
 }
@@ -152,9 +150,7 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& currencyInfoSet = _tradableCurrenciesCache.get();
   auto it = currencyInfoSet.find(TradableCurrenciesFunc::CurrencyInfo(currencyCode));
   if (it == currencyInfoSet.end()) {
-    string msg("Unable to find withdrawal fee for ");
-    currencyCode.appendStr(msg);
-    throw exception(std::move(msg));
+    throw exception("Unable to find withdrawal fee for {}", currencyCode);
   }
   return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
 }

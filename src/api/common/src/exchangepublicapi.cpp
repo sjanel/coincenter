@@ -204,17 +204,7 @@ Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const Ma
   if (!markets.contains(m)) {
     m = m.reverse();
     if (!markets.contains(m)) {
-      string ex("Cannot find ");
-      ex.append(c1.str())
-          .append("-")
-          .append(c2.str())
-          .append(" nor ")
-          .append(c2.str())
-          .append("-")
-          .append(c1.str())
-          .append(" markets on ")
-          .append(_name);
-      throw exception(std::move(ex));
+      throw exception("Cannot find {}-{} nor {}-{} markets on {}", c1, c2, c2, c1, _name);
     }
   }
   return m;

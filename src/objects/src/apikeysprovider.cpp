@@ -62,25 +62,19 @@ const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
   std::string_view platformStr = exchangeName.name();
   auto foundIt = _apiKeysMap.find(platformStr);
   if (foundIt == _apiKeysMap.end()) {
-    string ex("Unable to retrieve private key for ");
-    ex.append(platformStr);
-    throw exception(std::move(ex));
+    throw exception("Unable to retrieve private key for {}", platformStr);
   }
   const APIKeys& apiKeys = foundIt->second;
   if (!exchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
-      string ex("Specify name for ");
-      ex.append(platformStr).append(" keys as you have several");
-      throw exception(std::move(ex));
+      throw exception("Specify name for {} keys as you have several", platformStr);
     }
     return apiKeys.front();
   }
   auto keyNameIt = std::ranges::find_if(
       apiKeys, [exchangeName](const APIKey& apiKey) { return apiKey.name() == exchangeName.keyName(); });
   if (keyNameIt == apiKeys.end()) {
-    string ex("Unable to retrieve private key for ");
-    ex.append(platformStr).append(" named ").append(exchangeName.keyName());
-    throw exception(std::move(ex));
+    throw exception("Unable to retrieve private key for {} named {:k}", platformStr, exchangeName);
   }
   return *keyNameIt;
 }

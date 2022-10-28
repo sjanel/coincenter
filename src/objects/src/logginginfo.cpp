@@ -14,10 +14,7 @@ int8_t LogPosFromLogStr(std::string_view logStr) {
   if (logStr.size() == 1) {
     int8_t logLevelPos = logStr.front() - '0';
     if (logLevelPos < 0 || logLevelPos > kMaxLogLevel) {
-      string err("Unrecognized log level ");
-      err.append(logStr).append(". Possible values are 0-");
-      err.push_back('0' + kMaxLogLevel);
-      throw exception(std::move(err));
+      throw exception("Unrecognized log level {}. Possible values are 0-{}", logStr, '0' + kMaxLogLevel);
     }
     return logLevelPos;
   }
@@ -42,9 +39,8 @@ int8_t LogPosFromLogStr(std::string_view logStr) {
   if (logStr == "trace") {
     return 6;
   }
-  string err("Unrecognized log level name ");
-  err.append(logStr).append(". Possible values are off|critical|error|warning|info|debug|trace");
-  throw exception(std::move(err));
+  throw exception("Unrecognized log level name {}. Possible values are off|critical|error|warning|info|debug|trace",
+                  logStr);
 }
 
 }  // namespace
