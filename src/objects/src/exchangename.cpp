@@ -13,9 +13,7 @@ ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(g
 ExchangeName::ExchangeName(std::string_view exchangeName, std::string_view keyName)
     : _nameWithKey(ToLower(exchangeName)) {
   if (_nameWithKey.find('_') != string::npos) {
-    string err("Invalid exchange name ");
-    err.append(_nameWithKey);
-    throw exception(std::move(err));
+    throw exception("Invalid exchange name {}", _nameWithKey);
   }
   if (!keyName.empty()) {
     _nameWithKey.push_back('_');

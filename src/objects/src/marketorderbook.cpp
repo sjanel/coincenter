@@ -47,12 +47,7 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
     auto adjacentFindIt =
         std::ranges::adjacent_find(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price == rhs.price; });
     if (adjacentFindIt != _orders.end()) {
-      string ex("Forbidden duplicate price ");
-      ex.append(MonetaryAmount(adjacentFindIt->price).amountStr());
-      ex.append(" in the order book for market ");
-      ex.append(market.str());
-
-      throw exception(std::move(ex));
+      throw exception("Forbidden duplicate price {} in the order book for market {}", adjacentFindIt->price, market);
     }
 
     auto highestBidPriceIt = std::ranges::partition_point(_orders, [](AmountPrice a) { return a.amount > 0; });
@@ -74,14 +69,10 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   static constexpr std::string_view kErrNegVolumeMsg = " for MarketOrderbook creation, should be strictly positive";
 
   if (askVolume <= 0) {
-    string err("Invalid ask volume ");
-    err.append(askVolume.str()).append(kErrNegVolumeMsg);
-    throw exception(std::move(err));
+    throw exception("Invalid ask volume {}{}", askVolume, kErrNegVolumeMsg);
   }
   if (bidVolume <= 0) {
-    string err("Invalid bid volume ");
-    err.append(bidVolume.str()).append(kErrNegVolumeMsg);
-    throw exception(std::move(err));
+    throw exception("Invalid bid volume {}{}", bidVolume, kErrNegVolumeMsg);
   }
   static constexpr MonetaryAmount::RoundType roundType = MonetaryAmount::RoundType::kNearest;
 
@@ -91,71 +82,47 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   bidVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
 
   if (askVolume == 0) {
-    string err("Number of decimals ");
-    err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
-        .append(" is too small for given start volume ")
-        .append(askVolume.str());
-    throw exception(std::move(err));
+    throw exception("Number of decimals {} is too small for given start volume {}", _volAndPriNbDecimals.volNbDecimals,
+                    askVolume);
   }
   if (bidVolume == 0) {
-    string err("Number of decimals ");
-    err.append(ToString(_volAndPriNbDecimals.volNbDecimals))
-        .append(" is too small for given start volume ")
-        .append(bidVolume.str());
-    throw exception(std::move(err));
+    throw exception("Number of decimals {} is too small for given start volume {}", _volAndPriNbDecimals.volNbDecimals,
+                    bidVolume);
   }
 
   std::optional<AmountType> optStepPrice = (askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
   if (!optStepPrice) {
-    string err("Invalid number of decimals ");
-    err.append(ToString(_volAndPriNbDecimals.priNbDecimals));
-    err.append(" for ask price ").append(askPrice.str()).append(" and bid price ").append(bidPrice.str());
-    throw exception(std::move(err));
+    throw exception("Invalid number of decimals {} for ask price {} and bid price {}",
+                    _volAndPriNbDecimals.priNbDecimals, askPrice, bidPrice);
   }
   if (*optStepPrice <= 0) {
-    string err("Invalid ask price ");
-    err.append(askPrice.str()).append(" and bid price ").append(bidPrice.str());
-    err.append(" for MarketOrderbook creation. Ask price should be larger than Bid price.");
-    throw exception(std::move(err));
+    throw exception(
+        "Invalid ask price {} and bid price {} for MarketOrderbook creation. Ask price should be larger than Bid "
+        "price",
+        askPrice, bidPrice);
   }
   const AmountPrice::AmountType stepPrice = *optStepPrice;
 
   std::optional<AmountType> optBidVol = bidVolume.amount(_volAndPriNbDecimals.volNbDecimals);
   std::optional<AmountType> optAskVol = askVolume.amount(_volAndPriNbDecimals.volNbDecimals);
   if (!optBidVol) {
-    string err("Cannot retrieve amount from bid volume ");
-    err.append(bidVolume.str())
-        .append(" with ")
-        .append(ToString(_volAndPriNbDecimals.volNbDecimals))
-        .append(" decimals");
-    throw exception(std::move(err));
+    throw exception("Cannot retrieve amount from bid volume {} with {} decimals", bidVolume,
+                    _volAndPriNbDecimals.volNbDecimals);
   }
   if (!optAskVol) {
-    string err("Cannot retrieve amount from ask volume ");
-    err.append(askVolume.str())
-        .append(" with ")
-        .append(ToString(_volAndPriNbDecimals.volNbDecimals))
-        .append(" decimals");
-    throw exception(std::move(err));
+    throw exception("Cannot retrieve amount from ask volume {} with {} decimals", askVolume,
+                    _volAndPriNbDecimals.volNbDecimals);
   }
 
   std::optional<AmountType> optBidPri = bidPrice.amount(_volAndPriNbDecimals.priNbDecimals);
   std::optional<AmountType> optAskPri = askPrice.amount(_volAndPriNbDecimals.priNbDecimals);
   if (!optBidPri) {
-    string err("Cannot retrieve amount from bid price ");
-    err.append(bidPrice.str())
-        .append(" with ")
-        .append(ToString(_volAndPriNbDecimals.priNbDecimals))
-        .append(" decimals");
-    throw exception(std::move(err));
+    throw exception("Cannot retrieve amount from bid price {} with {} decimals", bidPrice,
+                    _volAndPriNbDecimals.priNbDecimals);
   }
   if (!optAskPri) {
-    string err("Cannot retrieve amount from ask price ");
-    err.append(askPrice.str())
-        .append(" with ")
-        .append(ToString(_volAndPriNbDecimals.priNbDecimals))
-        .append(" decimals");
-    throw exception(std::move(err));
+    throw exception("Cannot retrieve amount from ask price {} with {} decimals", askPrice,
+                    _volAndPriNbDecimals.priNbDecimals);
   }
 
   const AmountPrice refBidAmountPrice(*optBidVol, *optBidPri);

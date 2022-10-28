@@ -43,9 +43,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
 TopLevelOption::TopLevelOption(const json& jsonData, std::string_view optionName) {
   auto optIt = jsonData.find(optionName);
   if (optIt == jsonData.end()) {
-    string err("Unable to find '");
-    err.append(optionName).append("' top level option in config file content");
-    throw exception(std::move(err));
+    throw exception("Unable to find '{}' top level option in config file content", optionName);
   }
   _defaultPart = optIt->find("default");
   _hasDefaultPart = _defaultPart != optIt->end();

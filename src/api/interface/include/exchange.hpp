@@ -30,14 +30,14 @@ class Exchange {
     if (_pExchangePrivate) {
       return *_pExchangePrivate;
     }
-    throw exception("No private key associated to this exchange");
+    throw exception("No private key associated to exchange {}", name());
   }
 
   const api::ExchangePrivate &apiPrivate() const {
     if (_pExchangePrivate) {
       return *_pExchangePrivate;
     }
-    throw exception("No private key associated to this exchange");
+    throw exception("No private key associated to exchange {}", name());
   }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }

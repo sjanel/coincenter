@@ -68,14 +68,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   auto statusIt = ret.find("status");
   if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
     log::error("Full Huobi json error: '{}'", ret.dump());
-    string errMsg("Huobi error: ");
     auto errIt = ret.find("err-msg");
-    if (errIt == ret.end()) {
-      errMsg.append("unknown");
-    } else {
-      errMsg.append(errIt->get<std::string_view>());
-    }
-    throw exception(std::move(errMsg));
+    throw exception("Huobi error: {}", errIt == ret.end() ? "unknown" : errIt->get<std::string_view>());
   }
 
   return ret;
@@ -367,21 +361,11 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - fee;
   if (!withdrawParams.minWithdrawAmt.isDefault() && netEmittedAmount < withdrawParams.minWithdrawAmt) {
-    string err("Minimum withdraw amount for ");
-    currencyCode.appendStr(err);
-    err.append(" on Huobi is ")
-        .append(withdrawParams.minWithdrawAmt.amountStr())
-        .append(", cannot withdraw ")
-        .append(netEmittedAmount.str());
-    throw exception(std::move(err));
+    throw exception("Minimum withdraw amount for {} on Huobi is {}, cannot withdraw {}", currencyCode,
+                    withdrawParams.minWithdrawAmt, netEmittedAmount);
   } else if (!withdrawParams.maxWithdrawAmt.isDefault() && netEmittedAmount > withdrawParams.maxWithdrawAmt) {
-    string err("Maximum withdraw amount for ");
-    currencyCode.appendStr(err);
-    err.append(" on Huobi is ")
-        .append(withdrawParams.maxWithdrawAmt.amountStr())
-        .append(", cannot withdraw ")
-        .append(netEmittedAmount.str());
-    throw exception(std::move(err));
+    throw exception("Maximum withdraw amount for {} on Huobi is {}, cannot withdraw {}", currencyCode,
+                    withdrawParams.maxWithdrawAmt, netEmittedAmount);
   }
   if (netEmittedAmount.nbDecimals() > withdrawParams.withdrawPrecision) {
     log::warn("Withdraw amount precision for Huobi is {} - truncating {}", withdrawParams.withdrawPrecision,

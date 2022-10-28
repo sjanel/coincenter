@@ -25,11 +25,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
     const long statusCode = statusCodeIt == ret.end() ? -1 : statusCodeIt->get<long>();
     auto msgIt = ret.find("message");
     std::string_view msg = msgIt == ret.end() ? "Unknown" : msgIt->get<std::string_view>();
-    string err("Upbit error: ");
-    err.append(msg);
-    err.append(", code = ");
-    AppendString(err, statusCode);
-    throw exception(std::move(err));
+    throw exception("Upbit error: {}, code = {}", msg, statusCode);
   }
   return ret;
 }

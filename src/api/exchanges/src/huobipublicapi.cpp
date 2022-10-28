@@ -247,9 +247,7 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       }
     }
   }
-  string msg("Unable to find withdrawal fee for ");
-  currencyCode.appendStr(msg);
-  throw exception(std::move(msg));
+  throw exception("Unable to find withdrawal fee for {}", currencyCode);
 }
 
 MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {

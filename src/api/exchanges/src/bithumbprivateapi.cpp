@@ -225,9 +225,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
         }
       }
       log::error("Full Bithumb json error: '{}'", ret.dump());
-      string ex("Bithumb error: ");
-      ex.append(statusCode).append(" \"").append(msg).append("\"");
-      throw exception(std::move(ex));
+      throw exception("Bithumb error: {} \"{}\"", statusCode, msg);
     }
   }
   return ret;
@@ -280,10 +278,9 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json ret = PrivateQuery(_curlHandle, _apiKey, kWalletAddressEndpointStr, {{"currency", currencyCode.str()}});
   if (ret.empty()) {
-    string err("Bithumb wallet is not created for ");
-    currencyCode.appendStr(err);
-    err.append(", it should be done with the UI first (no way to do it via API).");
-    throw exception(std::move(err));
+    throw exception(
+        "Bithumb wallet is not created for {}, it should be done with the UI first (no way to do it via API)",
+        currencyCode);
   }
   std::string_view addressAndTag = ret["data"]["wallet_address"].get<std::string_view>();
   std::size_t tagPos = addressAndTag.find('&');
@@ -636,7 +633,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       }
       std::size_t first = unitsStr.find_first_of("0123456789");
       if (first == std::string_view::npos) {
-        throw exception("Bithumb: cannot parse amount " + string(unitsStr));
+        throw exception("Bithumb: cannot parse amount {}", unitsStr);
       }
       MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
       if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
@@ -650,9 +647,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
                  initiatedWithdrawInfo.grossEmittedAmount());
     }
   }
-  string msg("Bithumb: unable to find withdrawal confirmation of ");
-  msg.append(initiatedWithdrawInfo.grossEmittedAmount().str());
-  throw exception(std::move(msg));
+  throw exception("Bithumb: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
 }
 
 bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,

@@ -35,11 +35,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
   if (foundErrorIt != ret.end() && foundMsgIt != ret.end()) {
     const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
     log::error("Full Binance json error: '{}'", ret.dump());
-    string ex("Error: ");
-    ex.append(MonetaryAmount(statusCode).amountStr());
-    ex.append(", msg: ");
-    ex.append(foundMsgIt->get<std::string_view>());
-    throw exception(std::move(ex));
+    throw exception("Error: {}, msg: ", MonetaryAmount(statusCode), foundMsgIt->get<std::string_view>());
   }
   return ret;
 }
@@ -48,9 +44,7 @@ template <class ExchangeInfoDataByMarket>
 const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market m) {
   auto it = exchangeInfoData.find(m);
   if (it == exchangeInfoData.end()) {
-    string ex("Unable to retrieve market data ");
-    ex.append(m.str());
-    throw exception(std::move(ex));
+    throw exception("Unable to retrieve {} data", m);
   }
   return it->second;
 }
@@ -248,9 +242,7 @@ MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
       return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     }
   }
-  string ex("Unable to find withdrawal fee for ");
-  currencyCode.appendStr(ex);
-  throw exception(std::move(ex));
+  throw exception("Unable to find withdrawal fee for {}", currencyCode);
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market m, MonetaryAmount pri) {

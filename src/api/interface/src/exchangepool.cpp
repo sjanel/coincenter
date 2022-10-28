@@ -40,9 +40,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
     } else if (exchangeName == "upbit") {
       exchangePublic = std::addressof(_upbitPublic);
     } else {
-      string ex("Should not happen, unsupported platform ");
-      ex.append(exchangeName);
-      throw exception(std::move(ex));
+      throw exception("Should not happen, unsupported platform {}", exchangeName);
     }
 
     const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
@@ -63,9 +61,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
         } else if (exchangeName == "upbit") {
           exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
         } else {
-          string ex("Should not happen, unsupported platform ");
-          ex.append(exchangeName);
-          throw exception(std::move(ex));
+          throw exception("Should not happen, unsupported platform {}", exchangeName);
         }
 
         _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,

@@ -45,20 +45,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   json ret = json::parse(curlHandle.query(endpoint, std::move(opts)));
   auto errCodeIt = ret.find("code");
   if (errCodeIt != ret.end() && errCodeIt->get<std::string_view>() != "200000") {
-    string errStr("Kucoin error: ");
-    errStr.append(errCodeIt->get<std::string_view>());
     auto msgIt = ret.find("msg");
-    if (msgIt != ret.end()) {
-      errStr.append(" - ");
-      errStr.append(msgIt->get<std::string_view>());
-    }
+    std::string_view msg = msgIt == ret.end() ? "null" : msgIt->get<std::string_view>();
     if (requestType == HttpRequestType::kDelete) {
-      log::warn("{} bypassed, object probably disappeared correctly", errStr);
+      log::warn("Kucoin error {} bypassed, object probably disappeared correctly. Msg: {}",
+                errCodeIt->get<std::string_view>(), msg);
       ret.clear();
       return ret;
     }
     log::error("Full Kucoin json error: '{}'", ret.dump());
-    throw exception(std::move(errStr));
+    throw exception("Kucoin error: {}, msg: {}", errCodeIt->get<std::string_view>(), msg);
   }
   return ret["data"];
 }
