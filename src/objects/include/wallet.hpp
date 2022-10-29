@@ -4,6 +4,7 @@
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
+#include "cct_format.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "currencycode.hpp"
@@ -30,7 +31,7 @@ class WalletCheck {
 class Wallet {
  public:
   /// Empty wallet that should not be used, just for temporary purposes.
-  Wallet() noexcept = default;
+  Wallet() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
   /// Build a wallet with all information.
   Wallet(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address, std::string_view tag,
@@ -54,8 +55,6 @@ class Wallet {
   CurrencyCode currencyCode() const { return _currency; }
 
   bool hasTag() const { return _tagPos != std::string_view::npos; }
-
-  string str() const;
 
   bool operator==(const Wallet &) const = default;
 
@@ -81,3 +80,21 @@ class Wallet {
 };
 
 }  // namespace cct
+
+template <>
+struct fmt::formatter<cct::Wallet> {
+  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin(), end = ctx.end();
+    if (it != end && *it != '}') {
+      throw format_error("invalid format");
+    }
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const cct::Wallet &w, FormatContext &ctx) const -> decltype(ctx.out()) {
+    bool hasTag = w.hasTag();
+    return fmt::format_to(ctx.out(), "{} wallet of {} [{}{}{}]", w.exchangeName().name(), w.currencyCode(), w.address(),
+                          hasTag ? "," : "", hasTag ? w.tag() : "");
+  }
+};

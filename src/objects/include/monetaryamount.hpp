@@ -1,7 +1,5 @@
 #pragma once
 
-#include <spdlog/fmt/bundled/format.h>
-
 #include <concepts>
 #include <cstdint>
 #include <limits>
@@ -10,6 +8,7 @@
 #include <string_view>
 #include <type_traits>
 
+#include "cct_format.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -124,7 +123,7 @@ class MonetaryAmount {
 
   constexpr int8_t maxNbDecimals() const {
     return _curWithDecimals.isLongCurrencyCode()
-               ? CurrencyCodeConstants::kMaxNbDecimalsLongCurrencyCode
+               ? CurrencyCodeBase::kMaxNbDecimalsLongCurrencyCode
                : std::numeric_limits<AmountType>::digits10 - 1;  // -1 as minimal nb digits of integral part
   }
 

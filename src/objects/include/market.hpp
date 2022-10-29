@@ -1,11 +1,10 @@
 #pragma once
 
-#include <spdlog/fmt/bundled/format.h>
-
 #include <array>
 #include <ostream>
 #include <utility>
 
+#include "cct_format.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "monetaryamount.hpp"

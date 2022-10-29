@@ -298,7 +298,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet w(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag, walletCheck);
-  log::info("Retrieved {}", w.str());
+  log::info("Retrieved {}", w);
   return w;
 }
 

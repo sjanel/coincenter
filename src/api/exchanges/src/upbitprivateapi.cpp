@@ -182,7 +182,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet w(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, std::move(addressIt->get_ref<string&>()),
            tag, walletCheck);
-  log::info("Retrieved {}", w.str());
+  log::info("Retrieved {}", w);
   return w;
 }
 

@@ -157,7 +157,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
   Wallet w(ExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode,
            std::move(result["address"].get_ref<string&>()), tag, walletCheck);
-  log::info("Retrieved {}", w.str());
+  log::info("Retrieved {}", w);
   return w;
 }
 
