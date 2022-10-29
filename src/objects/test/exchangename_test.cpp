@@ -53,4 +53,12 @@ TEST(ExchangeName, Equality) {
   EXPECT_NE(ExchangeName("upbit", "_user13"), ExchangeName("binance", "_user13"));
 }
 
+TEST(ExchangeName, Format) {
+  EXPECT_EQ(fmt::format("{}", ExchangeName("binance_key")), "binance");
+  EXPECT_EQ(fmt::format("{:e}", ExchangeName("binance_key")), "binance");
+  EXPECT_EQ(fmt::format("{:n}", ExchangeName("binance_key")), "binance");
+  EXPECT_EQ(fmt::format("{:k}", ExchangeName("binance_key")), "key");
+  EXPECT_EQ(fmt::format("{:ek}", ExchangeName("binance_key")), "binance_key");
+}
+
 }  // namespace cct

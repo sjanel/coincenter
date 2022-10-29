@@ -94,7 +94,7 @@ struct fmt::formatter<cct::Wallet> {
   template <typename FormatContext>
   auto format(const cct::Wallet &w, FormatContext &ctx) const -> decltype(ctx.out()) {
     bool hasTag = w.hasTag();
-    return fmt::format_to(ctx.out(), "{} wallet of {} [{}{}{}]", w.exchangeName().name(), w.currencyCode(), w.address(),
+    return fmt::format_to(ctx.out(), "{:n} wallet of {} [{}{}{}]", w.exchangeName(), w.currencyCode(), w.address(),
                           hasTag ? "," : "", hasTag ? w.tag() : "");
   }
 };

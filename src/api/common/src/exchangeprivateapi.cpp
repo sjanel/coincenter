@@ -222,8 +222,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
     }
   } while (action != NextAction::kTerminate);
   log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount(),
-            initiatedWithdrawInfo.receivingWallet().exchangeName().str(),
-            initiatedWithdrawInfo.receivingWallet().address());
+            initiatedWithdrawInfo.receivingWallet().exchangeName(), initiatedWithdrawInfo.receivingWallet().address());
   return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
 }
 

@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include "cct_const.hpp"
-#include "cct_fixedcapacityvector.hpp"
+#include "cct_format.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
@@ -28,17 +28,17 @@ class ExchangeName {
   ExchangeName(std::string_view exchangeName, std::string_view keyName);
 
   std::string_view name() const {
-    std::size_t dash = dashPos();
-    return std::string_view(_nameWithKey.data(), dash == string::npos ? _nameWithKey.size() : dash);
+    std::size_t underscore = underscorePos();
+    return std::string_view(_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore);
   }
 
   std::string_view keyName() const {
-    std::size_t dash = dashPos();
-    return std::string_view(_nameWithKey.begin() + (dash == string::npos ? _nameWithKey.size() : dash + 1U),
+    std::size_t underscore = underscorePos();
+    return std::string_view(_nameWithKey.begin() + (underscore == string::npos ? _nameWithKey.size() : underscore + 1U),
                             _nameWithKey.end());
   }
 
-  bool isKeyNameDefined() const { return dashPos() != string::npos; }
+  bool isKeyNameDefined() const { return underscorePos() != string::npos; }
 
   std::string_view str() const { return _nameWithKey; }
 
@@ -52,7 +52,7 @@ class ExchangeName {
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  std::size_t dashPos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
+  std::size_t underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
 
   static constexpr std::size_t kMinExchangeNameLength =
       std::ranges::min_element(kSupportedExchanges, [](std::string_view lhs, std::string_view rhs) {
@@ -80,3 +80,41 @@ inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNam
   return exchangesStr;
 }
 }  // namespace cct
+
+template <>
+struct fmt::formatter<cct::ExchangeName> {
+  /// format ExchangeName 'name_key':
+  ///  - '{}' -> 'name'
+  ///  - '{:e}' -> 'name'
+  ///  - '{:n}' -> 'name'
+  ///  - '{:k}' -> 'key'
+  ///  - '{:ek}' -> 'name_key'
+  bool printExchangeName = false;
+  bool printKeyName = false;
+
+  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin();
+    for (auto end = ctx.end(); it != end; ++it) {
+      switch (*it) {
+        case 'e':
+          [[fallthrough]];
+        case 'n':
+          printExchangeName = true;
+          break;
+        case 'k':
+          printKeyName = true;
+          break;
+        case '}':
+          return it;
+        default:
+          throw format_error("invalid format");
+      }
+    }
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const cct::ExchangeName &e, FormatContext &ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}", printKeyName ? (printExchangeName ? e.str() : e.keyName()) : e.name());
+  }
+};
