@@ -293,6 +293,7 @@ static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount shou
 
 }  // namespace cct
 
+#ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::MonetaryAmount> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
@@ -308,3 +309,4 @@ struct fmt::formatter<cct::MonetaryAmount> {
     return fmt::format_to(ctx.out(), "{} {}", a.amountStr(), a.currencyCode());
   }
 };
+#endif

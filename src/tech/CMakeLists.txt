@@ -20,8 +20,8 @@ add_unit_test(
 add_unit_test(
     cct_exception_test
     test/cct_exception_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
+    LIBRARIES
+    spdlog
 )
 
 add_unit_test(
@@ -33,12 +33,16 @@ add_unit_test(
     codec_test
     src/codec.cpp
     test/codec_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
     durationstring_test
     src/durationstring.cpp
     test/durationstring_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
@@ -92,4 +96,6 @@ add_unit_test(
     unitsparser_test
     src/unitsparser.cpp
     test/unitsparser_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )

@@ -25,4 +25,9 @@ TEST(CctExceptionTest, MoveStringConstructorLong) {
                "I can test if the exception stores it correctly.");
 }
 
+TEST(CctExceptionTest, Format) {
+  EXPECT_STREQ(exception("Unknown currency code {}. Please enter a real one.", "BABYDOGE").what(),
+               "Unknown currency code BABYDOGE. Please enter a real one.");
+}
+
 }  // namespace cct

@@ -1,5 +1,6 @@
 #include "huobiprivateapi.hpp"
 
+#include <iterator>
 #include <thread>
 
 #include "apikey.hpp"

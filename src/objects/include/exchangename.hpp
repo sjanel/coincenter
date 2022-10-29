@@ -81,6 +81,7 @@ inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNam
 }
 }  // namespace cct
 
+#ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::ExchangeName> {
   /// format ExchangeName 'name_key':
@@ -118,3 +119,4 @@ struct fmt::formatter<cct::ExchangeName> {
     return fmt::format_to(ctx.out(), "{}", printKeyName ? (printExchangeName ? e.str() : e.keyName()) : e.name());
   }
 };
+#endif

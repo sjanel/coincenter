@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <execution>
+#include <iterator>
 
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
