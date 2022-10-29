@@ -36,9 +36,7 @@ string File::read() const {
   if (_ifError == IfError::kThrow || std::filesystem::exists(_filePath.c_str())) {
     std::ifstream file(_filePath.c_str());
     if (!file) {
-      string err("Unable to open ");
-      err.append(_filePath).append(" for reading");
-      throw exception(std::move(err));
+      throw exception("Unable to open {} for reading", _filePath);
     }
     try {
       data = string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
