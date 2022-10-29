@@ -628,10 +628,9 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (isPercentageWithdraw) {
     log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode,
-              fromPrivateExchangeName.str(), toPrivateExchangeName.str());
+              fromPrivateExchangeName, toPrivateExchangeName);
   } else {
-    log::info("Withdraw gross {} from {} to {} requested", grossAmount, fromPrivateExchangeName.str(),
-              toPrivateExchangeName.str());
+    log::info("Withdraw gross {} from {} to {} requested", grossAmount, fromPrivateExchangeName, toPrivateExchangeName);
   }
 
   Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);

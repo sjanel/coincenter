@@ -22,7 +22,7 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
   File depositAddressesFile = GetDepositAddressesFile(walletCheck.dataDir());
   json data = depositAddressesFile.readJson();
   if (!data.contains(exchangeName.name())) {
-    log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, exchangeName.name());
+    log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, exchangeName);
     return false;
   }
   const json &exchangeWallets = data[string(exchangeName.name())];
@@ -30,8 +30,7 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
   for (const auto &[privateExchangeKeyName, wallets] : exchangeWallets.items()) {
     if (exchangeName.keyName().empty()) {
       if (!uniqueKeyName) {
-        log::error("Several key names found for exchange {}. Specify a key name to remove ambiguity",
-                   exchangeName.name());
+        log::error("Several key names found for exchange {:n}. Specify a key name to remove ambiguity", exchangeName);
         return false;
       }
 
