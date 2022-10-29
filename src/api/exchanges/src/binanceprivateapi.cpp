@@ -111,7 +111,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet w(ExchangeName(_public.name(), _apiKey.name()), currencyCode, std::move(result["address"].get_ref<string&>()),
            tag, walletCheck);
-  log::info("Retrieved {} (URL: '{}')", w.str(), result["url"].get<std::string_view>());
+  log::info("Retrieved {} (URL: '{}')", w, result["url"].get<std::string_view>());
   return w;
 }
 

@@ -91,17 +91,4 @@ Wallet::Wallet(ExchangeName &&exchangeName, CurrencyCode currency, string &&addr
   ValidateDepositAddressIfNeeded(_exchangeName, currency, this->address(), tag, walletCheck);
 }
 
-string Wallet::str() const {
-  string ret(_exchangeName.str());
-  ret.append(" wallet of ");
-  _currency.appendStr(ret);
-  ret.append(" [");
-  ret.append(address());
-  ret.push_back(']');
-  if (hasTag()) {
-    ret.append(" tag ");
-    ret.append(tag());
-  }
-  return ret;
-}
 }  // namespace cct

@@ -177,7 +177,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   Wallet w(std::move(exchangeName), currencyCode, std::move(address), std::move(tag), walletCheck);
-  log::info("Retrieved {}", w.str());
+  log::info("Retrieved {}", w);
   return w;
 }
 

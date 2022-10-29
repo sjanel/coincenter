@@ -197,8 +197,7 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
   log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount,
-            initiatedWithdrawInfo.receivingWallet().str(), _exchangePublic.name(),
-            targetExchange._exchangePublic.name());
+            initiatedWithdrawInfo.receivingWallet(), _exchangePublic.name(), targetExchange._exchangePublic.name());
   enum class NextAction { kCheckSender, kCheckReceiver, kTerminate };
   NextAction action = NextAction::kCheckSender;
   SentWithdrawInfo sentWithdrawInfo;

@@ -1,19 +1,18 @@
 #pragma once
 
-#include <spdlog/fmt/bundled/format.h>
-
 #include <compare>
 #include <cstdint>
 #include <ostream>
 #include <string_view>
 #include <type_traits>
 
+#include "cct_format.hpp"
 #include "cct_hash.hpp"
 #include "cct_invalid_argument_exception.hpp"
 
 namespace cct {
 
-struct CurrencyCodeConstants {
+struct CurrencyCodeBase {
   static constexpr int kMaxLen = 10;
 
   static constexpr uint64_t kNbBitsChar = 6;
@@ -34,6 +33,30 @@ struct CurrencyCodeConstants {
     return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1))) &
                              ((1ULL << kNbBitsChar) - 1ULL)) +
            kFirstAuthorizedLetter - 1;
+  }
+
+  static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) {
+    return isLongCurrencyCode ? kNbDecimals4Mask : (1ULL << (kNbBitsChar + kNbBitsNbDecimals)) - 1ULL;
+  }
+
+  static constexpr uint64_t StrToBmp(std::string_view acronym) {
+    uint64_t ret = 0;
+    int charPos = 0;
+    for (char c : acronym) {
+      if (c >= 'a') {
+        if (c > 'z') {
+          throw invalid_argument("Unexpected char in acronym");
+        }
+        c -= 'a' - 'A';
+      }
+      if (c < kFirstAuthorizedLetter || c > kLastAuthorizedLetter) {
+        throw invalid_argument("Unexpected char in acronym");
+      }
+
+      ret |= static_cast<uint64_t>(c - kFirstAuthorizedLetter + 1)
+             << (kNbBitsNbDecimals + kNbBitsChar * static_cast<uint64_t>(kMaxLen - ++charPos));
+    }
+    return ret;
   }
 };
 
@@ -69,7 +92,7 @@ class CurrencyCodeIterator {
     return oldSelf;
   }
 
-  char operator*() const noexcept { return CurrencyCodeConstants::CharAt(_data, static_cast<int>(_pos)); }
+  char operator*() const noexcept { return CurrencyCodeBase::CharAt(_data, static_cast<int>(_pos)); }
 
  private:
   friend class CurrencyCode;
@@ -90,14 +113,14 @@ class CurrencyCode {
   using iterator = CurrencyCodeIterator;
   using const_iterator = iterator;
 
-  static constexpr auto kMaxLen = CurrencyCodeConstants::kMaxLen;
+  static constexpr auto kMaxLen = CurrencyCodeBase::kMaxLen;
 
   /// Constructs a neutral currency code.
   constexpr CurrencyCode() noexcept : _data(0) {}
 
   /// Constructs a currency code from a char array.
   template <unsigned N, std::enable_if_t<N <= kMaxLen + 1, bool> = true>
-  constexpr CurrencyCode(const char (&acronym)[N]) : _data(ComputeData(acronym)) {}
+  constexpr CurrencyCode(const char (&acronym)[N]) : _data(CurrencyCodeBase::StrToBmp(acronym)) {}
 
   /// Constructs a currency code from given string.
   /// If number of chars in 'acronym' is higher than 'kMaxLen', exception will be raised.
@@ -106,7 +129,7 @@ class CurrencyCode {
     if (acronym.length() > kMaxLen) {
       throw invalid_argument("Acronym is too long to fit in a CurrencyCode");
     }
-    _data = ComputeData(acronym);
+    _data = CurrencyCodeBase::StrToBmp(acronym);
   }
 
   const_iterator begin() const { return const_iterator(_data); }
@@ -115,7 +138,7 @@ class CurrencyCode {
   constexpr uint64_t size() const {
     uint64_t s = 0;
     while (static_cast<int>(s) < kMaxLen &&
-           (_data & (CurrencyCodeConstants::kFirstCharMask >> (CurrencyCodeConstants::kNbBitsChar * s)))) {
+           (_data & (CurrencyCodeBase::kFirstCharMask >> (CurrencyCodeBase::kNbBitsChar * s)))) {
       ++s;
     }
     return s;
@@ -138,7 +161,7 @@ class CurrencyCode {
   void append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = (*this)[charPos];
-      if (c == CurrencyCodeConstants::kFirstAuthorizedLetter - 1) {
+      if (c == CurrencyCodeBase::kFirstAuthorizedLetter - 1) {
         break;
       }
       *it = c;
@@ -149,9 +172,9 @@ class CurrencyCode {
   /// Returns a 64 bits code
   constexpr uint64_t code() const noexcept { return _data; }
 
-  constexpr bool isNeutral() const noexcept { return !(_data & CurrencyCodeConstants::kFirstCharMask); }
+  constexpr bool isNeutral() const noexcept { return !(_data & CurrencyCodeBase::kFirstCharMask); }
 
-  constexpr char operator[](uint32_t pos) const { return CurrencyCodeConstants::CharAt(_data, static_cast<int>(pos)); }
+  constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
 
   constexpr auto operator<=>(const CurrencyCode &) const = default;
 
@@ -160,7 +183,7 @@ class CurrencyCode {
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = cur[charPos];
-      if (c == CurrencyCodeConstants::kFirstAuthorizedLetter - 1) {
+      if (c == CurrencyCodeBase::kFirstAuthorizedLetter - 1) {
         break;
       }
       os << c;
@@ -177,72 +200,40 @@ class CurrencyCode {
 
   explicit constexpr CurrencyCode(uint64_t data) : _data(data) {}
 
-  constexpr bool isLongCurrencyCode() const { return _data & CurrencyCodeConstants::kBeforeLastCharMask; }
+  constexpr bool isLongCurrencyCode() const { return _data & CurrencyCodeBase::kBeforeLastCharMask; }
 
   constexpr void setNbDecimals(int8_t nbDecimals) {
     if (isLongCurrencyCode()) {
-      if (!std::is_constant_evaluated() && nbDecimals > CurrencyCodeConstants::kMaxNbDecimalsLongCurrencyCode) {
+      if (!std::is_constant_evaluated() && nbDecimals > CurrencyCodeBase::kMaxNbDecimalsLongCurrencyCode) {
         throw invalid_argument("Too many decimals for long currency code");
       }
       // For currency codes whose length is > 8, only 15 digits are supported
-      _data = static_cast<uint64_t>(nbDecimals) + (_data & (~CurrencyCodeConstants::kNbDecimals4Mask));
+      _data = static_cast<uint64_t>(nbDecimals) + (_data & (~CurrencyCodeBase::kNbDecimals4Mask));
     } else {
       // max 64 decimals for currency codes whose length is maximum 8 (most cases)
-      _data =
-          (static_cast<uint64_t>(nbDecimals) << CurrencyCodeConstants::kNbBitsNbDecimals) +
-          (_data & ~((1ULL << (CurrencyCodeConstants::kNbBitsChar + CurrencyCodeConstants::kNbBitsNbDecimals)) - 1ULL));
+      _data = (static_cast<uint64_t>(nbDecimals) << CurrencyCodeBase::kNbBitsNbDecimals) +
+              (_data & ~((1ULL << (CurrencyCodeBase::kNbBitsChar + CurrencyCodeBase::kNbBitsNbDecimals)) - 1ULL));
     }
   }
 
   constexpr int8_t nbDecimals() const {
     if (isLongCurrencyCode()) {
       // For currency codes whose length is > 8, only 15 digits are supported
-      return static_cast<int8_t>(_data & CurrencyCodeConstants::kNbDecimals4Mask);
+      return static_cast<int8_t>(_data & CurrencyCodeBase::kNbDecimals4Mask);
     }
     // max 64 decimals for currency codes whose length is maximum 8 (most cases)
-    return static_cast<int8_t>((_data >> CurrencyCodeConstants::kNbBitsNbDecimals) &
-                               ((1ULL << CurrencyCodeConstants::kNbBitsChar) - 1ULL));
+    return static_cast<int8_t>((_data >> CurrencyCodeBase::kNbBitsNbDecimals) &
+                               ((1ULL << CurrencyCodeBase::kNbBitsChar) - 1ULL));
   }
 
   constexpr CurrencyCode toNeutral() const {
     // keep number of decimals
-    return CurrencyCode(
-        _data &
-        (isLongCurrencyCode()
-             ? CurrencyCodeConstants::kNbDecimals4Mask
-             : (1ULL << (CurrencyCodeConstants::kNbBitsChar + CurrencyCodeConstants::kNbBitsNbDecimals)) - 1ULL));
+    return CurrencyCode(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
   constexpr CurrencyCode withNoDecimalsPart() const {
     // Keep currency, not decimals
-    return CurrencyCode(
-        _data &
-        ~(isLongCurrencyCode()
-              ? CurrencyCodeConstants::kNbDecimals4Mask
-              : (1ULL << (CurrencyCodeConstants::kNbBitsChar + CurrencyCodeConstants::kNbBitsNbDecimals)) - 1ULL));
-  }
-
-  static constexpr uint64_t ComputeData(std::string_view acronym) {
-    uint64_t ret = 0;
-    int charPos = 0;
-    for (char c : acronym) {
-      if (c >= 'a') {
-        if (c > 'z') {
-          throw invalid_argument("Unexpected char in acronym");
-        }
-        c -= 'a' - 'A';
-      }
-      if (c < CurrencyCodeConstants::kFirstAuthorizedLetter || c > CurrencyCodeConstants::kLastAuthorizedLetter) {
-        throw invalid_argument("Unexpected char in acronym");
-      }
-
-      ret |= static_cast<uint64_t>(c - CurrencyCodeConstants::kFirstAuthorizedLetter + 1)
-             << (CurrencyCodeConstants::kNbBitsNbDecimals +
-                 CurrencyCodeConstants::kNbBitsChar * static_cast<uint64_t>(kMaxLen - charPos - 1));
-
-      ++charPos;
-    }
-    return ret;
+    return CurrencyCode(_data & ~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 };
 
