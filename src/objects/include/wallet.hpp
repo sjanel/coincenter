@@ -81,6 +81,7 @@ class Wallet {
 
 }  // namespace cct
 
+#ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::Wallet> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
@@ -98,3 +99,4 @@ struct fmt::formatter<cct::Wallet> {
                           hasTag ? "," : "", hasTag ? w.tag() : "");
   }
 };
+#endif

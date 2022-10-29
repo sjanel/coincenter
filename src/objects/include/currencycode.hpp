@@ -2,6 +2,7 @@
 
 #include <compare>
 #include <cstdint>
+#include <iterator>
 #include <ostream>
 #include <string_view>
 #include <type_traits>
@@ -239,6 +240,7 @@ class CurrencyCode {
 
 }  // namespace cct
 
+#ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::CurrencyCode> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
@@ -255,6 +257,7 @@ struct fmt::formatter<cct::CurrencyCode> {
     return ctx.out();
   }
 };
+#endif
 
 // Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key
 namespace std {

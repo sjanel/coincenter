@@ -1,5 +1,7 @@
 #include "apikeysprovider.hpp"
 
+#include <iterator>
+
 #include "cct_exception.hpp"
 #include "cct_file.hpp"
 #include "cct_json.hpp"

@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <array>
 #include <exception>
+#include <iterator>
 #include <variant>
 
+#include "cct_format.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 
@@ -17,9 +19,6 @@ class exception : public std::exception {
  public:
   static constexpr int kMsgMaxLen = 80;
 
-  static_assert(std::is_nothrow_move_constructible_v<string> && std::is_nothrow_destructible_v<string>,
-                "exception cannot be nothrow with a string");
-
   template <unsigned N, std::enable_if_t<N <= kMsgMaxLen + 1, bool> = true>
   explicit exception(const char (&str)[N]) noexcept {
     // Hint: default constructor constructs a variant holding the value-initialized value of the first alternative
@@ -30,9 +29,14 @@ class exception : public std::exception {
     // char array.
   }
 
-  explicit exception(string&& str) noexcept : _data(std::move(str)) {}
+  explicit exception(string&& str) noexcept(std::is_nothrow_move_constructible_v<string>) : _data(std::move(str)) {}
 
-  exception(const exception& o) noexcept = delete;
+  template <typename... Args>
+  explicit exception(format_string<Args...> fmt, Args&&... args) : _data(std::in_place_type<string>) {
+    format_to(std::back_inserter(std::get<1>(_data)), fmt, std::forward<Args>(args)...);
+  }
+
+  exception(const exception& o) = delete;
   exception(exception&&) noexcept = default;
   exception& operator=(const exception& o) = delete;
   exception& operator=(exception&&) noexcept = default;

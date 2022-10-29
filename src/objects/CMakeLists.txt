@@ -40,8 +40,6 @@ add_unit_test(
     test/exchangename_test.cpp
     LIBRARIES
     coincenter_tech
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test( 

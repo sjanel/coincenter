@@ -63,8 +63,10 @@ class Market {
 
   TradableAssets _assets;
 };
+
 }  // namespace cct
 
+#ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::Market> {
   constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
@@ -80,6 +82,7 @@ struct fmt::formatter<cct::Market> {
     return fmt::format_to(ctx.out(), "{}-{}", m.base(), m.quote());
   }
 };
+#endif
 
 namespace std {
 template <>
