@@ -31,15 +31,18 @@ class exception : public std::exception {
 
   explicit exception(string&& str) noexcept(std::is_nothrow_move_constructible_v<string>) : _data(std::move(str)) {}
 
+#ifdef CCT_MSVC
+  // MSVC bug: https://developercommunity.visualstudio.com/t/using-fmtlib-on-a-custom-exceptions-constructor-pa/1673659
+  // do not use fmt for building an exception waiting for the bug to be fixed...
+  // Exception message will be incorrect.
+  template <typename... Args>
+  explicit exception(std::string_view fmt, Args&&...) : _data(std::in_place_type<string>, fmt) {}
+#else
   template <typename... Args>
   explicit exception(format_string<Args...> fmt, Args&&... args) : _data(std::in_place_type<string>) {
-    format_to(std::back_inserter(std::get<1>(_data)), fmt, std::forward<Args>(args)...);
+    cct::format_to(std::back_inserter(std::get<1>(_data)), fmt, std::forward<Args>(args)...);
   }
-
-  exception(const exception& o) = delete;
-  exception(exception&&) noexcept = default;
-  exception& operator=(const exception& o) = delete;
-  exception& operator=(exception&&) noexcept = default;
+#endif
 
   const char* what() const noexcept override {
     switch (_data.index()) {

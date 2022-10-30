@@ -76,8 +76,8 @@ class ExchangePrivate : public ExchangeBase {
                       const MarketsPath &conversionPath);
 
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
-  /// A very small value is not relevant as withdraw time order of magnitude are minutes (or hours with Bitcoin)
-  static constexpr auto kWithdrawInfoRefreshTime = std::chrono::seconds(5);
+  /// A very small value is not relevant as withdraw time order of magnitude are minutes or hours
+  static constexpr auto kWithdrawRefreshTime = std::chrono::seconds(5);
 
   /// Withdraws an amount from 'this' exchange to 'targetExchange'.
   /// This method is synchronous:
@@ -87,7 +87,7 @@ class ExchangePrivate : public ExchangeBase {
   /// @param targetExchange private exchange to which we should deliver the transfer
   /// @return information about the withdraw
   WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                        Duration withdrawRefreshTime = kWithdrawInfoRefreshTime);
+                        Duration withdrawRefreshTime = kWithdrawRefreshTime);
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.

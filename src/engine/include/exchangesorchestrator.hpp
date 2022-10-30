@@ -52,7 +52,7 @@ class ExchangesOrchestrator {
 
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
-                        Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawInfoRefreshTime);
+                        Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawRefreshTime);
 
   MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 

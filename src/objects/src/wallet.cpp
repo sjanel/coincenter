@@ -63,9 +63,7 @@ namespace {
 void ValidateDepositAddressIfNeeded(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address,
                                     std::string_view tag, WalletCheck walletCheck) {
   if (!Wallet::ValidateWallet(walletCheck, exchangeName, currency, address, tag)) {
-    string errMsg("Incorrect wallet compared to the one stored in ");
-    errMsg.append(kDepositAddressesFileName);
-    throw exception(std::move(errMsg));
+    throw exception("Incorrect wallet compared to the one stored in {}", kDepositAddressesFileName);
   }
 }
 }  // namespace
