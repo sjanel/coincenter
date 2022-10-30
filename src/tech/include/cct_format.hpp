@@ -3,7 +3,7 @@
 #ifdef CCT_DISABLE_SPDLOG
 #include <string_view>
 #else
-#include <spdlog/fmt/bundled/format.h>
+#include <spdlog/spdlog.h>
 #endif
 
 namespace cct {
@@ -17,9 +17,9 @@ template <typename OutputIt, typename... T>
 auto format_to(OutputIt out, format_string<T...>, T&&...) -> OutputIt {
   return out;
 }
-
 #else
-using fmt::format_string;
+template <typename... Args>
+using format_string = spdlog::format_string_t<Args...>;
 using fmt::format_to;
 #endif
 
