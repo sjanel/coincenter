@@ -552,17 +552,44 @@ TEST(MonetaryAmountTest, PositiveAmountStr) {
   EXPECT_EQ(MonetaryAmount("9204.1260").amountStr(), "9204.126");
   EXPECT_EQ(MonetaryAmount("0.709").amountStr(), "0.709");
   EXPECT_EQ(MonetaryAmount("0.0").amountStr(), "0");
+  EXPECT_EQ(MonetaryAmount("3.4950EUR").amountStr(), "3.495");
+  EXPECT_EQ(MonetaryAmount("94.5").amountStr(), "94.5");
+  EXPECT_EQ(MonetaryAmount("15003.74").amountStr(), "15003.74");
+  EXPECT_EQ(MonetaryAmount("15003.740 1INCH").amountStr(), "15003.74");
+  EXPECT_EQ(MonetaryAmount("0 KRW").amountStr(), "0");
+  EXPECT_EQ(MonetaryAmount("22337203685477.5808 MAGIC4LIFE").amountStr(), "22337203685477.5808");
+  EXPECT_EQ(MonetaryAmount("0.000001573004009 MAGIC4LIFE").amountStr(), "0.000001573004009");
+  EXPECT_EQ(MonetaryAmount("764.00000000000001 MAGIC4LIFE").amountStr(), "764.00000000000001");
 }
 
 TEST(MonetaryAmountTest, NegativeAmountStr) {
   EXPECT_EQ(MonetaryAmount("-3.4950EUR").amountStr(), "-3.495");
   EXPECT_EQ(MonetaryAmount("-0.0034090").amountStr(), "-0.003409");
   EXPECT_EQ(MonetaryAmount("-0.0").amountStr(), "0");
+  EXPECT_EQ(MonetaryAmount("-3.4950EUR").amountStr(), "-3.495");
+  EXPECT_EQ(MonetaryAmount("-94.5").amountStr(), "-94.5");
+  EXPECT_EQ(MonetaryAmount("-15003.740").amountStr(), "-15003.74");
+  EXPECT_EQ(MonetaryAmount("-15003.740 1INCH").amountStr(), "-15003.74");
+  EXPECT_EQ(MonetaryAmount("-0 KRW").amountStr(), "0");
+  EXPECT_EQ(MonetaryAmount("-22337203685477.5808 MAGIC4LIFE").amountStr(), "-22337203685477.5808");
+  EXPECT_EQ(MonetaryAmount("-0.000001573004009 MAGIC4LIFE").amountStr(), "-0.000001573004009");
+  EXPECT_EQ(MonetaryAmount("-764.00000000000001 MAGIC4LIFE").amountStr(), "-764.00000000000001");
+}
+
+TEST(MonetaryAmountTest, PositiveStringRepresentation) {
+  EXPECT_EQ(MonetaryAmount("3.4950EUR").str(), "3.495 EUR");
+  EXPECT_EQ(MonetaryAmount("94.5").str(), "94.5");
+  EXPECT_EQ(MonetaryAmount("15003.740 1INCH").str(), "15003.74 1INCH");
+  EXPECT_EQ(MonetaryAmount("0 KRW").str(), "0 KRW");
+  EXPECT_EQ(MonetaryAmount("22337203685477.5808 MAGIC4LIFE").str(), "22337203685477.5808 MAGIC4LIFE");
+  EXPECT_EQ(MonetaryAmount("0.000001573004009 MAGIC4LIFE").str(), "0.000001573004009 MAGIC4LIFE");
+  EXPECT_EQ(MonetaryAmount("764.00000000000001 MAGIC4LIFE").str(), "764.00000000000001 MAGIC4LIFE");
 }
 
 TEST(MonetaryAmountTest, ExoticInput) {
-  EXPECT_EQ(MonetaryAmount(" + 4.6   EUr "), MonetaryAmount("4.6EUR"));
-  EXPECT_EQ(MonetaryAmount(" - .9   f&g "), MonetaryAmount("-0.9F&G"));
+  EXPECT_EQ(MonetaryAmount(" +4.6   EUr "), MonetaryAmount("4.6EUR"));
+  EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
+  EXPECT_THROW(MonetaryAmount(" - .9   f&g "), exception);
   EXPECT_THROW(MonetaryAmount("--.9"), exception);
 }
 
