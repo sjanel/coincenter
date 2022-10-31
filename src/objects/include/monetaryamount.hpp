@@ -1,7 +1,9 @@
 #pragma once
 
+#include <charconv>
 #include <concepts>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <ostream>
@@ -236,10 +238,81 @@ class MonetaryAmount {
   /// Get a string on the currency of this amount
   string currencyStr() const { return _curWithDecimals.str(); }
 
-  /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
-  string amountStr() const;
+  /// @brief Appends a string reprensentation of the amount to given output iterator
+  /// @param it output iterator should have at least a capacity of
+  ///           std::numeric_limits<AmountType>::digits10 + 3
+  ///             (+1 for the sign, +1 for the '.', +1 for the first 0 if nbDecimals >= nbDigits)
+  template <class OutputIt>
+  OutputIt appendAmount(OutputIt it) const {
+    if (_amount < 0) {
+      *it = '-';
+      ++it;
+    }
+    const int nbDigits = ndigits(_amount);
+    const int nbDecs = nbDecimals();
+    int remNbZerosToPrint = std::max(0, nbDecs + 1 - nbDigits);
 
-  string str() const;
+    // no terminating null char, +1 is for the biggest decimal exponent part that is not fully covered by 64 bits
+    // for instance, 9223372036854775808 is 19 chars (std::numeric_limits<AmountType>::digits10 + 1)
+    char amountBuf[std::numeric_limits<AmountType>::digits10 + 1];
+    std::to_chars(std::begin(amountBuf), std::end(amountBuf), std::abs(_amount));
+
+    int amountCharPos;
+    if (remNbZerosToPrint > 0) {
+      amountCharPos = 0;
+      *it = '0';
+      ++it;
+      --remNbZerosToPrint;
+    } else {
+      amountCharPos = nbDigits - nbDecs;
+      it = std::copy(std::begin(amountBuf), std::begin(amountBuf) + amountCharPos, it);
+    }
+
+    if (nbDecs > 0) {
+      *it = '.';
+      ++it;
+    }
+    it = std::fill_n(it, remNbZerosToPrint, '0');
+    return std::copy_n(std::begin(amountBuf) + amountCharPos, nbDigits - amountCharPos, it);
+  }
+
+  /// @brief Appends a string reprensentation of the amount plus its currency to given output iterator
+  /// @param it output iterator should have at least a capacity of
+  ///           std::numeric_limits<AmountType>::digits10 + 3 for the amount (explanation above)
+  ///            + CurrencyCodeBase::kMaxLen + 1 for the currency and the space separator
+  template <class OutputIt>
+  OutputIt append(OutputIt it) const {
+    it = appendAmount(it);
+    if (!_curWithDecimals.isNeutral()) {
+      *it = ' ';
+      it = _curWithDecimals.append(++it);
+    }
+    return it;
+  }
+
+  /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
+  string amountStr() const {
+    string s(std::numeric_limits<AmountType>::digits10 + 3, '\0');
+    s.erase(appendAmount(s.begin()), s.end());
+    return s;
+  }
+
+  void appendAmountStr(string &s) const {
+    s.append(std::numeric_limits<AmountType>::digits10 + 3, '\0');
+    s.erase(appendAmount(s.begin() + std::numeric_limits<AmountType>::digits10 + 3), s.end());
+  }
+
+  /// Get a string of this MonetaryAmount
+  string str() const {
+    string s = amountStr();
+    appendCurrencyStr(s);
+    return s;
+  }
+
+  void appendStr(string &s) const {
+    appendAmountStr(s);
+    appendCurrencyStr(s);
+  }
 
   friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &m);
 
@@ -247,6 +320,12 @@ class MonetaryAmount {
   using UnsignedAmountType = uint64_t;
 
   static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
+
+  void appendCurrencyStr(string &s) const {
+    if (!_curWithDecimals.isNeutral()) {
+      _curWithDecimals.appendStrWithSpace(s);
+    }
+  }
 
   /// Private constructor to set fields directly without checks.
   /// We add a dummy bool parameter to differentiate it from the public constructor
@@ -306,7 +385,7 @@ struct fmt::formatter<cct::MonetaryAmount> {
 
   template <typename FormatContext>
   auto format(const cct::MonetaryAmount &a, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{} {}", a.amountStr(), a.currencyCode());
+    return a.append(ctx.out());
   }
 };
 #endif

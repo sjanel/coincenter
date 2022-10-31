@@ -452,35 +452,6 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   return MonetaryAmount(static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs);
 }
 
-string MonetaryAmount::amountStr() const {
-  const int isNeg = static_cast<int>(_amount < 0);
-  const int nbDigits = ndigits(_amount);
-  const int nbDecs = nbDecimals();
-  const int nbZeros = std::max(0, nbDecs + 1 - nbDigits);
-
-  string ret(static_cast<string::size_type>(isNeg + nbZeros + nbDigits), '0');
-  std::to_chars(ret.data() + nbZeros, ret.data() + ret.size(), _amount);
-
-  if (isNeg > 0 && nbZeros > 0) {
-    std::swap(ret.front(), ret[nbZeros]);
-  }
-
-  if (nbDecs > 0) {
-    ret.insert(ret.end() - nbDecs, '.');
-  }
-
-  return ret;
-}
-
-string MonetaryAmount::str() const {
-  string ret = amountStr();
-  if (!_curWithDecimals.isNeutral()) {
-    ret.push_back(' ');
-    _curWithDecimals.appendStr(ret);
-  }
-  return ret;
-}
-
 std::ostream &operator<<(std::ostream &os, const MonetaryAmount &m) {
   os << m.str();
   return os;
