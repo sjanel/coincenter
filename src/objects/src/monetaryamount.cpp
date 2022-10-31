@@ -19,10 +19,10 @@ namespace {
 /// Theorem 15
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
-inline void RemovePrefixSpaces(std::string_view &str) {
+constexpr void RemovePrefixSpaces(std::string_view &str) {
   str.remove_prefix(std::find_if(str.begin(), str.end(), [](char c) { return c != ' '; }) - str.begin());
 }
-inline void RemoveTrailing(std::string_view &str, char r) {
+constexpr void RemoveTrailing(std::string_view &str, char r) {
   str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [r](char c) { return c != r; }) - str.rbegin());
 }
 
@@ -35,9 +35,7 @@ inline bool ParseNegativeChar(std::string_view &amountStr) {
         isNeg = true;
         [[fallthrough]];
       case '+':  // Let's accept inputs like: "+3" -> "3"
-        // Remove at least one char + possible spaces after it
-        amountStr.remove_prefix(std::find_if(amountStr.begin() + 1, amountStr.end(), [](char c) { return c != ' '; }) -
-                                amountStr.begin());
+        amountStr.remove_prefix(1UL);
         break;
       case '.':  // Let's accept inputs like: ".5" -> "0.5"
         break;
@@ -132,14 +130,16 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
 
   auto last = amountCurrencyStr.begin();
   auto endIt = amountCurrencyStr.end();
-  while (last != endIt && *last <= '9') {  // Trick: all '.', '+', '-' are before digits in the ASCII code
+  static_assert(' ' < '+' && '+' < '-' && '+' < '.');  // Trick: all '.', '+', '-' are before digits in the ASCII code
+  while (last != endIt && *last >= '+' && *last <= '9') {
     ++last;
   }
   std::string_view amountStr(amountCurrencyStr.begin(), last);
-  RemoveTrailing(amountStr, ' ');
   int8_t nbDecimals;
   std::tie(_amount, nbDecimals) = AmountIntegralFromStr(amountStr);
-  _curWithDecimals = CurrencyCode(std::string_view(last, endIt));
+  std::string_view currencyStr(last, endIt);
+  RemovePrefixSpaces(currencyStr);
+  _curWithDecimals = CurrencyCode(currencyStr);
   sanitizeDecimals(nbDecimals, maxNbDecimals());
 }
 
