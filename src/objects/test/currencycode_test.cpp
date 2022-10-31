@@ -34,6 +34,39 @@ TEST(CurrencyCodeTest, String) {
   EXPECT_EQ("MAGIC4LIFE", CurrencyCode("Magic4Life").str());
 }
 
+TEST(CurrencyCodeTest, AppendString) {
+  {
+    string s("init");
+    CurrencyCode("").appendStr(s);
+
+    EXPECT_EQ("init", s);
+  }
+  {
+    string s("init");
+    CurrencyCode("a").appendStr(s);
+
+    EXPECT_EQ("initA", s);
+  }
+  {
+    string s("init2");
+    CurrencyCode("67").appendStr(s);
+
+    EXPECT_EQ("init267", s);
+  }
+  {
+    string s("");
+    CurrencyCode("").appendStr(s);
+
+    EXPECT_EQ("", s);
+  }
+  {
+    string s("");
+    CurrencyCode("EUR").appendStr(s);
+
+    EXPECT_EQ("EUR", s);
+  }
+}
+
 TEST(CurrencyCodeTest, ExoticString) {
   EXPECT_EQ("G%&$-0_", CurrencyCode("g%&$-0_").str());
   EXPECT_EQ("()", CurrencyCode("()").str());

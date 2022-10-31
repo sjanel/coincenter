@@ -154,12 +154,16 @@ class CurrencyCode {
     return s;
   }
 
-  /// Append currency string reprensentation to given string.
-  void appendStr(string &s) const { append(std::back_inserter(s)); }
+  /// Append currency string representation to given string.
+  void appendStr(string &s) const {
+    auto l = size();
+    s.append(l, '\0');
+    append(s.end() - l);
+  }
 
-  /// Append currency string reprensentation to given output iterator
+  /// Append currency string representation to given output iterator
   template <class OutputIt>
-  void append(OutputIt it) const {
+  OutputIt append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = (*this)[charPos];
       if (c == CurrencyCodeBase::kFirstAuthorizedLetter - 1) {
@@ -168,6 +172,7 @@ class CurrencyCode {
       *it = c;
       ++it;
     }
+    return it;
   }
 
   /// Returns a 64 bits code
@@ -236,6 +241,13 @@ class CurrencyCode {
     // Keep currency, not decimals
     return CurrencyCode(_data & ~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
+
+  /// Append currency string representation to given string, with a space before
+  void appendStrWithSpace(string &s) const {
+    auto l = size();
+    s.append(l + 1UL, ' ');
+    append(s.end() - l);
+  }
 };
 
 }  // namespace cct
@@ -253,8 +265,7 @@ struct fmt::formatter<cct::CurrencyCode> {
 
   template <typename FormatContext>
   auto format(const cct::CurrencyCode &cur, FormatContext &ctx) const -> decltype(ctx.out()) {
-    cur.append(ctx.out());
-    return ctx.out();
+    return cur.append(ctx.out());
   }
 };
 #endif
