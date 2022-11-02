@@ -278,7 +278,7 @@ class MonetaryAmount {
 
   /// @brief Appends a string reprensentation of the amount plus its currency to given output iterator
   /// @param it output iterator should have at least a capacity of
-  ///           std::numeric_limits<AmountType>::digits10 + 3 for the amount (explanation above)
+  ///           kMaxNbCharsAmount for the amount (explanation above)
   ///            + CurrencyCodeBase::kMaxLen + 1 for the currency and the space separator
   template <class OutputIt>
   OutputIt append(OutputIt it) const {
@@ -292,14 +292,15 @@ class MonetaryAmount {
 
   /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
   string amountStr() const {
-    string s(std::numeric_limits<AmountType>::digits10 + 3, '\0');
+    string s(kMaxNbCharsAmount, '\0');
     s.erase(appendAmount(s.begin()), s.end());
     return s;
   }
 
   void appendAmountStr(string &s) const {
-    s.append(std::numeric_limits<AmountType>::digits10 + 3, '\0');
-    s.erase(appendAmount(s.begin() + std::numeric_limits<AmountType>::digits10 + 3), s.end());
+    s.append(kMaxNbCharsAmount, '\0');
+    auto endIt = s.end();
+    s.erase(appendAmount(endIt - kMaxNbCharsAmount), endIt);
   }
 
   /// Get a string of this MonetaryAmount
@@ -320,6 +321,7 @@ class MonetaryAmount {
   using UnsignedAmountType = uint64_t;
 
   static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
+  static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
 
   void appendCurrencyStr(string &s) const {
     if (!_curWithDecimals.isNeutral()) {

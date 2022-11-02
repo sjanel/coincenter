@@ -36,6 +36,12 @@ TEST(CurrencyCodeTest, String) {
 
 TEST(CurrencyCodeTest, AppendString) {
   {
+    string s("");
+    CurrencyCode("").appendStr(s);
+
+    EXPECT_EQ("", s);
+  }
+  {
     string s("init");
     CurrencyCode("").appendStr(s);
 
@@ -52,12 +58,6 @@ TEST(CurrencyCodeTest, AppendString) {
     CurrencyCode("67").appendStr(s);
 
     EXPECT_EQ("init267", s);
-  }
-  {
-    string s("");
-    CurrencyCode("").appendStr(s);
-
-    EXPECT_EQ("", s);
   }
   {
     string s("");
