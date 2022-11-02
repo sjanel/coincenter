@@ -29,7 +29,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
             return jsonData;
           }
         }
-        jsonData.update(exchangeConfigJsonData);
+        jsonData.update(exchangeConfigJsonData, true);
       }
       return jsonData;
     }
