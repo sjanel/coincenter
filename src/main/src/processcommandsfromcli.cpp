@@ -18,14 +18,11 @@ json LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &
   if (!cmdLineOptions.apiOutputType.empty()) {
     generalConfigData["apiOutputType"] = cmdLineOptions.apiOutputType;
   }
-  if (!cmdLineOptions.logLevel.empty()) {
-    generalConfigData["log"]["level"] = string(cmdLineOptions.logLevel);
+  if (!cmdLineOptions.logConsole.empty()) {
+    generalConfigData["log"]["console"] = string(cmdLineOptions.logConsole);
   }
-  if (cmdLineOptions.logConsole) {
-    generalConfigData["log"]["file"] = false;
-  }
-  if (cmdLineOptions.logFile) {
-    generalConfigData["log"]["file"] = true;
+  if (!cmdLineOptions.logFile.empty()) {
+    generalConfigData["log"]["file"] = string(cmdLineOptions.logFile);
   }
 
   return generalConfigData;

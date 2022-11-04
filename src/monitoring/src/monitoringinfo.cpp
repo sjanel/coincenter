@@ -12,7 +12,7 @@ MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std
       _password(password),
       _port(useMonitoring ? static_cast<uint16_t>(port) : 0U) {
   if (port < 0 || port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
-    throw exception("Invalid port value");
+    throw exception("Invalid port value {}", port);
   }
   if (useMonitoring) {
     log::info("Monitoring config - Export to {}:{} user '{}', job name {}", address, port, username, jobName);
