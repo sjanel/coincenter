@@ -108,19 +108,19 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     throw exception("No deposit method found on Kraken for {}", currencyCode);
   }
   // Don't keep a view on 'method' value, we will override json data just below. We can just steal the string.
+  ExchangeName exchangeName(_exchangePublic.name(), _apiKey.name());
   string method = std::move(res.front()["method"].get_ref<string&>());
   res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                      {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
     // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
-    log::warn("No deposit address found on {} for {}, creating a new one", _exchangePublic.name(), currencyCode);
+    log::warn("No deposit address found on {} for {}, creating a new one", exchangeName, currencyCode);
     res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
       throw exception("Cannot create a new deposit address on Kraken for {}", currencyCode);
     }
   }
-  ExchangeName exchangeName(_exchangePublic.name(), _apiKey.name());
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
@@ -135,12 +135,12 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         if (valueStr.is_number_integer()) {  // WARNING: when new = true, expiretm is not a string, but a number!
           int64_t expireTmValue = valueStr.get<int64_t>();
           if (expireTmValue != 0) {
-            log::warn("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
+            log::warn("{} wallet has an expire time of {}", exchangeName, expireTmValue);
           }
         } else if (valueStr.is_string()) {
           std::string_view expireTmValue = valueStr.get<std::string_view>();
           if (expireTmValue != "0") {
-            log::warn("{} wallet has an expire time of {}", _exchangePublic.name(), expireTmValue);
+            log::warn("{} wallet has an expire time of {}", exchangeName, expireTmValue);
           }
         } else {
           throw exception("Cannot retrieve 'expiretm' field of Kraken deposit address");

@@ -119,11 +119,10 @@ struct CoincenterCmdLineOptions {
   std::string_view dataDir = kDefaultDataDir;
 
   std::string_view apiOutputType;
-  std::string_view logLevel;
+  std::string_view logConsole;
+  std::string_view logFile;
   bool help = false;
   bool version = false;
-  bool logFile = false;
-  bool logConsole = false;
   std::optional<std::string_view> nosecrets;
   CommandLineOptionalInt repeats;
   Duration repeatTime = kDefaultRepeatTime;
@@ -195,20 +194,23 @@ struct CoincenterAllowedOptions {
         "--log",
         'v',
         "<levelname|0-6>",
-        "Sets the log level during all execution. "
-        "Possible values are: \n(off|critical|error|warning|info|debug|trace) or "
-        "(0-6) (default configured in general config file)"},
-       &OptValueType::logLevel},
-      {{{"General", 4}, "--log-console", "", "Log to stdout (default configured in general config file)"},
+        "Sets the log level in the console during all execution. "
+        "Possible values are: (off|critical|error|warning|info|debug|trace) or "
+        "(0-6) (overrides .log.console in general config file)"},
        &OptValueType::logConsole},
-      {{{"General", 4}, "--log-file", "", "Log to rotating files (default configured in general config file)"},
+      {{{"General", 4}, "--log-console", "<levelname|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
+      {{{"General", 4},
+        "--log-file",
+        "<levelname|0-6>",
+        "Sets the log level in files during all execution (overrides .log.file in general config file). "
+        "Number of rotating files to keep and their size is configurable in the general config file"},
        &OptValueType::logFile},
       {{{"General", 5}, "--output", 'o', "", CoincenterCmdLineOptions::kOutput}, &OptValueType::apiOutputType},
       {{{"General", 7},
         "--no-secrets",
         "<[exch1,...]>",
-        "Even if present, do not load secrets and do not use private exchanges.\n"
-        "If empty list of exchanges, it skips secrets load for all private exchanges"},
+        "Do not load secrets for specified exchanges.\n"
+        "If no exchange is specified, no key will be loaded at all"},
        &OptValueType::nosecrets},
       {{{"General", 8},
         "--repeat",

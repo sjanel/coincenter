@@ -19,8 +19,8 @@ json GeneralConfig::LoadFile(std::string_view dataDir) {
 {
   "apiOutputType": "table",
   "log": {
-    "level": "info",
-    "file": false,
+    "console": "info",
+    "file": "off",
     "maxNbFiles": 10,
     "maxFileSize": "5Mi"
   },
@@ -37,7 +37,7 @@ json GeneralConfig::LoadFile(std::string_view dataDir) {
               GeneralConfig::kFilename);
     generalConfigFile.write(jsonData);
   } else {
-    jsonData.update(generalConfigJsonData);
+    jsonData.update(generalConfigJsonData, true);
     if (jsonData != generalConfigJsonData) {
       log::warn("File {} updated with default values of all supported options", GeneralConfig::kFilename);
       generalConfigFile.write(jsonData);

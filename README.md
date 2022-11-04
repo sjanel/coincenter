@@ -138,7 +138,12 @@ You can also choose a *json* output format with option `-o json`.
 
 ### Logging
 
-`coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging. You can use `--log <log-level>` to change the log level of the entire execution, and `--log-file` to log to rotating files.
+`coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging. By default, it logs in the console with the 'info' level.
+
+`spdlog` is set up asynchronously, and it's possible to log in rotating files in addition of the console, with different levels for each.
+
+For this, you can configure statically the default level for each in the [config file](CONFIG.md#options-description). 
+It is also overridable on the command line, with options `--log <log-level>` and `--log-file <log-level>`.
 
 ## Public requests
 
