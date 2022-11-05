@@ -63,8 +63,9 @@
 *-ut
 cscope*
 **/*secret.json
-data/secret
 data/cache
+data/log
+data/secret
 data/static/exchangeconfig.json
 data/static/generalconfig.json
 monitoring/data/grafana/*

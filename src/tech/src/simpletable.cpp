@@ -110,6 +110,6 @@ void SimpleTable::print(std::ostream &os) const {
     }
   }
 
-  os << lineSep << std::endl;
+  os << lineSep;
 }
 }  // namespace cct

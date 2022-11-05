@@ -17,13 +17,13 @@ using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExc
 
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
     : _coincenterInfo(coincenterInfo),
-      _cryptowatchAPI(_coincenterInfo, coincenterInfo.getRunMode()),
-      _fiatConverter(_coincenterInfo, _coincenterInfo.fiatConversionQueryRate()),
+      _cryptowatchAPI(coincenterInfo, coincenterInfo.getRunMode()),
+      _fiatConverter(coincenterInfo, coincenterInfo.fiatConversionQueryRate()),
       _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
-      _metricsExporter(_coincenterInfo.metricGatewayPtr()),
-      _exchangePool(_coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
+      _metricsExporter(coincenterInfo.metricGatewayPtr()),
+      _exchangePool(coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
       _exchangesOrchestrator(_exchangePool.exchanges()),
-      _queryResultPrinter(std::cout, _coincenterInfo.apiOutputType()) {}
+      _queryResultPrinter(coincenterInfo.apiOutputType()) {}
 
 void Coincenter::process(const CoincenterCommands &coincenterCommands) {
   const int nbRepeats = coincenterCommands.repeats();

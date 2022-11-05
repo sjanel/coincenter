@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <ostream>
 
 #include "apioutputtype.hpp"
+#include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "market.hpp"
@@ -11,10 +14,16 @@
 #include "queryresulttypes.hpp"
 
 namespace cct {
+class SimpleTable;
 class TradeOptions;
 class WithdrawInfo;
+
 class QueryResultPrinter {
  public:
+  /// @brief  Creates a QueryResultPrinter that will output result in the output logger.
+  explicit QueryResultPrinter(ApiOutputType apiOutputType);
+
+  /// @brief  Creates a QueryResultPrinter that will output result in given ostream
   QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType);
 
   void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
@@ -73,7 +82,12 @@ class QueryResultPrinter {
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
                    CoincenterCommandType commandType) const;
 
-  std::ostream &_os;
+  void printTable(const SimpleTable &t) const;
+
+  void printJson(json &&in, json &&out) const;
+
+  std::ostream *_pOs = nullptr;
+  std::shared_ptr<log::logger> _outputLogger;
   ApiOutputType _apiOutputType;
 };
 

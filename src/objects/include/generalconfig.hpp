@@ -17,8 +17,6 @@ class GeneralConfig {
 
   GeneralConfig() = default;
 
-  GeneralConfig(const LoggingInfo &loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
-
   GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
 
   const LoggingInfo &loggingInfo() const { return _loggingInfo; }

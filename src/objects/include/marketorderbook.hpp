@@ -2,13 +2,13 @@
 
 #include <limits>
 #include <optional>
-#include <ostream>
 #include <span>
 #include <string_view>
 
 #include "cct_smallvector.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "simpletable.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
@@ -143,10 +143,10 @@ class MarketOrderBook {
 
   std::optional<MonetaryAmount> computeAvgPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
 
-  /// Print the market order book to given stream.
+  /// Print the market order book in a SimpleTable and returns it.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
-  void print(std::ostream& os, std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
+  SimpleTable getTable(std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
 
  private:
   using AmountType = MonetaryAmount::AmountType;

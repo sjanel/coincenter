@@ -1,11 +1,13 @@
 #include "queryresultprinter.hpp"
 
+#include <sstream>
+
 #include "balanceperexchangeportfolio.hpp"
-#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "coincentercommandtype.hpp"
 #include "durationstring.hpp"
 #include "exchange.hpp"
+#include "logginginfo.hpp"
 #include "simpletable.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
@@ -14,19 +16,11 @@
 #include "withdrawinfo.hpp"
 
 namespace cct {
-
-namespace {
-
-void PrintOutJson(std::ostream &os, json &&in, json &&out) {
-  json ret;
-  ret.emplace("in", std::move(in));
-  ret.emplace("out", std::move(out));
-  os << ret.dump();
-}
-}  // namespace
+QueryResultPrinter::QueryResultPrinter(ApiOutputType apiOutputType)
+    : _outputLogger(log::get(LoggingInfo::kOutputLoggerName)), _apiOutputType(apiOutputType) {}
 
 QueryResultPrinter::QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType)
-    : _os(os), _apiOutputType(apiOutputType) {}
+    : _pOs(&os), _outputLogger(log::get(LoggingInfo::kOutputLoggerName)), _apiOutputType(apiOutputType) {}
 
 void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
                                       const MarketsPerExchange &marketsPerExchange) const {
@@ -44,7 +38,7 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
           t.emplace_back(e->name(), m.str());
         }
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -65,7 +59,7 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
         }
         out.emplace(e->name(), std::move(marketsForExchange));
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -86,7 +80,7 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
         // Sort rows in lexicographical order for consistent output
         std::sort(t.begin(), t.end());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -115,7 +109,7 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
         });
         out.emplace(e->name(), std::move(allTickerForExchange));
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -142,7 +136,7 @@ void QueryResultPrinter::printMarketOrderBooks(
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
-        marketOrderBook.print(_os, exchangeName, optConversionRate);
+        printTable(marketOrderBook.getTable(exchangeName, optConversionRate));
       }
       break;
     }
@@ -174,7 +168,7 @@ void QueryResultPrinter::printMarketOrderBooks(
         marketOrderBookForExchange.emplace("ask", std::move(asksForExchange));
         out.emplace(exchangeName, std::move(marketOrderBookForExchange));
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -186,7 +180,7 @@ void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchan
   BalancePerExchangePortfolio totalBalance(balancePerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      totalBalance.printTable(_os, balancePerExchange.size() > 1);
+      printTable(totalBalance.getTable(balancePerExchange.size() > 1));
       break;
     }
     case ApiOutputType::kJson: {
@@ -198,7 +192,7 @@ void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchan
       }
       in.emplace("opt", std::move(inOpt));
 
-      PrintOutJson(_os, std::move(in), totalBalance.printJson(equiCurrency));
+      printJson(std::move(in), totalBalance.printJson(equiCurrency));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -216,7 +210,7 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
       for (const auto &[exchangePtr, wallet] : walletPerExchange) {
         t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), wallet.address(), wallet.tag());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -244,7 +238,7 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
           it->emplace(exchangePtr->keyName(), std::move(depositPerExchangeData));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -291,7 +285,7 @@ void QueryResultPrinter::printTrades(const TradedAmountsPerExchange &tradedAmoun
         t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradedAmount.tradedFrom.str(),
                        tradedAmount.tradedTo.str());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -340,7 +334,7 @@ void QueryResultPrinter::printTrades(const TradedAmountsPerExchange &tradedAmoun
           it->emplace(exchangePtr->keyName(), std::move(tradedAmountPerExchangeJson));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -387,7 +381,7 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
                          openedOrder.remainingVolume().str());
         }
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -422,7 +416,7 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
           it->emplace(exchangePtr->keyName(), std::move(orders));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -438,7 +432,7 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
       for (const auto &[exchangePtr, nbCancelledOrders] : nbCancelledOrdersPerExchange) {
         t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), nbCancelledOrders);
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -464,7 +458,7 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
           it->emplace(exchangePtr->keyName(), std::move(cancelledOrdersForAccount));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -491,7 +485,7 @@ void QueryResultPrinter::printConversionPath(Market m,
           t.emplace_back(e->name(), std::move(conversionPathStr));
         }
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -511,7 +505,7 @@ void QueryResultPrinter::printConversionPath(Market m,
           out.emplace(e->name(), std::move(conversionPathForExchange));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -527,7 +521,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountPerExchange &with
       for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
         t.emplace_back(e->name(), withdrawFee.str());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -541,7 +535,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountPerExchange &with
       for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
         out.emplace(e->name(), withdrawFee.amountStr());
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -560,7 +554,7 @@ void QueryResultPrinter::printLast24hTradedVolume(Market m,
       for (const auto &[e, tradedVolume] : tradedVolumePerExchange) {
         t.emplace_back(e->name(), tradedVolume.str());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -574,7 +568,7 @@ void QueryResultPrinter::printLast24hTradedVolume(Market m,
       for (const auto &[e, tradedVolume] : tradedVolumePerExchange) {
         out.emplace(e->name(), tradedVolume.amountStr());
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -629,7 +623,7 @@ void QueryResultPrinter::printLastTrades(Market m, int nbLastTrades,
           t.emplace_back("Summary", std::move(summary[0]), avgPrice.str(), std::move(summary[1]));
         }
 
-        t.print(_os);
+        printTable(t);
       }
       break;
     }
@@ -653,7 +647,7 @@ void QueryResultPrinter::printLastTrades(Market m, int nbLastTrades,
         }
         out.emplace(exchangePtr->name(), std::move(lastTradesJson));
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -670,7 +664,7 @@ void QueryResultPrinter::printLastPrice(Market m, const MonetaryAmountPerExchang
       for (const auto &[e, lastPrice] : pricePerExchange) {
         t.emplace_back(e->name(), lastPrice.str());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -684,7 +678,7 @@ void QueryResultPrinter::printLastPrice(Market m, const MonetaryAmountPerExchang
       for (const auto &[e, lastPrice] : pricePerExchange) {
         out.emplace(e->name(), lastPrice.amountStr());
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -702,7 +696,7 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       t.emplace_back(fromPrivateExchangeName.name(), toPrivateExchangeName.name(), grossAmount.str(),
                      ToString(withdrawInfo.initiatedTime()), ToString(withdrawInfo.receivedTime()),
                      withdrawInfo.netEmittedAmount().str());
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -733,7 +727,7 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       out.emplace("receivedTime", ToString(withdrawInfo.receivedTime()));
       out.emplace("netReceivedAmount", withdrawInfo.netEmittedAmount().amountStr());
 
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
@@ -759,7 +753,7 @@ void QueryResultPrinter::printDustSweeper(
         t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesStr),
                        tradedAmountsVectorWithFinalAmount.finalAmount.str());
       }
-      t.print(_os);
+      printTable(t);
       break;
     }
     case ApiOutputType::kJson: {
@@ -793,11 +787,40 @@ void QueryResultPrinter::printDustSweeper(
           it->emplace(exchangePtr->keyName(), std::move(tradedInfoPerExchangeData));
         }
       }
-      PrintOutJson(_os, std::move(in), std::move(out));
+      printJson(std::move(in), std::move(out));
       break;
     }
     case ApiOutputType::kNoPrint:
       break;
+  }
+}
+
+void QueryResultPrinter::printTable(const SimpleTable &t) const {
+  std::ostringstream ss;
+  std::ostream &os = _pOs ? *_pOs : ss;
+  t.print(os);
+
+  if (_pOs) {
+    *_pOs << std::endl;
+  } else {
+    // logger library automatically adds a newline as suffix
+#ifdef CCT_STRINGSTREAM_HAS_VIEW
+    _outputLogger->info(ss.view());
+#else
+    _outputLogger->info(ss.str());
+#endif
+  }
+}
+
+void QueryResultPrinter::printJson(json &&in, json &&out) const {
+  json ret;
+  ret.emplace("in", std::move(in));
+  ret.emplace("out", std::move(out));
+
+  if (_pOs) {
+    *_pOs << ret.dump() << std::endl;
+  } else {
+    _outputLogger->info(ret.dump());
   }
 }
 

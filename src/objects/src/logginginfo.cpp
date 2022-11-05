@@ -52,6 +52,17 @@ int8_t LogPosFromLogStr(std::string_view logStr) {
                   logStr);
 }
 
+log::filename_t GetLogFilename() {
+#ifdef CCT_MSVC
+  return log::filename_t(kDefaultDataDir) + "/log/log.txt";
+#else
+  // Internal error in MSVC for below code...
+  static constexpr std::string_view kLogDir2 = "/log/log.txt";
+  static constexpr std::string_view kLogDir = JoinStringView_v<kDefaultDataDir, kLogDir2>;
+  return log::filename_t(kLogDir);
+#endif
+}
+
 }  // namespace
 
 LoggingInfo::LoggingInfo(const json &generalConfigJsonLogPart)
@@ -59,46 +70,72 @@ LoggingInfo::LoggingInfo(const json &generalConfigJsonLogPart)
       _maxNbFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
       _logLevelConsolePos(LogPosFromLogStr(generalConfigJsonLogPart["console"].get<std::string_view>())),
       _logLevelFilePos(LogPosFromLogStr(generalConfigJsonLogPart["file"].get<std::string_view>())) {
-  activateLogOptions();
+  createLoggers();
 }
 
-void LoggingInfo::activateLogOptions() const {
-  FixedCapacityVector<spdlog::sink_ptr, 2> sinks;
+LoggingInfo::LoggingInfo(LoggingInfo &&o) noexcept
+    : _maxFileSizeInBytes(o._maxFileSizeInBytes),
+      _maxNbFiles(o._maxNbFiles),
+      _logLevelConsolePos(o._logLevelConsolePos),
+      _logLevelFilePos(o._logLevelFilePos),
+      _destroyLoggers(o._destroyLoggers) {
+  o._destroyLoggers = false;
+}
+
+LoggingInfo &LoggingInfo::operator=(LoggingInfo &&o) noexcept {
+  if (&o != this) {
+    _maxFileSizeInBytes = o._maxFileSizeInBytes;
+    _maxNbFiles = o._maxNbFiles;
+    _logLevelConsolePos = o._logLevelConsolePos;
+    _logLevelFilePos = o._logLevelFilePos;
+    _destroyLoggers = o._destroyLoggers;
+    o._destroyLoggers = false;
+  }
+  return *this;
+}
+
+LoggingInfo::~LoggingInfo() {
+  if (_destroyLoggers) {
+    log::drop_all();
+  }
+}
+
+void LoggingInfo::createLoggers() const {
+  FixedCapacityVector<log::sink_ptr, 2> sinks;
 
   if (_logLevelConsolePos != 0) {
-    auto &consoleSink = sinks.emplace_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+    auto &consoleSink = sinks.emplace_back(std::make_shared<log::sinks::stderr_color_sink_mt>());
     consoleSink->set_level(LevelFromPos(_logLevelConsolePos));
   }
 
   if (_logLevelFilePos != 0) {
-#ifdef CCT_MSVC
-    auto logFile = spdlog::filename_t(kDefaultDataDir) + "/log/log.txt";
-#else
-    // Internal error in MSVC for below code...
-    static constexpr std::string_view kLogDir2 = "/log/log.txt";
-    static constexpr std::string_view kLogDir = JoinStringView_v<kDefaultDataDir, kLogDir2>;
-    spdlog::filename_t logFile(kLogDir);
-#endif
     auto &rotatingSink = sinks.emplace_back(
-        std::make_shared<spdlog::sinks::rotating_file_sink_mt>(std::move(logFile), _maxFileSizeInBytes, _maxNbFiles));
+        std::make_shared<log::sinks::rotating_file_sink_mt>(GetLogFilename(), _maxFileSizeInBytes, _maxNbFiles));
     rotatingSink->set_level(LevelFromPos(_logLevelFilePos));
   }
 
-  if (sinks.empty()) {
-    log::set_level(log::level::level_enum::off);
-  } else {
-    constexpr int nbThreads = 1;
-    spdlog::init_thread_pool(8192, nbThreads);
-    auto logger = std::make_shared<spdlog::async_logger>("", sinks.begin(), sinks.end(), spdlog::thread_pool(),
-                                                         spdlog::async_overflow_policy::block);
+  constexpr int nbThreads = 1;  // only one logger thread is important to keep order between output logger and others
+  log::init_thread_pool(8192, nbThreads);
+  auto logger = std::make_shared<log::async_logger>("", sinks.begin(), sinks.end(), log::thread_pool(),
+                                                    log::async_overflow_policy::block);
 
-    // spdlog level is present in sink context, and also logger context (why?)
-    // in addition of the levels of each sink, we need to set the main level of the logger based on the max log level of
-    // both
-    logger->set_level(LevelFromPos(std::max(_logLevelConsolePos, _logLevelFilePos)));
+  // spdlog level is present in sink context, and also logger context (why?)
+  // in addition of the levels of each sink, we need to set the main level of the logger based on the max log level of
+  // both
+  logger->set_level(LevelFromPos(std::max(_logLevelConsolePos, _logLevelFilePos)));
 
-    spdlog::set_default_logger(logger);
-  }
+  log::set_default_logger(logger);
+
+  createOutputLogger();
+}
+
+void LoggingInfo::createOutputLogger() const {
+  auto outputLogger =
+      std::make_shared<log::async_logger>(kOutputLoggerName, std::make_shared<log::sinks::stdout_color_sink_mt>(),
+                                          log::thread_pool(), log::async_overflow_policy::block);
+  outputLogger->set_level(log::level::level_enum::info);
+  outputLogger->set_pattern("%v");
+  log::register_logger(outputLogger);
 }
 
 }  // namespace cct

@@ -45,7 +45,7 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
 #endif
   }
 
-  std::stringstream ss;
+  std::ostringstream ss;
 };
 
 class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
@@ -82,8 +82,7 @@ TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
     "req": "Markets"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -106,8 +105,7 @@ TEST_F(QueryResultPrinterMarketsTest, Json) {
       "XRP-EUR"
     ]
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -146,8 +144,7 @@ TEST_F(QueryResultPrinterTickerTest, EmptyJson) {
     "req": "Ticker"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -197,8 +194,7 @@ TEST_F(QueryResultPrinterTickerTest, Json) {
       }
     ]
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -256,8 +252,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
     "req": "Orderbook"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -335,8 +330,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
       ]
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -377,8 +371,7 @@ TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, EmptyJson) {
       "cur": {}
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -403,8 +396,7 @@ TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, Json) {
       "cur": {}
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -455,8 +447,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, EmptyJson) {
       "cur": {}
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -544,8 +535,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -601,8 +591,7 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, EmptyJson) {
       "eq": "0"
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -677,8 +666,7 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, Json) {
       "eq": "44180.28"
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -721,8 +709,7 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, EmptyJson) {
     "req": "DepositInfo"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -748,8 +735,7 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -791,8 +777,7 @@ TEST_F(QueryResultPrinterDepositInfoWithTagTest, EmptyJson) {
     "req": "DepositInfo"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -818,8 +803,7 @@ TEST_F(QueryResultPrinterDepositInfoWithTagTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -884,8 +868,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
     "req": "Trade"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -934,8 +917,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -996,8 +978,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, EmptyJson) {
     "req": "Trade"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1036,8 +1017,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1092,8 +1072,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
     "req": "Buy"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1128,8 +1107,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1190,8 +1168,7 @@ TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
     "req": "Sell"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1237,8 +1214,7 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1299,8 +1275,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, EmptyJson) {
     "req": "OrdersOpened"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1371,8 +1346,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
       ]
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1412,8 +1386,7 @@ TEST_F(QueryResultPrinterCancelOrdersTest, EmptyJson) {
     "req": "OrdersCancel"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1444,8 +1417,7 @@ TEST_F(QueryResultPrinterCancelOrdersTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1487,8 +1459,7 @@ TEST_F(QueryResultPrinterConversionPathTest, EmptyJson) {
     "req": "ConversionPath"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1512,8 +1483,7 @@ TEST_F(QueryResultPrinterConversionPathTest, Json) {
       "BBB-XRP"
     ]
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1553,8 +1523,7 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
     "req": "WithdrawFee"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1572,8 +1541,7 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, Json) {
     "bithumb": "0.15",
     "huobi": "0.05"
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1615,8 +1583,7 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, EmptyJson) {
     "req": "Last24hTradedVolume"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1635,8 +1602,7 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, Json) {
     "binance": "37.8",
     "huobi": "14"
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1713,8 +1679,7 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, EmptyJson) {
     "req": "LastTrades"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1785,8 +1750,7 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
       }
     ]
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1829,8 +1793,7 @@ TEST_F(QueryResultPrinterLastPriceTest, EmptyJson) {
     "req": "LastPrice"
   },
   "out": {}
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1849,8 +1812,7 @@ TEST_F(QueryResultPrinterLastPriceTest, Json) {
     "bithumb": "590",
     "huobi": "444"
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1921,8 +1883,7 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
       "tag": "xrptag2"
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -1978,8 +1939,7 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
       "tag": "xrptag2"
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 
@@ -2062,8 +2022,7 @@ TEST_F(QueryResultPrinterDustSweeperTest, Json) {
       }
     }
   }
-}
-)";
+})";
   expectJson(kExpected);
 }
 

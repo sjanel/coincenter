@@ -8,7 +8,6 @@
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
 #include "priceoptions.hpp"
-#include "simpletable.hpp"
 #include "stringhelpers.hpp"
 #include "unreachable.hpp"
 
@@ -534,8 +533,8 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
   }
 }
 
-void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
-                            std::optional<MonetaryAmount> conversionPriceRate) const {
+SimpleTable MarketOrderBook::getTable(std::string_view exchangeName,
+                                      std::optional<MonetaryAmount> conversionPriceRate) const {
   string h1("Sellers of ");
   string baseStr = _market.base().str();
   h1.append(baseStr).append(" (asks)");
@@ -573,7 +572,7 @@ void MarketOrderBook::print(std::ostream& os, std::string_view exchangeName,
     }
     t.push_back(std::move(r));
   }
-  t.print(os);
+  return t;
 }
 
 }  // namespace cct
