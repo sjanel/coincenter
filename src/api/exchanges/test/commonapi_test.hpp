@@ -35,9 +35,7 @@ class TestAPI {
 
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfig};
-  CoincenterInfo coincenterTestInfo{settings::RunMode::kTest, loadConfig};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
-  APIKeysProvider apiTestKeysProvider{coincenterTestInfo.dataDir(), coincenterTestInfo.getRunMode()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
   CryptowatchAPI cryptowatchAPI{coincenterInfo};
   PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};

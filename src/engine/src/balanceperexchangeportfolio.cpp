@@ -17,7 +17,7 @@ MonetaryAmount ComputeTotalSum(const BalancePortfolio &total) {
 }
 }  // namespace
 
-void BalancePerExchangePortfolio::printTable(std::ostream &os, bool wide) const {
+SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   BalancePortfolio total = computeTotal();
   CurrencyCode balanceCurrencyCode = total.empty() ? CurrencyCode() : total.front().equi.currencyCode();
   const bool countEqui = !balanceCurrencyCode.isNeutral();
@@ -66,7 +66,7 @@ void BalancePerExchangePortfolio::printTable(std::ostream &os, bool wide) const 
     }
     balanceTable.push_back(std::move(r));
   }
-  balanceTable.print(os);
+  return balanceTable;
 }
 
 namespace {

@@ -1,10 +1,9 @@
 #pragma once
 
-#include <ostream>
-
 #include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "queryresulttypes.hpp"
+#include "simpletable.hpp"
 
 namespace cct {
 class BalancePerExchangePortfolio {
@@ -14,7 +13,7 @@ class BalancePerExchangePortfolio {
 
   /// Pretty print table of balance.
   /// @param wide if true, all exchange amount will be printed as well
-  void printTable(std::ostream &os, bool wide) const;
+  SimpleTable getTable(bool wide) const;
 
   /// Print in json format.
   json printJson(CurrencyCode equiCurrency) const;

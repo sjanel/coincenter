@@ -8,16 +8,25 @@
 
 namespace cct {
 
+/// @brief Singleton encapsulating loggers lifetime and set-up.
 class LoggingInfo {
  public:
   static constexpr int kDefaultNbMaxFiles = 10;
   static constexpr int64_t kDefaultFileSizeInBytes = 5 * 1024 * 1024;
+  static constexpr char const *const kOutputLoggerName = "output";
 
   /// Creates a default logging info, with level 'info' on standard output.
-  constexpr LoggingInfo() noexcept = default;
+  LoggingInfo() { createLoggers(); }
 
   /// Creates a logging info from general config json file.
   explicit LoggingInfo(const json &generalConfigJsonLogPart);
+
+  LoggingInfo(const LoggingInfo &) = delete;
+  LoggingInfo(LoggingInfo &&) noexcept;
+  LoggingInfo &operator=(const LoggingInfo &) = delete;
+  LoggingInfo &operator=(LoggingInfo &&) noexcept;
+
+  ~LoggingInfo();
 
   int64_t maxFileSizeInBytes() const { return _maxFileSizeInBytes; }
 
@@ -27,7 +36,9 @@ class LoggingInfo {
   log::level::level_enum logFile() const { return LevelFromPos(_logLevelFilePos); }
 
  private:
-  void activateLogOptions() const;
+  void createLoggers() const;
+
+  void createOutputLogger() const;
 
   static constexpr int8_t PosFromLevel(log::level::level_enum level) {
     return static_cast<int8_t>(log::level::off) - static_cast<int8_t>(level);
@@ -40,6 +51,7 @@ class LoggingInfo {
   int _maxNbFiles = kDefaultNbMaxFiles;
   int8_t _logLevelConsolePos = PosFromLevel(log::level::info);
   int8_t _logLevelFilePos = PosFromLevel(log::level::off);
+  bool _destroyLoggers = true;
 };
 
 }  // namespace cct
