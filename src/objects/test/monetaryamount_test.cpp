@@ -97,6 +97,9 @@ TEST(MonetaryAmountTest, Arithmetic) {
 
   EXPECT_EQ(MonetaryAmount("0.49999999999976", "KRW") + MonetaryAmount("14183417.9174094504", "KRW"),
             MonetaryAmount("14183418.4174094503", "KRW"));
+
+  EXPECT_EQ(MonetaryAmount() + MonetaryAmount("3.1415 EUR"), MonetaryAmount("3.1415 EUR"));
+  EXPECT_EQ(MonetaryAmount("3.1415 EUR") - MonetaryAmount(), MonetaryAmount("3.1415 EUR"));
 }
 
 TEST(MonetaryAmountTest, Comparison) {

@@ -308,6 +308,12 @@ std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const 
 }
 
 MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
+  if (_amount == 0 && _curWithDecimals.isNeutral()) {
+    return o;
+  }
+  if (o._amount == 0 && o._curWithDecimals.isNeutral()) {
+    return *this;
+  }
   if (currencyCode() != o.currencyCode()) {
     throw exception("Addition is only possible on amounts with same currency");
   }
