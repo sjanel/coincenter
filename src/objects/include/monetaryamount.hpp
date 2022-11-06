@@ -174,6 +174,10 @@ class MonetaryAmount {
 
   constexpr MonetaryAmount operator-() const noexcept { return MonetaryAmount(true, -_amount, _curWithDecimals); }
 
+  /// @brief  Addition of two MonetaryAmounts.
+  ///         They should have same currency for addition to be possible.
+  ///         Exception: default MonetaryAmount (0 with neutral currency) is a neutral element for addition and
+  ///         subtraction
   MonetaryAmount operator+(MonetaryAmount o) const;
 
   MonetaryAmount operator-(MonetaryAmount o) const { return *this + (-o); }
@@ -183,7 +187,7 @@ class MonetaryAmount {
     return *this;
   }
   MonetaryAmount &operator-=(MonetaryAmount o) {
-    *this = *this - o;
+    *this = *this + (-o);
     return *this;
   }
 

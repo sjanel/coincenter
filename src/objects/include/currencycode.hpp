@@ -117,7 +117,7 @@ class CurrencyCode {
   static constexpr auto kMaxLen = CurrencyCodeBase::kMaxLen;
 
   /// Constructs a neutral currency code.
-  constexpr CurrencyCode() noexcept : _data(0) {}
+  constexpr CurrencyCode() noexcept : _data() {}
 
   /// Constructs a currency code from a char array.
   template <unsigned N, std::enable_if_t<N <= kMaxLen + 1, bool> = true>
