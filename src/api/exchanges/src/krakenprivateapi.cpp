@@ -181,7 +181,8 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
     MarketSet markets;
 
     for (const auto& [id, orderDetails] : openedPartIt->items()) {
-      std::string_view marketStr = orderDetails["descr"]["pair"].get<std::string_view>();
+      const json& descrPart = orderDetails["descr"];
+      std::string_view marketStr = descrPart["pair"].get<std::string_view>();
 
       std::optional<Market> optMarket =
           _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
@@ -206,9 +207,8 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
       MonetaryAmount originalVolume(orderDetails["vol"].get<std::string_view>(), volumeCur);
       MonetaryAmount matchedVolume(orderDetails["vol_exec"].get<std::string_view>(), volumeCur);
       MonetaryAmount remainingVolume = originalVolume - matchedVolume;
-      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
-      TradeSide side =
-          orderDetails["descr"]["type"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+      MonetaryAmount price(descrPart["price"].get<std::string_view>(), priceCur);
+      TradeSide side = descrPart["type"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
       int64_t secondsSinceEpoch = static_cast<int64_t>(orderDetails["opentm"].get<double>());
 
