@@ -121,4 +121,12 @@ CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
   _isPercentageAmount = value;
   return *this;
 }
+
+CoincenterCommand& CoincenterCommand::withBalanceInUse(bool value) {
+  if (_type != CoincenterCommandType::kBalance) {
+    throw exception("With balance in use can only be set for Balance command");
+  }
+  _withBalanceInUse = value;
+  return *this;
+}
 }  // namespace cct

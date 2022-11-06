@@ -23,7 +23,7 @@ class KrakenPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
+  BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 

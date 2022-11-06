@@ -99,7 +99,6 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
                                             const Fiats &fiats, bool considerStableCoinsAsFiats) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
-    log::warn("Cannot convert {} to itself", fromCurrency);
     return ret;
   }
 

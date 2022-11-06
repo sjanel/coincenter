@@ -21,7 +21,7 @@ class ExchangesOrchestrator {
                                                      CurrencyCode equiCurrencyCode, std::optional<int> depth);
 
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                CurrencyCode equiCurrency = CurrencyCode());
+                                const BalanceOptions &balanceOptions = BalanceOptions());
 
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 

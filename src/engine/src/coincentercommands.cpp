@@ -109,6 +109,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
         anyParser.getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
     _commands.emplace_back(CoincenterCommandType::kBalance)
         .setCur1(balanceCurrencyCode)
+        .withBalanceInUse(cmdLineOptions.withBalanceInUse)
         .setExchangeNames(std::move(exchanges));
   }
 

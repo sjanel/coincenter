@@ -13,31 +13,28 @@ using Type = CurrencyExchange::Type;
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
   ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
+  BalanceOptions balanceOptions;
 };
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
-  CurrencyCode equiCurrency;
-
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
 
   const ExchangeName privateExchangeNames[1] = {ExchangeName(exchange1.name(), exchange1.keyName())};
   BalancePerExchange ret{{&exchange1, balancePortfolio1}};
-  EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, equiCurrency), ret);
+  EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions), ret);
 }
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencySeveralExchanges) {
-  CurrencyCode equiCurrency;
-
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(equiCurrency)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
                                                ExchangeName(exchange1.name(), exchange1.keyName()),
                                                ExchangeName(exchange4.name(), exchange4.keyName())};
   BalancePerExchange ret{
       {&exchange1, balancePortfolio1}, {&exchange3, balancePortfolio2}, {&exchange4, balancePortfolio3}};
-  EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, equiCurrency), ret);
+  EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions), ret);
 }
 
 TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
@@ -191,7 +188,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
 
   WithdrawInfo createWithdrawInfo(MonetaryAmount grossAmount, bool isPercentageWithdraw) {
     if (isPercentageWithdraw) {
-      EXPECT_CALL(exchangePrivate1, queryAccountBalance(CurrencyCode())).WillOnce(testing::Return(balancePortfolio1));
+      EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
       grossAmount = (grossAmount.toNeutral() * balancePortfolio1.get(cur)) / 100;
     } else {
       EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).Times(0);

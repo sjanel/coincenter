@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "apikey.hpp"
+#include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresultvault.hpp"
 #include "curlhandle.hpp"
@@ -42,10 +43,8 @@ class ExchangePrivate : public ExchangeBase {
   /// Information should be fully set with private key.
   virtual CurrencyExchangeFlatSet queryTradableCurrencies() = 0;
 
-  /// Get a fast overview of the available assets on this exchange.
-  /// @param equiCurrency (optional) if provided, attempt to convert each asset to given currency as an
-  ///                     additional value information
-  BalancePortfolio getAccountBalance(CurrencyCode equiCurrency = CurrencyCode());
+  /// Get a fast overview of the account balance on this exchange.
+  BalancePortfolio getAccountBalance(const BalanceOptions &balanceOptions = BalanceOptions());
 
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
@@ -112,7 +111,7 @@ class ExchangePrivate : public ExchangeBase {
  protected:
   ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic, const APIKey &apiKey);
 
-  virtual BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) = 0;
+  virtual BalancePortfolio queryAccountBalance(const BalanceOptions &balanceOptions = BalanceOptions()) = 0;
 
   /// Adds an amount to given BalancePortfolio.
   /// @param equiCurrency Asks conversion of given amount into this currency as well

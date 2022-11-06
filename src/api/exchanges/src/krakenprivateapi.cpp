@@ -90,13 +90,58 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
 
 CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
-BalancePortfolio KrakenPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   BalancePortfolio balancePortfolio;
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/Balance");
   // Kraken returns an empty array in case of account with no balance at all
+  vector<MonetaryAmount> balanceAmounts;
+  balanceAmounts.reserve(res.size());
   for (const auto& [curCode, amountStr] : res.items()) {
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(curCode));
-    addBalance(balancePortfolio, MonetaryAmount(amountStr.get<std::string_view>(), currencyCode), equiCurrency);
+
+    balanceAmounts.emplace_back(amountStr.get<std::string_view>(), currencyCode);
+  }
+  const auto compByCurrency = [](MonetaryAmount lhs, MonetaryAmount rhs) {
+    return lhs.currencyCode() < rhs.currencyCode();
+  };
+  std::ranges::sort(balanceAmounts, compByCurrency);
+
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+
+  // Kraken returns total balance, including the amounts in use
+  if (!withBalanceInUse) {
+    // We need to query the opened orders to remove the balance in use
+    for (const Order& order : queryOpenedOrders()) {
+      MonetaryAmount remVolume = order.remainingVolume();
+      switch (order.side()) {
+        case TradeSide::kBuy: {
+          MonetaryAmount price = order.price();
+          auto lb = std::ranges::lower_bound(balanceAmounts, price, compByCurrency);
+          if (lb != balanceAmounts.end() && lb->currencyCode() == price.currencyCode()) {
+            *lb -= remVolume.toNeutral() * price;
+          } else {
+            log::error("Was expecting at least {} in Kraken balance", remVolume.toNeutral() * price);
+          }
+          break;
+        }
+        case TradeSide::kSell: {
+          auto lb = std::ranges::lower_bound(balanceAmounts, remVolume, compByCurrency);
+          if (lb != balanceAmounts.end() && lb->currencyCode() == remVolume.currencyCode()) {
+            *lb -= remVolume;
+          } else {
+            log::error("Was expecting at least {} in Kraken balance", remVolume);
+          }
+          break;
+        }
+        default:
+          throw exception("unknown trade side");
+      }
+    }
+  }
+  for (MonetaryAmount amount : balanceAmounts) {
+    addBalance(balancePortfolio, amount, equiCurrency);
   }
   return balancePortfolio;
 }

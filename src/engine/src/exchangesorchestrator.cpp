@@ -92,16 +92,19 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
 }
 
 BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                                     CurrencyCode equiCurrency) {
-  log::info("Query balance from {}{}{}", ConstructAccumulatedExchangeNames(privateExchangeNames),
-            equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency);
+                                                     const BalanceOptions &balanceOptions) {
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  log::info("Query balance from {}{}{} with{} balance in use", ConstructAccumulatedExchangeNames(privateExchangeNames),
+            equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency, withBalanceInUse ? "" : "out");
 
   ExchangeRetriever::SelectedExchanges balanceExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
   SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(balanceExchanges.size());
   std::transform(std::execution::par, balanceExchanges.begin(), balanceExchanges.end(), balancePortfolios.begin(),
-                 [equiCurrency](Exchange *e) { return e->apiPrivate().getAccountBalance(equiCurrency); });
+                 [&](Exchange *e) { return e->apiPrivate().getAccountBalance(balanceOptions); });
 
   BalancePerExchange ret;
   ret.reserve(balanceExchanges.size());

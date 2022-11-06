@@ -92,7 +92,10 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
     }
 
     case CoincenterCommandType::kBalance: {
-      BalancePerExchange balancePerExchange = getBalance(cmd.exchangeNames(), cmd.cur1());
+      BalanceOptions balanceOptions(cmd.withBalanceInUse() ? BalanceOptions::AmountIncludePolicy::kWithBalanceInUse
+                                                           : BalanceOptions::AmountIncludePolicy::kOnlyAvailable,
+                                    cmd.cur1());
+      BalancePerExchange balancePerExchange = getBalance(cmd.exchangeNames(), balanceOptions);
       _queryResultPrinter.printBalance(balancePerExchange, cmd.cur1());
       break;
     }
@@ -168,14 +171,15 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, Exchang
 }
 
 BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                          CurrencyCode equiCurrency) {
+                                          const BalanceOptions &balanceOptions) {
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   std::optional<CurrencyCode> optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
   if (optEquiCur) {
     log::warn("Consider {} instead of stable coin {} as equivalent currency", *optEquiCur, equiCurrency);
     equiCurrency = *optEquiCur;
   }
 
-  BalancePerExchange ret = _exchangesOrchestrator.getBalance(privateExchangeNames, equiCurrency);
+  BalancePerExchange ret = _exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions);
 
   _metricsExporter.exportBalanceMetrics(ret, equiCurrency);
 
