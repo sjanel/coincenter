@@ -85,12 +85,20 @@ CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
   return _public.queryTradableCurrencies(result);
 }
 
-BalancePortfolio BinancePrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account");
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   BalancePortfolio balancePortfolio;
   for (const json& balance : result["balances"]) {
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
     MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
+    MonetaryAmount usedAmount(balance["locked"].get<std::string_view>(), currencyCode);
+
+    if (withBalanceInUse) {
+      amount += usedAmount;
+    }
 
     addBalance(balancePortfolio, amount, equiCurrency);
   }

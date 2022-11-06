@@ -86,17 +86,21 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPubli
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
-BalancePortfolio HuobiPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   string method = "/v1/account/accounts/";
   AppendString(method, _accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   BalancePortfolio balancePortfolio;
+
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   for (const json& balanceDetail : result["data"]["list"]) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(balanceDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(balanceDetail["balance"].get<std::string_view>(), currencyCode);
-    if (typeStr == "trade") {
+    if (typeStr == "trade" || (withBalanceInUse && typeStr == "frozen")) {
       this->addBalance(balancePortfolio, amount, equiCurrency);
     } else {
       log::debug("Do not consider {} as it is {} on {}", amount, typeStr, _exchangePublic.name());

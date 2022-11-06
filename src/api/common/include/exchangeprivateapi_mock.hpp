@@ -13,7 +13,7 @@ class MockExchangePrivate : public ExchangePrivate {
       : ExchangePrivate(config, exchangePublic, apiKey) {}
 
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
-  MOCK_METHOD(BalancePortfolio, queryAccountBalance, (CurrencyCode), (override));
+  MOCK_METHOD(BalancePortfolio, queryAccountBalance, (const BalanceOptions &), (override));
   MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode), (override));
   MOCK_METHOD(bool, canGenerateDepositAddress, (), (const override));
   MOCK_METHOD(Orders, queryOpenedOrders, (const OrdersConstraints &), (override));

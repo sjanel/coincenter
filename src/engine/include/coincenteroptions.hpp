@@ -121,22 +121,16 @@ struct CoincenterCmdLineOptions {
   std::string_view apiOutputType;
   std::string_view logConsole;
   std::string_view logFile;
-  bool help = false;
-  bool version = false;
   std::optional<std::string_view> nosecrets;
-  CommandLineOptionalInt repeats;
   Duration repeatTime = kDefaultRepeatTime;
 
   std::string_view monitoringAddress = kDefaultMonitoringIPAddress;
   std::string_view monitoringUsername;
   std::string_view monitoringPassword;
-  int monitoringPort = kDefaultMonitoringPort;
-  bool useMonitoring = false;
 
   std::string_view markets;
 
   std::string_view orderbook;
-  int orderbookDepth = 0;
   std::string_view orderbookCur;
 
   std::optional<std::string_view> ticker;
@@ -151,11 +145,6 @@ struct CoincenterCmdLineOptions {
   std::string_view tradeStrategy;
   Duration tradeTimeout{TradeOptions().maxTradeTime()};
   Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
-
-  bool forceMultiTrade = false;
-  bool forceSingleTrade = false;
-  bool tradeTimeoutMatch = false;
-  bool tradeSim{TradeOptions().isSimulation()};
 
   std::string_view buy;
   std::string_view sell;
@@ -179,7 +168,20 @@ struct CoincenterCmdLineOptions {
   std::string_view lastPrice;
 
   std::string_view lastTrades;
+
+  CommandLineOptionalInt repeats;
   int nbLastTrades = api::ExchangePublic::kNbLastTradesDefault;
+  int monitoringPort = kDefaultMonitoringPort;
+  int orderbookDepth = 0;
+
+  bool forceMultiTrade = false;
+  bool forceSingleTrade = false;
+  bool tradeTimeoutMatch = false;
+  bool tradeSim{TradeOptions().isSimulation()};
+  bool help = false;
+  bool version = false;
+  bool useMonitoring = false;
+  bool withBalanceInUse = false;
 };
 
 template <class OptValueType>
@@ -289,6 +291,8 @@ struct CoincenterAllowedOptions {
         "in this case a total amount will be printed in this currency "
         "if conversion is possible."},
        &OptValueType::balance},
+      {{{"Private queries", 30}, "--balance-in-use", "", "Include balance in use as well from opened orders"},
+       &OptValueType::withBalanceInUse},
       {{{"Private queries", 31},
         "--orders-opened",
         "<cur1-cur2[,exch1,...]>",

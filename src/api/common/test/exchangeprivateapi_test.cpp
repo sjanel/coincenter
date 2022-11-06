@@ -411,7 +411,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   MarketPriceMap marketPriceMap{
       {xrpbtcMarket, xrpbtcBidPri}, {xrpeurMarket, xrpeurBidPri}, {etheurMarket, xrpethBidPri}};
 
-  CurrencyCode eqCur;
+  BalanceOptions balanceOptions;
 };
 
 TEST_F(ExchangePrivateDustSweeperTest, DustSweeperNoThreshold) {
@@ -425,7 +425,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeperHigherThanThresholdNoAction) {
 
   MonetaryAmount dustCurAmount{1, dustCur};
   BalancePortfolio balance{dustCurAmount};
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(CurrencyCode{})).WillOnce(testing::Return(balance));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance));
 
   auto actualRes = exchangePrivate.queryDustSweeper(dustCur);
   EXPECT_TRUE(actualRes.tradedAmountsVector.empty());
@@ -445,7 +445,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeperDirectSellingPossible) {
   expectMarketOrderBookCall(xrpbtcMarket);
 
   MonetaryAmount avBtcAmount{75, "BTC", 4};
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur))
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(BalancePortfolio{from, avBtcAmount}))
       .WillOnce(testing::Return(BalancePortfolio{avBtcAmount + tradedAmounts.tradedTo}));
 
@@ -476,7 +476,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper2StepsSameMarket) {
   TradedAmounts tradedAmounts2 = expectTakerSell(from + tradedAmounts1.tradedTo, pri);
 
   MonetaryAmount avBtcAmount{75, "BTC", 4};
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur))
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(BalancePortfolio{from, avBtcAmount}))
       .WillOnce(
           testing::Return(BalancePortfolio{from + tradedAmounts1.tradedTo, avBtcAmount - tradedAmounts1.tradedFrom}))
@@ -517,7 +517,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
 
   BalancePortfolio balance1{from, avBtcAmount, avEurAmount};
 
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur)).WillOnce(testing::Return(balance1));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance1));
 
   // BTC should be called first because markets are lexicographically sorted
   expectTakerSell(from, priBtc, 0);  // no selling possible
@@ -529,7 +529,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
 
   BalancePortfolio balance2 = balance1 + tradedAmounts1;
 
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur)).WillOnce(testing::Return(balance2));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance2));
 
   int percentXRPSoldSecondStep = 80;
   TradedAmounts tradedAmounts2 = expectTakerSell(from, priBtc, percentXRPSoldSecondStep);
@@ -537,7 +537,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
 
   BalancePortfolio balance3 = balance2 + tradedAmounts2;
 
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur)).WillOnce(testing::Return(balance3));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance3));
 
   expectTakerSell(from, priEur, 0);  // no selling possible
   expectTakerSell(from, priBtc, 0);  // no selling possible
@@ -550,14 +550,14 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   from += tradedAmounts3.tradedTo;
 
   BalancePortfolio balance4 = balance3 + tradedAmounts3;
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur)).WillOnce(testing::Return(balance4));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance4));
 
   // Final sell that works
   TradedAmounts tradedAmounts4 = expectTakerSell(from, priEur);
 
   BalancePortfolio balance5 = balance4 + tradedAmounts4;
 
-  EXPECT_CALL(exchangePrivate, queryAccountBalance(eqCur)).WillOnce(testing::Return(balance5));
+  EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance5));
 
   TradedAmountsVector tradedAmountsVector{tradedAmounts1, tradedAmounts2, tradedAmounts3, tradedAmounts4};
   TradedAmountsVectorWithFinalAmount res{tradedAmountsVector, MonetaryAmount{0, dustCur}};

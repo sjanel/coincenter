@@ -119,14 +119,18 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinP
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}
 
-BalancePortfolio KucoinPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts");
   BalancePortfolio balancePortfolio;
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+  const std::string_view amountKey = withBalanceInUse ? "balance" : "available";
   for (const json& balanceDetail : result) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(
-        _coincenterInfo.standardizeCurrencyCode(CurrencyCode(balanceDetail["currency"].get<std::string_view>())));
-    MonetaryAmount amount(balanceDetail["available"].get<std::string_view>(), currencyCode);
+        _coincenterInfo.standardizeCurrencyCode(balanceDetail["currency"].get<std::string_view>()));
+    MonetaryAmount amount(balanceDetail[amountKey].get<std::string_view>(), currencyCode);
     log::debug("{} in account '{}' on {}", amount, typeStr, _exchangePublic.name());
     this->addBalance(balancePortfolio, amount, equiCurrency);
   }

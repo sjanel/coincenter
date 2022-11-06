@@ -13,9 +13,9 @@ ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangeP
                                  const APIKey &apiKey)
     : ExchangeBase(), _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
-BalancePortfolio ExchangePrivate::getAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
   UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
-  BalancePortfolio balancePortfolio = queryAccountBalance(equiCurrency);
+  BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
   log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
   return balancePortfolio;
 }

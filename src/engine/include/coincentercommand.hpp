@@ -35,6 +35,7 @@ class CoincenterCommand {
   CoincenterCommand& setCur2(CurrencyCode cur2);
 
   CoincenterCommand& setPercentageAmount(bool value = true);
+  CoincenterCommand& withBalanceInUse(bool value = true);
 
   bool isPublic() const;
   bool isPrivate() const { return !isPublic(); }
@@ -61,6 +62,7 @@ class CoincenterCommand {
   CoincenterCommandType type() const { return _type; }
 
   bool isPercentageAmount() const { return _isPercentageAmount; }
+  bool withBalanceInUse() const { return _withBalanceInUse; }
 
   using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<ExchangeNames> &&
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
@@ -76,6 +78,7 @@ class CoincenterCommand {
   CurrencyCode _cur1, _cur2;
   CoincenterCommandType _type;
   bool _isPercentageAmount = false;
+  bool _withBalanceInUse = false;
 };
 
 }  // namespace cct

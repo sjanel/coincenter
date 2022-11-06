@@ -68,7 +68,7 @@ class Coincenter {
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                CurrencyCode equiCurrency = CurrencyCode());
+                                const BalanceOptions &balanceOptions);
 
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 

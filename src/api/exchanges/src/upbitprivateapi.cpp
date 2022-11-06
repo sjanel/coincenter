@@ -117,12 +117,20 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   return ret;
 }
 
-BalancePortfolio UpbitPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   BalancePortfolio ret;
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   for (const json& accountDetail : PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts")) {
-    MonetaryAmount a(accountDetail["balance"].get<std::string_view>(),
-                     accountDetail["currency"].get<std::string_view>());
-    this->addBalance(ret, a, equiCurrency);
+    CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
+    MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
+    this->addBalance(ret, availableAmount, equiCurrency);
+
+    if (withBalanceInUse) {
+      MonetaryAmount amountInUse(accountDetail["locked"].get<std::string_view>(), currencyCode);
+      this->addBalance(ret, amountInUse, equiCurrency);
+    }
   }
   return ret;
 }

@@ -292,19 +292,22 @@ If you have only one key per exchange, suffixing with the name is not necessary 
 
 ### Balance
 
-Check your balance across supported exchanges at one glance!
+Check your available balance across supported exchanges at one glance!
 ```
 coincenter --balance
 ```
 prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
 It is also possible to give a list of exchanges (comma separated) to print balance only on those ones.
 
-You can also specify a currency to which all assets will be converted (if possible) to have a nice estimation of your total balance.
+You can also specify a currency to which all assets will be converted (if possible) to have a nice estimation of your total balance in your currency.
 The currency acronym should be at the first position of the comma separated values, the next ones being the accounts.
-For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*, launch:
+For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*:
 ```
 coincenter --balance eur,kraken,bithumb
 ```
+
+By default, the balance displayed is the available one, with opened orders remaining unmatched amounts deduced. 
+To include balance in use as well, `--balance-in-use` should be added.
 
 ### Single Trade
 

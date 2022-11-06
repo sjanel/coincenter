@@ -261,13 +261,21 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
   }
 }
 
-BalancePortfolio BithumbPrivate::queryAccountBalance(CurrencyCode equiCurrency) {
+BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}})["data"];
   BalancePortfolio balancePortfolio;
+  bool withBalanceInUse =
+      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
+  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   for (const auto& [key, value] : result.items()) {
-    static constexpr std::string_view kPrefixKey = "available_";
-    if (key.starts_with(kPrefixKey)) {
-      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixKey.size(), key.end()));
+    static constexpr std::string_view kPrefixAvailableKey = "available_";
+    static constexpr std::string_view kPrefixInUseKey = "in_use_";
+    if (key.starts_with(kPrefixAvailableKey)) {
+      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixAvailableKey.size(), key.end()));
+      MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
+      this->addBalance(balancePortfolio, amount, equiCurrency);
+    } else if (withBalanceInUse && key.starts_with(kPrefixInUseKey)) {
+      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixInUseKey.size(), key.end()));
       MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
       this->addBalance(balancePortfolio, amount, equiCurrency);
     }

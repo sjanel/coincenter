@@ -22,7 +22,7 @@ class HuobiPrivate : public ExchangePrivate {
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 
-  BalancePortfolio queryAccountBalance(CurrencyCode equiCurrency = CurrencyCode()) override;
+  BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;
 
   Wallet queryDepositWallet(CurrencyCode currencyCode) override { return _depositWalletsCache.get(currencyCode); }
 
