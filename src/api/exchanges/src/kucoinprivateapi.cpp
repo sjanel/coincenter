@@ -4,6 +4,7 @@
 
 #include "apikey.hpp"
 #include "codec.hpp"
+#include "coincenterinfo.hpp"
 #include "kucoinpublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
@@ -111,10 +112,10 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 }  // namespace
 
-KucoinPrivate::KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinPublic, const APIKey& apiKey)
-    : ExchangePrivate(config, kucoinPublic, apiKey),
-      _curlHandle(KucoinPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
-                  config.getRunMode()),
+KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey)
+    : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
+      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+                  coincenterInfo.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}

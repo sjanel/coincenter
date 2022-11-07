@@ -4,10 +4,19 @@
 
 #include "cct_allocator.hpp"
 #include "cct_exception.hpp"
+#include "coincenterinfo.hpp"
 #include "fiatconverter.hpp"
 #include "unreachable.hpp"
 
 namespace cct::api {
+ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+                               const CoincenterInfo &coincenterInfo)
+    : _name(name),
+      _fiatConverter(fiatConverter),
+      _cryptowatchApi(cryptowatchApi),
+      _coincenterInfo(coincenterInfo),
+      _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
+
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
                                                       MarketOrderBookMap &marketOrderBookMap, bool canUseCryptowatchAPI,

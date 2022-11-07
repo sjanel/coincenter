@@ -5,6 +5,7 @@
 
 #include "apikey.hpp"
 #include "codec.hpp"
+#include "coincenterinfo.hpp"
 #include "huobipublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
@@ -77,10 +78,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 }  // namespace
 
-HuobiPrivate::HuobiPrivate(const CoincenterInfo& config, HuobiPublic& huobiPublic, const APIKey& apiKey)
-    : ExchangePrivate(config, huobiPublic, apiKey),
-      _curlHandle(HuobiPublic::kURLBases, config.metricGatewayPtr(),
-                  config.exchangeInfo(huobiPublic.name()).privateAPIRate(), config.getRunMode()),
+HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey)
+    : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
+      _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(),
+                  coincenterInfo.exchangeInfo(huobiPublic.name()).privateAPIRate(), coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

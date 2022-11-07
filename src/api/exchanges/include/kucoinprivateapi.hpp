@@ -18,7 +18,7 @@ class KucoinPublic;
 
 class KucoinPrivate : public ExchangePrivate {
  public:
-  KucoinPrivate(const CoincenterInfo& config, KucoinPublic& kucoinPublic, const APIKey& apiKey);
+  KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 

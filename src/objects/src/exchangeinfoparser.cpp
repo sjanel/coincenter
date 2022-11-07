@@ -94,9 +94,9 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
   throw exception(std::move(err));
 }
 
-TopLevelOption::CurrencyVector TopLevelOption::getUnorderedCurrencyUnion(std::string_view exchangeName,
-                                                                         std::string_view subOptionName) const {
-  CurrencyVector ret;
+CurrencyCodeVector TopLevelOption::getUnorderedCurrencyUnion(std::string_view exchangeName,
+                                                             std::string_view subOptionName) const {
+  CurrencyCodeVector ret;
   const auto appendFunc = [&](JsonIt it) {
     JsonIt optValIt = it->find(subOptionName);
     if (optValIt != it->end()) {

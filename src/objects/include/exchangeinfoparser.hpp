@@ -7,6 +7,7 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
+#include "currencycodevector.hpp"
 #include "durationstring.hpp"
 #include "monetaryamount.hpp"
 
@@ -25,7 +26,6 @@ class TopLevelOption {
   static constexpr std::string_view kWithdrawOptionStr = "withdraw";
 
   using JsonIt = json::const_iterator;
-  using CurrencyVector = vector<CurrencyCode>;
   using MonetaryAmountVector = vector<MonetaryAmount>;
 
   TopLevelOption(const json& jsonData, std::string_view optionName);
@@ -55,11 +55,11 @@ class TopLevelOption {
   }
 
   /// Create an unordered aggregation of currencies from array string values of all option levels
-  CurrencyVector getUnorderedCurrencyUnion(std::string_view exchangeName, std::string_view subOptionName) const;
+  CurrencyCodeVector getUnorderedCurrencyUnion(std::string_view exchangeName, std::string_view subOptionName) const;
 
   /// Get the array of currencies from array string values traversing the config options from bottom to up.
-  CurrencyVector getCurrenciesArray(std::string_view exchangeName, std::string_view subOptionName1,
-                                    std::string_view subOptionName2 = "") const {
+  CurrencyCodeVector getCurrenciesArray(std::string_view exchangeName, std::string_view subOptionName1,
+                                        std::string_view subOptionName2 = "") const {
     return getArray<CurrencyCode>(exchangeName, subOptionName1, subOptionName2);
   }
 

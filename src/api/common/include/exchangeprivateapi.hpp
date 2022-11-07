@@ -12,6 +12,7 @@
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
+#include "exchangeinfo.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -169,7 +170,7 @@ class ExchangePrivate : public ExchangeBase {
   TradedAmounts buySomeAmountToMakeFutureSellPossible(std::span<const Market> possibleMarkets,
                                                       MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
                                                       const BalancePortfolio &balance, const TradeOptions &tradeOptions,
-                                                      const ExchangeInfo::MonetaryAmountSet &dustThresholds);
+                                                      const MonetaryAmountByCurrencySet &dustThresholds);
 };
 }  // namespace api
 }  // namespace cct

@@ -24,8 +24,8 @@ class ExchangeInfoTest : public ::testing::Test {
 };
 
 TEST_F(ExchangeInfoTest, ExcludedAssets) {
-  EXPECT_EQ(exchangeInfo.excludedCurrenciesAll(), ExchangeInfo::CurrencySet({"AUD", "CAD"}));
-  EXPECT_EQ(exchangeInfo.excludedCurrenciesWithdrawal(), ExchangeInfo::CurrencySet({"BTC", "EUR"}));
+  EXPECT_EQ(exchangeInfo.excludedCurrenciesAll(), CurrencyCodeSet({"AUD", "CAD"}));
+  EXPECT_EQ(exchangeInfo.excludedCurrenciesWithdrawal(), CurrencyCodeSet({"BTC", "EUR"}));
 }
 
 TEST_F(ExchangeInfoTest, TradeFees) {

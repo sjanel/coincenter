@@ -195,7 +195,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
     log::error("Unexpected Bithumb reply for orderbook. May require code api update");
   }
   CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
-  const ExchangeInfo::CurrencySet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
   for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
     if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
       const json* asksBids[2];

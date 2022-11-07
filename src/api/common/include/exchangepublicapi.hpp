@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "cct_string.hpp"
-#include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -18,6 +17,8 @@
 
 namespace cct {
 
+class CoincenterInfo;
+class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
@@ -161,12 +162,7 @@ class ExchangePublic : public ExchangeBase {
   friend class ExchangePrivate;
 
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
-                 const CoincenterInfo &coincenterInfo)
-      : _name(name),
-        _fiatConverter(fiatConverter),
-        _cryptowatchApi(cryptowatchApi),
-        _coincenterInfo(coincenterInfo),
-        _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
+                 const CoincenterInfo &coincenterInfo);
 
   string _name;
   CachedResultVault _cachedResultVault;

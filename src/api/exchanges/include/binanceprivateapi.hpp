@@ -19,7 +19,7 @@ class BinancePublic;
 
 class BinancePrivate : public ExchangePrivate {
  public:
-  BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey);
+  BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey);
 
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 

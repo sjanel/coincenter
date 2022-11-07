@@ -83,7 +83,7 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic) {}
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   CurrencyExchangeVector currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
   currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() - excludedCurrencies.size()));

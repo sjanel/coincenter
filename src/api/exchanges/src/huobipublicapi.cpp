@@ -131,7 +131,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
 
   markets.reserve(static_cast<MarketSet::size_type>(result.size()));
 
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
 
   for (const json& marketDetails : result) {
     std::string_view baseAsset = marketDetails["base-currency"].get<std::string_view>();

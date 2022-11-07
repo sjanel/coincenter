@@ -6,6 +6,7 @@
 #include "apikey.hpp"
 #include "binancepublicapi.hpp"
 #include "cct_smallvector.hpp"
+#include "coincenterinfo.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
@@ -63,10 +64,10 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 }  // namespace
 
-BinancePrivate::BinancePrivate(const CoincenterInfo& config, BinancePublic& binancePublic, const APIKey& apiKey)
-    : ExchangePrivate(config, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, config.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
-                  config.getRunMode()),
+BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
+    : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
+      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+                  coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _apiKey, binancePublic),

@@ -77,7 +77,7 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   return currencies;
 }
 
-bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies) {
+bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCodeSet& excludedCurrencies) {
   if (excludedCurrencies.contains(standardCode)) {
     // Forbidden currency, do not consider its market
     log::trace("Discard {} excluded by config", standardCode);
@@ -88,7 +88,7 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInf
 
 MarketSet UpbitPublic::MarketsFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
   for (const json& marketDetails : result) {

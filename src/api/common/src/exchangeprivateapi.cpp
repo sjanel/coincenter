@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "cct_vector.hpp"
+#include "coincenterinfo.hpp"
 #include "timedef.hpp"
 
 namespace cct::api {
@@ -229,9 +230,9 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
 }
 
 namespace {
-bool IsAboveDustAmountThreshold(const ExchangeInfo::MonetaryAmountSet &dustThresholds, MonetaryAmount amount) {
-  auto lb = std::ranges::lower_bound(dustThresholds, amount, ExchangeInfo::CompareByCurrencyCode{});
-  return lb == dustThresholds.end() || lb->currencyCode() != amount.currencyCode() || *lb <= amount;
+bool IsAboveDustAmountThreshold(const MonetaryAmountByCurrencySet &dustThresholds, MonetaryAmount amount) {
+  auto foundIt = dustThresholds.find(amount);
+  return foundIt == dustThresholds.end() || *foundIt <= amount;
 }
 
 using PenaltyPerMarketMap = std::map<Market, int>;
@@ -244,16 +245,15 @@ void IncrementPenalty(Market m, PenaltyPerMarketMap &penaltyPerMarketMap) {
 }
 
 vector<Market> GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
-                                                   const ExchangeInfo::MonetaryAmountSet &dustThresholds,
+                                                   const MonetaryAmountByCurrencySet &dustThresholds,
                                                    CurrencyCode currencyCode, const MarketSet &markets,
                                                    const PenaltyPerMarketMap &penaltyPerMarketMap) {
   vector<Market> possibleMarkets;
   for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
     MonetaryAmount avAmount = avAmountEq.amount;
     CurrencyCode avCur = avAmount.currencyCode();
-    auto lbAvAmount =
-        std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, avCur), ExchangeInfo::CompareByCurrencyCode{});
-    if (lbAvAmount == dustThresholds.end() || lbAvAmount->currencyCode() != avCur || *lbAvAmount < avAmount) {
+    auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
+    if (lbAvAmount == dustThresholds.end() || *lbAvAmount < avAmount) {
       Market m(currencyCode, avCur);
       if (markets.contains(m)) {
         possibleMarkets.push_back(std::move(m));
@@ -303,7 +303,7 @@ std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSw
 TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
     std::span<const Market> possibleMarkets, MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
     const BalancePortfolio &balance, const TradeOptions &tradeOptions,
-    const ExchangeInfo::MonetaryAmountSet &dustThresholds) {
+    const MonetaryAmountByCurrencySet &dustThresholds) {
   CurrencyCode currencyCode = dustThreshold.currencyCode();
   static constexpr MonetaryAmount kMultiplier(15, CurrencyCode(), 1);
 
@@ -357,14 +357,12 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 }
 
 TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
-  using MonetaryAmountSet = ExchangeInfo::MonetaryAmountSet;
-  const MonetaryAmountSet &dustThresholds = exchangeInfo().dustAmountsThreshold();
+  const MonetaryAmountByCurrencySet &dustThresholds = exchangeInfo().dustAmountsThreshold();
   const int dustSweeperMaxNbTrades = exchangeInfo().dustSweeperMaxNbTrades();
-  auto dustThresholdLb =
-      std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, currencyCode), ExchangeInfo::CompareByCurrencyCode());
+  auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
   TradedAmountsVectorWithFinalAmount ret;
   auto eName = exchangeName();
-  if (dustThresholdLb == dustThresholds.end() || dustThresholdLb->currencyCode() != currencyCode) {
+  if (dustThresholdLb == dustThresholds.end()) {
     log::warn("No dust threshold is configured for {} on {:n}", currencyCode, eName);
     return ret;
   }

@@ -3,23 +3,16 @@
 #include <string_view>
 
 #include "apiquerytypeenum.hpp"
-#include "cct_flatset.hpp"
-#include "cct_vector.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencycodevector.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 class ExchangeInfo {
  public:
-  using CurrencySet = FlatSet<CurrencyCode>;
-  using CurrencyVector = vector<CurrencyCode>;
-
-  struct CompareByCurrencyCode {
-    bool operator()(MonetaryAmount lhs, MonetaryAmount rhs) const { return lhs.currencyCode() < rhs.currencyCode(); }
-  };
-  using MonetaryAmountSet = FlatSet<MonetaryAmount, CompareByCurrencyCode>;
-
   enum struct FeeType { kMaker, kTaker };
 
   struct APIUpdateFrequencies {
@@ -27,24 +20,24 @@ class ExchangeInfo {
   };
 
   ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
-               CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
-               CurrencyVector &&preferredPaymentCurrencies, MonetaryAmountSet &&dustAmountsThreshold,
+               CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
+               CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
                int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
                bool placeSimulateRealOrder);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
-  const CurrencySet &excludedCurrenciesAll() const { return _excludedCurrenciesAll; }
+  const CurrencyCodeSet &excludedCurrenciesAll() const { return _excludedCurrenciesAll; }
 
   /// Get a reference to the list of statically excluded currency codes to consider for withdrawals.
-  const CurrencySet &excludedCurrenciesWithdrawal() const { return _excludedCurrenciesWithdrawal; }
+  const CurrencyCodeSet &excludedCurrenciesWithdrawal() const { return _excludedCurrenciesWithdrawal; }
 
   /// Get a reference to the array of preferred payment currencies ordered by decreasing priority.
-  const CurrencyVector &preferredPaymentCurrencies() const { return _preferredPaymentCurrencies; }
+  const CurrencyCodeVector &preferredPaymentCurrencies() const { return _preferredPaymentCurrencies; }
 
   /// Get a reference to the set of monetary amounts representing the threshold for dust sweeper
-  const MonetaryAmountSet &dustAmountsThreshold() const { return _dustAmountsThreshold; }
+  const MonetaryAmountByCurrencySet &dustAmountsThreshold() const { return _dustAmountsThreshold; }
 
   /// Maximum number of trades performed by the automatic dust sweeper process.
   /// A high value may have a higher chance of successfully sell to 0 the wanted currency,
@@ -84,11 +77,11 @@ class ExchangeInfo {
   bool multiTradeAllowedByDefault() const { return _multiTradeAllowedByDefault; }
 
  private:
-  CurrencySet _excludedCurrenciesAll;          // Currencies will be completely ignored by the exchange
-  CurrencySet _excludedCurrenciesWithdrawal;   // Currencies unavailable for withdrawals
-  CurrencyVector _preferredPaymentCurrencies;  // Ordered list of currencies available from smart trading.
-  MonetaryAmountSet _dustAmountsThreshold;  // Total amount in balance under one of these thresholds will be considered
-                                            // for dust sweeper
+  CurrencyCodeSet _excludedCurrenciesAll;             // Currencies will be completely ignored by the exchange
+  CurrencyCodeSet _excludedCurrenciesWithdrawal;      // Currencies unavailable for withdrawals
+  CurrencyCodeVector _preferredPaymentCurrencies;     // Ordered list of currencies available from smart trading.
+  MonetaryAmountByCurrencySet _dustAmountsThreshold;  // Total amount in balance under one of these thresholds will be
+                                                      // considered for dust sweeper
   APIUpdateFrequencies _apiUpdateFrequencies;
   Duration _publicAPIRate;
   Duration _privateAPIRate;
