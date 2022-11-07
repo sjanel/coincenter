@@ -39,7 +39,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
     bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
 
-    ExchangeInfo::MonetaryAmountSet dustAmountsThresholds(
+    MonetaryAmountByCurrencySet dustAmountsThresholds(
         queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
     int dustSweeperMaxNbTrades = queryTopLevelOption.getInt(exchangeName, "dustSweeperMaxNbTrades");
 

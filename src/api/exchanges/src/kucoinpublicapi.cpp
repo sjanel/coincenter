@@ -96,7 +96,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
 
   markets.reserve(static_cast<MarketSet::size_type>(result.size()));
 
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
 
   for (const json& marketDetails : result) {
     const std::string_view baseAsset = marketDetails["baseCurrency"].get<std::string_view>();

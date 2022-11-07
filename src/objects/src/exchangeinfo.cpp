@@ -38,8 +38,9 @@ string BuildUpdateFrequenciesString(const ExchangeInfo::APIUpdateFrequencies &ap
 }  // namespace
 
 ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
-                           CurrencyVector &&excludedAllCurrencies, CurrencyVector &&excludedCurrenciesWithdraw,
-                           CurrencyVector &&preferredPaymentCurrencies, MonetaryAmountSet &&dustAmountsThreshold,
+                           CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
+                           CurrencyCodeVector &&preferredPaymentCurrencies,
+                           MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
                            Duration privateAPIRate, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
                            bool validateDepositAddressesInFile, bool placeSimulateRealOrder)

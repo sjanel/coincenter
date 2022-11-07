@@ -4,6 +4,7 @@
 
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
+#include "currencycodeset.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 
@@ -56,7 +57,7 @@ class UpbitPublic : public ExchangePublic {
 
   static string ReverseMarketStr(Market m) { return m.reverse().assetsPairStrUpper('-'); }
 
-  static bool CheckCurrencyCode(CurrencyCode standardCode, const ExchangeInfo::CurrencySet& excludedCurrencies);
+  static bool CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCodeSet& excludedCurrencies);
 
   static MonetaryAmount SanitizeVolume(MonetaryAmount vol, MonetaryAmount pri);
 

@@ -29,7 +29,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&&
 }
 
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,
-                           const ExchangeInfo::CurrencySet& excludedCurrencies, const CoincenterInfo& config) {
+                           const CurrencyCodeSet& excludedCurrencies, const CoincenterInfo& config) {
   if (krakenAltName.ends_with(".HOLD")) {
     // These are special tokens for holding
     log::trace("Discard {} which are special tokens for holding process", krakenAltName);
@@ -286,7 +286,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/public/Assets");
   CurrencyExchangeVector currencies;
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
     if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _coincenterInfo)) {
@@ -312,7 +312,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
   ret.second.reserve(result.size());
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
   for (const auto& [key, value] : result.items()) {
     if (!value.contains("ordermin")) {

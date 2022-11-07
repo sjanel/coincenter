@@ -5,7 +5,9 @@
 
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "exchangeinfo.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "fiatconverter.hpp"
 

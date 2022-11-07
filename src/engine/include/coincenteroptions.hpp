@@ -5,10 +5,12 @@
 #include <string_view>
 #include <utility>
 
+#include "apioutputtype.hpp"
 #include "cct_const.hpp"
 #include "commandlineoption.hpp"
 #include "exchangeinfomap.hpp"
 #include "exchangepublicapi.hpp"
+#include "loadconfiguration.hpp"
 #include "static_string_view_helpers.hpp"
 #include "staticcommandlineoptioncheck.hpp"
 #include "stringhelpers.hpp"

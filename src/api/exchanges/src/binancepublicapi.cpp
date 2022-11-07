@@ -86,7 +86,7 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
   for (const json& el : data) {
     std::string_view coin = el["coin"].get<std::string_view>();
     if (coin.size() > CurrencyCode::kMaxLen) {
@@ -123,7 +123,7 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
 
 MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeInfoCache.get();
-  const ExchangeInfo::CurrencySet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
   for (const auto& marketJsonPair : exchangeInfoData) {

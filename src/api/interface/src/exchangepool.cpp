@@ -7,6 +7,7 @@
 #include "bithumbprivateapi.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
+#include "coincenterinfo.hpp"
 #include "huobiprivateapi.hpp"
 #include "krakenprivateapi.hpp"
 #include "kucoinprivateapi.hpp"

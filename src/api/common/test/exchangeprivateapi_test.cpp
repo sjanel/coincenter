@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_const.hpp"
+#include "coincenterinfo.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -377,9 +378,8 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
 
   std::optional<MonetaryAmount> dustThreshold(CurrencyCode cur) {
     const auto &dustThresholds = exchangePublic.exchangeInfo().dustAmountsThreshold();
-    auto dustThresholdLb =
-        std::ranges::lower_bound(dustThresholds, MonetaryAmount(0, cur), ExchangeInfo::CompareByCurrencyCode());
-    if (dustThresholdLb == dustThresholds.end() || dustThresholdLb->currencyCode() != cur) {
+    auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, cur));
+    if (dustThresholdLb == dustThresholds.end()) {
       return std::nullopt;
     }
     return *dustThresholdLb;
