@@ -6,8 +6,6 @@
 
 namespace cct {
 
-using Deposit = CurrencyExchange::Deposit;
-using Withdraw = CurrencyExchange::Withdraw;
 using Type = CurrencyExchange::Type;
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
@@ -42,9 +40,11 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.name(), exchange2.keyName())};
 
-  CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{
-      CurrencyExchange(depositCurrency, Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("XRP", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies2{
+      CurrencyExchangeVector{CurrencyExchange(depositCurrency, CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("XRP", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   Wallet wallet2{privateExchangeNames[0], depositCurrency, "address1", "", WalletCheck()};
@@ -61,20 +61,26 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
       ExchangeName(exchange3.name(), exchange3.keyName()), ExchangeName(exchange1.name(), exchange1.keyName()),
       ExchangeName(exchange2.name(), exchange2.keyName()), ExchangeName(exchange4.name(), exchange4.keyName())};
 
-  CurrencyExchangeFlatSet tradableCurrencies1{CurrencyExchangeVector{
-      CurrencyExchange(depositCurrency, Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies1{
+      CurrencyExchangeVector{CurrencyExchange(depositCurrency, CurrencyExchange::Deposit::kUnavailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
 
-  CurrencyExchangeFlatSet tradableCurrencies2{
-      CurrencyExchangeVector{CurrencyExchange("XLM", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{CurrencyExchange(
+      "XLM", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   CurrencyExchangeFlatSet tradableCurrencies3{CurrencyExchangeVector{
-      CurrencyExchange("BTC", Deposit::kUnavailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("SOL", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange(depositCurrency, Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("EUR", Deposit::kAvailable, Withdraw::kAvailable, Type::kFiat),
+      CurrencyExchange("BTC", CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
+                       Type::kCrypto),
+      CurrencyExchange("SOL", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                       Type::kCrypto),
+      CurrencyExchange(depositCurrency, CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kUnavailable,
+                       Type::kCrypto),
+      CurrencyExchange("EUR", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                       Type::kFiat),
   }};
   EXPECT_CALL(exchangePrivate3, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
   EXPECT_CALL(exchangePrivate4, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
@@ -129,13 +135,17 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
   ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   ExchangeName toExchange(exchange2.name(), exchange2.keyName());
 
-  CurrencyExchangeFlatSet tradableCurrencies1{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies1{
+      CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kUnavailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
-  CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies2{
+      CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
@@ -146,13 +156,17 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
   ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   ExchangeName toExchange(exchange2.name(), exchange2.keyName());
 
-  CurrencyExchangeFlatSet tradableCurrencies1{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies1{
+      CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
-  CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{
-      CurrencyExchange(grossAmount.currencyCode(), Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+  CurrencyExchangeFlatSet tradableCurrencies2{
+      CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kUnavailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
@@ -176,11 +190,15 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
  protected:
   ExchangeOrchestratorWithdrawTest() {
     CurrencyExchangeFlatSet tradableCurrencies1{
-        CurrencyExchangeVector{CurrencyExchange(cur, Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
-                               CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+        CurrencyExchangeVector{CurrencyExchange(cur, CurrencyExchange::Deposit::kUnavailable,
+                                                CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                               CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                                CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
     CurrencyExchangeFlatSet tradableCurrencies2{
-        CurrencyExchangeVector{CurrencyExchange(cur, Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
-                               CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+        CurrencyExchangeVector{CurrencyExchange(cur, CurrencyExchange::Deposit::kAvailable,
+                                                CurrencyExchange::Withdraw::kUnavailable, Type::kCrypto),
+                               CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                                CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
 
     EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
     EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));

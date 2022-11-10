@@ -45,7 +45,7 @@ class Order {
   /// default ordering by place time first, then matched volume, etc
   auto operator<=>(const Order &) const = default;
 
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
+  using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 
  private:
   TimePoint _placedTime;

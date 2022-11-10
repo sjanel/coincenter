@@ -6,8 +6,6 @@
 
 namespace cct {
 
-using Deposit = CurrencyExchange::Deposit;
-using Withdraw = CurrencyExchange::Withdraw;
 using Type = CurrencyExchange::Type;
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
@@ -137,17 +135,23 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingCurrency) {
                                              ExchangeName(kSupportedExchanges[2])};
 
   CurrencyExchangeFlatSet tradableCurrencies1{
-      CurrencyExchangeVector{CurrencyExchange("XRP", Deposit::kUnavailable, Withdraw::kAvailable, Type::kCrypto),
-                             CurrencyExchange("SHIB", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto)}};
+      CurrencyExchangeVector{CurrencyExchange("XRP", CurrencyExchange::Deposit::kUnavailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
+                             CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
+                                              CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate1, queryTradableCurrencies())
       .Times(2)
       .WillRepeatedly(testing::Return(tradableCurrencies1));
 
   CurrencyExchangeFlatSet tradableCurrencies3{CurrencyExchangeVector{
-      CurrencyExchange("BTC", Deposit::kUnavailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("SOL", Deposit::kAvailable, Withdraw::kAvailable, Type::kCrypto),
-      CurrencyExchange("XRP", Deposit::kAvailable, Withdraw::kUnavailable, Type::kCrypto),
-      CurrencyExchange("EUR", Deposit::kAvailable, Withdraw::kAvailable, Type::kFiat),
+      CurrencyExchange("BTC", CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
+                       Type::kCrypto),
+      CurrencyExchange("SOL", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                       Type::kCrypto),
+      CurrencyExchange("XRP", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kUnavailable,
+                       Type::kCrypto),
+      CurrencyExchange("EUR", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                       Type::kFiat),
   }};
   EXPECT_CALL(exchangePrivate3, queryTradableCurrencies())
       .Times(2)
