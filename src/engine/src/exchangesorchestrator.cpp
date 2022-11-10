@@ -159,7 +159,7 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const Exchange
 
 OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                                                const OrdersConstraints &openedOrdersConstraints) {
-  log::info("Query opened orders matching {} on {}", openedOrdersConstraints.str(),
+  log::info("Query opened orders matching {} on {}", openedOrdersConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges selectedExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
@@ -175,7 +175,7 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const E
 
 NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                                                                  const OrdersConstraints &ordersConstraints) {
-  log::info("Cancel opened orders matching {} on {}", ordersConstraints.str(),
+  log::info("Cancel opened orders matching {} on {}", ordersConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
   ExchangeRetriever::SelectedExchanges selectedExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
