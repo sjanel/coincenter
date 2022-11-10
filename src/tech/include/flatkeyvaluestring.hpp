@@ -122,13 +122,16 @@ class FlatKeyValueString {
   const_iterator begin() const { return const_iterator(_data); }
   const_iterator end() const { return const_iterator(_data, true); }
 
-  /// Append a new value for a key.
-  /// Key should not already be present.
-  /// If you wish to convert value to array (for json conversion), you can end each value with a ','.
-  /// Examples:
-  ///   "val": value is a single string
-  ///   "val,": value is an array of a single string
-  ///   "val1,val2,": value is an array of two values val1 and val2
+  /// Append a new value for a key, even if it already exists in the parameters.
+  /// There are several ways to set values as arrays (and none is standard). Choose the method depending on your usage:
+  ///   - "aKey[]=val1&aKey[]=val2" can be used with several appends (one per value) with the same key suffixed with []
+  ///     This method needs to be used for direct call as parameter string
+  ///   -If this query string will be transformed into json, set a key only once, with each value suffixed by a ','
+  ///   (even the last one)
+  ///     Examples:
+  ///       "val": value is a single string
+  ///       "val,": value is an array of a single string
+  ///       "val1,val2,": value is an array of two values val1 and val2
   void append(std::string_view key, std::string_view value);
 
   void append(std::string_view key, std::integral auto i) {
@@ -222,7 +225,6 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(std::string_vie
   assert(key.find(AssignmentChar) == std::string_view::npos);
   assert(value.find(KeyValuePairSep) == std::string_view::npos);
   assert(value.find(AssignmentChar) == std::string_view::npos);
-  assert(!contains(key));
   if (!_data.empty()) {
     _data.push_back(KeyValuePairSep);
   }

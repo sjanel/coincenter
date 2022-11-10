@@ -249,6 +249,45 @@ int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   return openedOrders.size();
 }
 
+Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+  static constexpr int kNbResultsPerPage = 100;
+  CurlPostData options{{"state", "accepted"}, {"limit", kNbResultsPerPage}};
+  if (depositsConstraints.isCurDefined()) {
+    options.append("currency", depositsConstraints.currencyCode().str());
+  }
+  if (depositsConstraints.isDepositIdDefined()) {
+    for (std::string_view depositId : depositsConstraints.depositIdSet()) {
+      // Use the "PHP" method of arrays in query string parameter
+      options.append("txids[]", depositId);
+    }
+  }
+  int nbResults;
+  int page = 0;
+  do {
+    options.set("page", ++page);
+    json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
+    if (deposits.empty()) {
+      deposits.reserve(result.size());
+    }
+    nbResults = static_cast<int>(result.size());
+    for (const json& trx : result) {
+      CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
+      MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
+      TimePoint timestamp = FromString(trx["done_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
+      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+        continue;
+      }
+      std::string_view id = trx["txid"].get<std::string_view>();
+
+      deposits.emplace_back(id, timestamp, amount);
+    }
+  } while (nbResults == kNbResultsPerPage);  // there may be more pages
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 namespace {
 bool IsOrderClosed(const json& orderJson) {
   std::string_view state = orderJson["state"].get<std::string_view>();
@@ -427,24 +466,6 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   }
   const bool isDone = stateUpperStr == "DONE";
   return SentWithdrawInfo(netEmittedAmount, isDone || isCanceled);
-}
-
-bool UpbitPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                      const SentWithdrawInfo& sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits",
-                             {{"currency", currencyCode.str()}, {"state", "accepted"}});
-  RecentDeposit::RecentDepositVector recentDeposits;
-  recentDeposits.reserve(recentDeposits.size());
-  for (const json& trx : result) {
-    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
-    // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-    TimePoint timestamp = FromString(trx["done_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
-
-    recentDeposits.emplace_back(amount, timestamp);
-  }
-  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace cct::api

@@ -238,6 +238,41 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   return nbOrdersCancelled;
 }
 
+Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+  CurlPostData options;
+  if (depositsConstraints.isCurDefined()) {
+    options.append("coin", depositsConstraints.currencyCode().str());
+  }
+  if (depositsConstraints.isReceivedTimeAfterDefined()) {
+    options.append("startTime", TimestampToMs(depositsConstraints.receivedAfter()));
+  }
+  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
+    options.append("endTime", TimestampToMs(depositsConstraints.receivedBefore()));
+  }
+  if (depositsConstraints.isDepositIdDefined()) {
+    if (depositsConstraints.depositIdSet().size() == 1) {
+      options.append("txId", depositsConstraints.depositIdSet().front());
+    }
+  }
+  json depositStatus =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", std::move(options));
+  for (json& depositDetail : depositStatus) {
+    int status = depositDetail["status"].get<int>();
+    if (status == 1) {  // 1: success, 0: pending, 6: credited but cannot withdraw
+      CurrencyCode currencyCode(depositDetail["coin"].get<std::string_view>());
+      string& id = depositDetail["id"].get_ref<string&>();
+      MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
+      int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
+      TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
+
+      deposits.emplace_back(std::move(id), timestamp, amountReceived);
+    }
+  }
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail");
   WithdrawalFeeMap ret;

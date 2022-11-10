@@ -210,6 +210,41 @@ int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   return batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
 }
 
+Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+  CurlPostData options;
+  if (depositsConstraints.isCurDefined()) {
+    options.append("currency", ToLower(depositsConstraints.currencyCode().str()));
+  }
+  options.append("size", 500);
+  options.append("type", "deposit");
+  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
+                                  std::move(options))["data"];
+  for (const json& depositDetail : depositJson) {
+    std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
+    int64_t id = depositDetail["id"].get<int64_t>();
+    if (depositStatus == "confirmed" || depositStatus == "safe" || depositStatus == "orphan") {
+      CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
+      MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
+      int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
+      TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+        continue;
+      }
+      string idStr = ToString(id);
+      if (depositsConstraints.isDepositIdDefined() && !depositsConstraints.depositIdSet().contains(idStr)) {
+        continue;
+      }
+
+      deposits.emplace_back(std::move(idStr), timestamp, amount);
+    } else {
+      log::debug("Discarding Huobi deposit {} with status {}", id, depositStatus);
+    }
+  }
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
   string csvOrderIdValues;
 
@@ -442,30 +477,6 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
     }
   }
   return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
-}
-
-bool HuobiPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                      const SentWithdrawInfo& sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  string lowerCaseCur = ToLower(currencyCode.str());
-
-  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                                  {{"currency", lowerCaseCur}, {"type", "deposit"}});
-  MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
-  RecentDeposit::RecentDepositVector recentDeposits;
-  for (const json& depositDetail : depositJson["data"]) {
-    std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
-    log::debug("Exploring Huobi deposit with status {}", depositStatus);
-    if (depositStatus == "confirmed") {
-      MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
-      int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
-      TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
-
-      recentDeposits.emplace_back(amount, timestamp);
-    }
-  }
-  RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {

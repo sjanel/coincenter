@@ -4,6 +4,7 @@
 
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
+#include "depositsconstraints.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
@@ -20,6 +21,9 @@ class CoincenterCommand {
 
   CoincenterCommand& setOrdersConstraints(const OrdersConstraints& ordersConstraints);
   CoincenterCommand& setOrdersConstraints(OrdersConstraints&& ordersConstraints);
+
+  CoincenterCommand& setDepositsConstraints(const DepositsConstraints& depositsConstraints);
+  CoincenterCommand& setDepositsConstraints(DepositsConstraints&& depositsConstraints);
 
   CoincenterCommand& setTradeOptions(const TradeOptions& tradeOptions);
   CoincenterCommand& setTradeOptions(TradeOptions&& tradeOptions);
@@ -45,9 +49,10 @@ class CoincenterCommand {
 
   const ExchangeNames& exchangeNames() const { return _exchangeNames; }
 
-  const OrdersConstraints& ordersConstraints() const { return std::get<OrdersConstraints>(_tradeOrOrdersOptions); }
+  const OrdersConstraints& ordersConstraints() const { return std::get<OrdersConstraints>(_specialOptions); }
+  const DepositsConstraints& depositsConstraints() const { return std::get<DepositsConstraints>(_specialOptions); }
 
-  const TradeOptions& tradeOptions() const { return std::get<TradeOptions>(_tradeOrOrdersOptions); }
+  const TradeOptions& tradeOptions() const { return std::get<TradeOptions>(_specialOptions); }
 
   MonetaryAmount amount() const { return _amount; }
 
@@ -68,10 +73,10 @@ class CoincenterCommand {
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
 
  private:
-  using TradeOrOrdersOptions = std::variant<OrdersConstraints, TradeOptions>;
+  using SpecialOptions = std::variant<OrdersConstraints, DepositsConstraints, TradeOptions>;
 
   ExchangeNames _exchangeNames;
-  TradeOrOrdersOptions _tradeOrOrdersOptions;
+  SpecialOptions _specialOptions;
   MonetaryAmount _amount;
   int _n = -1;
   Market _market;

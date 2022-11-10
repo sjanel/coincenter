@@ -466,6 +466,80 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
   }
 }
 
+namespace {
+json DepositsConstraintsToJson(const DepositsConstraints &depositsConstraints) {
+  json ret;
+  if (depositsConstraints.isCurDefined()) {
+    ret.emplace("cur", depositsConstraints.currencyCode().str());
+  }
+  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
+    ret.emplace("receivedBefore", ToString(depositsConstraints.receivedBefore()));
+  }
+  if (depositsConstraints.isReceivedTimeAfterDefined()) {
+    ret.emplace("receivedAfter", ToString(depositsConstraints.receivedAfter()));
+  }
+  if (depositsConstraints.isDepositIdDefined()) {
+    json depositIds = json::array();
+    for (const string &depositId : depositsConstraints.depositIdSet()) {
+      depositIds.emplace_back(depositId);
+    }
+    ret.emplace("matchIds", std::move(depositIds));
+  }
+  return ret;
+}
+}  // namespace
+
+void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &depositsPerExchange,
+                                             const DepositsConstraints &depositsConstraints) const {
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable t("Exchange", "Account", "Exchange Id", "Received time", "Amount");
+      for (const auto &[exchangePtr, deposits] : depositsPerExchange) {
+        for (const Deposit &deposit : deposits) {
+          t.emplace_back(exchangePtr->name(), exchangePtr->keyName(), deposit.depositId(), deposit.receivedTimeStr(),
+                         deposit.amount().str());
+        }
+      }
+      printTable(t);
+      break;
+    }
+    case ApiOutputType::kJson: {
+      json in;
+      in.emplace("req", CoincenterCommandTypeToString(CoincenterCommandType::kRecentDeposits));
+      json inOpt = DepositsConstraintsToJson(depositsConstraints);
+
+      if (!inOpt.empty()) {
+        in.emplace("opt", std::move(inOpt));
+      }
+
+      json out = json::object();
+      for (const auto &[exchangePtr, deposits] : depositsPerExchange) {
+        json depositsJson = json::array();
+        for (const Deposit &deposit : deposits) {
+          json &depositJson = depositsJson.emplace_back();
+          depositJson.emplace("id", deposit.depositId());
+          depositJson.emplace("cur", deposit.amount().currencyStr());
+          depositJson.emplace("receivedTime", deposit.receivedTimeStr());
+          depositJson.emplace("amount", deposit.amount().amountStr());
+        }
+
+        auto it = out.find(exchangePtr->name());
+        if (it == out.end()) {
+          json depositsPerExchangeUser;
+          depositsPerExchangeUser.emplace(exchangePtr->keyName(), std::move(depositsJson));
+          out.emplace(exchangePtr->name(), std::move(depositsPerExchangeUser));
+        } else {
+          it->emplace(exchangePtr->keyName(), std::move(depositsJson));
+        }
+      }
+      printJson(std::move(in), std::move(out));
+      break;
+    }
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+}
+
 void QueryResultPrinter::printConversionPath(Market m,
                                              const ConversionPathPerExchange &conversionPathsPerExchange) const {
   switch (_apiOutputType) {

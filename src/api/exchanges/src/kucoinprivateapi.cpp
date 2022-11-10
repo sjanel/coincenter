@@ -8,6 +8,7 @@
 #include "kucoinpublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
+#include "stringhelpers.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
 
@@ -234,6 +235,47 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   return openedOrders.size();
 }
 
+Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  CurlPostData options{{"status", "SUCCESS"}};
+  if (depositsConstraints.isCurDefined()) {
+    options.append("currency", depositsConstraints.currencyCode().str());
+  }
+  if (depositsConstraints.isReceivedTimeAfterDefined()) {
+    options.append("startAt", TimestampToMs(depositsConstraints.receivedAfter()));
+  }
+  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
+    options.append("endAt", TimestampToMs(depositsConstraints.receivedBefore()));
+  }
+  if (depositsConstraints.isDepositIdDefined()) {
+    if (depositsConstraints.depositIdSet().size() == 1) {
+      options.append("txId", depositsConstraints.depositIdSet().front());
+    }
+  }
+  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/deposits", std::move(options));
+  auto itemsIt = depositJson.find("items");
+  if (itemsIt == depositJson.end()) {
+    throw exception("Unexpected result from Kucoin deposit API");
+  }
+  Deposits deposits;
+  deposits.reserve(itemsIt->size());
+  for (const json& depositDetail : *itemsIt) {
+    CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
+    MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
+    int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
+
+    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+
+    // Kucoin does not provide any transaction id, let's generate it from currency and timestamp...
+    string id = currencyCode.str();
+    id.push_back('-');
+    id.append(ToString(millisecondsSinceEpoch));
+
+    deposits.emplace_back(std::move(id), timestamp, amount);
+  }
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
@@ -376,30 +418,6 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
     }
   }
   return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
-}
-
-bool KucoinPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                       const SentWithdrawInfo& sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-
-  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/deposits",
-                                  {{"currency", currencyCode.str()}, {"status", "SUCCESS"}});
-  auto itemsIt = depositJson.find("items");
-  if (itemsIt == depositJson.end()) {
-    throw exception("Unexpected result from Kucoin deposit API");
-  }
-  RecentDeposit::RecentDepositVector recentDeposits;
-  recentDeposits.reserve(itemsIt->size());
-  for (const json& depositDetail : *itemsIt) {
-    MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
-    int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
-
-    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
-
-    recentDeposits.emplace_back(amount, timestamp);
-  }
-  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace cct::api

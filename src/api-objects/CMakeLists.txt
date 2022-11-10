@@ -8,6 +8,16 @@ target_link_libraries(coincenter_api-objects PRIVATE coincenter_objects)
 target_include_directories(coincenter_api-objects PUBLIC include)
  
 add_unit_test(
+  depositsconstraints_test
+  src/depositsconstraints.cpp
+  test/depositsconstraints_test.cpp
+  LIBRARIES
+  coincenter_objects
+  DEFINITIONS
+  CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
   ordersconstraints_test
   src/ordersconstraints.cpp
   test/ordersconstraints_test.cpp

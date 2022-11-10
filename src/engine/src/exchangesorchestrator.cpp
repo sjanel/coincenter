@@ -186,6 +186,22 @@ NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(std::span<const
   return nbOrdersCancelled;
 }
 
+DepositsPerExchange ExchangesOrchestrator::getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
+                                                             const DepositsConstraints &depositsConstraints) {
+  log::info("Query recent deposits matching {} on {}", depositsConstraints,
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  DepositsPerExchange ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [&](Exchange *e) {
+                   return std::make_pair(e, DepositsSet(e->apiPrivate().queryRecentDeposits(depositsConstraints)));
+                 });
+
+  return ret;
+}
+
 ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
   log::info("Query {} conversion path from {}", m, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);

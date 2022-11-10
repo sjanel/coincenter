@@ -35,6 +35,8 @@ bool CoincenterCommand::isReadOnly() const {
       [[fallthrough]];
     case CoincenterCommandType::kDepositInfo:
       [[fallthrough]];
+    case CoincenterCommandType::kRecentDeposits:
+      [[fallthrough]];
     case CoincenterCommandType::kOrdersOpened:
       return true;
     default:
@@ -55,7 +57,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstrain
   if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
-  _tradeOrOrdersOptions = ordersConstraints;
+  _specialOptions = ordersConstraints;
   return *this;
 }
 
@@ -63,7 +65,23 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& o
   if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
     throw exception("Order constraints can only be used for orders related commands");
   }
-  _tradeOrOrdersOptions = std::move(ordersConstraints);
+  _specialOptions = std::move(ordersConstraints);
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setDepositsConstraints(const DepositsConstraints& depositsConstraints) {
+  if (_type != CoincenterCommandType::kRecentDeposits) {
+    throw exception("Deposit constraints can only be used for deposits related commands");
+  }
+  _specialOptions = depositsConstraints;
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints&& depositsConstraints) {
+  if (_type != CoincenterCommandType::kRecentDeposits) {
+    throw exception("Deposit constraints can only be used for deposits related commands");
+  }
+  _specialOptions = std::move(depositsConstraints);
   return *this;
 }
 
@@ -72,7 +90,7 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(const TradeOptions& tradeO
       _type != CoincenterCommandType::kTrade) {
     throw exception("Trade options can only be used for trade related commands");
   }
-  _tradeOrOrdersOptions = tradeOptions;
+  _specialOptions = tradeOptions;
   return *this;
 }
 
@@ -81,7 +99,7 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOption
       _type != CoincenterCommandType::kTrade) {
     throw exception("Trade options can only be used for trade related commands");
   }
-  _tradeOrOrdersOptions = std::move(tradeOptions);
+  _specialOptions = std::move(tradeOptions);
   return *this;
 }
 

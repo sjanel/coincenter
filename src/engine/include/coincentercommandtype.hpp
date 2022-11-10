@@ -18,6 +18,7 @@ enum class CoincenterCommandType : int8_t {
   kDepositInfo,
   kOrdersOpened,
   kOrdersCancel,
+  kRecentDeposits,
   kTrade,
   kBuy,
   kSell,

@@ -391,6 +391,68 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   return orders.size();
 }
 
+Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+  CurlPostData options{{kPaymentCurParamStr, "BTC"}, {"searchGb", 4}};
+  SmallVector<CurrencyCode, 1> currencies;
+  if (depositsConstraints.isCurDefined()) {
+    currencies.push_back(depositsConstraints.currencyCode());
+  } else {
+    log::warn("Retrieval of recent deposits should be done currency by currency for {:e}", exchangeName());
+    log::warn("Heuristic: only query for currencies which are present in the balance");
+    log::warn("Doing such, we may miss some recent deposits in other currencies");
+    for (const auto& amountWithEquivalent : queryAccountBalance()) {
+      CurrencyCode currencyCode = amountWithEquivalent.amount.currencyCode();
+      if (currencyCode != "KRW") {
+        currencies.push_back(currencyCode);
+      }
+    }
+  }
+  for (CurrencyCode currencyCode : currencies) {
+    options.set(kOrderCurrencyParamStr, currencyCode.str());
+    json txrList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", options)["data"];
+    for (const json& trx : txrList) {
+      CurrencyCode currencyCode(trx[kOrderCurrencyParamStr.data()].get<std::string_view>());
+      std::string_view amountStr = trx["units"].get<std::string_view>();  // starts with "+ "
+      // In the official documentation, transfer_date field is an integer.
+      // But in fact (as of 2022) it's a string. Let's support both types to be safe.
+      auto transferDateIt = trx.find("transfer_date");
+      if (transferDateIt == trx.end()) {
+        throw exception("Was expecting 'transfer_date' parameter");
+      }
+      int64_t microsecondsSinceEpoch;
+      if (transferDateIt->is_string()) {
+        microsecondsSinceEpoch = FromString<int64_t>(transferDateIt->get<std::string_view>());
+      } else if (transferDateIt->is_number_integer()) {
+        microsecondsSinceEpoch = transferDateIt->get<int64_t>();
+      } else {
+        throw exception("Cannot understand 'transfer_date' parameter type");
+      }
+
+      TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
+
+      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+        continue;
+      }
+
+      // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
+      string id = currencyCode.str();
+      id.push_back('-');
+      id.append(ToString(microsecondsSinceEpoch));
+
+      if (depositsConstraints.isOrderIdDependent() && !depositsConstraints.depositIdSet().contains(id)) {
+        continue;
+      }
+
+      MonetaryAmount amountReceived(amountStr, currencyCode);
+
+      deposits.emplace_back(std::move(id), timestamp, amountReceived);
+    }
+  }
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
@@ -654,43 +716,6 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
     }
   }
   throw exception("Bithumb: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
-}
-
-bool BithumbPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                        const SentWithdrawInfo& sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  CurlPostData checkDepositPostData{
-      {kOrderCurrencyParamStr, currencyCode.str()}, {kPaymentCurParamStr, "BTC"}, {"searchGb", 4}};
-  json trxList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", std::move(checkDepositPostData))["data"];
-
-  RecentDeposit::RecentDepositVector recentDeposits;
-  for (const json& trx : trxList) {
-    CurrencyCode trxCur(trx[kOrderCurrencyParamStr.data()].get<std::string_view>());
-    if (trxCur != currencyCode) {
-      continue;
-    }
-    MonetaryAmount amountReceived(trx["units"].get<std::string_view>(), currencyCode);
-    // In the official documentation, transfer_date field is an integer.
-    // But in fact (as of 2022) it's a string. Let's support both types to be safe.
-    auto transferDateIt = trx.find("transfer_date");
-    if (transferDateIt == trx.end()) {
-      throw exception("Was expecting 'transfer_date' parameter");
-    }
-    int64_t microsecondsSinceEpoch;
-    if (transferDateIt->is_string()) {
-      microsecondsSinceEpoch = FromString<int64_t>(transferDateIt->get<std::string_view>());
-    } else if (transferDateIt->is_number_integer()) {
-      microsecondsSinceEpoch = transferDateIt->get<int64_t>();
-    } else {
-      throw exception("Cannot understand 'transfer_date' parameter type");
-    }
-
-    TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
-
-    recentDeposits.emplace_back(amountReceived, timestamp);
-  }
-  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 void BithumbPrivate::updateCacheFile() const {

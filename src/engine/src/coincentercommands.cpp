@@ -243,6 +243,24 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
         .setExchangeNames(std::move(exchanges));
   }
 
+  if (cmdLineOptions.recentDepositsInfo) {
+    auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentDepositsInfo)
+                                         .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
+    auto depositIdViewVector = StringOptionParser(cmdLineOptions.depositsIds).getCSVValues();
+    vector<string> depositIds;
+    depositIds.reserve(depositIdViewVector.size());
+    for (std::string_view depositIdView : depositIdViewVector) {
+      depositIds.emplace_back(depositIdView);
+    }
+    DepositsConstraints depositConstraints(currencyCode,
+                                           std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMinAge),
+                                           std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMaxAge),
+                                           DepositsConstraints::DepositIdSet(std::move(depositIds)));
+    _commands.emplace_back(CoincenterCommandType::kRecentDeposits)
+        .setDepositsConstraints(std::move(depositConstraints))
+        .setExchangeNames(std::move(exchanges));
+  }
+
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
     auto [amountToWithdraw, isPercentageWithdraw, fromExchange, toExchange] =

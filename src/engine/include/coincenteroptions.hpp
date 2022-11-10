@@ -160,6 +160,11 @@ struct CoincenterCmdLineOptions {
   Duration ordersMinAge{};
   Duration ordersMaxAge{};
 
+  std::optional<std::string_view> recentDepositsInfo;
+  std::string_view depositsIds;
+  Duration depositsMinAge{};
+  Duration depositsMaxAge{};
+
   std::string_view withdraw;
   std::string_view withdrawAll;
   std::string_view withdrawFee;
@@ -295,29 +300,46 @@ struct CoincenterAllowedOptions {
        &OptValueType::balance},
       {{{"Private queries", 30}, "--balance-in-use", "", "Include balance in use as well from opened orders"},
        &OptValueType::withBalanceInUse},
-      {{{"Private queries", 31},
+      {{{"Private queries", 30},
         "--orders-opened",
         "<cur1-cur2[,exch1,...]>",
         "Print opened orders matching selection criteria.\n"
         "All cur1, cur2 and exchanges are optional, "
         "returned opened orders will be filtered accordingly."},
        &OptValueType::openedOrdersInfo},
-      {{{"Private queries", 32},
+      {{{"Private queries", 31},
         "--orders-cancel",
         "<cur1-cur2[,exch1,...]>",
         "Cancel opened orders matching selection criteria.\n"
         "All cur1, cur2 and exchanges are optional."},
        &OptValueType::cancelOpenedOrders},
-      {{{"Private queries", 34},
+      {{{"Private queries", 31},
         "--orders-id",
         "<id1,...>",
         "Only select orders with given ID.\n"
         "One or several IDs can be given, should be comma separated."},
        &OptValueType::ordersIds},
-      {{{"Private queries", 35}, "--orders-min-age", "<time>", "Only select orders with given minimum age."},
+      {{{"Private queries", 31}, "--orders-min-age", "<time>", "Only select orders with given minimum age."},
        &OptValueType::ordersMinAge},
-      {{{"Private queries", 36}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
+      {{{"Private queries", 32}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
        &OptValueType::ordersMaxAge},
+      {{{"Private queries", 33},
+        "--deposits",
+        "<cur[,exch1,...]>",
+        "Print recent deposits matching selection criteria.\n"
+        "Currency and exchanges are optional, "
+        "returned deposits will be filtered accordingly."},
+       &OptValueType::recentDepositsInfo},
+      {{{"Private queries", 33},
+        "--deposits-id",
+        "<id1,...>",
+        "Only select deposits with given ID.\n"
+        "One or several IDs can be given, should be comma separated."},
+       &OptValueType::depositsIds},
+      {{{"Private queries", 33}, "--deposits-min-age", "<time>", "Only select deposits with given minimum age."},
+       &OptValueType::depositsMinAge},
+      {{{"Private queries", 34}, "--deposits-max-age", "<time>", "Only select deposits with given maximum age."},
+       &OptValueType::depositsMaxAge},
       {{{"Trade", 40}, "--buy", "<amt cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
       {{{"Trade", 40}, "--sell", "<amt[%]cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
       {{{"Trade", 40},

@@ -32,6 +32,8 @@ class KucoinPrivate : public ExchangePrivate {
 
   int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
+  Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
+
  protected:
   bool isSimulatedOrderSupported() const override { return false; }
 
@@ -45,9 +47,6 @@ class KucoinPrivate : public ExchangePrivate {
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
-
-  bool isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                          const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
   struct DepositWalletFunc {
