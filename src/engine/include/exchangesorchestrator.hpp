@@ -31,6 +31,9 @@ class ExchangesOrchestrator {
   NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
                                             const OrdersConstraints &ordersConstraints);
 
+  DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
+                                        const DepositsConstraints &depositsConstraints);
+
   ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
 
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);

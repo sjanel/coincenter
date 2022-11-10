@@ -1355,6 +1355,113 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, NoPrint) {
   expectNoStr();
 }
 
+class QueryResultPrinterRecentDepositsBaseTest : public QueryResultPrinterTest {
+ protected:
+  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC")};
+  Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP")};
+  Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR")};
+  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH")};
+  Deposit deposit5{"id5", tp4, MonetaryAmount("69204866.9", "DOGE")};
+};
+
+class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrinterRecentDepositsBaseTest {
+ protected:
+  DepositsConstraints depositsConstraints;
+  DepositsPerExchange depositsPerExchange{{&exchange1, DepositsSet{}},
+                                          {&exchange2, DepositsSet{deposit3, deposit5}},
+                                          {&exchange4, DepositsSet{deposit2}},
+                                          {&exchange3, DepositsSet{deposit4, deposit1}}};
+};
+
+TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
+  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  static constexpr std::string_view kExpected = R"(
+------------------------------------------------------------------------------
+| Exchange | Account   | Exchange Id | Received time       | Amount          |
+------------------------------------------------------------------------------
+| bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    |
+| bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE |
+| huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          |
+| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       |
+| huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        |
+------------------------------------------------------------------------------
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, EmptyJson) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(DepositsPerExchange{}, depositsConstraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "RecentDeposits"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "RecentDeposits"
+  },
+  "out": {
+    "binance": {
+      "testuser1": []
+    },
+    "bithumb": {
+      "testuser1": [
+        {
+          "amount": "15020.67",
+          "cur": "EUR",
+          "id": "id3",
+          "receivedTime": "2006-07-14 23:58:24"
+        },
+        {
+          "amount": "69204866.9",
+          "cur": "DOGE",
+          "id": "id5",
+          "receivedTime": "2011-10-03 06:49:36"
+        }
+      ]
+    },
+    "huobi": {
+      "testuser1": [
+        {
+          "amount": "0.045",
+          "cur": "BTC",
+          "id": "id1",
+          "receivedTime": "1999-03-25 04:46:43"
+        },
+        {
+          "amount": "1.31",
+          "cur": "ETH",
+          "id": "id4",
+          "receivedTime": "2011-10-03 06:49:36"
+        }
+      ],
+      "testuser2": [
+        {
+          "amount": "37",
+          "cur": "XRP",
+          "id": "id2",
+          "receivedTime": "2002-06-23 07:58:35"
+        }
+      ]
+    }
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
+  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  expectNoStr();
+}
+
 class QueryResultPrinterCancelOrdersTest : public QueryResultPrinterTest {
  protected:
   OrdersConstraints ordersConstraints;

@@ -24,9 +24,6 @@ class OrderConstraintsBitmap {
   static constexpr uint8_t kIdConstrained = (1U << static_cast<uint8_t>(ConstraintType::kId));
 
  public:
-  /// Constructs an empty constraint type bitmap
-  constexpr OrderConstraintsBitmap() noexcept = default;
-
   void set(ConstraintType constraintType) { _bmp |= (1U << static_cast<uint8_t>(constraintType)); }
 
   bool isConstrained(ConstraintType constraintType) const {

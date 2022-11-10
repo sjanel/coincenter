@@ -33,6 +33,19 @@ class TestAPI {
     return sampleMarkets;
   }
 
+  static CurrencyExchangeFlatSet ComputeCurrencyExchangeSample(const MarketSet &markets,
+                                                               const CurrencyExchangeFlatSet &currencies) {
+    CurrencyExchangeFlatSet currencyToKeep;
+    std::ranges::copy_if(
+        currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange &c) {
+          return !c.isFiat() && std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
+        });
+
+    CurrencyExchangeFlatSet sample;
+    std::ranges::sample(currencyToKeep, std::inserter(sample, sample.end()), 1, std::mt19937{std::random_device{}()});
+    return sample;
+  }
+
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfig};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
@@ -46,6 +59,7 @@ class TestAPI {
                                                               : exchangePublic.queryTradableCurrencies()};
   MarketSet markets{exchangePublic.queryTradableMarkets()};
   MarketSet sampleMarkets{ComputeMarketSetSample(markets, currencies)};
+  CurrencyExchangeFlatSet sampleCurrencies{ComputeCurrencyExchangeSample(markets, currencies)};
   MarketOrderBookMap approximatedMarketOrderbooks{exchangePublic.queryAllApproximatedOrderBooks(1)};
   MarketPriceMap marketPriceMap{exchangePublic.queryAllPrices()};
   WithdrawalFeeMap withdrawalFees{exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
@@ -182,6 +196,19 @@ class TestAPI {
     }
   }
 
+  void testRecentDeposits() {
+    if (exchangePrivatePtr.get()) {
+      for (const CurrencyExchange &curExchange : sampleCurrencies) {
+        CurrencyCode cur(curExchange.standardCode());
+        log::info("Choosing {} as random currency code for Recent deposits test", cur);
+        Deposits deposits = exchangePrivatePtr.get()->queryRecentDeposits(DepositsConstraints(cur));
+        if (!deposits.empty()) {
+          EXPECT_EQ(deposits.front().amount().currencyCode(), cur);
+        }
+      }
+    }
+  }
+
   void testTrade() {
     if (!sampleMarkets.empty()) {
       Market m = sampleMarkets.front();
@@ -223,6 +250,7 @@ class TestAPI {
   TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); } \
   TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }               \
   TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }   \
+  TEST(TestAPIType##Test, RecentDeposits) { testAPI.testRecentDeposits(); } \
   TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(); }           \
   TEST(TestAPIType##Test, Trade) { testAPI.testTrade(); }
 }  // namespace cct::api

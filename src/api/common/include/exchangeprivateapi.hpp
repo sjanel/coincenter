@@ -11,6 +11,7 @@
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "depositsconstraints.hpp"
 #include "exchangebase.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -60,6 +61,9 @@ class ExchangePrivate : public ExchangeBase {
   /// Cancel all opened orders on the exchange that matches given constraints
   /// @return number of opened orders cancelled
   virtual int cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+
+  /// Get recent deposits filtered according to given constraints
+  virtual Deposits queryRecentDeposits(const DepositsConstraints &depositsConstraints = DepositsConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.
@@ -146,9 +150,10 @@ class ExchangePrivate : public ExchangeBase {
   /// Check if withdraw has been confirmed and successful from 'this' exchange
   virtual SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) = 0;
 
-  /// Check if withdraw has been received by 'this' exchange
+  /// Check if withdraw has been received by 'this' exchange.
+  /// Default implementation is provided. It can be overriden if necessary.
   virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                  const SentWithdrawInfo &sentWithdrawInfo) = 0;
+                                  const SentWithdrawInfo &sentWithdrawInfo);
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &options, Market m);
 

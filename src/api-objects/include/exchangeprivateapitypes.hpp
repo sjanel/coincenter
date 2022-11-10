@@ -2,10 +2,13 @@
 
 #include "cct_flatset.hpp"
 #include "cct_vector.hpp"
+#include "deposit.hpp"
 #include "order.hpp"
 #include "tradedamounts.hpp"
 
 namespace cct {
+using Deposits = vector<Deposit>;
+using DepositsSet = FlatSet<Deposit>;
 using Orders = vector<Order>;
 using OrdersSet = FlatSet<Order>;
 using TradedAmountsVector = vector<TradedAmounts>;

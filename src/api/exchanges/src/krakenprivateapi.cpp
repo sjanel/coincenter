@@ -282,6 +282,56 @@ int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   return openedOrders.size();
 }
 
+Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+  SmallVector<CurrencyCode, 1> currencies;
+  if (depositsConstraints.isCurDefined()) {
+    currencies.push_back(depositsConstraints.currencyCode());
+  } else {
+    log::warn("Retrieval of recent deposits should be done currency by currency for {:e}", exchangeName());
+    log::warn("Heuristic: only query for currencies which are present in the balance");
+    log::warn("Doing such, we may miss some recent deposits in other currencies");
+    for (const auto& amountWithEquivalent : queryAccountBalance()) {
+      currencies.push_back(amountWithEquivalent.amount.currencyCode());
+    }
+  }
+  CurlPostData options;
+  for (CurrencyCode currencyCode : currencies) {
+    options.set("asset", _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode).exchangeStr());
+    for (const json& trx : PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", options)) {
+      std::string_view status(trx["status"].get<std::string_view>());
+      if (status != "Success") {
+        log::debug("Deposit {} status {}", trx["refid"].get<std::string_view>(), status);
+        continue;
+      }
+      auto additionalNoteIt = trx.find("status-prop");
+      if (additionalNoteIt != trx.end()) {
+        std::string_view statusNote(additionalNoteIt->get<std::string_view>());
+        if (statusNote == "onhold") {
+          log::debug("Additional status is {}", statusNote);
+          continue;
+        }
+      }
+
+      MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+      int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
+      std::string_view id = trx["txid"].get<std::string_view>();
+      TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
+
+      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+        continue;
+      }
+      if (depositsConstraints.isDepositIdDefined() && !depositsConstraints.depositIdSet().contains(id)) {
+        continue;
+      }
+
+      deposits.emplace_back(id, timestamp, amount);
+    }
+  }
+  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
+  return deposits;
+}
+
 PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
@@ -467,28 +517,6 @@ SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
     }
   }
   throw exception("Kraken: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
-}
-
-bool KrakenPrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                       const SentWithdrawInfo& sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
-  json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", {{"asset", krakenCurrency.altStr()}});
-  RecentDeposit::RecentDepositVector recentDeposits;
-  for (const json& trx : trxList) {
-    std::string_view status(trx["status"].get<std::string_view>());
-    if (status != "Success") {
-      log::debug("Deposit {} status {}", trx["refid"].get<std::string_view>(), status);
-      continue;
-    }
-    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
-    int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
-    TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
-
-    recentDeposits.emplace_back(amount, timestamp);
-  }
-  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
 }
 
 }  // namespace cct::api

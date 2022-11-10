@@ -48,7 +48,6 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   kvPairs.set("d", "cestboncestfini");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
-  EXPECT_DEBUG_DEATH(kvPairs.append("777", "cestinterditca"), "");
   EXPECT_DEBUG_DEATH(kvPairs.append("newKey", "="), "");
 }
 

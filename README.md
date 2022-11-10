@@ -27,6 +27,7 @@ Main features:
  - Balance
  - Trade (buy & sell in several flavors)
  - Deposit information (address & tag)
+ - Recent Deposits
  - Opened orders
  - Cancel opened orders
  - Withdraw (with check at destination that funds are well received)
@@ -74,6 +75,8 @@ Main features:
     - [Buy / Sell](#buy--sell)
       - [Examples with explanation](#examples-with-explanation-1)
     - [Deposit information](#deposit-information)
+    - [Recent deposits](#recent-deposits)
+      - [Examples](#examples-1)
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
@@ -517,6 +520,24 @@ If for a given exchange account a deposit address is not created yet, `coincente
 Only one deposit address per currency / account is returned.
 
 **Important note**: only addresses which are validated against the `depositaddresses.json` file will be returned (unless option `validateDepositAddressesInFile` is set to `false` in `static/exchangeconfig.json` file). This file allows you to control addresses to which `coincenter` can send funds, even if you have more deposit addresses already configured.
+
+### Recent deposits
+
+To retrieve the most recent deposits, use the `--deposits` option. Currency is optional - if not provided, deposits in all currencies will be returned.
+
+Some exchanges do not provide a method to retrieve recent deposits for more than one currency (Kraken and Bithumb for instance). 
+If you request all currencies on these exchanges, `coincenter` will not query deposits for all existing currencies, but only for the currencies present in your balance to decrease the number of queries. Still, it's an heuristic so it may of course miss other deposits.
+
+By default, it returns all deposits on given currency, or any currency. You can filter the deposits with options:
+ - `--deposits-max-age <time>` to set a maximum age for the deposits to retrieve
+ - `--deposits-min-age <time>` to set a minimum age for the deposits to retrieve
+ - `--deposits-id <id1,id2,...>` to retrieve only deposits with given IDs
+
+#### Examples
+
+`coincenter --deposits kraken --deposits-max-age 2w`: retrieves all deposits of the last two weeks
+
+`coincenter --deposits eth --deposits-id myid1,myid2`: retrieves all deposits of Ethereum, if they have either id `myid1` or `myid2`
 
 ### Opened orders
 

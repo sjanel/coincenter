@@ -9,6 +9,7 @@
 #include "cct_log.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
+#include "depositsconstraints.hpp"
 #include "market.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
@@ -59,6 +60,9 @@ class QueryResultPrinter {
 
   void printCancelledOrders(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange,
                             const OrdersConstraints &ordersConstraints) const;
+
+  void printRecentDeposits(const DepositsPerExchange &depositsPerExchange,
+                           const DepositsConstraints &depositsConstraints) const;
 
   void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 

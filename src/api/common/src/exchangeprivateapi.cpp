@@ -6,6 +6,7 @@
 
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
+#include "recentdeposit.hpp"
 #include "timedef.hpp"
 
 namespace cct::api {
@@ -314,6 +315,7 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
     bool enoughAvAmount = false;
     for (Market m : possibleMarkets) {
       // We will buy some amount. It should be as small as possible to limit fees
+      log::debug("Dust sweeper - attempt to buy on {} with multiplier {}", m, mult);
       auto it = marketPriceMap.find(m);
       if (it == marketPriceMap.end()) {
         continue;
@@ -404,6 +406,8 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
       break;
     }
 
+    log::info("Dust sweeper for {} - exploring {} markets", eName, possibleMarkets.size());
+
     // First pass - check if by chance on selected markets selling is possible in one shot
     TradedAmounts tradedAmounts;
     std::tie(tradedAmounts, tradedMarket) =
@@ -473,4 +477,18 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   placeOrderInfo.setClosed();
   return placeOrderInfo;
 }
+
+bool ExchangePrivate::isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
+                                         const SentWithdrawInfo &sentWithdrawInfo) {
+  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+  Deposits deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
+  RecentDeposit::RecentDepositVector recentDeposits;
+  recentDeposits.reserve(deposits.size());
+  for (const Deposit &deposit : deposits) {
+    recentDeposits.emplace_back(deposit.amount(), deposit.receivedTime());
+  }
+  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
+  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+}
+
 }  // namespace cct::api

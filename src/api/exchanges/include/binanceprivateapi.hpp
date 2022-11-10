@@ -33,6 +33,8 @@ class BinancePrivate : public ExchangePrivate {
 
   int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
+  Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
+
   WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
