@@ -34,19 +34,17 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   CurlPostData&& postdata = CurlPostData()) {
-  Nonce nonce = Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S");
-  string encodedNonce = curlHandle.urlEncode(nonce);
-
-  CurlPostData signaturePostdata;
-
-  signaturePostdata.append("AccessKeyId", apiKey.key());
-  signaturePostdata.append("SignatureMethod", "HmacSHA256");
-  signaturePostdata.append("SignatureVersion", 2);
-  signaturePostdata.append("Timestamp", std::move(encodedNonce));
+  CurlPostData signaturePostdata{{"AccessKeyId", apiKey.key()},
+                                 {"SignatureMethod", "HmacSHA256"},
+                                 {"SignatureVersion", 2},
+                                 {"Timestamp", curlHandle.urlEncode(Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S"))}};
 
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postdata.empty()) {
     if (requestType == HttpRequestType::kGet) {
+      // Warning: Huobi expects that all parameters of the query are ordered lexicographically
+      // We trust the caller for this. In case the order is not respected, error 'Signature not valid' will be returned
+      // from Huobi
       signaturePostdata.append(std::move(postdata));
       postdata = CurlPostData();
     } else {
@@ -357,10 +355,11 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   }
   log::info("Found stored {} withdraw address '{}'", _exchangePublic.name(), huobiWithdrawAddressName);
 
-  CurlPostData withdrawPostData{{"address", wallet.address()}};
+  CurlPostData withdrawPostData;
   if (wallet.hasTag()) {
     withdrawPostData.append("addr-tag", wallet.tag());
   }
+  withdrawPostData.append("address", wallet.address());
 
   MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(currencyCode));
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
