@@ -17,7 +17,7 @@ class CommandLineOption {
  public:
   using GroupNameAndPrio = std::pair<const char*, int>;
 
-  constexpr CommandLineOption() = default;
+  constexpr CommandLineOption() noexcept = default;
 
   template <class StringViewType>
   constexpr CommandLineOption(GroupNameAndPrio optionGroupName, const char* fullName, char shortName,

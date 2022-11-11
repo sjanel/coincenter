@@ -5,6 +5,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <memory>
+#include <utility>
 
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
@@ -78,9 +79,7 @@ LoggingInfo::LoggingInfo(LoggingInfo &&o) noexcept
       _maxNbFiles(o._maxNbFiles),
       _logLevelConsolePos(o._logLevelConsolePos),
       _logLevelFilePos(o._logLevelFilePos),
-      _destroyLoggers(o._destroyLoggers) {
-  o._destroyLoggers = false;
-}
+      _destroyLoggers(std::exchange(o._destroyLoggers, false)) {}
 
 LoggingInfo &LoggingInfo::operator=(LoggingInfo &&o) noexcept {
   if (&o != this) {
@@ -88,8 +87,7 @@ LoggingInfo &LoggingInfo::operator=(LoggingInfo &&o) noexcept {
     _maxNbFiles = o._maxNbFiles;
     _logLevelConsolePos = o._logLevelConsolePos;
     _logLevelFilePos = o._logLevelFilePos;
-    _destroyLoggers = o._destroyLoggers;
-    o._destroyLoggers = false;
+    _destroyLoggers = std::exchange(o._destroyLoggers, false);
   }
   return *this;
 }

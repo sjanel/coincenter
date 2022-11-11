@@ -31,11 +31,6 @@ class Coincenter {
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
-  Coincenter(const Coincenter &) = delete;
-  Coincenter(Coincenter &&) = delete;
-  Coincenter &operator=(const Coincenter &) = delete;
-  Coincenter &operator=(Coincenter &&) = delete;
-
   void process(const CoincenterCommands &opts);
 
   /// Retrieve the markets for given selected public exchanges, or all if empty.
