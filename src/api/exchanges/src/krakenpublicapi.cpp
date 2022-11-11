@@ -488,7 +488,7 @@ void KrakenPublic::updateCacheFile() const {
     const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
 
     json data;
-    data["timeepoch"] = std::chrono::duration_cast<std::chrono::seconds>(latestUpdate.time_since_epoch()).count();
+    data["timeepoch"] = TimestampToS(latestUpdate);
     for (const auto& [curCode, withdrawFee] : withdrawalInfoMaps.first) {
       string curCodeStr = curCode.str();
       data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();

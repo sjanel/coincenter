@@ -20,7 +20,17 @@ T GetTimeDiff(TimePoint t1, TimePoint t2) {
 }
 
 template <class T>
-T GetTimeFrom(TimePoint t1) {
-  return GetTimeDiff<T>(t1, Clock::now());
+T GetTimeFrom(TimePoint t) {
+  return GetTimeDiff<T>(t, Clock::now());
+}
+
+constexpr int64_t TimestampToS(TimePoint t) {
+  return std::chrono::duration_cast<TimeInS>(t.time_since_epoch()).count();
+}
+constexpr int64_t TimestampToMs(TimePoint t) {
+  return std::chrono::duration_cast<TimeInMs>(t.time_since_epoch()).count();
+}
+constexpr int64_t TimestampToUs(TimePoint t) {
+  return std::chrono::duration_cast<TimeInUs>(t.time_since_epoch()).count();
 }
 }  // namespace cct

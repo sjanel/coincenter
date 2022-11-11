@@ -318,8 +318,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
       static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(tradeInfo.options.maxTradeTime()).count());
   const int expireTimeInSeconds = std::max(10, maxTradeTimeInSeconds);
 
-  const auto nbSecondsSinceEpoch =
-      std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch()).count();
+  const auto nbSecondsSinceEpoch = TimestampToS(Clock::now());
 
   // oflags: Ask fee in destination currency.
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).

@@ -60,8 +60,7 @@ void FiatConverter::updateCacheFile() const {
   for (const auto& [market, priceTimeValue] : _pricesMap) {
     string marketPairStr = market.assetsPairStrUpper('-');
     data[marketPairStr]["rate"] = priceTimeValue.rate;
-    data[marketPairStr]["timeepoch"] =
-        std::chrono::duration_cast<std::chrono::seconds>(priceTimeValue.lastUpdatedTime.time_since_epoch()).count();
+    data[marketPairStr]["timeepoch"] = TimestampToS(priceTimeValue.lastUpdatedTime);
   }
   GetRatesCacheFile(_dataDir).write(data);
 }
