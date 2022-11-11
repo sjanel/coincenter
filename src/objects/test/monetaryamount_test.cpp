@@ -581,13 +581,13 @@ TEST(MonetaryAmountTest, NegativeAmountStr) {
 TEST(MonetaryAmountTest, AppendAmountStr) {
   {
     string s("");
-    MonetaryAmount("").appendAmountStr(s);
+    MonetaryAmount().appendAmountStr(s);
 
     EXPECT_EQ("0", s);
   }
   {
     string s("init");
-    MonetaryAmount("").appendAmountStr(s);
+    MonetaryAmount().appendAmountStr(s);
 
     EXPECT_EQ("init0", s);
   }
@@ -614,13 +614,13 @@ TEST(MonetaryAmountTest, AppendAmountStr) {
 TEST(MonetaryAmountTest, AppendString) {
   {
     string s("");
-    MonetaryAmount("").appendStr(s);
+    MonetaryAmount().appendStr(s);
 
     EXPECT_EQ("0", s);
   }
   {
     string s("init");
-    MonetaryAmount("").appendStr(s);
+    MonetaryAmount().appendStr(s);
 
     EXPECT_EQ("init0", s);
   }
@@ -666,8 +666,20 @@ TEST(MonetaryAmountTest, NegativeStringRepresentation) {
 
 TEST(MonetaryAmountTest, ExoticInput) {
   EXPECT_EQ(MonetaryAmount(" +4.6   EUr "), MonetaryAmount("4.6EUR"));
+  EXPECT_EQ(MonetaryAmount(" +4.6 ", "EUr"), MonetaryAmount("4.6EUR"));
+
+  // Below ones are needed for Bithumb ('+ 5' for example)
+  EXPECT_EQ(MonetaryAmount("+ 4.6   EUr "), MonetaryAmount("4.6EUR"));
+  EXPECT_EQ(MonetaryAmount("+ 4.6 ", "EUr"), MonetaryAmount("4.6EUR"));
+
   EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
-  EXPECT_THROW(MonetaryAmount(" - .9   f&g "), exception);
+  EXPECT_EQ(MonetaryAmount(" -.9", "f&g"), MonetaryAmount("-0.9F&G"));
+
+  EXPECT_EQ(MonetaryAmount(" - .9   f&g "), MonetaryAmount("-0.9F&G"));
+  EXPECT_EQ(MonetaryAmount(" - .9", "f&g"), MonetaryAmount("-0.9F&G"));
+
+  EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
+
   EXPECT_THROW(MonetaryAmount("--.9"), exception);
 }
 
