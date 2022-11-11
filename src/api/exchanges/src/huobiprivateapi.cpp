@@ -402,7 +402,8 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   if (!withdrawParams.minWithdrawAmt.isDefault() && netEmittedAmount < withdrawParams.minWithdrawAmt) {
     throw exception("Minimum withdraw amount for {} on Huobi is {}, cannot withdraw {}", currencyCode,
                     withdrawParams.minWithdrawAmt, netEmittedAmount);
-  } else if (!withdrawParams.maxWithdrawAmt.isDefault() && netEmittedAmount > withdrawParams.maxWithdrawAmt) {
+  }
+  if (!withdrawParams.maxWithdrawAmt.isDefault() && netEmittedAmount > withdrawParams.maxWithdrawAmt) {
     throw exception("Maximum withdraw amount for {} on Huobi is {}, cannot withdraw {}", currencyCode,
                     withdrawParams.maxWithdrawAmt, netEmittedAmount);
   }

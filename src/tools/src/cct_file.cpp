@@ -43,9 +43,8 @@ string File::read() const {
     } catch (const std::exception& e) {
       if (_ifError == IfError::kThrow) {
         throw e;
-      } else {
-        log::error("Error while reading file {}: {}", _filePath, e.what());
       }
+      log::error("Error while reading file {}: {}", _filePath, e.what());
     }
   }
   return data;
@@ -80,9 +79,8 @@ void File::write(const json& data) const {
   } catch (const std::exception& e) {
     if (_ifError == IfError::kThrow) {
       throw e;
-    } else {
-      log::error("Error while writing file {}: {}", _filePath, e.what());
     }
+    log::error("Error while writing file {}: {}", _filePath, e.what());
   }
 }
 

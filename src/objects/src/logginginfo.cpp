@@ -124,10 +124,10 @@ void LoggingInfo::createLoggers() const {
 
   log::set_default_logger(logger);
 
-  createOutputLogger();
+  CreateOutputLogger();
 }
 
-void LoggingInfo::createOutputLogger() const {
+void LoggingInfo::CreateOutputLogger() {
   auto outputLogger =
       std::make_shared<log::async_logger>(kOutputLoggerName, std::make_shared<log::sinks::stdout_color_sink_mt>(),
                                           log::thread_pool(), log::async_overflow_policy::block);
