@@ -12,7 +12,7 @@ class ExchangeSecretsInfo {
   /// Constructs a custom Exchange secrets info from a list of public exchange names.
   /// For each exchange in the list, private keys will not be loaded and used.
   /// However, if the list is empty, no secrets will be loaded. To use all secrets, call the default constructor.
-  ExchangeSecretsInfo(ExchangeNames &&exchangesWithoutSecrets)
+  explicit ExchangeSecretsInfo(ExchangeNames &&exchangesWithoutSecrets)
       : _exchangesWithoutSecrets(std::move(exchangesWithoutSecrets)),
         _allExchangesWithoutSecrets(_exchangesWithoutSecrets.empty()) {}
 

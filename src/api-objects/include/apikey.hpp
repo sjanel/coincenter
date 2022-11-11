@@ -20,13 +20,13 @@ class APIKey {
   APIKey(APIKey &&) noexcept = default;
   APIKey &operator=(APIKey &&) noexcept = default;
 
+  ~APIKey() { _privateKey.assign(_privateKey.size(), '\0'); }
+
   std::string_view platform() const { return _platform; }
   std::string_view name() const { return _name; }
   std::string_view key() const { return _key; }
   std::string_view privateKey() const { return _privateKey; }
   std::string_view passphrase() const { return _passphrase; }
-
-  ~APIKey() { _privateKey.assign(_privateKey.size(), '\0'); }
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 

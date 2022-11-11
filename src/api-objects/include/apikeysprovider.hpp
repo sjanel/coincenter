@@ -31,6 +31,8 @@ class APIKeysProvider {
   APIKeysProvider(APIKeysProvider &&) noexcept = default;
   APIKeysProvider &operator=(APIKeysProvider &&) noexcept = default;
 
+  ~APIKeysProvider() = default;
+
   KeyNames getKeyNames(std::string_view platform) const;
 
   bool contains(std::string_view platform) const { return _apiKeysMap.find(platform) != _apiKeysMap.end(); }

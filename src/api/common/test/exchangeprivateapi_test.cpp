@@ -31,8 +31,6 @@ namespace cct::api {
 
 class ExchangePrivateTest : public ::testing::Test {
  protected:
-  ExchangePrivateTest() = default;
-
   void tradeBaseExpectCalls() {
     EXPECT_CALL(exchangePrivate, isSimulatedOrderSupported()).WillRepeatedly(testing::Return(false));
     EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(MarketSet{market}));

@@ -60,6 +60,8 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
   CachedResultT(CachedResultT &&) noexcept = default;
   CachedResultT &operator=(CachedResultT &&) noexcept = default;
 
+  ~CachedResultT() = default;
+
   /// Sets given value associated to the key built with given parameters,
   /// if given timestamp is more recent than the one associated to the value already present at this key (if any)
   template <class ResultTypeT, class... Args>

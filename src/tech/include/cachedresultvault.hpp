@@ -27,8 +27,6 @@ class CachedResultBase {
 template <class DurationT>
 class CachedResultVaultT {
  public:
-  CachedResultVaultT() noexcept = default;
-
   void registerCachedResult(CachedResultBase<DurationT> &cacheResult) {
     _cachedResults.push_back(std::addressof(cacheResult));
   }

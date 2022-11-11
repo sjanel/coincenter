@@ -64,7 +64,7 @@ CurlHandle::CurlHandle(const std::string_view *pBaseUrlStartPtr, int8_t nbBaseUr
   }
   CURL *curl = reinterpret_cast<CURL *>(_handle);
   CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  log::debug("Initialize a new CurlHandle with {} ms as minimum duration between queries",
+  log::debug("Initialize CurlHandle for {} with {} ms as minimum duration between queries", _pBaseUrls[0],
              std::chrono::duration_cast<std::chrono::milliseconds>(minDurationBetweenQueries).count());
 
   if (IsProxyRequested(runMode)) {
