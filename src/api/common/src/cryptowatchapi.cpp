@@ -7,6 +7,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "timedef.hpp"
 #include "toupperlower.hpp"
 
 namespace cct::api {
@@ -127,8 +128,7 @@ void CryptowatchAPI::updateCacheFile() const {
     for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
       data["fiats"].emplace_back(fiatCode.str());
     }
-    data["timeepoch"] =
-        std::chrono::duration_cast<std::chrono::seconds>(fiatsPtrLastUpdatedTimePair.second.time_since_epoch()).count();
+    data["timeepoch"] = TimestampToS(fiatsPtrLastUpdatedTimePair.second);
     fiatsCacheFile.write(data);
   }
 }

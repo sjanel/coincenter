@@ -268,8 +268,8 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
   std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
   std::string_view bithumbTimestamp = result["date"].get<std::string_view>();
   int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
-  int64_t t1Ms = std::chrono::duration_cast<TimeInMs>(t1.time_since_epoch()).count();
-  int64_t t2Ms = std::chrono::duration_cast<TimeInMs>(Clock::now().time_since_epoch()).count();
+  int64_t t1Ms = TimestampToMs(t1);
+  int64_t t2Ms = TimestampToMs(Clock::now());
   if (t1Ms < bithumbTimeMs && bithumbTimeMs < t2Ms) {
     log::debug("Bithumb time is synchronized with us");
   } else {

@@ -102,7 +102,7 @@ json CurrencyOrderInfoField2Json(const ValueType& val, TimePoint ts) {
   } else {
     data.emplace(kValueKeyStr, val);
   }
-  data.emplace(kTimestampKeyStr, std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch()).count());
+  data.emplace(kTimestampKeyStr, TimestampToS(ts));
   return data;
 }
 
@@ -344,9 +344,7 @@ Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
 
   Orders openedOrders;
   if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("after", std::chrono::duration_cast<std::chrono::milliseconds>(
-                               openedOrdersConstraints.placedAfter().time_since_epoch())
-                               .count());
+    params.append("after", TimestampToMs(openedOrdersConstraints.placedAfter()));
   }
   if (orderCurrencies.size() > 1) {
     log::info("Will make {} opened order requests", orderCurrencies.size());

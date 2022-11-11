@@ -22,14 +22,14 @@ namespace cct {
 struct CoincenterCmdLineOptions {
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
-  static constexpr Duration kDefaultRepeatTime = std::chrono::seconds(1);
+  static constexpr Duration kDefaultRepeatTime = TimeInS(1);
 
   static constexpr int64_t kDefaultTradeTimeout =
-      std::chrono::duration_cast<std::chrono::seconds>(TradeOptions().maxTradeTime()).count();
+      std::chrono::duration_cast<TimeInS>(TradeOptions().maxTradeTime()).count();
   static constexpr int64_t kMinUpdatePriceTime =
-      std::chrono::duration_cast<std::chrono::seconds>(TradeOptions().minTimeBetweenPriceUpdates()).count();
+      std::chrono::duration_cast<TimeInS>(TradeOptions().minTimeBetweenPriceUpdates()).count();
   static constexpr int64_t kDefaultRepeatDurationSeconds =
-      std::chrono::duration_cast<std::chrono::seconds>(kDefaultRepeatTime).count();
+      std::chrono::duration_cast<TimeInS>(kDefaultRepeatTime).count();
 
   static constexpr std::string_view kOutput1 = "Output format. One of (";
   static constexpr std::string_view kOutput2 = ") (default configured in general config file)";

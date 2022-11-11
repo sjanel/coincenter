@@ -90,8 +90,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   }
 
   MonetaryAmount price = *optPrice;
-  const auto nbSecondsSinceEpoch =
-      std::chrono::duration_cast<std::chrono::seconds>(timerStart.time_since_epoch()).count();
+  const auto nbSecondsSinceEpoch = TimestampToS(timerStart);
   const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
 
   TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;

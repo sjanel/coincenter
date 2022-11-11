@@ -175,9 +175,7 @@ Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
     }
   }
   if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("startAt", std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 openedOrdersConstraints.placedAfter().time_since_epoch())
-                                 .count());
+    params.append("startAt", TimestampToMs(openedOrdersConstraints.placedAfter()));
   }
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params));
 
