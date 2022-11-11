@@ -38,7 +38,7 @@ class LoggingInfo {
  private:
   void createLoggers() const;
 
-  void createOutputLogger() const;
+  static void CreateOutputLogger();
 
   static constexpr int8_t PosFromLevel(log::level::level_enum level) {
     return static_cast<int8_t>(log::level::off) - static_cast<int8_t>(level);
