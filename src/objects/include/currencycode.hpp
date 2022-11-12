@@ -20,6 +20,7 @@ struct CurrencyCodeBase {
   static constexpr uint64_t kNbBitsNbDecimals = 4;
 
   static constexpr uint64_t kNbDecimals4Mask = (1ULL << kNbBitsNbDecimals) - 1ULL;
+  static constexpr uint64_t kNbDecimals6Mask = (1ULL << 6ULL) - 1ULL;
 
   static constexpr uint64_t kFirstCharMask = ~((1ULL << (kNbBitsNbDecimals + (kMaxLen - 1) * kNbBitsChar)) - 1ULL);
 
@@ -27,35 +28,33 @@ struct CurrencyCodeBase {
 
   static constexpr int64_t kMaxNbDecimalsLongCurrencyCode = 15;  // 2^4 - 1
 
-  static constexpr char kFirstAuthorizedLetter = 33;  // '!'
+  static constexpr char kFirstAuthorizedLetter = 32;  // ' '
   static constexpr char kLastAuthorizedLetter = 95;   // '_'
 
   static constexpr char CharAt(uint64_t data, int pos) noexcept {
     return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1))) &
                              ((1ULL << kNbBitsChar) - 1ULL)) +
-           kFirstAuthorizedLetter - 1;
+           kFirstAuthorizedLetter;
   }
 
   static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) {
-    return isLongCurrencyCode ? kNbDecimals4Mask : (1ULL << (kNbBitsChar + kNbBitsNbDecimals)) - 1ULL;
+    return isLongCurrencyCode ? kNbDecimals4Mask : kNbDecimals6Mask;
   }
 
   static constexpr uint64_t StrToBmp(std::string_view acronym) {
     uint64_t ret = 0;
-    int charPos = 0;
+    uint32_t charPos = kMaxLen;
     for (char c : acronym) {
       if (c >= 'a') {
         if (c > 'z') {
           throw invalid_argument("Unexpected char in acronym");
         }
         c -= 'a' - 'A';
-      }
-      if (c < kFirstAuthorizedLetter || c > kLastAuthorizedLetter) {
+      } else if (c <= kFirstAuthorizedLetter || c > kLastAuthorizedLetter) {
         throw invalid_argument("Unexpected char in acronym");
       }
 
-      ret |= static_cast<uint64_t>(c - kFirstAuthorizedLetter + 1)
-             << (kNbBitsNbDecimals + kNbBitsChar * static_cast<uint64_t>(kMaxLen - ++charPos));
+      ret |= static_cast<uint64_t>(c - kFirstAuthorizedLetter) << (kNbBitsNbDecimals + kNbBitsChar * --charPos);
     }
     return ret;
   }
@@ -94,21 +93,24 @@ class CurrencyCodeIterator {
   }
 
   char operator*() const noexcept { return CurrencyCodeBase::CharAt(_data, static_cast<int>(_pos)); }
+  // operator-> cannot be implemented here - we would need a const char * but it's not possible.
 
  private:
   friend class CurrencyCode;
 
   // Default constructor needed for an iterator in C++20
-  CurrencyCodeIterator() noexcept : _data(0), _pos(0) {}
-
-  explicit CurrencyCodeIterator(uint64_t data, uint64_t pos = 0) : _data(data), _pos(pos) {}
+  explicit CurrencyCodeIterator(uint64_t data = 0, uint64_t pos = 0) noexcept : _data(data), _pos(pos) {}
 
   uint64_t _data;
   uint64_t _pos;
 };
 
-/// Lightweight object representing a currency code with its acronym. Can be used as a key.
+/// Lightweight object representing a currency code with its acronym.
 /// Can be used to represent a fiat currency or a coin (for the latter, acronym is expected to be 10 chars long maximum)
+/// It supports up to 10 characters and weights only 64 bits, with characters between '!' and '_' in the ASCII code,
+/// each coded on 6 bits. Space cannot be present in the currency code, they are coded as 6 bits of 0.
+/// The last 4 bits are either unused, or used to store number of decimals of MonetaryAmount, internally. They are not
+/// exposed publicly.
 class CurrencyCode {
  public:
   using iterator = CurrencyCodeIterator;
@@ -128,7 +130,7 @@ class CurrencyCode {
   /// Note: spaces are not skipped. If any, they will be captured as part of the code, which is probably unexpected.
   constexpr CurrencyCode(std::string_view acronym) {
     if (acronym.length() > kMaxLen) {
-      throw invalid_argument("Acronym is too long to fit in a CurrencyCode");
+      throw invalid_argument("Acronym '{}' is too long to fit in a CurrencyCode", acronym);
     }
     _data = CurrencyCodeBase::StrToBmp(acronym);
   }
@@ -166,7 +168,7 @@ class CurrencyCode {
   OutputIt append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = (*this)[charPos];
-      if (c == CurrencyCodeBase::kFirstAuthorizedLetter - 1) {
+      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
       *it = c;
@@ -182,6 +184,7 @@ class CurrencyCode {
 
   constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
 
+  /// Note that this respects the lexicographical order - chars are encoded from the most significant bits first
   constexpr auto operator<=>(const CurrencyCode &) const = default;
 
   constexpr bool operator==(const CurrencyCode &) const = default;
@@ -189,7 +192,7 @@ class CurrencyCode {
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
       char c = cur[charPos];
-      if (c == CurrencyCodeBase::kFirstAuthorizedLetter - 1) {
+      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
       os << c;
@@ -202,6 +205,10 @@ class CurrencyCode {
 
   // bitmap with 10 words of 6 bits (from ascii [33, 95]) + 4 extra bits that will be used by
   // MonetaryAmount to hold number of decimals (max 15)
+  // Example, with currency code "EUR":
+  // 100101 110101 110010 000000 000000 000000 000000 000000 000000 000000 0000 = 10906733135072854016 (code)
+  // |----| |----| |----| |----| |----| |----| |----| |----| |----| |----| |--|
+  //  'E'    'U'    'R'    ' '    ' '    ' '    ' '    ' '    ' '    ' '
   uint64_t _data;
 
   explicit constexpr CurrencyCode(uint64_t data) : _data(data) {}
@@ -209,27 +216,13 @@ class CurrencyCode {
   constexpr bool isLongCurrencyCode() const { return _data & CurrencyCodeBase::kBeforeLastCharMask; }
 
   constexpr void setNbDecimals(int8_t nbDecimals) {
-    if (isLongCurrencyCode()) {
-      if (!std::is_constant_evaluated() && nbDecimals > CurrencyCodeBase::kMaxNbDecimalsLongCurrencyCode) {
-        throw invalid_argument("Too many decimals for long currency code");
-      }
-      // For currency codes whose length is > 8, only 15 digits are supported
-      _data = static_cast<uint64_t>(nbDecimals) + (_data & (~CurrencyCodeBase::kNbDecimals4Mask));
-    } else {
-      // max 64 decimals for currency codes whose length is maximum 8 (most cases)
-      _data = (static_cast<uint64_t>(nbDecimals) << CurrencyCodeBase::kNbBitsNbDecimals) +
-              (_data & ~((1ULL << (CurrencyCodeBase::kNbBitsChar + CurrencyCodeBase::kNbBitsNbDecimals)) - 1ULL));
-    }
+    // For currency codes whose length is > 8, only 15 digits are supported
+    // max 64 decimals for currency codes whose length is maximum 8 (most cases)
+    _data = static_cast<uint64_t>(nbDecimals) + (_data & (~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode())));
   }
 
   constexpr int8_t nbDecimals() const {
-    if (isLongCurrencyCode()) {
-      // For currency codes whose length is > 8, only 15 digits are supported
-      return static_cast<int8_t>(_data & CurrencyCodeBase::kNbDecimals4Mask);
-    }
-    // max 64 decimals for currency codes whose length is maximum 8 (most cases)
-    return static_cast<int8_t>((_data >> CurrencyCodeBase::kNbBitsNbDecimals) &
-                               ((1ULL << CurrencyCodeBase::kNbBitsChar) - 1ULL));
+    return static_cast<int8_t>(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
   constexpr CurrencyCode toNeutral() const {
@@ -242,7 +235,7 @@ class CurrencyCode {
     return CurrencyCode(_data & ~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
-  /// Append currency string representation to given string, with a space before
+  /// Append currency string representation to given string, with a space before (used by MonetaryAmount)
   void appendStrWithSpace(string &s) const {
     auto l = size();
     s.append(l + 1UL, ' ');
