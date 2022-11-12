@@ -12,7 +12,6 @@ string BinToHex(std::span<const unsigned char> bindata) {
   static constexpr char kHexits[] = "0123456789abcdef";
   const int s = static_cast<int>(bindata.size());
   string ret(2 * s, '\0');
-  ret.reserve(2 * s);
   for (int i = 0; i < s; ++i) {
     ret[i * 2] = kHexits[bindata[i] >> 4];
     ret[(i * 2) + 1] = kHexits[bindata[i] & 0x0F];

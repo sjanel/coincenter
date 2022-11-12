@@ -16,8 +16,6 @@ ApiOutputType ApiOutputTypeFromString(std::string_view str) {
   if (lowerStr == kApiOutputTypeJsonStr) {
     return ApiOutputType::kJson;
   }
-  string err("Unrecognized api output type ");
-  err.append(str);
-  throw invalid_argument(std::move(err));
+  throw invalid_argument("Unrecognized api output type {}", str);
 }
 }  // namespace cct
