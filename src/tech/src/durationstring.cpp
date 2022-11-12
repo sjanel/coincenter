@@ -40,9 +40,6 @@ Duration ParseDuration(std::string_view durationStr) {
     while (p < s && islower(durationStr[p])) {
       ++p;
     }
-    if (unitFirst == p) {
-      throw invalid_argument(kInvalidTimeDurationUnitMsg);
-    }
     std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + p);
     if (timeUnitStr == "y") {
       ret += std::chrono::years(timeAmount);

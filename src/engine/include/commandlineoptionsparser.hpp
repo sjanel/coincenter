@@ -22,8 +22,7 @@
 namespace cct {
 
 inline void ThrowExpectingValueException(const CommandLineOption& commandLineOption) {
-  static const string ex = "Expecting a value for option: " + string(commandLineOption.fullName());
-  throw invalid_argument(ex.c_str());
+  throw invalid_argument("Expecting a value for option {}", commandLineOption.fullName());
 }
 
 // helper type for the visitor #4
@@ -64,9 +63,7 @@ class CommandLineOptionsParser : private OptValueType {
       const bool knownOption =
           std::ranges::any_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); });
       if (!knownOption) {
-        string ex("Unrecognized command-line option: ");
-        ex.append(argStr);
-        throw invalid_argument(std::move(ex));
+        throw invalid_argument("Unrecognized command-line option {}", argStr);
       }
 
       for (auto& cbk : _callbacks) {
