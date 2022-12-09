@@ -70,6 +70,7 @@ class CurlHandle {
   CurlHandle(const string[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
   CurlHandle(const char *[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
 
+  // Move operations are deleted but could be implemented if needed. It's just to avoid useless code.
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;
 
