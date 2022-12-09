@@ -142,7 +142,7 @@ class MonetaryAmount {
   ///            2 ETH convertTo("1600 EUR")       = 3200 EUR
   ///            1500 EUR convertTo("0.0005 ETH")  = 0.75 ETH
   /// @return a monetary amount in the currency of given price
-  MonetaryAmount convertTo(MonetaryAmount p) const { return p * toNeutral(); }
+  [[nodiscard]] MonetaryAmount convertTo(MonetaryAmount p) const { return p * toNeutral(); }
 
   /// Rounds current monetary amount according to given step amount.
   /// CurrencyCode of 'step' is unused.
@@ -168,7 +168,7 @@ class MonetaryAmount {
     return amount * ipow(10, static_cast<uint8_t>(o.nbDecimals())) <=> o._amount;
   }
 
-  constexpr MonetaryAmount abs() const noexcept {
+  [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
     return MonetaryAmount(true, _amount < 0 ? -_amount : _amount, _curWithDecimals);
   }
 
@@ -225,7 +225,7 @@ class MonetaryAmount {
     return *this;
   }
 
-  constexpr MonetaryAmount toNeutral() const noexcept {
+  [[nodiscard]] constexpr MonetaryAmount toNeutral() const noexcept {
     return MonetaryAmount(true, _amount, _curWithDecimals.toNeutral());
   }
 
