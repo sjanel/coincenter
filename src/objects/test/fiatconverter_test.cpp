@@ -1,4 +1,3 @@
-
 #include "fiatconverter.hpp"
 
 #include <gtest/gtest.h>
@@ -64,13 +63,13 @@ string CurlHandle::query(std::string_view url, const CurlOptions &) {
     }
 
     if (rate != 0) {
-      j["results"][string(marketStr)]["val"] = rate;
+      j["results"][marketStr]["val"] = rate;
     }
   }
   return j.dump();
 }
 
-CurlHandle::~CurlHandle() = default;
+CurlHandle::~CurlHandle() {}
 
 class FiatConverterTest : public ::testing::Test {
  protected:
