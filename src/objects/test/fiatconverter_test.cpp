@@ -23,10 +23,12 @@ void AreDoubleEqual(double lhs, double rhs) {
 constexpr double kKRW = 1341.88;
 constexpr double kUSD = 1.21;
 constexpr double kGBP = 0.88;
+
+constexpr std::string_view kSomeFakeURL = "some/fake/url";
 }  // namespace
 
-CurlHandle::CurlHandle(const std::string_view *, int8_t, AbstractMetricGateway *, Duration, settings::RunMode)
-    : _handle(nullptr) {}
+CurlHandle::CurlHandle(const BestURLPicker &, AbstractMetricGateway *, Duration, settings::RunMode)
+    : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
 
 string CurlHandle::query(std::string_view url, const CurlOptions &) {
   json j;

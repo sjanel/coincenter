@@ -17,6 +17,13 @@ target_link_libraries(coincenter_tools PRIVATE CURL::libcurl)
 target_include_directories(coincenter_tools PUBLIC include)
 
 add_unit_test(
+    besturlpicker_test
+    test/besturlpicker_test.cpp
+    LIBRARIES
+    coincenter_tools
+)
+
+add_unit_test(
     curlhandle_test
     test/curlhandle_test.cpp
     LIBRARIES

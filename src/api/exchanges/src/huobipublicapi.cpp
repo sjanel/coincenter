@@ -10,6 +10,7 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
 #include "toupperlower.hpp"

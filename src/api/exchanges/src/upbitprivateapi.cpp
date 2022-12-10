@@ -15,6 +15,7 @@
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "curloptions.hpp"
 #include "monetaryamount.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"

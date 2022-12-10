@@ -7,6 +7,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
+#include "cct_json.hpp"
 #include "curlhandle.hpp"
 #include "exchangebase.hpp"
 #include "market.hpp"

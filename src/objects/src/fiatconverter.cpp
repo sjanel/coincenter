@@ -4,7 +4,7 @@
 #include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
+#include "curloptions.hpp"
 
 namespace cct {
 namespace {

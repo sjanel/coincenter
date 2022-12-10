@@ -1,19 +1,18 @@
 #pragma once
 
-#include <cstdint>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include "cct_fixedcapacityvector.hpp"
+#include "besturlpicker.hpp"
 #include "cct_string.hpp"
-#include "curloptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 
 class AbstractMetricGateway;
+class CurlOptions;
 
 /// RAII class safely managing a CURL handle.
 ///
@@ -22,53 +21,15 @@ class AbstractMetricGateway;
 /// Note that this implementation is not thread-safe. It is recommended to embed an instance of
 /// CurlHandle for faster similar queries.
 class CurlHandle {
- private:
-  static constexpr int kNbMaxBaseUrl = 4;
-
  public:
-  /// Constructs a new CurlHandle with only one possible Base URL without any min duration between queries nor support
-  /// for metric collection.
-  /// Warning: given base URL should come from static storage
-  explicit CurlHandle(const std::string_view &singleBaseUrl)
-      : CurlHandle(std::addressof(singleBaseUrl), 1, nullptr, Duration::zero(), settings::RunMode::kProd) {}
-
-  CurlHandle(const string &) = delete;
-  CurlHandle(const char *) = delete;
-
-  /// Constructs a new CurlHandle with only one possible Base URL.
-  /// Warning: given base URL should come from static storage
-  /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
-  /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
-  CurlHandle(const std::string_view &singleBaseUrl, AbstractMetricGateway *pMetricGateway,
-             Duration minDurationBetweenQueries, settings::RunMode runMode)
-      : CurlHandle(std::addressof(singleBaseUrl), 1, pMetricGateway, minDurationBetweenQueries, runMode) {}
-
-  CurlHandle(const string &, AbstractMetricGateway *, Duration, settings::RunMode) = delete;
-  CurlHandle(const char *, AbstractMetricGateway *, Duration, settings::RunMode) = delete;
-
-  /// Constructs a new CurlHandle without any min duration between queries nor support
-  /// for metric collection.
-  /// Warning: given base URL should come from static storage
-  /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
-  /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
-  template <unsigned N, std::enable_if_t<(N > 0) && N <= kNbMaxBaseUrl, bool> = true>
-  explicit CurlHandle(const std::string_view (&aBaseUrl)[N])
-      : CurlHandle(aBaseUrl, N, nullptr, Duration::zero(), settings::RunMode::kProd) {}
-
-  CurlHandle(const string[]) = delete;
-  CurlHandle(const char *[]) = delete;
-
   /// Constructs a new CurlHandle.
-  /// Warning: given base URL should come from static storage
+  /// @param bestURLPicker object managing which URL to pick at each query based on response time stats
+  /// @param pMetricGateway if not null, queries will export some metrics
   /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
-  /// @param pMetricGateway optional pointer to metrics gateway. If not null, metrics will be exported.
-  template <unsigned N, std::enable_if_t<(N > 0) && N <= kNbMaxBaseUrl, bool> = true>
-  CurlHandle(const std::string_view (&aBaseUrl)[N], AbstractMetricGateway *pMetricGateway,
-             Duration minDurationBetweenQueries, settings::RunMode runMode)
-      : CurlHandle(aBaseUrl, N, pMetricGateway, minDurationBetweenQueries, runMode) {}
-
-  CurlHandle(const string[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
-  CurlHandle(const char *[], AbstractMetricGateway *, Duration, settings::RunMode) = delete;
+  /// @param runMode run mode
+  explicit CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway = nullptr,
+                      Duration minDurationBetweenQueries = Duration::zero(),
+                      settings::RunMode runMode = settings::RunMode::kProd);
 
   // Move operations are deleted but could be implemented if needed. It's just to avoid useless code.
   CurlHandle(const CurlHandle &) = delete;
@@ -86,8 +47,7 @@ class CurlHandle {
   /// creation of this object.
   string query(std::string_view endpoint, const CurlOptions &opts);
 
-  // Return the next base url that will be used by the next query
-  std::string_view getNextBaseUrl() const { return _pBaseUrls[pickBestBaseUrlPos()]; }
+  std::string_view getNextBaseUrl() const { return _bestUrlPicker.getNextBaseURL(); }
 
   Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
@@ -95,34 +55,19 @@ class CurlHandle {
   using trivially_relocatable = std::true_type;
 
  private:
-  struct ResponseTimeStats {
-    uint32_t nbRequestsDone;
-    uint16_t avgResponseTime;
-    uint16_t avgDeviation;
-  };
-
-  using ResponseTimeStatsPerBaseUrl = FixedCapacityVector<ResponseTimeStats, kNbMaxBaseUrl>;
-
-  CurlHandle(const std::string_view *pBaseUrlStartPtr, int8_t nbBaseUrl, AbstractMetricGateway *pMetricGateway,
-             Duration minDurationBetweenQueries, settings::RunMode runMode);
-
   void setUpProxy(const char *proxyUrl, bool reset);
-
-  int8_t pickBestBaseUrlPos() const;
-  void storeResponseTimePerBaseUrl(int8_t baseUrlPos, uint32_t responseTimeInMs);
-
-  int8_t nbBaseUrl() const { return static_cast<int8_t>(_responseTimeStatsPerBaseUrl.size()); }
 
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header
   void *_handle;
   AbstractMetricGateway *_pMetricGateway;  // non-owning pointer
-  const std::string_view *_pBaseUrls;
   Duration _minDurationBetweenQueries;
   TimePoint _lastQueryTime{};
-  ResponseTimeStatsPerBaseUrl _responseTimeStatsPerBaseUrl;
+  BestURLPicker _bestUrlPicker;
 };
 
+// Simple RAII class managing global init and clean up of Curl library.
+// It's in the same file as CurlHandle so that only one source file has a dependency on curl sources.
 struct CurlInitRAII {
   [[nodiscard]] CurlInitRAII();
 
