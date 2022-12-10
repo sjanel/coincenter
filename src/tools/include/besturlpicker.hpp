@@ -57,6 +57,8 @@ class BestURLPicker {
     uint16_t avgResponseTime;  // approximation of moving average
     uint16_t avgDeviation;     // approximation of moving standard deviation
 
+    bool operator==(const ResponseTimeStats &) const noexcept = default;
+
     uint32_t score() const { return static_cast<uint32_t>(avgResponseTime) + avgDeviation; }
   };
 

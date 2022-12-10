@@ -19,25 +19,33 @@ int8_t BestURLPicker::nextBaseURLPos() const {
     return static_cast<int8_t>(minNbIt - _responseTimeStatsPerBaseUrl.begin());
   }
 
+  // Let's compute a 'score' based on the average deviation and the avg response time and pick best url
+  // The lowest score will correspond to the best URL
+  auto nextBaseURLIt =
+      std::ranges::min_element(_responseTimeStatsPerBaseUrl,
+                               [](ResponseTimeStats lhs, ResponseTimeStats rhs) { return lhs.score() < rhs.score(); });
+
   // We favor the URL that has the least score for 90 % of the requests, and give a chance to the one with the least
-  // number of requests 10 % of the time
+  // number of requests 10 % of the time, not counting the one with the best score.
   int totalNbRequestsDone =
       std::accumulate(_responseTimeStatsPerBaseUrl.begin(), _responseTimeStatsPerBaseUrl.end(), 0,
                       [](int sum, ResponseTimeStats stats) { return sum + stats.nbRequestsDone; });
-
   if ((totalNbRequestsDone % 10) == 9) {
-    auto minNbOfRequestsURLPosIt = std::ranges::min_element(
-        _responseTimeStatsPerBaseUrl,
-        [](ResponseTimeStats lhs, ResponseTimeStats rhs) { return lhs.nbRequestsDone < rhs.nbRequestsDone; });
-    return static_cast<int8_t>(minNbOfRequestsURLPosIt - _responseTimeStatsPerBaseUrl.begin());
+    ResponseTimeStats minScoreResponseTimeStats = *nextBaseURLIt;
+
+    nextBaseURLIt = std::ranges::min_element(_responseTimeStatsPerBaseUrl,
+                                             [minScoreResponseTimeStats](ResponseTimeStats lhs, ResponseTimeStats rhs) {
+                                               if (lhs == minScoreResponseTimeStats) {
+                                                 return false;
+                                               }
+                                               if (rhs == minScoreResponseTimeStats) {
+                                                 return true;
+                                               }
+                                               return lhs.nbRequestsDone < rhs.nbRequestsDone;
+                                             });
   }
 
-  // Then, let's compute a 'score' based on the average deviation and the avg response time and pick best url
-  // The lowest score will correspond to the best URL
-  auto minScoreByURLIt =
-      std::ranges::min_element(_responseTimeStatsPerBaseUrl,
-                               [](ResponseTimeStats lhs, ResponseTimeStats rhs) { return lhs.score() < rhs.score(); });
-  return static_cast<int8_t>(minScoreByURLIt - _responseTimeStatsPerBaseUrl.begin());
+  return static_cast<int8_t>(nextBaseURLIt - _responseTimeStatsPerBaseUrl.begin());
 }
 
 void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t responseTimeInMs) {
