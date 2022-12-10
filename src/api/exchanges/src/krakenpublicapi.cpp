@@ -12,6 +12,7 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "curloptions.hpp"
 #include "timedef.hpp"
 
 namespace cct::api {

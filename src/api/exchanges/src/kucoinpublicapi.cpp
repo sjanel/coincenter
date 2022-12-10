@@ -4,12 +4,12 @@
 #include <cassert>
 #include <execution>
 #include <thread>
-#include <unordered_map>
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
+#include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
 #include "stringhelpers.hpp"

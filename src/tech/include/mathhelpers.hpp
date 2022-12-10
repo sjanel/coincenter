@@ -68,16 +68,10 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
   }
 }
 
-template <class T>
-concept SignedIntegral = std::integral<T> && std::is_signed_v<T>;
-
-template <class T>
-concept UnsignedIntegral = std::integral<T> && !std::is_signed_v<T>;
-
 /// Return the number of digits of given integral.
 /// The minus sign is not counted.
 /// Uses dichotomy for highest performance as possible.
-constexpr int ndigits(SignedIntegral auto n) noexcept {
+constexpr int ndigits(std::signed_integral auto n) noexcept {
   using T = decltype(n);
   if constexpr (std::is_same_v<T, int8_t>) {
     return n < 0 ? (n > -100 ? (n > -10 ? 1 : 2) : 3) : (n < 100 ? (n < 10 ? 1 : 2) : 3);
@@ -113,11 +107,11 @@ constexpr int ndigits(SignedIntegral auto n) noexcept {
 }
 
 /// Count the number of digits including the possible minus sign for negative integrals.
-constexpr int nchars(SignedIntegral auto n) noexcept { return ndigits(n) + static_cast<int>(n < 0); }
+constexpr int nchars(std::signed_integral auto n) noexcept { return ndigits(n) + static_cast<int>(n < 0); }
 
 /// Return the number of digits of given integral.
 /// Uses dichotomy for highest performance as possible.
-constexpr int ndigits(UnsignedIntegral auto n) noexcept {
+constexpr int ndigits(std::unsigned_integral auto n) noexcept {
   using T = decltype(n);
   if constexpr (std::is_same_v<T, uint8_t>) {
     return n < 100U ? (n < 10U ? 1 : 2) : 3;
@@ -141,6 +135,6 @@ constexpr int ndigits(UnsignedIntegral auto n) noexcept {
 }
 
 /// Synonym of ndigits for unsigned types.
-constexpr int nchars(UnsignedIntegral auto n) noexcept { return ndigits(n); }
+constexpr int nchars(std::unsigned_integral auto n) noexcept { return ndigits(n); }
 
 }  // namespace cct

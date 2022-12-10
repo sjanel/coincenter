@@ -14,6 +14,7 @@
 #include "cct_smallvector.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
+#include "curloptions.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"

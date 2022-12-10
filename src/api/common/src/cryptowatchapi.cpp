@@ -7,6 +7,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "curloptions.hpp"
 #include "timedef.hpp"
 #include "toupperlower.hpp"
 

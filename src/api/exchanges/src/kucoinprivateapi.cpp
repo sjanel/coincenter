@@ -5,6 +5,7 @@
 #include "apikey.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
+#include "curloptions.hpp"
 #include "kucoinpublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"

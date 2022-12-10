@@ -9,6 +9,7 @@
 #include "cct_log.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
+#include "curloptions.hpp"
 #include "krakenpublicapi.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"

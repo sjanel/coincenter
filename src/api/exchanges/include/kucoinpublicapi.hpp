@@ -9,6 +9,7 @@
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
+#include "curloptions.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
