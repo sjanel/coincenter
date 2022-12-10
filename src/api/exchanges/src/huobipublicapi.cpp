@@ -1,7 +1,6 @@
 #include "huobipublicapi.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <execution>
 #include <thread>
 #include <unordered_map>
@@ -18,6 +17,8 @@
 namespace cct::api {
 namespace {
 
+constexpr std::string_view kHealthCheckBaseUrl[] = {"https://status.huobigroup.com"};
+
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
   string method(endpoint);
   if (!curlPostData.empty()) {
@@ -31,8 +32,6 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
   }
   return returnData ? ret["data"] : ret["tick"];
 }
-
-static constexpr std::string_view kHealthCheckBaseUrl[] = {"https://status.huobigroup.com"};
 
 }  // namespace
 
@@ -253,7 +252,6 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
   }
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
-  assert(!ret.empty());
   return ret;
 }
 

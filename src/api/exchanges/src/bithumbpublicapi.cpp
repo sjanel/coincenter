@@ -19,7 +19,7 @@
 namespace cct::api {
 namespace {
 
-static constexpr std::string_view kStatusOKStr = "0000";
+constexpr std::string_view kStatusOKStr = "0000";
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
