@@ -47,6 +47,15 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
 }
 }  // namespace
 
+string GetCurlVersionInfo() {
+  const curl_version_info_data *curlVersionInfo = curl_version_info(CURLVERSION_NOW);
+  string curlVersionInfoStr("curl ");
+  curlVersionInfoStr.append(curlVersionInfo->version);
+  curlVersionInfoStr.append(" ssl ").append(curlVersionInfo->ssl_version);
+  curlVersionInfoStr.append(" libz ").append(curlVersionInfo->libz_version);
+  return curlVersionInfoStr;
+}
+
 CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway,
                        Duration minDurationBetweenQueries, settings::RunMode runMode)
     : _handle(curl_easy_init()),

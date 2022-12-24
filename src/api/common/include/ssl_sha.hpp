@@ -9,6 +9,8 @@
 
 namespace cct::ssl {
 
+std::string_view GetOpenSSLVersion();
+
 //------------------------------------------------------------------------------
 // helper function to compute SHA256:
 using Sha256 = std::array<char, 256 / CHAR_BIT>;

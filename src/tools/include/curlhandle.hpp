@@ -14,6 +14,9 @@ namespace cct {
 class AbstractMetricGateway;
 class CurlOptions;
 
+// Get a string returning runtime curl version information.
+string GetCurlVersionInfo();
+
 /// RAII class safely managing a CURL handle.
 ///
 /// Aim of this class is to simplify curl library complexity usage, and abstracts it from client
