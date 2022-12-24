@@ -1,6 +1,7 @@
 ﻿#include "ssl_sha.hpp"
 
 #include <openssl/hmac.h>
+#include <openssl/opensslv.h>
 #include <openssl/sha.h>
 
 #include <cassert>
@@ -28,6 +29,8 @@ Sha256 ComputeSha256(std::string_view data) {
 
   return ret;
 }
+
+std::string_view GetOpenSSLVersion() { return OPENSSL_VERSION_TEXT; }
 
 string ShaBin(ShaType shaType, std::string_view data, std::string_view secret) {
   HMACCtxUniquePtr ctx(HMAC_CTX_new());
