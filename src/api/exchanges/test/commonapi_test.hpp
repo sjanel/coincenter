@@ -188,14 +188,9 @@ class TestAPI {
           });
       if (!depositableCryptos.empty()) {
         CurrencyExchangeFlatSet sample;
-        if (exchangePrivatePtr.get()->canGenerateDepositAddress()) {
-          std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), 1,
-                              std::mt19937{std::random_device{}()});
-        } else {
-          // If exchange cannot generate deposit wallet, test all until success (hopefully, at least one address will be
-          // generated)
-          sample = std::move(depositableCryptos);
-        }
+        int nbSamples = exchangePrivatePtr.get()->canGenerateDepositAddress() ? 1 : 5;
+        std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), nbSamples,
+                            std::mt19937{std::random_device{}()});
 
         for (const CurrencyExchange &curExchange : sample) {
           CurrencyCode cur(curExchange.standardCode());
