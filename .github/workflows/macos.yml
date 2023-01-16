@@ -14,13 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Prerequisites
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install dependencies
         run: brew install ninja
 
-      - name: cmake
+      - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -GNinja
 
-      - name: build
+      - name: Build
         working-directory: ${{github.workspace}}/build
         run: ninja
 
