@@ -450,9 +450,9 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraw",
                              {{"currency", currencyCode.str()}, {"uuid", initiatedWithdrawInfo.withdrawId()}});
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  MonetaryAmount realFee(result["fee"].get<std::string_view>(), currencyCode);
-  if (realFee != withdrawFee) {
-    log::error("{} withdraw fee is {} instead of {}", _exchangePublic.name(), realFee, withdrawFee);
+  MonetaryAmount fee(result["fee"].get<std::string_view>(), currencyCode);
+  if (fee != withdrawFee) {
+    log::warn("{} withdraw fee is {} instead of {}", _exchangePublic.name(), fee, withdrawFee);
   }
   MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
 
@@ -466,7 +466,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
     log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode);
   }
   const bool isDone = stateUpperStr == "DONE";
-  return SentWithdrawInfo(netEmittedAmount, isDone || isCanceled);
+  return SentWithdrawInfo(netEmittedAmount, fee, isDone || isCanceled);
 }
 
 }  // namespace cct::api

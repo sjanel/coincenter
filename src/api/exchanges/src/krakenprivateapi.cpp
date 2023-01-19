@@ -150,21 +150,21 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   json res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
+  ExchangeName eName(_exchangePublic.name(), _apiKey.name());
   if (res.empty()) {
-    throw exception("No deposit method found on Kraken for {}", currencyCode);
+    throw exception("No deposit method found on {} for {}", eName, currencyCode);
   }
   // Don't keep a view on 'method' value, we will override json data just below. We can just steal the string.
-  ExchangeName exchangeName(_exchangePublic.name(), _apiKey.name());
   string method = std::move(res.front()["method"].get_ref<string&>());
   res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                      {{"asset", krakenCurrency.altStr()}, {"method", method}});
   if (res.empty()) {
     // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
-    log::warn("No deposit address found on {} for {}, creating a new one", exchangeName, currencyCode);
+    log::warn("No deposit address found on {} for {}, creating a new one", eName, currencyCode);
     res = PrivateQuery(_curlHandle, _apiKey, "/private/DepositAddresses",
                        {{"asset", krakenCurrency.altStr()}, {"method", method}, {"new", "true"}});
     if (res.empty()) {
-      throw exception("Cannot create a new deposit address on Kraken for {}", currencyCode);
+      throw exception("Cannot create a new deposit address on {} for {}", eName, currencyCode);
     }
   }
 
@@ -181,15 +181,15 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         if (valueStr.is_number_integer()) {  // WARNING: when new = true, expiretm is not a string, but a number!
           int64_t expireTmValue = valueStr.get<int64_t>();
           if (expireTmValue != 0) {
-            log::warn("{} wallet has an expire time of {}", exchangeName, expireTmValue);
+            log::warn("{} wallet has an expire time of {}", eName, expireTmValue);
           }
         } else if (valueStr.is_string()) {
           std::string_view expireTmValue = valueStr.get<std::string_view>();
           if (expireTmValue != "0") {
-            log::warn("{} wallet has an expire time of {}", exchangeName, expireTmValue);
+            log::warn("{} wallet has an expire time of {}", eName, expireTmValue);
           }
         } else {
-          throw exception("Cannot retrieve 'expiretm' field of Kraken deposit address");
+          throw exception("Cannot retrieve 'expiretm' field of {} deposit address", eName);
         }
 
       } else if (keyStr == "new") {
@@ -206,7 +206,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
         }
       }
     }
-    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, address, tag)) {
+    if (Wallet::ValidateWallet(walletCheck, eName, currencyCode, address, tag)) {
       break;
     }
     log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
@@ -214,7 +214,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet w(std::move(exchangeName), currencyCode, std::move(address), std::move(tag), walletCheck);
+  Wallet w(std::move(eName), currencyCode, std::move(address), std::move(tag), walletCheck);
   log::info("Retrieved {}", w);
   return w;
 }
@@ -267,7 +267,7 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
     }
   }
   std::ranges::sort(openedOrders);
-  log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
+  log::info("Retrieved {} opened orders from {}", openedOrders.size(), exchangeName());
   return openedOrders;
 }
 
@@ -503,18 +503,15 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   json trxList = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", {{"asset", krakenCurrency.altStr()}});
   for (const json& trx : trxList) {
     std::string_view withdrawId = trx["refid"].get<std::string_view>();
     if (withdrawId == initiatedWithdrawInfo.withdrawId()) {
-      MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
-      if (realFee != withdrawFee) {
-        log::warn("Kraken withdraw fee is {} instead of parsed {}", realFee, withdrawFee);
-      }
       std::string_view status = trx["status"].get<std::string_view>();
+      log::info("{} withdraw status: {}", exchangeName(), status);
       MonetaryAmount netWithdrawAmount(trx["amount"].get<std::string_view>(), currencyCode);
-      return SentWithdrawInfo(netWithdrawAmount, status == "Success");
+      MonetaryAmount fee(trx["fee"].get<std::string_view>(), currencyCode);
+      return SentWithdrawInfo(netWithdrawAmount, fee, status == "Success");
     }
   }
   throw exception("Kraken: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());

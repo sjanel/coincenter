@@ -200,23 +200,25 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
   log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount,
-            initiatedWithdrawInfo.receivingWallet(), _exchangePublic.name(), targetExchange._exchangePublic.name());
+            initiatedWithdrawInfo.receivingWallet(), exchangeName(), targetExchange.exchangeName());
   enum class NextAction { kCheckSender, kCheckReceiver, kTerminate };
   NextAction action = NextAction::kCheckSender;
   SentWithdrawInfo sentWithdrawInfo;
+  ReceivedWithdrawInfo receivedWithdrawInfo;
   do {
     std::this_thread::sleep_for(withdrawRefreshTime);
     switch (action) {
       case NextAction::kCheckSender:
         sentWithdrawInfo = isWithdrawSuccessfullySent(initiatedWithdrawInfo);
         if (sentWithdrawInfo.isWithdrawSent()) {
-          log::info("Withdraw successfully sent from {}", _exchangePublic.name());
+          log::info("Withdraw successfully sent from {}", exchangeName());
           action = NextAction::kCheckReceiver;
         }
         break;
       case NextAction::kCheckReceiver:
-        if (targetExchange.isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo)) {
-          log::info("Withdraw successfully received at {}", targetExchange._exchangePublic.name());
+        receivedWithdrawInfo = targetExchange.isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo);
+        if (receivedWithdrawInfo.isWithdrawReceived()) {
+          log::info("Withdraw successfully received at {}", targetExchange.exchangeName());
           action = NextAction::kTerminate;
         }
         break;
@@ -224,9 +226,9 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
         break;
     }
   } while (action != NextAction::kTerminate);
-  log::info("Confirmed withdrawal of {} to {} {}", sentWithdrawInfo.netEmittedAmount(),
-            initiatedWithdrawInfo.receivingWallet().exchangeName(), initiatedWithdrawInfo.receivingWallet().address());
-  return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), receivedWithdrawInfo.netReceivedAmount());
+  log::info("Confirmed withdrawal {}", withdrawInfo);
+  return withdrawInfo;
 }
 
 namespace {
@@ -478,17 +480,20 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   return placeOrderInfo;
 }
 
-bool ExchangePrivate::isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                         const SentWithdrawInfo &sentWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
+ReceivedWithdrawInfo ExchangePrivate::isWithdrawReceived(const InitiatedWithdrawInfo &,
+                                                         const SentWithdrawInfo &sentWithdrawInfo) {
+  MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
+  const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
   Deposits deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
   RecentDeposit::RecentDepositVector recentDeposits;
   recentDeposits.reserve(deposits.size());
   for (const Deposit &deposit : deposits) {
     recentDeposits.emplace_back(deposit.amount(), deposit.receivedTime());
   }
-  RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+  RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
+  const RecentDeposit *pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
+  return ReceivedWithdrawInfo(pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
+                              pClosestRecentDeposit != nullptr);
 }
 
 }  // namespace cct::api

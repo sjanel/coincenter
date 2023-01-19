@@ -434,6 +434,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                    {{"currency", lowerCaseCur}, {"from", withdrawIdStr}, {"type", "withdraw"}});
   MonetaryAmount netEmittedAmount;
+  MonetaryAmount fee;
   bool isWithdrawSent = false;
   for (const json& withdrawDetail : withdrawJson["data"]) {
     if (withdrawDetail["id"].get<int64_t>() == withdrawId) {
@@ -469,7 +470,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
         log::error("unknown status value '{}'", withdrawStatus);
       }
       netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-      MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
+      fee = MonetaryAmount(withdrawDetail["fee"].get<double>(), currencyCode);
       double diffExpected = (netEmittedAmount + fee - initiatedWithdrawInfo.grossEmittedAmount()).toDouble();
       if (diffExpected > 0.001 || diffExpected < -0.001) {
         log::error("Unexpected fee - {} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(),
@@ -478,7 +479,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
+  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {

@@ -52,12 +52,12 @@ class ExchangeName {
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  std::size_t underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
-
   static constexpr std::size_t kMinExchangeNameLength =
       std::ranges::min_element(kSupportedExchanges, [](std::string_view lhs, std::string_view rhs) {
         return lhs.size() < rhs.size();
       })->size();
+
+  std::size_t underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
 
   string _nameWithKey;
 };
@@ -85,7 +85,7 @@ inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNam
 template <>
 struct fmt::formatter<cct::ExchangeName> {
   /// format ExchangeName 'name_key':
-  ///  - '{}' -> 'name'
+  ///  - '{}' -> 'name_key'
   ///  - '{:e}' -> 'name'
   ///  - '{:n}' -> 'name'
   ///  - '{:k}' -> 'key'
@@ -94,29 +94,41 @@ struct fmt::formatter<cct::ExchangeName> {
   bool printKeyName = false;
 
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin();
-    for (auto end = ctx.end(); it != end; ++it) {
-      switch (*it) {
-        case 'e':
-          [[fallthrough]];
-        case 'n':
-          printExchangeName = true;
-          break;
-        case 'k':
-          printKeyName = true;
-          break;
-        case '}':
-          return it;
-        default:
-          throw format_error("invalid format");
+    auto it = ctx.begin(), end = ctx.end();
+    if (it == end || *it == '}') {
+      printExchangeName = true;
+      printKeyName = true;
+    } else {
+      for (; it != end; ++it) {
+        switch (*it) {
+          case 'e':
+            [[fallthrough]];
+          case 'n':
+            printExchangeName = true;
+            break;
+          case 'k':
+            printKeyName = true;
+            break;
+          case '}':
+            return it;
+          default:
+            throw format_error("invalid format");
+        }
       }
     }
-    return it;
+
+    return end;
   }
 
   template <typename FormatContext>
   auto format(const cct::ExchangeName &e, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{}", printKeyName ? (printExchangeName ? e.str() : e.keyName()) : e.name());
+    if (printExchangeName) {
+      ctx.out() = fmt::format_to(ctx.out(), "{}", e.name());
+    }
+    if (printKeyName && e.isKeyNameDefined()) {
+      ctx.out() = fmt::format_to(ctx.out(), "{}{}", printExchangeName ? "_" : "", e.keyName());
+    }
+    return ctx.out();
   }
 };
 #endif

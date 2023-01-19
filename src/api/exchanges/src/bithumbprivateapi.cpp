@@ -707,7 +707,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
       if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
         bool isWithdrawSuccess = searchGb == 5;
-        return SentWithdrawInfo(initiatedWithdrawInfo.grossEmittedAmount() - realFee, isWithdrawSuccess);
+        return SentWithdrawInfo(initiatedWithdrawInfo.grossEmittedAmount() - realFee, realFee, isWithdrawSuccess);
       }
       // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
       // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.

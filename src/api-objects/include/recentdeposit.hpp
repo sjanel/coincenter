@@ -17,6 +17,7 @@ class RecentDeposit {
 
   /// Select the RecentDeposit among given ones which is the closest to 'this' object.
   /// It may reorder the given vector but will not modify objects themselves.
+  /// Returns nullptr if no matching deposit has been found
   const RecentDeposit *selectClosestRecentDeposit(RecentDepositVector &recentDeposits) const;
 
   string str() const;

@@ -268,7 +268,7 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, address, tag, WalletCheck());
   EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
-  WithdrawIdView withdrawIdView = "WithdrawId";
+  std::string_view withdrawIdView = "WithdrawId";
   InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, withdrawIdView, grossAmount);
   EXPECT_CALL(exchangePrivate, launchWithdraw(grossAmount, std::move(receivingWallet)))
       .WillOnce(testing::Return(initiatedWithdrawInfo));
@@ -276,8 +276,8 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   MonetaryAmount fee(1, "ETH", 2);
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
-  SentWithdrawInfo unsentWithdrawInfo(netEmittedAmount, false);
-  SentWithdrawInfo sentWithdrawInfo(netEmittedAmount, true);
+  SentWithdrawInfo unsentWithdrawInfo(netEmittedAmount, fee, false);
+  SentWithdrawInfo sentWithdrawInfo(netEmittedAmount, fee, true);
   {
     testing::InSequence seq;
 
@@ -293,12 +293,12 @@ TEST_F(ExchangePrivateTest, Withdraw) {
 
     EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
         .Times(2)
-        .WillRepeatedly(testing::Return(false));
+        .WillRepeatedly(testing::Return(ReceivedWithdrawInfo{}));
     EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
-        .WillOnce(testing::Return(true));
+        .WillOnce(testing::Return(ReceivedWithdrawInfo{netEmittedAmount, true}));
   }
 
-  WithdrawInfo withdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+  WithdrawInfo withdrawInfo(initiatedWithdrawInfo, netEmittedAmount);
   EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, Duration::zero()), withdrawInfo);
 }
 
