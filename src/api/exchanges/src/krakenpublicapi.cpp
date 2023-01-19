@@ -153,7 +153,7 @@ MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
   auto foundIt = withdrawalFeeMaps.find(currencyCode);
   if (foundIt == withdrawalFeeMaps.end()) {
-    log::error("Unable to find {} withdrawal fee for {}", name(), currencyCode);
+    log::warn("Unable to find {} withdrawal fee for {}, consider 0 instead", name(), currencyCode);
     return MonetaryAmount(0, currencyCode);
   }
   return foundIt->second;

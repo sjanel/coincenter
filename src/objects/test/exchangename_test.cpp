@@ -53,12 +53,22 @@ TEST(ExchangeName, Equality) {
   EXPECT_NE(ExchangeName("upbit", "_user13"), ExchangeName("binance", "_user13"));
 }
 
-TEST(ExchangeName, Format) {
-  EXPECT_EQ(fmt::format("{}", ExchangeName("binance_key")), "binance");
-  EXPECT_EQ(fmt::format("{:e}", ExchangeName("binance_key")), "binance");
-  EXPECT_EQ(fmt::format("{:n}", ExchangeName("binance_key")), "binance");
-  EXPECT_EQ(fmt::format("{:k}", ExchangeName("binance_key")), "key");
-  EXPECT_EQ(fmt::format("{:ek}", ExchangeName("binance_key")), "binance_key");
+TEST(ExchangeName, FormatWithoutKey) {
+  ExchangeName en("kraken");
+  EXPECT_EQ(fmt::format("{}", en), "kraken");
+  EXPECT_EQ(fmt::format("{:e}", en), "kraken");
+  EXPECT_EQ(fmt::format("{:n}", en), "kraken");
+  EXPECT_EQ(fmt::format("{:k}", en), "");
+  EXPECT_EQ(fmt::format("{:ek}", en), "kraken");
+}
+
+TEST(ExchangeName, FormatWithKey) {
+  ExchangeName en("binance_key");
+  EXPECT_EQ(fmt::format("{}", en), "binance_key");
+  EXPECT_EQ(fmt::format("{:e}", en), "binance");
+  EXPECT_EQ(fmt::format("{:n}", en), "binance");
+  EXPECT_EQ(fmt::format("{:k}", en), "key");
+  EXPECT_EQ(fmt::format("{:ek}", en), "binance_key");
 }
 
 }  // namespace cct

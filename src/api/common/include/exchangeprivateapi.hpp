@@ -109,6 +109,7 @@ class ExchangePrivate : public ExchangeBase {
   /// Returns the amounts actually traded with the final amount balance on this currency
   TradedAmountsVectorWithFinalAmount queryDustSweeper(CurrencyCode currencyCode);
 
+  /// Builds en ExchangeName wrapping the exchange and the key name
   ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.name(), _apiKey.name()); }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
@@ -152,8 +153,8 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Check if withdraw has been received by 'this' exchange.
   /// Default implementation is provided. It can be overriden if necessary.
-  virtual bool isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                  const SentWithdrawInfo &sentWithdrawInfo);
+  virtual ReceivedWithdrawInfo isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
+                                                  const SentWithdrawInfo &sentWithdrawInfo);
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &options, Market m);
 

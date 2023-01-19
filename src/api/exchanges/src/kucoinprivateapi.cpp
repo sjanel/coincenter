@@ -393,6 +393,7 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
                                    {{"currency", currencyCode.str()}});
   MonetaryAmount netEmittedAmount;
+  MonetaryAmount fee;
   bool isWithdrawSent = false;
   for (const json& withdrawDetail : withdrawJson["items"]) {
     if (withdrawDetail["id"].get<std::string_view>() == withdrawId) {
@@ -410,7 +411,7 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
         log::error("unknown status value '{}'", withdrawStatus);
       }
       netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);
-      MonetaryAmount fee(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
+      fee = MonetaryAmount(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
       if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
         log::error("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
                    initiatedWithdrawInfo.grossEmittedAmount().amountStr());
@@ -418,7 +419,7 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
+  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
 }
 
 }  // namespace cct::api

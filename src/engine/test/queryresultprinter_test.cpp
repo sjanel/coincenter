@@ -1983,16 +1983,17 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
  protected:
   MonetaryAmount grossAmount{"76.55 XRP"};
   MonetaryAmount netEmittedAmount{"75.55 XRP"};
+  MonetaryAmount fee = grossAmount - netEmittedAmount;
   bool isWithdrawSent = true;
   ExchangeName fromExchange{exchange1.apiPrivate().exchangeName()};
   ExchangeName toExchange{exchange4.apiPrivate().exchangeName()};
 
   Wallet receivingWallet{toExchange, grossAmount.currencyCode(), "xrpaddress666", "xrptag2", WalletCheck{}};
-  WithdrawIdView withdrawId = "WithdrawTest01";
+  std::string_view withdrawId = "WithdrawTest01";
   MonetaryAmount grossEmittedAmount;
   api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount, tp1};
-  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, isWithdrawSent};
-  WithdrawInfo withdrawInfo{initiatedWithdrawInfo, sentWithdrawInfo, tp2};
+  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, isWithdrawSent};
+  WithdrawInfo withdrawInfo{initiatedWithdrawInfo, netEmittedAmount, tp2};
 };
 
 class QueryResultPrinterWithdrawAmountTest : public QueryResultPrinterWithdrawTest {

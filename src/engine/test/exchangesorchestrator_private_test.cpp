@@ -218,12 +218,12 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawIdView, grossAmount};
     EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
-    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, true};
+    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
     EXPECT_CALL(exchangePrivate1, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(sentWithdrawInfo));
     EXPECT_CALL(exchangePrivate2, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
-        .WillOnce(testing::Return(true));
-    return WithdrawInfo(initiatedWithdrawInfo, sentWithdrawInfo);
+        .WillOnce(testing::Return(api::ReceivedWithdrawInfo{netEmittedAmount, true}));
+    return WithdrawInfo(initiatedWithdrawInfo, netEmittedAmount);
   }
 
   CurrencyCode cur{"XRP"};
@@ -233,7 +233,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
   std::string_view address{"TestAddress"};
   std::string_view tag{"TestTag"};
 
-  WithdrawIdView withdrawIdView{"WithdrawId"};
+  std::string_view withdrawIdView{"WithdrawId"};
 
   MonetaryAmount fee{"0.02", cur};
 };

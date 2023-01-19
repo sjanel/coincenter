@@ -795,7 +795,7 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
                     "Net received amount");
       t.emplace_back(fromPrivateExchangeName.name(), toPrivateExchangeName.name(), grossAmount.str(),
                      ToString(withdrawInfo.initiatedTime()), ToString(withdrawInfo.receivedTime()),
-                     withdrawInfo.netEmittedAmount().str());
+                     withdrawInfo.receivedAmount().str());
       printTable(t);
       break;
     }
@@ -825,7 +825,7 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       out.emplace("to", std::move(to));
       out.emplace("initiatedTime", ToString(withdrawInfo.initiatedTime()));
       out.emplace("receivedTime", ToString(withdrawInfo.receivedTime()));
-      out.emplace("netReceivedAmount", withdrawInfo.netEmittedAmount().amountStr());
+      out.emplace("netReceivedAmount", withdrawInfo.receivedAmount().amountStr());
 
       printJson(std::move(in), std::move(out));
       break;

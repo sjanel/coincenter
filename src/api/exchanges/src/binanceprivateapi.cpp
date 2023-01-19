@@ -459,6 +459,7 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
                                      {{"coin", currencyCode.str()}});
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
   MonetaryAmount netEmittedAmount;
+  MonetaryAmount fee;
   bool isWithdrawSent = false;
   for (const json& withdrawDetail : withdrawStatus) {
     std::string_view withdrawDetailId(withdrawDetail["id"].get<std::string_view>());
@@ -484,7 +485,7 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
           log::error("Withdraw failed");
           break;
         case 6:
-          log::warn("Withdraw completed!");
+          log::info("Withdraw completed!");
           isWithdrawSent = true;
           break;
         default:
@@ -492,19 +493,19 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
           break;
       }
       netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-      MonetaryAmount fee(withdrawDetail["transactionFee"].get<double>(), currencyCode);
+      fee = MonetaryAmount(withdrawDetail["transactionFee"].get<double>(), currencyCode);
       if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
-        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
-                   initiatedWithdrawInfo.grossEmittedAmount().amountStr());
+        log::warn("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
+                  initiatedWithdrawInfo.grossEmittedAmount().amountStr());
       }
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, isWithdrawSent);
+  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
 }
 
-bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                        const SentWithdrawInfo& sentWithdrawInfo) {
+ReceivedWithdrawInfo BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                                        const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
                                     {{"coin", currencyCode.str()}});
@@ -525,7 +526,9 @@ bool BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWi
     }
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return expectedDeposit.selectClosestRecentDeposit(recentDeposits) != nullptr;
+  const RecentDeposit* pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
+  return ReceivedWithdrawInfo(pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
+                              pClosestRecentDeposit != nullptr);
 }
 
 }  // namespace cct::api
