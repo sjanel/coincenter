@@ -166,6 +166,8 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
+  bool shouldDiscardChain(CurrencyCode cur, const json& chainDetail) const;
+
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;

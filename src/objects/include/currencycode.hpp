@@ -10,6 +10,8 @@
 #include "cct_format.hpp"
 #include "cct_hash.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 
@@ -154,6 +156,24 @@ class CurrencyCode {
     string s;
     appendStr(s);
     return s;
+  }
+
+  /// Return true if this currency code acronym is equal to given string.
+  /// Comparison is case insensitive.
+  constexpr bool iequal(std::string_view curStr) const {
+    if (curStr.size() > kMaxLen) {
+      return false;
+    }
+    for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
+      char c = (*this)[charPos];
+      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
+        return curStr.size() == charPos;
+      }
+      if (curStr.size() == charPos || c != toupper(curStr[charPos])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Append currency string representation to given string.

@@ -77,16 +77,22 @@ bool HuobiPublic::healthCheck() {
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "/v2/reference/currencies"); }
 
+bool HuobiPublic::shouldDiscardChain(CurrencyCode cur, const json& chainDetail) const {
+  std::string_view chainName = chainDetail["chain"].get<std::string_view>();
+  if (!cur.iequal(chainName) && !cur.iequal(chainDetail["displayName"].get<std::string_view>())) {
+    log::debug("Discarding chain '{}' as not supported by {}", chainName, cur);
+    return true;
+  }
+  return false;
+}
+
 HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
   WithdrawParams withdrawParams;
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curStr))) {
       for (const json& chainDetail : curDetail["chains"]) {
-        std::string_view chainName = chainDetail["chain"].get<std::string_view>();
-        std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
-        if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
-          log::debug("Discarding chain {} for {}", chainName, cur.str());
+        if (shouldDiscardChain(cur, chainDetail)) {
           continue;
         }
 
@@ -115,10 +121,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
     bool foundChainWithSameName = false;
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     for (const json& chainDetail : curDetail["chains"]) {
-      std::string_view chainName = chainDetail["chain"].get<std::string_view>();
-      std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
-      if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
-        log::debug("Discarding chain {} for {}", chainName, cur.str());
+      if (shouldDiscardChain(cur, chainDetail)) {
         continue;
       }
       std::string_view depositAllowedStr = chainDetail["depositStatus"].get<std::string_view>();
@@ -220,10 +223,7 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     bool foundChainWithSameName = false;
     for (const json& chainDetail : curDetail["chains"]) {
-      std::string_view chainName = chainDetail["chain"].get<std::string_view>();
-      std::string_view displayName = chainDetail["displayName"].get<std::string_view>();
-      if (CurrencyCode(chainName) != cur && CurrencyCode(displayName) != cur) {
-        log::debug("Discarding chain '{}' as not supported", chainName);
+      if (shouldDiscardChain(cur, chainDetail)) {
         continue;
       }
       auto withdrawFeeTypeIt = chainDetail.find("withdrawFeeType");
