@@ -43,10 +43,10 @@ class KrakenPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderRef& orderRef) override;
+  OrderInfo cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) override;
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef) override {
-    return queryOrderInfo(orderRef, QueryOrder::kOpenedThenClosed);
+  OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override {
+    return queryOrderInfo(orderId, tradeContext, QueryOrder::kOpenedThenClosed);
   }
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
@@ -67,11 +67,11 @@ class KrakenPrivate : public ExchangePrivate {
     KrakenPublic& _exchangePublic;
   };
 
-  json queryOrdersData(int64_t userRef, const OrderId& orderId, QueryOrder queryOrder);
+  json queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder);
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef, QueryOrder queryOrder);
+  OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext, QueryOrder queryOrder);
 
-  void cancelOrderProcess(const OrderId& id);
+  void cancelOrderProcess(OrderIdView orderId);
 
   CurlHandle _curlHandle;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;

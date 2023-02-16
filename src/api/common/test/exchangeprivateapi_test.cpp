@@ -25,9 +25,19 @@ inline BalancePortfolio operator+(const BalancePortfolio &b, const TradedAmounts
 inline bool operator==(const TradedAmountsVectorWithFinalAmount &lhs, const TradedAmountsVectorWithFinalAmount &rhs) {
   return lhs.finalAmount == rhs.finalAmount && lhs.tradedAmountsVector == rhs.tradedAmountsVector;
 }
+
 }  // namespace cct
 
 namespace cct::api {
+
+inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
+  // We don't compare on value userRef which is set from a timestamp
+  return lhs.m == rhs.m && lhs.side == rhs.side;
+}
+
+inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
+  return lhs.tradeContext == rhs.tradeContext && lhs.options == rhs.options;
+}
 
 class ExchangePrivateTest : public ::testing::Test {
  protected:
@@ -40,6 +50,7 @@ class ExchangePrivateTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
   CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kProd, Duration::max(), true};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
   APIKey key{"test", "testuser", "", "", ""};
   MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
@@ -48,7 +59,6 @@ class ExchangePrivateTest : public ::testing::Test {
 
   VolAndPriNbDecimals volAndPriDec{2, 2};
   int depth = 15;
-  int64_t nbSecondsSinceEpoch = 0;
 
   MonetaryAmount askPrice1{"2300.45 EUR"};
   MonetaryAmount bidPrice1{"2300.4 EUR"};
@@ -66,10 +76,6 @@ class ExchangePrivateTest : public ::testing::Test {
       askPrice3, MonetaryAmount("0.96 ETH"), bidPrice3, MonetaryAmount("3.701 ETH"), volAndPriDec, depth};
 };
 
-inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) { return lhs.m == rhs.m && lhs.side == rhs.side; }
-
-inline bool operator==(const OrderRef &lhs, const OrderRef &rhs) { return lhs.id == rhs.id; }
-
 TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   tradeBaseExpectCalls();
 
@@ -79,7 +85,8 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
 
   PriceOptions priceOptions(PriceStrategy::kTaker);
   TradeOptions tradeOptions(priceOptions);
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, market, TradeSide::kSell, tradeOptions);
+  TradeContext tradeContext(market, TradeSide::kSell);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo("23004 EUR");
 
@@ -101,7 +108,8 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
   TradeOptions tradeOptions(priceOptions);
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, market, TradeSide::kBuy, tradeOptions);
+  TradeContext tradeContext(market, TradeSide::kBuy);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
 
@@ -122,16 +130,16 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
   MonetaryAmount pri(askPrice1);
 
   TradeSide side = TradeSide::kSell;
+  TradeContext tradeContext(market, side);
+
   PriceOptions priceOptions(PriceStrategy::kMaker);
   TradeOptions tradeOptions(priceOptions);
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, market, side, tradeOptions);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
   PlaceOrderInfo unmatchedPlacedOrderInfo(OrderInfo(TradedAmounts(from.currencyCode(), market.quote()), false),
                                           OrderId("Order # 0"));
-
-  OrderRef orderRef(unmatchedPlacedOrderInfo.orderId, nbSecondsSinceEpoch, market, side);
 
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
       .WillOnce(testing::Return(unmatchedPlacedOrderInfo));
@@ -140,7 +148,7 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
   MonetaryAmount partialMatchedTo = partialMatchedFrom.toNeutral() * askPrice1;
   MonetaryAmount fullMatchedTo = from.toNeutral() * askPrice1;
 
-  EXPECT_CALL(exchangePrivate, queryOrderInfo(orderRef))
+  EXPECT_CALL(exchangePrivate, queryOrderInfo(static_cast<OrderIdView>(unmatchedPlacedOrderInfo.orderId), tradeContext))
       .WillOnce(testing::Return(unmatchedPlacedOrderInfo.orderInfo))
       .WillOnce(testing::Return(OrderInfo(TradedAmounts(partialMatchedFrom, partialMatchedTo), false)))
       .WillOnce(testing::Return(OrderInfo(TradedAmounts(from, fullMatchedTo), true)));
@@ -155,13 +163,14 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   MonetaryAmount pri1(bidPrice1);
   MonetaryAmount pri2(bidPrice2);
   TradeSide side = TradeSide::kBuy;
+  TradeContext tradeContext(market, side);
 
   MonetaryAmount vol1(from / pri1, market.base());
   MonetaryAmount vol2(from / pri2, market.base());
 
   TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
                             TradeTypePolicy::kForceMultiTrade);
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, market, side, tradeOptions);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
 
   {
     testing::InSequence seq;
@@ -179,16 +188,14 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   PlaceOrderInfo unmatchedPlacedOrderInfo1(unmatchedOrderInfo, OrderId("Order # 0"));
   PlaceOrderInfo unmatchedPlacedOrderInfo2(unmatchedOrderInfo, OrderId("Order # 1"));
 
-  OrderRef orderRef1(unmatchedPlacedOrderInfo1.orderId, nbSecondsSinceEpoch, market, side);
-  OrderRef orderRef2(unmatchedPlacedOrderInfo2.orderId, nbSecondsSinceEpoch, market, side);
-
   // Call once queryOrderBook
 
   // Place first order
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol1, pri1, tradeInfo))
       .WillOnce(testing::Return(unmatchedPlacedOrderInfo1));
 
-  EXPECT_CALL(exchangePrivate, queryOrderInfo(orderRef1))
+  EXPECT_CALL(exchangePrivate,
+              queryOrderInfo(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
       .Times(2)
       .WillRepeatedly(testing::Return(unmatchedPlacedOrderInfo1.orderInfo));
 
@@ -196,7 +203,8 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   // Call once queryOrderBook with new price
 
   // Price change, cancel order
-  EXPECT_CALL(exchangePrivate, cancelOrder(orderRef1)).WillOnce(testing::Return(OrderInfo(zeroTradedAmounts, false)));
+  EXPECT_CALL(exchangePrivate, cancelOrder(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
+      .WillOnce(testing::Return(OrderInfo(zeroTradedAmounts, false)));
 
   // Place second order
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol2, pri2, tradeInfo))
@@ -207,11 +215,12 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
 
   TradedAmounts partialMatchedTradedAmounts(partialMatchedFrom, partialMatchedTo);
 
-  EXPECT_CALL(exchangePrivate, queryOrderInfo(orderRef2))
+  EXPECT_CALL(exchangePrivate,
+              queryOrderInfo(static_cast<OrderIdView>(unmatchedPlacedOrderInfo2.orderId), tradeContext))
       .WillOnce(testing::Return(unmatchedPlacedOrderInfo2.orderInfo))
       .WillOnce(testing::Return(OrderInfo(partialMatchedTradedAmounts, false)));
 
-  EXPECT_CALL(exchangePrivate, cancelOrder(orderRef2))
+  EXPECT_CALL(exchangePrivate, cancelOrder(static_cast<OrderIdView>(unmatchedPlacedOrderInfo2.orderId), tradeContext))
       .WillOnce(testing::Return(OrderInfo(partialMatchedTradedAmounts, false)));
 
   MonetaryAmount pri3(bidPrice3);
@@ -237,7 +246,8 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
   TradeSide side = TradeSide::kSell;
   TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kSimulation, Duration::max(), Duration::zero(),
                             TradeTypePolicy::kForceMultiTrade);
-  TradeInfo tradeInfo(nbSecondsSinceEpoch, market, side, tradeOptions);
+  TradeContext tradeContext(market, side);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
@@ -331,7 +341,8 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     MonetaryAmount vol(from);
 
     Market m{from.currencyCode(), pri.currencyCode()};
-    TradeInfo tradeInfo(nbSecondsSinceEpoch, m, TradeSide::kSell, tradeOptions);
+    TradeContext tradeContext(m, TradeSide::kSell);
+    TradeInfo tradeInfo(tradeContext, tradeOptions);
 
     MonetaryAmount tradedTo = vol.toNeutral() * pri;
 
@@ -356,7 +367,8 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     MonetaryAmount from = to.toNeutral() * bidPri;
     MonetaryAmount vol(from / askPri, m.base());
 
-    TradeInfo tradeInfo(nbSecondsSinceEpoch, m, TradeSide::kBuy, tradeOptions);
+    TradeContext tradeContext(m, TradeSide::kBuy);
+    TradeInfo tradeInfo(tradeContext, tradeOptions);
 
     TradedAmounts tradedAmounts(MonetaryAmount{success ? from : MonetaryAmount(0), askPri.currencyCode()},
                                 success ? vol : MonetaryAmount{0, vol.currencyCode()});

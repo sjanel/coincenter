@@ -40,18 +40,18 @@ class HuobiPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderRef& orderRef) override;
+  OrderInfo cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   int batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet);
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
+  OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
  private:
-  void cancelOrderProcess(const OrderId& id);
+  void cancelOrderProcess(OrderIdView orderId);
 
   struct AccountIdFunc {
 #ifndef CCT_AGGR_INIT_CXX20

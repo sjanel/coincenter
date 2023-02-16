@@ -9,35 +9,25 @@
 
 namespace cct::api {
 
-struct OrderRef {
-#ifndef CCT_AGGR_INIT_CXX20
-  OrderRef(const OrderId &orderId, int64_t nbSecondsSinceEpoch, Market market, TradeSide s)
-      : id(orderId), userRef(nbSecondsSinceEpoch), m(market), side(s) {}
-#endif
+using UserRefInt = int32_t;
+
+struct TradeContext {
+  TradeContext(Market market, TradeSide s, UserRefInt userRef = 0) : m(market), side(s), userRef(userRef) {}
 
   CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
   CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
 
-  const OrderId &id;
-  int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
   Market m;
   TradeSide side;
+  UserRefInt userRef;  // Used by Kraken for instance, used to group orders queries context
 };
 
 struct TradeInfo {
 #ifndef CCT_AGGR_INIT_CXX20
-  TradeInfo(int64_t nbSecondsSinceEpoch, Market market, TradeSide s, const TradeOptions &opts)
-      : userRef(nbSecondsSinceEpoch), m(market), side(s), options(opts) {}
+  TradeInfo(const TradeContext &tradeContext, const TradeOptions &opts) : tradeContext(tradeContext), options(opts) {}
 #endif
 
-  CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
-  CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
-
-  OrderRef createOrderRef(const OrderId &orderId) const { return OrderRef(orderId, userRef, m, side); }
-
-  int64_t userRef;  // Used by Kraken for instance, used to group orders queries context
-  Market m;
-  TradeSide side;
+  TradeContext tradeContext;
   TradeOptions options;
 };
 
