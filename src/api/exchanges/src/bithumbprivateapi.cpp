@@ -387,7 +387,8 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   // No faster way to cancel several orders at once with Bithumb, doing a simple for loop
   Orders orders = queryOpenedOrders(openedOrdersConstraints);
   for (const Order& o : orders) {
-    cancelOrderProcess(OrderRef(o.id(), 0 /*userRef, unused*/, o.market(), o.side()));
+    TradeContext tradeContext(o.market(), o.side());
+    cancelOrderProcess(o.id(), tradeContext);
   }
   return orders.size();
 }
@@ -457,11 +458,11 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
                                           const TradeInfo& tradeInfo) {
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  const Market m = tradeInfo.m;
+  const Market m = tradeInfo.tradeContext.m;
 
   // It seems Bithumb uses "standard" currency codes, no need to translate them
   CurlPostData placePostData{{kOrderCurrencyParamStr, m.base().str()}, {kPaymentCurParamStr, m.quote().str()}};
@@ -602,7 +603,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       }
     } else {
       placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
-      placeOrderInfo.orderInfo = queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId));
+      placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext);
       break;
     }
   }
@@ -614,13 +615,13 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   return placeOrderInfo;
 }
 
-OrderInfo BithumbPrivate::cancelOrder(const OrderRef& orderRef) {
-  cancelOrderProcess(orderRef);
-  return queryOrderInfo(orderRef);
+OrderInfo BithumbPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
+  cancelOrderProcess(orderId, tradeContext);
+  return queryOrderInfo(orderId, tradeContext);
 }
 
 namespace {
-CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view orderId) {
+CurlPostData OrderInfoPostData(Market m, TradeSide side, OrderIdView orderId) {
   CurlPostData ret;
   auto baseStr = m.base().str();
   auto quoteStr = m.quote().str();
@@ -634,19 +635,19 @@ CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view orderI
 }
 }  // namespace
 
-void BithumbPrivate::cancelOrderProcess(const OrderRef& orderRef) {
-  PrivateQuery(_curlHandle, _apiKey, "/trade/cancel", OrderInfoPostData(orderRef.m, orderRef.side, orderRef.id));
+void BithumbPrivate::cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext) {
+  PrivateQuery(_curlHandle, _apiKey, "/trade/cancel", OrderInfoPostData(tradeContext.m, tradeContext.side, orderId));
 }
 
-OrderInfo BithumbPrivate::queryOrderInfo(const OrderRef& orderRef) {
-  const Market m = orderRef.m;
-  const CurrencyCode fromCurrencyCode = orderRef.fromCur();
-  const CurrencyCode toCurrencyCode = orderRef.toCur();
+OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
+  const Market m = tradeContext.m;
+  const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
+  const CurrencyCode toCurrencyCode = tradeContext.toCur();
 
-  CurlPostData postData = OrderInfoPostData(m, orderRef.side, orderRef.id);
+  CurlPostData postData = OrderInfoPostData(m, tradeContext.side, orderId);
   json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", postData)["data"];
 
-  const bool isClosed = result.empty() || result.front()[kOrderIdParamStr].get<std::string_view>() != orderRef.id;
+  const bool isClosed = result.empty() || result.front()[kOrderIdParamStr].get<std::string_view>() != orderId;
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (isClosed) {
     postData.erase(kTypeParamStr);

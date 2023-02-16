@@ -279,8 +279,8 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
 
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
@@ -289,7 +289,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
     return placeOrderInfo;
   }
 
-  const Market m = tradeInfo.m;
+  const Market m = tradeInfo.tradeContext.m;
 
   bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
 
@@ -330,22 +330,22 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   return placeOrderInfo;
 }
 
-OrderInfo KucoinPrivate::cancelOrder(const OrderRef& orderRef) {
-  cancelOrderProcess(orderRef.id);
-  return queryOrderInfo(orderRef);
+OrderInfo KucoinPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
+  cancelOrderProcess(orderId);
+  return queryOrderInfo(orderId, tradeContext);
 }
 
-void KucoinPrivate::cancelOrderProcess(const OrderId& id) {
+void KucoinPrivate::cancelOrderProcess(OrderIdView id) {
   string endpoint("/api/v1/orders/");
   endpoint.append(id);
   PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
 }
 
-OrderInfo KucoinPrivate::queryOrderInfo(const OrderRef& orderRef) {
-  const CurrencyCode fromCurrencyCode(orderRef.fromCur());
-  const Market m = orderRef.m;
+OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
+  const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
+  const Market m = tradeContext.m;
   string endpoint = "/api/v1/orders/";
-  endpoint.append(orderRef.id);
+  endpoint.append(orderId);
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
 

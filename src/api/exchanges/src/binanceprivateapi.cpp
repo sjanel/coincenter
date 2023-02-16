@@ -335,9 +335,9 @@ TradedAmounts QueryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, con
 PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
-  const Market m = tradeInfo.m;
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
+  const Market m = tradeInfo.tradeContext.m;
   const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
   const bool placeSimulatedRealOrder = binancePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
@@ -403,14 +403,15 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   return placeOrderInfo;
 }
 
-OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, HttpRequestType requestType) {
-  const Market m = orderRef.m;
-  const CurrencyCode fromCurrencyCode = orderRef.side == TradeSide::kSell ? m.base() : m.quote();
-  const CurrencyCode toCurrencyCode = orderRef.side == TradeSide::kBuy ? m.base() : m.quote();
+OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tradeContext,
+                                     HttpRequestType requestType) {
+  const Market m = tradeContext.m;
+  const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::kSell ? m.base() : m.quote();
+  const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? m.base() : m.quote();
   const string assetsStr = m.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   json result =
-      PrivateQuery(_curlHandle, _apiKey, requestType, "/api/v3/order", {{"symbol", assets}, {"orderId", orderRef.id}});
+      PrivateQuery(_curlHandle, _apiKey, requestType, "/api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
   const std::string_view status = result["status"].get<std::string_view>();
   bool isClosed = false;
   bool queryClosedOrder = false;
@@ -418,7 +419,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, HttpRequestType r
     isClosed = true;
     queryClosedOrder = true;
   } else if (status == "REJECTED" || status == "EXPIRED") {
-    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderRef.id, status);
+    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, status);
     isClosed = true;
   }
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
@@ -429,7 +430,7 @@ OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, HttpRequestType r
       myTradesOpts.append("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
     }
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", myTradesOpts);
-    int64_t integralOrderId = FromString<int64_t>(orderRef.id);
+    int64_t integralOrderId = FromString<int64_t>(orderId);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
         orderInfo.tradedAmounts += ParseTrades(m, fromCurrencyCode, tradeDetails);

@@ -271,12 +271,12 @@ int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
 
 PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  const Market m = tradeInfo.m;
+  const Market m = tradeInfo.tradeContext.m;
   string lowerCaseMarket = m.assetsPairStrLower();
 
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
@@ -322,24 +322,24 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   return placeOrderInfo;
 }
 
-void HuobiPrivate::cancelOrderProcess(const OrderId& id) {
+void HuobiPrivate::cancelOrderProcess(OrderIdView id) {
   string endpoint = "/v1/order/orders/";
   endpoint.append(id);
   endpoint.append("/submitcancel");
   PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, endpoint);
 }
 
-OrderInfo HuobiPrivate::cancelOrder(const OrderRef& orderRef) {
-  cancelOrderProcess(orderRef.id);
-  return queryOrderInfo(orderRef);
+OrderInfo HuobiPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
+  cancelOrderProcess(orderId);
+  return queryOrderInfo(orderId, tradeContext);
 }
 
-OrderInfo HuobiPrivate::queryOrderInfo(const OrderRef& orderRef) {
-  const CurrencyCode fromCurrencyCode = orderRef.fromCur();
-  const CurrencyCode toCurrencyCode = orderRef.toCur();
-  const Market m = orderRef.m;
+OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
+  const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
+  const CurrencyCode toCurrencyCode = tradeContext.toCur();
+  const Market m = tradeContext.m;
   string endpoint = "/v1/order/orders/";
-  endpoint.append(orderRef.id);
+  endpoint.append(orderId);
 
   json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
   const json& data = res["data"];

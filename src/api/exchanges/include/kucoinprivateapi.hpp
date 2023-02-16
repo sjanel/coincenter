@@ -40,9 +40,9 @@ class KucoinPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderRef& orderRef) override;
+  OrderInfo cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) override;
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
+  OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -62,7 +62,7 @@ class KucoinPrivate : public ExchangePrivate {
     const KucoinPublic& _kucoinPublic;
   };
 
-  void cancelOrderProcess(const OrderId& id);
+  void cancelOrderProcess(OrderIdView orderId);
 
   CurlHandle _curlHandle;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;

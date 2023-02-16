@@ -335,12 +335,12 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
 
 PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool isTakerStrategy =
       tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   const bool isSimulation = tradeInfo.options.isSimulation();
-  const Market m = tradeInfo.m;
+  const Market m = tradeInfo.tradeContext.m;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);
   const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(m);
   CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.base());
@@ -382,7 +382,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
                              {"volume", volume.amountStr()},
                              {"oflags", fromCurrencyCode == m.quote() ? "fcib" : "fciq"},
                              {"expiretm", nbSecondsSinceEpoch + expireTimeInSeconds},
-                             {"userref", tradeInfo.userRef}};
+                             {"userref", tradeInfo.tradeContext.userRef}};
   if (isSimulation) {
     placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
   }
@@ -408,30 +408,30 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   log::debug("Kraken adjusted volume: {}", krakenVolume);
 
   placeOrderInfo.orderInfo =
-      queryOrderInfo(tradeInfo.createOrderRef(placeOrderInfo.orderId),
+      queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext,
                      isTakerStrategy ? QueryOrder::kClosedThenOpened : QueryOrder::kOpenedThenClosed);
 
   return placeOrderInfo;
 }
 
-OrderInfo KrakenPrivate::cancelOrder(const OrderRef& orderRef) {
-  cancelOrderProcess(orderRef.id);
-  return queryOrderInfo(orderRef, QueryOrder::kClosedThenOpened);
+OrderInfo KrakenPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
+  cancelOrderProcess(orderId);
+  return queryOrderInfo(orderId, tradeContext, QueryOrder::kClosedThenOpened);
 }
 
-void KrakenPrivate::cancelOrderProcess(const OrderId& id) {
+void KrakenPrivate::cancelOrderProcess(OrderIdView id) {
   PrivateQuery(_curlHandle, _apiKey, "/private/CancelOrder", {{"txid", id}});
 }
 
-OrderInfo KrakenPrivate::queryOrderInfo(const OrderRef& orderRef, QueryOrder queryOrder) {
-  const CurrencyCode fromCurrencyCode = orderRef.fromCur();
-  const CurrencyCode toCurrencyCode = orderRef.toCur();
-  const Market m = orderRef.m;
+OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext, QueryOrder queryOrder) {
+  const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
+  const CurrencyCode toCurrencyCode = tradeContext.toCur();
+  const Market m = tradeContext.m;
 
-  json ordersRes = queryOrdersData(orderRef.userRef, orderRef.id, queryOrder);
+  json ordersRes = queryOrdersData(tradeContext.userRef, orderId, queryOrder);
   auto openIt = ordersRes.find("open");
-  const bool orderInOpenedPart = openIt != ordersRes.end() && openIt->contains(orderRef.id);
-  const json& orderJson = orderInOpenedPart ? (*openIt)[orderRef.id] : ordersRes["closed"][orderRef.id];
+  const bool orderInOpenedPart = openIt != ordersRes.end() && openIt->contains(orderId);
+  const json& orderJson = orderInOpenedPart ? (*openIt)[orderId] : ordersRes["closed"][orderId];
   MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), m.base());             // always in base currency
   MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), m.base());  // always in base currency
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode), !orderInOpenedPart);
@@ -453,7 +453,7 @@ OrderInfo KrakenPrivate::queryOrderInfo(const OrderRef& orderRef, QueryOrder que
   return orderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(int64_t userRef, const OrderId& orderId, QueryOrder queryOrder) {
+json KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder) {
   static constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
   CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};

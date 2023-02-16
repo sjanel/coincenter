@@ -139,11 +139,11 @@ class ExchangePrivate : public ExchangeBase {
   /// Cancel given order id and return its possible matched amounts.
   /// When this methods ends, order should be successfully cancelled and its matched parts returned definitely (trade
   /// automaton will not come back on this order later on)
-  virtual OrderInfo cancelOrder(const OrderRef &orderRef) = 0;
+  virtual OrderInfo cancelOrder(OrderIdView orderId, const TradeContext &tradeContext) = 0;
 
   /// Query an order and return and 'OrderInfo' with its matched parts and if it is closed or not (closed means that its
   /// status and matched parts will not evolve in the future).
-  virtual OrderInfo queryOrderInfo(const OrderRef &orderRef) = 0;
+  virtual OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext &tradeContext) = 0;
 
   /// Orders a withdraw in mode fire and forget.
   virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&wallet) = 0;

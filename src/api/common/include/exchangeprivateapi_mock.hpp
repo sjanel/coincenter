@@ -25,8 +25,8 @@ class MockExchangePrivate : public ExchangePrivate {
 
   MOCK_METHOD(PlaceOrderInfo, placeOrder, (MonetaryAmount, MonetaryAmount, MonetaryAmount, const TradeInfo &),
               (override));
-  MOCK_METHOD(OrderInfo, cancelOrder, (const OrderRef &), (override));
-  MOCK_METHOD(OrderInfo, queryOrderInfo, (const OrderRef &), (override));
+  MOCK_METHOD(OrderInfo, cancelOrder, (OrderIdView, const TradeContext &), (override));
+  MOCK_METHOD(OrderInfo, queryOrderInfo, (OrderIdView, const TradeContext &), (override));
   MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount, Wallet &&), (override));
   MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &), (override));
   MOCK_METHOD(ReceivedWithdrawInfo, isWithdrawReceived, (const InitiatedWithdrawInfo &, const SentWithdrawInfo &),

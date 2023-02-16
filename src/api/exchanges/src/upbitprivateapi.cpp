@@ -245,7 +245,8 @@ int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   // No faster way to cancel several orders at once, doing a simple for loop
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
   for (const Order& o : openedOrders) {
-    cancelOrder(OrderRef(o.id(), 0 /*userRef, unused*/, o.market(), o.side()));
+    TradeContext tradeContext(o.market(), o.side());
+    cancelOrder(o.id(), tradeContext);
   }
   return openedOrders.size();
 }
@@ -351,11 +352,11 @@ void UpbitPrivate::applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTake
 
 PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                         const TradeInfo& tradeInfo) {
-  const CurrencyCode fromCurrencyCode(tradeInfo.fromCur());
-  const CurrencyCode toCurrencyCode(tradeInfo.toCur());
+  const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
+  const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const Market m = tradeInfo.m;
+  const Market m = tradeInfo.tradeContext.m;
 
   const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
   const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
@@ -407,21 +408,21 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   return placeOrderInfo;
 }
 
-OrderInfo UpbitPrivate::cancelOrder(const OrderRef& orderRef) {
-  CurlPostData postData{{"uuid", orderRef.id}};
+OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
+  CurlPostData postData{{"uuid", orderId}};
   json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
   bool cancelledOrderClosed = IsOrderClosed(orderRes);
   while (!cancelledOrderClosed) {
     orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
     cancelledOrderClosed = IsOrderClosed(orderRes);
   }
-  return ParseOrderJson(orderRes, orderRef.fromCur(), orderRef.m);
+  return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.m);
 }
 
-OrderInfo UpbitPrivate::queryOrderInfo(const OrderRef& orderRef) {
-  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderRef.id}});
-  const CurrencyCode fromCurrencyCode(orderRef.fromCur());
-  return ParseOrderJson(orderRes, fromCurrencyCode, orderRef.m);
+OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
+  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
+  const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
+  return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.m);
 }
 
 MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {

@@ -43,9 +43,9 @@ class BithumbPrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderRef& orderRef) override;
+  OrderInfo cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) override;
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef) override;
+  OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -65,7 +65,7 @@ class BithumbPrivate : public ExchangePrivate {
     BithumbPublic& _exchangePublic;
   };
 
-  void cancelOrderProcess(const OrderRef& orderRef);
+  void cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext);
 
   struct CurrencyOrderInfo {
     int8_t nbDecimals{};
