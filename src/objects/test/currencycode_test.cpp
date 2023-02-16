@@ -77,6 +77,22 @@ TEST(CurrencyCodeTest, InvalidString) {
   EXPECT_THROW(CurrencyCode("invchar~"), invalid_argument);
 }
 
+TEST(CurrencyCodeTest, IEqual) {
+  static_assert(CurrencyCode("XRP").iequal("xrP"));
+  EXPECT_TRUE(CurrencyCode("eur").iequal("EUR"));
+  EXPECT_TRUE(CurrencyCode("eur").iequal("Eur"));
+  EXPECT_TRUE(CurrencyCode("BABYDOGE").iequal("babyDoge"));
+  EXPECT_TRUE(CurrencyCode("1INCH").iequal("1INCH"));
+
+  static_assert(!CurrencyCode("XRP").iequal("XRG"));
+  EXPECT_FALSE(CurrencyCode("eur").iequal("FUR"));
+  EXPECT_FALSE(CurrencyCode("eur").iequal("EUH"));
+  EXPECT_FALSE(CurrencyCode("BABYDOGE").iequal("babyoge"));
+  EXPECT_FALSE(CurrencyCode("BABYDOGE").iequal("babyDog"));
+  EXPECT_FALSE(CurrencyCode("inch").iequal("1INCH"));
+  EXPECT_FALSE(CurrencyCode("1inc").iequal("1INCH"));
+}
+
 TEST(CurrencyCodeTest, Size) {
   EXPECT_EQ(0U, CurrencyCode("").size());
   EXPECT_EQ(1U, CurrencyCode("1").size());
