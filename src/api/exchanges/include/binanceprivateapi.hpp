@@ -46,9 +46,9 @@ class BinancePrivate : public ExchangePrivate {
   PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                             const TradeInfo& tradeInfo) override;
 
-  OrderInfo cancelOrder(const OrderRef& orderRef) override { return queryOrder(orderRef, true); }
+  OrderInfo cancelOrder(const OrderRef& orderRef) override { return queryOrder(orderRef, HttpRequestType::kDelete); }
 
-  OrderInfo queryOrderInfo(const OrderRef& orderRef) override { return queryOrder(orderRef, false); }
+  OrderInfo queryOrderInfo(const OrderRef& orderRef) override { return queryOrder(orderRef, HttpRequestType::kGet); }
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
 
@@ -58,7 +58,7 @@ class BinancePrivate : public ExchangePrivate {
                                           const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
-  OrderInfo queryOrder(const OrderRef& orderRef, bool isCancel);
+  OrderInfo queryOrder(const OrderRef& orderRef, HttpRequestType requestType);
 
   bool checkMarketAppendSymbol(Market m, CurlPostData& params);
 
