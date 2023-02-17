@@ -403,11 +403,10 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   return placeOrderInfo;
 }
 
-OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, bool isCancel) {
+OrderInfo BinancePrivate::queryOrder(const OrderRef& orderRef, HttpRequestType requestType) {
   const Market m = orderRef.m;
   const CurrencyCode fromCurrencyCode = orderRef.side == TradeSide::kSell ? m.base() : m.quote();
   const CurrencyCode toCurrencyCode = orderRef.side == TradeSide::kBuy ? m.base() : m.quote();
-  const HttpRequestType requestType = isCancel ? HttpRequestType::kDelete : HttpRequestType::kGet;
   const string assetsStr = m.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   json result =
