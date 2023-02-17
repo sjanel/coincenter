@@ -74,7 +74,7 @@ json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::stri
 
 template <class ValueType>
 bool LoadCurrencyInfoField(const json& currencyOrderInfoJson, std::string_view keyStr, ValueType& val, TimePoint& ts) {
-  auto subPartIt = currencyOrderInfoJson.find(keyStr.data());
+  auto subPartIt = currencyOrderInfoJson.find(keyStr);
   if (subPartIt != currencyOrderInfoJson.end()) {
     auto valIt = subPartIt->find(kValueKeyStr);
     auto tsIt = subPartIt->find(kTimestampKeyStr);
@@ -362,18 +362,18 @@ Orders BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
         continue;
       }
 
-      string id = std::move(orderDetails[kOrderIdParamStr.data()].get_ref<string&>());
+      string id = std::move(orderDetails[kOrderIdParamStr].get_ref<string&>());
       if (!openedOrdersConstraints.validateOrderId(id)) {
         continue;
       }
 
-      CurrencyCode priceCur(orderDetails[kPaymentCurParamStr.data()].get<std::string_view>());
+      CurrencyCode priceCur(orderDetails[kPaymentCurParamStr].get<std::string_view>());
       MonetaryAmount originalVolume(orderDetails["units"].get<std::string_view>(), volumeCur);
       MonetaryAmount remainingVolume(orderDetails["units_remaining"].get<std::string_view>(), volumeCur);
       MonetaryAmount matchedVolume = originalVolume - remainingVolume;
       MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
       TradeSide side =
-          orderDetails[kTypeParamStr.data()].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+          orderDetails[kTypeParamStr].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
       openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
     }
@@ -436,7 +436,7 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
       }
 
       // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
-      string id = std::move(trx[kOrderCurrencyParamStr.data()].get_ref<string&>());
+      string id = std::move(trx[kOrderCurrencyParamStr].get_ref<string&>());
       id.push_back('-');
       id.append(ToString(microsecondsSinceEpoch));
 
@@ -555,7 +555,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   bool currencyInfoUpdated = false;
   for (int nbRetries = 0; nbRetries < kNbMaxRetries; ++nbRetries) {
     json result = PrivateQuery(_curlHandle, _apiKey, endpoint, placePostData);
-    auto orderIdIt = result.find(kOrderIdParamStr.data());
+    auto orderIdIt = result.find(kOrderIdParamStr);
     if (orderIdIt == result.end()) {
       currencyInfoUpdated = true;
       if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
@@ -620,16 +620,16 @@ OrderInfo BithumbPrivate::cancelOrder(const OrderRef& orderRef) {
 }
 
 namespace {
-CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view id) {
+CurlPostData OrderInfoPostData(Market m, TradeSide side, std::string_view orderId) {
   CurlPostData ret;
   auto baseStr = m.base().str();
   auto quoteStr = m.quote().str();
   ret.reserve(kOrderCurrencyParamStr.size() + kPaymentCurParamStr.size() + kTypeParamStr.size() +
-              kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + id.size() + 10U);
+              kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + orderId.size() + 10U);
   ret.append(kOrderCurrencyParamStr, baseStr);
   ret.append(kPaymentCurParamStr, quoteStr);
   ret.append(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
-  ret.append(kOrderIdParamStr, id);
+  ret.append(kOrderIdParamStr, orderId);
   return ret;
 }
 }  // namespace
@@ -646,7 +646,7 @@ OrderInfo BithumbPrivate::queryOrderInfo(const OrderRef& orderRef) {
   CurlPostData postData = OrderInfoPostData(m, orderRef.side, orderRef.id);
   json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", postData)["data"];
 
-  const bool isClosed = result.empty() || result.front()[kOrderIdParamStr.data()] != orderRef.id;
+  const bool isClosed = result.empty() || result.front()[kOrderIdParamStr].get<std::string_view>() != orderRef.id;
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (isClosed) {
     postData.erase(kTypeParamStr);
@@ -693,7 +693,7 @@ SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithd
     checkWithdrawPostData.set("searchGb", searchGb);
     json trxList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", checkWithdrawPostData)["data"];
     for (const json& trx : trxList) {
-      assert(trx[kOrderCurrencyParamStr.data()].get<std::string_view>() == currencyCode);
+      assert(currencyCode.iequal(trx[kOrderCurrencyParamStr].get<std::string_view>()));
       std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
       MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
       if (realFee != withdrawFee) {
