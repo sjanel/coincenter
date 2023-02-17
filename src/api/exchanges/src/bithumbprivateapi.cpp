@@ -412,8 +412,7 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
   for (CurrencyCode currencyCode : currencies) {
     options.set(kOrderCurrencyParamStr, currencyCode.str());
     json txrList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", options)["data"];
-    for (const json& trx : txrList) {
-      CurrencyCode currencyCode(trx[kOrderCurrencyParamStr.data()].get<std::string_view>());
+    for (json& trx : txrList) {
       std::string_view amountStr = trx["units"].get<std::string_view>();  // starts with "+ "
       // In the official documentation, transfer_date field is an integer.
       // But in fact (as of 2022) it's a string. Let's support both types to be safe.
@@ -437,7 +436,7 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
       }
 
       // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
-      string id = currencyCode.str();
+      string id = std::move(trx[kOrderCurrencyParamStr.data()].get_ref<string&>());
       id.push_back('-');
       id.append(ToString(microsecondsSinceEpoch));
 
