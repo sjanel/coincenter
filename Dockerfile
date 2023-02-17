@@ -1,5 +1,5 @@
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM alpine:3.16.3 AS build
+FROM alpine:3.16.4 AS build
 
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apk update && \
