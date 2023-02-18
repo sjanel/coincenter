@@ -38,7 +38,7 @@ bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatS
 
 void Exchange::updateCacheFile() const {
   _exchangePublic.updateCacheFile();
-  if (_pExchangePrivate) {
+  if (_pExchangePrivate != nullptr) {
     _pExchangePrivate->updateCacheFile();
   }
 }

@@ -121,8 +121,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   // Parse trade / buy / sell options
   // First, check that at most one master trade option is set
   // (options would be set for all trades otherwise which is not very intuitive)
-  if (!cmdLineOptions.buy.empty() + !cmdLineOptions.sell.empty() + !cmdLineOptions.sellAll.empty() +
-          !cmdLineOptions.tradeAll.empty() >
+  if (static_cast<int>(!cmdLineOptions.buy.empty()) + static_cast<int>(!cmdLineOptions.sell.empty()) +
+          static_cast<int>(!cmdLineOptions.sellAll.empty()) + static_cast<int>(!cmdLineOptions.tradeAll.empty()) >
       1) {
     throw invalid_argument("Only one trade can be done at a time");
   }

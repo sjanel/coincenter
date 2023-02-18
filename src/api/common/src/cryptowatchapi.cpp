@@ -43,7 +43,7 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
   if (loadFromFileCacheAtInit) {
     json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readJson();
     if (!data.empty()) {
-      int64_t timeepoch = data["timeepoch"].get<int64_t>();
+      int64_t timeEpoch = data["timeepoch"].get<int64_t>();
       auto& fiatsFile = data["fiats"];
       Fiats fiats;
       fiats.reserve(static_cast<Fiats::size_type>(fiatsFile.size()));
@@ -52,12 +52,12 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
         fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
       }
       log::info("Loaded {} fiats from cache file", fiats.size());
-      _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeepoch)));
+      _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeEpoch)));
     }
   }
 }
 
-std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, Market m) {
+std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, Market mk) {
   string marketPrefix("market:");
   marketPrefix.append(exchangeName);
   marketPrefix.push_back(':');
@@ -66,15 +66,15 @@ std::optional<double> CryptowatchAPI::queryPrice(std::string_view exchangeName, 
 
   for (int marketPos = 0; marketPos < 2; ++marketPos) {
     string mStr = marketPrefix;
-    mStr.append(m.assetsPairStrLower());
+    mStr.append(mk.assetsPairStrLower());
 
     const json& result = _allPricesCache.get();
     auto foundIt = result.find(mStr);
     if (foundIt != result.end()) {
-      const double p = static_cast<double>(*foundIt);
-      return marketPos == 0 ? p : (1 / p);
+      const double price = static_cast<double>(*foundIt);
+      return marketPos == 0 ? price : (1 / price);
     }
-    m = m.reverse();  // Second try with reversed market
+    mk = mk.reverse();  // Second try with reversed market
   }
   return std::nullopt;
 }
@@ -125,7 +125,7 @@ void CryptowatchAPI::updateCacheFile() const {
     }
   }
   data.clear();
-  if (fiatsPtrLastUpdatedTimePair.first) {
+  if (fiatsPtrLastUpdatedTimePair.first != nullptr) {
     for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
       data["fiats"].emplace_back(fiatCode.str());
     }

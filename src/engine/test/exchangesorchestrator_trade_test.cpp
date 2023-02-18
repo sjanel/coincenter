@@ -29,15 +29,15 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
     case OrderBook::kExpect3Calls:                                                                                  \
     case OrderBook::kExpect4Calls:                                                                                  \
     case OrderBook::kExpect5Calls:                                                                                  \
-      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth))                                                         \
+      EXPECT_CALL(exchangePublic, queryOrderBook(mk, depth))                                                        \
           .Times(static_cast<int>(orderBookCall))                                                                   \
           .WillRepeatedly(testing::Return(marketOrderbook));                                                        \
       break;                                                                                                        \
     case OrderBook::kExpectCall:                                                                                    \
-      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth)).WillOnce(testing::Return(marketOrderbook));             \
+      EXPECT_CALL(exchangePublic, queryOrderBook(mk, depth)).WillOnce(testing::Return(marketOrderbook));            \
       break;                                                                                                        \
     case OrderBook::kExpectNoCall:                                                                                  \
-      EXPECT_CALL(exchangePublic, queryOrderBook(m, depth)).Times(0);                                               \
+      EXPECT_CALL(exchangePublic, queryOrderBook(mk, depth)).Times(0);                                              \
       break;                                                                                                        \
     case OrderBook::kNoExpectation:                                                                                 \
       break;                                                                                                        \
@@ -122,16 +122,16 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
   TradedAmounts expectSingleTrade(int exchangePrivateNum, MonetaryAmount from, CurrencyCode toCurrency, TradeSide side,
                                   TradableMarkets tradableMarketsCall, OrderBook orderBookCall,
                                   AllOrderBooks allOrderBooksCall, bool makeMarketAvailable) {
-    Market m(from.currencyCode(), toCurrency);
+    Market mk(from.currencyCode(), toCurrency);
     if (side == TradeSide::kBuy) {
-      m = m.reverse();
+      mk = mk.reverse();
     }
 
     // Choose price of 1 such that we do not need to make a division if it's a buy.
-    MonetaryAmount vol(from, m.base());
-    MonetaryAmount pri(1, m.quote());
+    MonetaryAmount vol(from, mk.base());
+    MonetaryAmount pri(1, mk.quote());
 
-    MonetaryAmount maxVol(std::numeric_limits<MonetaryAmount::AmountType>::max(), m.base(),
+    MonetaryAmount maxVol(std::numeric_limits<MonetaryAmount::AmountType>::max(), mk.base(),
                           volAndPriDec1.volNbDecimals);
 
     MonetaryAmount tradedTo(from, toCurrency);
@@ -147,8 +147,8 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     PlaceOrderInfo placeOrderInfo(orderInfo, orderId);
 
     if (makeMarketAvailable) {
-      markets.insert(m);
-      marketOrderBookMap.insert_or_assign(m, marketOrderbook);
+      markets.insert(mk);
+      marketOrderBookMap.insert_or_assign(mk, marketOrderbook);
     }
 
     // EXPECT_CALL does not allow references. Or I did not found the way to make it work, so we use ugly macros here

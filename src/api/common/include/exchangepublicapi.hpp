@@ -86,16 +86,16 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the order book of given market.
   /// It should be more precise that previous version with possibility to go deeper.
-  virtual MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) = 0;
+  virtual MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) = 0;
 
   /// Retrieve the total volume exchange on given market in the last 24 hours.
-  virtual MonetaryAmount queryLast24hVolume(Market m) = 0;
+  virtual MonetaryAmount queryLast24hVolume(Market mk) = 0;
 
   /// Retrieve an ordered vector of recent last trades
-  virtual LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) = 0;
+  virtual LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
 
   /// Retrieve the last price of given market.
-  virtual MonetaryAmount queryLastPrice(Market m) = 0;
+  virtual MonetaryAmount queryLastPrice(Market mk) = 0;
 
   Fiats queryFiats() { return _cryptowatchApi.queryFiats(); }
 
@@ -128,10 +128,10 @@ class ExchangePublic : public ExchangeBase {
   CurrenciesPath findCurrenciesPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                                     bool considerStableCoinsAsFiats = false);
 
-  std::optional<MonetaryAmount> computeLimitOrderPrice(Market m, CurrencyCode fromCurrencyCode,
+  std::optional<MonetaryAmount> computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
                                                        const PriceOptions &priceOptions);
 
-  std::optional<MonetaryAmount> computeAvgOrderPrice(Market m, MonetaryAmount from, const PriceOptions &priceOptions);
+  std::optional<MonetaryAmount> computeAvgOrderPrice(Market mk, MonetaryAmount from, const PriceOptions &priceOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
   Market retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets);

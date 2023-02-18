@@ -50,7 +50,7 @@ class FiatConverter {
     TimePoint lastUpdatedTime;
   };
 
-  std::optional<double> queryCurrencyRate(Market m);
+  std::optional<double> queryCurrencyRate(Market mk);
 
   using PricesMap = std::unordered_map<Market, PriceTimedValue>;
 

@@ -23,9 +23,9 @@ class MockExchangePublic : public ExchangePublic {
   MOCK_METHOD(MonetaryAmount, queryWithdrawalFee, (CurrencyCode currencyCode), (override));
   MOCK_METHOD(bool, isWithdrawalFeesSourceReliable, (), (const override));
   MOCK_METHOD(MarketOrderBookMap, queryAllApproximatedOrderBooks, (int depth), (override));
-  MOCK_METHOD(MarketOrderBook, queryOrderBook, (Market m, int depth), (override));
-  MOCK_METHOD(MonetaryAmount, queryLast24hVolume, (Market m), (override));
-  MOCK_METHOD(LastTradesVector, queryLastTrades, (Market m, int nbTrades), (override));
-  MOCK_METHOD(MonetaryAmount, queryLastPrice, (Market m), (override));
+  MOCK_METHOD(MarketOrderBook, queryOrderBook, (Market mk, int depth), (override));
+  MOCK_METHOD(MonetaryAmount, queryLast24hVolume, (Market mk), (override));
+  MOCK_METHOD(LastTradesVector, queryLastTrades, (Market mk, int nbTrades), (override));
+  MOCK_METHOD(MonetaryAmount, queryLastPrice, (Market mk), (override));
 };
 }  // namespace cct::api

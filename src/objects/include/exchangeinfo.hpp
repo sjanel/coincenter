@@ -46,8 +46,8 @@ class ExchangeInfo {
 
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
-  MonetaryAmount applyFee(MonetaryAmount m, FeeType feeType) const {
-    return m * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
+  MonetaryAmount applyFee(MonetaryAmount mk, FeeType feeType) const {
+    return mk * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
   }
 
   MonetaryAmount getMakerFeeRatio() const { return _generalMakerRatio; }

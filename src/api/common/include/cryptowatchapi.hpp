@@ -31,9 +31,9 @@ class CryptowatchAPI : public ExchangeBase {
     return _supportedExchanges.get().contains(exchangeName);
   }
 
-  /// Query the approximate price of market 'm' for exchange name 'exchangeName'.
+  /// Query the approximate price of market 'mk' for exchange name 'exchangeName'.
   /// Data may not be up to date, but should respond quickly.
-  std::optional<double> queryPrice(std::string_view exchangeName, Market m);
+  std::optional<double> queryPrice(std::string_view exchangeName, Market mk);
 
   /// Returns a new set of fiat currencies.
   Fiats queryFiats() {

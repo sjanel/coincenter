@@ -135,10 +135,10 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
     log::trace("Accept {}-{} Kucoin asset pair", baseAsset, quoteAsset);
     CurrencyCode base(baseAsset);
     CurrencyCode quote(quoteAsset);
-    Market m(base, quote);
-    markets.insert(m);
+    Market mk(base, quote);
+    markets.insert(mk);
 
-    MarketInfo& marketInfo = marketInfoMap[m];
+    MarketInfo& marketInfo = marketInfoMap[std::move(mk)];
 
     marketInfo.baseMinSize = MonetaryAmount(marketDetails["baseMinSize"].get<std::string_view>(), base);
     marketInfo.quoteMinSize = MonetaryAmount(marketDetails["quoteMinSize"].get<std::string_view>(), quote);
@@ -178,20 +178,20 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   const auto& [markets, marketInfoMap] = _marketsCache.get();
   json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
   for (const json& tickerDetails : data["ticker"]) {
-    Market m(tickerDetails["symbol"].get<std::string_view>(), '-');
-    if (!markets.contains(m)) {
-      log::trace("Market {} is not present", m);
+    Market mk(tickerDetails["symbol"].get<std::string_view>(), '-');
+    if (!markets.contains(mk)) {
+      log::trace("Market {} is not present", mk);
       continue;
     }
-    MonetaryAmount askPri(tickerDetails["sell"].get<std::string_view>(), m.quote());
-    MonetaryAmount bidPri(tickerDetails["buy"].get<std::string_view>(), m.quote());
+    MonetaryAmount askPri(tickerDetails["sell"].get<std::string_view>(), mk.quote());
+    MonetaryAmount bidPri(tickerDetails["buy"].get<std::string_view>(), mk.quote());
     // There is no volume in the response, we need to emulate it, based on the 24h volume
-    MonetaryAmount dayVolume(tickerDetails["vol"].get<std::string_view>(), m.base());
+    MonetaryAmount dayVolume(tickerDetails["vol"].get<std::string_view>(), mk.base());
     if (dayVolume == 0) {
-      log::trace("No volume for {}", m);
+      log::trace("No volume for {}", mk);
       continue;
     }
-    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
 
     // Use avg traded volume by second as ask/bid vol
     MonetaryAmount askVol = dayVolume / (2 * 24 * 3600);
@@ -204,7 +204,7 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
     VolAndPriNbDecimals volAndPriNbDecimals{marketInfo.baseIncrement.nbDecimals(),
                                             marketInfo.priceIncrement.nbDecimals()};
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
+    ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Kucoin ticker information from {} markets", ret.size());
@@ -213,14 +213,14 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
 
 namespace {
 template <class InputIt>
-void FillOrderBook(Market m, int depth, bool isAsk, InputIt beg, InputIt end, vector<OrderBookLine>& orderBookLines) {
-  int n = 0;
+void FillOrderBook(Market mk, int depth, bool isAsk, InputIt beg, InputIt end, vector<OrderBookLine>& orderBookLines) {
+  int currentDepth = 0;
   for (auto it = beg; it != end; ++it) {
-    MonetaryAmount price((*it)[0].template get<std::string_view>(), m.quote());
-    MonetaryAmount amount((*it)[1].template get<std::string_view>(), m.base());
+    MonetaryAmount price((*it)[0].template get<std::string_view>(), mk.quote());
+    MonetaryAmount amount((*it)[1].template get<std::string_view>(), mk.base());
 
     orderBookLines.emplace_back(amount, price, isAsk);
-    if (++n == depth) {
+    if (++currentDepth == depth) {
       if (++it != end) {
         log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
       }
@@ -230,7 +230,7 @@ void FillOrderBook(Market m, int depth, bool isAsk, InputIt beg, InputIt end, ve
 }
 }  // namespace
 
-MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
+MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Kucoin has a fixed range of authorized values for depth
   static constexpr int kAuthorizedDepths[] = {20, 100};
   auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
@@ -242,7 +242,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
   string endpoint("/api/v1/market/orderbook/level2_");
   AppendString(endpoint, *lb);
 
-  json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(m));
+  json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
   const json& asks = asksAndBids["asks"];
   const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
@@ -251,18 +251,18 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market m, int depth) {
   for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
     if (isAsk) {
-      FillOrderBook(m, depth, isAsk, asksOrBids->begin(), asksOrBids->end(), orderBookLines);
+      FillOrderBook(mk, depth, isAsk, asksOrBids->begin(), asksOrBids->end(), orderBookLines);
     } else {
       // Reverse iterate as they are received in descending order
-      FillOrderBook(m, depth, isAsk, asksOrBids->rbegin(), asksOrBids->rend(), orderBookLines);
+      FillOrderBook(mk, depth, isAsk, asksOrBids->rbegin(), asksOrBids->rend(), orderBookLines);
     }
   }
-  return MarketOrderBook(m, orderBookLines);
+  return MarketOrderBook(mk, orderBookLines);
 }
 
-MonetaryAmount KucoinPublic::sanitizePrice(Market m, MonetaryAmount pri) {
+MonetaryAmount KucoinPublic::sanitizePrice(Market mk, MonetaryAmount pri) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
-  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
   MonetaryAmount sanitizedPri = pri;
   if (pri < marketInfo.priceIncrement) {
     sanitizedPri = marketInfo.priceIncrement;
@@ -275,9 +275,9 @@ MonetaryAmount KucoinPublic::sanitizePrice(Market m, MonetaryAmount pri) {
   return sanitizedPri;
 }
 
-MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
+MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
-  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
   MonetaryAmount sanitizedVol = vol;
   // TODO: Kucoin documentation is not clear about this, this would probably need to be adjusted
   if (sanitizedVol < marketInfo.baseMinSize) {
@@ -293,18 +293,18 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market m, MonetaryAmount vol) {
   return sanitizedVol;
 }
 
-MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(m));
-  return MonetaryAmount(result["vol"].get<std::string_view>(), m.base());
+MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
+  return MonetaryAmount(result["vol"].get<std::string_view>(), mk.base());
 }
 
-LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
-  json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(m));
+LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+  json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
   for (const json& detail : result) {
-    MonetaryAmount amount(detail["size"].get<std::string_view>(), m.base());
-    MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
+    MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
+    MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // time is in nanoseconds
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
     TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
@@ -315,8 +315,8 @@ LastTradesVector KucoinPublic::queryLastTrades(Market m, int) {
   return ret;
 }
 
-MonetaryAmount KucoinPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(m));
-  return MonetaryAmount(result["price"].get<std::string_view>(), m.quote());
+MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
+  return MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
 }
 }  // namespace cct::api

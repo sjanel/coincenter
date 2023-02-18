@@ -20,13 +20,13 @@ namespace {
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
 constexpr void RemovePrefixSpaces(std::string_view &str) {
-  str.remove_prefix(std::find_if(str.begin(), str.end(), [](char c) { return c != ' '; }) - str.begin());
+  str.remove_prefix(std::find_if(str.begin(), str.end(), [](char ch) { return ch != ' '; }) - str.begin());
 }
 constexpr void RemoveTrailingSpaces(std::string_view &str) {
-  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char c) { return c != ' '; }) - str.rbegin());
+  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char ch) { return ch != ' '; }) - str.rbegin());
 }
 constexpr void RemoveTrailingZeros(std::string_view &str) {
-  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char c) { return c != '0'; }) - str.rbegin());
+  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char ch) { return ch != '0'; }) - str.rbegin());
 }
 
 inline int ParseNegativeChar(std::string_view &amountStr) {
@@ -264,18 +264,18 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
     const AmountType epsilon = ipow(10, currentNbDecimals - nbDecimals);
     if (_amount < 0) {
       if (roundType != RoundType::kUp) {
-        const AmountType r = epsilon + (_amount % epsilon);
-        if (_amount >= std::numeric_limits<AmountType>::min() + r &&  // Protection against overflow
-            (roundType == RoundType::kDown || 2 * r < epsilon)) {
-          _amount -= r;
+        const AmountType rem = epsilon + (_amount % epsilon);
+        if (_amount >= std::numeric_limits<AmountType>::min() + rem &&  // Protection against overflow
+            (roundType == RoundType::kDown || 2 * rem < epsilon)) {
+          _amount -= rem;
         }
       }
     } else {
       if (roundType != RoundType::kDown) {
-        const AmountType r = epsilon - (_amount % epsilon);
-        if (_amount <= std::numeric_limits<AmountType>::max() - r &&  // Protection against overflow
-            (roundType == RoundType::kUp || 2 * r <= epsilon)) {
-          _amount += r;
+        const AmountType rem = epsilon - (_amount % epsilon);
+        if (_amount <= std::numeric_limits<AmountType>::max() - rem &&  // Protection against overflow
+            (roundType == RoundType::kUp || 2 * rem <= epsilon)) {
+          _amount += rem;
         }
       }
     }
@@ -284,17 +284,17 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
   sanitizeDecimals(currentNbDecimals, nbDecimals);
 }
 
-std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const {
-  if (currencyCode() != o.currencyCode()) {
+std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &other) const {
+  if (currencyCode() != other.currencyCode()) {
     throw exception("Cannot compare amounts with different currency");
   }
   int8_t lhsNbDecimals = nbDecimals();
-  int8_t rhsNbDecimals = o.nbDecimals();
+  int8_t rhsNbDecimals = other.nbDecimals();
   if (lhsNbDecimals == rhsNbDecimals) {
-    return _amount <=> o._amount;
+    return _amount <=> other._amount;
   }
   AmountType lhsIntAmount = integerPart();
-  AmountType rhsIntAmount = o.integerPart();
+  AmountType rhsIntAmount = other.integerPart();
   if (lhsIntAmount != rhsIntAmount) {
     return lhsIntAmount <=> rhsIntAmount;
   }
@@ -312,22 +312,22 @@ std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &o) const 
     }
     return lhsAmount <=> rhsAmount;
   };
-  return adjustDecimals(_amount, o._amount, lhsNbDecimals, rhsNbDecimals);
+  return adjustDecimals(_amount, other._amount, lhsNbDecimals, rhsNbDecimals);
 }
 
-MonetaryAmount MonetaryAmount::operator+(MonetaryAmount o) const {
+MonetaryAmount MonetaryAmount::operator+(MonetaryAmount other) const {
   if (_amount == 0 && _curWithDecimals.isNeutral()) {
-    return o;
+    return other;
   }
-  if (o._amount == 0 && o._curWithDecimals.isNeutral()) {
+  if (other._amount == 0 && other._curWithDecimals.isNeutral()) {
     return *this;
   }
-  if (currencyCode() != o.currencyCode()) {
+  if (currencyCode() != other.currencyCode()) {
     throw exception("Addition is only possible on amounts with same currency");
   }
   AmountType lhsAmount = _amount;
-  AmountType rhsAmount = o._amount;
-  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, nbDecimals(), o.nbDecimals());
+  AmountType rhsAmount = other._amount;
+  int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, nbDecimals(), other.nbDecimals());
   AmountType resAmount = lhsAmount + rhsAmount;
   if (resAmount >= kMaxAmountFullNDigits || resAmount <= -kMaxAmountFullNDigits) {
     resAmount /= 10;
@@ -427,12 +427,10 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
 
   int8_t lhsNbDecimals = nbDecimals() + lhsNbDigitsToAdd;
 
-  lhsNbDigits += lhsNbDigitsToAdd;
-
   UnsignedAmountType totalIntPart = 0;
   int8_t nbDecs = lhsNbDecimals - div.nbDecimals();
   int8_t totalPartNbDigits;
-  do {
+  while (true) {
     totalIntPart += lhs / rhs;  // Add integral part
     totalPartNbDigits = static_cast<int8_t>(ndigits(totalIntPart));
     lhs %= rhs;  // Keep the rest
@@ -448,7 +446,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     totalIntPart *= multPower;
     lhs *= multPower;
     nbDecs += nbDigitsToAdd;
-  } while (true);
+  }
 
   if (nbDecs < 0) {
     throw exception("Overflow during divide");
@@ -466,8 +464,8 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   return MonetaryAmount(static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs);
 }
 
-std::ostream &operator<<(std::ostream &os, const MonetaryAmount &m) {
-  os << m.str();
+std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma) {
+  os << ma.str();
   return os;
 }
 

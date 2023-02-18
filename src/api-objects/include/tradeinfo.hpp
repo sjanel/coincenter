@@ -12,12 +12,12 @@ namespace cct::api {
 using UserRefInt = int32_t;
 
 struct TradeContext {
-  TradeContext(Market market, TradeSide s, UserRefInt userRef = 0) : m(market), side(s), userRef(userRef) {}
+  TradeContext(Market market, TradeSide s, UserRefInt userRef = 0) : mk(market), side(s), userRef(userRef) {}
 
-  CurrencyCode fromCur() const { return side == TradeSide::kSell ? m.base() : m.quote(); }
-  CurrencyCode toCur() const { return side == TradeSide::kBuy ? m.base() : m.quote(); }
+  CurrencyCode fromCur() const { return side == TradeSide::kSell ? mk.base() : mk.quote(); }
+  CurrencyCode toCur() const { return side == TradeSide::kBuy ? mk.base() : mk.quote(); }
 
-  Market m;
+  Market mk;
   TradeSide side;
   UserRefInt userRef;  // Used by Kraken for instance, used to group orders queries context
 };

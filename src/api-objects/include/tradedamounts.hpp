@@ -28,7 +28,7 @@ struct TradedAmounts {
 
   bool operator==(const TradedAmounts &) const = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const TradedAmounts &a);
+  friend std::ostream &operator<<(std::ostream &os, const TradedAmounts &tradedAmounts);
 
   string str() const;
 

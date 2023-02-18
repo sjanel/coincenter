@@ -17,12 +17,12 @@ ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConvert
       _coincenterInfo(coincenterInfo),
       _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
 
-std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, CurrencyCode toCurrency,
+std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
                                                       MarketOrderBookMap &marketOrderBookMap, bool canUseCryptowatchAPI,
                                                       const PriceOptions &priceOptions) {
-  if (a.currencyCode() == toCurrency) {
-    return a;
+  if (amount.currencyCode() == toCurrency) {
+    return amount;
   }
   if (conversionPath.empty()) {
     return std::nullopt;
@@ -31,10 +31,10 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
       priceOptions.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
   bool canUseCryptoWatch =
       canUseCryptowatchAPI && priceOptions.isAveragePrice() && _cryptowatchApi.queryIsExchangeSupported(_name);
-  for (Market m : conversionPath) {
-    CurrencyCode mFromCurrencyCode = a.currencyCode();
-    assert(m.canTrade(mFromCurrencyCode));
-    CurrencyCode mToCurrencyCode = m.base() == a.currencyCode() ? m.quote() : m.base();
+  for (Market mk : conversionPath) {
+    CurrencyCode mFromCurrencyCode = amount.currencyCode();
+    assert(mk.canTrade(mFromCurrencyCode));
+    CurrencyCode mToCurrencyCode = mk.base() == amount.currencyCode() ? mk.quote() : mk.base();
     std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(mFromCurrencyCode);
     CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
     std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
@@ -42,31 +42,31 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
     bool isFromFiatLike = optFiatLikeFrom || fiats.contains(mFromCurrencyCode);
     bool isToFiatLike = optFiatLikeTo || fiats.contains(mToCurrencyCode);
     if (isFromFiatLike && isToFiatLike) {
-      a = _fiatConverter.convert(MonetaryAmount(a, fiatFromLikeCurCode), fiatToLikeCurCode);
+      amount = _fiatConverter.convert(MonetaryAmount(amount, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
       if (canUseCryptoWatch) {
         std::optional<double> rate = _cryptowatchApi.queryPrice(_name, Market(mFromCurrencyCode, mToCurrencyCode));
         if (rate) {
-          a = a.toNeutral() * MonetaryAmount(*rate, mToCurrencyCode);
+          amount = amount.toNeutral() * MonetaryAmount(*rate, mToCurrencyCode);
           continue;
         }
       }
       if (marketOrderBookMap.empty()) {
         marketOrderBookMap = queryAllApproximatedOrderBooks(1);
       }
-      auto it = marketOrderBookMap.find(m);
+      auto it = marketOrderBookMap.find(mk);
       if (it == marketOrderBookMap.end()) {
         return std::nullopt;
       }
       const MarketOrderBook &marketOrderbook = it->second;
-      std::optional<MonetaryAmount> optA = marketOrderbook.convert(a, priceOptions);
+      std::optional<MonetaryAmount> optA = marketOrderbook.convert(amount, priceOptions);
       if (!optA) {
         return std::nullopt;
       }
-      a = _exchangeInfo.applyFee(*optA, feeType);
+      amount = _exchangeInfo.applyFee(*optA, feeType);
     }
   }
-  return a;
+  return amount;
 }
 
 namespace {
@@ -74,7 +74,8 @@ namespace {
 // Optimized struct containing a currency and a reverse bool to keep market directionality information
 struct CurrencyDir {
 #ifndef CCT_AGGR_INIT_CXX20
-  CurrencyDir(CurrencyCode c, bool b) : cur(c), isLastRealMarketReversed(b) {}
+  CurrencyDir(CurrencyCode cur, bool isLastRealMarketReversed)
+      : cur(cur), isLastRealMarketReversed(isLastRealMarketReversed) {}
 #endif
 
   CurrencyCode cur;
@@ -95,7 +96,7 @@ class CurrencyDirFastestPathComparator {
     // For equal path sizes, favor non-fiat currencies. Two reasons for this:
     // - In some countries, tax are automatically collected when any conversion to a fiat on an exchange is made
     // - It may have the highest volume, as fiats are only present on some regions
-    auto isFiat = [this](CurrencyDir c) { return _cryptowatchApi.queryIsCurrencyCodeFiat(c.cur); };
+    auto isFiat = [this](CurrencyDir curDir) { return _cryptowatchApi.queryIsCurrencyCodeFiat(curDir.cur); };
     return std::ranges::count_if(lhs, isFiat) > std::ranges::count_if(rhs, isFiat);
   }
 
@@ -147,11 +148,11 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
         return ret;
       }
     }
-    for (Market m : markets) {
-      if (m.canTrade(lastCurrencyCode)) {
+    for (Market mk : markets) {
+      if (mk.canTrade(lastCurrencyCode)) {
         CurrencyDirPath &newPath = searchPaths.emplace_back(path);
-        const bool isLastRealMarketReversed = lastCurrencyCode == m.quote();
-        const CurrencyCode newCur = m.opposite(lastCurrencyCode);
+        const bool isLastRealMarketReversed = lastCurrencyCode == mk.quote();
+        const CurrencyCode newCur = mk.opposite(lastCurrencyCode);
         newPath.emplace_back(newCur, isLastRealMarketReversed);
         std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
       }
@@ -176,27 +177,27 @@ ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode f
   if (!marketsPath.empty()) {
     ret.reserve(marketsPath.size() + 1U);
     ret.emplace_back(fromCurrency);
-    for (Market m : marketsPath) {
-      if (m.base() == ret.back()) {
-        ret.emplace_back(m.quote());
+    for (Market mk : marketsPath) {
+      if (mk.base() == ret.back()) {
+        ret.emplace_back(mk.quote());
       } else {
-        ret.emplace_back(m.base());
+        ret.emplace_back(mk.base());
       }
     }
   }
   return ret;
 }
 
-std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market m, CurrencyCode fromCurrencyCode,
+std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
                                                                      const PriceOptions &priceOptions) {
-  int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
-  return queryOrderBook(m, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
+  const int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
+  return queryOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
 }
 
-std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market m, MonetaryAmount from,
+std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, MonetaryAmount from,
                                                                    const PriceOptions &priceOptions) {
   if (priceOptions.isFixedPrice()) {
-    return MonetaryAmount(priceOptions.fixedPrice(), m.quote());
+    return MonetaryAmount(priceOptions.fixedPrice(), mk.quote());
   }
   int depth = 1;
   if (priceOptions.isRelativePrice()) {
@@ -204,18 +205,18 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market m, Mon
   } else if (priceOptions.priceStrategy() == PriceStrategy::kTaker) {
     depth = kDefaultDepth;
   }
-  return queryOrderBook(m, depth).computeAvgPrice(from, priceOptions);
+  return queryOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
 }
 
 Market ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
-  Market m(c1, c2);
-  if (!markets.contains(m)) {
-    m = m.reverse();
-    if (!markets.contains(m)) {
+  Market mk(c1, c2);
+  if (!markets.contains(mk)) {
+    mk = mk.reverse();
+    if (!markets.contains(mk)) {
       throw exception("Cannot find {}-{} nor {}-{} markets on {}", c1, c2, c2, c1, _name);
     }
   }
-  return m;
+  return mk;
 }
 
 MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) {
@@ -288,9 +289,9 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
 
   Market ret;
 
-  auto tryAppendBaseCurrency = [&](CurrencyCode cur) {
+  const auto tryAppendBaseCurrency = [&](CurrencyCode cur) {
     if (!cur.isNeutral()) {
-      auto firstMarketIt = std::ranges::partition_point(markets, [cur](Market m) { return m.base() < cur; });
+      auto firstMarketIt = std::ranges::partition_point(markets, [cur](Market mk) { return mk.base() < cur; });
       if (firstMarketIt != markets.end() && firstMarketIt->base() == cur) {
         ret = Market(cur, CurrencyCode());
         return true;
@@ -299,11 +300,11 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
     return false;
   };
 
-  auto tryAppendQuoteCurrency = [&](CurrencyCode cur1, CurrencyCode cur2) {
-    ret = Market(cur1, cur2);
+  const auto tryAppendQuoteCurrency = [&](CurrencyCode lhs, CurrencyCode rhs) {
+    ret = Market(lhs, rhs);
     if (!markets.contains(ret)) {
       log::debug("No market {} on {}", name(), ret);
-      ret = Market(cur1, CurrencyCode());
+      ret = Market(lhs, CurrencyCode());
     }
   };
 

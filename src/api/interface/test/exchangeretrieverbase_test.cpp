@@ -8,7 +8,7 @@ class ExchangeTest {
  public:
   using ExchangePublic = ExchangeTest;
 
-  ExchangeTest(std::string_view n, std::string_view kn) : _name(n), _keyName(kn) {}
+  ExchangeTest(std::string_view name, std::string_view keyName) : _name(name), _keyName(keyName) {}
 
   std::string_view name() const { return _name; }
   std::string_view keyName() const { return _keyName; }

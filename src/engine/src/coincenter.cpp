@@ -177,13 +177,13 @@ ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNam
   return ret;
 }
 
-MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
+MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                                CurrencyCode equiCurrencyCode,
                                                                std::optional<int> depth) {
   MarketOrderBookConversionRates ret =
-      _exchangesOrchestrator.getMarketOrderBooks(m, exchangeNames, equiCurrencyCode, depth);
+      _exchangesOrchestrator.getMarketOrderBooks(mk, exchangeNames, equiCurrencyCode, depth);
 
-  _metricsExporter.exportOrderbookMetrics(m, ret);
+  _metricsExporter.exportOrderbookMetrics(mk, ret);
 
   return ret;
 }
@@ -229,8 +229,8 @@ TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
   return _exchangesOrchestrator.dustSweeper(privateExchangeNames, currencyCode);
 }
 
-ConversionPathPerExchange Coincenter::getConversionPaths(Market m, ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getConversionPaths(m, exchangeNames);
+ConversionPathPerExchange Coincenter::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getConversionPaths(mk, exchangeNames);
 }
 
 MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
@@ -244,8 +244,8 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingCurrency(CurrencyCo
   return _exchangesOrchestrator.getExchangesTradingCurrency(currencyCode, exchangeNames, shouldBeWithdrawable);
 }
 
-UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getExchangesTradingMarket(m, exchangeNames);
+UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getExchangesTradingMarket(mk, exchangeNames);
 }
 
 TradedAmountsPerExchange Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
@@ -277,20 +277,21 @@ MonetaryAmountPerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode,
   return _exchangesOrchestrator.getWithdrawFees(currencyCode, exchangeNames);
 }
 
-MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getLast24hTradedVolumePerExchange(m, exchangeNames);
+MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getLast24hTradedVolumePerExchange(mk, exchangeNames);
 }
 
-LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames, int nbLastTrades) {
-  LastTradesPerExchange ret = _exchangesOrchestrator.getLastTradesPerExchange(m, exchangeNames, nbLastTrades);
+LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
+                                                           int nbLastTrades) {
+  LastTradesPerExchange ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
 
-  _metricsExporter.exportLastTradesMetrics(m, ret);
+  _metricsExporter.exportLastTradesMetrics(mk, ret);
 
   return ret;
 }
 
-MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getLastPricePerExchange(m, exchangeNames);
+MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getLastPricePerExchange(mk, exchangeNames);
 }
 
 void Coincenter::updateFileCaches() const {
@@ -298,7 +299,7 @@ void Coincenter::updateFileCaches() const {
   _cryptowatchAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
   auto exchanges = _exchangePool.exchanges();
-  std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &e) { e.updateCacheFile(); });
+  std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &exchange) { exchange.updateCacheFile(); });
 }
 
 }  // namespace cct

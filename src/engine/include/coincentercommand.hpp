@@ -30,8 +30,8 @@ class CoincenterCommand {
 
   CoincenterCommand& setAmount(MonetaryAmount amount);
 
-  CoincenterCommand& setDepth(int d);
-  CoincenterCommand& setNbLastTrades(int n) { return setDepth(n); }
+  CoincenterCommand& setDepth(int depth);
+  CoincenterCommand& setNbLastTrades(int nbTrades) { return setDepth(nbTrades); }
 
   CoincenterCommand& setMarket(Market market);
 

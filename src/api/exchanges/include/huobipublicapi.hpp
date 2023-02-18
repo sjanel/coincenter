@@ -54,21 +54,21 @@ class HuobiPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kHuobiStandardOrderBookDefaultDepth) override {
-    return _orderbookCache.get(m, depth);
+  MarketOrderBook queryOrderBook(Market mk, int depth = kHuobiStandardOrderBookDefaultDepth) override {
+    return _orderbookCache.get(mk, depth);
   }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
+  MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 
-  VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
+  VolAndPriNbDecimals queryVolAndPriNbDecimals(Market mk);
 
-  MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
+  MonetaryAmount sanitizePrice(Market mk, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market m, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
+  MonetaryAmount sanitizeVolume(Market mk, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
                                 MonetaryAmount sanitizedPrice, bool isTakerOrder);
 
  private:
@@ -132,7 +132,7 @@ class HuobiPublic : public ExchangePublic {
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int depth);
+    MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
@@ -143,7 +143,7 @@ class HuobiPublic : public ExchangePublic {
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
@@ -153,7 +153,7 @@ class HuobiPublic : public ExchangePublic {
     explicit TickerFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
@@ -166,7 +166,7 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
-  bool shouldDiscardChain(CurrencyCode cur, const json& chainDetail) const;
+  static bool ShouldDiscardChain(CurrencyCode cur, const json& chainDetail);
 
   const ExchangeInfo& _exchangeInfo;
   CurlHandle _curlHandle;

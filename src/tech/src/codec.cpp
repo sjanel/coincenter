@@ -9,10 +9,10 @@
 namespace cct {
 
 string BinToHex(std::span<const unsigned char> bindata) {
-  static constexpr char kHexits[] = "0123456789abcdef";
-  const int s = static_cast<int>(bindata.size());
-  string ret(2 * s, '\0');
-  for (int i = 0; i < s; ++i) {
+  static constexpr const char* const kHexits = "0123456789abcdef";
+  const int sz = static_cast<int>(bindata.size());
+  string ret(2 * sz, '\0');
+  for (int i = 0; i < sz; ++i) {
     ret[i * 2] = kHexits[bindata[i] >> 4];
     ret[(i * 2) + 1] = kHexits[bindata[i] & 0x0F];
   }
@@ -27,10 +27,10 @@ string B64Encode(std::string_view bindata) {
   int bits_collected = 0;
   unsigned int accumulator = 0;
 
-  static constexpr char kB64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  static constexpr const char* const kB64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-  for (char c : bindata) {
-    accumulator = (accumulator << 8) | (c & 0xffu);
+  for (char ch : bindata) {
+    accumulator = (accumulator << 8) | (ch & 0xffu);
     bits_collected += 8;
     while (bits_collected >= 6) {
       bits_collected -= 6;
@@ -59,15 +59,15 @@ string B64Decode(std::string_view ascdata) {
       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64, 64, 26, 27, 28, 29, 30, 31, 32,
       33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
 
-  for (char c : ascdata) {
-    if (isspace(c) || c == '=') {
-      // Skip whitespace and padding. Be liberal in what you accept.
+  for (char ch : ascdata) {
+    if (isspace(ch) || ch == '=') {
+      // Skip whitespace and padding
       continue;
     }
-    if (c < 0 || kReverseTable[static_cast<unsigned char>(c)] > 63) {
+    if (ch < 0 || kReverseTable[static_cast<unsigned char>(ch)] > 63) {
       throw invalid_argument("This contains characters not legal in a base64 encoded string.");
     }
-    accumulator = (accumulator << 6) | kReverseTable[static_cast<unsigned char>(c)];
+    accumulator = (accumulator << 6) | kReverseTable[static_cast<unsigned char>(ch)];
     bits_collected += 6;
     if (bits_collected >= 8) {
       bits_collected -= 8;

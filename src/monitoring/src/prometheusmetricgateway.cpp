@@ -29,7 +29,7 @@ constexpr int kCheckFlushCounter = 20;
 
 std::string GetHostName() {
   char hostname[1024];
-  if (::gethostname(hostname, sizeof(hostname))) {
+  if (::gethostname(hostname, sizeof(hostname)) != 0) {
     hostname[0] = '\0';
   }
   return hostname;
@@ -80,7 +80,7 @@ inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
 
 }  // namespace
 
-void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const MetricKey& key, double v) {
+void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const MetricKey& key, double val) {
   assert(key.contains(kMetricNameKey) && key.contains(kMetricHelpKey));
   std::lock_guard<std::mutex> guard(_familiesMapMutex);
   auto foundIt = _familiesMap.find(key);
@@ -98,10 +98,10 @@ void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const Met
       }
       switch (op) {
         case MetricOperation::kIncrement:
-          if (v == 0) {
+          if (val == 0) {
             counterPtr->Increment();
           } else {
-            counterPtr->Increment(v);
+            counterPtr->Increment(val);
           }
           break;
         default:
@@ -122,21 +122,21 @@ void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const Met
       }
       switch (op) {
         case MetricOperation::kIncrement:
-          if (v == 0) {
+          if (val == 0) {
             gaugePtr->Increment();
           } else {
-            gaugePtr->Increment(v);
+            gaugePtr->Increment(val);
           }
           break;
         case MetricOperation::kDecrement:
-          if (v == 0) {
+          if (val == 0) {
             gaugePtr->Decrement();
           } else {
-            gaugePtr->Decrement(v);
+            gaugePtr->Decrement(val);
           }
           break;
         case MetricOperation::kSet:
-          gaugePtr->Set(v);
+          gaugePtr->Set(val);
           break;
         case MetricOperation::kSetCurrentTime:
           gaugePtr->SetToCurrentTime();
@@ -151,10 +151,10 @@ void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const Met
       if (foundIt == _familiesMap.end()) {
         log::error("You should create histogram first before adding any value in it");
       } else {
-        prometheus::Histogram* histogramPtr = reinterpret_cast<prometheus::Histogram*>(foundIt->second);
+        auto* histogramPtr = reinterpret_cast<prometheus::Histogram*>(foundIt->second);
         switch (op) {
           case MetricOperation::kObserve:
-            histogramPtr->Observe(v);
+            histogramPtr->Observe(val);
             break;
           default:
             throw exception("Unsupported metric operation");
@@ -169,7 +169,7 @@ void PrometheusMetricGateway::add(MetricType type, MetricOperation op, const Met
         prometheus::Summary* summaryPtr = reinterpret_cast<prometheus::Summary*>(foundIt->second);
         switch (op) {
           case MetricOperation::kObserve:
-            summaryPtr->Observe(v);
+            summaryPtr->Observe(val);
             break;
           default:
             throw exception("Unsupported metric operation");

@@ -59,7 +59,7 @@ class BalancePortfolio {
 
   void sortByDecreasingEquivalentAmount();
 
-  BalancePortfolio &operator+=(const BalancePortfolio &o);
+  BalancePortfolio &operator+=(const BalancePortfolio &other);
 
   bool operator==(const BalancePortfolio &) const = default;
 

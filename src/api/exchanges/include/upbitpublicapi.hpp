@@ -43,13 +43,15 @@ class UpbitPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
+    return _orderbookCache.get(mk, depth);
+  }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
+  MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 
   static constexpr std::string_view kUrlBase = "https://api.upbit.com";
   static constexpr char kUserAgent[] = "Upbit C++ API Client";
@@ -57,7 +59,7 @@ class UpbitPublic : public ExchangePublic {
  private:
   friend class UpbitPrivate;
 
-  static string ReverseMarketStr(Market m) { return m.reverse().assetsPairStrUpper('-'); }
+  static string ReverseMarketStr(Market mk) { return mk.reverse().assetsPairStrUpper('-'); }
 
   static bool CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCodeSet& excludedCurrencies);
 
@@ -117,7 +119,7 @@ class UpbitPublic : public ExchangePublic {
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int depth);
+    MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
@@ -128,7 +130,7 @@ class UpbitPublic : public ExchangePublic {
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
@@ -138,7 +140,7 @@ class UpbitPublic : public ExchangePublic {
     explicit TickerFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };

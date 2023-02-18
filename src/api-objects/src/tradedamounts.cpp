@@ -10,8 +10,8 @@ string TradedAmounts::str() const {
   return ret;
 }
 
-std::ostream &operator<<(std::ostream &os, const TradedAmounts &a) {
-  os << a.tradedFrom << " -> " << a.tradedTo;
+std::ostream &operator<<(std::ostream &os, const TradedAmounts &tradedAmounts) {
+  os << tradedAmounts.tradedFrom << " -> " << tradedAmounts.tradedTo;
   return os;
 }
 

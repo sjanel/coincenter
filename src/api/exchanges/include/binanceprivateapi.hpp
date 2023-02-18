@@ -64,7 +64,7 @@ class BinancePrivate : public ExchangePrivate {
  private:
   OrderInfo queryOrder(OrderIdView orderId, const TradeContext& tradeContext, HttpRequestType requestType);
 
-  bool checkMarketAppendSymbol(Market m, CurlPostData& params);
+  bool checkMarketAppendSymbol(Market mk, CurlPostData& params);
 
   struct TradableCurrenciesCache {
 #ifndef CCT_AGGR_INIT_CXX20

@@ -26,17 +26,20 @@ constexpr double kGBP = 0.88;
 constexpr std::string_view kSomeFakeURL = "some/fake/url";
 }  // namespace
 
-CurlHandle::CurlHandle(const BestURLPicker &, AbstractMetricGateway *, Duration, settings::RunMode)
+CurlHandle::CurlHandle([[maybe_unused]] const BestURLPicker &bestURLPicker,
+                       [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
+                       [[maybe_unused]] Duration minDurationBetweenQueries, [[maybe_unused]] settings::RunMode runMode)
     : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
 
-string CurlHandle::query(std::string_view url, const CurlOptions &) {
-  json j;
-  if (url.find("currencies") != std::string_view::npos) {
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+string CurlHandle::query(std::string_view endpoint, [[maybe_unused]] const CurlOptions &opts) {
+  json jsonData;
+  if (endpoint.find("currencies") != std::string_view::npos) {
     // Currencies
-    j["results"] = {"EUR", "USD", "GBP", "KRW"};
+    jsonData["results"] = {"EUR", "USD", "GBP", "KRW"};
   } else {
     // Rates
-    std::string_view marketStr(url.begin() + url.find("q=") + 2, url.begin() + url.find("q=") + 9);
+    std::string_view marketStr(endpoint.begin() + endpoint.find("q=") + 2, endpoint.begin() + endpoint.find("q=") + 9);
     std::string_view fromCurrency = marketStr.substr(0, 3);
     std::string_view targetCurrency = marketStr.substr(4);
     double rate = 0;
@@ -63,13 +66,13 @@ string CurlHandle::query(std::string_view url, const CurlOptions &) {
     }
 
     if (rate != 0) {
-      j["results"][marketStr]["val"] = rate;
+      jsonData["results"][marketStr]["val"] = rate;
     }
   }
-  return j.dump();
+  return jsonData.dump();
 }
 
-CurlHandle::~CurlHandle() {}
+CurlHandle::~CurlHandle() {}  // NOLINT
 
 class FiatConverterTest : public ::testing::Test {
  protected:

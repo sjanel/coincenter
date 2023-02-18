@@ -14,7 +14,7 @@ namespace cct::api {
 
 ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic,
                                  const APIKey &apiKey)
-    : ExchangeBase(), _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
+    : _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
 BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
   UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
@@ -63,9 +63,9 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   }
   MonetaryAmount avAmount = from;
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
-    Market m = conversionPath[tradePos];
-    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount, m.opposite(avAmount.currencyCode()));
-    TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, m);
+    Market mk = conversionPath[tradePos];
+    log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount, mk.opposite(avAmount.currencyCode()));
+    TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, mk);
     avAmount = stepTradedAmounts.tradedTo;
     if (avAmount == 0) {
       break;
@@ -80,14 +80,14 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   return tradedAmounts;
 }
 
-TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &options, Market m) {
+TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &options, Market mk) {
   const CurrencyCode fromCurrency = from.currencyCode();
 
-  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(m, from, options.priceOptions());
-  const CurrencyCode toCurrency = m.opposite(fromCurrency);
+  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(mk, from, options.priceOptions());
+  const CurrencyCode toCurrency = mk.opposite(fromCurrency);
   TradedAmounts totalTradedAmounts(fromCurrency, toCurrency);
   if (!optPrice) {
-    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), m);
+    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), mk);
     return totalTradedAmounts;
   }
 
@@ -97,8 +97,8 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       static_cast<UserRefInt>(TimestampToS(timerStart) % static_cast<int64_t>(std::numeric_limits<UserRefInt>::max()));
   const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
 
-  const TradeSide side = fromCurrency == m.base() ? TradeSide::kSell : TradeSide::kBuy;
-  TradeContext tradeContext(m, side, userRef);
+  const TradeSide side = fromCurrency == mk.base() ? TradeSide::kSell : TradeSide::kBuy;
+  TradeContext tradeContext(mk, side, userRef);
   TradeInfo tradeInfo(tradeContext, options);
   PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
 
@@ -121,15 +121,15 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
     enum class NextAction : int8_t { kPlaceMarketOrder, kNewOrderLimitPrice, kWait };
     NextAction nextAction = NextAction::kWait;
 
-    TimePoint t = Clock::now();
+    TimePoint nowTime = Clock::now();
 
     const bool reachedEmergencyTime =
-        !noEmergencyTime && timerStart + options.maxTradeTime() < t + std::chrono::seconds(1);
+        !noEmergencyTime && timerStart + options.maxTradeTime() < nowTime + std::chrono::seconds(1);
     bool updatePriceNeeded = false;
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
-        lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < t) {
+        lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < nowTime) {
       // Let's see if we need to change the price if limit price has changed.
-      optPrice = _exchangePublic.computeLimitOrderPrice(m, fromCurrency, options.priceOptions());
+      optPrice = _exchangePublic.computeLimitOrderPrice(mk, fromCurrency, options.priceOptions());
       if (optPrice) {
         price = *optPrice;
         updatePriceNeeded =
@@ -150,7 +150,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 
       if (reachedEmergencyTime) {
         // timeout. Action depends on Strategy
-        if (timerStart + options.maxTradeTime() < t) {
+        if (timerStart + options.maxTradeTime() < nowTime) {
           log::warn("Time out reached, stop from there");
           break;
         }
@@ -167,7 +167,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       if (nextAction != NextAction::kWait) {
         if (nextAction == NextAction::kPlaceMarketOrder) {
           tradeInfo.options.switchToTakerStrategy();
-          optPrice = _exchangePublic.computeAvgOrderPrice(m, from, tradeInfo.options.priceOptions());
+          optPrice = _exchangePublic.computeAvgOrderPrice(mk, from, tradeInfo.options.priceOptions());
           if (!optPrice) {
             throw exception("Impossible to compute new average order price");
           }
@@ -237,14 +237,14 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
 
 namespace {
 bool IsAboveDustAmountThreshold(const MonetaryAmountByCurrencySet &dustThresholds, MonetaryAmount amount) {
-  auto foundIt = dustThresholds.find(amount);
+  const auto foundIt = dustThresholds.find(amount);
   return foundIt == dustThresholds.end() || *foundIt <= amount;
 }
 
 using PenaltyPerMarketMap = std::map<Market, int>;
 
-void IncrementPenalty(Market m, PenaltyPerMarketMap &penaltyPerMarketMap) {
-  auto insertItInsertedPair = penaltyPerMarketMap.insert({m, 1});
+void IncrementPenalty(Market mk, PenaltyPerMarketMap &penaltyPerMarketMap) {
+  auto insertItInsertedPair = penaltyPerMarketMap.insert({mk, 1});
   if (!insertItInsertedPair.second) {
     ++insertItInsertedPair.first->second;
   }
@@ -258,13 +258,13 @@ vector<Market> GetPossibleMarketsForDustThresholds(const BalancePortfolio &balan
   for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
     MonetaryAmount avAmount = avAmountEq.amount;
     CurrencyCode avCur = avAmount.currencyCode();
-    auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
+    const auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
     if (lbAvAmount == dustThresholds.end() || *lbAvAmount < avAmount) {
-      Market m(currencyCode, avCur);
-      if (markets.contains(m)) {
-        possibleMarkets.push_back(std::move(m));
-      } else if (markets.contains(m.reverse())) {
-        possibleMarkets.push_back(m.reverse());
+      Market mk(currencyCode, avCur);
+      if (markets.contains(mk)) {
+        possibleMarkets.push_back(std::move(mk));
+      } else if (markets.contains(mk.reverse())) {
+        possibleMarkets.push_back(mk.reverse());
       }
     }
   }
@@ -296,11 +296,11 @@ vector<Market> GetPossibleMarketsForDustThresholds(const BalancePortfolio &balan
 
 std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSweeper(
     std::span<const Market> possibleMarkets, MonetaryAmount amountBalance, const TradeOptions &tradeOptions) {
-  for (Market m : possibleMarkets) {
-    log::info("Dust sweeper - attempt to sell in one shot on {}", m);
-    TradedAmounts tradedAmounts = marketTrade(amountBalance, tradeOptions, m);
+  for (Market mk : possibleMarkets) {
+    log::info("Dust sweeper - attempt to sell in one shot on {}", mk);
+    TradedAmounts tradedAmounts = marketTrade(amountBalance, tradeOptions, mk);
     if (tradedAmounts.tradedTo != 0) {
-      return {tradedAmounts, m};
+      return {tradedAmounts, mk};
     }
   }
   return {};
@@ -319,22 +319,22 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 
   for (MonetaryAmount mult = MonetaryAmount(1);; mult *= kMultiplier) {
     bool enoughAvAmount = false;
-    for (Market m : possibleMarkets) {
+    for (Market mk : possibleMarkets) {
       // We will buy some amount. It should be as small as possible to limit fees
-      log::debug("Dust sweeper - attempt to buy on {} with multiplier {}", m, mult);
-      auto it = marketPriceMap.find(m);
+      log::debug("Dust sweeper - attempt to buy on {} with multiplier {}", mk, mult);
+      auto it = marketPriceMap.find(mk);
       if (it == marketPriceMap.end()) {
         continue;
       }
 
       // Compute initial fromAmount from a random small amount defined from current price and dust threshold
       // (assuming it's rather small)
-      MonetaryAmount p = it->second;
+      MonetaryAmount price = it->second;
       MonetaryAmount fromAmount;
-      if (currencyCode == m.base()) {
-        fromAmount = MonetaryAmount(dustThreshold * p.toNeutral(), m.quote());
+      if (currencyCode == mk.base()) {
+        fromAmount = MonetaryAmount(dustThreshold * price.toNeutral(), mk.quote());
       } else {
-        fromAmount = MonetaryAmount(dustThreshold / p.toNeutral(), m.base());
+        fromAmount = MonetaryAmount(dustThreshold / price.toNeutral(), mk.base());
       }
 
       fromAmount *= mult;
@@ -349,7 +349,7 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
       enoughAvAmount = true;
 
       log::info("Dust sweeper - attempt to buy some {} for future selling", currencyCode);
-      TradedAmounts tradedAmounts = marketTrade(fromAmount, tradeOptions, m);
+      TradedAmounts tradedAmounts = marketTrade(fromAmount, tradeOptions, mk);
 
       if (tradedAmounts.tradedTo != 0) {
         // Then we should have sufficient amount now on this market
@@ -366,7 +366,7 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
   const MonetaryAmountByCurrencySet &dustThresholds = exchangeInfo().dustAmountsThreshold();
   const int dustSweeperMaxNbTrades = exchangeInfo().dustSweeperMaxNbTrades();
-  auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
+  const auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
   TradedAmountsVectorWithFinalAmount ret;
   auto eName = exchangeName();
   if (dustThresholdLb == dustThresholds.end()) {
@@ -439,14 +439,14 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
 
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
                                                   const TradeInfo &tradeInfo) {
-  Market m = tradeInfo.tradeContext.m;
+  const Market mk = tradeInfo.tradeContext.mk;
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
-  MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, m.base()));
+  const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
     if (exchangeInfo().placeSimulateRealOrder()) {
       log::debug("Place simulate real order - price {} will be overriden", price);
-      MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(m);
+      MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(mk);
       if (isSell) {
         price = marketOrderbook.getHighestTheoreticalPrice();
       } else {
@@ -484,8 +484,8 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   return placeOrderInfo;
 }
 
-ReceivedWithdrawInfo ExchangePrivate::isWithdrawReceived(const InitiatedWithdrawInfo &,
-                                                         const SentWithdrawInfo &sentWithdrawInfo) {
+ReceivedWithdrawInfo ExchangePrivate::isWithdrawReceived(
+    [[maybe_unused]] const InitiatedWithdrawInfo &initiatedWithdrawInfo, const SentWithdrawInfo &sentWithdrawInfo) {
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
   Deposits deposits = queryRecentDeposits(DepositsConstraints(currencyCode));

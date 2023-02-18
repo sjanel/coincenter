@@ -22,9 +22,9 @@ class LoggingInfo {
   explicit LoggingInfo(const json &generalConfigJsonLogPart);
 
   LoggingInfo(const LoggingInfo &) = delete;
-  LoggingInfo(LoggingInfo &&) noexcept;
+  LoggingInfo(LoggingInfo &&loggingInfo) noexcept;
   LoggingInfo &operator=(const LoggingInfo &) = delete;
-  LoggingInfo &operator=(LoggingInfo &&) noexcept;
+  LoggingInfo &operator=(LoggingInfo &&loggingInfo) noexcept;
 
   ~LoggingInfo();
 

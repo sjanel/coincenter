@@ -110,8 +110,8 @@ CoincenterCommand& CoincenterCommand::setAmount(MonetaryAmount amount) {
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setDepth(int d) {
-  _n = d;
+CoincenterCommand& CoincenterCommand::setDepth(int depth) {
+  _n = depth;
   return *this;
 }
 

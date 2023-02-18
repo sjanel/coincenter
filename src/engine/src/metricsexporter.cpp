@@ -12,7 +12,7 @@
 namespace cct {
 
 MetricsExporter::MetricsExporter(AbstractMetricGateway *pMetricsGateway) : _pMetricsGateway(pMetricsGateway) {
-  if (_pMetricsGateway) {
+  if (_pMetricsGateway != nullptr) {
     createSummariesAndHistograms();
   }
 }
@@ -58,8 +58,8 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
     key.set(kMetricNameKey, "limit_price");
     key.set(kMetricHelpKey, "Best bids and asks prices");
     key.set("exchange", e->name());
-    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStrLower('-'));
+    for (const auto &[mk, marketOrderbook] : marketOrderBookMap) {
+      key.set("market", mk.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
                             marketOrderbook.lowestAskPrice().toDouble());
@@ -69,8 +69,8 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
     }
     key.set(kMetricNameKey, "limit_volume");
     key.set(kMetricHelpKey, "Best bids and asks volumes");
-    for (const auto &[m, marketOrderbook] : marketOrderBookMap) {
-      key.set("market", m.assetsPairStrLower('-'));
+    for (const auto &[mk, marketOrderbook] : marketOrderBookMap) {
+      key.set("market", mk.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
                             marketOrderbook.amountAtAskPrice().toDouble());
@@ -81,11 +81,11 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
   }
 }
 
-void MetricsExporter::exportOrderbookMetrics(Market m,
+void MetricsExporter::exportOrderbookMetrics(Market mk,
                                              const MarketOrderBookConversionRates &marketOrderBookConversionRates) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("limit_pri", "Best bids and asks prices");
-  string marketLowerCase = m.assetsPairStrLower('-');
+  string marketLowerCase = mk.assetsPairStrLower('-');
   key.append("market", marketLowerCase);
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("exchange", exchangeName);
@@ -107,17 +107,17 @@ void MetricsExporter::exportOrderbookMetrics(Market m,
   }
 }
 
-void MetricsExporter::exportLastTradesMetrics(Market m, const LastTradesPerExchange &lastTradesPerExchange) {
+void MetricsExporter::exportLastTradesMetrics(Market mk, const LastTradesPerExchange &lastTradesPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
-  string marketLowerCase = m.assetsPairStrLower('-');
+  string marketLowerCase = mk.assetsPairStrLower('-');
   key.append("market", marketLowerCase);
 
   for (const auto &[e, lastTrades] : lastTradesPerExchange) {
     key.set("exchange", e->name());
 
-    std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, m.base()), MonetaryAmount(0, m.base())};
-    std::array<MonetaryAmount, 2> totalPrices{MonetaryAmount(0, m.quote()), MonetaryAmount(0, m.quote())};
+    std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};
+    std::array<MonetaryAmount, 2> totalPrices{MonetaryAmount(0, mk.quote()), MonetaryAmount(0, mk.quote())};
     std::array<int, 2> nb{};
     for (const PublicTrade &trade : lastTrades) {
       const int buyOrSell = trade.side() == TradeSide::kBuy ? 0 : 1;

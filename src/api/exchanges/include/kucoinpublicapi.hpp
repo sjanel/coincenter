@@ -56,19 +56,19 @@ class KucoinPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = 10) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = 10) override { return _orderbookCache.get(mk, depth); }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
+  MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 
-  VolAndPriNbDecimals queryVolAndPriNbDecimals(Market m);
+  VolAndPriNbDecimals queryVolAndPriNbDecimals(Market mk);
 
-  MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
+  MonetaryAmount sanitizePrice(Market mk, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol);
+  MonetaryAmount sanitizeVolume(Market mk, MonetaryAmount vol);
 
  private:
   friend class KucoinPrivate;
@@ -147,7 +147,7 @@ class KucoinPublic : public ExchangePublic {
         : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int depth);
+    MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
@@ -158,7 +158,7 @@ class KucoinPublic : public ExchangePublic {
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
@@ -168,12 +168,12 @@ class KucoinPublic : public ExchangePublic {
     explicit TickerFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
 
-  static CurlPostData GetSymbolPostData(Market m) { return CurlPostData{{"symbol", m.assetsPairStrUpper('-')}}; }
+  static CurlPostData GetSymbolPostData(Market mk) { return CurlPostData{{"symbol", mk.assetsPairStrUpper('-')}}; }
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

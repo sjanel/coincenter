@@ -71,19 +71,19 @@ class Exchange {
     return _exchangePublic.queryAllApproximatedOrderBooks(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = ExchangePublic::kDefaultDepth) {
-    return _exchangePublic.queryOrderBook(m, depth);
+  MarketOrderBook queryOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth) {
+    return _exchangePublic.queryOrderBook(mk, depth);
   }
 
-  MonetaryAmount queryLast24hVolume(Market m) { return _exchangePublic.queryLast24hVolume(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) { return _exchangePublic.queryLast24hVolume(mk); }
 
   /// Retrieve an ordered vector of recent last trades
-  LastTradesVector queryLastTrades(Market m, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
-    return _exchangePublic.queryLastTrades(m, nbTrades);
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
+    return _exchangePublic.queryLastTrades(mk, nbTrades);
   }
 
   /// Retrieve the last price of given market.
-  MonetaryAmount queryLastPrice(Market m) { return _exchangePublic.queryLastPrice(m); }
+  MonetaryAmount queryLastPrice(Market mk) { return _exchangePublic.queryLastPrice(mk); }
 
   bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 

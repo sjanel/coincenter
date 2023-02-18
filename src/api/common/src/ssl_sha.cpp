@@ -85,7 +85,7 @@ string ShaDigest(ShaType shaType, std::string_view data) {
 
 string ShaDigest(ShaType shaType, std::span<const string> data) {
   EVPMDCTXUniquePtr mdctx = InitEVPMDCTXUniquePtr(shaType);
-  std::ranges::for_each(data, [&](std::string_view s) { EVP_DigestUpdate(mdctx.get(), s.data(), s.size()); });
+  std::ranges::for_each(data, [&](std::string_view str) { EVP_DigestUpdate(mdctx.get(), str.data(), str.size()); });
   return EVPBinToHex(mdctx);
 }
 
