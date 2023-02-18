@@ -29,9 +29,10 @@ jobs:
           push: true
           tags: sjanel/coincenter:latest
 
-      - name: Tag current version
+      - name: Tag current version (if release one)
         run: |
           VERSION=`docker run sjanel/coincenter --version | head -1 | cut -d' ' -f 3`
+          case $VERSION in *.*.*.*) exit 0;; esac
           NEW_TAG="sjanel/coincenter:${VERSION}"
           docker tag sjanel/coincenter:latest $NEW_TAG
           docker push $NEW_TAG
