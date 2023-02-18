@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [clang++-13]
+        clang-version: [14]
         buildmode: [Debug]
 
     steps:
@@ -23,16 +23,11 @@ jobs:
         run: |
           sudo apt update && sudo apt install libcurl4-gnutls-dev ninja-build
 
-      - name: Install clang
+      - name: Install clang (with clang-tidy)
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 13
-
-      - name: Install clang-tidy
-        run: |
-          sudo apt install clang-tidy-13
-          sudo ln -sf /usr/bin/clang-tidy-13 /usr/bin/clang-tidy
+          sudo ./llvm.sh ${{matrix.clang-version}}
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -40,7 +35,9 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_ENABLE_CLANG_TIDY=ON -GNinja
+        run: |
+          clang-tidy --dump-config
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.clang-version}} -DCCT_ENABLE_CLANG_TIDY=ON -DCCT_ENABLE_ASAN=OFF -GNinja
 
       - name: Build
         working-directory: ${{github.workspace}}/build

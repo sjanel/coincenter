@@ -42,10 +42,25 @@ docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data 
 
 ## Prerequisites
 
+This is a **C++20** project.
+
+It's still currently (as of beginning of 2023) not fully supported by any compiler (although GCC is very close, see [here](https://en.cppreference.com/w/cpp/compiler_support)).
+
+But they have partial support which is sufficient to build `coincenter`.
+
+The following compilers are known to compile `coincenter` (and are tested in the CI):
+
+- **GCC** version >= 11
+- **Clang** version >= 14
+- **MSVC** version >= 19.30
+
+Other compilers have not been tested.
+
+In addition, the basic minimum requirements are:
+
 - **Git**
-- **C++** compiler supporting C++20 (gcc >= 10, clang >= 13, MSVC >= 19.30).
 - **CMake** >= 3.15
-- **curl** >= 7.58.0 (it may work with an earlier version, it's just the minimum tested)
+- **curl** >= 7.58.0 (it may work with an earlier version, it's just the minimum tested on **Ubuntu 18**)
 - **openssl** >= 1.1.0
 
 ### Linux
@@ -53,17 +68,18 @@ docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data 
 #### Debian / Ubuntu
 
 ```
-sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-10
+sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-11
 ```
 
 #### Alpine
 
 With `ninja` generator for instance:
+
 ```
 sudo apk update && sudo apk upgrade && sudo apk add g++ libc-dev curl-dev cmake ninja git linux-headers
 ```
 
-You can refer to the provided `Dockerfile` for more information.
+You can refer to the provided [Dockerfile](Dockerfile) for more information.
 
 ### Windows
 
@@ -80,7 +96,7 @@ Then, locate where curl is installed (by default, should be in `C:\ProgramData\c
 ### External libraries
 
 `coincenter` uses various external open source libraries.
-In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically. 
+In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically.
 If you are building frequently `coincenter` you can install them to speed up its compilation.
 
 | Library                                                        | Description                                        | License              |
@@ -94,14 +110,9 @@ If you are building frequently `coincenter` you can install them to speed up its
 
 ### With cmake
 
-This is a **C++20** project.
+This project can be easily built with [cmake](https://cmake.org/).
 
-The following compilers and their versions have been tested (and are tested in the CI):
- - GCC version >= 10
- - Clang version >= 13
- - MSVC version >= 19.30
-
-Other compilers have not been tested yet.
+The minimum tested version is cmake `3.15`.
 
 #### cmake build options
 
@@ -113,6 +124,7 @@ Other compilers have not been tested yet.
 | `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
+
 ```
 mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
 ```
@@ -124,6 +136,7 @@ On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studi
 **coincenter** can also be used as a sub project, such as a trading bot for instance. It is the case by default if built as a sub-module in `cmake`.
 
 To build your `cmake` project with **coincenter** library, you can do it with `FetchContent`:
+
 ```
 include(FetchContent)
 
@@ -135,14 +148,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(coincenter)
 ```
+
 Then, a static library named `coincenter` is defined and you can link it as usual:
+
 ```
 target_link_libraries(<MyProgram> PRIVATE coincenter)
 ```
 
 ### Build with monitoring support
 
-You can build `coincenter` with [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) if needed. 
+You can build `coincenter` with [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) if needed.
 If you have it installed on your machine, `cmake` will link coincenter with it. Otherwise you can still activate `cmake` flag `CCT_BUILD_PROMETHEUS_FROM_SRC` (default to OFF) to build it automatically from sources with `FetchContent`.
 
 ### With Docker
