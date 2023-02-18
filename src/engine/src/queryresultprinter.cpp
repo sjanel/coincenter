@@ -904,11 +904,7 @@ void QueryResultPrinter::printTable(const SimpleTable &t) const {
     *_pOs << std::endl;
   } else {
     // logger library automatically adds a newline as suffix
-#ifdef CCT_STRINGSTREAM_HAS_VIEW
     _outputLogger->info(ss.view());
-#else
-    _outputLogger->info(ss.str());
-#endif
   }
 }
 

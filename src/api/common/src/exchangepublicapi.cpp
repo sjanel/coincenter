@@ -71,7 +71,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount a, Currency
 
 namespace {
 
-// Optimized struct containing a currency and a reverse bool to keep market directionnality information
+// Optimized struct containing a currency and a reverse bool to keep market directionality information
 struct CurrencyDir {
 #ifndef CCT_AGGR_INIT_CXX20
   CurrencyDir(CurrencyCode c, bool b) : cur(c), isLastRealMarketReversed(b) {}

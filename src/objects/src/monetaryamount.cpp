@@ -158,12 +158,7 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode) : _curW
   std::stringstream amtBuf;
   amtBuf << std::setprecision(kNbMaxDoubleDecimals) << std::fixed << amount;
   int8_t nbDecimals;
-#ifdef CCT_STRINGSTREAM_HAS_VIEW
   std::string_view strView = amtBuf.view();
-#else
-  auto str = amtBuf.str();
-  std::string_view strView = str;
-#endif
   const int negMult = ParseNegativeChar(strView);
 
   std::tie(_amount, nbDecimals) = AmountIntegralFromStr(strView, true);

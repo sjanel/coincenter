@@ -19,30 +19,18 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
 
   void SetUp() override { ss.clear(); }
 
-#ifdef CCT_STRINGSTREAM_HAS_VIEW
   void expectNoStr() const { EXPECT_TRUE(ss.view().empty()); }
-#else
-  void expectNoStr() const { EXPECT_TRUE(ss.str().empty()); }
-#endif
 
   void expectStr(std::string_view expected) const {
     ASSERT_FALSE(expected.empty());
     expected.remove_prefix(1);  // skip first newline char of expected string
-#ifdef CCT_STRINGSTREAM_HAS_VIEW
     EXPECT_EQ(ss.view(), expected);
-#else
-    EXPECT_EQ(ss.str(), expected);
-#endif
   }
 
   void expectJson(std::string_view expected) const {
     ASSERT_FALSE(expected.empty());
     expected.remove_prefix(1);  // skip first newline char of expected string
-#ifdef CCT_STRINGSTREAM_HAS_VIEW
     EXPECT_EQ(json::parse(ss.view()), json::parse(expected));
-#else
-    EXPECT_EQ(json::parse(ss.str()), json::parse(expected));
-#endif
   }
 
   std::ostringstream ss;
