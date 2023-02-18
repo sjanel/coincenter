@@ -18,26 +18,27 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
   const int nbPrices = static_cast<int>(orderLines.size());
   _orders.reserve(nbPrices);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
-    for (const OrderBookLine& l : orderLines) {
+    for (const OrderBookLine& orderBookLine : orderLines) {
       _volAndPriNbDecimals.volNbDecimals =
-          std::min(_volAndPriNbDecimals.volNbDecimals, l._amount.currentMaxNbDecimals());
+          std::min(_volAndPriNbDecimals.volNbDecimals, orderBookLine._amount.currentMaxNbDecimals());
       _volAndPriNbDecimals.priNbDecimals =
-          std::min(_volAndPriNbDecimals.priNbDecimals, l._price.currentMaxNbDecimals());
+          std::min(_volAndPriNbDecimals.priNbDecimals, orderBookLine._price.currentMaxNbDecimals());
     }
   }
   if (nbPrices == 0) {
     _lowestAskPricePos = 0;
     _highestBidPricePos = 0;
   } else {
-    for (const OrderBookLine& l : orderLines) {
-      assert(l._amount.currencyCode() == market.base() && l._price.currencyCode() == market.quote());
+    for (const OrderBookLine& orderBookLine : orderLines) {
+      assert(orderBookLine._amount.currencyCode() == market.base() &&
+             orderBookLine._price.currencyCode() == market.quote());
       // amounts cannot be nullopt here
-      if (l._amount == 0) {
+      if (orderBookLine._amount == 0) {
         // Just ignore empty lines
         continue;
       }
-      AmountPrice::AmountType amountIntegral = *l._amount.amount(_volAndPriNbDecimals.volNbDecimals);
-      AmountPrice::AmountType priceIntegral = *l._price.amount(_volAndPriNbDecimals.priNbDecimals);
+      AmountPrice::AmountType amountIntegral = *orderBookLine._amount.amount(_volAndPriNbDecimals.volNbDecimals);
+      AmountPrice::AmountType priceIntegral = *orderBookLine._price.amount(_volAndPriNbDecimals.priNbDecimals);
 
       _orders.emplace_back(amountIntegral, priceIntegral);
     }
@@ -49,10 +50,12 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
       throw exception("Forbidden duplicate price {} in the order book for market {}", adjacentFindIt->price, market);
     }
 
-    auto highestBidPriceIt = std::ranges::partition_point(_orders, [](AmountPrice a) { return a.amount > 0; });
+    auto highestBidPriceIt =
+        std::ranges::partition_point(_orders, [](AmountPrice amountPrice) { return amountPrice.amount > 0; });
     _highestBidPricePos = static_cast<int>(highestBidPriceIt - _orders.begin() - 1);
     _lowestAskPricePos = static_cast<int>(
-        std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice a) { return a.amount < 0; }) - _orders.begin());
+        std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice amountPrice) { return amountPrice.amount < 0; }) -
+        _orders.begin());
   }
 }
 
@@ -133,25 +136,25 @@ MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolu
   _orders.resize(depth * 2);
 
   // Add bid lines first
-  for (int d = 0; d < depth; ++d) {
-    AmountPrice amountPrice = d == 0 ? refBidAmountPrice : _orders[depth - d];
-    amountPrice.price -= stepPrice * d;
-    if (d != 0 && amountPrice.amount < kMaxVol) {
+  for (int currentDepth = 0; currentDepth < depth; ++currentDepth) {
+    AmountPrice amountPrice = currentDepth == 0 ? refBidAmountPrice : _orders[depth - currentDepth];
+    amountPrice.price -= stepPrice * currentDepth;
+    if (currentDepth != 0 && amountPrice.amount < kMaxVol) {
       amountPrice.amount += simulatedStepVol / 2;
     }
-    _orders[depth - d - 1] = std::move(amountPrice);
+    _orders[depth - currentDepth - 1] = std::move(amountPrice);
   }
   _highestBidPricePos = depth - 1;
   _lowestAskPricePos = _highestBidPricePos + 1;
 
   // Finally add ask lines
-  for (int d = 0; d < depth; ++d) {
-    AmountPrice amountPrice = d == 0 ? refAskAmountPrice : _orders[depth + d - 1];
-    amountPrice.price += stepPrice * d;
-    if (d != 0 && -amountPrice.amount < kMaxVol) {
+  for (int currentDepth = 0; currentDepth < depth; ++currentDepth) {
+    AmountPrice amountPrice = currentDepth == 0 ? refAskAmountPrice : _orders[depth + currentDepth - 1];
+    amountPrice.price += stepPrice * currentDepth;
+    if (currentDepth != 0 && -amountPrice.amount < kMaxVol) {
       amountPrice.amount -= simulatedStepVol / 2;
     }
-    _orders[depth + d] = std::move(amountPrice);
+    _orders[depth + currentDepth] = std::move(amountPrice);
   }
 }
 
@@ -168,30 +171,30 @@ std::optional<MonetaryAmount> MarketOrderBook::averagePrice() const {
   }
 }
 
-MonetaryAmount MarketOrderBook::computeCumulAmountBoughtImmediatelyAt(MonetaryAmount p) const {
+MonetaryAmount MarketOrderBook::computeCumulAmountBoughtImmediatelyAt(MonetaryAmount price) const {
   AmountType integralAmountRep = 0;
   const int nbOrders = _orders.size();
-  for (int pos = _lowestAskPricePos; pos < nbOrders && priceAt(pos) <= p; ++pos) {
+  for (int pos = _lowestAskPricePos; pos < nbOrders && priceAt(pos) <= price; ++pos) {
     integralAmountRep -= _orders[pos].amount;  // Minus as amounts are negative here
   }
   return MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals);
 }
 
-MonetaryAmount MarketOrderBook::computeCumulAmountSoldImmediatelyAt(MonetaryAmount p) const {
+MonetaryAmount MarketOrderBook::computeCumulAmountSoldImmediatelyAt(MonetaryAmount price) const {
   AmountType integralAmountRep = 0;
-  for (int pos = _highestBidPricePos; pos >= 0 && priceAt(pos) >= p; --pos) {
+  for (int pos = _highestBidPricePos; pos >= 0 && priceAt(pos) >= price; --pos) {
     integralAmountRep += _orders[pos].amount;
   }
   return MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals);
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(
-    MonetaryAmount a) const {
-  if (a.currencyCode() != _market.base()) {
+    MonetaryAmount ma) const {
+  if (ma.currencyCode() != _market.base()) {
     throw exception("Given amount should be in the base currency of this market");
   }
   AmountType integralAmountRep = 0;
-  const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
+  const std::optional<AmountType> integralTotalAmountToBuyOpt = ma.amount(_volAndPriNbDecimals.volNbDecimals);
   if (!integralTotalAmountToBuyOpt) {
     return std::nullopt;
   }
@@ -207,15 +210,15 @@ std::optional<MonetaryAmount> MarketOrderBook::computeMaxPriceAtWhichAmountWould
 }
 
 MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWouldBeBoughtImmediately(
-    MonetaryAmount a) const {
-  if (a.currencyCode() != _market.base()) {
+    MonetaryAmount ma) const {
+  if (ma.currencyCode() != _market.base()) {
     throw exception("Given amount should be in the base currency of this market");
   }
   AmountType integralAmountRep = 0;
-  const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
+  const std::optional<AmountType> integralTotalAmountToBuyOpt = ma.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::warn("Not enough amount to buy {} on market {}", a, _market);
+    log::warn("Not enough amount to buy {} on market {}", ma, _market);
     return ret;
   }
   const AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -235,14 +238,14 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
       ret.emplace_back(negAmountAt(pos), price);
     }
   }
-  log::warn("Not enough amount to buy {} on market {} ({} max)", a, _market,
+  log::warn("Not enough amount to buy {} on market {} ({} max)", ma, _market,
             MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals));
   ret.clear();
   return ret;
 }
 
 namespace {
-inline std::optional<MonetaryAmount> ComputeAvgPrice(Market m,
+inline std::optional<MonetaryAmount> ComputeAvgPrice(Market mk,
                                                      const MarketOrderBook::AmountPerPriceVec& amountsPerPrice) {
   if (amountsPerPrice.empty()) {
     return std::optional<MonetaryAmount>();
@@ -250,8 +253,8 @@ inline std::optional<MonetaryAmount> ComputeAvgPrice(Market m,
   if (amountsPerPrice.size() == 1) {
     return amountsPerPrice.front().price;
   }
-  MonetaryAmount ret(0, m.quote());
-  MonetaryAmount totalAmount(0, m.base());
+  MonetaryAmount ret(0, mk.quote());
+  MonetaryAmount totalAmount(0, mk.base());
   for (const MarketOrderBook::AmountAtPrice& amountAtPrice : amountsPerPrice) {
     ret += amountAtPrice.amount.toNeutral() * amountAtPrice.price;
     totalAmount += amountAtPrice.amount;
@@ -262,17 +265,17 @@ inline std::optional<MonetaryAmount> ComputeAvgPrice(Market m,
 }  // namespace
 
 std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceAtWhichAmountWouldBeBoughtImmediately(
-    MonetaryAmount a) const {
-  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeBoughtImmediately(a));
+    MonetaryAmount ma) const {
+  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeBoughtImmediately(ma));
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeMinPriceAtWhichAmountWouldBeSoldImmediately(
-    MonetaryAmount a) const {
-  if (a.currencyCode() != _market.base()) {
+    MonetaryAmount ma) const {
+  if (ma.currencyCode() != _market.base()) {
     throw exception("Given amount should be in the base currency of this market");
   }
   AmountType integralAmountRep = 0;
-  const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
+  const std::optional<AmountType> integralTotalAmountToBuyOpt = ma.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
     return std::nullopt;
@@ -289,15 +292,15 @@ std::optional<MonetaryAmount> MarketOrderBook::computeMinPriceAtWhichAmountWould
 }
 
 MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWouldBeSoldImmediately(
-    MonetaryAmount a) const {
-  if (a.currencyCode() != _market.base()) {
+    MonetaryAmount ma) const {
+  if (ma.currencyCode() != _market.base()) {
     throw exception("Given amount should be in the base currency of this market");
   }
   AmountType integralAmountRep = 0;
-  const std::optional<AmountType> integralTotalAmountToBuyOpt = a.amount(_volAndPriNbDecimals.volNbDecimals);
+  const std::optional<AmountType> integralTotalAmountToBuyOpt = ma.amount(_volAndPriNbDecimals.volNbDecimals);
   AmountPerPriceVec ret;
   if (!integralTotalAmountToBuyOpt) {
-    log::debug("Not enough amount to sell {} on market {}", a, _market);
+    log::debug("Not enough amount to sell {} on market {}", ma, _market);
     return ret;
   }
   const AmountType integralTotalAmountToBuy = *integralTotalAmountToBuyOpt;
@@ -314,14 +317,14 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
     integralAmountRep += _orders[pos].amount;
     ret.emplace_back(amountAt(pos), price);
   }
-  log::debug("Not enough amount to sell {} on market {}", a, _market);
+  log::debug("Not enough amount to sell {} on market {}", ma, _market);
   ret.clear();
   return ret;
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceAtWhichAmountWouldBeSoldImmediately(
-    MonetaryAmount a) const {
-  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeSoldImmediately(a));
+    MonetaryAmount ma) const {
+  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeSoldImmediately(ma));
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceForTakerAmount(MonetaryAmount amountInBaseOrQuote) const {
@@ -540,7 +543,7 @@ SimpleTable MarketOrderBook::getTable(std::string_view exchangeName,
   h1.append(baseStr).append(" (asks)");
   string h2(exchangeName);
   h2.append(" ").append(baseStr).append(" price in ");
-  _market.quote().appendStr(h2);
+  _market.quote().appendStrTo(h2);
   string h3(exchangeName);
   if (conversionPriceRate) {
     h3.append(" ").append(baseStr).append(" price in ").append(conversionPriceRate->currencyStr());
@@ -548,31 +551,31 @@ SimpleTable MarketOrderBook::getTable(std::string_view exchangeName,
   string h4("Buyers of ");
   h4.append(baseStr).append(" (bids)");
 
-  SimpleTable t;
+  SimpleTable table;
   if (conversionPriceRate) {
-    t.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
+    table.emplace_back(std::move(h1), std::move(h2), std::move(h3), std::move(h4));
   } else {
-    t.emplace_back(std::move(h1), std::move(h2), std::move(h4));
+    table.emplace_back(std::move(h1), std::move(h2), std::move(h4));
   }
 
   for (int op = _orders.size(); op > 0; --op) {
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode(), _volAndPriNbDecimals.volNbDecimals);
     MonetaryAmount price = priceAt(pos);
-    SimpleTable::Row r(amount.str());
-    r.emplace_back(price.amountStr());
+    SimpleTable::Row row(amount.str());
+    row.emplace_back(price.amountStr());
     if (conversionPriceRate) {
       MonetaryAmount convertedPrice = price.toNeutral() * conversionPriceRate->toNeutral();
 
-      r.emplace_back(convertedPrice.str());
+      row.emplace_back(convertedPrice.str());
     }
-    r.emplace_back("");
+    row.emplace_back("");
     if (_orders[pos].amount > 0) {
-      r.front().swap(r.back());
+      row.front().swap(row.back());
     }
-    t.push_back(std::move(r));
+    table.push_back(std::move(row));
   }
-  return t;
+  return table;
 }
 
 }  // namespace cct

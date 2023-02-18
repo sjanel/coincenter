@@ -12,11 +12,11 @@ namespace {
 template <class ContainerType>
 string BuildConcatenatedString(const ContainerType &printableValues) {
   string ret(1, '[');
-  for (auto v : printableValues) {
+  for (auto value : printableValues) {
     if (ret.size() > 1) {
       ret.push_back(',');
     }
-    v.appendStr(ret);
+    value.appendStrTo(ret);
   }
   ret.push_back(']');
   return ret;

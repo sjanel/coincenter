@@ -46,17 +46,17 @@ struct CurrencyCodeBase {
   static constexpr uint64_t StrToBmp(std::string_view acronym) {
     uint64_t ret = 0;
     uint32_t charPos = kMaxLen;
-    for (char c : acronym) {
-      if (c >= 'a') {
-        if (c > 'z') {
+    for (char ch : acronym) {
+      if (ch >= 'a') {
+        if (ch > 'z') {
           throw invalid_argument("Unexpected char in acronym");
         }
-        c -= 'a' - 'A';
-      } else if (c <= kFirstAuthorizedLetter || c > kLastAuthorizedLetter) {
+        ch -= 'a' - 'A';
+      } else if (ch <= kFirstAuthorizedLetter || ch > kLastAuthorizedLetter) {
         throw invalid_argument("Unexpected char in acronym");
       }
 
-      ret |= static_cast<uint64_t>(c - kFirstAuthorizedLetter) << (kNbBitsNbDecimals + kNbBitsChar * --charPos);
+      ret |= static_cast<uint64_t>(ch - kFirstAuthorizedLetter) << (kNbBitsNbDecimals + kNbBitsChar * --charPos);
     }
     return ret;
   }
@@ -141,21 +141,21 @@ class CurrencyCode {
   const_iterator end() const { return const_iterator(_data, size()); }
 
   constexpr uint64_t size() const {
-    uint64_t s = 0;
-    while (static_cast<int>(s) < kMaxLen &&
-           (_data & (CurrencyCodeBase::kFirstCharMask >> (CurrencyCodeBase::kNbBitsChar * s)))) {
-      ++s;
+    uint64_t sz = 0;
+    while (static_cast<int>(sz) < kMaxLen &&
+           (_data & (CurrencyCodeBase::kFirstCharMask >> (CurrencyCodeBase::kNbBitsChar * sz)))) {
+      ++sz;
     }
-    return s;
+    return sz;
   }
 
   constexpr uint64_t length() const { return size(); }
 
   /// Get a string of this CurrencyCode, trimmed.
   string str() const {
-    string s;
-    appendStr(s);
-    return s;
+    string ret;
+    appendStrTo(ret);
+    return ret;
   }
 
   /// Return true if this currency code acronym is equal to given string.
@@ -165,11 +165,11 @@ class CurrencyCode {
       return false;
     }
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char c = (*this)[charPos];
-      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
+      char ch = (*this)[charPos];
+      if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         return curStr.size() == charPos;
       }
-      if (curStr.size() == charPos || c != toupper(curStr[charPos])) {
+      if (curStr.size() == charPos || ch != toupper(curStr[charPos])) {
         return false;
       }
     }
@@ -177,21 +177,21 @@ class CurrencyCode {
   }
 
   /// Append currency string representation to given string.
-  void appendStr(string &s) const {
-    auto l = size();
-    s.append(l, '\0');
-    append(s.end() - l);
+  void appendStrTo(string &str) const {
+    auto len = size();
+    str.append(len, '\0');
+    append(str.end() - len);
   }
 
   /// Append currency string representation to given output iterator
   template <class OutputIt>
   OutputIt append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char c = (*this)[charPos];
-      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
+      char ch = (*this)[charPos];
+      if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
-      *it = c;
+      *it = ch;
       ++it;
     }
     return it;
@@ -211,11 +211,11 @@ class CurrencyCode {
 
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char c = cur[charPos];
-      if (c == CurrencyCodeBase::kFirstAuthorizedLetter) {
+      char ch = cur[charPos];
+      if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
-      os << c;
+      os << ch;
     }
     return os;
   }
@@ -256,10 +256,10 @@ class CurrencyCode {
   }
 
   /// Append currency string representation to given string, with a space before (used by MonetaryAmount)
-  void appendStrWithSpace(string &s) const {
-    auto l = size();
-    s.append(l + 1UL, ' ');
-    append(s.end() - l);
+  void appendStrWithSpaceTo(string &str) const {
+    auto len = size();
+    str.append(len + 1UL, ' ');
+    append(str.end() - len);
   }
 };
 
@@ -287,6 +287,6 @@ struct fmt::formatter<cct::CurrencyCode> {
 namespace std {
 template <>
 struct hash<cct::CurrencyCode> {
-  auto operator()(const cct::CurrencyCode &c) const { return cct::HashValue64(c.code()); }
+  auto operator()(const cct::CurrencyCode &currencyCode) const { return cct::HashValue64(currencyCode.code()); }
 };
 }  // namespace std

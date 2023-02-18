@@ -92,38 +92,40 @@ class MonetaryAmount {
 
   /// Constructs a new MonetaryAmount from another MonetaryAmount and a new CurrencyCode.
   /// Use this constructor to change currency of an existing MonetaryAmount.
-  constexpr MonetaryAmount(MonetaryAmount o, CurrencyCode newCurrencyCode)
-      : _amount(o._amount), _curWithDecimals(newCurrencyCode) {
-    setNbDecimals(o.nbDecimals());
+  constexpr MonetaryAmount(MonetaryAmount monetaryAmount, CurrencyCode newCurrencyCode)
+      : _amount(monetaryAmount._amount), _curWithDecimals(newCurrencyCode) {
+    setNbDecimals(monetaryAmount.nbDecimals());
   }
 
   /// Get an integral representation of this MonetaryAmount multiplied by given number of decimals.
   /// If an overflow would occur for the resulting amount, return std::nullopt
   /// Example : "5.6235" with 6 decimals will return 5623500
-  std::optional<AmountType> amount(int8_t nbDecimals) const;
+  [[nodiscard]] std::optional<AmountType> amount(int8_t nbDecimals) const;
 
   /// Get the integer part of the amount of this MonetaryAmount.
-  constexpr AmountType integerPart() const { return _amount / ipow(10, static_cast<uint8_t>(nbDecimals())); }
+  [[nodiscard]] constexpr AmountType integerPart() const {
+    return _amount / ipow(10, static_cast<uint8_t>(nbDecimals()));
+  }
 
   /// Get the decimal part of the amount of this MonetaryAmount.
   /// Warning: starting zeros will not be part of the returned value. Use nbDecimals to retrieve the number of decimals
   /// of this MonetaryAmount.
   /// Example: "45.046" decimalPart() = 46
-  constexpr AmountType decimalPart() const;
+  [[nodiscard]] constexpr AmountType decimalPart() const;
 
   /// Get the amount of this MonetaryAmount in double format.
-  constexpr double toDouble() const {
+  [[nodiscard]] constexpr double toDouble() const {
     return static_cast<double>(_amount) / ipow(10, static_cast<uint8_t>(nbDecimals()));
   }
 
-  constexpr CurrencyCode currencyCode() const {
+  [[nodiscard]] constexpr CurrencyCode currencyCode() const {
     // We do not want to expose private nb decimals bits to outside world
     return _curWithDecimals.withNoDecimalsPart();
   }
 
-  constexpr int8_t nbDecimals() const { return _curWithDecimals.nbDecimals(); }
+  [[nodiscard]] constexpr int8_t nbDecimals() const { return _curWithDecimals.nbDecimals(); }
 
-  constexpr int8_t maxNbDecimals() const {
+  [[nodiscard]] constexpr int8_t maxNbDecimals() const {
     return _curWithDecimals.isLongCurrencyCode()
                ? CurrencyCodeBase::kMaxNbDecimalsLongCurrencyCode
                : std::numeric_limits<AmountType>::digits10 - 1;  // -1 as minimal nb digits of integral part
@@ -133,7 +135,7 @@ class MonetaryAmount {
   /// Examples:
   ///  0.00426622338114037 EUR -> 17
   ///  45.546675 EUR           -> 16
-  constexpr int8_t currentMaxNbDecimals() const {
+  [[nodiscard]] constexpr int8_t currentMaxNbDecimals() const {
     return static_cast<int8_t>(maxNbDecimals() - ndigits(integerPart()) + 1);
   }
 
@@ -142,7 +144,7 @@ class MonetaryAmount {
   ///            2 ETH convertTo("1600 EUR")       = 3200 EUR
   ///            1500 EUR convertTo("0.0005 ETH")  = 0.75 ETH
   /// @return a monetary amount in the currency of given price
-  [[nodiscard]] MonetaryAmount convertTo(MonetaryAmount p) const { return p * toNeutral(); }
+  [[nodiscard]] MonetaryAmount convertTo(MonetaryAmount price) const { return price * toNeutral(); }
 
   /// Rounds current monetary amount according to given step amount.
   /// CurrencyCode of 'step' is unused.
@@ -153,47 +155,49 @@ class MonetaryAmount {
   /// Rounds current monetary amount according to given precision (number of decimals)
   void round(int8_t nbDecimals, RoundType roundType);
 
-  std::strong_ordering operator<=>(const MonetaryAmount &o) const;
+  [[nodiscard]] std::strong_ordering operator<=>(const MonetaryAmount &other) const;
 
-  constexpr bool operator==(const MonetaryAmount &o) const = default;
+  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &other) const = default;
 
-  constexpr bool operator==(AmountType amount) const { return _amount == amount && nbDecimals() == 0; }
+  [[nodiscard]] constexpr bool operator==(AmountType amount) const { return _amount == amount && nbDecimals() == 0; }
   friend constexpr bool operator==(AmountType amount, MonetaryAmount rhs) { return rhs == amount; }
 
-  constexpr auto operator<=>(AmountType amount) const {
+  [[nodiscard]] constexpr auto operator<=>(AmountType amount) const {
     return _amount <=> amount * ipow(10, static_cast<uint8_t>(nbDecimals()));
   }
 
-  friend constexpr auto operator<=>(AmountType amount, MonetaryAmount o) {
-    return amount * ipow(10, static_cast<uint8_t>(o.nbDecimals())) <=> o._amount;
+  [[nodiscard]] friend constexpr auto operator<=>(AmountType amount, MonetaryAmount other) {
+    return amount * ipow(10, static_cast<uint8_t>(other.nbDecimals())) <=> other._amount;
   }
 
   [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
     return MonetaryAmount(true, _amount < 0 ? -_amount : _amount, _curWithDecimals);
   }
 
-  constexpr MonetaryAmount operator-() const noexcept { return MonetaryAmount(true, -_amount, _curWithDecimals); }
+  [[nodiscard]] constexpr MonetaryAmount operator-() const noexcept {
+    return MonetaryAmount(true, -_amount, _curWithDecimals);
+  }
 
   /// @brief  Addition of two MonetaryAmounts.
   ///         They should have same currency for addition to be possible.
   ///         Exception: default MonetaryAmount (0 with neutral currency) is a neutral element for addition and
   ///         subtraction
-  MonetaryAmount operator+(MonetaryAmount o) const;
+  [[nodiscard]] MonetaryAmount operator+(MonetaryAmount other) const;
 
-  MonetaryAmount operator-(MonetaryAmount o) const { return *this + (-o); }
+  [[nodiscard]] MonetaryAmount operator-(MonetaryAmount other) const { return *this + (-other); }
 
-  MonetaryAmount &operator+=(MonetaryAmount o) {
-    *this = *this + o;
+  MonetaryAmount &operator+=(MonetaryAmount other) {
+    *this = *this + other;
     return *this;
   }
-  MonetaryAmount &operator-=(MonetaryAmount o) {
-    *this = *this + (-o);
+  MonetaryAmount &operator-=(MonetaryAmount other) {
+    *this = *this + (-other);
     return *this;
   }
 
-  MonetaryAmount operator*(AmountType mult) const;
+  [[nodiscard]] MonetaryAmount operator*(AmountType mult) const;
 
-  friend MonetaryAmount operator*(AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
+  [[nodiscard]] friend MonetaryAmount operator*(AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
 
   /// Multiplication involving 2 MonetaryAmounts *must* have at least one 'Neutral' currency.
   /// This is to remove ambiguity on the resulting currency:
@@ -201,7 +205,7 @@ class MonetaryAmount {
   ///  - XXXXXXX * Neutral -> XXXXXXX
   ///  - Neutral * YYYYYYY -> YYYYYYY
   ///  - XXXXXXX * YYYYYYY -> ??????? (exception will be thrown in this case)
-  MonetaryAmount operator*(MonetaryAmount mult) const;
+  [[nodiscard]] MonetaryAmount operator*(MonetaryAmount mult) const;
 
   MonetaryAmount &operator*=(AmountType mult) {
     *this = *this * mult;
@@ -212,9 +216,9 @@ class MonetaryAmount {
     return *this;
   }
 
-  MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div); }
+  [[nodiscard]] MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div); }
 
-  MonetaryAmount operator/(MonetaryAmount div) const;
+  [[nodiscard]] MonetaryAmount operator/(MonetaryAmount div) const;
 
   MonetaryAmount &operator/=(AmountType div) {
     *this = *this / div;
@@ -229,20 +233,20 @@ class MonetaryAmount {
     return MonetaryAmount(true, _amount, _curWithDecimals.toNeutral());
   }
 
-  constexpr bool isDefault() const noexcept { return _amount == 0 && hasNeutralCurrency(); }
+  [[nodiscard]] constexpr bool isDefault() const noexcept { return _amount == 0 && hasNeutralCurrency(); }
 
-  constexpr bool hasNeutralCurrency() const noexcept { return _curWithDecimals.isNeutral(); }
+  [[nodiscard]] constexpr bool hasNeutralCurrency() const noexcept { return _curWithDecimals.isNeutral(); }
 
-  constexpr bool isAmountInteger() const noexcept { return nbDecimals() == 0; }
+  [[nodiscard]] constexpr bool isAmountInteger() const noexcept { return nbDecimals() == 0; }
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals.
   /// Does nothing if maxNbDecimals is larger than current number of decimals
   constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeDecimals(nbDecimals(), maxNbDecimals); }
 
   /// Get a string on the currency of this amount
-  string currencyStr() const { return _curWithDecimals.str(); }
+  [[nodiscard]] string currencyStr() const { return _curWithDecimals.str(); }
 
-  /// @brief Appends a string reprensentation of the amount to given output iterator
+  /// @brief Appends a string representation of the amount to given output iterator
   /// @param it output iterator should have at least a capacity of
   ///           std::numeric_limits<AmountType>::digits10 + 3
   ///             (+1 for the sign, +1 for the '.', +1 for the first 0 if nbDecimals >= nbDigits)
@@ -280,7 +284,7 @@ class MonetaryAmount {
     return std::copy_n(std::begin(amountBuf) + amountCharPos, nbDigits - amountCharPos, it);
   }
 
-  /// @brief Appends a string reprensentation of the amount plus its currency to given output iterator
+  /// @brief Appends a string representation of the amount plus its currency to given output iterator
   /// @param it output iterator should have at least a capacity of
   ///           kMaxNbCharsAmount for the amount (explanation above)
   ///            + CurrencyCodeBase::kMaxLen + 1 for the currency and the space separator
@@ -295,31 +299,31 @@ class MonetaryAmount {
   }
 
   /// Get a string representation of the amount hold by this MonetaryAmount (without currency).
-  string amountStr() const {
-    string s(kMaxNbCharsAmount, '\0');
-    s.erase(appendAmount(s.begin()), s.end());
-    return s;
+  [[nodiscard]] string amountStr() const {
+    string ret(kMaxNbCharsAmount, '\0');
+    ret.erase(appendAmount(ret.begin()), ret.end());
+    return ret;
   }
 
-  void appendAmountStr(string &s) const {
-    s.append(kMaxNbCharsAmount, '\0');
-    auto endIt = s.end();
-    s.erase(appendAmount(endIt - kMaxNbCharsAmount), endIt);
+  void appendAmountStr(string &str) const {
+    str.append(kMaxNbCharsAmount, '\0');
+    auto endIt = str.end();
+    str.erase(appendAmount(endIt - kMaxNbCharsAmount), endIt);
   }
 
   /// Get a string of this MonetaryAmount
-  string str() const {
-    string s = amountStr();
-    appendCurrencyStr(s);
-    return s;
+  [[nodiscard]] string str() const {
+    string ret = amountStr();
+    appendCurrencyStr(ret);
+    return ret;
   }
 
-  void appendStr(string &s) const {
-    appendAmountStr(s);
-    appendCurrencyStr(s);
+  void appendStrTo(string &str) const {
+    appendAmountStr(str);
+    appendCurrencyStr(str);
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &m);
+  friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma);
 
  private:
   using UnsignedAmountType = uint64_t;
@@ -327,9 +331,9 @@ class MonetaryAmount {
   static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
   static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
 
-  void appendCurrencyStr(string &s) const {
+  void appendCurrencyStr(string &str) const {
     if (!_curWithDecimals.isNeutral()) {
-      _curWithDecimals.appendStrWithSpace(s);
+      _curWithDecimals.appendStrWithSpaceTo(str);
     }
   }
 
@@ -390,8 +394,8 @@ struct fmt::formatter<cct::MonetaryAmount> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::MonetaryAmount &a, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return a.append(ctx.out());
+  auto format(const cct::MonetaryAmount &ma, FormatContext &ctx) const -> decltype(ctx.out()) {
+    return ma.append(ctx.out());
   }
 };
 #endif

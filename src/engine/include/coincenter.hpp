@@ -31,7 +31,7 @@ class Coincenter {
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
-  void process(const CoincenterCommands &opts);
+  void process(const CoincenterCommands &coincenterCommands);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
@@ -43,25 +43,25 @@ class Coincenter {
 
   /// Retrieve market order book of market for given exchanges
   /// Also adds the conversion rate of each Exchange bundled with the market order book.
-  MarketOrderBookConversionRates getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
+  MarketOrderBookConversionRates getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
-  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames);
+  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Retrieve the last trades for each queried exchange
-  LastTradesPerExchange getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames, int nbLastTrades);
+  LastTradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
 
   /// Retrieve the last price for exchanges supporting given market.
-  MonetaryAmountPerExchange getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames);
+  MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Retrieve all matching Exchange references trading currency, at most one per platform.
   UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames,
                                                             bool shouldBeWithdrawable);
 
   /// Retrieve all matching Exchange references proposing market, at most one per platform.
-  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
@@ -87,7 +87,7 @@ class Coincenter {
                                                             CurrencyCode currencyCode);
 
   /// Query the conversion paths for each public exchange requested
-  ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
+  ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
   MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);

@@ -79,9 +79,9 @@ CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
   CurrencyExchangeFlatSet currencies;
   currencies.reserve(markets.size() / 2);
-  for (Market m : markets) {
-    currencies.emplace(m.base(), m.base(), m.base());
-    currencies.emplace(m.quote(), m.quote(), m.quote());
+  for (Market mk : markets) {
+    currencies.emplace(mk.base(), mk.base(), mk.base());
+    currencies.emplace(mk.quote(), mk.quote(), mk.quote());
   }
   log::warn("Retrieved {} Upbit currencies with partial information", currencies.size());
   log::warn("Public API of Upbit does not provide deposit / withdrawal access");
@@ -191,38 +191,38 @@ MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
   const MarketSet& markets = _marketsCache.get();
   string marketsStr;
   marketsStr.reserve(static_cast<string::size_type>(markets.size()) * 8);
-  for (Market m : markets) {
+  for (Market mk : markets) {
     if (!marketsStr.empty()) {
       marketsStr.push_back(',');
     }
-    marketsStr.append(ReverseMarketStr(m));
+    marketsStr.append(ReverseMarketStr(mk));
   }
   return ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", marketsStr}}), depth);
 }
 
-MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market m, int depth) {
+MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market mk, int depth) {
   MarketOrderBookMap marketOrderBookMap =
-      ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(m)}}), depth);
-  auto it = marketOrderBookMap.find(m);
+      ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(mk)}}), depth);
+  auto it = marketOrderBookMap.find(mk);
   if (it == marketOrderBookMap.end()) {
     throw exception("Unexpected answer from get OrderBooks");
   }
   return it->second;
 }
 
-MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(m)}});
+MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
-  return MonetaryAmount(last24hVol, m.base());
+  return MonetaryAmount(last24hVol, mk.base());
 }
 
-LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
-  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(m)}});
+LastTradesVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
+  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
   LastTradesVector ret;
   ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
   for (const json& detail : result) {
-    MonetaryAmount amount(detail["trade_volume"].get<double>(), m.base());
-    MonetaryAmount price(detail["trade_price"].get<double>(), m.quote());
+    MonetaryAmount amount(detail["trade_volume"].get<double>(), mk.base());
+    MonetaryAmount price(detail["trade_price"].get<double>(), mk.quote());
     int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
     TradeSide tradeSide = detail["ask_bid"].get<std::string_view>() == "BID" ? TradeSide::kBuy : TradeSide::kSell;
 
@@ -232,10 +232,10 @@ LastTradesVector UpbitPublic::queryLastTrades(Market m, int nbTrades) {
   return ret;
 }
 
-MonetaryAmount UpbitPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(m)}});
+MonetaryAmount UpbitPublic::TickerFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double lastPrice = result.front()["trade_price"].get<double>();
-  return MonetaryAmount(lastPrice, m.quote());
+  return MonetaryAmount(lastPrice, mk.quote());
 }
 
 MonetaryAmount UpbitPublic::SanitizeVolume(MonetaryAmount vol, MonetaryAmount pri) {

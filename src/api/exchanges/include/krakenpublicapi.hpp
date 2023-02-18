@@ -30,7 +30,7 @@ class KrakenPublic : public ExchangePublic {
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get().first; }
 
-  MonetaryAmount queryVolumeOrderMin(Market m) { return _marketsCache.get().second.find(m)->second.minVolumeOrder; }
+  MonetaryAmount queryVolumeOrderMin(Market mk) { return _marketsCache.get().second.find(mk)->second.minVolumeOrder; }
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
@@ -44,13 +44,15 @@ class KrakenPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderBookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
+    return _orderBookCache.get(mk, depth);
+  }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tickerCache.get(m).first; }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tickerCache.get(mk).first; }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m).second; }
+  MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk).second; }
 
   void updateCacheFile() const override;
 
@@ -146,7 +148,7 @@ class KrakenPublic : public ExchangePublic {
         : _tradableCurrenciesCache(currenciesCache), _marketsCache(marketsCache), _curlHandle(curlHandle) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int count);
+    MarketOrderBook operator()(Market mk, int count);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
@@ -161,7 +163,7 @@ class KrakenPublic : public ExchangePublic {
         : _tradableCurrenciesCache(tradableCurrenciesCache), _curlHandle(curlHandle) {}
 #endif
 
-    Last24hTradedVolumeAndLatestPricePair operator()(Market m);
+    Last24hTradedVolumeAndLatestPricePair operator()(Market mk);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CurlHandle& _curlHandle;

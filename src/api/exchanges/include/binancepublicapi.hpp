@@ -55,17 +55,19 @@ class BinancePublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
+    return _orderbookCache.get(mk, depth);
+  }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override { return _tickerCache.get(m); }
+  MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 
-  MonetaryAmount sanitizePrice(Market m, MonetaryAmount pri);
+  MonetaryAmount sanitizePrice(Market mk, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market m, MonetaryAmount vol, MonetaryAmount priceForMinNotional, bool isTakerOrder);
+  MonetaryAmount sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForMinNotional, bool isTakerOrder);
 
  private:
   friend class BinancePrivate;
@@ -136,7 +138,7 @@ class BinancePublic : public ExchangePublic {
     explicit OrderBookFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int depth = kDefaultDepth);
+    MarketOrderBook operator()(Market mk, int depth = kDefaultDepth);
 
     CommonInfo& _commonInfo;
   };
@@ -145,7 +147,7 @@ class BinancePublic : public ExchangePublic {
 #ifndef CCT_AGGR_INIT_CXX20
     explicit TradedVolumeFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
 #endif
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CommonInfo& _commonInfo;
   };
@@ -155,7 +157,7 @@ class BinancePublic : public ExchangePublic {
     explicit TickerFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CommonInfo& _commonInfo;
   };

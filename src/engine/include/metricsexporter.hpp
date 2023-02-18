@@ -18,9 +18,9 @@ class MetricsExporter {
 
   void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps);
 
-  void exportOrderbookMetrics(Market m, const MarketOrderBookConversionRates &marketOrderBookConversionRates);
+  void exportOrderbookMetrics(Market mk, const MarketOrderBookConversionRates &marketOrderBookConversionRates);
 
-  void exportLastTradesMetrics(Market m, const LastTradesPerExchange &lastTradesPerExchange);
+  void exportLastTradesMetrics(Market mk, const LastTradesPerExchange &lastTradesPerExchange);
 
  private:
   void createSummariesAndHistograms();

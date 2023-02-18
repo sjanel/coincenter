@@ -137,8 +137,8 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 }
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  CurlPostData postdata{{"currency", currencyCode.str()}};
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postdata, false);
+  CurlPostData postData{{"currency", currencyCode.str()}};
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData, false);
   bool generateDepositAddressNeeded = false;
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
@@ -153,7 +153,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
   if (generateDepositAddressNeeded) {
     json genCoinAddressResult =
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/deposits/generate_coin_address", postdata);
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/deposits/generate_coin_address", postData);
     if (genCoinAddressResult.contains("success")) {
       log::info("Successfully generated address");
     }
@@ -166,7 +166,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
                   std::chrono::duration_cast<std::chrono::seconds>(sleepingTime).count());
       }
       std::this_thread::sleep_for(sleepingTime);
-      result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postdata);
+      result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData);
       sleepingTime += std::chrono::seconds(1);
       ++nbRetries;
     } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
@@ -184,10 +184,10 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet w(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, std::move(addressIt->get_ref<string&>()),
-           tag, walletCheck);
-  log::info("Retrieved {}", w);
-  return w;
+  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
+                std::move(addressIt->get_ref<string&>()), tag, walletCheck);
+  log::info("Retrieved {}", wallet);
+  return wallet;
 }
 
 Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
@@ -217,7 +217,8 @@ Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
     }
 
     // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-    TimePoint placedTime = FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
+    TimePoint placedTime =
+        FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -244,9 +245,9 @@ Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
 int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   // No faster way to cancel several orders at once, doing a simple for loop
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& o : openedOrders) {
-    TradeContext tradeContext(o.market(), o.side());
-    cancelOrder(o.id(), tradeContext);
+  for (const Order& order : openedOrders) {
+    TradeContext tradeContext(order.market(), order.side());
+    cancelOrder(order.id(), tradeContext);
   }
   return openedOrders.size();
 }
@@ -277,7 +278,8 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      TimePoint timestamp = FromString(trx["done_at"].get_ref<const string&>().c_str(), "%Y-%m-%dT%H:%M:%S");
+      TimePoint timestamp =
+          FromString(trx["done_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateReceivedTime(timestamp)) {
         continue;
       }
@@ -303,20 +305,21 @@ bool IsOrderClosed(const json& orderJson) {
   return true;
 }
 
-OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market m) {
-  OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == m.base() ? m.quote() : m.base()),
+OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market mk) {
+  OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == mk.base() ? mk.quote() : mk.base()),
                       IsOrderClosed(orderJson));
 
   if (orderJson.contains("trades")) {
-    CurrencyCode feeCurrencyCode(m.quote());  // TODO: to be confirmed (this is true at least for markets involving KRW)
+    CurrencyCode feeCurrencyCode(
+        mk.quote());  // TODO: to be confirmed (this is true at least for markets involving KRW)
     MonetaryAmount fee(orderJson["paid_fee"].get<std::string_view>(), feeCurrencyCode);
 
     for (const json& orderDetails : orderJson["trades"]) {
-      MonetaryAmount tradedVol(orderDetails["volume"].get<std::string_view>(), m.base());  // always in base currency
-      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), m.quote());      // always in quote currency
-      MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), m.quote());
+      MonetaryAmount tradedVol(orderDetails["volume"].get<std::string_view>(), mk.base());  // always in base currency
+      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), mk.quote());      // always in quote currency
+      MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), mk.quote());
 
-      if (fromCurrencyCode == m.quote()) {
+      if (fromCurrencyCode == mk.quote()) {
         orderInfo.tradedAmounts.tradedFrom += tradedCost;
         orderInfo.tradedAmounts.tradedTo += tradedVol;
       } else {
@@ -324,7 +327,7 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
         orderInfo.tradedAmounts.tradedTo += tradedCost;
       }
     }
-    if (fromCurrencyCode == m.quote()) {
+    if (fromCurrencyCode == mk.quote()) {
       orderInfo.tradedAmounts.tradedFrom += fee;
     } else {
       orderInfo.tradedAmounts.tradedTo -= fee;
@@ -336,9 +339,9 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
 
 }  // namespace
 
-void UpbitPrivate::applyFee(Market m, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
+void UpbitPrivate::applyFee(Market mk, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
                             MonetaryAmount& volume) {
-  if (fromCurrencyCode == m.quote()) {
+  if (fromCurrencyCode == mk.quote()) {
     // For 'buy', from amount is fee excluded
     ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
     const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
@@ -356,16 +359,17 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const Market m = tradeInfo.tradeContext.m;
+  const Market mk = tradeInfo.tradeContext.mk;
 
-  const std::string_view askOrBid = fromCurrencyCode == m.base() ? "ask" : "bid";
-  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == m.base() ? "market" : "price") : "limit";
+  const std::string_view askOrBid = fromCurrencyCode == mk.base() ? "ask" : "bid";
+  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == mk.base() ? "market" : "price") : "limit";
 
-  CurlPostData placePostData{{"market", UpbitPublic::ReverseMarketStr(m)}, {"side", askOrBid}, {"ord_type", orderType}};
+  CurlPostData placePostData{
+      {"market", UpbitPublic::ReverseMarketStr(mk)}, {"side", askOrBid}, {"ord_type", orderType}};
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  applyFee(m, fromCurrencyCode, isTakerStrategy, from, volume);
+  applyFee(mk, fromCurrencyCode, isTakerStrategy, from, volume);
 
   MonetaryAmount sanitizedVol = UpbitPublic::SanitizeVolume(volume, price);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
@@ -380,7 +384,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   if (isTakerStrategy) {
     // Upbit has an exotic way to distinguish buy and sell on the same market
-    if (fromCurrencyCode == m.base()) {
+    if (fromCurrencyCode == mk.base()) {
       placePostData.append("volume", volume.amountStr());
     } else {
       placePostData.append("price", from.amountStr());
@@ -392,7 +396,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
 
-  placeOrderInfo.orderInfo = ParseOrderJson(placeOrderRes, fromCurrencyCode, m);
+  placeOrderInfo.orderInfo = ParseOrderJson(placeOrderRes, fromCurrencyCode, mk);
   placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
 
   // Upbit takes some time to match the market order - We should wait that it has been matched
@@ -401,7 +405,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
     json orderRes =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", placeOrderInfo.orderId}});
 
-    placeOrderInfo.orderInfo = ParseOrderJson(orderRes, fromCurrencyCode, m);
+    placeOrderInfo.orderInfo = ParseOrderJson(orderRes, fromCurrencyCode, mk);
 
     takerOrderNotClosed = !placeOrderInfo.orderInfo.isClosed;
   }
@@ -416,13 +420,13 @@ OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
     orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
     cancelledOrderClosed = IsOrderClosed(orderRes);
   }
-  return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.m);
+  return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.mk);
 }
 
 OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
-  return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.m);
+  return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.mk);
 }
 
 MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {

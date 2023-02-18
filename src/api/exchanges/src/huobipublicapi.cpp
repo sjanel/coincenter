@@ -77,7 +77,7 @@ bool HuobiPublic::healthCheck() {
 
 json HuobiPublic::TradableCurrenciesFunc::operator()() { return PublicQuery(_curlHandle, "/v2/reference/currencies"); }
 
-bool HuobiPublic::shouldDiscardChain(CurrencyCode cur, const json& chainDetail) const {
+bool HuobiPublic::ShouldDiscardChain(CurrencyCode cur, const json& chainDetail) {
   std::string_view chainName = chainDetail["chain"].get<std::string_view>();
   if (!cur.iequal(chainName) && !cur.iequal(chainDetail["displayName"].get<std::string_view>())) {
     log::debug("Discarding chain '{}' as not supported by {}", chainName, cur);
@@ -92,7 +92,7 @@ HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curStr))) {
       for (const json& chainDetail : curDetail["chains"]) {
-        if (shouldDiscardChain(cur, chainDetail)) {
+        if (ShouldDiscardChain(cur, chainDetail)) {
           continue;
         }
 
@@ -121,7 +121,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
     bool foundChainWithSameName = false;
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     for (const json& chainDetail : curDetail["chains"]) {
-      if (shouldDiscardChain(cur, chainDetail)) {
+      if (ShouldDiscardChain(cur, chainDetail)) {
         continue;
       }
       std::string_view depositAllowedStr = chainDetail["depositStatus"].get<std::string_view>();
@@ -183,8 +183,8 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
     log::trace("Accept {}-{} Huobi asset pair", baseAsset, quoteAsset);
     CurrencyCode base(baseAsset);
     CurrencyCode quote(quoteAsset);
-    Market m(base, quote);
-    markets.insert(m);
+    Market mk(base, quote);
+    markets.insert(mk);
 
     int8_t volNbDec = marketDetails["amount-precision"].get<int8_t>();
     int8_t priNbDec = marketDetails["price-precision"].get<int8_t>();
@@ -210,7 +210,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
     marketInfo.buyMarketMaxOrderValue =
         MonetaryAmount(marketDetails["buy-market-max-order-value"].get<double>(), quote);
 
-    marketInfoMap.insert_or_assign(m, std::move(marketInfo));
+    marketInfoMap.insert_or_assign(mk, std::move(marketInfo));
   }
   log::info("Retrieved huobi {} markets", markets.size());
   return {std::move(markets), std::move(marketInfoMap)};
@@ -223,7 +223,7 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     bool foundChainWithSameName = false;
     for (const json& chainDetail : curDetail["chains"]) {
-      if (shouldDiscardChain(cur, chainDetail)) {
+      if (ShouldDiscardChain(cur, chainDetail)) {
         continue;
       }
       auto withdrawFeeTypeIt = chainDetail.find("withdrawFeeType");
@@ -278,8 +278,8 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   using HuobiAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   HuobiAssetPairToStdMarketMap huobiAssetPairToStdMarketMap;
   huobiAssetPairToStdMarketMap.reserve(markets.size());
-  for (Market m : markets) {
-    huobiAssetPairToStdMarketMap.insert_or_assign(m.assetsPairStrUpper(), m);
+  for (Market mk : markets) {
+    huobiAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
   for (const json& tickerDetails : PublicQuery(_curlHandle, "/market/tickers")) {
     string upperMarket = ToUpper(tickerDetails["symbol"].get<std::string_view>());
@@ -287,33 +287,33 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
     if (it == huobiAssetPairToStdMarketMap.end()) {
       continue;
     }
-    Market m = it->second;
-    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+    Market mk = it->second;
+    const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
     VolAndPriNbDecimals volAndPriNbDecimals = marketInfo.volAndPriNbDecimals;
-    MonetaryAmount askPri(tickerDetails["ask"].get<double>(), m.quote(), MonetaryAmount::RoundType::kNearest,
+    MonetaryAmount askPri(tickerDetails["ask"].get<double>(), mk.quote(), MonetaryAmount::RoundType::kNearest,
                           volAndPriNbDecimals.priNbDecimals);
-    MonetaryAmount bidPri(tickerDetails["bid"].get<double>(), m.quote(), MonetaryAmount::RoundType::kNearest,
+    MonetaryAmount bidPri(tickerDetails["bid"].get<double>(), mk.quote(), MonetaryAmount::RoundType::kNearest,
                           volAndPriNbDecimals.priNbDecimals);
-    MonetaryAmount askVol(tickerDetails["askSize"].get<double>(), m.base(), MonetaryAmount::RoundType::kUp,
+    MonetaryAmount askVol(tickerDetails["askSize"].get<double>(), mk.base(), MonetaryAmount::RoundType::kUp,
                           volAndPriNbDecimals.volNbDecimals);
-    MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), m.base(), MonetaryAmount::RoundType::kUp,
+    MonetaryAmount bidVol(tickerDetails["bidSize"].get<double>(), mk.base(), MonetaryAmount::RoundType::kUp,
                           volAndPriNbDecimals.volNbDecimals);
 
     if (bidVol == 0 || askVol == 0) {
-      log::trace("No volume for {}", m);
+      log::trace("No volume for {}", mk);
       continue;
     }
 
-    ret.insert_or_assign(m, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
+    ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Huobi ticker information from {} markets", ret.size());
   return ret;
 }
 
-MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
+MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Huobi has a fixed range of authorized values for depth
-  CurlPostData postData{{"symbol", m.assetsPairStrLower()}, {"type", "step0"}};
+  CurlPostData postData{{"symbol", mk.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
     static constexpr int kAuthorizedDepths[] = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
     auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
@@ -331,13 +331,13 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
   for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
     const bool isAsk = asksOrBids == std::addressof(asks);
-    int n = 0;
+    int currentDepth = 0;
     for (const auto& priceQuantityPair : *asksOrBids) {
-      MonetaryAmount amount(priceQuantityPair.back().get<double>(), m.base());
-      MonetaryAmount price(priceQuantityPair.front().get<double>(), m.quote());
+      MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
+      MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
 
       orderBookLines.emplace_back(amount, price, isAsk);
-      if (++n == depth) {
+      if (++currentDepth == depth) {
         if (depth < static_cast<int>(asksOrBids->size())) {
           log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
         }
@@ -345,13 +345,13 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market m, int depth) {
       }
     }
   }
-  return MarketOrderBook(m, orderBookLines);
+  return MarketOrderBook(mk, orderBookLines);
 }
 
-MonetaryAmount HuobiPublic::sanitizePrice(Market m, MonetaryAmount pri) {
+MonetaryAmount HuobiPublic::sanitizePrice(Market mk, MonetaryAmount pri) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
   MonetaryAmount sanitizedPri = pri;
-  auto priNbDecimals = marketInfoMap.find(m)->second.volAndPriNbDecimals.priNbDecimals;
+  auto priNbDecimals = marketInfoMap.find(mk)->second.volAndPriNbDecimals.priNbDecimals;
   MonetaryAmount minPri(1, pri.currencyCode(), priNbDecimals);
   if (sanitizedPri < minPri) {
     sanitizedPri = minPri;
@@ -364,10 +364,10 @@ MonetaryAmount HuobiPublic::sanitizePrice(Market m, MonetaryAmount pri) {
   return sanitizedPri;
 }
 
-MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
+MonetaryAmount HuobiPublic::sanitizeVolume(Market mk, CurrencyCode fromCurrencyCode, MonetaryAmount vol,
                                            MonetaryAmount sanitizedPrice, bool isTakerOrder) {
   const MarketsFunc::MarketInfoMap& marketInfoMap = _marketsCache.get().second;
-  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(m)->second;
+  const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
   MonetaryAmount sanitizedVol = vol;
 
   if (sanitizedVol.toNeutral() * sanitizedPrice < marketInfo.minOrderValue) {
@@ -377,7 +377,7 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
     sanitizedVol.truncate(marketInfo.volAndPriNbDecimals.volNbDecimals);
   }
   if (isTakerOrder) {
-    if (fromCurrencyCode == m.base() && sanitizedVol < marketInfo.sellMarketMinOrderAmount) {
+    if (fromCurrencyCode == mk.base() && sanitizedVol < marketInfo.sellMarketMinOrderAmount) {
       sanitizedVol = marketInfo.sellMarketMinOrderAmount;
     }
   } else {
@@ -391,24 +391,24 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market m, CurrencyCode fromCurrencyCo
   return sanitizedVol;
 }
 
-MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/market/detail/merged", {{"symbol", m.assetsPairStrLower()}});
+MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/market/detail/merged", {{"symbol", mk.assetsPairStrLower()}});
   double last24hVol = result["amount"].get<double>();
-  return MonetaryAmount(last24hVol, m.base());
+  return MonetaryAmount(last24hVol, mk.base());
 }
 
-LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
+LastTradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
   nbTrades = std::min(nbTrades, 2000);  // max authorized
   nbTrades = std::max(nbTrades, 1);     // min authorized
   json result =
-      PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", m.assetsPairStrLower()}, {"size", nbTrades}});
+      PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
   LastTradesVector ret;
   for (const json& detail : result) {
     auto dataDetails = detail.find("data");
     if (dataDetails != detail.end()) {
       for (const json& detail2 : *dataDetails) {
-        MonetaryAmount amount(detail2["amount"].get<double>(), m.base());
-        MonetaryAmount price(detail2["price"].get<double>(), m.quote());
+        MonetaryAmount amount(detail2["amount"].get<double>(), mk.base());
+        MonetaryAmount price(detail2["price"].get<double>(), mk.quote());
         int64_t millisecondsSinceEpoch = detail2["ts"].get<int64_t>();
         TradeSide tradeSide =
             detail2["direction"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
@@ -421,9 +421,9 @@ LastTradesVector HuobiPublic::queryLastTrades(Market m, int nbTrades) {
   return ret;
 }
 
-MonetaryAmount HuobiPublic::TickerFunc::operator()(Market m) {
-  json result = PublicQuery(_curlHandle, "/market/trade", {{"symbol", m.assetsPairStrLower()}});
+MonetaryAmount HuobiPublic::TickerFunc::operator()(Market mk) {
+  json result = PublicQuery(_curlHandle, "/market/trade", {{"symbol", mk.assetsPairStrLower()}});
   double lastPrice = result["data"].front()["price"].get<double>();
-  return MonetaryAmount(lastPrice, m.quote());
+  return MonetaryAmount(lastPrice, mk.quote());
 }
 }  // namespace cct::api

@@ -19,7 +19,7 @@ class ExchangesOrchestrator {
 
   ExchangeTickerMaps getTickerInformation(ExchangeNameSpan exchangeNames);
 
-  MarketOrderBookConversionRates getMarketOrderBooks(Market m, ExchangeNameSpan exchangeNames,
+  MarketOrderBookConversionRates getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode, std::optional<int> depth);
 
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
@@ -36,14 +36,14 @@ class ExchangesOrchestrator {
   DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
                                         const DepositsConstraints &depositsConstraints);
 
-  ConversionPathPerExchange getConversionPaths(Market m, ExchangeNameSpan exchangeNames);
+  ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 
   UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames,
                                                             bool shouldBeWithdrawable);
 
-  UniquePublicSelectedExchanges getExchangesTradingMarket(Market m, ExchangeNameSpan exchangeNames);
+  UniquePublicSelectedExchanges getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames);
 
   TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                                  std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
@@ -64,11 +64,11 @@ class ExchangesOrchestrator {
 
   MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
-  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market m, ExchangeNameSpan exchangeNames);
+  MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
-  LastTradesPerExchange getLastTradesPerExchange(Market m, ExchangeNameSpan exchangeNames, int nbLastTrades);
+  LastTradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
 
-  MonetaryAmountPerExchange getLastPricePerExchange(Market m, ExchangeNameSpan exchangeNames);
+  MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
  private:
   ExchangeRetriever _exchangeRetriever;

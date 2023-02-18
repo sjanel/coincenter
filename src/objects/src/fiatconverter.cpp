@@ -65,8 +65,8 @@ void FiatConverter::updateCacheFile() const {
   GetRatesCacheFile(_dataDir).write(data);
 }
 
-std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
-  string qStr(m.assetsPairStrUpper('_'));
+std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
+  string qStr(mk.assetsPairStrUpper('_'));
   CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
 
   string method = "/v7/convert?";
@@ -78,12 +78,12 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
     log::error("No JSON data received from fiat currency converter service");
-    auto it = _pricesMap.find(m);
+    auto it = _pricesMap.find(mk);
     if (it != _pricesMap.end()) {
       // Update cache time anyway to avoid querying too much the service
-      TimePoint t = Clock::now();
-      it->second.lastUpdatedTime = t;
-      _pricesMap[m.reverse()].lastUpdatedTime = t;
+      TimePoint nowTime = Clock::now();
+      it->second.lastUpdatedTime = nowTime;
+      _pricesMap[mk.reverse()].lastUpdatedTime = nowTime;
     }
     return std::nullopt;
   }
@@ -91,9 +91,9 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market m) {
   const json& rates = res[qStr];
   double rate = rates["val"];
   log::debug("Stored rate {} for market {}", rate, qStr.c_str());
-  TimePoint t = Clock::now();
-  _pricesMap.insert_or_assign(m.reverse(), PriceTimedValue{static_cast<double>(1) / rate, t});
-  _pricesMap.insert_or_assign(std::move(m), PriceTimedValue{rate, t});
+  TimePoint nowTime = Clock::now();
+  _pricesMap.insert_or_assign(mk.reverse(), PriceTimedValue{static_cast<double>(1) / rate, nowTime});
+  _pricesMap.insert_or_assign(std::move(mk), PriceTimedValue{rate, nowTime});
   return rate;
 }
 
@@ -101,17 +101,17 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
   if (from == to) {
     return amount;
   }
-  Market m(from, to);
+  Market mk(from, to);
   double rate;
   std::lock_guard<std::mutex> guard(_pricesMutex);
-  auto it = _pricesMap.find(m);
+  auto it = _pricesMap.find(mk);
   if (it != _pricesMap.end() && Clock::now() - it->second.lastUpdatedTime < _ratesUpdateFrequency) {
     rate = it->second.rate;
   } else {
     if (_ratesUpdateFrequency == Duration::max()) {
       throw exception("Unable to query fiat currency rates and no rate found in cache");
     }
-    std::optional<double> queriedRate = queryCurrencyRate(m);
+    std::optional<double> queriedRate = queryCurrencyRate(mk);
     if (queriedRate) {
       rate = *queriedRate;
     } else {

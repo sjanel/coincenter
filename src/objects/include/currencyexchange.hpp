@@ -56,7 +56,7 @@ class CurrencyExchange {
 
   operator CurrencyCode() const { return _standardCode; }
 
-  friend std::ostream &operator<<(std::ostream &os, const CurrencyExchange &v);
+  friend std::ostream &operator<<(std::ostream &os, const CurrencyExchange &currencyExchange);
 
  private:
   CurrencyCode _standardCode;

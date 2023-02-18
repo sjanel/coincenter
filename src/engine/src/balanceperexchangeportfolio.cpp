@@ -27,7 +27,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
     total.sortByDecreasingEquivalentAmount();
 
     string balanceEqCur("Total ");
-    balanceCurrencyCode.appendStr(balanceEqCur);
+    balanceCurrencyCode.appendStrTo(balanceEqCur);
     balanceEqCur.append(" eq");
     header.emplace_back(std::move(balanceEqCur));
   }
@@ -45,26 +45,26 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   const int nbExchanges = _balancePerExchange.size();
   for (const auto &[amount, equi] : total) {
     // Amounts impossible to convert have a zero value
-    SimpleTable::Row r(amount.currencyStr(), amount.amountStr());
+    SimpleTable::Row row(amount.currencyStr(), amount.amountStr());
     if (countEqui) {
-      r.emplace_back(equi.amountStr());
+      row.emplace_back(equi.amountStr());
     }
     if (wide) {
       for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-        r.emplace_back(_balancePerExchange[exchangePos].second.get(amount.currencyCode()).amountStr());
+        row.emplace_back(_balancePerExchange[exchangePos].second.get(amount.currencyCode()).amountStr());
       }
     }
-    balanceTable.push_back(std::move(r));
+    balanceTable.push_back(std::move(row));
   }
   if (countEqui) {
     balanceTable.push_back(SimpleTable::Row::kDivider);
-    SimpleTable::Row r("Total", "", ComputeTotalSum(total).amountStr());
+    SimpleTable::Row row("Total", "", ComputeTotalSum(total).amountStr());
     if (wide) {
       for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-        r.emplace_back("");
+        row.emplace_back("");
       }
     }
-    balanceTable.push_back(std::move(r));
+    balanceTable.push_back(std::move(row));
   }
   return balanceTable;
 }

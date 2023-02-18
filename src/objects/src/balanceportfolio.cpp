@@ -20,15 +20,15 @@ inline MonetaryAmountWithEquivalent &operator+=(MonetaryAmountWithEquivalent &lh
 
 BalancePortfolio::BalancePortfolio(std::span<const MonetaryAmount> init) {
   // Simple for loop to avoid complex code eliminating duplicates for same currency
-  for (MonetaryAmount a : init) {
-    add(a);
+  for (MonetaryAmount ma : init) {
+    add(ma);
   }
 }
 
 BalancePortfolio::BalancePortfolio(std::span<const MonetaryAmountWithEquivalent> init) {
   // Simple for loop to avoid complex code eliminating duplicates for same currency
-  for (const MonetaryAmountWithEquivalent &e : init) {
-    add(e.amount, e.equi);
+  for (const MonetaryAmountWithEquivalent &monetaryAmountWithEquivalent : init) {
+    add(monetaryAmountWithEquivalent.amount, monetaryAmountWithEquivalent.equi);
   }
 }
 
@@ -46,20 +46,21 @@ void BalancePortfolio::add(MonetaryAmount amount, MonetaryAmount equivalentInMai
 }
 
 MonetaryAmount BalancePortfolio::get(CurrencyCode currencyCode) const {
-  auto it = std::ranges::partition_point(_sortedAmounts, [currencyCode](const MonetaryAmountWithEquivalent &a) {
-    return a.amount.currencyCode() < currencyCode;
-  });
+  auto it = std::ranges::partition_point(
+      _sortedAmounts, [currencyCode](const MonetaryAmountWithEquivalent &monetaryAmountWithEquivalent) {
+        return monetaryAmountWithEquivalent.amount.currencyCode() < currencyCode;
+      });
   if (it == _sortedAmounts.end() || it->amount.currencyCode() != currencyCode) {
     return MonetaryAmount(0, currencyCode);
   }
   return it->amount;
 }
 
-BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &o) {
+BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &other) {
   auto first1 = _sortedAmounts.begin();
   auto last1 = _sortedAmounts.end();
-  auto first2 = o.begin();
-  auto last2 = o.end();
+  auto first2 = other.begin();
+  auto last2 = other.end();
 
   while (first2 != last2) {
     if (first1 == last1) {

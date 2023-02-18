@@ -19,28 +19,28 @@ Duration ParseDuration(std::string_view durationStr) {
       "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
       "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
 
-  const std::size_t s = durationStr.size();
+  const std::size_t sz = durationStr.size();
   Duration ret{};
-  for (std::size_t p = 0; p < s;) {
-    std::size_t intFirst = p;
+  for (std::size_t charPos = 0; charPos < sz;) {
+    std::size_t intFirst = charPos;
 
-    while (p < s && isdigit(durationStr[p])) {
-      ++p;
+    while (charPos < sz && isdigit(durationStr[charPos])) {
+      ++charPos;
     }
-    if (intFirst == p) {
+    if (intFirst == charPos) {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
-    std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + p);
+    std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + charPos);
     int64_t timeAmount = FromString<int64_t>(timeAmountStr);
 
-    while (p < s && isspace(durationStr[p])) {
-      ++p;
+    while (charPos < sz && isspace(durationStr[charPos])) {
+      ++charPos;
     }
-    std::size_t unitFirst = p;
-    while (p < s && islower(durationStr[p])) {
-      ++p;
+    std::size_t unitFirst = charPos;
+    while (charPos < sz && islower(durationStr[charPos])) {
+      ++charPos;
     }
-    std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + p);
+    std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + charPos);
     if (timeUnitStr == "y") {
       ret += std::chrono::years(timeAmount);
     } else if (timeUnitStr == "mon") {
@@ -62,8 +62,8 @@ Duration ParseDuration(std::string_view durationStr) {
     } else {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
-    while (p < s && isspace(durationStr[p])) {
-      ++p;
+    while (charPos < sz && isspace(durationStr[charPos])) {
+      ++charPos;
     }
   }
 

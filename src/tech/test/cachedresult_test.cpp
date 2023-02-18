@@ -10,14 +10,14 @@ namespace {
 struct Incr {
   int operator()() { return ++nbCalls; }
 
-  int operator()(int a) {
-    nbCalls += a;
+  int operator()(int val) {
+    nbCalls += val;
     return nbCalls;
   }
 
-  int operator()(int a, int b) {
-    nbCalls += a;
-    nbCalls += b;
+  int operator()(int lhs, int rhs) {
+    nbCalls += lhs;
+    nbCalls += rhs;
     return nbCalls;
   }
 
@@ -88,13 +88,13 @@ TEST_F(CachedResultTest, GetCache) {
 }
 
 TEST_F(CachedResultTest, SetInCache) {
-  auto t = std::chrono::steady_clock::now();
-  cachedResult.set(42, t, 3, 4);
+  auto nowTime = std::chrono::steady_clock::now();
+  cachedResult.set(42, nowTime, 3, 4);
   EXPECT_EQ(cachedResult.get(3, 4), 42);
   EXPECT_EQ(cachedResult.get(3, 4), 42);
   std::this_thread::sleep_for(kCacheExpireTime);
   EXPECT_EQ(cachedResult.get(3, 4), 7);
-  cachedResult.set(42, t, 3, 4);  // timestamp too old, should not be set
+  cachedResult.set(42, nowTime, 3, 4);  // timestamp too old, should not be set
   EXPECT_EQ(cachedResult.get(3, 4), 7);
 }
 

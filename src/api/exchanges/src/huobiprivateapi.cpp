@@ -34,37 +34,38 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postdata = CurlPostData()) {
-  CurlPostData signaturePostdata{{"AccessKeyId", apiKey.key()},
-                                 {"SignatureMethod", "HmacSHA256"},
-                                 {"SignatureVersion", 2},
-                                 {"Timestamp", curlHandle.urlEncode(Nonce_LiteralDate("%Y-%m-%dT%H:%M:%S"))}};
+                  CurlPostData&& postData = CurlPostData()) {
+  CurlPostData signaturePostData{
+      {"AccessKeyId", apiKey.key()},
+      {"SignatureMethod", "HmacSHA256"},
+      {"SignatureVersion", 2},
+      {"Timestamp", curlHandle.urlEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat))}};
 
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
-  if (!postdata.empty()) {
+  if (!postData.empty()) {
     if (requestType == HttpRequestType::kGet) {
       // Warning: Huobi expects that all parameters of the query are ordered lexicographically
       // We trust the caller for this. In case the order is not respected, error 'Signature not valid' will be returned
       // from Huobi
-      signaturePostdata.append(std::move(postdata));
-      postdata = CurlPostData();
+      signaturePostData.append(postData);
+      postData = CurlPostData();
     } else {
       postDataFormat = CurlOptions::PostDataFormat::kJson;
     }
   }
 
   string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(
-      ssl::ShaType::kSha256, BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostdata.str()),
+      ssl::ShaType::kSha256, BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostData.str()),
       apiKey.privateKey())));
 
-  signaturePostdata.append("Signature", sig);
+  signaturePostData.append("Signature", sig);
 
   string method(endpoint);
   method.push_back('?');
-  method.append(signaturePostdata.str());
+  method.append(signaturePostData.str());
 
   json ret = json::parse(
-      curlHandle.query(method, CurlOptions(requestType, std::move(postdata), HuobiPublic::kUserAgent, postDataFormat)));
+      curlHandle.query(method, CurlOptions(requestType, std::move(postData), HuobiPublic::kUserAgent, postDataFormat)));
   auto statusIt = ret.find("status");
   if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
     log::error("Full Huobi json error: '{}'", ret.dump());
@@ -111,29 +112,30 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = ToLower(currencyCode.str());
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
-                             {{"currency", lowerCaseCur}});
-  std::string_view address;
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
+                           {{"currency", lowerCaseCur}})["data"];
+  string address;
   std::string_view tag;
   ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  for (const json& depositDetail : result["data"]) {
-    address = depositDetail["address"].get<std::string_view>();
+  for (json& depositDetail : data) {
     tag = depositDetail["addressTag"].get<std::string_view>();
 
-    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, address, tag)) {
+    std::string_view addressView = depositDetail["address"].get<std::string_view>();
+
+    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, addressView, tag)) {
+      address = std::move(depositDetail["address"].get_ref<string&>());
       break;
     }
-    log::warn("{} & tag {} are not validated in the deposit addresses file", address, tag);
-    address = std::string_view();
+    log::warn("{} & tag {} are not validated in the deposit addresses file", addressView, tag);
     tag = std::string_view();
   }
 
-  Wallet w(std::move(exchangeName), currencyCode, address, tag, walletCheck);
-  log::info("Retrieved {}", w);
-  return w;
+  Wallet wallet(std::move(exchangeName), currencyCode, std::move(address), tag, walletCheck);
+  log::info("Retrieved {}", wallet);
+  return wallet;
 }
 
 Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
@@ -276,23 +278,23 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  const Market m = tradeInfo.tradeContext.m;
-  string lowerCaseMarket = m.assetsPairStrLower();
+  const Market mk = tradeInfo.tradeContext.mk;
+  string lowerCaseMarket = mk.assetsPairStrLower();
 
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   std::string_view type;
   if (isTakerStrategy) {
-    type = fromCurrencyCode == m.base() ? "sell-market" : "buy-market";
+    type = fromCurrencyCode == mk.base() ? "sell-market" : "buy-market";
   } else {
-    type = fromCurrencyCode == m.base() ? "sell-limit" : "buy-limit";
+    type = fromCurrencyCode == mk.base() ? "sell-limit" : "buy-limit";
   }
 
   HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
 
-  price = huobiPublic.sanitizePrice(m, price);
+  price = huobiPublic.sanitizePrice(mk, price);
 
-  MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(m, fromCurrencyCode, volume, price, isTakerStrategy);
+  MonetaryAmount sanitizedVol = huobiPublic.sanitizeVolume(mk, fromCurrencyCode, volume, price, isTakerStrategy);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
   if (volume < sanitizedVol && !isSimulationWithRealOrder) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
@@ -305,7 +307,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   CurlPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
   if (isTakerStrategy) {
-    if (fromCurrencyCode == m.quote()) {
+    if (fromCurrencyCode == mk.quote()) {
       // For buy-market, Huobi asks for the buy value, not the volume. Extract from documentation:
       // 'order size (for buy market order, it's order value)'
       placePostData.set("amount", from.amountStr());
@@ -337,7 +339,7 @@ OrderInfo HuobiPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
 OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
-  const Market m = tradeContext.m;
+  const Market mk = tradeContext.mk;
   string endpoint = "/v1/order/orders/";
   endpoint.append(orderId);
 
@@ -358,10 +360,10 @@ OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
     filledFees = data["filled-fees"].get<std::string_view>();
   }
 
-  MonetaryAmount baseMatchedAmount(filledAmount, m.base());
-  MonetaryAmount quoteMatchedAmount(filledCashAmount, m.quote());
-  MonetaryAmount fromAmount = fromCurrencyCode == m.base() ? baseMatchedAmount : quoteMatchedAmount;
-  MonetaryAmount toAmount = fromCurrencyCode == m.base() ? quoteMatchedAmount : baseMatchedAmount;
+  MonetaryAmount baseMatchedAmount(filledAmount, mk.base());
+  MonetaryAmount quoteMatchedAmount(filledCashAmount, mk.quote());
+  MonetaryAmount fromAmount = fromCurrencyCode == mk.base() ? baseMatchedAmount : quoteMatchedAmount;
+  MonetaryAmount toAmount = fromCurrencyCode == mk.base() ? quoteMatchedAmount : baseMatchedAmount;
   // Fee is always in destination currency (according to Huobi documentation)
   MonetaryAmount fee(filledFees, toCurrencyCode);
   toAmount -= fee;

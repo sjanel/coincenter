@@ -244,7 +244,7 @@ TEST_F(QueryResultPrinterTickerTest, NoPrint) {
 
 class QueryResultPrinterMarketOrderBookTest : public QueryResultPrinterTest {
  protected:
-  Market m{"BTC", "EUR"};
+  Market mk{"BTC", "EUR"};
   int d = 3;
   MarketOrderBook mob{askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec2, d};
   MarketOrderBookConversionRates marketOrderBookConversionRates{{"exchangeA", mob, {}}, {"exchangeD", mob, {}}};
@@ -252,7 +252,7 @@ class QueryResultPrinterMarketOrderBookTest : public QueryResultPrinterTest {
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
   QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printMarketOrderBooks(m, CurrencyCode{}, d, marketOrderBookConversionRates);
+      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------
 | Sellers of BTC (asks) | exchangeA BTC price in EUR | Buyers of BTC (bids) |
@@ -280,7 +280,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printMarketOrderBooks(m, CurrencyCode{}, d, MarketOrderBookConversionRates{});
+      .printMarketOrderBooks(mk, CurrencyCode{}, d, MarketOrderBookConversionRates{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -297,7 +297,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printMarketOrderBooks(m, CurrencyCode{}, d, marketOrderBookConversionRates);
+      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -375,7 +375,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printMarketOrderBooks(m, CurrencyCode{}, d, marketOrderBookConversionRates);
+      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   expectNoStr();
 }
 

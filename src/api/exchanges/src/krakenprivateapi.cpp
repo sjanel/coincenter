@@ -214,9 +214,9 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet w(std::move(eName), currencyCode, std::move(address), std::move(tag), walletCheck);
-  log::info("Retrieved {}", w);
-  return w;
+  Wallet wallet(std::move(eName), currencyCode, std::move(address), std::move(tag), walletCheck);
+  log::info("Retrieved {}", wallet);
+  return wallet;
 }
 
 Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
@@ -277,8 +277,8 @@ int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     return cancelledOrders["count"].get<int>();
   }
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& o : openedOrders) {
-    cancelOrderProcess(o.id());
+  for (const Order& order : openedOrders) {
+    cancelOrderProcess(order.id());
   }
   return openedOrders.size();
 }
@@ -340,15 +340,15 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   const bool isTakerStrategy =
       tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
   const bool isSimulation = tradeInfo.options.isSimulation();
-  const Market m = tradeInfo.tradeContext.m;
+  const Market mk = tradeInfo.tradeContext.mk;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);
-  const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(m);
-  CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.base());
-  CurrencyExchange krakenCurrencyQuote = _exchangePublic.convertStdCurrencyToCurrencyExchange(m.quote());
+  const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(mk);
+  CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(mk.base());
+  CurrencyExchange krakenCurrencyQuote = _exchangePublic.convertStdCurrencyToCurrencyExchange(mk.quote());
   Market krakenMarket(krakenCurrencyBase.altCode(), krakenCurrencyQuote.altCode());
-  const std::string_view orderType = fromCurrencyCode == m.base() ? "sell" : "buy";
+  const std::string_view orderType = fromCurrencyCode == mk.base() ? "sell" : "buy";
 
-  auto volAndPriNbDecimals = krakenPublic._marketsCache.get().second.find(m)->second.volAndPriNbDecimals;
+  auto volAndPriNbDecimals = krakenPublic._marketsCache.get().second.find(mk)->second.volAndPriNbDecimals;
 
   price.truncate(volAndPriNbDecimals.priNbDecimals);
 
@@ -380,7 +380,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
                              {"ordertype", isTakerStrategy ? "market" : "limit"},
                              {"price", price.amountStr()},
                              {"volume", volume.amountStr()},
-                             {"oflags", fromCurrencyCode == m.quote() ? "fcib" : "fciq"},
+                             {"oflags", fromCurrencyCode == mk.quote() ? "fcib" : "fciq"},
                              {"expiretm", nbSecondsSinceEpoch + expireTimeInSeconds},
                              {"userref", tradeInfo.tradeContext.userRef}};
   if (isSimulation) {
@@ -404,7 +404,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount
   std::string_view krakenTruncatedAmount(
       orderDescriptionStr.begin() + orderType.size() + 1,
       orderDescriptionStr.begin() + orderDescriptionStr.find(' ', orderType.size() + 1));
-  MonetaryAmount krakenVolume(krakenTruncatedAmount, m.base());
+  MonetaryAmount krakenVolume(krakenTruncatedAmount, mk.base());
   log::debug("Kraken adjusted volume: {}", krakenVolume);
 
   placeOrderInfo.orderInfo =
@@ -426,22 +426,22 @@ void KrakenPrivate::cancelOrderProcess(OrderIdView id) {
 OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext, QueryOrder queryOrder) {
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
-  const Market m = tradeContext.m;
+  const Market mk = tradeContext.mk;
 
   json ordersRes = queryOrdersData(tradeContext.userRef, orderId, queryOrder);
   auto openIt = ordersRes.find("open");
   const bool orderInOpenedPart = openIt != ordersRes.end() && openIt->contains(orderId);
   const json& orderJson = orderInOpenedPart ? (*openIt)[orderId] : ordersRes["closed"][orderId];
-  MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), m.base());             // always in base currency
-  MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), m.base());  // always in base currency
+  MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), mk.base());             // always in base currency
+  MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), mk.base());  // always in base currency
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode), !orderInOpenedPart);
   // Avoid division by 0 as the price is returned as 0.
   if (tradedVol != 0) {
-    MonetaryAmount tradedCost(orderJson["cost"].get<std::string_view>(), m.quote());  // always in quote currency
-    MonetaryAmount fee(orderJson["fee"].get<std::string_view>(), m.quote());          // always in quote currency
+    MonetaryAmount tradedCost(orderJson["cost"].get<std::string_view>(), mk.quote());  // always in quote currency
+    MonetaryAmount fee(orderJson["fee"].get<std::string_view>(), mk.quote());          // always in quote currency
 
-    if (fromCurrencyCode == m.quote()) {
-      MonetaryAmount price(orderJson["price"].get<std::string_view>(), m.base());
+    if (fromCurrencyCode == mk.quote()) {
+      MonetaryAmount price(orderJson["price"].get<std::string_view>(), mk.base());
       orderInfo.tradedAmounts.tradedFrom += tradedCost;
       orderInfo.tradedAmounts.tradedTo += (tradedCost - fee).toNeutral() / price;
     } else {
@@ -488,7 +488,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 
   string krakenWalletName(wallet.exchangeName().str());
   krakenWalletName.push_back('_');
-  currencyCode.appendStr(krakenWalletName);
+  currencyCode.appendStrTo(krakenWalletName);
   std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);
 
   json withdrawData = PrivateQuery(

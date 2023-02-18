@@ -83,11 +83,11 @@ void SimpleTable::print(std::ostream &os) const {
   // We assume that each row has same number of cells, no silly checks here
   const size_type nbColumns = _rows.front().size();
   SmallVector<uint16_t, 8> maxWidthPerColumn(nbColumns, 0);
-  for (const Row &r : _rows) {
-    if (!r.isDivider()) {
+  for (const Row &row : _rows) {
+    if (!row.isDivider()) {
       for (size_type columnPos = 0; columnPos < nbColumns; ++columnPos) {
         maxWidthPerColumn[columnPos] =
-            std::max(maxWidthPerColumn[columnPos], static_cast<uint16_t>(r[columnPos].size()));
+            std::max(maxWidthPerColumn[columnPos], static_cast<uint16_t>(row[columnPos].size()));
       }
     }
   }
@@ -98,11 +98,11 @@ void SimpleTable::print(std::ostream &os) const {
   os << lineSep << std::endl;
 
   bool printHeader = _rows.size() > 1U;
-  for (const Row &r : _rows) {
-    if (r.isDivider()) {
+  for (const Row &row : _rows) {
+    if (row.isDivider()) {
       os << lineSep << std::endl;
     } else {
-      r.print(os, maxWidthPerColumn);
+      row.print(os, maxWidthPerColumn);
     }
     if (printHeader) {
       os << lineSep << std::endl;

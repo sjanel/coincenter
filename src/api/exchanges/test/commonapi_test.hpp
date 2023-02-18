@@ -22,9 +22,9 @@ class TestAPI {
   static MarketSet ComputeMarketSetSample(const MarketSet &markets, const CurrencyExchangeFlatSet &currencies) {
     static constexpr int kNbSamples = 1;
     MarketSet consideredMarkets;
-    std::ranges::copy_if(markets, std::inserter(consideredMarkets, consideredMarkets.end()), [&currencies](Market m) {
-      auto cur1It = currencies.find(m.base());
-      auto cur2It = currencies.find(m.quote());
+    std::ranges::copy_if(markets, std::inserter(consideredMarkets, consideredMarkets.end()), [&currencies](Market mk) {
+      auto cur1It = currencies.find(mk.base());
+      auto cur2It = currencies.find(mk.quote());
       return cur1It != currencies.end() && cur2It != currencies.end() && (!cur1It->isFiat() || !cur2It->isFiat());
     });
     MarketSet sampleMarkets;
@@ -38,7 +38,7 @@ class TestAPI {
     CurrencyExchangeFlatSet currencyToKeep;
     std::ranges::copy_if(
         currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange &c) {
-          return !c.isFiat() && std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
+          return !c.isFiat() && std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
         });
 
     CurrencyExchangeFlatSet sample;
@@ -90,37 +90,37 @@ class TestAPI {
     }
     markets = exchangePublic.queryTradableMarkets();
     sampleMarkets = ComputeMarketSetSample(markets, currencies);
-    for (Market m : sampleMarkets) {
-      testMarket(m);
+    for (Market mk : sampleMarkets) {
+      testMarket(mk);
     }
   }
 
-  void testMarket(Market m) {
+  void testMarket(Market mk) {
     if (!exchangeStatusOK) {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    log::info("Test {} market", m);
+    log::info("Test {} market", mk);
     ASSERT_FALSE(markets.empty());
     static constexpr int kCountDepthOrderBook = 5;
-    MarketOrderBook marketOrderBook = exchangePublic.queryOrderBook(m, kCountDepthOrderBook);
+    MarketOrderBook marketOrderBook = exchangePublic.queryOrderBook(mk, kCountDepthOrderBook);
     EXPECT_LE(marketOrderBook.nbAskPrices(), kCountDepthOrderBook);
     EXPECT_LE(marketOrderBook.nbBidPrices(), kCountDepthOrderBook);
     EXPECT_FALSE(marketOrderBook.isArtificiallyExtended());
     if (!marketOrderBook.empty()) {
       EXPECT_LT(marketOrderBook.highestBidPrice(), marketOrderBook.lowestAskPrice());
     }
-    EXPECT_NO_THROW(exchangePublic.queryLast24hVolume(m));
-    EXPECT_NO_THROW(exchangePublic.queryLastPrice(m));
+    EXPECT_NO_THROW(exchangePublic.queryLast24hVolume(mk));
+    EXPECT_NO_THROW(exchangePublic.queryLastPrice(mk));
 
     MarketOrderBookMap approximatedMarketOrderbooks = exchangePublic.queryAllApproximatedOrderBooks(1);
 
-    auto approximatedOrderbookIt = approximatedMarketOrderbooks.find(m);
+    auto approximatedOrderbookIt = approximatedMarketOrderbooks.find(mk);
     ASSERT_NE(approximatedOrderbookIt, approximatedMarketOrderbooks.end());
 
     MarketPriceMap marketPriceMap = exchangePublic.queryAllPrices();
 
-    auto marketPriceIt = marketPriceMap.find(m);
+    auto marketPriceIt = marketPriceMap.find(mk);
     ASSERT_NE(marketPriceIt, marketPriceMap.end());
   }
 
@@ -130,11 +130,11 @@ class TestAPI {
       return;
     }
     CurrencyExchangeFlatSet withdrawableCryptos;
-    std::ranges::copy_if(currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
-                         [this](const CurrencyExchange &c) {
-                           return !c.isFiat() && c.canWithdraw() &&
-                                  std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
-                         });
+    std::ranges::copy_if(
+        currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()), [this](const CurrencyExchange &c) {
+          return !c.isFiat() && c.canWithdraw() &&
+                 std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
+        });
 
     if (!withdrawableCryptos.empty()) {
       CurrencyExchangeFlatSet sample;
@@ -184,7 +184,7 @@ class TestAPI {
       std::ranges::copy_if(
           currencies, std::inserter(depositableCryptos, depositableCryptos.end()), [this](const CurrencyExchange &c) {
             return !c.isFiat() && c.canDeposit() &&
-                   std::ranges::any_of(markets, [&c](Market m) { return m.canTrade(c.standardCode()); });
+                   std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
           });
       if (!depositableCryptos.empty()) {
         CurrencyExchangeFlatSet sample;
@@ -196,8 +196,8 @@ class TestAPI {
           CurrencyCode cur(curExchange.standardCode());
           log::info("Choosing {} as random currency code for Deposit wallet test", cur);
           try {
-            Wallet w = exchangePrivatePtr.get()->queryDepositWallet(cur);
-            EXPECT_FALSE(w.address().empty());
+            Wallet wallet = exchangePrivatePtr.get()->queryDepositWallet(cur);
+            EXPECT_FALSE(wallet.address().empty());
             break;
           } catch (const exception &) {
             if (exchangePrivatePtr.get()->canGenerateDepositAddress()) {
@@ -217,11 +217,11 @@ class TestAPI {
       return;
     }
     if (exchangePrivatePtr.get() && !sampleMarkets.empty()) {
-      Market m = sampleMarkets.front();
-      Orders baseOpenedOrders = exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(m.base()));
+      Market mk = sampleMarkets.front();
+      Orders baseOpenedOrders = exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(mk.base()));
       if (!baseOpenedOrders.empty()) {
         const Order &openedOrder = baseOpenedOrders.front();
-        EXPECT_TRUE(openedOrder.market().canTrade(m.base()));
+        EXPECT_TRUE(openedOrder.market().canTrade(mk.base()));
         EXPECT_LT(openedOrder.matchedVolume(), openedOrder.originalVolume());
       }
     }
@@ -250,8 +250,8 @@ class TestAPI {
       return;
     }
     if (!sampleMarkets.empty()) {
-      Market m = sampleMarkets.front();
-      LastTradesVector lastTrades = exchangePublic.queryLastTrades(m);
+      Market mk = sampleMarkets.front();
+      LastTradesVector lastTrades = exchangePublic.queryLastTrades(mk);
       if (!lastTrades.empty() && exchangePrivatePtr.get()) {
         auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
           return lhs.amount() < rhs.amount();
@@ -261,8 +261,8 @@ class TestAPI {
         TradeOptions tradeOptions(TradeMode::kSimulation);
         MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
         MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
-        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, m.quote(), tradeOptions).tradedTo, 0);
-        EXPECT_NE(exchangePrivatePtr.get()->trade(bigFrom, m.base(), tradeOptions).tradedFrom, 0);
+        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, mk.quote(), tradeOptions).tradedTo, 0);
+        EXPECT_NE(exchangePrivatePtr.get()->trade(bigFrom, mk.base(), tradeOptions).tradedFrom, 0);
       }
     }
   }

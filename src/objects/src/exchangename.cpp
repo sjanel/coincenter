@@ -5,8 +5,9 @@
 
 namespace cct {
 ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(globalExchangeName) {
-  for (std::size_t p = 0, s = globalExchangeName.size(); p < s && _nameWithKey[p] != '_'; ++p) {
-    _nameWithKey[p] = tolower(_nameWithKey[p]);
+  for (std::size_t charPos = 0, sz = globalExchangeName.size(); charPos < sz && _nameWithKey[charPos] != '_';
+       ++charPos) {
+    _nameWithKey[charPos] = tolower(_nameWithKey[charPos]);
   }
 }
 

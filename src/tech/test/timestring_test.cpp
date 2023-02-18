@@ -18,9 +18,9 @@ TEST(TimeStringTest, TimeSinceEpoch) {
 }
 
 TEST(TimeStringTest, LiteralDate) {
-  Nonce n1 = Nonce_LiteralDate("%Y-%m-%d %H:%M:%S");
+  Nonce n1 = Nonce_LiteralDate(kTimeYearToSecondSpaceSeparatedFormat);
   std::this_thread::sleep_for(std::chrono::milliseconds(1020));
-  Nonce n2 = Nonce_LiteralDate("%Y-%m-%d %H:%M:%S");
+  Nonce n2 = Nonce_LiteralDate(kTimeYearToSecondSpaceSeparatedFormat);
   EXPECT_LT(n1, n2);
 
   const std::regex dateRegex("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}");

@@ -15,10 +15,10 @@ inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-inline BalancePortfolio operator+(const BalancePortfolio &b, const TradedAmounts &a) {
-  BalancePortfolio ret = b;
-  ret.add(a.tradedTo);
-  ret.add(-a.tradedFrom);
+inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
+  BalancePortfolio ret = balancePortfolio;
+  ret.add(tradedAmounts.tradedTo);
+  ret.add(-tradedAmounts.tradedFrom);
   return ret;
 }
 
@@ -32,7 +32,7 @@ namespace cct::api {
 
 inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
   // We don't compare on value userRef which is set from a timestamp
-  return lhs.m == rhs.m && lhs.side == rhs.side;
+  return lhs.mk == rhs.mk && lhs.side == rhs.side;
 }
 
 inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
@@ -323,13 +323,13 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
         .WillOnce(testing::Return(MarketSet{xrpbtcMarket, xrpeurMarket, Market{"ETH", "EUR"}}));
   }
 
-  void expectMarketOrderBookCall(Market m, int nTimes = 1) {
-    if (m == xrpbtcMarket) {
-      EXPECT_CALL(exchangePublic, queryOrderBook(m, MarketOrderBook::kDefaultDepth))
+  void expectMarketOrderBookCall(Market mk, int nTimes = 1) {
+    if (mk == xrpbtcMarket) {
+      EXPECT_CALL(exchangePublic, queryOrderBook(mk, MarketOrderBook::kDefaultDepth))
           .Times(nTimes)
           .WillRepeatedly(testing::Return(xrpbtcMarketOrderBook));
-    } else if (m == xrpeurMarket) {
-      EXPECT_CALL(exchangePublic, queryOrderBook(m, MarketOrderBook::kDefaultDepth))
+    } else if (mk == xrpeurMarket) {
+      EXPECT_CALL(exchangePublic, queryOrderBook(mk, MarketOrderBook::kDefaultDepth))
           .Times(nTimes)
           .WillRepeatedly(testing::Return(xrpeurMarketOrderBook));
     } else {
@@ -340,8 +340,8 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   TradedAmounts expectTakerSell(MonetaryAmount from, MonetaryAmount pri, int percentageSold = 100) {
     MonetaryAmount vol(from);
 
-    Market m{from.currencyCode(), pri.currencyCode()};
-    TradeContext tradeContext(m, TradeSide::kSell);
+    Market mk{from.currencyCode(), pri.currencyCode()};
+    TradeContext tradeContext(mk, TradeSide::kSell);
     TradeInfo tradeInfo(tradeContext, tradeOptions);
 
     MonetaryAmount tradedTo = vol.toNeutral() * pri;
@@ -362,12 +362,12 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     return tradedAmounts;
   }
 
-  TradedAmounts expectTakerBuy(MonetaryAmount to, MonetaryAmount askPri, MonetaryAmount bidPri, Market m,
+  TradedAmounts expectTakerBuy(MonetaryAmount to, MonetaryAmount askPri, MonetaryAmount bidPri, Market mk,
                                bool success = true) {
     MonetaryAmount from = to.toNeutral() * bidPri;
-    MonetaryAmount vol(from / askPri, m.base());
+    MonetaryAmount vol(from / askPri, mk.base());
 
-    TradeContext tradeContext(m, TradeSide::kBuy);
+    TradeContext tradeContext(mk, TradeSide::kBuy);
     TradeInfo tradeInfo(tradeContext, tradeOptions);
 
     TradedAmounts tradedAmounts(MonetaryAmount{success ? from : MonetaryAmount(0), askPri.currencyCode()},
@@ -520,7 +520,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   expectMarketOrderBookCall(xrpbtcMarket, 5);
   expectMarketOrderBookCall(xrpeurMarket, 5);
 
-  ::testing::InSequence s;
+  ::testing::InSequence inSeq;
 
   MonetaryAmount avBtcAmount{75, "BTC", 4};
   MonetaryAmount avEurAmount{500, "EUR"};

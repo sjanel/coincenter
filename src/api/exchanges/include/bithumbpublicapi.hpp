@@ -29,7 +29,7 @@ class BithumbPublic : public ExchangePublic {
 
   MarketSet queryTradableMarkets() override;
 
-  MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
+  MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get()); }
 
   WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
@@ -37,17 +37,19 @@ class BithumbPublic : public ExchangePublic {
 
   bool isWithdrawalFeesSourceReliable() const override { return true; }
 
-  MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
-    return _allOrderBooksCache.get(depth);
+  MarketOrderBookMap queryAllApproximatedOrderBooks([[maybe_unused]] int depth = kDefaultDepth) override {
+    return _allOrderBooksCache.get();
   }
 
-  MarketOrderBook queryOrderBook(Market m, int depth = kDefaultDepth) override { return _orderbookCache.get(m, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
+    return _orderbookCache.get(mk, depth);
+  }
 
-  MonetaryAmount queryLast24hVolume(Market m) override { return _tradedVolumeCache.get(m); }
+  MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market m, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
-  MonetaryAmount queryLastPrice(Market m) override;
+  MonetaryAmount queryLastPrice(Market mk) override;
 
   static constexpr std::string_view kUrlBase = "https://api.bithumb.com";
   static constexpr char kUserAgent[] = "Bithumb C++ API Client";
@@ -86,7 +88,7 @@ class BithumbPublic : public ExchangePublic {
         : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
-    MarketOrderBookMap operator()(int depth);
+    MarketOrderBookMap operator()();
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
@@ -99,7 +101,7 @@ class BithumbPublic : public ExchangePublic {
         : _coincenterInfo(config), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
-    MarketOrderBook operator()(Market m, int depth);
+    MarketOrderBook operator()(Market mk, int depth);
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
@@ -111,7 +113,7 @@ class BithumbPublic : public ExchangePublic {
     explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
 #endif
 
-    MonetaryAmount operator()(Market m);
+    MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
@@ -119,7 +121,7 @@ class BithumbPublic : public ExchangePublic {
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
-  CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
+  CachedResult<AllOrderBooksFunc> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
   CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;
 };

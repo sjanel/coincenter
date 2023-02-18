@@ -15,6 +15,7 @@
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
 #include "stringhelpers.hpp"
+#include "timestring.hpp"
 
 namespace cct::api {
 namespace {
@@ -25,10 +26,10 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string methodUrl(endpoint);
   methodUrl.push_back('/');
-  base.appendStr(methodUrl);
+  base.appendStrTo(methodUrl);
   if (!quote.isNeutral()) {
     methodUrl.push_back('_');
-    quote.appendStr(methodUrl);
+    quote.appendStrTo(methodUrl);
   }
   if (!urlOpts.empty()) {
     methodUrl.push_back('?');
@@ -84,7 +85,8 @@ bool BithumbPublic::healthCheck() {
 
 MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
-  if (!pMarketOrderbookMap || lastUpdatedTime + exchangeInfo().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
+  if (pMarketOrderbookMap == nullptr ||
+      lastUpdatedTime + exchangeInfo().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
     pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
   }
   MarketSet markets;
@@ -103,12 +105,12 @@ MonetaryAmount BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   return it->second;
 }
 
-MonetaryAmount BithumbPublic::queryLastPrice(Market m) {
+MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
   // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
-  std::optional<MonetaryAmount> avgPrice = queryOrderBook(m).averagePrice();
+  std::optional<MonetaryAmount> avgPrice = queryOrderBook(mk).averagePrice();
   if (!avgPrice) {
-    log::error("Empty order book for {} on {} cannot compute average price", m, _name);
-    return MonetaryAmount(0, m.quote());
+    log::error("Empty order book for {} on {} cannot compute average price", mk, _name);
+    return MonetaryAmount(0, mk.quote());
   }
   return *avgPrice;
 }
@@ -117,7 +119,7 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  string s = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
+  string dataStr = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //
@@ -126,25 +128,26 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
   // class="money_type tx_c">
   static constexpr std::string_view kCoinSep = "tr data-coin=";
   static constexpr std::string_view kFeeSep = "right out_fee";
-  for (std::size_t p = s.find(kCoinSep); p != string::npos; p = s.find(kCoinSep, p)) {
-    p = s.find("money_type tx_c", p);
-    p = s.find('(', p) + 1;
-    std::size_t endP = s.find(')', p);
-    CurrencyCode coinAcro(std::string_view(s.begin() + p, s.begin() + endP));
-    std::size_t nextRightOutFee = s.find(kFeeSep, endP);
-    std::size_t nextCoinSep = s.find(kCoinSep, endP);
+  for (std::size_t charPos = dataStr.find(kCoinSep); charPos != string::npos;
+       charPos = dataStr.find(kCoinSep, charPos)) {
+    charPos = dataStr.find("money_type tx_c", charPos);
+    charPos = dataStr.find('(', charPos) + 1;
+    std::size_t endP = dataStr.find(')', charPos);
+    CurrencyCode coinAcro(std::string_view(dataStr.begin() + charPos, dataStr.begin() + endP));
+    std::size_t nextRightOutFee = dataStr.find(kFeeSep, endP);
+    std::size_t nextCoinSep = dataStr.find(kCoinSep, endP);
     if (nextRightOutFee > nextCoinSep) {
       // This means no withdraw fee data, probably 0 ?
       ret.insert_or_assign(coinAcro, MonetaryAmount(0, coinAcro));
       continue;
     }
-    p = s.find(kFeeSep, endP);
-    if (p == string::npos) {
+    charPos = dataStr.find(kFeeSep, endP);
+    if (charPos == string::npos) {
       break;
     }
-    p = s.find('>', p) + 1;
-    endP = s.find('<', p);
-    std::string_view withdrawFee(s.begin() + p, s.begin() + endP);
+    charPos = dataStr.find('>', charPos) + 1;
+    endP = dataStr.find('<', charPos);
+    std::string_view withdrawFee(dataStr.begin() + charPos, dataStr.begin() + endP);
     MonetaryAmount ma(withdrawFee, coinAcro);
     log::debug("Updated Bithumb withdrawal fees {}", ma);
     ret.insert_or_assign(std::move(coinAcro), std::move(ma));
@@ -223,7 +226,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
         asksBids[1] = std::addressof(result["bids"]);
       } else if (!singleMarketQuote) {
         // then it's a base currency
-        baseCurrencyCode = CurrencyCode(config.standardizeCurrencyCode(baseOrSpecial));
+        baseCurrencyCode = config.standardizeCurrencyCode(baseOrSpecial);
         if (excludedCurrencies.contains(baseCurrencyCode)) {
           // Forbidden currency, do not consider its market
           log::trace("Discard {} excluded by config", baseCurrencyCode);
@@ -265,22 +268,22 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
 }
 }  // namespace
 
-MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()(int) {
+MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
   return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo);
 }
 
-MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market m, int count) {
-  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, m, count);
-  auto it = marketOrderBookMap.find(m);
+MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
+  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, mk, depth);
+  auto it = marketOrderBookMap.find(mk);
   if (it == marketOrderBookMap.end()) {
-    throw exception("Cannot find {} in market order book map", m);
+    throw exception("Cannot find {} in market order book map", mk);
   }
   return it->second;
 }
 
-MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
+MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
   TimePoint t1 = Clock::now();
-  json result = PublicQuery(_curlHandle, "/public/ticker", m.base(), m.quote());
+  json result = PublicQuery(_curlHandle, "/public/ticker", mk.base(), mk.quote());
   std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
   std::string_view bithumbTimestamp = result["date"].get<std::string_view>();
   int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
@@ -292,25 +295,25 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market m) {
     log::error("Bithumb time is not synchronized with us (Bithumb: {}, us: [{} - {}])", bithumbTimestamp, t1Ms, t2Ms);
   }
 
-  return MonetaryAmount(last24hVol, m.base());
+  return MonetaryAmount(last24hVol, mk.base());
 }
 
 namespace {
-TimePoint EpochTime(const std::string& dateStr) {
-  std::istringstream ss(dateStr);
-  std::tm t{};
-  ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+TimePoint EpochTime(std::string&& dateStr) {
+  std::istringstream ss(std::move(dateStr));
+  std::tm tm{};
+  ss >> std::get_time(&tm, kTimeYearToSecondSpaceSeparatedFormat);
   static constexpr Duration kKoreaUTCTime = std::chrono::hours(9);
-  return Clock::from_time_t(std::mktime(&t)) - kKoreaUTCTime;
+  return Clock::from_time_t(std::mktime(&tm)) - kKoreaUTCTime;
 }
 }  // namespace
 
-LastTradesVector BithumbPublic::queryLastTrades(Market m, int) {
-  json result = PublicQuery(_curlHandle, "/public/transaction_history", m.base(), m.quote());
+LastTradesVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+  json result = PublicQuery(_curlHandle, "/public/transaction_history", mk.base(), mk.quote());
   LastTradesVector ret;
   for (const json& detail : result) {
-    MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), m.base());
-    MonetaryAmount price(detail["price"].get<std::string_view>(), m.quote());
+    MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());
+    MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"
     TradeSide tradeSide = detail["type"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 

@@ -30,21 +30,21 @@ string CurrencyExchange::str() const {
   if (_exchangeCode != _standardCode || _altCode != _standardCode) {
     ret.push_back('(');
     if (_exchangeCode != _standardCode) {
-      _exchangeCode.appendStr(ret);
+      _exchangeCode.appendStrTo(ret);
     }
     if (_altCode != _standardCode) {
       if (_exchangeCode != _standardCode) {
         ret.push_back(',');
       }
-      _altCode.appendStr(ret);
+      _altCode.appendStrTo(ret);
     }
     ret.push_back(')');
   }
   return ret;
 }
 
-std::ostream &operator<<(std::ostream &os, const CurrencyExchange &c) {
-  os << c.str();
+std::ostream &operator<<(std::ostream &os, const CurrencyExchange &currencyExchange) {
+  os << currencyExchange.str();
   return os;
 }
 

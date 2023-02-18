@@ -36,34 +36,34 @@ TEST(CurrencyCodeTest, String) {
 
 TEST(CurrencyCodeTest, AppendString) {
   {
-    string s("");
-    CurrencyCode("").appendStr(s);
+    string str("");
+    CurrencyCode("").appendStrTo(str);
 
-    EXPECT_EQ("", s);
+    EXPECT_EQ("", str);
   }
   {
-    string s("init");
-    CurrencyCode("").appendStr(s);
+    string str("init");
+    CurrencyCode("").appendStrTo(str);
 
-    EXPECT_EQ("init", s);
+    EXPECT_EQ("init", str);
   }
   {
-    string s("init");
-    CurrencyCode("a").appendStr(s);
+    string str("init");
+    CurrencyCode("a").appendStrTo(str);
 
-    EXPECT_EQ("initA", s);
+    EXPECT_EQ("initA", str);
   }
   {
-    string s("init2");
-    CurrencyCode("67").appendStr(s);
+    string str("init2");
+    CurrencyCode("67").appendStrTo(str);
 
-    EXPECT_EQ("init267", s);
+    EXPECT_EQ("init267", str);
   }
   {
-    string s("");
-    CurrencyCode("EUR").appendStr(s);
+    string str("");
+    CurrencyCode("EUR").appendStrTo(str);
 
-    EXPECT_EQ("EUR", s);
+    EXPECT_EQ("EUR", str);
   }
 }
 
@@ -160,11 +160,11 @@ TEST(CurrencyCodeTest, Constexpr) {
 
 TEST(CurrencyCodeTest, Iterator) {
   EXPECT_NE(CurrencyCode("doge").begin(), CurrencyCode("DOGE").end());
-  string s;
-  for (char c : CurrencyCode("test")) {
-    s.push_back(c);
+  string str;
+  for (char ch : CurrencyCode("test")) {
+    str.push_back(ch);
   }
-  EXPECT_EQ("TEST", s);
+  EXPECT_EQ("TEST", str);
 }
 
 }  // namespace cct

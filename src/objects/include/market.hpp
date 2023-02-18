@@ -50,7 +50,7 @@ class Market {
 
   string str() const { return assetsPairStrUpper('-'); }
 
-  friend std::ostream& operator<<(std::ostream& os, const Market& m);
+  friend std::ostream& operator<<(std::ostream& os, const Market& mk);
 
   /// Returns a string representing this Market in lower case
   string assetsPairStrLower(char sep = 0) const { return assetsPairStr(sep, true); }
@@ -78,8 +78,8 @@ struct fmt::formatter<cct::Market> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::Market& m, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{}-{}", m.base(), m.quote());
+  auto format(const cct::Market& mk, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}-{}", mk.base(), mk.quote());
   }
 };
 #endif
@@ -87,8 +87,8 @@ struct fmt::formatter<cct::Market> {
 namespace std {
 template <>
 struct hash<cct::Market> {
-  size_t operator()(const cct::Market& m) const {
-    return cct::HashCombine(hash<cct::CurrencyCode>()(m.base()), hash<cct::CurrencyCode>()(m.quote()));
+  size_t operator()(const cct::Market& mk) const {
+    return cct::HashCombine(hash<cct::CurrencyCode>()(mk.base()), hash<cct::CurrencyCode>()(mk.quote()));
   }
 };
 }  // namespace std

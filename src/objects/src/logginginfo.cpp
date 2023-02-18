@@ -74,20 +74,20 @@ LoggingInfo::LoggingInfo(const json &generalConfigJsonLogPart)
   createLoggers();
 }
 
-LoggingInfo::LoggingInfo(LoggingInfo &&o) noexcept
-    : _maxFileSizeInBytes(o._maxFileSizeInBytes),
-      _maxNbFiles(o._maxNbFiles),
-      _logLevelConsolePos(o._logLevelConsolePos),
-      _logLevelFilePos(o._logLevelFilePos),
-      _destroyLoggers(std::exchange(o._destroyLoggers, false)) {}
+LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
+    : _maxFileSizeInBytes(loggingInfo._maxFileSizeInBytes),
+      _maxNbFiles(loggingInfo._maxNbFiles),
+      _logLevelConsolePos(loggingInfo._logLevelConsolePos),
+      _logLevelFilePos(loggingInfo._logLevelFilePos),
+      _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)) {}
 
-LoggingInfo &LoggingInfo::operator=(LoggingInfo &&o) noexcept {
-  if (&o != this) {
-    _maxFileSizeInBytes = o._maxFileSizeInBytes;
-    _maxNbFiles = o._maxNbFiles;
-    _logLevelConsolePos = o._logLevelConsolePos;
-    _logLevelFilePos = o._logLevelFilePos;
-    _destroyLoggers = std::exchange(o._destroyLoggers, false);
+LoggingInfo &LoggingInfo::operator=(LoggingInfo &&loggingInfo) noexcept {
+  if (&loggingInfo != this) {
+    _maxFileSizeInBytes = loggingInfo._maxFileSizeInBytes;
+    _maxNbFiles = loggingInfo._maxNbFiles;
+    _logLevelConsolePos = loggingInfo._logLevelConsolePos;
+    _logLevelFilePos = loggingInfo._logLevelFilePos;
+    _destroyLoggers = std::exchange(loggingInfo._destroyLoggers, false);
   }
   return *this;
 }

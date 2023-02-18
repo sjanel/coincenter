@@ -85,28 +85,28 @@ class MarketOrderBook {
   /// Computes the amount that could be bought immediately from the order book at given price.
   /// Note that exception could be thrown if currency of given amount is different from quote currency of the order
   /// book.
-  MonetaryAmount computeCumulAmountBoughtImmediatelyAt(MonetaryAmount p) const;
+  MonetaryAmount computeCumulAmountBoughtImmediatelyAt(MonetaryAmount price) const;
 
   /// Computes the amount that could be sold immediately from the order book at given price.
   /// Note that exception could be thrown if currency of given amount is different from quote currency of the order
   /// book.
-  MonetaryAmount computeCumulAmountSoldImmediatelyAt(MonetaryAmount p) const;
+  MonetaryAmount computeCumulAmountSoldImmediatelyAt(MonetaryAmount price) const;
 
   /// Computes the max price for which amount would be bought immediately from the order book.
   /// This price may not exist (when not enough volume for instance), returns empty optional in this case
-  std::optional<MonetaryAmount> computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount a) const;
+  std::optional<MonetaryAmount> computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount ma) const;
 
   /// Computes the min price for which amount would be sold immediately from the order book.
   /// This price may not exist (when not enough volume for instance), returns empty optional in this case
-  std::optional<MonetaryAmount> computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount a) const;
+  std::optional<MonetaryAmount> computeMinPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
 
   /// Computes the list of {price / amount}s for which amount would be bought immediately from the order book.
   /// If operation is not possible, return an empty vector.
-  AmountPerPriceVec computePricesAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount a) const;
+  AmountPerPriceVec computePricesAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount ma) const;
 
   /// Computes the list of {price / amount}s for which amount would be sold immediately from the order book.
   /// If operation is not possible, return an empty vector.
-  AmountPerPriceVec computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount a) const;
+  AmountPerPriceVec computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
 
   /// Given an amount in either base or quote currency, attempt to convert it at market price immediately and return
   /// the average price matched.
@@ -129,7 +129,7 @@ class MarketOrderBook {
   int nbAskPrices() const { return static_cast<int>(_orders.size()) - _lowestAskPricePos; }
   int nbBidPrices() const { return _lowestAskPricePos; }
 
-  /// Get a pair of {Price, Amount} of values positionned at given relative price from limit price.
+  /// Get a pair of {Price, Amount} of values positioned at given relative price from limit price.
   /// At position 0, the pair will contain average limit prices and average amounts from both highest bid and lowest ask
   /// prices.
   /// No bounds check is made.
@@ -209,9 +209,9 @@ class MarketOrderBook {
     return MonetaryAmount(_orders[pos].price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
 
-  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount a) const;
+  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
 
-  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount a) const;
+  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount ma) const;
 
   /// Attempt to convert given amount expressed in base currency to quote currency.
   /// It may not be possible, in which case an empty optional will be returned.

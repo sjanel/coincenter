@@ -31,7 +31,7 @@ class QueryResultPrinter {
 
   void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
 
-  void printMarketOrderBooks(Market m, CurrencyCode equiCurrencyCode, std::optional<int> depth,
+  void printMarketOrderBooks(Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
                              const MarketOrderBookConversionRates &marketOrderBooksConversionRates) const;
 
   void printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const;
@@ -66,15 +66,15 @@ class QueryResultPrinter {
   void printRecentDeposits(const DepositsPerExchange &depositsPerExchange,
                            const DepositsConstraints &depositsConstraints) const;
 
-  void printConversionPath(Market m, const ConversionPathPerExchange &conversionPathsPerExchange) const;
+  void printConversionPath(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 
   void printWithdrawFees(const MonetaryAmountPerExchange &withdrawFeePerExchange, CurrencyCode cur) const;
 
-  void printLast24hTradedVolume(Market m, const MonetaryAmountPerExchange &tradedVolumePerExchange) const;
+  void printLast24hTradedVolume(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) const;
 
-  void printLastTrades(Market m, int nbLastTrades, const LastTradesPerExchange &lastTradesPerExchange) const;
+  void printLastTrades(Market mk, int nbLastTrades, const LastTradesPerExchange &lastTradesPerExchange) const;
 
-  void printLastPrice(Market m, const MonetaryAmountPerExchange &pricePerExchange) const;
+  void printLastPrice(Market mk, const MonetaryAmountPerExchange &pricePerExchange) const;
 
   void printWithdraw(const WithdrawInfo &withdrawInfo, MonetaryAmount grossAmount, bool isPercentageWithdraw,
                      const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName) const;
@@ -88,7 +88,7 @@ class QueryResultPrinter {
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
                    CoincenterCommandType commandType) const;
 
-  void printTable(const SimpleTable &t) const;
+  void printTable(const SimpleTable &simpleTable) const;
 
   void printJson(json &&in, json &&out) const;
 

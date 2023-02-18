@@ -18,27 +18,27 @@ namespace cct::api {
 namespace {
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postdata = CurlPostData()) {
+                  CurlPostData&& postData = CurlPostData()) {
   string strToSign(Nonce_TimeSinceEpochInMs());
   auto nonceSize = strToSign.size();
   strToSign.append(ToString(requestType));
   strToSign.append(endpoint);
 
-  CurlOptions::PostDataFormat postdataFormat = CurlOptions::PostDataFormat::kString;
-  if (!postdata.empty()) {
+  CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
+  if (!postData.empty()) {
     if (requestType == HttpRequestType::kGet || requestType == HttpRequestType::kDelete) {
       strToSign.push_back('?');
-      strToSign.append(postdata.str());
+      strToSign.append(postData.str());
     } else {
-      strToSign.append(postdata.toJson().dump());
-      postdataFormat = CurlOptions::PostDataFormat::kJson;
+      strToSign.append(postData.toJson().dump());
+      postDataFormat = CurlOptions::PostDataFormat::kJson;
     }
   }
 
   string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
   string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
 
-  CurlOptions opts(requestType, std::move(postdata), KucoinPublic::kUserAgent, postdataFormat);
+  CurlOptions opts(requestType, std::move(postData), KucoinPublic::kUserAgent, postDataFormat);
   opts.appendHttpHeader("KC-API-KEY", apiKey.key());
   opts.appendHttpHeader("KC-API-SIGN", signature);
   opts.appendHttpHeader("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
@@ -158,10 +158,10 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   bool doCheckWallet = coincenterInfo.exchangeInfo(_kucoinPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
-  Wallet w(ExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode,
-           std::move(result["address"].get_ref<string&>()), tag, walletCheck);
-  log::info("Retrieved {}", w);
-  return w;
+  Wallet wallet(ExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode,
+                std::move(result["address"].get_ref<string&>()), tag, walletCheck);
+  log::info("Retrieved {}", wallet);
+  return wallet;
 }
 
 Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
@@ -230,8 +230,8 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     return static_cast<int>(cancelledOrders["cancelledOrderIds"].size());
   }
   Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& o : openedOrders) {
-    cancelOrderProcess(o.id());
+  for (const Order& order : openedOrders) {
+    cancelOrderProcess(order.id());
   }
   return openedOrders.size();
 }
@@ -289,15 +289,15 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
     return placeOrderInfo;
   }
 
-  const Market m = tradeInfo.tradeContext.m;
+  const Market mk = tradeInfo.tradeContext.mk;
 
   bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
 
   KucoinPublic& kucoinPublic = dynamic_cast<KucoinPublic&>(_exchangePublic);
 
-  price = kucoinPublic.sanitizePrice(m, price);
+  price = kucoinPublic.sanitizePrice(mk, price);
 
-  MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(m, volume);
+  MonetaryAmount sanitizedVol = kucoinPublic.sanitizeVolume(mk, volume);
   if (volume < sanitizedVol) {
     log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
               sanitizedVol);
@@ -307,10 +307,10 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   volume = sanitizedVol;
 
-  std::string_view buyOrSell = fromCurrencyCode == m.base() ? "sell" : "buy";
+  std::string_view buyOrSell = fromCurrencyCode == mk.base() ? "sell" : "buy";
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
 
-  CurlPostData params = KucoinPublic::GetSymbolPostData(m);
+  CurlPostData params = KucoinPublic::GetSymbolPostData(mk);
   params.append("clientOid", Nonce_TimeSinceEpochInMs());
   params.append("side", buyOrSell);
   params.append("type", strategyType);
@@ -343,20 +343,20 @@ void KucoinPrivate::cancelOrderProcess(OrderIdView id) {
 
 OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
-  const Market m = tradeContext.m;
+  const Market mk = tradeContext.mk;
   string endpoint = "/api/v1/orders/";
   endpoint.append(orderId);
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
 
-  MonetaryAmount size(data["size"].get<std::string_view>(), m.base());
-  MonetaryAmount matchedSize(data["dealSize"].get<std::string_view>(), m.base());
+  MonetaryAmount size(data["size"].get<std::string_view>(), mk.base());
+  MonetaryAmount matchedSize(data["dealSize"].get<std::string_view>(), mk.base());
 
   // Fee is already deduced from the matched amount
   MonetaryAmount fromAmount;
   MonetaryAmount toAmount;
-  MonetaryAmount dealFunds(data["dealFunds"].get<std::string_view>(), m.quote());
-  if (fromCurrencyCode == m.base()) {
+  MonetaryAmount dealFunds(data["dealFunds"].get<std::string_view>(), mk.quote());
+  if (fromCurrencyCode == mk.base()) {
     // sell
     fromAmount = matchedSize;
     toAmount = dealFunds;

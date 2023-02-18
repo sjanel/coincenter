@@ -38,7 +38,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   SetNonceAndSignature(apiKey, opts.getPostData());
 
   json ret = json::parse(curlHandle.query(endpoint, opts));
-  auto binanceError = [](const json& j) { return j.contains("code") && j.contains("msg"); };
+  auto binanceError = [](const json& data) { return data.contains("code") && data.contains("msg"); };
   if (binanceError(ret)) {
     int statusCode = ret["code"];  // "1100" for instance
     int nbRetries = 0;
@@ -114,21 +114,21 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   const CoincenterInfo& coincenterInfo = _public.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_public.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet w(ExchangeName(_public.name(), _apiKey.name()), currencyCode, std::move(result["address"].get_ref<string&>()),
-           tag, walletCheck);
-  log::info("Retrieved {} (URL: '{}')", w, result["url"].get<std::string_view>());
-  return w;
+  Wallet wallet(ExchangeName(_public.name(), _apiKey.name()), currencyCode,
+                std::move(result["address"].get_ref<string&>()), tag, walletCheck);
+  log::info("Retrieved {} (URL: '{}')", wallet, result["url"].get<std::string_view>());
+  return wallet;
 }
 
-bool BinancePrivate::checkMarketAppendSymbol(Market m, CurlPostData& params) {
+bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
   MarketSet markets = _exchangePublic.queryTradableMarkets();
-  if (!markets.contains(m)) {
-    m = m.reverse();
-    if (!markets.contains(m)) {
+  if (!markets.contains(mk)) {
+    mk = mk.reverse();
+    if (!markets.contains(mk)) {
       return false;
     }
   }
-  params.append("symbol", m.assetsPairStrUpper());
+  params.append("symbol", mk.assetsPairStrUpper());
   return true;
 }
 
@@ -214,9 +214,9 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   using OrdersByMarketMap = std::unordered_map<Market, SmallVector<Order, 3>>;
   OrdersByMarketMap ordersByMarketMap;
   std::for_each(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
-                [&ordersByMarketMap](Order&& o) {
-                  Market m = o.market();
-                  ordersByMarketMap[m].push_back(std::move(o));
+                [&ordersByMarketMap](Order&& order) {
+                  Market mk = order.market();
+                  ordersByMarketMap[mk].push_back(std::move(order));
                 });
   int nbOrdersCancelled = 0;
   for (const auto& [market, orders] : ordersByMarketMap) {
@@ -291,7 +291,7 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   if (!result.contains(currencyCode.str())) {
     throw exception("Unable to find asset information in assetDetail query to Binance");
   }
-  const json& withdrawFeeDetails = result[string(currencyCode.str())];
+  const json& withdrawFeeDetails = result[currencyCode.str()];
   if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
     log::error("{} is currently unavailable for withdraw from {}", currencyCode, _exchangePublic.name());
   }
@@ -299,12 +299,12 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
 }
 
 namespace {
-TradedAmounts ParseTrades(Market m, CurrencyCode fromCurrencyCode, const json& fillDetail) {
-  MonetaryAmount price(fillDetail["price"].get<std::string_view>(), m.quote());
-  MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), m.base());
+TradedAmounts ParseTrades(Market mk, CurrencyCode fromCurrencyCode, const json& fillDetail) {
+  MonetaryAmount price(fillDetail["price"].get<std::string_view>(), mk.quote());
+  MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), mk.base());
   MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
-  TradedAmounts detailTradedInfo(fromCurrencyCode == m.quote() ? quantityTimesPrice : quantity,
-                                 fromCurrencyCode == m.quote() ? quantity : quantityTimesPrice);
+  TradedAmounts detailTradedInfo(fromCurrencyCode == mk.quote() ? quantityTimesPrice : quantity,
+                                 fromCurrencyCode == mk.quote() ? quantity : quantityTimesPrice);
   MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
                      fillDetail["commissionAsset"].get<std::string_view>());
   log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity, price, fee);
@@ -313,18 +313,18 @@ TradedAmounts ParseTrades(Market m, CurrencyCode fromCurrencyCode, const json& f
   } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
     detailTradedInfo.tradedTo -= fee;
   } else {
-    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), m);
+    log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), mk);
   }
   return detailTradedInfo;
 }
 
-TradedAmounts QueryOrdersAfterPlace(Market m, CurrencyCode fromCurrencyCode, const json& orderJson) {
-  CurrencyCode toCurrencyCode(fromCurrencyCode == m.quote() ? m.base() : m.quote());
+TradedAmounts QueryOrdersAfterPlace(Market mk, CurrencyCode fromCurrencyCode, const json& orderJson) {
+  CurrencyCode toCurrencyCode(fromCurrencyCode == mk.quote() ? mk.base() : mk.quote());
   TradedAmounts ret(fromCurrencyCode, toCurrencyCode);
 
   if (orderJson.contains("fills")) {
     for (const json& fillDetail : orderJson["fills"]) {
-      ret += ParseTrades(m, fromCurrencyCode, fillDetail);
+      ret += ParseTrades(mk, fromCurrencyCode, fillDetail);
     }
   }
 
@@ -337,16 +337,16 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
-  const Market m = tradeInfo.tradeContext.m;
-  const std::string_view buyOrSell = fromCurrencyCode == m.base() ? "SELL" : "BUY";
+  const Market mk = tradeInfo.tradeContext.mk;
+  const std::string_view buyOrSell = fromCurrencyCode == mk.base() ? "SELL" : "BUY";
   const bool placeSimulatedRealOrder = binancePublic.exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
   const bool isSimulation = tradeInfo.options.isSimulation();
 
-  price = binancePublic.sanitizePrice(m, price);
+  price = binancePublic.sanitizePrice(mk, price);
 
-  MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(m, volume, price, isTakerStrategy);
+  MonetaryAmount sanitizedVol = binancePublic.sanitizeVolume(mk, volume, price, isTakerStrategy);
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
@@ -375,7 +375,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   volume = sanitizedVol;
 
   CurlPostData placePostData{
-      {"symbol", m.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
+      {"symbol", mk.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
   if (!isTakerStrategy) {
     placePostData.append("timeInForce", "GTC");
@@ -393,7 +393,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {
-      placeOrderInfo.tradedAmounts() += QueryOrdersAfterPlace(m, fromCurrencyCode, result);
+      placeOrderInfo.tradedAmounts() += QueryOrdersAfterPlace(mk, fromCurrencyCode, result);
     } else {
       log::error("{} rejected our place order with status {}", _exchangePublic.name(), status);
     }
@@ -405,10 +405,10 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
 OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tradeContext,
                                      HttpRequestType requestType) {
-  const Market m = tradeContext.m;
-  const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::kSell ? m.base() : m.quote();
-  const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? m.base() : m.quote();
-  const string assetsStr = m.assetsPairStrUpper();
+  const Market mk = tradeContext.mk;
+  const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::kSell ? mk.base() : mk.quote();
+  const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? mk.base() : mk.quote();
+  const string assetsStr = mk.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   json result =
       PrivateQuery(_curlHandle, _apiKey, requestType, "/api/v3/order", {{"symbol", assets}, {"orderId", orderId}});
@@ -433,7 +433,7 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
     int64_t integralOrderId = FromString<int64_t>(orderId);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
-        orderInfo.tradedAmounts += ParseTrades(m, fromCurrencyCode, tradeDetails);
+        orderInfo.tradedAmounts += ParseTrades(mk, fromCurrencyCode, tradeDetails);
       }
     }
   }
