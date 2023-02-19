@@ -69,8 +69,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
   }
   if (errorIt != ret.end() && !errorIt->empty()) {
     std::string_view msg = errorIt->front().get<std::string_view>();
-    if (method.ends_with("CancelOrder") && msg == "EOrder:Unknown order") {
-      log::warn("Unknown order from Kraken CancelOrder. Assuming closed order");
+    if (method.ends_with("CancelOrder") && msg.ends_with("Unknown order")) {
+      log::warn("No data for order, probably expired");
       ret = json::parse(R"({" error ":[]," result ":{" count ":1}})");
     } else {
       log::error("Full Kraken json error: '{}'", ret.dump());

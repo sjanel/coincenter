@@ -80,115 +80,116 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   return tradedAmounts;
 }
 
-TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &options, Market mk) {
+TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk) {
   const CurrencyCode fromCurrency = from.currencyCode();
-
-  std::optional<MonetaryAmount> optPrice = _exchangePublic.computeAvgOrderPrice(mk, from, options.priceOptions());
   const CurrencyCode toCurrency = mk.opposite(fromCurrency);
-  TradedAmounts totalTradedAmounts(fromCurrency, toCurrency);
-  if (!optPrice) {
-    log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), mk);
-    return totalTradedAmounts;
-  }
 
-  MonetaryAmount price = *optPrice;
   const TimePoint timerStart = Clock::now();
   const UserRefInt userRef =
       static_cast<UserRefInt>(TimestampToS(timerStart) % static_cast<int64_t>(std::numeric_limits<UserRefInt>::max()));
-  const bool noEmergencyTime = options.maxTradeTime() == Duration::max();
 
   const TradeSide side = fromCurrency == mk.base() ? TradeSide::kSell : TradeSide::kBuy;
   TradeContext tradeContext(mk, side, userRef);
-  TradeInfo tradeInfo(tradeContext, options);
-  PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeOptions &options = tradeInfo.options;
+  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
 
-  if (placeOrderInfo.isClosed()) {
-    log::debug("Order {} closed with traded amounts {}", placeOrderInfo.orderId, placeOrderInfo.tradedAmounts());
-    return placeOrderInfo.tradedAmounts();
-  }
+  enum class NextAction : int8_t { kPlaceInitialOrder, kPlaceLimitOrder, kPlaceMarketOrder, kWait };
 
-  TimePoint lastPriceUpdateTime = Clock::now();
-  MonetaryAmount lastPrice = price;
+  TimePoint lastPriceUpdateTime;
+  MonetaryAmount price;
+  MonetaryAmount lastPrice;
+
+  OrderId orderId;
+
+  TradedAmounts totalTradedAmounts(fromCurrency, toCurrency);
+
+  NextAction nextAction = NextAction::kPlaceInitialOrder;
 
   while (true) {
-    OrderInfo orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeContext);
+    switch (nextAction) {
+      case NextAction::kWait:
+        // Do nothing
+        break;
+      case NextAction::kPlaceMarketOrder:
+        options.switchToTakerStrategy();
+        [[fallthrough]];
+      case NextAction::kPlaceInitialOrder: {
+        std::optional<MonetaryAmount> optAvgPrice =
+            _exchangePublic.computeAvgOrderPrice(mk, from, options.priceOptions());
+        if (!optAvgPrice) {
+          log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), mk);
+          // It's fine to return from there as we don't have a pending order still opened
+          return totalTradedAmounts;
+        }
+        price = *optAvgPrice;
+        [[fallthrough]];
+      }
+      case NextAction::kPlaceLimitOrder:
+        [[fallthrough]];
+      default: {
+        PlaceOrderInfo placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
+
+        orderId = std::move(placeOrderInfo.orderId);
+
+        if (placeOrderInfo.isClosed()) {
+          totalTradedAmounts += placeOrderInfo.tradedAmounts();
+          log::debug("Order {} closed with last traded amounts {}", orderId, placeOrderInfo.tradedAmounts());
+          return totalTradedAmounts;
+        }
+
+        lastPrice = price;
+        lastPriceUpdateTime = Clock::now();
+        nextAction = NextAction::kWait;
+        break;
+      }
+    }
+
+    OrderInfo orderInfo = queryOrderInfo(orderId, tradeContext);
     if (orderInfo.isClosed) {
       totalTradedAmounts += orderInfo.tradedAmounts;
-      log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId, orderInfo.tradedAmounts);
+      log::debug("Order {} closed with last traded amounts {}", orderId, orderInfo.tradedAmounts);
       break;
     }
 
-    enum class NextAction : int8_t { kPlaceMarketOrder, kNewOrderLimitPrice, kWait };
-    NextAction nextAction = NextAction::kWait;
-
     TimePoint nowTime = Clock::now();
 
-    const bool reachedEmergencyTime =
-        !noEmergencyTime && timerStart + options.maxTradeTime() < nowTime + std::chrono::seconds(1);
+    const bool reachedEmergencyTime = options.maxTradeTime() < TimeInS(1) + nowTime - timerStart;
     bool updatePriceNeeded = false;
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
-        lastPriceUpdateTime + options.minTimeBetweenPriceUpdates() < nowTime) {
+        options.minTimeBetweenPriceUpdates() < nowTime - lastPriceUpdateTime) {
       // Let's see if we need to change the price if limit price has changed.
-      optPrice = _exchangePublic.computeLimitOrderPrice(mk, fromCurrency, options.priceOptions());
-      if (optPrice) {
-        price = *optPrice;
+      std::optional<MonetaryAmount> optLimitPrice =
+          _exchangePublic.computeLimitOrderPrice(mk, fromCurrency, options.priceOptions());
+      if (optLimitPrice) {
+        price = *optLimitPrice;
         updatePriceNeeded =
             (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
       }
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
-      // Cancel
-      log::debug("Cancel order {}", placeOrderInfo.orderId);
-      OrderInfo cancelledOrderInfo = cancelOrder(placeOrderInfo.orderId, tradeContext);
+      log::debug("Cancel order {}", orderId);
+      OrderInfo cancelledOrderInfo = cancelOrder(orderId, tradeContext);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
       from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
       if (from == 0) {
-        log::debug("Order {} matched with last traded amounts {} while cancelling", placeOrderInfo.orderId,
+        log::debug("Order {} matched with last traded amounts {} while cancelling", orderId,
                    cancelledOrderInfo.tradedAmounts);
         break;
       }
 
       if (reachedEmergencyTime) {
         // timeout. Action depends on Strategy
-        if (timerStart + options.maxTradeTime() < nowTime) {
-          log::warn("Time out reached, stop from there");
-          break;
-        }
         log::info("Emergency time reached, {} trade", options.timeoutActionStr());
-        if (options.placeMarketOrderAtTimeout()) {
+        if (options.placeMarketOrderAtTimeout() && !options.isTakerStrategy(placeSimulatedRealOrder)) {
           nextAction = NextAction::kPlaceMarketOrder;
         } else {
           break;
         }
       } else {
         // updatePriceNeeded
-        nextAction = NextAction::kNewOrderLimitPrice;
-      }
-      if (nextAction != NextAction::kWait) {
-        if (nextAction == NextAction::kPlaceMarketOrder) {
-          tradeInfo.options.switchToTakerStrategy();
-          optPrice = _exchangePublic.computeAvgOrderPrice(mk, from, tradeInfo.options.priceOptions());
-          if (!optPrice) {
-            throw exception("Impossible to compute new average order price");
-          }
-          price = *optPrice;
-          log::info("Reached emergency time, make a last taker order at price {}", price);
-        } else {
-          lastPriceUpdateTime = Clock::now();
-          log::info("Limit price changed from {} to {}, update order", lastPrice, price);
-        }
-
-        lastPrice = price;
-
-        // Compute new volume (price is either not needed in taker order, or already recomputed)
-        placeOrderInfo = placeOrderProcess(from, price, tradeInfo);
-
-        if (placeOrderInfo.isClosed()) {
-          totalTradedAmounts += placeOrderInfo.tradedAmounts();
-          log::debug("Order {} closed with last traded amounts {}", placeOrderInfo.orderId,
-                     placeOrderInfo.tradedAmounts());
-          break;
-        }
+        nextAction = NextAction::kPlaceLimitOrder;
+        log::info("Limit price changed from {} to {}, update order", lastPrice, price);
       }
     }
   }

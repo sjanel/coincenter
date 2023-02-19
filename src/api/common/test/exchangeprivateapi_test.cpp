@@ -260,6 +260,97 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
   EXPECT_EQ(exchangePrivate.trade(from, market.quote(), tradeOptions), TradedAmounts(from, toAmount));
 }
 
+TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseEmergencyTakerTrade) {
+  tradeBaseExpectCalls();
+
+  MonetaryAmount from(10000, market.quote());
+  MonetaryAmount pri1(bidPrice1);
+  TradeSide side = TradeSide::kBuy;
+  TradeContext tradeContext(market, side);
+
+  MonetaryAmount vol1(from / pri1, market.base());
+
+  TradeOptions tradeOptions(TradeTimeoutAction::kForceMatch, TradeMode::kReal, Duration::zero(), Duration::zero(),
+                            TradeTypePolicy::kForceMultiTrade);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
+
+  EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_))
+      .Times(2)
+      .WillRepeatedly(testing::Return(marketOrderBook1));
+
+  TradedAmounts zeroTradedAmounts(from.currencyCode(), market.base());
+  OrderInfo unmatchedOrderInfo(zeroTradedAmounts, false);
+  PlaceOrderInfo unmatchedPlacedOrderInfo1(unmatchedOrderInfo, OrderId("Order # 0"));
+
+  // Place first order
+  EXPECT_CALL(exchangePrivate, placeOrder(from, vol1, pri1, tradeInfo))
+      .WillOnce(testing::Return(unmatchedPlacedOrderInfo1));
+
+  EXPECT_CALL(exchangePrivate,
+              queryOrderInfo(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
+      .WillOnce(testing::Return(unmatchedPlacedOrderInfo1.orderInfo));
+
+  // Emergency reached - cancel order
+  EXPECT_CALL(exchangePrivate, cancelOrder(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
+      .WillOnce(testing::Return(OrderInfo(zeroTradedAmounts, false)));
+
+  // Place taker order
+  tradeInfo.options.switchToTakerStrategy();
+
+  MonetaryAmount pri2 = *marketOrderBook1.computeAvgPriceForTakerAmount(from);
+  MonetaryAmount vol2(from / pri2, market.base());
+
+  PlaceOrderInfo matchedPlacedOrderInfo2(OrderInfo(TradedAmounts(from, vol2), true), OrderId("Order # 1"));
+  EXPECT_CALL(exchangePrivate, placeOrder(from, vol2, pri2, tradeInfo))
+      .WillOnce(testing::Return(matchedPlacedOrderInfo2));
+
+  EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), TradedAmounts(from, vol2));
+}
+
+TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
+  tradeBaseExpectCalls();
+
+  MonetaryAmount from(5000, market.quote());
+  MonetaryAmount pri1(bidPrice1);
+  TradeSide side = TradeSide::kBuy;
+  TradeContext tradeContext(market, side);
+
+  MonetaryAmount vol1(from / pri1, market.base());
+
+  TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::zero(), Duration::zero(),
+                            TradeTypePolicy::kForceMultiTrade);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
+
+  EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
+
+  TradedAmounts zeroTradedAmounts(from.currencyCode(), market.base());
+  OrderInfo unmatchedOrderInfo(zeroTradedAmounts, false);
+  PlaceOrderInfo unmatchedPlacedOrderInfo1(unmatchedOrderInfo, OrderId("Order # 0"));
+
+  // Place first order, no match at place
+  EXPECT_CALL(exchangePrivate, placeOrder(from, vol1, pri1, tradeInfo))
+      .WillOnce(testing::Return(unmatchedPlacedOrderInfo1));
+
+  MonetaryAmount partialMatchedFrom = from / 3;
+  MonetaryAmount partialMatchedTo(partialMatchedFrom / bidPrice1, market.base());
+
+  TradedAmounts partialMatchedTradedAmounts(partialMatchedFrom, partialMatchedTo);
+
+  OrderInfo partialMatchOrderInfo(partialMatchedTradedAmounts, false);
+
+  EXPECT_CALL(exchangePrivate,
+              queryOrderInfo(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
+      .WillOnce(testing::Return(partialMatchOrderInfo));
+
+  // Emergency reached - cancel order
+  EXPECT_CALL(exchangePrivate, cancelOrder(static_cast<OrderIdView>(unmatchedPlacedOrderInfo1.orderId), tradeContext))
+      .WillOnce(testing::Return(partialMatchOrderInfo));
+
+  // No action expected after emergency reached
+
+  EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), partialMatchedTradedAmounts);
+}
+
 inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }

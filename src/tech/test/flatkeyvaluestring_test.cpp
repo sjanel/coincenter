@@ -95,8 +95,8 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
 
   int kvPairPos = 0;
-  for (const auto &[k, v] : kvPairs) {
-    const char *kvPairPtr = k.data();
+  for (const auto &[key, val] : kvPairs) {
+    const char *kvPairPtr = key.data();
     switch (kvPairPos++) {
       case 0:
         ASSERT_STREQ(kvPairPtr, "tata:abc");
@@ -137,40 +137,40 @@ TEST_F(CurlOptionsCase1, Get) {
 }
 
 TEST_F(CurlOptionsCase1, Iterator) {
-  int i = 0;
-  for (const auto &[k, v] : kvPairs) {
-    switch (i++) {
+  int itPos = 0;
+  for (const auto &[key, val] : kvPairs) {
+    switch (itPos++) {
       case 0:
-        EXPECT_EQ(k, "units");
-        EXPECT_EQ(v, "0.11176");
+        EXPECT_EQ(key, "units");
+        EXPECT_EQ(val, "0.11176");
         break;
       case 1:
-        EXPECT_EQ(k, "price");
-        EXPECT_EQ(v, "357.78");
+        EXPECT_EQ(key, "price");
+        EXPECT_EQ(val, "357.78");
         break;
       case 2:
-        EXPECT_EQ(k, "777");
-        EXPECT_EQ(v, "encoredutravail?");
+        EXPECT_EQ(key, "777");
+        EXPECT_EQ(val, "encoredutravail?");
         break;
       case 3:
-        EXPECT_EQ(k, "hola");
-        EXPECT_EQ(v, "quetal");
+        EXPECT_EQ(key, "hola");
+        EXPECT_EQ(val, "quetal");
         break;
       case 4:
-        EXPECT_EQ(k, "array1");
-        EXPECT_EQ(v, "val1,,");
+        EXPECT_EQ(key, "array1");
+        EXPECT_EQ(val, "val1,,");
         break;
       case 5:
-        EXPECT_EQ(k, "array2");
-        EXPECT_EQ(v, ",val1,val2,value,");
+        EXPECT_EQ(key, "array2");
+        EXPECT_EQ(val, ",val1,val2,value,");
         break;
       case 6:
-        EXPECT_EQ(k, "emptyArray");
-        EXPECT_EQ(v, ",");
+        EXPECT_EQ(key, "emptyArray");
+        EXPECT_EQ(val, ",");
         break;
     }
   }
-  EXPECT_EQ(i, 7);
+  EXPECT_EQ(itPos, 7);
 }
 
 TEST_F(CurlOptionsCase1, ConvertToJson) {
@@ -209,8 +209,8 @@ TEST_F(CurlOptionsCase1, ConvertToJson) {
 TEST_F(CurlOptionsCase1, AppendIntegralValues) {
   kvPairs.append("price1", 1957386078376L);
   EXPECT_EQ(kvPairs.get("price1"), "1957386078376");
-  int8_t s = -116;
-  kvPairs.append("testu", s);
+  int8_t val = -116;
+  kvPairs.append("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");
 }
 
@@ -223,8 +223,8 @@ TEST_F(CurlOptionsCase1, SetIntegralValues) {
   EXPECT_EQ(
       kvPairs.str(),
       "units=0.11176&price=357.78&777=-666&hola=quetal&array1=val1,,&array2=,val1,val2,value,&emptyArray=,&price1=42");
-  int8_t s = -116;
-  kvPairs.set("testu", s);
+  int8_t val = -116;
+  kvPairs.set("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");
 }
 

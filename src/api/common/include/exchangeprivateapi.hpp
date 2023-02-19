@@ -156,7 +156,7 @@ class ExchangePrivate : public ExchangeBase {
   virtual ReceivedWithdrawInfo isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
                                                   const SentWithdrawInfo &sentWithdrawInfo);
 
-  TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &options, Market mk);
+  TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault{_exchangePublic._cachedResultVault};

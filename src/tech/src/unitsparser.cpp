@@ -10,8 +10,8 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
   if (endPos == std::string_view::npos) {
     endPos = sizeStr.size();
   }
-  int64_t v = FromString<int64_t>(std::string_view(sizeStr.begin(), sizeStr.begin() + endPos));
-  if (v < 0) {
+  int64_t nbBytes = FromString<int64_t>(std::string_view(sizeStr.begin(), sizeStr.begin() + endPos));
+  if (nbBytes < 0) {
     throw exception("Number of bytes cannot be negative");
   }
   int64_t multiplier = 1;
@@ -40,7 +40,7 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
     }
   }
 
-  return v * multiplier;
+  return nbBytes * multiplier;
 }
 
 }  // namespace cct
