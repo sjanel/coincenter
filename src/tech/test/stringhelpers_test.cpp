@@ -6,44 +6,44 @@
 
 namespace cct {
 TEST(ToChar, Zero) {
-  string s;
-  AppendString(s, 0);
-  EXPECT_EQ(s, "0");
-  SetString(s, 0);
-  EXPECT_EQ(s, "0");
+  string str;
+  AppendString(str, 0);
+  EXPECT_EQ(str, "0");
+  SetString(str, 0);
+  EXPECT_EQ(str, "0");
   EXPECT_EQ(ToString(0), "0");
 }
 
 TEST(ToChar, PositiveValue) {
-  string s("I am a string ");
-  AppendString(s, 42);
-  EXPECT_EQ(s, "I am a string 42");
-  AppendString(s, 9);
-  EXPECT_EQ(s, "I am a string 429");
-  SetString(s, 902);
-  EXPECT_EQ(s, "902");
+  string str("I am a string ");
+  AppendString(str, 42);
+  EXPECT_EQ(str, "I am a string 42");
+  AppendString(str, 9);
+  EXPECT_EQ(str, "I am a string 429");
+  SetString(str, 902);
+  EXPECT_EQ(str, "902");
   EXPECT_EQ(ToString(98124), "98124");
 }
 
 TEST(ToChar, NegativeValue) {
-  string s("I will hold some negative value ");
-  AppendString(s, -293486);
-  EXPECT_EQ(s, "I will hold some negative value -293486");
-  AppendString(s, -9830346445);
-  EXPECT_EQ(s, "I will hold some negative value -293486-9830346445");
-  SetString(s, -13);
-  EXPECT_EQ(s, "-13");
+  string str("I will hold some negative value ");
+  AppendString(str, -293486);
+  EXPECT_EQ(str, "I will hold some negative value -293486");
+  AppendString(str, -9830346445);
+  EXPECT_EQ(str, "I will hold some negative value -293486-9830346445");
+  SetString(str, -13);
+  EXPECT_EQ(str, "-13");
   EXPECT_EQ(ToString(-123467), "-123467");
 }
 
 TEST(ToChar, UnsignedValue) {
-  string s("I am a string ");
-  AppendString(s, 738U);
-  EXPECT_EQ(s, "I am a string 738");
-  AppendString(s, std::numeric_limits<uint64_t>::max());
-  EXPECT_EQ(s, "I am a string 73818446744073709551615");
-  SetString(s, 901235U);
-  EXPECT_EQ(s, "901235");
+  string str("I am a string ");
+  AppendString(str, 738U);
+  EXPECT_EQ(str, "I am a string 738");
+  AppendString(str, std::numeric_limits<uint64_t>::max());
+  EXPECT_EQ(str, "I am a string 73818446744073709551615");
+  SetString(str, 901235U);
+  EXPECT_EQ(str, "901235");
   EXPECT_EQ(ToString(630195439576U), "630195439576");
 }
 

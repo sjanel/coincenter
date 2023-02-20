@@ -32,8 +32,8 @@ class InitiatedWithdrawInfo {
  private:
   Wallet _receivingWallet;
   string _withdrawIdOrMsgIfNotInitiated;
-  TimePoint _initiatedTime;  // The time at which withdraw has been ordered from the source exchange
   MonetaryAmount _grossEmittedAmount;
+  TimePoint _initiatedTime{};  // The time at which withdraw has been ordered from the source exchange
 };
 
 class SentWithdrawInfo {

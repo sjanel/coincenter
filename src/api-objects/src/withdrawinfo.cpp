@@ -8,8 +8,8 @@ InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, std::string
                                              MonetaryAmount grossEmittedAmount, TimePoint initiatedTime)
     : _receivingWallet(std::move(receivingWallet)),
       _withdrawIdOrMsgIfNotInitiated(withdrawId),
-      _initiatedTime(initiatedTime),
-      _grossEmittedAmount(grossEmittedAmount) {}
+      _grossEmittedAmount(grossEmittedAmount),
+      _initiatedTime(initiatedTime) {}
 }  // namespace api
 
 WithdrawInfo::WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, MonetaryAmount receivedAmount,

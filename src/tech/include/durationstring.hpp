@@ -14,6 +14,6 @@ Duration ParseDuration(std::string_view durationStr);
 /// Create a string representation of given duration.
 /// No spaces are inserted between a couple of units. For example:
 /// "1y6mon" instead of "1y 6mon" will be returne
-string DurationToString(Duration d);
+string DurationToString(Duration dur);
 
 }  // namespace cct

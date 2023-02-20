@@ -62,7 +62,7 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
       _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(minDurationBetweenQueries),
       _bestUrlPicker(bestURLPicker) {
-  if (!_handle) {
+  if (_handle == nullptr) {
     throw std::bad_alloc();
   }
   CURL *curl = reinterpret_cast<CURL *>(_handle);
@@ -83,12 +83,12 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
  * Should function remove proxy for subsequent calls when option is off ? not useful for now
  */
 void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
-  if (proxyUrl || reset) {
+  if (proxyUrl != nullptr || reset) {
     log::info("Setting proxy to {} reset = {} ?", proxyUrl, reset);
     CURL *curl = reinterpret_cast<CURL *>(_handle);
     CurlSetLogIfError(curl, CURLOPT_PROXY, proxyUrl);  // Default of nullptr
     CurlSetLogIfError(curl, CURLOPT_CAINFO, GetProxyCAInfo());
-    CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxyUrl ? 0L : 1L);
+    CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxyUrl != nullptr ? 0L : 1L);
   }
 }
 
@@ -145,7 +145,7 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
     // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
     // guaranteed to be null-terminated since C++11)
     curlListPtr = curl_slist_append(curlListPtr, httpHeaderKey.data());
-    if (!curlListPtr) {
+    if (curlListPtr == nullptr) {
       curl_slist_free_all(oldCurlListPtr);
       throw std::bad_alloc();
     }
@@ -163,16 +163,16 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
 
   if (_minDurationBetweenQueries != Duration::zero()) {
     // Check last request time
-    const TimePoint t = Clock::now();
-    if (t < _lastQueryTime + _minDurationBetweenQueries) {
+    const TimePoint nowTime = Clock::now();
+    if (nowTime < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
-      const Duration sleepingTime = _minDurationBetweenQueries - (t - _lastQueryTime);
+      const Duration sleepingTime = _minDurationBetweenQueries - (nowTime - _lastQueryTime);
       log::debug("Wait {} ms before performing query", std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
-      _lastQueryTime = t + sleepingTime;
+      _lastQueryTime = nowTime + sleepingTime;
     } else {
       // Query can be performed immediately
-      _lastQueryTime = t;
+      _lastQueryTime = nowTime;
     }
   }
 
@@ -188,7 +188,7 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
   _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
 
-  if (_pMetricGateway) {
+  if (_pMetricGateway != nullptr) {
     _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                          CurlMetrics::kNbRequestsKeys.find(opts.requestType())->second);
     _pMetricGateway->add(MetricType::kHistogram, MetricOperation::kObserve,
@@ -219,7 +219,7 @@ string CurlHandle::urlEncode(std::string_view data) const {
 
   CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, data.data(), static_cast<int>(data.size())));
   const char *encodedChars = uniquePtr.get();
-  if (!encodedChars) {
+  if (encodedChars == nullptr) {
     throw std::bad_alloc();
   }
   return encodedChars;

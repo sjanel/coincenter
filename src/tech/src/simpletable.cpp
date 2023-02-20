@@ -70,8 +70,8 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
 void SimpleTable::Row::print(std::ostream &os, std::span<const uint16_t> maxWidthPerColumn) const {
   os << kColumnSep;
   size_type columnPos = 0;
-  for (const Cell &c : _cells) {
-    c.print(os, maxWidthPerColumn[columnPos++]);
+  for (const Cell &cell : _cells) {
+    cell.print(os, maxWidthPerColumn[columnPos++]);
   }
   os << std::endl;
 }
