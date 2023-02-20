@@ -49,7 +49,7 @@ class KrakenPrivate : public ExchangePrivate {
     return queryOrderInfo(orderId, tradeContext, QueryOrder::kOpenedThenClosed);
   }
 
-  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
+  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
 
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 

@@ -146,7 +146,7 @@ class ExchangePrivate : public ExchangeBase {
   virtual OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext &tradeContext) = 0;
 
   /// Orders a withdraw in mode fire and forget.
-  virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&wallet) = 0;
+  virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&destinationWallet) = 0;
 
   /// Check if withdraw has been confirmed and successful from 'this' exchange
   virtual SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) = 0;

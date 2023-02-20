@@ -303,7 +303,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, address, tag, walletCheck);
+  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, string(address), tag, walletCheck);
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -672,17 +672,18 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
   return orderInfo;
 }
 
-InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount netWithdrawAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{
-      {"units", netWithdrawAmount.amountStr()}, {"currency", currencyCode.str()}, {"address", wallet.address()}};
-  if (wallet.hasTag()) {
-    withdrawPostData.append("destination", wallet.tag());
+  CurlPostData withdrawPostData{{"units", netWithdrawAmount.amountStr()},
+                                {"currency", currencyCode.str()},
+                                {"address", destinationWallet.address()}};
+  if (destinationWallet.hasTag()) {
+    withdrawPostData.append("destination", destinationWallet.tag());
   }
   PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal", std::move(withdrawPostData));
-  return InitiatedWithdrawInfo(std::move(wallet), "", grossAmount);
+  return InitiatedWithdrawInfo(std::move(destinationWallet), "", grossAmount);
 }
 
 SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

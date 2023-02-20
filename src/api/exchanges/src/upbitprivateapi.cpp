@@ -436,18 +436,19 @@ MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyC
   return MonetaryAmount(amountStr, currencyCode);
 }
 
-InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{
-      {"currency", currencyCode.str()}, {"amount", netEmittedAmount.amountStr()}, {"address", wallet.address()}};
-  if (wallet.hasTag()) {
-    withdrawPostData.append("secondary_address", wallet.tag());
+  CurlPostData withdrawPostData{{"currency", currencyCode.str()},
+                                {"amount", netEmittedAmount.amountStr()},
+                                {"address", destinationWallet.address()}};
+  if (destinationWallet.hasTag()) {
+    withdrawPostData.append("secondary_address", destinationWallet.tag());
   }
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", withdrawPostData);
-  std::string_view withdrawId(result["uuid"].get<std::string_view>());
-  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
+  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount);
 }
 
 SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

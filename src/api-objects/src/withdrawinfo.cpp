@@ -4,17 +4,13 @@
 
 namespace cct {
 namespace api {
-InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, std::string_view withdrawId,
+InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, string withdrawId,
                                              MonetaryAmount grossEmittedAmount, TimePoint initiatedTime)
     : _receivingWallet(std::move(receivingWallet)),
-      _withdrawIdOrMsgIfNotInitiated(withdrawId),
+      _withdrawIdOrMsgIfNotInitiated(std::move(withdrawId)),
       _grossEmittedAmount(grossEmittedAmount),
       _initiatedTime(initiatedTime) {}
 }  // namespace api
-
-WithdrawInfo::WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, MonetaryAmount receivedAmount,
-                           TimePoint receivedTime)
-    : _initiatedWithdrawInfo(initiatedWithdrawInfo), _receivedTime(receivedTime), _receivedAmount(receivedAmount) {}
 
 WithdrawInfo::WithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,
                            TimePoint receivedTime)

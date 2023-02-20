@@ -34,10 +34,7 @@ class Wallet {
   Wallet() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
 
   /// Build a wallet with all information.
-  Wallet(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address, std::string_view tag,
-         WalletCheck walletCheck);
-
-  Wallet(ExchangeName &&exchangeName, CurrencyCode currency, string &&address, std::string_view tag,
+  Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
          WalletCheck walletCheck);
 
   const ExchangeName &exchangeName() const { return _exchangeName; }

@@ -47,7 +47,7 @@ class BithumbPrivate : public ExchangePrivate {
 
   OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
-  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) override;
+  InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
 
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
