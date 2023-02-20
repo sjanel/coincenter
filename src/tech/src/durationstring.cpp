@@ -70,58 +70,58 @@ Duration ParseDuration(std::string_view durationStr) {
   return ret;
 }
 
-string DurationToString(Duration d) {
+string DurationToString(Duration dur) {
   string ret;
-  if (d >= std::chrono::years(1)) {
-    int64_t nbY = std::chrono::duration_cast<std::chrono::years>(d).count();
+  if (dur >= std::chrono::years(1)) {
+    int64_t nbY = std::chrono::duration_cast<std::chrono::years>(dur).count();
     AppendString(ret, nbY);
     ret.push_back('y');
-    d -= std::chrono::years(nbY);
+    dur -= std::chrono::years(nbY);
   }
-  if (d >= std::chrono::months(1)) {
-    int64_t nM = std::chrono::duration_cast<std::chrono::months>(d).count();
+  if (dur >= std::chrono::months(1)) {
+    int64_t nM = std::chrono::duration_cast<std::chrono::months>(dur).count();
     AppendString(ret, nM);
     ret.append("mon");
-    d -= std::chrono::months(nM);
+    dur -= std::chrono::months(nM);
   }
-  if (d >= std::chrono::weeks(1)) {
-    int64_t nbW = std::chrono::duration_cast<std::chrono::weeks>(d).count();
+  if (dur >= std::chrono::weeks(1)) {
+    int64_t nbW = std::chrono::duration_cast<std::chrono::weeks>(dur).count();
     AppendString(ret, nbW);
     ret.push_back('w');
-    d -= std::chrono::weeks(nbW);
+    dur -= std::chrono::weeks(nbW);
   }
-  if (d >= std::chrono::days(1)) {
-    int64_t nbD = std::chrono::duration_cast<std::chrono::days>(d).count();
+  if (dur >= std::chrono::days(1)) {
+    int64_t nbD = std::chrono::duration_cast<std::chrono::days>(dur).count();
     AppendString(ret, nbD);
     ret.push_back('d');
-    d -= std::chrono::days(nbD);
+    dur -= std::chrono::days(nbD);
   }
-  if (d >= std::chrono::hours(1)) {
-    int64_t nbH = std::chrono::duration_cast<std::chrono::hours>(d).count();
+  if (dur >= std::chrono::hours(1)) {
+    int64_t nbH = std::chrono::duration_cast<std::chrono::hours>(dur).count();
     AppendString(ret, nbH);
     ret.push_back('h');
-    d -= std::chrono::hours(nbH);
+    dur -= std::chrono::hours(nbH);
   }
-  if (d >= std::chrono::minutes(1)) {
-    int64_t nbMin = std::chrono::duration_cast<std::chrono::minutes>(d).count();
+  if (dur >= std::chrono::minutes(1)) {
+    int64_t nbMin = std::chrono::duration_cast<std::chrono::minutes>(dur).count();
     AppendString(ret, nbMin);
     ret.append("min");
-    d -= std::chrono::minutes(nbMin);
+    dur -= std::chrono::minutes(nbMin);
   }
-  if (d >= std::chrono::seconds(1)) {
-    int64_t nbS = std::chrono::duration_cast<std::chrono::seconds>(d).count();
+  if (dur >= std::chrono::seconds(1)) {
+    int64_t nbS = std::chrono::duration_cast<std::chrono::seconds>(dur).count();
     AppendString(ret, nbS);
     ret.push_back('s');
-    d -= std::chrono::seconds(nbS);
+    dur -= std::chrono::seconds(nbS);
   }
-  if (d >= std::chrono::milliseconds(1)) {
-    int64_t nbMs = std::chrono::duration_cast<std::chrono::milliseconds>(d).count();
+  if (dur >= std::chrono::milliseconds(1)) {
+    int64_t nbMs = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
     AppendString(ret, nbMs);
     ret.append("ms");
-    d -= std::chrono::milliseconds(nbMs);
+    dur -= std::chrono::milliseconds(nbMs);
   }
-  if (d >= std::chrono::microseconds(1)) {
-    int64_t nbUs = std::chrono::duration_cast<std::chrono::microseconds>(d).count();
+  if (dur >= std::chrono::microseconds(1)) {
+    int64_t nbUs = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
     AppendString(ret, nbUs);
     ret.append("us");
   }
