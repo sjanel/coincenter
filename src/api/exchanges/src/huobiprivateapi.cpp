@@ -372,7 +372,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
   return OrderInfo(TradedAmounts(fromAmount, toAmount), isClosed);
 }
 
-InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   string lowerCaseCur = ToLower(currencyCode.str());
   HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
@@ -383,7 +383,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   for (const json& withdrawAddress : queryWithdrawAddressJson["data"]) {
     std::string_view address(withdrawAddress["address"].get<std::string_view>());
     std::string_view addressTag(withdrawAddress["addressTag"].get<std::string_view>());
-    if (address == wallet.address() && addressTag == wallet.tag()) {
+    if (address == destinationWallet.address() && addressTag == destinationWallet.tag()) {
       huobiWithdrawAddressName = withdrawAddress["note"].get<std::string_view>();
       break;
     }
@@ -394,10 +394,10 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   log::info("Found stored {} withdraw address '{}'", _exchangePublic.name(), huobiWithdrawAddressName);
 
   CurlPostData withdrawPostData;
-  if (wallet.hasTag()) {
-    withdrawPostData.append("addr-tag", wallet.tag());
+  if (destinationWallet.hasTag()) {
+    withdrawPostData.append("addr-tag", destinationWallet.tag());
   }
-  withdrawPostData.append("address", wallet.address());
+  withdrawPostData.append("address", destinationWallet.address());
 
   MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(currencyCode));
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
@@ -425,7 +425,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
                              std::move(withdrawPostData));
   string withdrawIdStr = ToString(result["data"].get<int64_t>());
-  return InitiatedWithdrawInfo(std::move(wallet), std::move(withdrawIdStr), grossAmount);
+  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(withdrawIdStr), grossAmount);
 }
 
 SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

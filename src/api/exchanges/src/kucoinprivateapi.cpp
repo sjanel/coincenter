@@ -368,7 +368,7 @@ OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
   return OrderInfo(TradedAmounts(fromAmount, toAmount), !data["isActive"].get<bool>());
 }
 
-InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   if (!EnsureEnoughAmountIn(_curlHandle, _apiKey, grossAmount, "main")) {
     throw exception("Insufficient funds for withdraw");
   }
@@ -377,14 +377,16 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(grossAmount.currencyCode()));
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
-  CurlPostData opts{
-      {"currency", currencyCode.str()}, {"address", wallet.address()}, {"amount", netEmittedAmount.amountStr()}};
-  if (wallet.hasTag()) {
-    opts.append("memo", wallet.tag());
+  CurlPostData opts{{"currency", currencyCode.str()},
+                    {"address", destinationWallet.address()},
+                    {"amount", netEmittedAmount.amountStr()}};
+  if (destinationWallet.hasTag()) {
+    opts.append("memo", destinationWallet.tag());
   }
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/withdrawals", std::move(opts));
-  return InitiatedWithdrawInfo(std::move(wallet), result["withdrawalId"].get<std::string_view>(), grossAmount);
+  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["withdrawalId"].get_ref<string&>()),
+                               grossAmount);
 }
 
 SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

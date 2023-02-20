@@ -15,7 +15,7 @@ class InitiatedWithdrawInfo {
   /// Empty InitiatedWithdrawInfo, when no withdrawal has been done
   InitiatedWithdrawInfo(string &&msg = string()) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
 
-  InitiatedWithdrawInfo(Wallet receivingWallet, std::string_view withdrawId, MonetaryAmount grossEmittedAmount,
+  InitiatedWithdrawInfo(Wallet receivingWallet, string withdrawId, MonetaryAmount grossEmittedAmount,
                         TimePoint initiatedTime = Clock::now());
 
   TimePoint initiatedTime() const { return _initiatedTime; }
@@ -77,10 +77,6 @@ class WithdrawInfo {
  public:
   /// Empty withdraw info, when no withdrawal has been done
   explicit WithdrawInfo(string &&msg = string()) : _initiatedWithdrawInfo(std::move(msg)) {}
-
-  /// Constructs a withdraw info with all information
-  WithdrawInfo(const api::InitiatedWithdrawInfo &initiatedWithdrawInfo, MonetaryAmount receivedAmount,
-               TimePoint receivedTime = Clock::now());
 
   /// Constructs a withdraw info with all information
   WithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,

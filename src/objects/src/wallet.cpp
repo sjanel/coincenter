@@ -59,33 +59,16 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
   return false;
 }
 
-namespace {
-void ValidateDepositAddressIfNeeded(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address,
-                                    std::string_view tag, WalletCheck walletCheck) {
-  if (!Wallet::ValidateWallet(walletCheck, exchangeName, currency, address, tag)) {
-    throw exception("Incorrect wallet compared to the one stored in {}", kDepositAddressesFileName);
-  }
-}
-}  // namespace
-
-Wallet::Wallet(const ExchangeName &exchangeName, CurrencyCode currency, std::string_view address, std::string_view tag,
-               WalletCheck walletCheck)
-    : _exchangeName(exchangeName),
-      _addressAndTag(address),
-      _tagPos(tag.empty() ? std::string_view::npos : address.size()),
-      _currency(currency) {
-  _addressAndTag.append(tag);
-  ValidateDepositAddressIfNeeded(_exchangeName, currency, address, tag, walletCheck);
-}
-
-Wallet::Wallet(ExchangeName &&exchangeName, CurrencyCode currency, string &&address, std::string_view tag,
+Wallet::Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
                WalletCheck walletCheck)
     : _exchangeName(std::move(exchangeName)),
       _addressAndTag(std::move(address)),
       _tagPos(tag.empty() ? std::string_view::npos : _addressAndTag.size()),
       _currency(currency) {
   _addressAndTag.append(tag);
-  ValidateDepositAddressIfNeeded(_exchangeName, currency, this->address(), tag, walletCheck);
+  if (!ValidateWallet(walletCheck, _exchangeName, _currency, this->address(), tag)) {
+    throw exception("Incorrect wallet compared to the one stored in {}", kDepositAddressesFileName);
+  }
 }
 
 }  // namespace cct

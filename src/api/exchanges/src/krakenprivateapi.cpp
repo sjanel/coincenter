@@ -482,22 +482,30 @@ json KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryO
   } while (true);
 }
 
-InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+namespace {
+/// Compute the destination key name as defined in the Kraken UI by the user.
+/// It should be done once per destination account manually.
+string KrakenWalletKeyName(const Wallet& destinationWallet) {
+  string krakenWalletName(destinationWallet.exchangeName().str());
+  krakenWalletName.push_back('_');
+  destinationWallet.currencyCode().appendStrTo(krakenWalletName);
+  std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);
+  return krakenWalletName;
+}
+}  // namespace
+
+InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
 
-  string krakenWalletName(wallet.exchangeName().str());
-  krakenWalletName.push_back('_');
-  currencyCode.appendStrTo(krakenWalletName);
-  std::ranges::transform(krakenWalletName, krakenWalletName.begin(), tolower);
-
-  json withdrawData = PrivateQuery(
-      _curlHandle, _apiKey, "/private/Withdraw",
-      {{"amount", grossAmount.amountStr()}, {"asset", krakenCurrency.altStr()}, {"key", krakenWalletName}});
+  json withdrawData = PrivateQuery(_curlHandle, _apiKey, "/private/Withdraw",
+                                   {{"amount", grossAmount.amountStr()},
+                                    {"asset", krakenCurrency.altStr()},
+                                    {"key", KrakenWalletKeyName(destinationWallet)}});
 
   // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
-  std::string_view withdrawId = withdrawData["refid"].get<std::string_view>();
-  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(withdrawData["refid"].get_ref<string&>()),
+                               grossAmount);
 }
 
 SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

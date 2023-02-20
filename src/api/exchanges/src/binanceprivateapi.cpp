@@ -440,17 +440,16 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
   return orderInfo;
 }
 
-InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& wallet) {
+InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   CurlPostData withdrawPostData{
-      {"coin", currencyCode.str()}, {"address", wallet.address()}, {"amount", grossAmount.amountStr()}};
-  if (wallet.hasTag()) {
-    withdrawPostData.append("addressTag", wallet.tag());
+      {"coin", currencyCode.str()}, {"address", destinationWallet.address()}, {"amount", grossAmount.amountStr()}};
+  if (destinationWallet.hasTag()) {
+    withdrawPostData.append("addressTag", destinationWallet.tag());
   }
-  json result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply", withdrawPostData);
-  std::string_view withdrawId(result["id"].get<std::string_view>());
-  return InitiatedWithdrawInfo(std::move(wallet), withdrawId, grossAmount);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply",
+                             std::move(withdrawPostData));
+  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount);
 }
 
 SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {

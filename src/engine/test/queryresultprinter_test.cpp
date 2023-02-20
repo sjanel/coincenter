@@ -1977,11 +1977,10 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   ExchangeName toExchange{exchange4.apiPrivate().exchangeName()};
 
   Wallet receivingWallet{toExchange, grossAmount.currencyCode(), "xrpaddress666", "xrptag2", WalletCheck{}};
-  std::string_view withdrawId = "WithdrawTest01";
   MonetaryAmount grossEmittedAmount;
-  api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount, tp1};
   api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, isWithdrawSent};
-  WithdrawInfo withdrawInfo{initiatedWithdrawInfo, netEmittedAmount, tp2};
+  WithdrawInfo withdrawInfo{api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1},
+                            netEmittedAmount, tp2};
 };
 
 class QueryResultPrinterWithdrawAmountTest : public QueryResultPrinterWithdrawTest {

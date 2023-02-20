@@ -364,13 +364,10 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   CurrencyCode cur = grossAmount.currencyCode();
   MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, cryptowatchAPI, coincenterInfo);
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
-  std::string_view address = "TestAddress";
-  std::string_view tag = "TestTag";
-  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, address, tag, WalletCheck());
+  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck());
   EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
-  std::string_view withdrawIdView = "WithdrawId";
-  InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, withdrawIdView, grossAmount);
+  InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, "WithdrawId", grossAmount);
   EXPECT_CALL(exchangePrivate, launchWithdraw(grossAmount, std::move(receivingWallet)))
       .WillOnce(testing::Return(initiatedWithdrawInfo));
 
@@ -399,7 +396,7 @@ TEST_F(ExchangePrivateTest, Withdraw) {
         .WillOnce(testing::Return(ReceivedWithdrawInfo{netEmittedAmount, true}));
   }
 
-  WithdrawInfo withdrawInfo(initiatedWithdrawInfo, netEmittedAmount);
+  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
   EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, Duration::zero()), withdrawInfo);
 }
 
