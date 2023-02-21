@@ -68,7 +68,7 @@ log::filename_t GetLogFilename() {
 
 LoggingInfo::LoggingInfo(const json &generalConfigJsonLogPart)
     : _maxFileSizeInBytes(ParseNumberOfBytes(generalConfigJsonLogPart["maxFileSize"].get<std::string_view>())),
-      _maxNbFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
+      _maxNbFiles(generalConfigJsonLogPart["maxNbFiles"].get<int32_t>()),
       _logLevelConsolePos(LogPosFromLogStr(generalConfigJsonLogPart["console"].get<std::string_view>())),
       _logLevelFilePos(LogPosFromLogStr(generalConfigJsonLogPart["file"].get<std::string_view>())) {
   createLoggers();
