@@ -12,34 +12,34 @@ string BinToHex(std::span<const unsigned char> bindata) {
   static constexpr const char* const kHexits = "0123456789abcdef";
   const int sz = static_cast<int>(bindata.size());
   string ret(2 * sz, '\0');
-  for (int i = 0; i < sz; ++i) {
-    ret[i * 2] = kHexits[bindata[i] >> 4];
-    ret[(i * 2) + 1] = kHexits[bindata[i] & 0x0F];
+  for (int charPos = 0; charPos < sz; ++charPos) {
+    ret[charPos * 2] = kHexits[bindata[charPos] >> 4];
+    ret[(charPos * 2) + 1] = kHexits[bindata[charPos] & 0x0F];
   }
   return ret;
 }
 
-string B64Encode(std::string_view bindata) {
-  const ::std::size_t binlen = bindata.size();
+string B64Encode(std::span<const char> bindata) {
+  const auto binlen = bindata.size();
   // Use = signs so the end is properly padded.
   string retval((((binlen + 2) / 3) * 4), '=');
   std::size_t outpos = 0;
-  int bits_collected = 0;
+  int bitsCollected = 0;
   unsigned int accumulator = 0;
 
   static constexpr const char* const kB64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   for (char ch : bindata) {
     accumulator = (accumulator << 8) | (ch & 0xffu);
-    bits_collected += 8;
-    while (bits_collected >= 6) {
-      bits_collected -= 6;
-      retval[outpos++] = kB64Table[(accumulator >> bits_collected) & 0x3fu];
+    bitsCollected += 8;
+    while (bitsCollected >= 6) {
+      bitsCollected -= 6;
+      retval[outpos++] = kB64Table[(accumulator >> bitsCollected) & 0x3fu];
     }
   }
-  if (bits_collected > 0) {  // Any trailing bits that are missing.
-    assert(bits_collected < 6);
-    accumulator <<= 6 - bits_collected;
+  if (bitsCollected > 0) {  // Any trailing bits that are missing.
+    assert(bitsCollected < 6);
+    accumulator <<= 6 - bitsCollected;
     retval[outpos++] = kB64Table[accumulator & 0x3fu];
   }
   assert(retval.empty() || outpos >= (retval.size() - 2));
@@ -47,9 +47,9 @@ string B64Encode(std::string_view bindata) {
   return retval;
 }
 
-string B64Decode(std::string_view ascdata) {
+string B64Decode(std::span<const char> ascdata) {
   string retval;
-  int bits_collected = 0;
+  int bitsCollected = 0;
   unsigned int accumulator = 0;
 
   static constexpr char kReverseTable[] = {
@@ -68,10 +68,10 @@ string B64Decode(std::string_view ascdata) {
       throw invalid_argument("This contains characters not legal in a base64 encoded string.");
     }
     accumulator = (accumulator << 6) | kReverseTable[static_cast<unsigned char>(ch)];
-    bits_collected += 6;
-    if (bits_collected >= 8) {
-      bits_collected -= 8;
-      retval.push_back(static_cast<char>((accumulator >> bits_collected) & 0xffu));
+    bitsCollected += 6;
+    if (bitsCollected >= 8) {
+      bitsCollected -= 8;
+      retval.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xffu));
     }
   }
   return retval;

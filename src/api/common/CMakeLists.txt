@@ -44,4 +44,13 @@ add_common_test(
   test/exchangepublicapi_test.cpp
 )
 
+add_unit_test(
+  ssl_sha_test
+  src/ssl_sha.cpp
+  test/ssl_sha_test.cpp
+  LIBRARIES
+  coincenter_apicommon
+  OpenSSL::SSL
+)
+
 

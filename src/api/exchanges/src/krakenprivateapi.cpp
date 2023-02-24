@@ -25,10 +25,9 @@ string PrivateSignature(const APIKey& apiKey, string data, const Nonce& nonce, s
   // concatenate nonce and postdata and compute SHA256
   string noncePostData(nonce.begin(), nonce.end());
   noncePostData.append(postdata);
-  ssl::Sha256 nonce_postdata = ssl::ComputeSha256(noncePostData);
 
   // concatenate path and nonce_postdata (path + ComputeSha256(nonce + postdata))
-  data.append(nonce_postdata.begin(), nonce_postdata.end());
+  ssl::AppendSha256(noncePostData, data);
 
   // and compute HMAC
   return B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, data, B64Decode(apiKey.privateKey())));

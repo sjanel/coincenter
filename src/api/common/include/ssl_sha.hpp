@@ -1,25 +1,26 @@
 #pragma once
 
-#include <array>
 #include <climits>
+#include <cstdint>
 #include <span>
 #include <string_view>
 
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
 
 namespace cct::ssl {
 
 std::string_view GetOpenSSLVersion();
 
-//------------------------------------------------------------------------------
-// helper function to compute SHA256:
-using Sha256 = std::array<char, 256 / CHAR_BIT>;
+/// @brief Append Sha256 computed from 'data' to 'str'
+void AppendSha256(std::string_view data, string &str);
 
-Sha256 ComputeSha256(std::string_view data);
+/// @brief Helper type containing the number of bytes of the SHA
+enum class ShaType : int16_t { kSha256 = 256 / CHAR_BIT, kSha512 = 512 / CHAR_BIT };
 
-enum class ShaType { kSha256, kSha512 };
+using Md = FixedCapacityVector<char, static_cast<int16_t>(ShaType::kSha512)>;
 
-string ShaBin(ShaType shaType, std::string_view data, std::string_view secret);
+Md ShaBin(ShaType shaType, std::string_view data, std::string_view secret);
 
 string ShaHex(ShaType shaType, std::string_view data, std::string_view secret);
 
