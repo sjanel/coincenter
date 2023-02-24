@@ -62,4 +62,6 @@ TEST_F(TestCurlHandle, ProxyMockTest) {
     EXPECT_EQ(out, "POOL_LEFT");
   }
 }
+
+TEST_F(TestCurlHandle, CurlVersion) { EXPECT_NE(GetCurlVersionInfo(), string()); }
 }  // namespace cct
