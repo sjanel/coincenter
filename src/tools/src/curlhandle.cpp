@@ -39,9 +39,9 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
   CURLcode code = curl_easy_setopt(curl, curlOption, value);
   if (code != CURLE_OK) {
     if constexpr (std::is_integral_v<T> || std::is_same_v<T, const char *>) {
-      log::error("Curl error {} setting option {} to {}", code, curlOption, value);
+      log::error("Curl error {} setting option {} to {}", static_cast<int>(code), static_cast<int>(curlOption), value);
     } else {
-      log::error("Curl error {} setting option {}", code, curlOption);
+      log::error("Curl error {} setting option {}", static_cast<int>(code), static_cast<int>(curlOption));
     }
   }
 }
