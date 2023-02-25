@@ -60,9 +60,7 @@ class CommandLineOptionsParser : private OptValueType {
     const int vargvSize = static_cast<int>(vargv.size());
     for (int idxOpt = 0; idxOpt < vargvSize; ++idxOpt) {
       const char* argStr = vargv[idxOpt];
-      const bool knownOption =
-          std::ranges::any_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); });
-      if (!knownOption) {
+      if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
         throw invalid_argument("Unrecognized command-line option {}", argStr);
       }
 
