@@ -30,14 +30,13 @@ TEST_F(KrakenBaseCurlHandle, QueryKrakenTime) {
   CurlOptions opts = kVerboseHttpGetOptions;
   opts.appendHttpHeader("MyHeaderIsVeryLongToAvoidSSO", "Val1");
 
-  string s = handle.query("/public/Time", opts);
-  EXPECT_TRUE(s.find("unixtime") != string::npos);
+  EXPECT_TRUE(handle.query("/public/Time", opts).find("unixtime") != string::npos);
 }
 
 TEST_F(KrakenBaseCurlHandle, QueryKrakenSystemStatus) {
-  string s = handle.query("/public/SystemStatus", kVerboseHttpGetOptions);
-  EXPECT_TRUE(s.find("online") != string::npos || s.find("maintenance") != string::npos ||
-              s.find("cancel_only") != string::npos || s.find("post_only") != string::npos);
+  string str = handle.query("/public/SystemStatus", kVerboseHttpGetOptions);
+  EXPECT_TRUE(str.find("online") != string::npos || str.find("maintenance") != string::npos ||
+              str.find("cancel_only") != string::npos || str.find("post_only") != string::npos);
 }
 
 class TestCurlHandle : public ::testing::Test {
