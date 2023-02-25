@@ -20,8 +20,7 @@ int main(int argc, const char* argv[]) {
   } catch (const cct::invalid_argument& e) {
     cct::log::critical("Invalid argument: {}", e.what());
     return EXIT_FAILURE;
-  } catch (const std::exception& e) {
-    cct::log::critical("Exception: {}", e.what());
+  } catch ([[maybe_unused]] const std::exception& e) {
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
