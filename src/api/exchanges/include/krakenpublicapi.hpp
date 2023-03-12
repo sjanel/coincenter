@@ -5,6 +5,7 @@
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "static_string_view_helpers.hpp"
 #include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
@@ -56,7 +57,10 @@ class KrakenPublic : public ExchangePublic {
 
   void updateCacheFile() const override;
 
-  static constexpr std::string_view kUrlBase = "https://api.kraken.com/0";
+  static constexpr std::string_view kUrlPrefix = "https://api.kraken.com";
+  static constexpr std::string_view kVersion = "/0";
+  static constexpr std::string_view kUrlBase = JoinStringView_v<kUrlPrefix, kVersion>;
+
   static constexpr char kUserAgent[] = "Kraken C++ API Client";
 
  private:

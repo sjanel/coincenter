@@ -30,7 +30,7 @@ constexpr bool StaticCommandLineOptionsCheck(std::array<T, N>... ar) {
     }
   }
 
-  // Check short names equality with a bistet hashmap of presence
+  // Check short names equality with a bitset hashmap of presence
   // (std::bitset is unfortunately not constexpr yet)
   uint64_t charPresenceBmp[8]{};
   for (const auto& f : all) {

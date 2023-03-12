@@ -70,14 +70,8 @@ class CommandLineOptionalInt {
 
   constexpr CommandLineOptionalInt(int value) : _value(value), _state(State::kValueIsSet) {}
 
-  constexpr int& operator*() {
-    assert(isSet());
-    return _value;
-  }
-  constexpr int operator*() const {
-    assert(isSet());
-    return _value;
-  }
+  constexpr int& operator*() { return _value; }
+  constexpr int operator*() const { return _value; }
 
   constexpr bool isPresent() const { return _state == State::kOptionPresent || _state == State::kValueIsSet; }
   constexpr bool isSet() const { return _state == State::kValueIsSet; }
