@@ -335,16 +335,16 @@ OrderInfo KucoinPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tr
   return queryOrderInfo(orderId, tradeContext);
 }
 
-void KucoinPrivate::cancelOrderProcess(OrderIdView id) {
+void KucoinPrivate::cancelOrderProcess(OrderIdView orderId) {
   string endpoint("/api/v1/orders/");
-  endpoint.append(id);
+  endpoint.append(orderId);
   PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
 }
 
 OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
   const Market mk = tradeContext.mk;
-  string endpoint = "/api/v1/orders/";
+  string endpoint("/api/v1/orders/");
   endpoint.append(orderId);
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
