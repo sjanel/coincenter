@@ -99,7 +99,8 @@ class KrakenPublic : public ExchangePublic {
 
     // Use different curl handles as it is not from Kraken official REST API.
     // There are two of them such that second one may be used in case of failure of the first one
-    CurlHandle _curlHandle1, _curlHandle2;
+    CurlHandle _curlHandle1;
+    CurlHandle _curlHandle2;
   };
 
   struct MarketsFunc {
