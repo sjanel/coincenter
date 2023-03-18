@@ -19,14 +19,15 @@ ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangeP
 BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
   UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
   BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
-  log::info("Retrieved {} balance for {} assets", _exchangePublic.name(), balancePortfolio.size());
+  log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
   return balancePortfolio;
 }
 
 void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
   if (amount != 0) {
+    ExchangeName exchangeName = this->exchangeName();
     if (equiCurrency.isNeutral()) {
-      log::debug("{} Balance {}", _exchangePublic.name(), amount);
+      log::debug("{} Balance {}", exchangeName, amount);
       balancePortfolio.add(amount);
     } else {
       std::optional<MonetaryAmount> optConvertedAmountEquiCurrency = _exchangePublic.convert(amount, equiCurrency);
@@ -34,10 +35,10 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       } else {
-        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency, _exchangePublic.name());
+        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency, exchangeName);
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
-      log::debug("{} Balance {} (eq. {})", _exchangePublic.name(), amount, equivalentInMainCurrency);
+      log::debug("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);
       balancePortfolio.add(amount, equivalentInMainCurrency);
     }
   }
@@ -46,14 +47,17 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
 TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
                                      const MarketsPath &conversionPath) {
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
-  log::debug(options.str(realOrderPlacedInSimulationMode));
   const int nbTrades = static_cast<int>(conversionPath.size());
   const bool isMultiTradeAllowed = options.isMultiTradeAllowed(exchangeInfo().multiTradeAllowedByDefault());
-  log::info("{}rade {} -> {} on {}_{} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from,
-            toCurrency, _exchangePublic.name(), keyName());
+
+  ExchangeName exchangeName = this->exchangeName();
+  log::info("{}rade {} -> {} on {} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from, toCurrency,
+            exchangeName);
+  log::debug(options.str(realOrderPlacedInSimulationMode));
+
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
-    log::warn("Cannot trade {} into {} on {}", from, toCurrency, _exchangePublic.name());
+    log::warn("Cannot trade {} into {} on {}", from, toCurrency, exchangeName);
     return tradedAmounts;
   }
   if (nbTrades > 1 && !isMultiTradeAllowed) {
@@ -118,7 +122,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
         std::optional<MonetaryAmount> optAvgPrice =
             _exchangePublic.computeAvgOrderPrice(mk, from, options.priceOptions());
         if (!optAvgPrice) {
-          log::error("Impossible to compute {} average price on {}", _exchangePublic.name(), mk);
+          log::error("Impossible to compute {} average price on {}", exchangeName(), mk);
           // It's fine to return from there as we don't have a pending order still opened
           return totalTradedAmounts;
         }
@@ -368,8 +372,9 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
   const MonetaryAmountByCurrencySet &dustThresholds = exchangeInfo().dustAmountsThreshold();
   const int dustSweeperMaxNbTrades = exchangeInfo().dustSweeperMaxNbTrades();
   const auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
+  const auto eName = exchangeName();
+
   TradedAmountsVectorWithFinalAmount ret;
-  auto eName = exchangeName();
   if (dustThresholdLb == dustThresholds.end()) {
     log::warn("No dust threshold is configured for {} on {:n}", currencyCode, eName);
     return ret;
@@ -448,11 +453,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
     if (exchangeInfo().placeSimulateRealOrder()) {
       log::debug("Place simulate real order - price {} will be overriden", price);
       MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(mk);
-      if (isSell) {
-        price = marketOrderbook.getHighestTheoreticalPrice();
-      } else {
-        price = marketOrderbook.getLowestTheoreticalPrice();
-      }
+      price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
     } else {
       PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
       from -= placeOrderInfo.tradedAmounts().tradedFrom;
@@ -476,6 +477,7 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
+
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
   ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
   toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);

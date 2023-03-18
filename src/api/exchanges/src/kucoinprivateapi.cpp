@@ -134,7 +134,7 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
     CurrencyCode currencyCode(
         _coincenterInfo.standardizeCurrencyCode(balanceDetail["currency"].get<std::string_view>()));
     MonetaryAmount amount(balanceDetail[amountKey].get<std::string_view>(), currencyCode);
-    log::debug("{} in account '{}' on {}", amount, typeStr, _exchangePublic.name());
+    log::debug("{} in account '{}' on {}", amount, typeStr, exchangeName());
     this->addBalance(balancePortfolio, amount, equiCurrency);
   }
   return balancePortfolio;
@@ -143,8 +143,9 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
 Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v2/deposit-addresses",
                              {{"currency", currencyCode.str()}});
+  ExchangeName exchangeName(_kucoinPublic.name(), _apiKey.name());
   if (result.empty()) {
-    log::info("No deposit address for {} in {}, creating one", currencyCode, _kucoinPublic.name());
+    log::info("No deposit address for {} in {}, creating one", currencyCode, exchangeName);
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/deposit-addresses",
                           {{"currency", currencyCode.str()}});
   } else {
@@ -158,8 +159,8 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   bool doCheckWallet = coincenterInfo.exchangeInfo(_kucoinPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
-  Wallet wallet(ExchangeName(_kucoinPublic.name(), _apiKey.name()), currencyCode,
-                std::move(result["address"].get_ref<string&>()), tag, walletCheck);
+  Wallet wallet(std::move(exchangeName), currencyCode, std::move(result["address"].get_ref<string&>()), tag,
+                walletCheck);
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -415,8 +416,8 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
       netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);
       fee = MonetaryAmount(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
       if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
-        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
-                   initiatedWithdrawInfo.grossEmittedAmount().amountStr());
+        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount, fee,
+                   initiatedWithdrawInfo.grossEmittedAmount());
       }
       break;
     }
