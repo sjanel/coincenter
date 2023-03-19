@@ -45,7 +45,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.appendHttpHeader("KC-API-PASSPHRASE", passphrase);
   opts.appendHttpHeader("KC-API-KEY-VERSION", 2);
 
-  json ret = json::parse(curlHandle.query(endpoint, std::move(opts)));
+  json ret = json::parse(curlHandle.query(endpoint, opts));
   auto errCodeIt = ret.find("code");
   if (errCodeIt != ret.end() && errCodeIt->get<std::string_view>() != "200000") {
     auto msgIt = ret.find("msg");

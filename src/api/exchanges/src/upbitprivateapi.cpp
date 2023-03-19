@@ -51,7 +51,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
   opts.appendHttpHeader("Authorization", authStr);
 
-  json ret = json::parse(curlHandle.query(endpoint, std::move(opts)));
+  json ret = json::parse(curlHandle.query(endpoint, opts));
   if (throwIfError) {
     auto errorIt = ret.find("error");
     if (errorIt != ret.end()) {

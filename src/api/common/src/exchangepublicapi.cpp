@@ -234,7 +234,7 @@ MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const Market
 std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
                                                                    CurrencyCode filterCur) {
   std::optional<Market> ret;
-  static constexpr int kMinimalCryptoAcronymLen = 3;
+  static constexpr std::string_view::size_type kMinimalCryptoAcronymLen = 3;
 
   if (!filterCur.isNeutral()) {
     std::size_t firstCurLen;
@@ -260,8 +260,8 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
       // currencies so we need to compare with the markets that exist
       markets = queryTradableMarkets();
     }
-    const int symbolStrSize = static_cast<int>(marketStr.size());
-    for (int splitCurPos = kMinimalCryptoAcronymLen; splitCurPos < symbolStrSize; ++splitCurPos) {
+    const auto symbolStrSize = marketStr.size();
+    for (auto splitCurPos = kMinimalCryptoAcronymLen; splitCurPos < symbolStrSize; ++splitCurPos) {
       ret = Market(_coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), splitCurPos)),
                    _coincenterInfo.standardizeCurrencyCode(
                        std::string_view(marketStr.data() + splitCurPos, symbolStrSize - splitCurPos)));

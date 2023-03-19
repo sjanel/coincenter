@@ -73,7 +73,7 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
   method.append(opts.getPostData().str());
   opts.getPostData().clear();
 
-  string dataStr = _curlHandle.query(method, std::move(opts));
+  string dataStr = _curlHandle.query(method, opts);
   json data = json::parse(dataStr, nullptr, false /* allow exceptions */);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
