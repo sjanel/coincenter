@@ -44,22 +44,25 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
   LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
-  CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
-                                CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions));
-
   try {
+    CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
+                                  CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions));
+
     ExchangeSecretsInfo exchangesSecretsInfo;
-    if (cmdLineOptions.nosecrets) {
-      StringOptionParser anyParser(*cmdLineOptions.nosecrets);
+    if (cmdLineOptions.noSecrets) {
+      StringOptionParser anyParser(*cmdLineOptions.noSecrets);
 
       exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
     }
 
     Coincenter coincenter(coincenterInfo, exchangesSecretsInfo);
 
-    coincenter.process(coincenterCommands);
+    int nbCommandsProcessed = coincenter.process(coincenterCommands);
 
-    coincenter.updateFileCaches();  // Write potentially updated cache data on disk at end of program
+    // Write potentially updated cache data on disk at end of program
+    coincenter.updateFileCaches();
+
+    log::debug("normal termination after {} command(s) processed", nbCommandsProcessed);
   } catch (const exception &e) {
     // Log exception here as LoggingInfo is still configured at this point (will be destroyed immediately afterwards)
     log::critical("Exception: {}", e.what());
