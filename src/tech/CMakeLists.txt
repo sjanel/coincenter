@@ -13,8 +13,8 @@ target_include_directories(coincenter_tech PUBLIC include)
 add_unit_test(
     cachedresult_test
     test/cachedresult_test.cpp
-    LIBRARIES
-    spdlog
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(

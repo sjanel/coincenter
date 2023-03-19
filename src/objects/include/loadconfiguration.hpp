@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include "cct_const.hpp"
 
 namespace cct {
@@ -9,17 +11,13 @@ class LoadConfiguration {
 
   enum class ExchangeConfigFileType : int8_t { kProd, kTest };
 
-  LoadConfiguration() noexcept : _dataDir(kDefaultDataDir), _exchangeConfigFileType(ExchangeConfigFileType::kProd) {}
+  LoadConfiguration() noexcept;
 
-  LoadConfiguration(std::string_view dataDir, ExchangeConfigFileType exchangeConfigFileType)
-      : _dataDir(dataDir), _exchangeConfigFileType(exchangeConfigFileType) {}
+  LoadConfiguration(std::string_view dataDir, ExchangeConfigFileType exchangeConfigFileType);
 
   std::string_view dataDir() const { return _dataDir; }
 
-  std::string_view exchangeConfigFile() const {
-    return _exchangeConfigFileType == ExchangeConfigFileType::kProd ? kProdDefaultExchangeConfigFile
-                                                                    : kTestDefaultExchangeConfigFile;
-  }
+  std::string_view exchangeConfigFile() const;
 
   ExchangeConfigFileType exchangeConfigFileType() const { return _exchangeConfigFileType; }
 

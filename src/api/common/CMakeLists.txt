@@ -22,7 +22,7 @@ function(add_common_test name)
      LIBRARIES
      coincenter_api-objects
      coincenter_objects
-     coincenter_tools
+     coincenter_iotools
    )
 endfunction()
 
