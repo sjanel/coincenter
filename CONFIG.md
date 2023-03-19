@@ -6,6 +6,12 @@ At this step, `coincenter` is built. To execute properly, it needs read/write ac
 - `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
 - `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs. `generalconfig.json` contains general options independent from exchanges (such as logging, fiat converter).
 
+This directory is set according to these rules, by decreasing priority:
+
+- `--data` or `-d` option from the command line
+- or from `CCT_DATA_DIR` environment variable if it is set at runtime
+- or defaults to the default data directory chosen at build time from `CCT_DATA_DIR` environment variable
+
 ## Important files
 
 ### secret/secret.json

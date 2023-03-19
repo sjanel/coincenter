@@ -19,6 +19,8 @@
 
 namespace cct {
 
+std::string_view SelectDefaultDataDir() noexcept;
+
 struct CoincenterCmdLineOptions {
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
@@ -116,9 +118,9 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kMonitoringIP =
       JoinStringView_v<kMonitoringIP1, CoincenterCmdLineOptions::kDefaultMonitoringIPAddress, CharToStringView_v<')'>>;
 
-  static void PrintVersion(std::string_view programName);
+  static void PrintVersion(std::string_view programName) noexcept;
 
-  std::string_view dataDir = kDefaultDataDir;
+  std::string_view dataDir = SelectDefaultDataDir();
 
   std::string_view apiOutputType;
   std::string_view logConsole;

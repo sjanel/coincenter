@@ -38,7 +38,7 @@ option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 option(CCT_ENABLE_CLANG_TIDY "Compile with clang-tidy checks" OFF)
 option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
 
-set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter")
+set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter. Can also be overriden at runtime with this environment variable")
 
 if(EXISTS ${CCT_DATA_DIR})
   message(STATUS "Using Data directory ${CCT_DATA_DIR}")
