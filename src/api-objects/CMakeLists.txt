@@ -1,4 +1,3 @@
-# Create tools lib
 aux_source_directory(src API_OBJECTS_SRC)
 
 add_library(coincenter_api-objects STATIC ${API_OBJECTS_SRC})
@@ -33,5 +32,5 @@ add_unit_test(
   test/recentdeposit_test.cpp
   LIBRARIES
   coincenter_objects
-  coincenter_tools
+  coincenter_iotools
 )
