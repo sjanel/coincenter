@@ -25,8 +25,9 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _exchangesOrchestrator(_exchangePool.exchanges()),
       _queryResultPrinter(coincenterInfo.apiOutputType()) {}
 
-void Coincenter::process(const CoincenterCommands &coincenterCommands) {
+int Coincenter::process(const CoincenterCommands &coincenterCommands) {
   const int nbRepeats = coincenterCommands.repeats();
+  int nbCommandsProcessed = 0;
   for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
     if (repeatPos != 0) {
       std::this_thread::sleep_for(coincenterCommands.repeatTime());
@@ -40,8 +41,10 @@ void Coincenter::process(const CoincenterCommands &coincenterCommands) {
     }
     for (const CoincenterCommand &cmd : coincenterCommands.commands()) {
       processCommand(cmd);
+      ++nbCommandsProcessed;
     }
   }
+  return nbCommandsProcessed;
 }
 
 void Coincenter::processCommand(const CoincenterCommand &cmd) {

@@ -125,7 +125,7 @@ struct CoincenterCmdLineOptions {
   std::string_view apiOutputType;
   std::string_view logConsole;
   std::string_view logFile;
-  std::optional<std::string_view> nosecrets;
+  std::optional<std::string_view> noSecrets;
   Duration repeatTime = kDefaultRepeatTime;
 
   std::string_view monitoringAddress = kDefaultMonitoringIPAddress;
@@ -224,7 +224,7 @@ struct CoincenterAllowedOptions {
         "<[exch1,...]>",
         "Do not load secrets for specified exchanges.\n"
         "If no exchange is specified, no key will be loaded at all"},
-       &OptValueType::nosecrets},
+       &OptValueType::noSecrets},
       {{{"General", 8},
         "--repeat",
         'r',

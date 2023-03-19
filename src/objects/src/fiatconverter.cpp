@@ -90,7 +90,7 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
   const json& res = data["results"];
   const json& rates = res[qStr];
   double rate = rates["val"];
-  log::debug("Stored rate {} for market {}", rate, qStr.c_str());
+  log::debug("Stored rate {} for market {}", rate, qStr);
   TimePoint nowTime = Clock::now();
   _pricesMap.insert_or_assign(mk.reverse(), PriceTimedValue{static_cast<double>(1) / rate, nowTime});
   _pricesMap.insert_or_assign(std::move(mk), PriceTimedValue{rate, nowTime});

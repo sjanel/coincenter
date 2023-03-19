@@ -31,7 +31,7 @@ class Coincenter {
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
-  void process(const CoincenterCommands &coincenterCommands);
+  int process(const CoincenterCommands &coincenterCommands);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
