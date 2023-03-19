@@ -8,47 +8,48 @@
 
 namespace cct {
 
-string BinToHex(std::span<const unsigned char> bindata) {
+string BinToHex(std::span<const unsigned char> binData) {
   static constexpr const char* const kHexits = "0123456789abcdef";
-  const int sz = static_cast<int>(bindata.size());
+  auto sz = binData.size();
   string ret(2 * sz, '\0');
-  for (int charPos = 0; charPos < sz; ++charPos) {
-    ret[charPos * 2] = kHexits[bindata[charPos] >> 4];
-    ret[(charPos * 2) + 1] = kHexits[bindata[charPos] & 0x0F];
+  while (sz != 0) {
+    --sz;
+    ret[2 * sz] = kHexits[binData[sz] >> 4];
+    ret[(2 * sz) + 1] = kHexits[binData[sz] & 0x0F];
   }
   return ret;
 }
 
-string B64Encode(std::span<const char> bindata) {
-  const auto binlen = bindata.size();
+string B64Encode(std::span<const char> binData) {
+  const auto binLen = binData.size();
   // Use = signs so the end is properly padded.
-  string retval((((binlen + 2) / 3) * 4), '=');
-  std::size_t outpos = 0;
+  string ret((((binLen + 2) / 3) * 4), '=');
+  std::size_t outPos = 0;
   int bitsCollected = 0;
   unsigned int accumulator = 0;
 
   static constexpr const char* const kB64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-  for (char ch : bindata) {
+  for (char ch : binData) {
     accumulator = (accumulator << 8) | (ch & 0xffu);
     bitsCollected += 8;
     while (bitsCollected >= 6) {
       bitsCollected -= 6;
-      retval[outpos++] = kB64Table[(accumulator >> bitsCollected) & 0x3fu];
+      ret[outPos++] = kB64Table[(accumulator >> bitsCollected) & 0x3fu];
     }
   }
   if (bitsCollected > 0) {  // Any trailing bits that are missing.
     assert(bitsCollected < 6);
     accumulator <<= 6 - bitsCollected;
-    retval[outpos++] = kB64Table[accumulator & 0x3fu];
+    ret[outPos++] = kB64Table[accumulator & 0x3fu];
   }
-  assert(retval.empty() || outpos >= (retval.size() - 2));
-  assert(outpos <= retval.size());
-  return retval;
+  assert(ret.empty() || outPos >= (ret.size() - 2));
+  assert(outPos <= ret.size());
+  return ret;
 }
 
-string B64Decode(std::span<const char> ascdata) {
-  string retval;
+string B64Decode(std::span<const char> ascData) {
+  string ret;
   int bitsCollected = 0;
   unsigned int accumulator = 0;
 
@@ -59,7 +60,7 @@ string B64Decode(std::span<const char> ascdata) {
       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64, 64, 26, 27, 28, 29, 30, 31, 32,
       33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
 
-  for (char ch : ascdata) {
+  for (char ch : ascData) {
     if (isspace(ch) || ch == '=') {
       // Skip whitespace and padding
       continue;
@@ -71,9 +72,9 @@ string B64Decode(std::span<const char> ascdata) {
     bitsCollected += 6;
     if (bitsCollected >= 8) {
       bitsCollected -= 8;
-      retval.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xffu));
+      ret.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xffu));
     }
   }
-  return retval;
+  return ret;
 }
 }  // namespace cct

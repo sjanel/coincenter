@@ -2,10 +2,7 @@
 Checks: "-*,\
   bugprone-*,\
   -bugprone-easily-swappable-parameters,\
-  -bugprone-implicit-widening-of-multiplication-result,\
-  -bugprone-misplaced-widening-cast,\
   -bugprone-narrowing-conversions,\
-  -bugprone-too-small-loop-variable,\
   google-readability-casting,\
   misc-*,\
   -misc-no-recursion,\
@@ -17,6 +14,7 @@ Checks: "-*,\
   -modernize-use-noexcept,\
   -modernize-use-trailing-return-type,\
   performance-*,\
+  portability-*,\
   readability-*,\
   -readability-function-cognitive-complexity,\
   -readability-identifier-naming,\

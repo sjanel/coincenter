@@ -21,7 +21,7 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
     switch (sizeStr[endPos]) {
       case '.':
         throw exception("Decimal number not accepted for number of bytes parsing");
-      case 'T':
+      case 'T':  // NOLINT(bugprone-branch-clone)
         multiplier *= multiplierBase;
         [[fallthrough]];
       case 'G':
