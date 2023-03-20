@@ -333,7 +333,7 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount other) const {
     resAmount /= 10;
     --resNbDecimals;
   }
-  return MonetaryAmount(resAmount, _curWithDecimals, resNbDecimals);
+  return {resAmount, _curWithDecimals, resNbDecimals};
 }
 
 MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
@@ -356,7 +356,7 @@ MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
       nbDigitsToTruncate = 0;
     }
   }
-  return MonetaryAmount(amount * mult, _curWithDecimals, nbDecs);
+  return {amount * mult, _curWithDecimals, nbDecs};
 }
 
 MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
@@ -396,7 +396,7 @@ MonetaryAmount MonetaryAmount::operator*(MonetaryAmount mult) const {
     }
   }
   CurrencyCode resCurrency = _curWithDecimals.isNeutral() ? mult._curWithDecimals : _curWithDecimals;
-  return MonetaryAmount(lhsAmount * rhsAmount, resCurrency, lhsNbDecimals + rhsNbDecimals);
+  return {lhsAmount * rhsAmount, resCurrency, static_cast<int8_t>(lhsNbDecimals + rhsNbDecimals)};
 }
 
 MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
@@ -461,7 +461,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     nbDecs -= nbDigitsTruncate;
   }
 
-  return MonetaryAmount(static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs);
+  return {static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs};
 }
 
 std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma) {

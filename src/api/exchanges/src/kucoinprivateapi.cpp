@@ -386,8 +386,7 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   }
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/withdrawals", std::move(opts));
-  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["withdrawalId"].get_ref<string&>()),
-                               grossAmount);
+  return {std::move(destinationWallet), std::move(result["withdrawalId"].get_ref<string&>()), grossAmount};
 }
 
 SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
@@ -422,7 +421,7 @@ SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
+  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 }  // namespace cct::api

@@ -295,7 +295,7 @@ MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currenc
   if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
     log::error("{} is currently unavailable for withdraw from {}", currencyCode, _exchangePublic.name());
   }
-  return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
+  return {withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode};
 }
 
 namespace {
@@ -449,7 +449,7 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   }
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply",
                              std::move(withdrawPostData));
-  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount);
+  return {std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount};
 }
 
 SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
@@ -500,7 +500,7 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
+  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 ReceivedWithdrawInfo BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
@@ -526,8 +526,8 @@ ReceivedWithdrawInfo BinancePrivate::isWithdrawReceived(const InitiatedWithdrawI
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
   const RecentDeposit* pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
-  return ReceivedWithdrawInfo(pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
-                              pClosestRecentDeposit != nullptr);
+  return {pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
+          pClosestRecentDeposit != nullptr};
 }
 
 }  // namespace cct::api

@@ -30,7 +30,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
 constexpr std::string_view kRatesCacheFile = "ratescache.json";
 
 File GetRatesCacheFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow);
+  return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
 }
 
 constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";

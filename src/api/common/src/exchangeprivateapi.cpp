@@ -499,8 +499,8 @@ ReceivedWithdrawInfo ExchangePrivate::isWithdrawReceived(
   }
   RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
   const RecentDeposit *pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
-  return ReceivedWithdrawInfo(pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
-                              pClosestRecentDeposit != nullptr);
+  return {pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
+          pClosestRecentDeposit != nullptr};
 }
 
 }  // namespace cct::api

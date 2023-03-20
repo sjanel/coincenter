@@ -265,7 +265,7 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
     for (const json& chainDetail : curDetail["chains"]) {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
       if (chainName == cur) {
-        return MonetaryAmount(chainDetail["transactFeeWithdraw"].get<std::string_view>(), cur);
+        return {chainDetail["transactFeeWithdraw"].get<std::string_view>(), cur};
       }
     }
   }

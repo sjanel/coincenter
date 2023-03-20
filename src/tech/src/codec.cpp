@@ -31,17 +31,17 @@ string B64Encode(std::span<const char> binData) {
   static constexpr const char* const kB64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   for (char ch : binData) {
-    accumulator = (accumulator << 8) | (ch & 0xffu);
+    accumulator = (accumulator << 8) | (ch & 0xFFU);
     bitsCollected += 8;
     while (bitsCollected >= 6) {
       bitsCollected -= 6;
-      ret[outPos++] = kB64Table[(accumulator >> bitsCollected) & 0x3fu];
+      ret[outPos++] = kB64Table[(accumulator >> bitsCollected) & 0x3FU];
     }
   }
   if (bitsCollected > 0) {  // Any trailing bits that are missing.
     assert(bitsCollected < 6);
     accumulator <<= 6 - bitsCollected;
-    ret[outPos++] = kB64Table[accumulator & 0x3fu];
+    ret[outPos++] = kB64Table[accumulator & 0x3FU];
   }
   assert(ret.empty() || outPos >= (ret.size() - 2));
   assert(outPos <= ret.size());
@@ -72,7 +72,7 @@ string B64Decode(std::span<const char> ascData) {
     bitsCollected += 6;
     if (bitsCollected >= 8) {
       bitsCollected -= 8;
-      ret.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xffu));
+      ret.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xFFU));
     }
   }
   return ret;

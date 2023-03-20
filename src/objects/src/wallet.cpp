@@ -9,7 +9,7 @@ namespace cct {
 
 namespace {
 File GetDepositAddressesFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kSecret, kDepositAddressesFileName, File::IfError::kNoThrow);
+  return {dataDir, File::Type::kSecret, kDepositAddressesFileName, File::IfError::kNoThrow};
 }
 }  // namespace
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.

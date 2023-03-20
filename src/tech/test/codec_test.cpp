@@ -8,7 +8,7 @@ namespace cct {
 
 namespace {
 std::span<const unsigned char> StringToBytes(std::string_view str) {
-  return std::span<const unsigned char>(reinterpret_cast<const unsigned char *>(str.data()), str.length());
+  return {reinterpret_cast<const unsigned char *>(str.data()), str.length()};
 }
 }  // namespace
 

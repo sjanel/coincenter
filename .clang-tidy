@@ -5,22 +5,16 @@ Checks: "-*,\
   -bugprone-narrowing-conversions,\
   google-readability-casting,\
   misc-*,\
-  -misc-no-recursion,\
   -misc-non-private-member-variables-in-classes,\
   modernize-*,\
   -modernize-avoid-c-arrays,\
-  -modernize-return-braced-init-list,\
-  -modernize-use-nodiscard,\
-  -modernize-use-noexcept,\
   -modernize-use-trailing-return-type,\
   performance-*,\
   portability-*,\
   readability-*,\
   -readability-function-cognitive-complexity,\
-  -readability-identifier-naming,\
   -readability-magic-numbers,\
   -readability-qualified-auto,\
-  -readability-uppercase-literal-suffix,\
   "
 HeaderFilterRegex: 'Source/cm[^/]*\.(h|hxx|cxx)$'
 CheckOptions:

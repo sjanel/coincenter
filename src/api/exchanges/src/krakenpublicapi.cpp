@@ -65,7 +65,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 }
 
 File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
-  return File(dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfError::kNoThrow);
+  return {dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfError::kNoThrow};
 }
 
 }  // namespace
@@ -379,14 +379,15 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
 }
 
 MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
-  MarketOrderBookMap ret;
-  string allAssetPairs;
   const CurrencyExchangeFlatSet& krakenCurrencies = _tradableCurrenciesCache.get();
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  allAssetPairs.reserve(markets.size() * 8);
+
   using KrakenAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   KrakenAssetPairToStdMarketMap krakenAssetPairToStdMarketMap;
   krakenAssetPairToStdMarketMap.reserve(markets.size());
+
+  string allAssetPairs;
+  MarketOrderBookMap ret;
   ret.reserve(markets.size());
   for (Market mk : markets) {
     auto lb = krakenCurrencies.find(mk.base());

@@ -170,7 +170,7 @@ MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   if (it == currencyInfoSet.end()) {
     throw exception("Unable to find withdrawal fee for {}", currencyCode);
   }
-  return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
+  return {it->withdrawalMinFee, it->currencyExchange.standardCode()};
 }
 
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
@@ -194,7 +194,9 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
 
     // Use avg traded volume by second as ask/bid vol
-    MonetaryAmount askVol = dayVolume / (2 * 24 * 3600);
+    static constexpr MonetaryAmount::AmountType kAskVolPerDay = static_cast<MonetaryAmount::AmountType>(2) * 24 * 3600;
+
+    MonetaryAmount askVol = dayVolume / kAskVolPerDay;
     askVol.round(marketInfo.baseIncrement, MonetaryAmount::RoundType::kNearest);
     if (askVol == 0) {
       askVol = marketInfo.baseIncrement;
@@ -295,7 +297,7 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
-  return MonetaryAmount(result["vol"].get<std::string_view>(), mk.base());
+  return {result["vol"].get<std::string_view>(), mk.base()};
 }
 
 LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
@@ -317,6 +319,6 @@ LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int n
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
-  return MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
+  return {result["price"].get<std::string_view>(), mk.quote()};
 }
 }  // namespace cct::api

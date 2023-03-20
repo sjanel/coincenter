@@ -5,7 +5,7 @@
 namespace cct {
 bool CoincenterCommand::isPublic() const {
   switch (_type) {
-    case CoincenterCommandType::kHealthCheck:
+    case CoincenterCommandType::kHealthCheck:  // NOLINT(bugprone-branch-clone)
       [[fallthrough]];
     case CoincenterCommandType::kMarkets:
       [[fallthrough]];
@@ -33,7 +33,7 @@ bool CoincenterCommand::isReadOnly() const {
     return true;
   }
   switch (_type) {
-    case CoincenterCommandType::kBalance:
+    case CoincenterCommandType::kBalance:  // NOLINT(bugprone-branch-clone)
       [[fallthrough]];
     case CoincenterCommandType::kDepositInfo:
       [[fallthrough]];

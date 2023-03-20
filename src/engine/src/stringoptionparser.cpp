@@ -23,9 +23,7 @@ ExchangeNames GetExchanges(std::string_view str) {
   return exchanges;
 }
 
-std::string_view StrEnd(std::string_view opt, std::size_t startPos) {
-  return std::string_view(opt.begin() + startPos, opt.end());
-}
+std::string_view StrEnd(std::string_view opt, std::size_t startPos) { return {opt.begin() + startPos, opt.end()}; }
 
 bool IsExchangeName(std::string_view str) {
   string lowerStr = ToLower(str);
@@ -51,7 +49,7 @@ std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::siz
   while (endPos > 0U && isblank(opt[endPos - 1U])) {
     --endPos;
   }
-  return std::string_view(opt.begin() + begPos, opt.begin() + endPos);
+  return {opt.begin() + begPos, opt.begin() + endPos};
 }
 
 auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPercentageAtLast, std::size_t &pos) {
@@ -114,7 +112,7 @@ StringOptionParser::CurrencyPrivateExchanges StringOptionParser::getCurrencyPriv
     throw invalid_argument("Expected a currency code first");
   }
 
-  return CurrencyPrivateExchanges(CurrencyCode(curStr), GetExchanges(exchangesStr));
+  return {CurrencyCode(curStr), GetExchanges(exchangesStr)};
 }
 
 StringOptionParser::CurrenciesPrivateExchanges StringOptionParser::getCurrenciesPrivateExchanges(

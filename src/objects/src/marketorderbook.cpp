@@ -177,7 +177,7 @@ MonetaryAmount MarketOrderBook::computeCumulAmountBoughtImmediatelyAt(MonetaryAm
   for (int pos = _lowestAskPricePos; pos < nbOrders && priceAt(pos) <= price; ++pos) {
     integralAmountRep -= _orders[pos].amount;  // Minus as amounts are negative here
   }
-  return MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals);
+  return {integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals};
 }
 
 MonetaryAmount MarketOrderBook::computeCumulAmountSoldImmediatelyAt(MonetaryAmount price) const {
@@ -185,7 +185,7 @@ MonetaryAmount MarketOrderBook::computeCumulAmountSoldImmediatelyAt(MonetaryAmou
   for (int pos = _highestBidPricePos; pos >= 0 && priceAt(pos) >= price; --pos) {
     integralAmountRep += _orders[pos].amount;
   }
-  return MonetaryAmount(integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals);
+  return {integralAmountRep, _market.base(), _volAndPriNbDecimals.volNbDecimals};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(
@@ -248,7 +248,7 @@ namespace {
 inline std::optional<MonetaryAmount> ComputeAvgPrice(Market mk,
                                                      const MarketOrderBook::AmountPerPriceVec& amountsPerPrice) {
   if (amountsPerPrice.empty()) {
-    return std::optional<MonetaryAmount>();
+    return {};
   }
   if (amountsPerPrice.size() == 1) {
     return amountsPerPrice.front().price;
@@ -348,7 +348,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceForTakerAmount(Mon
       return avgPrice / amountInBaseOrQuote.toNeutral();
     }
   }
-  return std::optional<MonetaryAmount>();
+  return {};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeWorstPriceForTakerAmount(
@@ -370,7 +370,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeWorstPriceForTakerAmount(
       return price;
     }
   }
-  return std::optional<MonetaryAmount>();
+  return {};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::convert(MonetaryAmount amountInBaseOrQuote,
@@ -384,6 +384,7 @@ std::optional<MonetaryAmount> MarketOrderBook::convert(MonetaryAmount amountInBa
              : MonetaryAmount(amountInBaseOrQuote / *avgPrice, _market.base());
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::operator[](int relativePosToLimitPrice) const {
   if (relativePosToLimitPrice == 0) {
     auto [v11, v12] = (*this)[-1];
@@ -416,7 +417,7 @@ std::optional<MonetaryAmount> MarketOrderBook::convertBaseAmountToQuote(Monetary
       return quoteAmount + amountInBaseCurrency.toNeutral() * price;
     }
   }
-  return std::optional<MonetaryAmount>();
+  return {};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::convertQuoteAmountToBase(MonetaryAmount amountInQuoteCurrency) const {
@@ -438,7 +439,7 @@ std::optional<MonetaryAmount> MarketOrderBook::convertQuoteAmountToBase(Monetary
       return baseAmount + MonetaryAmount(1, _market.base()) * (amountInQuoteCurrency / price);
     }
   }
-  return std::optional<MonetaryAmount>();
+  return {};
 }
 
 MonetaryAmount MarketOrderBook::getHighestTheoreticalPrice() const {
@@ -452,7 +453,8 @@ MonetaryAmount MarketOrderBook::getHighestTheoreticalPrice() const {
 
 MonetaryAmount MarketOrderBook::getLowestTheoreticalPrice() const {
   // Use 10 as default number of decimals if empty orderbook (like Satoshi)
-  return MonetaryAmount(1, _market.quote(), _orders.empty() ? 10 : (lowestAskPrice() - highestBidPrice()).nbDecimals());
+  return {1, _market.quote(),
+          _orders.empty() ? static_cast<int8_t>(10) : (lowestAskPrice() - highestBidPrice()).nbDecimals()};
 }
 
 namespace {
