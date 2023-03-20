@@ -515,8 +515,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   }
 
   // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
-  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(withdrawData["refid"].get_ref<string&>()),
-                               grossAmount);
+  return {std::move(destinationWallet), std::move(withdrawData["refid"].get_ref<string&>()), grossAmount};
 }
 
 SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
@@ -531,7 +530,7 @@ SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdr
       log::info("{} withdraw status: {}", exchangeName(), status);
       MonetaryAmount netWithdrawAmount(trx["amount"].get<std::string_view>(), currencyCode);
       MonetaryAmount fee(trx["fee"].get<std::string_view>(), currencyCode);
-      return SentWithdrawInfo(netWithdrawAmount, fee, status == "Success");
+      return {netWithdrawAmount, fee, status == "Success"};
     }
   }
   throw exception("Kraken: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());

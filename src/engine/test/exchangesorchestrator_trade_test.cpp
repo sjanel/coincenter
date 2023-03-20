@@ -269,7 +269,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
         throw exception("Unexpected exchange number ");
     }
 
-    return TradedAmounts(from, tradedTo2);
+    return {from, tradedTo2};
   }
 
   void resetMarkets() {

@@ -7,7 +7,8 @@
 
 namespace cct {
 namespace {
-struct Incr {
+class Incr {
+ public:
   int operator()() { return ++nbCalls; }
 
   int operator()(int val) {
@@ -21,6 +22,7 @@ struct Incr {
     return nbCalls;
   }
 
+ private:
   int nbCalls{};
 };
 

@@ -295,7 +295,7 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
     log::error("Bithumb time is not synchronized with us (Bithumb: {}, us: [{} - {}])", bithumbTimestamp, t1Ms, t2Ms);
   }
 
-  return MonetaryAmount(last24hVol, mk.base());
+  return {last24hVol, mk.base()};
 }
 
 namespace {

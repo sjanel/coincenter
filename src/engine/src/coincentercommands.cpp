@@ -31,9 +31,9 @@ CoincenterCmdLineOptions CoincenterCommands::ParseOptions(int argc, const char *
 
 MonitoringInfo CoincenterCommands::CreateMonitoringInfo(std::string_view programName,
                                                         const CoincenterCmdLineOptions &cmdLineOptions) {
-  return MonitoringInfo(cmdLineOptions.useMonitoring, programName, cmdLineOptions.monitoringAddress,
-                        cmdLineOptions.monitoringPort, cmdLineOptions.monitoringUsername,
-                        cmdLineOptions.monitoringPassword);
+  return {cmdLineOptions.useMonitoring,      programName,
+          cmdLineOptions.monitoringAddress,  cmdLineOptions.monitoringPort,
+          cmdLineOptions.monitoringUsername, cmdLineOptions.monitoringPassword};
 }
 
 namespace {

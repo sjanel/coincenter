@@ -425,7 +425,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
                              std::move(withdrawPostData));
   string withdrawIdStr = ToString(result["data"].get<int64_t>());
-  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(withdrawIdStr), grossAmount);
+  return {std::move(destinationWallet), std::move(withdrawIdStr), grossAmount};
 }
 
 SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
@@ -481,7 +481,7 @@ SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
       break;
     }
   }
-  return SentWithdrawInfo(netEmittedAmount, fee, isWithdrawSent);
+  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {

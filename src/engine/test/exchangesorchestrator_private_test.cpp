@@ -223,7 +223,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
         .WillOnce(testing::Return(sentWithdrawInfo));
     EXPECT_CALL(exchangePrivate2, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
         .WillOnce(testing::Return(api::ReceivedWithdrawInfo{netEmittedAmount, true}));
-    return WithdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
+    return {std::move(initiatedWithdrawInfo), netEmittedAmount};
   }
 
   CurrencyCode cur{"XRP"};

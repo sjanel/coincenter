@@ -53,8 +53,7 @@ const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData,
 template <class ExchangeInfoDataByMarket>
 VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
   const json& marketData = RetrieveMarketData(exchangeInfoData, mk);
-  return VolAndPriNbDecimals(marketData["baseAssetPrecision"].get<int8_t>(),
-                             marketData["quoteAssetPrecision"].get<int8_t>());
+  return {marketData["baseAssetPrecision"].get<int8_t>(), marketData["quoteAssetPrecision"].get<int8_t>()};
 }
 }  // namespace
 
@@ -450,7 +449,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", mk.assetsPairStrUpper()}});
   std::string_view last24hVol = result["volume"].get<std::string_view>();
-  return MonetaryAmount(last24hVol, mk.base());
+  return {last24hVol, mk.base()};
 }
 
 LastTradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
@@ -478,7 +477,7 @@ LastTradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market mk) {
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
   std::string_view lastPrice = result["price"].get<std::string_view>();
-  return MonetaryAmount(lastPrice, mk.quote());
+  return {lastPrice, mk.quote()};
 }
 
 }  // namespace cct::api

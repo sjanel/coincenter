@@ -416,9 +416,8 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
   if (privateExchangeNames.size() == 1 && !isPercentageTrade) {
     // In this special case we don't need to call the balance - call trade directly
     Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeNames.front());
-    return TradedAmountsPerExchange(
-        1,
-        std::make_pair(std::addressof(exchange), exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions)));
+    return {1, std::make_pair(std::addressof(exchange),
+                              exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions))};
   }
 
   const CurrencyCode fromCurrency = startAmount.currencyCode();

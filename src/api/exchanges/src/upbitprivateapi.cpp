@@ -433,7 +433,7 @@ MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyC
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
                              {{"currency", currencyCode.str()}});
   std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
-  return MonetaryAmount(amountStr, currencyCode);
+  return {amountStr, currencyCode};
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
@@ -448,7 +448,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   }
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
-  return InitiatedWithdrawInfo(std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount);
+  return {std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount};
 }
 
 SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
@@ -472,7 +472,7 @@ SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdra
     log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode);
   }
   const bool isDone = stateUpperStr == "DONE";
-  return SentWithdrawInfo(netEmittedAmount, fee, isDone || isCanceled);
+  return {netEmittedAmount, fee, isDone || isCanceled};
 }
 
 }  // namespace cct::api

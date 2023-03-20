@@ -10,13 +10,13 @@ class ExchangeTest {
 
   ExchangeTest(std::string_view name, std::string_view keyName) : _name(name), _keyName(keyName) {}
 
-  std::string_view name() const { return _name; }
-  std::string_view keyName() const { return _keyName; }
+  [[nodiscard]] std::string_view name() const { return _name; }
+  [[nodiscard]] std::string_view keyName() const { return _keyName; }
 
   ExchangePublic &apiPublic() { return *this; }
-  const ExchangePublic &apiPublic() const { return *this; }
+  [[nodiscard]] const ExchangePublic &apiPublic() const { return *this; }
 
-  bool matches(const ExchangeName &exchangeName) const {
+  [[nodiscard]] bool matches(const ExchangeName &exchangeName) const {
     return exchangeName.name() == _name && (!exchangeName.isKeyNameDefined() || exchangeName.keyName() == _keyName);
   }
 
