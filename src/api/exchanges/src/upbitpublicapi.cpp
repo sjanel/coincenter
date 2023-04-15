@@ -4,12 +4,12 @@
 #include <cassert>
 
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "fiatconverter.hpp"
+#include "file.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct::api {
@@ -134,7 +134,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
 WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
-  json jsonData = withdrawFeesFile.readJson();
+  json jsonData = withdrawFeesFile.readAllJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);

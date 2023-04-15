@@ -3,11 +3,11 @@
 #include <cctype>
 
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "file.hpp"
 #include "timedef.hpp"
 #include "toupperlower.hpp"
 
@@ -41,7 +41,7 @@ CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode r
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {
   if (loadFromFileCacheAtInit) {
-    json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readJson();
+    json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
     if (!data.empty()) {
       int64_t timeEpoch = data["timeepoch"].get<int64_t>();
       auto& fiatsFile = data["fiats"];
@@ -115,7 +115,7 @@ json CryptowatchAPI::AllPricesFunc::operator()() {
 
 void CryptowatchAPI::updateCacheFile() const {
   File fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
-  json data = fiatsCacheFile.readJson();
+  json data = fiatsCacheFile.readAllJson();
   auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
   auto timeEpochIt = data.find("timeepoch");
   if (timeEpochIt != data.end()) {

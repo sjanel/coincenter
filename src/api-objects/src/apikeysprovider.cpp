@@ -3,9 +3,9 @@
 #include <iterator>
 
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "file.hpp"
 
 namespace cct::api {
 namespace {
@@ -89,7 +89,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     std::string_view secretFileName = GetSecretFileName(runMode);
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
                      runMode == settings::RunMode::kProd ? File::IfError::kNoThrow : File::IfError::kThrow);
-    json jsonData = secretsFile.readJson();
+    json jsonData = secretsFile.readAllJson();
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
       if (std::ranges::find(exchangesWithoutSecrets, ExchangeName(publicExchangeName)) !=

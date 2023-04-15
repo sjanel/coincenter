@@ -2,8 +2,8 @@
 
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_log.hpp"
+#include "file.hpp"
 
 namespace cct {
 
@@ -20,7 +20,7 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
     return true;
   }
   File depositAddressesFile = GetDepositAddressesFile(walletCheck.dataDir());
-  json data = depositAddressesFile.readJson();
+  json data = depositAddressesFile.readAllJson();
   if (!data.contains(exchangeName.name())) {
     log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, exchangeName);
     return false;

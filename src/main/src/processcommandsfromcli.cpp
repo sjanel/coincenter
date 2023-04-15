@@ -3,6 +3,7 @@
 #include "coincenter.hpp"
 #include "coincenterinfo.hpp"
 #include "durationstring.hpp"
+#include "file.hpp"
 #include "generalconfig.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"
@@ -44,9 +45,18 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
   LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
+  auto dataDir = loadConfiguration.dataDir();
+
   try {
+    File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
+                                        File::IfError::kThrow);
+    File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
+    File currencyPrefixesTranslatorFile(dataDir, File::Type::kStatic, "currency_prefix_translator.json",
+                                        File::IfError::kThrow);
+
     CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
-                                  CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions));
+                                  CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions),
+                                  currencyAcronymsTranslatorFile, stableCoinsFile, currencyPrefixesTranslatorFile);
 
     ExchangeSecretsInfo exchangesSecretsInfo;
     if (cmdLineOptions.noSecrets) {

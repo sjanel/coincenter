@@ -2,11 +2,12 @@
 
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "durationstring.hpp"
 #include "exchangeinfoparser.hpp"
+#include "file.hpp"
+#include "toupperlower.hpp"
 
 #ifdef CCT_ENABLE_PROMETHEUS
 #include "prometheusmetricgateway.hpp"
@@ -17,10 +18,9 @@
 namespace cct {
 
 namespace {
-CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(std::string_view dataDir) {
-  File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
-                                      File::IfError::kThrow);
-  json jsonData = currencyAcronymsTranslatorFile.readJson();
+CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(
+    const Reader& currencyAcronymsTranslatorReader) {
+  json jsonData = currencyAcronymsTranslatorReader.readAllJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
@@ -29,9 +29,8 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
   return map;
 }
 
-CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(std::string_view dataDir) {
-  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
-  json jsonData = stableCoinsFile.readJson();
+CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(const Reader& stableCoinsReader) {
+  json jsonData = stableCoinsReader.readAllJson();
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
@@ -49,9 +48,11 @@ using MetricGatewayType = VoidMetricGateway;
 }  // namespace
 
 CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguration& loadConfiguration,
-                               GeneralConfig&& generalConfig, MonitoringInfo&& monitoringInfo)
-    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(loadConfiguration.dataDir())),
-      _stableCoinsMap(ComputeStableCoinsMap(loadConfiguration.dataDir())),
+                               GeneralConfig&& generalConfig, MonitoringInfo&& monitoringInfo,
+                               const Reader& currencyAcronymsReader, const Reader& stableCoinsReader,
+                               const Reader& currencyPrefixesReader)
+    : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(currencyAcronymsReader)),
+      _stableCoinsMap(ComputeStableCoinsMap(stableCoinsReader)),
       _exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
@@ -59,7 +60,15 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
-      _monitoringInfo(monitoringInfo) {}
+      _monitoringInfo(std::move(monitoringInfo)) {
+  json jsonData = currencyPrefixesReader.readAllJson();
+  for (auto& [prefix, acronym_prefix] : jsonData.items()) {
+    log::trace("Currency prefix {} <=> {}", prefix, acronym_prefix.get<std::string_view>());
+    _minPrefixLen = std::min(_minPrefixLen, static_cast<int>(prefix.length()));
+    _maxPrefixLen = std::max(_maxPrefixLen, static_cast<int>(prefix.length()));
+    _currencyPrefixAcronymMap.insert_or_assign(ToUpper(prefix), std::move(acronym_prefix.get_ref<string&>()));
+  }
+}
 
 CoincenterInfo::~CoincenterInfo() = default;  // To have definition of MetricGateway
 
@@ -69,6 +78,35 @@ CurrencyCode CoincenterInfo::standardizeCurrencyCode(CurrencyCode currencyCode) 
     return it->second;
   }
   return currencyCode;
+}
+
+CurrencyCode CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCode) const {
+  auto maxPrefixLen = std::min(_maxPrefixLen, static_cast<int>(currencyCode.length()));
+  string formattedCurrencyCode;
+  for (int prefixLen = _minPrefixLen; prefixLen <= maxPrefixLen; ++prefixLen) {
+    string prefix = ToUpper(std::string_view(currencyCode.begin(), currencyCode.begin() + prefixLen));
+    auto lb = _currencyPrefixAcronymMap.lower_bound(prefix);
+    if (lb == _currencyPrefixAcronymMap.end()) {
+      // given currency code cannot have a prefix present in the map
+      break;
+    }
+    if (lb->first == prefix) {
+      formattedCurrencyCode.append(lb->second);
+      auto begIt = currencyCode.begin() + prefixLen;
+      auto endIt = currencyCode.end();
+      auto isSeparator = [](char ch) { return ch == ' ' || ch == '/'; };
+
+      while (begIt != endIt && isSeparator(*begIt)) {
+        ++begIt;
+      }
+      std::transform(begIt, endIt, std::back_inserter(formattedCurrencyCode), [](char ch) { return toupper(ch); });
+      log::debug("Transformed '{}' into '{}'", currencyCode, formattedCurrencyCode);
+      currencyCode = formattedCurrencyCode;
+      break;
+    }
+  }
+
+  return standardizeCurrencyCode(CurrencyCode(currencyCode));
 }
 
 std::optional<CurrencyCode> CoincenterInfo::fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const {

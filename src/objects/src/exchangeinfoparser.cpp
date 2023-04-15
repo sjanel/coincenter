@@ -1,9 +1,9 @@
 #include "exchangeinfoparser.hpp"
 
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_log.hpp"
 #include "exchangeinfodefault.hpp"
+#include "file.hpp"
 #include "loadconfiguration.hpp"
 #include "unreachable.hpp"
 
@@ -15,7 +15,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
       std::string_view filename = loadConfiguration.exchangeConfigFile();
       File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfError::kNoThrow);
       json jsonData = ExchangeInfoDefault::Prod();
-      json exchangeConfigJsonData = exchangeConfigFile.readJson();
+      json exchangeConfigJsonData = exchangeConfigFile.readAllJson();
       if (exchangeConfigJsonData.empty()) {
         // Create a file with default values. User can then update them as he wishes.
         log::warn("No {} file found. Creating a default one which can be updated freely at your convenience", filename);

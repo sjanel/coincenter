@@ -1,6 +1,6 @@
 #include "generalconfig.hpp"
 
-#include "cct_file.hpp"
+#include "file.hpp"
 
 namespace cct {
 
@@ -26,7 +26,7 @@ json GeneralConfig::LoadFile(std::string_view dataDir) {
 }
 )"_json;
   json jsonData = kDefaultGeneralConfig;
-  json generalConfigJsonData = generalConfigFile.readJson();
+  json generalConfigJsonData = generalConfigFile.readAllJson();
   if (generalConfigJsonData.empty()) {
     // Create a file with default values. User can then update them as he wishes.
     log::warn("No {} file found. Creating a default one which can be updated freely at your convenience",

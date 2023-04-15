@@ -17,6 +17,15 @@ add_unit_test(
 )
 
 add_unit_test(
+    coincenterinfo_test
+    test/coincenterinfo_test.cpp
+    LIBRARIES
+    coincenter_objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
     currencycode_test
     test/currencycode_test.cpp
     LIBRARIES
