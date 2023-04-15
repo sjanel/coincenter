@@ -8,13 +8,13 @@
 #include "apikey.hpp"
 #include "bithumbpublicapi.hpp"
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "file.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
@@ -246,7 +246,7 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, bithumbPublic) {
-  json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readJson();
+  json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAllJson();
   for (const auto& [currencyCodeStr, currencyOrderInfoJson] : data.items()) {
     CurrencyOrderInfo currencyOrderInfo;
 
@@ -265,20 +265,22 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}})["data"];
   BalancePortfolio balancePortfolio;
-  bool withBalanceInUse =
-      balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
   CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+
+  static constexpr std::array<std::string_view, 2> kKnownPrefixes = {"available_", "in_use_"};
+  auto endPrefixIt = kKnownPrefixes.end();
+  if (balanceOptions.amountIncludePolicy() != BalanceOptions::AmountIncludePolicy::kWithBalanceInUse) {
+    --endPrefixIt;
+  }
+
   for (const auto& [key, value] : result.items()) {
-    static constexpr std::string_view kPrefixAvailableKey = "available_";
-    static constexpr std::string_view kPrefixInUseKey = "in_use_";
-    if (key.starts_with(kPrefixAvailableKey)) {
-      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixAvailableKey.size(), key.end()));
-      MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
-      this->addBalance(balancePortfolio, amount, equiCurrency);
-    } else if (withBalanceInUse && key.starts_with(kPrefixInUseKey)) {
-      CurrencyCode currencyCode(std::string_view(key.begin() + kPrefixInUseKey.size(), key.end()));
-      MonetaryAmount amount(value.get<std::string_view>(), currencyCode);
-      this->addBalance(balancePortfolio, amount, equiCurrency);
+    for (auto prefixIt = kKnownPrefixes.begin(); prefixIt != endPrefixIt; ++prefixIt) {
+      if (key.starts_with(*prefixIt)) {
+        std::string_view curStr(key.begin() + prefixIt->size(), key.end());
+        MonetaryAmount amount(value.get<std::string_view>(), _coincenterInfo.standardizeCurrencyCode(curStr));
+        this->addBalance(balancePortfolio, amount, equiCurrency);
+        break;
+      }
     }
   }
   return balancePortfolio;

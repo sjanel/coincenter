@@ -1,10 +1,10 @@
 #include "fiatconverter.hpp"
 
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "file.hpp"
 
 namespace cct {
 namespace {
@@ -14,7 +14,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
   File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
-  json data = thirdPartySecret.readJson();
+  json data = thirdPartySecret.readAllJson();
   if (data.empty() || data["freecurrencyconverter"].get<std::string_view>() == kDefaultCommunityKey) {
     log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecretFileName);
     log::warn("If you want to use extensively coincenter, please create your own key by going to");
@@ -43,7 +43,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
   File ratesCacheFile = GetRatesCacheFile(_dataDir);
-  json data = ratesCacheFile.readJson();
+  json data = ratesCacheFile.readAllJson();
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
     double rate = rateAndTimeData["rate"];

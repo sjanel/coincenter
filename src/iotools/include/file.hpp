@@ -2,21 +2,21 @@
 
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "reader.hpp"
+#include "writer.hpp"
 
 namespace cct {
 
-class File {
+class File : public Reader, public Writer {
  public:
   enum class Type : int8_t { kCache, kSecret, kStatic };
   enum class IfError : int8_t { kThrow, kNoThrow };
 
   File(std::string_view dataDir, Type type, std::string_view name, IfError ifError);
 
-  string read() const;
+  string readAll() const override;
 
-  json readJson() const;
-
-  void write(const json &data) const;
+  int write(const json &data) const override;
 
  private:
   string _filePath;

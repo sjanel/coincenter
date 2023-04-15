@@ -6,12 +6,12 @@
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_file.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "cryptowatchapi.hpp"
 #include "curloptions.hpp"
+#include "file.hpp"
 #include "timedef.hpp"
 
 namespace cct::api {
@@ -90,7 +90,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                                                 exchangeInfo().getAPICallUpdateFrequency(kLastPrice)),
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
-  json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readJson();
+  json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
   if (!data.empty()) {
     Duration withdrawDataRefreshTime = exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees);
     TimePoint lastUpdatedTime(std::chrono::seconds(data["timeepoch"].get<int64_t>()));

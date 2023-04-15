@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cassert>
+#include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -14,6 +15,7 @@
 #include "generalconfig.hpp"
 #include "loadconfiguration.hpp"
 #include "monitoringinfo.hpp"
+#include "reader.hpp"
 #include "runmodes.hpp"
 
 namespace cct {
@@ -23,21 +25,24 @@ class AbstractMetricGateway;
 class CoincenterInfo {
  public:
   using CurrencyEquivalentAcronymMap = std::unordered_map<CurrencyCode, CurrencyCode>;
+  using CurrencyPrefixAcronymMap = std::map<string, string, std::less<>>;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
                           const LoadConfiguration &loadConfiguration = LoadConfiguration(),
                           GeneralConfig &&generalConfig = GeneralConfig(),
-                          MonitoringInfo &&monitoringInfo = MonitoringInfo());
+                          MonitoringInfo &&monitoringInfo = MonitoringInfo(),
+                          const Reader &currencyAcronymsReader = Reader(), const Reader &stableCoinsReader = Reader(),
+                          const Reader &currencyPrefixesReader = Reader());
 
   ~CoincenterInfo();
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.
   /// Use this function to standardize names
   CurrencyCode standardizeCurrencyCode(CurrencyCode currencyCode) const;
-
-  CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const {
-    return standardizeCurrencyCode(CurrencyCode(currencyCode));
+  CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const;
+  CurrencyCode standardizeCurrencyCode(const char *currencyCode) const {
+    return standardizeCurrencyCode(std::string_view(currencyCode));
   }
 
   /// If 'stableCoinCandidate' is a stable crypto currency, return its associated fiat currency code.
@@ -46,7 +51,9 @@ class CoincenterInfo {
 
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
     auto it = _exchangeInfoMap.find(exchangeName);
-    assert(it != _exchangeInfoMap.end() && "Unable to find this exchange in the configuration file");
+    if (it == _exchangeInfoMap.end()) {
+      throw exception("Unable to find this exchange in the configuration file");
+    }
     return it->second;
   }
 
@@ -57,7 +64,9 @@ class CoincenterInfo {
   bool useMonitoring() const { return _monitoringInfo.useMonitoring(); }
 
   AbstractMetricGateway &metricGateway() const {
-    assert(useMonitoring());
+    if (!useMonitoring()) {
+      throw exception("Unexpected monitoring setting");
+    }
     return *_metricGatewayPtr;
   }
 
@@ -69,6 +78,7 @@ class CoincenterInfo {
 
  private:
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
+  CurrencyPrefixAcronymMap _currencyPrefixAcronymMap;
   StableCoinsMap _stableCoinsMap;
   ExchangeInfoMap _exchangeInfoMap;
   settings::RunMode _runMode;
@@ -76,5 +86,7 @@ class CoincenterInfo {
   GeneralConfig _generalConfig;
   std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
   MonitoringInfo _monitoringInfo;
+  int _minPrefixLen = std::numeric_limits<int>::max();
+  int _maxPrefixLen = 0;
 };
 }  // namespace cct

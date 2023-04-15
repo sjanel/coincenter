@@ -15,9 +15,6 @@ constexpr std::string_view kExchangeNameTest = kSupportedExchanges[0];
 
 class ExchangeInfoTest : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   ExchangeInfoMap exchangeInfoMap{ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))};
   ExchangeInfo exchangeInfo{exchangeInfoMap.at(kExchangeNameTest)};

@@ -1,4 +1,4 @@
-#include "cct_file.hpp"
+#include "file.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -30,7 +30,7 @@ string FullFileName(std::string_view dataDir, std::string_view fileName, File::T
 File::File(std::string_view dataDir, Type type, std::string_view name, IfError ifError)
     : _filePath(FullFileName(dataDir, name, type)), _ifError(ifError) {}
 
-string File::read() const {
+string File::readAll() const {
   log::debug("Opening file {} for reading", _filePath);
   string data;
   if (_ifError == IfError::kThrow || std::filesystem::exists(_filePath.c_str())) {
@@ -50,38 +50,34 @@ string File::read() const {
   return data;
 }
 
-json File::readJson() const {
-  string dataS = read();
-  if (dataS.empty()) {
-    dataS = "{}";
-  }
-  return json::parse(std::move(dataS));
-}
-
-void File::write(const json& data) const {
+int File::write(const json& data) const {
   log::debug("Opening file {} for writing", _filePath);
-  std::ofstream file(_filePath.c_str());
-  if (!file) {
+  std::ofstream fileOfStream(_filePath.c_str());
+  if (!fileOfStream) {
     string err("Unable to open ");
     err.append(_filePath).append(" for writing");
     if (_ifError == IfError::kThrow) {
       throw exception(std::move(err));
     }
     log::error(err);
-    return;
+    return 0;
   }
   try {
     if (data.empty()) {
-      file << "{}" << std::endl;
-    } else {
-      file << data.dump(2) << std::endl;
+      static constexpr std::string_view kEmptyJsonStr = "{}";
+      fileOfStream << kEmptyJsonStr << std::endl;
+      return kEmptyJsonStr.length() + 1;
     }
+    string outStr = data.dump(2);
+    fileOfStream << outStr << std::endl;
+    return outStr.length() + 1;
   } catch (const std::exception& e) {
     if (_ifError == IfError::kThrow) {
       throw e;
     }
     log::error("Error while writing file {}: {}", _filePath, e.what());
   }
+  return 0;
 }
 
 }  // namespace cct

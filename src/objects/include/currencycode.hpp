@@ -49,11 +49,11 @@ struct CurrencyCodeBase {
     for (char ch : acronym) {
       if (ch >= 'a') {
         if (ch > 'z') {
-          throw invalid_argument("Unexpected char in acronym");
+          throw invalid_argument("Unexpected char '{}' in acronym '{}'", ch, acronym);
         }
         ch -= 'a' - 'A';
       } else if (ch <= kFirstAuthorizedLetter || ch > kLastAuthorizedLetter) {
-        throw invalid_argument("Unexpected char in acronym");
+        throw invalid_argument("Unexpected char '{}' in acronym '{}'", ch, acronym);
       }
 
       ret |= static_cast<uint64_t>(ch - kFirstAuthorizedLetter) << (kNbBitsNbDecimals + kNbBitsChar * --charPos);
