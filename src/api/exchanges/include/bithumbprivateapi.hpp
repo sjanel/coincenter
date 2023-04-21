@@ -21,6 +21,8 @@ class BithumbPrivate : public ExchangePrivate {
  public:
   BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey);
 
+  bool validateApiKey() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 
   BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;

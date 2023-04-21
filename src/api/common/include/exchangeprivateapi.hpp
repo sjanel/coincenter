@@ -37,9 +37,14 @@ class APIKey;
 
 class ExchangePrivate : public ExchangeBase {
  public:
-  virtual ~ExchangePrivate() {}
+  virtual ~ExchangePrivate() = default;
 
   std::string_view keyName() const { return _apiKey.name(); }
+
+  /// Returns true if that API key looks valid.
+  /// Note that this method is not expected to detect all limitations of the API Key (IP, query type) that are defined
+  /// by the platform. It is designed to catch easy invalidations only.
+  virtual bool validateApiKey() = 0;
 
   /// Retrieve the possible currencies known by current exchange.
   /// Information should be fully set with private key.

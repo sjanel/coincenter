@@ -34,7 +34,7 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postData = CurlPostData()) {
+                  CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
   CurlPostData signaturePostData{
       {"AccessKeyId", apiKey.key()},
       {"SignatureMethod", "HmacSHA256"},
@@ -66,11 +66,13 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
   json ret = json::parse(
       curlHandle.query(method, CurlOptions(requestType, std::move(postData), HuobiPublic::kUserAgent, postDataFormat)));
-  auto statusIt = ret.find("status");
-  if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
-    log::error("Full Huobi json error: '{}'", ret.dump());
-    auto errIt = ret.find("err-msg");
-    throw exception("Huobi error: {}", errIt == ret.end() ? "unknown" : errIt->get<std::string_view>());
+  if (throwIfError) {
+    auto statusIt = ret.find("status");
+    if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
+      log::error("Full Huobi json error: '{}'", ret.dump());
+      auto errIt = ret.find("err-msg");
+      throw exception("Huobi error: {}", errIt == ret.end() ? "unknown" : errIt->get<std::string_view>());
+    }
   }
 
   return ret;
@@ -86,6 +88,14 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
+
+bool HuobiPrivate::validateApiKey() {
+  constexpr bool throwIfError = false;
+  json result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts", CurlPostData(), throwIfError);
+  auto statusIt = result.find("status");
+  return statusIt == result.end() || statusIt->get<std::string_view>() == "ok";
+}
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   string method = "/v1/account/accounts/";

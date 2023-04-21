@@ -48,26 +48,27 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
   auto dataDir = loadConfiguration.dataDir();
 
+  File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
+                                      File::IfError::kThrow);
+  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
+  File currencyPrefixesTranslatorFile(dataDir, File::Type::kStatic, "currency_prefix_translator.json",
+                                      File::IfError::kThrow);
+
+  // Should be outside the try / catch as it holds the RAII object managing the Logging (LoggingInfo)
+  CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
+                                CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions),
+                                currencyAcronymsTranslatorFile, stableCoinsFile, currencyPrefixesTranslatorFile);
+
+  ExchangeSecretsInfo exchangesSecretsInfo;
+  if (cmdLineOptions.noSecrets) {
+    StringOptionParser anyParser(*cmdLineOptions.noSecrets);
+
+    exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
+  }
+
+  CurlInitRAII curlInitRAII;  // Should be before any curl query
+
   try {
-    File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
-                                        File::IfError::kThrow);
-    File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
-    File currencyPrefixesTranslatorFile(dataDir, File::Type::kStatic, "currency_prefix_translator.json",
-                                        File::IfError::kThrow);
-
-    CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
-                                  CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions),
-                                  currencyAcronymsTranslatorFile, stableCoinsFile, currencyPrefixesTranslatorFile);
-
-    ExchangeSecretsInfo exchangesSecretsInfo;
-    if (cmdLineOptions.noSecrets) {
-      StringOptionParser anyParser(*cmdLineOptions.noSecrets);
-
-      exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
-    }
-
-    CurlInitRAII curlInitRAII;  // Should be before any curl query
-
     Coincenter coincenter(coincenterInfo, exchangesSecretsInfo);
 
     int nbCommandsProcessed = coincenter.process(coincenterCommands);

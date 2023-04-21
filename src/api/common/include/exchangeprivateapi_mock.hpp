@@ -12,6 +12,7 @@ class MockExchangePrivate : public ExchangePrivate {
   MockExchangePrivate(ExchangePublic &exchangePublic, const CoincenterInfo &config, const APIKey &apiKey)
       : ExchangePrivate(config, exchangePublic, apiKey) {}
 
+  MOCK_METHOD(bool, validateApiKey, (), (override));
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));
   MOCK_METHOD(BalancePortfolio, queryAccountBalance, (const BalanceOptions &), (override));
   MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode), (override));

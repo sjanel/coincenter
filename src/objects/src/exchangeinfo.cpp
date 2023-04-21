@@ -43,7 +43,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
                            MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
                            Duration privateAPIRate, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
-                           bool validateDepositAddressesInFile, bool placeSimulateRealOrder)
+                           bool validateDepositAddressesInFile, bool placeSimulateRealOrder, bool validateApiKey)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
@@ -56,7 +56,8 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
       _dustSweeperMaxNbTrades(dustSweeperMaxNbTrades),
       _multiTradeAllowedByDefault(multiTradeAllowedByDefault),
       _validateDepositAddressesInFile(validateDepositAddressesInFile),
-      _placeSimulateRealOrder(placeSimulateRealOrder) {
+      _placeSimulateRealOrder(placeSimulateRealOrder),
+      _validateApiKey(validateApiKey) {
   if (dustSweeperMaxNbTrades > std::numeric_limits<int16_t>::max() || dustSweeperMaxNbTrades < 0) {
     throw exception("Invalid number of dust sweeper max trades '{}', should be in [0, {}]", dustSweeperMaxNbTrades,
                     std::numeric_limits<int16_t>::max());
@@ -77,6 +78,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
     log::trace(" - Validate deposit addresses   : {}{}", _validateDepositAddressesInFile ? "yes in " : "no",
                _validateDepositAddressesInFile ? kDepositAddressesFileName : "");
     log::trace(" - Order placing in simulation  : {}", _placeSimulateRealOrder ? "real, unmatchable" : "none");
+    log::trace(" - Validate API Key             : {}", _validateApiKey ? "yes" : "no");
   }
   if (_preferredPaymentCurrencies.empty()) {
     log::warn("{} list of preferred currencies is empty, buy and sell commands cannot perform trades", exchangeNameStr);

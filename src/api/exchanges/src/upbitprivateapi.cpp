@@ -83,6 +83,13 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
+bool UpbitPrivate::validateApiKey() {
+  constexpr bool throwIfError = false;
+  json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), throwIfError);
+  auto errorIt = ret.find("error");
+  return errorIt == ret.end() && ret.size() != 0;
+}
+
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   CurrencyExchangeVector currencies;
