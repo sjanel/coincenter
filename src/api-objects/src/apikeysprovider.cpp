@@ -20,40 +20,25 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
   }
 }
 
-string FoundKeysStr(const auto& map) {
-  string foundKeysStr;
-  for (const auto& [platform, keys] : map) {
-    if (!foundKeysStr.empty()) {
-      foundKeysStr.append(" | ");
-    }
-    if (keys.size() > 1U) {
-      foundKeysStr.push_back('{');
-    }
-    bool firstKey = true;
-    for (const APIKey& key : keys) {
-      if (!firstKey) {
-        foundKeysStr.push_back(',');
-      }
-      foundKeysStr.append(key.name());
-      firstKey = false;
-    }
-    if (keys.size() > 1U) {
-      foundKeysStr.push_back('}');
-    }
-    foundKeysStr.push_back('@');
-    foundKeysStr.append(platform);
-  }
-  return foundKeysStr;
-}
 }  // namespace
+
+APIKeysProvider::APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo& exchangeSecretsInfo,
+                                 settings::RunMode runMode)
+    : _apiKeysMap(ParseAPIKeys(dataDir, exchangeSecretsInfo, runMode)) {
+  if (log::get_level() <= log::level::info) {
+    string foundKeysStr = str();
+    if (!foundKeysStr.empty()) {
+      log::info("Loaded keys {}", foundKeysStr);
+    }
+  }
+}
 
 APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform) const {
   KeyNames keyNames;
   auto foundIt = _apiKeysMap.find(platform);
   if (foundIt != _apiKeysMap.end()) {
     const APIKeys& apiKeys = foundIt->second;
-    std::ranges::transform(apiKeys, std::back_inserter(keyNames),
-                           [](const APIKey& apiKey) { return string(apiKey.name()); });
+    std::ranges::transform(apiKeys, std::back_inserter(keyNames), [](const APIKey& apiKey) { return apiKey.name(); });
   }
   return keyNames;
 }
@@ -118,13 +103,33 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     }
   }
 
-  if (log::get_level() <= log::level::info) {
-    string foundKeysStr = FoundKeysStr(map);
-    if (!foundKeysStr.empty()) {
-      log::info("Loaded keys {}", foundKeysStr);
-    }
-  }
-
   return map;
 }
+
+string APIKeysProvider::str() const {
+  string foundKeysStr;
+  for (const auto& [platform, keys] : _apiKeysMap) {
+    if (!foundKeysStr.empty()) {
+      foundKeysStr.append(" | ");
+    }
+    if (keys.size() > 1U) {
+      foundKeysStr.push_back('{');
+    }
+    bool firstKey = true;
+    for (const APIKey& key : keys) {
+      if (!firstKey) {
+        foundKeysStr.push_back(',');
+      }
+      foundKeysStr.append(key.name());
+      firstKey = false;
+    }
+    if (keys.size() > 1U) {
+      foundKeysStr.push_back('}');
+    }
+    foundKeysStr.push_back('@');
+    foundKeysStr.append(platform);
+  }
+  return foundKeysStr;
+}
+
 }  // namespace cct::api
