@@ -100,6 +100,10 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
+bool KrakenPrivate::validateApiKey() {
+  return PrivateQuery(_curlHandle, _apiKey, "/private/Balance").second == KrakenErrorEnum::kNoError;
+}
+
 CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _exchangePublic.queryTradableCurrencies(); }
 
 BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {

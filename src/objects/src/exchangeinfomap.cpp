@@ -38,6 +38,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
     bool validateDepositAddressesInFile =
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
     bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
+    bool validateApiKey = queryTopLevelOption.getBool(exchangeName, "validateApiKey");
 
     MonetaryAmountByCurrencySet dustAmountsThresholds(
         queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
@@ -51,7 +52,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
                      assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
                      std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
                      dustSweeperMaxNbTrades, multiTradeAllowedByDefault, validateDepositAddressesInFile,
-                     placeSimulatedRealOrder));
+                     placeSimulatedRealOrder, validateApiKey));
   }  // namespace cct
 
   return map;

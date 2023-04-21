@@ -24,7 +24,7 @@ class ExchangeInfo {
                CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
                int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
-               bool placeSimulateRealOrder);
+               bool placeSimulateRealOrder, bool validateApiKey);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -68,6 +68,11 @@ class ExchangeInfo {
 
   bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
 
+  // Returns true if we need to validate API key at each ExchangePrivate object construction.
+  // Benefit is that in the case an API key is detected as invalid, program will evict the corresponding exchange
+  // for the next commands including it.
+  bool shouldValidateApiKey() const { return _validateApiKey; }
+
   // In simulation mode for trade, for exchanges which do not have a simulation parameter, place a real order.
   // This real order price will have a limit price such that it should never be matched (if it is matched, lucky you!):
   // - Minimum for a buy (for instance, 1 USD for BTC)
@@ -91,5 +96,6 @@ class ExchangeInfo {
   bool _multiTradeAllowedByDefault;
   bool _validateDepositAddressesInFile;
   bool _placeSimulateRealOrder;
+  bool _validateApiKey;
 };
 }  // namespace cct

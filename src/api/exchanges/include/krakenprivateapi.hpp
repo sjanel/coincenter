@@ -21,6 +21,8 @@ class KrakenPrivate : public ExchangePrivate {
  public:
   KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey);
 
+  bool validateApiKey() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
   BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;

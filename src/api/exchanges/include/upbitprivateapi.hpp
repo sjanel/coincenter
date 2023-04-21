@@ -21,6 +21,8 @@ class UpbitPrivate : public ExchangePrivate {
  public:
   UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey);
 
+  bool validateApiKey() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _tradableCurrenciesCache.get(); }
 
   BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;

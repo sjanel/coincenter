@@ -20,8 +20,6 @@
 namespace cct::api {
 namespace {
 
-constexpr std::string_view kStatusOKStr = "0000";
-
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string methodUrl(endpoint);
@@ -40,7 +38,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
   auto errorIt = ret.find("status");
   if (errorIt != ret.end()) {
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
-    if (statusCode != kStatusOKStr) {                                // "0000" stands for: request OK
+    if (statusCode != BithumbPublic::kStatusOKStr) {                 // "0000" stands for: request OK
       log::error("Full Bithumb json error: '{}'", ret.dump());
       auto msgIt = ret.find("message");
       throw exception("Bithumb error: {}, msg: {}", statusCode,

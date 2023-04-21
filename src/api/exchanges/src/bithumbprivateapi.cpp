@@ -39,6 +39,9 @@ constexpr std::string_view kPaymentCurParamStr = "payment_currency";
 constexpr std::string_view kOrderIdParamStr = "order_id";
 constexpr std::string_view kTypeParamStr = "type";
 
+constexpr int kBadRequestErrorCode = 5100;
+constexpr int kOrderRelatedErrorCode = 5600;
+
 constexpr std::string_view kWalletAddressEndpointStr = "/info/wallet_address";
 
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
@@ -136,19 +139,77 @@ bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::str
   return false;
 }
 
-template <class CurlPostDataT = CurlPostData>
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                  CurlPostDataT&& curlPostData) {
-  CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
-  postData.prepend("endpoint", endpoint);
-  CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters(), BithumbPublic::kUserAgent);
-  json ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+bool IsSynchronizedTime(std::string_view msg) {
+  std::size_t requestTimePos = msg.find("Request Time");
+  if (requestTimePos != std::string_view::npos) {
+    // Bad Request.(Request Time:reqTime1638699638274/nowTime1638699977771)
+    static constexpr std::string_view kReqTime = "reqTime";
+    static constexpr std::string_view kNowTime = "nowTime";
+    std::size_t reqTimePos = msg.find(kReqTime, requestTimePos);
+    if (reqTimePos == std::string_view::npos) {
+      log::warn("Unable to parse Bithumb bad request msg {}", msg);
+    } else {
+      reqTimePos += kReqTime.size();
+      std::size_t nowTimePos = msg.find(kNowTime, reqTimePos);
+      if (nowTimePos == std::string_view::npos) {
+        log::warn("Unable to parse Bithumb bad request msg {}", msg);
+      } else {
+        nowTimePos += kNowTime.size();
+        static constexpr std::string_view kAllDigits = "0123456789";
+        std::size_t reqTimeEndPos = msg.find_first_not_of(kAllDigits, reqTimePos);
+        std::size_t nowTimeEndPos = msg.find_first_not_of(kAllDigits, nowTimePos);
+        if (nowTimeEndPos == std::string_view::npos) {
+          nowTimeEndPos = msg.size();
+        }
+        std::string_view reqTimeStr(msg.begin() + reqTimePos, msg.begin() + reqTimeEndPos);
+        std::string_view nowTimeStr(msg.begin() + nowTimePos, msg.begin() + nowTimeEndPos);
+        int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
+        int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
+        log::error("Bithumb time is not synchronized with us (difference of {} s)", (reqTimeInt - nowTimeInt) / 1000);
+        log::error("It can sometimes come from a bug in Bithumb, retry");
+        return false;
+      }
+    }
+  }
+  return false;
+}
 
-  // Example of error json: {"status":"5300","message":"Invalid Apikey"}
+bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json& data) {
   const bool isInfoOpenedOrders = endpoint == "/info/orders";
   const bool isCancelQuery = endpoint == "/trade/cancel";
   const bool isDepositInfo = endpoint == kWalletAddressEndpointStr;
   const bool isPlaceOrderQuery = !isCancelQuery && endpoint.starts_with("/trade");
+
+  if (isPlaceOrderQuery) {
+    if (ExtractError<int8_t>("수량은 소수점 ", "자", "number of decimals", msg, kNbDecimalsStr, data) ||
+        ExtractError<string>("주문금액은 ", " 입니다", "min order size", msg, kMinOrderSizeJsonKeyStr, data) ||
+        ExtractError<string>("주문 가격은 ", " 이상으로 입력 가능합니다", "min order price", msg,
+                             kMinOrderPriceJsonKeyStr, data) ||
+        ExtractError<string>("주문 가격은 ", " 이하로 입력 가능합니다", "max order price", msg,
+                             kMaxOrderPriceJsonKeyStr, data)) {
+      return true;
+    }
+  }
+  if ((isInfoOpenedOrders || isCancelQuery) &&
+      msg.find("거래 진행중인 내역이 존재하지 않습니다") != std::string_view::npos) {
+    // This is not really an error, it means that order has been eaten or cancelled.
+    // Just return empty json in this case
+    log::info("Considering Bithumb order as closed as no data received from them");
+    data.clear();
+    return true;
+  }
+  if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
+    data.clear();
+    return true;
+  }
+  return false;
+}
+
+json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
+                                    bool throwIfError, CurlOptions& opts) {
+  json ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+
+  // Example of error json: {"status":"5300","message":"Invalid Apikey"}
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
   while (ret.contains("status") && ++nbRetries < kMaxNbRetries) {
@@ -161,63 +222,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
       if (messageIt != ret.end()) {
         msg = messageIt->get<std::string_view>();
         switch (errorCode) {
-          case 5100: {
-            std::size_t requestTimePos = msg.find("Request Time");
-            if (requestTimePos != std::string_view::npos) {
-              // Bad Request.(Request Time:reqTime1638699638274/nowTime1638699977771)
-              static constexpr std::string_view kReqTime = "reqTime";
-              static constexpr std::string_view kNowTime = "nowTime";
-              std::size_t reqTimePos = msg.find(kReqTime, requestTimePos);
-              if (reqTimePos == std::string_view::npos) {
-                log::warn("Unable to parse Bithumb bad request msg {}", msg);
-              } else {
-                reqTimePos += kReqTime.size();
-                std::size_t nowTimePos = msg.find(kNowTime, reqTimePos);
-                if (nowTimePos == std::string_view::npos) {
-                  log::warn("Unable to parse Bithumb bad request msg {}", msg);
-                } else {
-                  nowTimePos += kNowTime.size();
-                  static constexpr std::string_view kAllDigits = "0123456789";
-                  std::size_t reqTimeEndPos = msg.find_first_not_of(kAllDigits, reqTimePos);
-                  std::size_t nowTimeEndPos = msg.find_first_not_of(kAllDigits, nowTimePos);
-                  if (nowTimeEndPos == std::string_view::npos) {
-                    nowTimeEndPos = msg.size();
-                  }
-                  std::string_view reqTimeStr(msg.begin() + reqTimePos, msg.begin() + reqTimeEndPos);
-                  std::string_view nowTimeStr(msg.begin() + nowTimePos, msg.begin() + nowTimeEndPos);
-                  int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
-                  int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
-                  log::error("Bithumb time is not synchronized with us (difference of {} s)",
-                             (reqTimeInt - nowTimeInt) / 1000);
-                  log::error("It can sometimes come from a bug in Bithumb, retry");
-                  ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
-                  continue;
-                }
-              }
+          case kBadRequestErrorCode:
+            if (!IsSynchronizedTime(msg)) {
+              ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+              continue;
             }
             break;
-          }
-          case 5600:
-            if (isPlaceOrderQuery) {
-              if (ExtractError<int8_t>("수량은 소수점 ", "자", "number of decimals", msg, kNbDecimalsStr, ret) ||
-                  ExtractError<string>("주문금액은 ", " 입니다", "min order size", msg, kMinOrderSizeJsonKeyStr, ret) ||
-                  ExtractError<string>("주문 가격은 ", " 이상으로 입력 가능합니다", "min order price", msg,
-                                       kMinOrderPriceJsonKeyStr, ret) ||
-                  ExtractError<string>("주문 가격은 ", " 이하로 입력 가능합니다", "max order price", msg,
-                                       kMaxOrderPriceJsonKeyStr, ret)) {
-                return ret;
-              }
-            }
-            if ((isInfoOpenedOrders || isCancelQuery) &&
-                msg.find("거래 진행중인 내역이 존재하지 않습니다") != std::string_view::npos) {
-              // This is not really an error, it means that order has been eaten or cancelled.
-              // Just return empty json in this case
-              log::info("Considering Bithumb order as closed as no data received from them");
-              ret.clear();
-              return ret;
-            }
-            if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
-              ret.clear();
+          case kOrderRelatedErrorCode:
+            if (CheckOrderErrors(endpoint, msg, ret)) {
               return ret;
             }
             break;
@@ -225,11 +237,23 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
             break;
         }
       }
-      log::error("Full Bithumb json error: '{}'", ret.dump());
-      throw exception("Bithumb error: {} \"{}\"", statusCode, msg);
+      if (throwIfError) {
+        log::error("Full Bithumb json error: '{}'", ret.dump());
+        throw exception("Bithumb error: {} \"{}\"", statusCode, msg);
+      }
     }
   }
   return ret;
+}
+
+template <class CurlPostDataT = CurlPostData>
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
+                  CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
+  CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
+  postData.prepend("endpoint", endpoint);
+  CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters(), BithumbPublic::kUserAgent);
+
+  return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, throwIfError, opts);
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
@@ -260,6 +284,13 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
                           currencyOrderInfo.lastMaxOrderPriceUpdatedTime);
     _currencyOrderInfoMap.insert_or_assign(CurrencyCode(currencyCodeStr), std::move(currencyOrderInfo));
   }
+}
+
+bool BithumbPrivate::validateApiKey() {
+  constexpr bool throwIfError = false;
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData(), throwIfError);
+  auto statusIt = result.find("status");
+  return statusIt != result.end() && statusIt->get<std::string_view>() == BithumbPublic::kStatusOKStr;
 }
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {

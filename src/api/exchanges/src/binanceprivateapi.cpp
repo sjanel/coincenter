@@ -22,6 +22,10 @@ namespace {
 /// It can happen to retry 10 times
 constexpr int kNbOrderRequestsRetries = 15;
 
+constexpr int kCancelRejectedStatusCode = -2011;
+constexpr int kNoSuchOrderStatusCode = -2013;
+constexpr int kInvalidApiKey = -2015;
+
 void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
   postData.set("timestamp", nonce);
@@ -32,30 +36,35 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData) {
 
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostDataT&& curlPostData = CurlPostData()) {
+                  CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), BinancePublic::kUserAgent);
   opts.appendHttpHeader("X-MBX-APIKEY", apiKey.key());
-  SetNonceAndSignature(apiKey, opts.getPostData());
 
-  json ret = json::parse(curlHandle.query(endpoint, opts));
-  auto binanceError = [](const json& data) { return data.contains("code") && data.contains("msg"); };
-  if (binanceError(ret)) {
-    int statusCode = ret["code"];  // "1100" for instance
-    int nbRetries = 0;
-    Duration sleepingTime = curlHandle.minDurationBetweenQueries();
-    while (++nbRetries < kNbOrderRequestsRetries && (statusCode == -2013 || statusCode == -2011)) {
+  Duration sleepingTime = curlHandle.minDurationBetweenQueries();
+  int statusCode{};
+  json ret;
+  for (int retryPos = 0; retryPos < kNbOrderRequestsRetries; ++retryPos) {
+    SetNonceAndSignature(apiKey, opts.getPostData());
+    ret = json::parse(curlHandle.query(endpoint, opts));
+
+    auto codeIt = ret.find("code");
+    if (codeIt == ret.end() || !ret.contains("msg")) {
+      return ret;
+    }
+
+    statusCode = *codeIt;  // "1100" for instance
+    if (statusCode != kNoSuchOrderStatusCode && statusCode != kCancelRejectedStatusCode) {
+      break;
+    }
+    if (retryPos + 1 != kNbOrderRequestsRetries) {
       // Order does not exist : this may be possible when we query an order info too fast
-      log::warn("Binance cannot find order yet");
-      sleepingTime = (3 * sleepingTime) / 2;
+      log::warn("Binance cannot find order");
       log::trace("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
-      SetNonceAndSignature(apiKey, opts.getPostData());
-      ret = json::parse(curlHandle.query(endpoint, opts));
-      if (!binanceError(ret)) {
-        return ret;
-      }
-      statusCode = ret["code"];
+      sleepingTime = (3 * sleepingTime) / 2;
     }
+  }
+  if (throwIfError) {
     log::error("Full Binance json error: '{}'", ret.dump());
     throw exception("Error: {}, msg: {}", MonetaryAmount(statusCode), ret["msg"].get<std::string_view>());
   }
@@ -86,6 +95,13 @@ CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
   return _public.queryTradableCurrencies(result);
 }
 
+bool BinancePrivate::validateApiKey() {
+  constexpr bool throwIfError = false;
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/account/status", CurlPostData(),
+                             throwIfError);
+  return result.find("code") == result.end();
+}
+
 BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account");
   bool withBalanceInUse =
@@ -95,9 +111,9 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
   for (const json& balance : result["balances"]) {
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
     MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
-    MonetaryAmount usedAmount(balance["locked"].get<std::string_view>(), currencyCode);
 
     if (withBalanceInUse) {
+      MonetaryAmount usedAmount(balance["locked"].get<std::string_view>(), currencyCode);
       amount += usedAmount;
     }
 

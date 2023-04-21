@@ -20,6 +20,8 @@ class HuobiPrivate : public ExchangePrivate {
  public:
   HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey);
 
+  bool validateApiKey() override;
+
   CurrencyExchangeFlatSet queryTradableCurrencies() override { return _exchangePublic.queryTradableCurrencies(); }
 
   BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) override;

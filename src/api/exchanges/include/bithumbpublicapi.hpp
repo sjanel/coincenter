@@ -17,6 +17,8 @@ class CryptowatchAPI;
 
 class BithumbPublic : public ExchangePublic {
  public:
+  static constexpr std::string_view kStatusOKStr = "0000";
+
   BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
 
   bool healthCheck() override;

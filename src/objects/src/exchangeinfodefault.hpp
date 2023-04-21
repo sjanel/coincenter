@@ -78,7 +78,8 @@ struct ExchangeInfoDefault {
         "lastPrice": "1s",
         "depositWallet": "1min",
         "currencyInfo": "4d"
-      }
+      },
+      "validateApiKey": false
     },
     "exchange": {
       "binance": {
@@ -197,7 +198,8 @@ struct ExchangeInfoDefault {
         "lastPrice": "1s",
         "depositWallet": "1min",
         "currencyInfo": "4d"
-      }
+      },
+      "validateApiKey": true
     }
   },
   "tradefees": { 

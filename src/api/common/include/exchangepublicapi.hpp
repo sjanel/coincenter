@@ -30,7 +30,7 @@ class ExchangePublic : public ExchangeBase {
 
   using Fiats = CryptowatchAPI::Fiats;
 
-  virtual ~ExchangePublic() {}
+  virtual ~ExchangePublic() = default;
 
   /// Check if public exchange is responding to basic health check, return true in this case.
   /// Exchange that implements the HealthCheck do not need to add a retry mechanism.

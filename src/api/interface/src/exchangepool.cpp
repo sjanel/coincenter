@@ -26,50 +26,60 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
       _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _kucoinPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
-  for (std::string_view exchangeName : kSupportedExchanges) {
+  for (std::string_view exchangeStr : kSupportedExchanges) {
     api::ExchangePublic* exchangePublic;
-    if (exchangeName == "binance") {
-      exchangePublic = std::addressof(_binancePublic);
-    } else if (exchangeName == "bithumb") {
-      exchangePublic = std::addressof(_bithumbPublic);
-    } else if (exchangeName == "huobi") {
-      exchangePublic = std::addressof(_huobiPublic);
-    } else if (exchangeName == "kraken") {
-      exchangePublic = std::addressof(_krakenPublic);
-    } else if (exchangeName == "kucoin") {
-      exchangePublic = std::addressof(_kucoinPublic);
-    } else if (exchangeName == "upbit") {
-      exchangePublic = std::addressof(_upbitPublic);
+    if (exchangeStr == "binance") {
+      exchangePublic = &_binancePublic;
+    } else if (exchangeStr == "bithumb") {
+      exchangePublic = &_bithumbPublic;
+    } else if (exchangeStr == "huobi") {
+      exchangePublic = &_huobiPublic;
+    } else if (exchangeStr == "kraken") {
+      exchangePublic = &_krakenPublic;
+    } else if (exchangeStr == "kucoin") {
+      exchangePublic = &_kucoinPublic;
+    } else if (exchangeStr == "upbit") {
+      exchangePublic = &_upbitPublic;
     } else {
-      throw exception("Should not happen, unsupported platform {}", exchangeName);
+      throw exception("Should not happen, unsupported platform {}", exchangeStr);
     }
 
-    const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeName);
+    const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeStr);
+    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(exchangePublic->name());
     if (canUsePrivateExchange) {
-      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeName)) {
+      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeStr)) {
         api::ExchangePrivate* exchangePrivate;
-        const api::APIKey& apiKey = _apiKeyProvider.get(ExchangeName(exchangeName, keyName));
-        if (exchangeName == "binance") {
-          exchangePrivate = std::addressof(_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey));
-        } else if (exchangeName == "bithumb") {
-          exchangePrivate = std::addressof(_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey));
-        } else if (exchangeName == "huobi") {
-          exchangePrivate = std::addressof(_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey));
-        } else if (exchangeName == "kraken") {
-          exchangePrivate = std::addressof(_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey));
-        } else if (exchangeName == "kucoin") {
-          exchangePrivate = std::addressof(_kucoinPrivates.emplace_front(_coincenterInfo, _kucoinPublic, apiKey));
-        } else if (exchangeName == "upbit") {
-          exchangePrivate = std::addressof(_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey));
+        ExchangeName exchangeName(exchangeStr, keyName);
+        const api::APIKey& apiKey = _apiKeyProvider.get(exchangeName);
+        if (exchangePublic == &_binancePublic) {
+          exchangePrivate = &_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey);
+        } else if (exchangePublic == &_bithumbPublic) {
+          exchangePrivate = &_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey);
+        } else if (exchangePublic == &_huobiPublic) {
+          exchangePrivate = &_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey);
+        } else if (exchangePublic == &_krakenPublic) {
+          exchangePrivate = &_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey);
+        } else if (exchangePublic == &_kucoinPublic) {
+          exchangePrivate = &_kucoinPrivates.emplace_front(_coincenterInfo, _kucoinPublic, apiKey);
+        } else if (exchangePublic == &_upbitPublic) {
+          exchangePrivate = &_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey);
         } else {
-          throw exception("Should not happen, unsupported platform {}", exchangeName);
+          throw exception("Unsupported platform {}", exchangeStr);
         }
 
-        _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic,
-                                *exchangePrivate);
+        if (exchangeInfo.shouldValidateApiKey()) {
+          if (exchangePrivate->validateApiKey()) {
+            log::info("{} api key is valid", exchangeName);
+          } else {
+            log::error("{} api key is invalid, do not consider it", exchangeName);
+            continue;
+          }
+        }
+
+        _exchanges.emplace_back(exchangeInfo, *exchangePublic, *exchangePrivate);
       }
     } else {
-      _exchanges.emplace_back(_coincenterInfo.exchangeInfo(exchangePublic->name()), *exchangePublic);
+      _exchanges.emplace_back(exchangeInfo, *exchangePublic);
     }
   }
   _exchanges.shrink_to_fit();
