@@ -127,7 +127,6 @@ class Coincenter {
  private:
   void processCommand(const CoincenterCommand &cmd);
 
-  CurlInitRAII _curlInitRAII;  // Should be first
   const CoincenterInfo &_coincenterInfo;
   api::CryptowatchAPI _cryptowatchAPI;
   FiatConverter _fiatConverter;

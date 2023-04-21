@@ -2,6 +2,7 @@
 
 #include "coincenter.hpp"
 #include "coincenterinfo.hpp"
+#include "curlhandle.hpp"
 #include "durationstring.hpp"
 #include "file.hpp"
 #include "generalconfig.hpp"
@@ -64,6 +65,8 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
       exchangesSecretsInfo = ExchangeSecretsInfo(anyParser.getExchanges());
     }
+
+    CurlInitRAII curlInitRAII;  // Should be before any curl query
 
     Coincenter coincenter(coincenterInfo, exchangesSecretsInfo);
 
