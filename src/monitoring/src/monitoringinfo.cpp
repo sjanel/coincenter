@@ -1,6 +1,6 @@
 #include "monitoringinfo.hpp"
 
-#include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
@@ -12,12 +12,12 @@ MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std
       _password(password),
       _port(useMonitoring ? static_cast<uint16_t>(port) : 0U) {
   if (port < 0 || port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
-    throw exception("Invalid port value {}", port);
+    throw invalid_argument("Invalid port value {}", port);
   }
   if (useMonitoring) {
     log::info("Monitoring config - Export to {}:{} user '{}', job name {}", address, port, username, jobName);
   } else {
-    log::info("Monitoring disabled");
+    log::debug("Monitoring disabled");
   }
 }
 }  // namespace cct
