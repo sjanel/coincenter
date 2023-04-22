@@ -61,6 +61,13 @@ add_unit_test(
 )
 
 add_unit_test(
+    logginginfo_test
+    test/logginginfo_test.cpp
+    LIBRARIES
+    coincenter_objects
+)
+
+add_unit_test(
     marketorderbook_test
     test/marketorderbook_test.cpp
     LIBRARIES

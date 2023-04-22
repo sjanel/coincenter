@@ -9,13 +9,9 @@ namespace cct::api {
 
 class CryptowatchAPITest : public ::testing::Test {
  protected:
-  CryptowatchAPITest() : cryptowatchAPI(config) {}
-
-  void SetUp() override {}
-  void TearDown() override {}
-
-  CoincenterInfo config;
-  CryptowatchAPI cryptowatchAPI;
+  settings::RunMode runMode = settings::RunMode::kTestKeys;
+  CoincenterInfo config{runMode};
+  CryptowatchAPI cryptowatchAPI{config, runMode};
 };
 
 TEST_F(CryptowatchAPITest, Prices) {

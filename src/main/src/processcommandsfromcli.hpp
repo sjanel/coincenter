@@ -4,8 +4,9 @@
 
 #include "coincentercommands.hpp"
 #include "coincenteroptions.hpp"
+#include "runmodes.hpp"
 
 namespace cct {
 void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &cmdLineOptions);
+                            const CoincenterCmdLineOptions &cmdLineOptions, settings::RunMode runMode);
 }

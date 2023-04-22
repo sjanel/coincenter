@@ -11,11 +11,11 @@ int main(int argc, const char* argv[]) {
   try {
     auto cmdLineOptions = cct::CoincenterCommands::ParseOptions(argc, argv);
 
-    cct::CoincenterCommands coincenterCommands;
-    if (coincenterCommands.setFromOptions(cmdLineOptions)) {
+    if (!cmdLineOptions.help && !cmdLineOptions.version) {
+      cct::CoincenterCommands coincenterCommands(cmdLineOptions);
       auto programName = std::filesystem::path(argv[0]).filename().string();
 
-      cct::ProcessCommandsFromCLI(programName, coincenterCommands, cmdLineOptions);
+      cct::ProcessCommandsFromCLI(programName, coincenterCommands, cmdLineOptions, cct::settings::RunMode::kProd);
     }
   } catch (const cct::invalid_argument& e) {
     cct::log::critical("Invalid argument: {}", e.what());

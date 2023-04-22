@@ -28,8 +28,7 @@ class CoincenterInfo {
   using CurrencyPrefixAcronymMap = std::map<string, string, std::less<>>;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
-  explicit CoincenterInfo(settings::RunMode runMode = settings::RunMode::kProd,
-                          const LoadConfiguration &loadConfiguration = LoadConfiguration(),
+  explicit CoincenterInfo(settings::RunMode runMode, const LoadConfiguration &loadConfiguration = LoadConfiguration(),
                           GeneralConfig &&generalConfig = GeneralConfig(),
                           MonitoringInfo &&monitoringInfo = MonitoringInfo(),
                           const Reader &currencyAcronymsReader = Reader(), const Reader &stableCoinsReader = Reader(),

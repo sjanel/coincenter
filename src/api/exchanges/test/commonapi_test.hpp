@@ -46,11 +46,12 @@ class TestAPI {
     return sample;
   }
 
+  settings::RunMode runMode = settings::RunMode::kProd;
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfig};
+  CoincenterInfo coincenterInfo{runMode, loadConfig};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  CryptowatchAPI cryptowatchAPI{coincenterInfo};
+  CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
   PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};
   std::unique_ptr<PrivateExchangeT> exchangePrivatePtr{
       CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)};

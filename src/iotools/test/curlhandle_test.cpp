@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include "cct_proxy.hpp"
 #include "curloptions.hpp"
+#include "proxy.hpp"
 
 /* URL available to test HTTPS, cf
  * https://support.nmi.com/hc/en-gb/articles/360021544791-How-to-Check-If-the-Correct-Certificates-Are-Installed-on-Linux

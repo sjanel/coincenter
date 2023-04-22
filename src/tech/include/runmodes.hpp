@@ -1,14 +1,37 @@
 #pragma once
 
+#include <cstdint>
+
 namespace cct {
 namespace settings {
-enum class RunMode {
+enum class RunMode : int8_t {
   kProd,
-  kProxy,  // proxy : capture & match requests from proxy
-  kTest,   // proxy + use test keys
+  kTestKeys,
+  kProxy,              // proxy : capture & match requests from proxy
+  kTestKeysWithProxy,  // proxy + use test keys
 };
 
 }  // namespace settings
 
-inline bool IsProxyRequested(settings::RunMode mode) { return mode >= settings::RunMode::kProxy; }
+constexpr bool IsProxyRequested(settings::RunMode runMode) {
+  switch (runMode) {
+    case settings::RunMode::kProxy:
+      [[fallthrough]];
+    case settings::RunMode::kTestKeysWithProxy:
+      return true;
+    default:
+      return false;
+  }
+}
+
+constexpr bool AreTestKeysRequested(settings::RunMode runMode) {
+  switch (runMode) {
+    case settings::RunMode::kTestKeys:
+      [[fallthrough]];
+    case settings::RunMode::kTestKeysWithProxy:
+      return true;
+    default:
+      return false;
+  }
+}
 }  // namespace cct

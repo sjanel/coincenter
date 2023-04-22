@@ -12,7 +12,9 @@ namespace {
 
 std::string_view GetSecretFileName(settings::RunMode runMode) {
   switch (runMode) {
-    case settings::RunMode::kTest:
+    case settings::RunMode::kTestKeys:
+      [[fallthrough]];
+    case settings::RunMode::kTestKeysWithProxy:
       log::info("Test mode activated, shifting to secret_test.json file.");
       return "secret_test.json";
     default:
@@ -73,7 +75,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
   } else {
     std::string_view secretFileName = GetSecretFileName(runMode);
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
-                     runMode == settings::RunMode::kProd ? File::IfError::kNoThrow : File::IfError::kThrow);
+                     AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
     json jsonData = secretsFile.readAllJson();
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();

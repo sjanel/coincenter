@@ -18,11 +18,10 @@ class APIKeysProvider {
  public:
   using KeyNames = SmallVector<std::string_view, kTypicalNbPrivateAccounts>;
 
-  explicit APIKeysProvider(std::string_view dataDir, settings::RunMode runMode = settings::RunMode::kProd)
+  APIKeysProvider(std::string_view dataDir, settings::RunMode runMode)
       : APIKeysProvider(dataDir, ExchangeSecretsInfo(), runMode) {}
 
-  APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
-                  settings::RunMode runMode = settings::RunMode::kProd);
+  APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo, settings::RunMode runMode);
 
   KeyNames getKeyNames(std::string_view platform) const;
 

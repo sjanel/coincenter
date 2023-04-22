@@ -17,9 +17,10 @@ class ExchangePublicTest : public ::testing::Test {
   void SetUp() override {}
   void TearDown() override {}
 
+  settings::RunMode runMode = settings::RunMode::kTestKeys;
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
-  CryptowatchAPI cryptowatchAPI{coincenterInfo};
+  CoincenterInfo coincenterInfo{runMode, loadConfiguration};
+  CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
 };

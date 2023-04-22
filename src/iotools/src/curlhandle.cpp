@@ -12,9 +12,9 @@
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "cct_proxy.hpp"
 #include "curlmetrics.hpp"
 #include "curloptions.hpp"
+#include "proxy.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {
