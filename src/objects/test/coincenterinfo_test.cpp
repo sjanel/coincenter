@@ -27,7 +27,7 @@ class CoincenterInfoTest : public ::testing::Test {
   MockReader currencyPrefixesReader;
 
   CoincenterInfo createCoincenterInfo() const {
-    return CoincenterInfo(settings::RunMode::kTest, loadConfiguration, GeneralConfig(), MonitoringInfo(),
+    return CoincenterInfo(settings::RunMode::kTestKeysWithProxy, loadConfiguration, GeneralConfig(), MonitoringInfo(),
                           currencyAcronymsReader, stableCoinsReader, currencyPrefixesReader);
   }
 };

@@ -20,3 +20,11 @@ set_target_properties(coincenter PROPERTIES
     COMPILE_DEFINITIONS_DEBUG "JSON_DEBUG;JSON_SAFE;JSON_ISO_STRICT"
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+
+add_unit_test(
+    processcommandsfromcli_test
+    src/processcommandsfromcli.cpp
+    test/processcommandsfromcli_test.cpp
+    LIBRARIES
+    coincenter_engine
+)

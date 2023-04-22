@@ -32,17 +32,17 @@ json LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &
 }  // namespace
 
 void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &cmdLineOptions) {
+                            const CoincenterCmdLineOptions &cmdLineOptions, settings::RunMode runMode) {
   json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
+
+  Duration fiatConversionQueryRate = ParseDuration(generalConfigData["fiatConversion"]["rate"].get<std::string_view>());
+  ApiOutputType apiOutputType = ApiOutputTypeFromString(generalConfigData["apiOutputType"].get<std::string_view>());
 
   // Create LoggingInfo first as it is a RAII structure re-initializing spdlog loggers.
   // It will be held by GeneralConfig and then itself by CoincenterInfo though.
   LoggingInfo loggingInfo(static_cast<const json &>(generalConfigData["log"]));
 
-  Duration fiatConversionQueryRate = ParseDuration(generalConfigData["fiatConversion"]["rate"].get<std::string_view>());
-
-  GeneralConfig generalConfig(std::move(loggingInfo), fiatConversionQueryRate,
-                              ApiOutputTypeFromString(generalConfigData["apiOutputType"].get<std::string_view>()));
+  GeneralConfig generalConfig(std::move(loggingInfo), fiatConversionQueryRate, apiOutputType);
 
   LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
@@ -55,7 +55,7 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
                                       File::IfError::kThrow);
 
   // Should be outside the try / catch as it holds the RAII object managing the Logging (LoggingInfo)
-  CoincenterInfo coincenterInfo(settings::RunMode::kProd, loadConfiguration, std::move(generalConfig),
+  CoincenterInfo coincenterInfo(runMode, loadConfiguration, std::move(generalConfig),
                                 CoincenterCommands::CreateMonitoringInfo(programName, cmdLineOptions),
                                 currencyAcronymsTranslatorFile, stableCoinsFile, currencyPrefixesTranslatorFile);
 
@@ -73,10 +73,12 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
     int nbCommandsProcessed = coincenter.process(coincenterCommands);
 
-    // Write potentially updated cache data on disk at end of program
-    coincenter.updateFileCaches();
+    if (nbCommandsProcessed > 0) {
+      // Write potentially updated cache data on disk at end of program
+      coincenter.updateFileCaches();
+    }
 
-    log::debug("normal termination after {} command(s) processed", nbCommandsProcessed);
+    log::info("normal termination after {} command(s) processed", nbCommandsProcessed);
   } catch (const exception &e) {
     // Log exception here as LoggingInfo is still configured at this point (will be destroyed immediately afterwards)
     log::critical("Exception: {}", e.what());

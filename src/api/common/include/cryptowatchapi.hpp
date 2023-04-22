@@ -22,8 +22,8 @@ class CryptowatchAPI : public ExchangeBase {
  public:
   using Fiats = FlatSet<CurrencyCode>;
 
-  explicit CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode = settings::RunMode::kProd,
-                          Duration fiatsUpdateFrequency = std::chrono::hours(96), bool loadFromFileCacheAtInit = true);
+  CryptowatchAPI(const CoincenterInfo &config, settings::RunMode runMode,
+                 Duration fiatsUpdateFrequency = std::chrono::hours(96), bool loadFromFileCacheAtInit = true);
 
   /// Tells whether given exchange is supported by Cryptowatch.
   bool queryIsExchangeSupported(std::string_view exchangeName) {
@@ -42,7 +42,7 @@ class CryptowatchAPI : public ExchangeBase {
   }
 
   /// Tells whether given currency code is a fiat currency or not.
-  /// Fiat currencies are traditionnal currencies, such as EUR, USD, GBP, KRW, etc.
+  /// Fiat currencies are traditional currencies, such as EUR, USD, GBP, KRW, etc.
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
   bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode) {
     std::lock_guard<std::mutex> guard(_fiatsMutex);

@@ -76,13 +76,9 @@ CurlHandle::~CurlHandle() {}  // NOLINT
 
 class FiatConverterTest : public ::testing::Test {
  protected:
-  FiatConverterTest() : converter(coincenterInfo, std::chrono::milliseconds(1)) {}
-
-  void SetUp() override {}
-  void TearDown() override {}
-
-  CoincenterInfo coincenterInfo;
-  FiatConverter converter;
+  settings::RunMode runMode = settings::RunMode::kTestKeys;
+  CoincenterInfo coincenterInfo{runMode};
+  FiatConverter converter{coincenterInfo, std::chrono::milliseconds(1)};
 };
 
 TEST_F(FiatConverterTest, DirectConversion) {

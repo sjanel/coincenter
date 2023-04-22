@@ -47,8 +47,8 @@ class ExchangePrivateTest : public ::testing::Test {
   }
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{settings::RunMode::kProd, loadConfiguration};
-  CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kProd, Duration::max(), true};
+  CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
+  CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kTestKeys, Duration::max(), true};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
 
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};

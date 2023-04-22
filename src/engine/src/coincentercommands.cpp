@@ -55,6 +55,10 @@ std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCm
 }
 }  // namespace
 
+CoincenterCommands::CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions) {
+  setFromOptions(cmdLineOptions);
+}
+
 bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.help || cmdLineOptions.version) {
     return false;

@@ -24,7 +24,7 @@ class LoggingInfo {
   LoggingInfo(const LoggingInfo &) = delete;
   LoggingInfo(LoggingInfo &&loggingInfo) noexcept;
   LoggingInfo &operator=(const LoggingInfo &) = delete;
-  LoggingInfo &operator=(LoggingInfo &&loggingInfo) noexcept;
+  LoggingInfo &operator=(LoggingInfo &&loggingInfo) = delete;
 
   ~LoggingInfo();
 

@@ -81,20 +81,9 @@ LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
       _logLevelFilePos(loggingInfo._logLevelFilePos),
       _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)) {}
 
-LoggingInfo &LoggingInfo::operator=(LoggingInfo &&loggingInfo) noexcept {
-  if (&loggingInfo != this) {
-    _maxFileSizeInBytes = loggingInfo._maxFileSizeInBytes;
-    _maxNbFiles = loggingInfo._maxNbFiles;
-    _logLevelConsolePos = loggingInfo._logLevelConsolePos;
-    _logLevelFilePos = loggingInfo._logLevelFilePos;
-    _destroyLoggers = std::exchange(loggingInfo._destroyLoggers, false);
-  }
-  return *this;
-}
-
 LoggingInfo::~LoggingInfo() {
   if (_destroyLoggers) {
-    log::drop_all();
+    log::drop(kOutputLoggerName);
   }
 }
 
