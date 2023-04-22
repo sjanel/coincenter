@@ -27,10 +27,10 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
 APIKeysProvider::APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo& exchangeSecretsInfo,
                                  settings::RunMode runMode)
     : _apiKeysMap(ParseAPIKeys(dataDir, exchangeSecretsInfo, runMode)) {
-  if (log::get_level() <= log::level::info) {
+  if (log::get_level() <= log::level::debug) {
     string foundKeysStr = str();
     if (!foundKeysStr.empty()) {
-      log::info("Loaded keys {}", foundKeysStr);
+      log::debug("Loaded keys {}", foundKeysStr);
     }
   }
 }
