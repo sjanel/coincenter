@@ -439,7 +439,7 @@ struct CoincenterAllowedOptions {
         "Prints withdraw fees of given currency on all supported exchanges,"
         " or only for the list of specified ones if provided (comma separated)."},
        &OptValueType::withdrawFee},
-      {{{"Monitoring", 60},
+      {{{"Monitoring", 70},
         "--monitoring",
         "",
         "Progressively send metrics to external instance provided that it's correctly set up "

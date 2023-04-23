@@ -78,9 +78,9 @@ class CoincenterCommand {
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;
   MonetaryAmount _amount;
-  int _n = -1;
   Market _market;
   CurrencyCode _cur1, _cur2;
+  int _n = -1;
   CoincenterCommandType _type;
   bool _isPercentageAmount = false;
   bool _withBalanceInUse = false;
