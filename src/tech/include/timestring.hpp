@@ -25,7 +25,7 @@ string ToString(TimePoint timePoint, const char* format = kTimeYearToSecondSpace
 TimePoint FromString(std::string_view timeStr, const char* format = kTimeYearToSecondSpaceSeparatedFormat);
 
 /// Create a Nonce as the number of milliseconds since Epoch time in string format.
-Nonce Nonce_TimeSinceEpochInMs(Duration msDelay = Duration{});
+Nonce Nonce_TimeSinceEpochInMs(Duration delay = Duration{});
 
 /// Create a Nonce in literal format.
 /// Example: '2021-06-01T14:44:13'

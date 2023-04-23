@@ -24,7 +24,8 @@ constexpr PriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
     return PriceStrategy::kTaker;
   }
 
-  throw invalid_argument("Unrecognized price strategy");
+  throw invalid_argument("Unrecognized price strategy, possible values are '{}', '{}' and '{}'", kMakerStr, kNibbleStr,
+                         kTakerStr);
 }
 }  // namespace
 
@@ -32,7 +33,7 @@ PriceOptions::PriceOptions(std::string_view priceStrategyStr) : _priceStrategy(S
 
 PriceOptions::PriceOptions(RelativePrice relativePrice) : _relativePrice(relativePrice) {
   if (relativePrice == 0 || relativePrice == kNoRelativePrice) {
-    throw invalid_argument("Invalid relative price");
+    throw invalid_argument("Invalid relative price, should be non zero");
   }
 }
 

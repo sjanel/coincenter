@@ -294,14 +294,30 @@ MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
   return ret;
 }
 
-MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForMinNotional,
+MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMins) {
+  if (avgPriceMins == 0) {
+    // price should be the last matched price
+    LastTradesVector lastTrades = queryLastTrades(mk, 1);
+    if (!lastTrades.empty()) {
+      return lastTrades.front().price();
+    }
+    log::error("Unable to retrieve last trades from {}, use average price instead for notional", mk);
+  }
+
+  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
+  return MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
+}
+
+MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,
                                              bool isTakerOrder) {
   const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), mk);
   MonetaryAmount ret(vol);
 
   const json* pMinNotionalFilter = nullptr;
+  const json* pNotionalFilter = nullptr;
   const json* pLotSizeFilter = nullptr;
   const json* pMarketLotSizeFilter = nullptr;
+
   for (const json& filter : marketData["filters"]) {
     const std::string_view filterType = filter["filterType"].get<std::string_view>();
     if (filterType == "LOT_SIZE") {
@@ -312,45 +328,60 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
       }
     } else if (filterType == "MIN_NOTIONAL") {
       if (isTakerOrder) {
-        const bool appliesToMarketTrade = filter["applyToMarket"].get<bool>();
-        if (appliesToMarketTrade) {
-          const int avgPriceMins = filter["avgPriceMins"].get<int>();
-
-          if (avgPriceMins == 0) {
-            // price should be the last matched price
-            LastTradesVector lastTrades = queryLastTrades(mk, 1);
-            if (lastTrades.empty()) {
-              log::error("Unable to retrieve last trades from {}, use average price instead for min notional", mk);
-              json result =
-                  PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
-              priceForMinNotional = MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
-            } else {
-              priceForMinNotional = lastTrades.front().price();
-            }
-          } else {
-            json result =
-                PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
-            priceForMinNotional = MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
-          }
+        if (filter["applyToMarket"].get<bool>()) {
+          priceForNotional = computePriceForNotional(mk, filter["avgPriceMins"].get<int>());
           pMinNotionalFilter = std::addressof(filter);
         }
       } else {
         pMinNotionalFilter = std::addressof(filter);
+      }
+    } else if (filterType == "NOTIONAL") {
+      if (isTakerOrder) {
+        if (filter["applyMinToMarket"].get<bool>() || filter["applyMaxToMarket"].get<bool>()) {
+          priceForNotional = computePriceForNotional(mk, filter["avgPriceMins"].get<int>());
+          pNotionalFilter = std::addressof(filter);
+        }
+      } else {
+        pNotionalFilter = std::addressof(filter);
       }
     }
   }
 
   MonetaryAmount minVolumeAfterMinNotional(0, ret.currencyCode());
   if (pMinNotionalFilter != nullptr) {
-    // "applyToMarket": true,
-    // "avgPriceMins": 5,
-    // "minNotional": "0.05000000"
     MonetaryAmount minNotional((*pMinNotionalFilter)["minNotional"].get<std::string_view>());
-    MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForMinNotional.toNeutral();
-    minVolumeAfterMinNotional = MonetaryAmount(minNotional / priceForMinNotional, ret.currencyCode());
+    MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForNotional.toNeutral();
+
+    minVolumeAfterMinNotional = MonetaryAmount(minNotional / priceForNotional, ret.currencyCode());
     if (priceTimesQuantity < minNotional) {
       log::debug("Too small min price * quantity. {} increased to {} for {}", ret, minVolumeAfterMinNotional, mk);
       ret = minVolumeAfterMinNotional;
+    }
+  }
+
+  if (pNotionalFilter != nullptr) {
+    MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForNotional.toNeutral();
+
+    if (!isTakerOrder || (*pNotionalFilter)["applyMinToMarket"].get<bool>()) {
+      // min notional applies
+      MonetaryAmount minNotional((*pNotionalFilter)["minNotional"].get<std::string_view>());
+
+      minVolumeAfterMinNotional =
+          std::max(minVolumeAfterMinNotional, MonetaryAmount(minNotional / priceForNotional, ret.currencyCode()));
+
+      if (priceTimesQuantity < minNotional) {
+        log::debug("Too small (price * quantity). {} increased to {} for {}", ret, minVolumeAfterMinNotional, mk);
+        ret = minVolumeAfterMinNotional;
+      }
+    } else if (!isTakerOrder || (*pNotionalFilter)["applyMaxToMarket"].get<bool>()) {
+      // max notional applies
+      MonetaryAmount maxNotional((*pNotionalFilter)["maxNotional"].get<std::string_view>());
+      MonetaryAmount maxVolumeAfterMaxNotional = MonetaryAmount(maxNotional / priceForNotional, ret.currencyCode());
+
+      if (priceTimesQuantity > maxNotional) {
+        log::debug("Too large (price * quantity). {} decreased to {} for {}", ret, maxVolumeAfterMaxNotional, mk);
+        ret = maxVolumeAfterMaxNotional;
+      }
     }
   }
 
@@ -370,12 +401,12 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
         log::debug("Too small volume {} increased to {} for {}", ret, minQty, mk);
         ret = minQty;
       } else if (stepSize != 0) {
-        ret.round(stepSize, MonetaryAmount::RoundType::kDown);
-        if (ret < minVolumeAfterMinNotional) {
+        if (ret == minVolumeAfterMinNotional) {
           ret.round(stepSize, MonetaryAmount::RoundType::kUp);
-        }
-        if (ret != vol) {
-          log::debug("Rounded {} into {} according to {}", vol, ret, mk);
+          log::debug("{} rounded up to {} because {} min notional applied", minVolumeAfterMinNotional, ret, mk);
+        } else {
+          ret.round(stepSize, MonetaryAmount::RoundType::kDown);
+          log::debug("{} rounded down to {} according to {}", vol, ret, mk);
         }
       }
     }

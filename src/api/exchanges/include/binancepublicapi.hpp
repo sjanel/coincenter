@@ -67,12 +67,14 @@ class BinancePublic : public ExchangePublic {
 
   MonetaryAmount sanitizePrice(Market mk, MonetaryAmount pri);
 
-  MonetaryAmount sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForMinNotional, bool isTakerOrder);
+  MonetaryAmount sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional, bool isTakerOrder);
 
  private:
   friend class BinancePrivate;
 
   CurrencyExchangeFlatSet queryTradableCurrencies(const json& data) const;
+
+  MonetaryAmount computePriceForNotional(Market mk, int avgPriceMins);
 
   struct CommonInfo {
     CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
