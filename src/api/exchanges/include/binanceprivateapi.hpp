@@ -7,6 +7,7 @@
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "timedef.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {
@@ -68,56 +69,48 @@ class BinancePrivate : public ExchangePrivate {
 
   bool checkMarketAppendSymbol(Market mk, CurlPostData& params);
 
-  struct TradableCurrenciesCache {
+  struct BinanceContext {
 #ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
+    BinanceContext(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic), _queryDelay(queryDelay) {}
 #endif
+
+    CurlHandle& _curlHandle;
+    const APIKey& _apiKey;
+    BinancePublic& _exchangePublic;
+    Duration& _queryDelay;
+  };
+
+  static_assert(std::is_trivially_destructible_v<BinanceContext>, "BinanceContext destructor should be virtual");
+
+  struct TradableCurrenciesCache : public BinanceContext {
+    TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic,
+                            Duration& queryDelay)
+        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
     CurrencyExchangeFlatSet operator()();
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    BinancePublic& _public;
   };
 
-  struct DepositWalletFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& binancePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _public(binancePublic) {}
-#endif
+  struct DepositWalletFunc : public BinanceContext {
+    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
+        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
     Wallet operator()(CurrencyCode currencyCode);
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    BinancePublic& _public;
   };
 
-  struct AllWithdrawFeesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    AllWithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-#endif
+  struct AllWithdrawFeesFunc : public BinanceContext {
+    AllWithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic,
+                        Duration& queryDelay)
+        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
     WithdrawalFeeMap operator()();
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    BinancePublic& _exchangePublic;
   };
 
-  struct WithdrawFeesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-#endif
+  struct WithdrawFeesFunc : public BinanceContext {
+    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
+        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
     MonetaryAmount operator()(CurrencyCode currencyCode);
-
-    CurlHandle& _curlHandle;
-    const APIKey& _apiKey;
-    BinancePublic& _exchangePublic;
   };
 
   CurlHandle _curlHandle;
@@ -125,6 +118,7 @@ class BinancePrivate : public ExchangePrivate {
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
   CachedResult<AllWithdrawFeesFunc> _allWithdrawFeesCache;
   CachedResult<WithdrawFeesFunc, CurrencyCode> _withdrawFeesCache;
+  Duration _queryDelay{};
 };
 }  // namespace api
 }  // namespace cct
