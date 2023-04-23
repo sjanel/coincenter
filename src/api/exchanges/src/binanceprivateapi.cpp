@@ -443,11 +443,13 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}", kBinanceCoinCur);
       json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/asset/dust", _queryDelay,
                                  {{"asset", from.currencyStr()}});
-      if (!result.contains("transferResult") || result["transferResult"].empty()) {
+      auto transferResultIt = result.find("transferResult");
+      if (transferResultIt == result.end() || transferResultIt->empty()) {
         throw exception("Unexpected dust transfer result");
       }
-      const json& res = result["transferResult"].front();
+      const json& res = transferResultIt->front();
       SetString(placeOrderInfo.orderId, res["tranId"].get<std::size_t>());
+      // 'transfered' is misspelled (against 'transferred') but the field is really named like this in Binance REST API
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {

@@ -41,13 +41,9 @@ TimePoint FromString(std::string_view timeStr, const char* format) {
   return Clock::from_time_t(std::mktime(&utc));  // TODO: fix issue of local time switch
 }
 
-Nonce Nonce_TimeSinceEpochInMs(Duration msDelay) {
+Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
   const auto nowTime = Clock::now();
-  // The return type of 'count()' is platform dependent. Let's cast it to 'int64_t' which is enough to hold a number of
-  // milliseconds from epoch
-  int64_t msSinceEpoch = static_cast<int64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(nowTime.time_since_epoch() + msDelay).count());
-  return ToString(msSinceEpoch);
+  return ToString(std::chrono::duration_cast<std::chrono::milliseconds>(nowTime.time_since_epoch() + delay).count());
 }
 
 }  // namespace cct
