@@ -21,13 +21,14 @@ class TradeOptions {
   constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
 
   TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur, Duration minTimeBetweenPriceUpdates,
-               TradeTypePolicy tradeType);
+               TradeTypePolicy tradeTypePolicy, TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
   TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
                Duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates,
-               TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault);
+               TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault,
+               TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
 
   constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 
@@ -42,6 +43,8 @@ class TradeOptions {
   constexpr int relativePrice() const { return _priceOptions.relativePrice(); }
 
   constexpr TradeMode tradeMode() const { return _mode; }
+
+  constexpr TradeSyncPolicy tradeSyncPolicy() const { return _tradeSyncPolicy; }
 
   bool isMultiTradeAllowed(bool multiTradeAllowedByDefault) const;
 
@@ -61,6 +64,8 @@ class TradeOptions {
 
   std::string_view timeoutActionStr() const;
 
+  std::string_view tradeSyncPolicyStr() const;
+
   string str(bool placeRealOrderInSimulationMode) const;
 
   bool operator==(const TradeOptions &) const = default;
@@ -72,5 +77,7 @@ class TradeOptions {
   TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kCancel;
   TradeMode _mode = TradeMode::kReal;
   TradeTypePolicy _tradeTypePolicy = TradeTypePolicy::kDefault;
+  TradeSyncPolicy _tradeSyncPolicy = TradeSyncPolicy::kSynchronous;
 };
+
 }  // namespace cct

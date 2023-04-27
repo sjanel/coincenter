@@ -898,6 +898,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -930,6 +931,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -1008,6 +1010,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, EmptyJson) {
         "price": {
           "strategy": "taker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -1040,6 +1043,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, Json) {
         "price": {
           "strategy": "taker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -1100,6 +1104,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -1128,6 +1133,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, Json) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       },
       "to": {
@@ -1201,6 +1207,7 @@ TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       }
     },
@@ -1230,6 +1237,7 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
         "price": {
           "strategy": "maker"
         },
+        "syncPolicy": "synchronous",
         "timeoutAction": "cancel"
       }
     },

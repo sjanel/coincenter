@@ -27,4 +27,10 @@ enum class TradeTypePolicy : int8_t {
   kForceSingleTrade  // Force single trade only
 };
 
+enum class TradeSyncPolicy : int8_t {
+  kSynchronous,  // Follow lifetime of the placed order, manage the price updates until it is either matched or
+                 // cancelled.
+  kAsynchronous  // Placed order will not be followed-up - trade will exits once placed.
+};
+
 }  // namespace cct

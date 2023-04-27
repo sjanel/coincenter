@@ -52,7 +52,7 @@ class ExchangePrivateTest : public ::testing::Test {
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
 
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
-  APIKey key{"test", "testuser", "", "", ""};
+  APIKey key{"test", "testUser", "", "", ""};
   MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
 
   Market market{"ETH", "EUR"};
@@ -120,6 +120,58 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
           testing::Return(PlaceOrderInfo(OrderInfo(TradedAmounts(from, tradedTo), true), OrderId("OrderId # 0"))));
 
   EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), TradedAmounts(from, tradedTo));
+}
+
+TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
+  tradeBaseExpectCalls();
+
+  MonetaryAmount from(5000, market.quote());
+  MonetaryAmount pri(*marketOrderBook1.computeAvgPriceForTakerAmount(from));
+
+  MonetaryAmount vol(from / pri, market.base());
+  PriceOptions priceOptions(PriceStrategy::kTaker);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal,
+                            TradeOptions::kDefaultTradeDuration, TradeOptions::kDefaultMinTimeBetweenPriceUpdates,
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeContext tradeContext(market, TradeSide::kBuy);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
+
+  MonetaryAmount tradedTo = vol * pri.toNeutral();
+
+  EXPECT_CALL(exchangePublic, queryOrderBook(market, MarketOrderBook::kDefaultDepth))
+      .WillOnce(testing::Return(marketOrderBook1));
+  EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
+      .WillOnce(
+          testing::Return(PlaceOrderInfo(OrderInfo(TradedAmounts(from, tradedTo), true), OrderId("OrderId # 0"))));
+
+  EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), TradedAmounts(from, tradedTo));
+}
+
+TEST_F(ExchangePrivateTest, TradeAsyncPolicyMaker) {
+  tradeBaseExpectCalls();
+
+  MonetaryAmount from(10, market.base());
+  MonetaryAmount vol(from);
+  MonetaryAmount pri(askPrice1);
+
+  TradeSide side = TradeSide::kSell;
+  TradeContext tradeContext(market, side);
+
+  PriceOptions priceOptions(PriceStrategy::kMaker);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal,
+                            TradeOptions::kDefaultTradeDuration, TradeOptions::kDefaultMinTimeBetweenPriceUpdates,
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeInfo tradeInfo(tradeContext, tradeOptions);
+
+  EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
+
+  PlaceOrderInfo unmatchedPlacedOrderInfo(OrderInfo(TradedAmounts(from.currencyCode(), market.quote()), false),
+                                          OrderId("Order # 0"));
+
+  EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
+      .WillOnce(testing::Return(unmatchedPlacedOrderInfo));
+
+  EXPECT_EQ(exchangePrivate.trade(from, market.quote(), tradeOptions), TradedAmounts(market.base(), market.quote()));
 }
 
 TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
