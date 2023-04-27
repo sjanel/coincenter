@@ -10,6 +10,7 @@
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
 #include "tradeoptions.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct {
 class CoincenterCommand {
@@ -27,6 +28,9 @@ class CoincenterCommand {
 
   CoincenterCommand& setTradeOptions(const TradeOptions& tradeOptions);
   CoincenterCommand& setTradeOptions(TradeOptions&& tradeOptions);
+
+  CoincenterCommand& setWithdrawOptions(const WithdrawOptions& withdrawOptions);
+  CoincenterCommand& setWithdrawOptions(WithdrawOptions&& withdrawOptions);
 
   CoincenterCommand& setAmount(MonetaryAmount amount);
 
@@ -54,6 +58,8 @@ class CoincenterCommand {
 
   const TradeOptions& tradeOptions() const { return std::get<TradeOptions>(_specialOptions); }
 
+  const WithdrawOptions& withdrawOptions() const { return std::get<WithdrawOptions>(_specialOptions); }
+
   MonetaryAmount amount() const { return _amount; }
 
   int nbLastTrades() const { return _n; }
@@ -73,7 +79,7 @@ class CoincenterCommand {
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
 
  private:
-  using SpecialOptions = std::variant<OrdersConstraints, DepositsConstraints, TradeOptions>;
+  using SpecialOptions = std::variant<OrdersConstraints, DepositsConstraints, TradeOptions, WithdrawOptions>;
 
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;

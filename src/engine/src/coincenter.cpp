@@ -149,10 +149,10 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       break;
     }
     case CoincenterCommandType::kWithdraw: {
-      WithdrawInfo withdrawInfo =
-          withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(), cmd.exchangeNames().back());
+      WithdrawInfo withdrawInfo = withdraw(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames().front(),
+                                           cmd.exchangeNames().back(), cmd.withdrawOptions());
       _queryResultPrinter.printWithdraw(withdrawInfo, withdrawInfo.grossAmount(), cmd.isPercentageAmount(),
-                                        cmd.exchangeNames().front(), cmd.exchangeNames().back());
+                                        cmd.exchangeNames().front(), cmd.exchangeNames().back(), cmd.withdrawOptions());
       break;
     }
     case CoincenterCommandType::kDustSweeper: {
@@ -271,9 +271,9 @@ TradedAmountsPerExchange Coincenter::smartSell(MonetaryAmount startAmount, bool 
 
 WithdrawInfo Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                                   const ExchangeName &fromPrivateExchangeName,
-                                  const ExchangeName &toPrivateExchangeName) {
+                                  const ExchangeName &toPrivateExchangeName, const WithdrawOptions &withdrawOptions) {
   return _exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromPrivateExchangeName,
-                                         toPrivateExchangeName);
+                                         toPrivateExchangeName, withdrawOptions);
 }
 
 MonetaryAmountPerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {

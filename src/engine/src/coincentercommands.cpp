@@ -102,6 +102,12 @@ TradeOptions ComputeTradeOptions(const CoincenterCmdLineOptions &cmdLineOptions,
                       tradeTypePolicy, tradeSyncPolicy);
 }
 
+WithdrawOptions ComputeWithdrawOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
+  WithdrawSyncPolicy withdrawSyncPolicy =
+      cmdLineOptions.withdrawAsync ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
+  return WithdrawOptions(cmdLineOptions.withdrawRefreshTime, withdrawSyncPolicy);
+}
+
 }  // namespace
 
 CoincenterCommands::CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions) {
@@ -291,7 +297,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(amountToWithdraw)
         .setPercentageAmount(isPercentageWithdraw)
-        .setExchangeNames(std::move(exchanges));
+        .setExchangeNames(std::move(exchanges))
+        .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 
   if (!cmdLineOptions.withdrawAll.empty()) {
@@ -303,7 +310,8 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(MonetaryAmount(100, curToWithdraw))
         .setPercentageAmount(true)
-        .setExchangeNames(std::move(exchanges));
+        .setExchangeNames(std::move(exchanges))
+        .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 
   if (!cmdLineOptions.dustSweeper.empty()) {

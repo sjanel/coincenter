@@ -9,6 +9,7 @@
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "stringhelpers.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct {
 inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
@@ -411,10 +412,10 @@ inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs)
   return lhs.isWithdrawSent() == rhs.isWithdrawSent() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 
-TEST_F(ExchangePrivateTest, Withdraw) {
+TEST_F(ExchangePrivateTest, WithdrawSynchronous) {
   MonetaryAmount grossAmount("2.5ETH");
   CurrencyCode cur = grossAmount.currencyCode();
-  MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, cryptowatchAPI, coincenterInfo);
+  MockExchangePublic destinationExchangePublic("kraken", fiatConverter, cryptowatchAPI, coincenterInfo);
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
   Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck());
   EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
@@ -449,7 +450,28 @@ TEST_F(ExchangePrivateTest, Withdraw) {
   }
 
   WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
-  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, Duration::zero()), withdrawInfo);
+  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate,
+                                     WithdrawOptions(Duration{}, WithdrawSyncPolicy::kSynchronous)),
+            withdrawInfo);
+}
+
+TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
+  MonetaryAmount grossAmount("2.5ETH");
+  CurrencyCode cur = grossAmount.currencyCode();
+  MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, cryptowatchAPI, coincenterInfo);
+  MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
+  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck());
+  EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
+
+  InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, "WithdrawId", grossAmount);
+  EXPECT_CALL(exchangePrivate, launchWithdraw(grossAmount, std::move(receivingWallet)))
+      .WillOnce(testing::Return(initiatedWithdrawInfo));
+
+  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), MonetaryAmount{});
+
+  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate,
+                                     WithdrawOptions(Duration{}, WithdrawSyncPolicy::kAsynchronous)),
+            withdrawInfo);
 }
 
 class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {

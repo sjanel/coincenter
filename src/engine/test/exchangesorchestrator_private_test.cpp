@@ -12,6 +12,7 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
   ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
   BalanceOptions balanceOptions;
+  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous};
 };
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
@@ -127,7 +128,8 @@ TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
   MonetaryAmount grossAmount{1000, "XRP"};
   ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
   const ExchangeName &toExchange = fromExchange;
-  EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange), exception);
+  EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions),
+               exception);
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
@@ -148,7 +150,8 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
+  EXPECT_FALSE(
+      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions).hasBeenInitiated());
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
@@ -169,7 +172,8 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange).hasBeenInitiated());
+  EXPECT_FALSE(
+      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions).hasBeenInitiated());
 }
 
 inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
@@ -238,7 +242,7 @@ TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossible) {
   bool isPercentageWithdraw = false;
   auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
   auto ret =
-      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, Duration::zero());
+      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   EXPECT_EQ(exp, ret);
 }
 
@@ -247,7 +251,7 @@ TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossiblePercentage) {
   bool isPercentageWithdraw = true;
   auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
   auto ret =
-      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, Duration::zero());
+      exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   EXPECT_EQ(exp, ret);
 }
 }  // namespace cct

@@ -7,6 +7,7 @@
 #include "market.hpp"
 #include "queryresulttypes.hpp"
 #include "tradedamounts.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct {
 class ExchangesOrchestrator {
@@ -60,7 +61,7 @@ class ExchangesOrchestrator {
 
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                         const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
-                        Duration withdrawRefreshTime = api::ExchangePrivate::kWithdrawRefreshTime);
+                        const WithdrawOptions &withdrawOptions);
 
   MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 

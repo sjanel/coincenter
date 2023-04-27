@@ -83,6 +83,9 @@ Main features:
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
+      - [Withdraw options](#withdraw-options)
+        - [Withdraw refresh time](#withdraw-refresh-time)
+        - [Withdraw asynchronous mode](#withdraw-asynchronous-mode)
     - [Dust sweeper](#dust-sweeper)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
@@ -157,7 +160,7 @@ It is also overridable on the command line, with options `--log <log-level>` and
 
 ### Health check
 
-`--health-check` pings the exchanges and checks if it is up and running.
+`--health-check` pings the exchanges and checks if there are up and running.
 It is the first thing that is checked in exchanges unit tests, hence if the health check fails for an exchange, the tests are skipped for the exchange.
 
 ### Markets
@@ -627,7 +630,7 @@ cancels order Id OID1 only, on the exchange where it is found on (no error is ra
 
 ### Withdraw coin
 
-It is possible to withdraw crypto currency with `coincenter` as well, in a synchronized mode (withdraw will check that funds are well received at destination). Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-all` is a convenient command wrapper of `--withdraw 100%`.
+It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-all` is a convenient command wrapper of `--withdraw 100%`.
 
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
@@ -641,6 +644,20 @@ Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 ```
 coincenter --withdraw 10000xlm,bithumb-huobi
 ```
+
+#### Withdraw options
+
+##### Withdraw refresh time
+
+You can customize the withdraw refresh time of the periodic checks during the continuous checking of withdraw status and receive at destination in **synchronous** mode.
+For that, specify a different time period with `--withdraw-refresh-time` that expects a string representation of a time.
+
+Defaults to 5 seconds.
+
+##### Withdraw asynchronous mode
+
+By default `coincenter` will exit withdraw process only once destination has received the funds.
+You can change the behavior to an **asynchronous** mode thanks to `--withdraw-async` option, which is like a fire and forget mode. Once the withdraw is initiated, withdraw process is finished and the withdraw is not followed anymore.
 
 ### Dust sweeper
 
