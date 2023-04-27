@@ -24,6 +24,7 @@ namespace cct {
 class CoincenterCommand;
 class CoincenterCommands;
 class TradeOptions;
+class WithdrawOptions;
 
 class Coincenter {
  public:
@@ -108,7 +109,8 @@ class Coincenter {
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                        const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName);
+                        const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
+                        const WithdrawOptions &withdrawOptions);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;

@@ -9,6 +9,7 @@
 #include "recentdeposit.hpp"
 #include "timedef.hpp"
 #include "unreachable.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct::api {
 
@@ -209,17 +210,33 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 }
 
 WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                                       Duration withdrawRefreshTime) {
+                                       const WithdrawOptions &withdrawOptions) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
-  log::info("Withdraw {} of {} to {} initiated from {} to {}", initiatedWithdrawInfo.withdrawId(), grossAmount,
-            initiatedWithdrawInfo.receivingWallet(), exchangeName(), targetExchange.exchangeName());
+  Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+  log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {} s",
+            initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
+            targetExchange.exchangeName(), std::chrono::duration_cast<TimeInS>(withdrawRefreshTime).count());
   SentWithdrawInfo sentWithdrawInfo;
   ReceivedWithdrawInfo receivedWithdrawInfo;
 
   enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
-  for (NextAction action = NextAction::kCheckSender; action != NextAction::kTerminate;) {
+
+  NextAction initialAction;
+  switch (withdrawOptions.withdrawSyncPolicy()) {
+    case WithdrawSyncPolicy::kSynchronous:
+      initialAction = NextAction::kCheckSender;
+      break;
+    case WithdrawSyncPolicy::kAsynchronous:
+      log::info("Asynchronous mode, exit with withdraw {} initiated", initiatedWithdrawInfo.withdrawId());
+      initialAction = NextAction::kTerminate;
+      break;
+    default:
+      unreachable();
+  }
+
+  for (NextAction action = initialAction; action != NextAction::kTerminate;) {
     std::this_thread::sleep_for(withdrawRefreshTime);
     switch (action) {
       case NextAction::kCheckSender:

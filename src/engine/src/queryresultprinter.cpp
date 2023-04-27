@@ -14,6 +14,7 @@
 #include "tradedamounts.hpp"
 #include "unreachable.hpp"
 #include "withdrawinfo.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct {
 QueryResultPrinter::QueryResultPrinter(ApiOutputType apiOutputType)
@@ -789,7 +790,8 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
 
 void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, MonetaryAmount grossAmount,
                                        bool isPercentageWithdraw, const ExchangeName &fromPrivateExchangeName,
-                                       const ExchangeName &toPrivateExchangeName) const {
+                                       const ExchangeName &toPrivateExchangeName,
+                                       const WithdrawOptions &withdrawOptions) const {
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       SimpleTable simpleTable("From Exchange", "To Exchange", "Gross withdraw amount", "Initiated time",
@@ -807,6 +809,7 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       inOpt.emplace("cur", grossAmount.currencyStr());
       inOpt.emplace("grossAmount", grossAmount.amountStr());
       inOpt.emplace("isPercentage", isPercentageWithdraw);
+      inOpt.emplace("syncPolicy", withdrawOptions.withdrawSyncPolicyStr());
       in.emplace("opt", std::move(inOpt));
 
       json from;

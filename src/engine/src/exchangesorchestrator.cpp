@@ -681,7 +681,8 @@ TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper
 
 WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
                                              const ExchangeName &fromPrivateExchangeName,
-                                             const ExchangeName &toPrivateExchangeName, Duration withdrawRefreshTime) {
+                                             const ExchangeName &toPrivateExchangeName,
+                                             const WithdrawOptions &withdrawOptions) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (isPercentageWithdraw) {
     log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode,
@@ -720,7 +721,7 @@ WithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool is
     grossAmount = (avAmount * grossAmount.toNeutral()) / 100;
   }
 
-  return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawRefreshTime);
+  return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawOptions);
 }
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,

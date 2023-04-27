@@ -16,6 +16,7 @@
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "tradeoptions.hpp"
+#include "withdrawoptions.hpp"
 
 namespace cct {
 
@@ -102,11 +103,22 @@ struct CoincenterCmdLineOptions {
   static constexpr std::string_view kWithdraw2 = "' file.";
   static constexpr std::string_view kWithdraw = JoinStringView_v<kWithdraw1, kDepositAddressesFileName, kWithdraw2>;
 
+  static constexpr std::string_view kWithdrawRefreshTime1 =
+      "Time interval for regular withdraw status checking during synchronous withdrawal. Default is ";
+  static constexpr int64_t kDefaultWithdrawRefreshTimeSeconds =
+      std::chrono::duration_cast<TimeInS>(WithdrawOptions().withdrawRefreshTime()).count();
+  static constexpr std::string_view kWithdrawRefreshTime2 = "s.";
+  static constexpr std::string_view kWithdrawRefreshTime =
+      JoinStringView_v<kWithdrawRefreshTime1, IntToStringView_v<kDefaultWithdrawRefreshTimeSeconds>,
+                       kWithdrawRefreshTime2>;
+
   static constexpr std::string_view kDustSweeper =
       "Attempts to clean small remaining amount of given currency on each given exchange."
-      " The amount is considered 'small' and eligible for dust sweeper process if the 'dustAmountsThreshold' is set in "
+      " The amount is considered 'small' and eligible for dust sweeper process if the 'dustAmountsThreshold' is "
+      "set in "
       "the config file for this currency and if starting available amount is lower than this defined threshold."
-      " Dust sweeper process is iterative, involving at most 'dustSweeperMaxNbTrades' max trades to be set as well in "
+      " Dust sweeper process is iterative, involving at most 'dustSweeperMaxNbTrades' max trades to be set as well "
+      "in "
       "the config file.";
 
   static constexpr std::string_view kMonitoringPort1 = "Specify port of metric gateway instance (default: ";
@@ -174,6 +186,7 @@ struct CoincenterCmdLineOptions {
   std::string_view withdraw;
   std::string_view withdrawAll;
   std::string_view withdrawFee;
+  Duration withdrawRefreshTime{WithdrawOptions().withdrawRefreshTime()};
 
   std::string_view dustSweeper;
 
@@ -196,6 +209,7 @@ struct CoincenterCmdLineOptions {
   bool version = false;
   bool useMonitoring = false;
   bool withBalanceInUse = false;
+  bool withdrawAsync = false;  // withdraw fire and forget mode
 };
 
 template <class OptValueType>
@@ -437,6 +451,16 @@ struct CoincenterAllowedOptions {
        &OptValueType::depositInfo},
       {{{"Withdraw and deposit", 60}, "--withdraw", 'w', "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
        &OptValueType::withdraw},
+      {{{"Withdraw and deposit", 60},
+        "--withdraw-async",
+        "",
+        "Initiate withdraw but do not wait for funds' arrival at destination."},
+       &OptValueType::withdrawAsync},
+      {{{"Withdraw and deposit", 60},
+        "--withdraw-refresh-time",
+        "<time>",
+        CoincenterCmdLineOptions::kWithdrawRefreshTime},
+       &OptValueType::withdrawRefreshTime},
       {{{"Withdraw and deposit", 60},
         "--withdraw-all",
         "<cur,from-to>",

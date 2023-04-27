@@ -31,6 +31,7 @@ namespace cct {
 
 class CoincenterInfo;
 class TradeOptions;
+class WithdrawOptions;
 
 namespace api {
 class APIKey;
@@ -86,19 +87,16 @@ class ExchangePrivate : public ExchangeBase {
   TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
                       const MarketsPath &conversionPath);
 
-  /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
-  /// A very small value is not relevant as withdraw time order of magnitude are minutes or hours
-  static constexpr auto kWithdrawRefreshTime = std::chrono::seconds(5);
-
   /// Withdraws an amount from 'this' exchange to 'targetExchange'.
   /// This method is synchronous:
   ///   - It first waits that withdrawal has been successfully sent from 'this'
   ///   - It then waits that deposit has arrived to 'targetExchange'
   /// @param grossAmount gross amount to withdraw, including the fee that will be deduced.
   /// @param targetExchange private exchange to which we should deliver the transfer
+  /// @param withdrawOptions specific options for this withdraw
   /// @return information about the withdraw
   WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                        Duration withdrawRefreshTime = kWithdrawRefreshTime);
+                        const WithdrawOptions &withdrawOptions);
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.

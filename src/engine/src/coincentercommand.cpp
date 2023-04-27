@@ -105,6 +105,22 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOption
   return *this;
 }
 
+CoincenterCommand& CoincenterCommand::setWithdrawOptions(const WithdrawOptions& withdrawOptions) {
+  if (_type != CoincenterCommandType::kWithdraw) {
+    throw exception("Withdraw options can only be used for withdraws");
+  }
+  _specialOptions = withdrawOptions;
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setWithdrawOptions(WithdrawOptions&& withdrawOptions) {
+  if (_type != CoincenterCommandType::kWithdraw) {
+    throw exception("Withdraw options can only be used for withdraws");
+  }
+  _specialOptions = std::move(withdrawOptions);
+  return *this;
+}
+
 CoincenterCommand& CoincenterCommand::setAmount(MonetaryAmount amount) {
   _amount = amount;
   return *this;
