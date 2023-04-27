@@ -291,6 +291,7 @@ json TradeOptionsToJson(const TradeOptions &tradeOptions) {
   ret.emplace("minTimeBetweenPriceUpdates", DurationToString(tradeOptions.minTimeBetweenPriceUpdates()));
   ret.emplace("mode", TradeModeToStr(tradeOptions.tradeMode()));
   ret.emplace("timeoutAction", tradeOptions.timeoutActionStr());
+  ret.emplace("syncPolicy", tradeOptions.tradeSyncPolicyStr());
   return ret;
 }
 }  // namespace

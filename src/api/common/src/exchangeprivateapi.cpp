@@ -136,9 +136,15 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 
         orderId = std::move(placeOrderInfo.orderId);
 
-        if (placeOrderInfo.isClosed()) {
+        if (placeOrderInfo.isClosed() || tradeOptions.tradeSyncPolicy() == TradeSyncPolicy::kAsynchronous) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
-          log::debug("Order {} closed with last traded amounts {}", orderId, placeOrderInfo.tradedAmounts());
+          if (placeOrderInfo.isClosed()) {
+            log::debug("Order {} closed with last traded amounts {}", orderId, placeOrderInfo.tradedAmounts());
+          } else {
+            log::info("Asynchronous mode, exit with order {} placed and traded amounts {}", orderId,
+                      placeOrderInfo.tradedAmounts());
+          }
+
           return totalTradedAmounts;
         }
 
@@ -153,6 +159,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
     if (orderInfo.isClosed) {
       totalTradedAmounts += orderInfo.tradedAmounts;
       log::debug("Order {} closed with last traded amounts {}", orderId, orderInfo.tradedAmounts);
+
       break;
     }
 

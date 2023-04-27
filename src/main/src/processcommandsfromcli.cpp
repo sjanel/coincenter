@@ -78,7 +78,7 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
       coincenter.updateFileCaches();
     }
 
-    log::info("normal termination after {} command(s) processed", nbCommandsProcessed);
+    log::debug("normal termination after {} command(s) processed", nbCommandsProcessed);
   } catch (const exception &e) {
     // Log exception here as LoggingInfo is still configured at this point (will be destroyed immediately afterwards)
     log::critical("Exception: {}", e.what());

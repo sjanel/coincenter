@@ -120,6 +120,8 @@ struct CoincenterCmdLineOptions {
 
   static void PrintVersion(std::string_view programName) noexcept;
 
+  bool isSmartTrade() const noexcept;
+
   std::string_view dataDir = SelectDefaultDataDir();
 
   std::string_view apiOutputType;
@@ -189,6 +191,7 @@ struct CoincenterCmdLineOptions {
   bool forceSingleTrade = false;
   bool tradeTimeoutMatch = false;
   bool tradeSim{TradeOptions().isSimulation()};
+  bool tradeAsync = false;  // trade fire and forget mode
   bool help = false;
   bool version = false;
   bool useMonitoring = false;
@@ -206,15 +209,15 @@ struct CoincenterAllowedOptions {
       {{{"General", 3},
         "--log",
         'v',
-        "<levelname|0-6>",
+        "<levelName|0-6>",
         "Sets the log level in the console during all execution. "
         "Possible values are: (off|critical|error|warning|info|debug|trace) or "
         "(0-6) (overrides .log.console in general config file)"},
        &OptValueType::logConsole},
-      {{{"General", 4}, "--log-console", "<levelname|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
+      {{{"General", 4}, "--log-console", "<levelName|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
       {{{"General", 4},
         "--log-file",
-        "<levelname|0-6>",
+        "<levelName|0-6>",
         "Sets the log level in files during all execution (overrides .log.file in general config file). "
         "Number of rotating files to keep and their size is configurable in the general config file"},
        &OptValueType::logFile},
@@ -373,6 +376,12 @@ struct CoincenterAllowedOptions {
         " or all that have some balance on cur1 if none provided\n"
         "Order will be placed at limit price by default"},
        &OptValueType::tradeAll},
+      {{{"Trade", 40},
+        "--trade-async",
+        "",
+        "Asynchronous trade mode. Trade orders will be sent in fire and forget mode, not following their lifetime "
+        "until either match or cancel occurs.\n This option is not compatible with multi trade."},
+       &OptValueType::tradeAsync},
       {{{"Trade", 41},
         "--multi-trade",
         "",
