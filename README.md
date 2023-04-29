@@ -1,4 +1,7 @@
-[![alpine](https://github.com/sjanel/coincenter/actions/workflows/alpine-docker.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/alpine-docker.yml)
+coincenter
+==========
+
+[![docker](https://github.com/sjanel/coincenter/actions/workflows/docker.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/docker.yml)
 [![macos](https://github.com/sjanel/coincenter/actions/workflows/macos.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/macos.yml)
 [![ubuntu](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/ubuntu.yml)
 [![windows](https://github.com/sjanel/coincenter/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/sjanel/coincenter/actions/workflows/windows.yml)
@@ -7,9 +10,6 @@
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/sjanel/coincenter/main/LICENSE)
 [![GitHub Releases](https://img.shields.io/github/release/sjanel/coincenter.svg)](https://github.com/sjanel/coincenter/releases)
-
-coincenter
-==========
 
 Command Line Interface (CLI) / library centralizing several crypto currencies exchanges REST API into a single, ergonomic all in one tool with a unified interface.
 

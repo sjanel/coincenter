@@ -1,4 +1,4 @@
-name: alpine-docker
+name: docker
 
 on:
   push:
@@ -7,12 +7,13 @@ on:
   pull_request:
 
 jobs:
-  alpine-docker:
+  docker:
     name: Docker build based on alpine
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        withtests: [0, 1]
+        with-tests: [0, 1]
+        file-name: ["Dockerfile", "alpine.Dockerfile"]
 
     steps:
       - name: Checkout repository code
@@ -20,4 +21,4 @@ jobs:
 
       - name: Docker build
         working-directory: ${{github.workspace}}
-        run: docker build --build-arg BUILD_TEST=${{matrix.withtests}} -t coincenter .
+        run: docker build --build-arg BUILD_TEST=${{matrix.with-tests}} -t coincenter -f ${{matrix.file-name}} .
