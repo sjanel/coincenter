@@ -192,7 +192,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 
       if (reachedEmergencyTime) {
         // timeout. Action depends on Strategy
-        log::info("Emergency time reached, {} trade", options.timeoutActionStr());
+        log::warn("Emergency time reached, {} trade", options.timeoutActionStr());
         if (options.placeMarketOrderAtTimeout() && !options.isTakerStrategy(placeSimulatedRealOrder)) {
           nextAction = NextAction::kPlaceMarketOrder;
         } else {
@@ -201,7 +201,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       } else {
         // updatePriceNeeded
         nextAction = NextAction::kPlaceLimitOrder;
-        log::info("Limit price changed from {} to {}, update order", lastPrice, price);
+        log::warn("Limit price changed from {} to {}, update order", lastPrice, price);
       }
     }
   }
@@ -223,36 +223,42 @@ WithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePriva
 
   enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
 
-  NextAction initialAction;
+  NextAction nextAction;
   switch (withdrawOptions.withdrawSyncPolicy()) {
     case WithdrawSyncPolicy::kSynchronous:
-      initialAction = NextAction::kCheckSender;
+      nextAction = NextAction::kCheckSender;
       break;
     case WithdrawSyncPolicy::kAsynchronous:
       log::info("Asynchronous mode, exit with withdraw {} initiated", initiatedWithdrawInfo.withdrawId());
-      initialAction = NextAction::kTerminate;
+      nextAction = NextAction::kTerminate;
       break;
     default:
       unreachable();
   }
 
-  for (NextAction action = initialAction; action != NextAction::kTerminate;) {
-    std::this_thread::sleep_for(withdrawRefreshTime);
-    switch (action) {
+  // When withdraw is in Check sender state, we alternatively check sender and then receiver.
+  // It's possible that sender status is confirmed later than the receiver in some cases (this can happen for "fast"
+  // coins such as Ripple for instance)
+  while (nextAction != NextAction::kTerminate) {
+    switch (nextAction) {
       case NextAction::kCheckSender:
         sentWithdrawInfo = isWithdrawSuccessfullySent(initiatedWithdrawInfo);
         if (sentWithdrawInfo.isWithdrawSent()) {
           log::info("Withdraw successfully sent from {}", exchangeName());
-          action = NextAction::kCheckReceiver;
+          nextAction = NextAction::kCheckReceiver;
+          continue;  // to skip the sleep and immediately check receiver
         }
-        break;
+        std::this_thread::sleep_for(withdrawRefreshTime);
+        [[fallthrough]];
       case NextAction::kCheckReceiver:
         receivedWithdrawInfo = targetExchange.isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo);
         if (receivedWithdrawInfo.isWithdrawReceived()) {
           log::info("Withdraw successfully received at {}", targetExchange.exchangeName());
-          action = NextAction::kTerminate;
+          nextAction = NextAction::kTerminate;
+          continue;  // to skip the sleep and immediately terminate
         }
-        break;
+        std::this_thread::sleep_for(withdrawRefreshTime);
+        [[fallthrough]];
       case NextAction::kTerminate:
         break;
       default:
@@ -523,8 +529,8 @@ ReceivedWithdrawInfo ExchangePrivate::isWithdrawReceived(
   }
   RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
   const RecentDeposit *pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
-  return {pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
-          pClosestRecentDeposit != nullptr};
+  bool isWithdrawReceived = pClosestRecentDeposit != nullptr;
+  return {pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(), isWithdrawReceived};
 }
 
 }  // namespace cct::api

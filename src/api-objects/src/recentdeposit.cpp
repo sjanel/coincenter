@@ -12,22 +12,23 @@ const RecentDeposit *RecentDeposit::selectClosestRecentDeposit(RecentDepositVect
     return nullptr;
   }
 
-  // Sort from most recent to oldest
+  // First step: sort from most recent to oldest
   std::ranges::sort(recentDeposits, [](const auto &lhs, const auto &rhs) { return lhs.timePoint() > rhs.timePoint(); });
-  if (recentDeposits.front().amount() == amount()) {
-    log::debug("Found recent deposit {} with exact amount", recentDeposits.front().str());
-    return std::addressof(recentDeposits.front());
-  }
 
   // Heuristic - before considering the amounts, only take the most recent deposits (1 day as upper security bound to
   // avoid potential UTC differences)
-  auto endIt = std::partition_point(recentDeposits.begin(), recentDeposits.end(), [this](const RecentDeposit &deposit) {
+  auto endIt = std::ranges::partition_point(recentDeposits, [this](const RecentDeposit &deposit) {
     return deposit.timePoint() + std::chrono::days(1) > this->timePoint();
   });
 
-  if (endIt == recentDeposits.end()) {
+  if (endIt == recentDeposits.begin()) {
     log::debug("Found no time eligible recent deposit");
     return nullptr;
+  }
+
+  if (recentDeposits.front().amount() == amount()) {
+    log::debug("Found recent deposit {} with exact amount", recentDeposits.front().str());
+    return std::addressof(recentDeposits.front());
   }
 
   // Sort by amount difference
@@ -37,6 +38,7 @@ const RecentDeposit *RecentDeposit::selectClosestRecentDeposit(RecentDepositVect
     if (diffLhs != diffRhs) {
       return diffLhs < diffRhs;
     }
+    // if same amount, prefer the most recent deposit
     return lhs.timePoint() > rhs.timePoint();
   });
 
@@ -59,7 +61,7 @@ const RecentDeposit *RecentDeposit::selectClosestRecentDeposit(RecentDepositVect
 string RecentDeposit::str() const {
   string ret(_amount.str());
   ret.append(" at ");
-  ret.append(ToString(_timepoint));
+  ret.append(ToString(_timePoint));
   return ret;
 }
 }  // namespace cct
