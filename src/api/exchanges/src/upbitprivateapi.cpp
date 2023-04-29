@@ -87,7 +87,7 @@ bool UpbitPrivate::validateApiKey() {
   constexpr bool throwIfError = false;
   json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), throwIfError);
   auto errorIt = ret.find("error");
-  return errorIt == ret.end() && ret.size() != 0;
+  return errorIt == ret.end() && !ret.empty();
 }
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
