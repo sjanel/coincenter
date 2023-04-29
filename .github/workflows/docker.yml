@@ -8,7 +8,7 @@ on:
 
 jobs:
   docker:
-    name: Docker build based on alpine
+    name: Docker build
     runs-on: ubuntu-latest
     strategy:
       matrix:
