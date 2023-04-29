@@ -1,13 +1,8 @@
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM ubuntu:22.04 AS build
+FROM alpine:3.17.3 AS build
 
 # Install base & build dependencies, needed certificates for curl to work with https
-RUN apt update && \
-    apt upgrade -y && \
-    apt install build-essential curl libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip -y && \
-    curl -L -o /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
-    gunzip /usr/local/bin/ninja.gz && \
-    chmod a+x /usr/local/bin/ninja
+RUN apk add --update --upgrade --no-cache g++ libc-dev curl-dev cmake ninja git ca-certificates
 
 # Set default directory for application
 WORKDIR /app

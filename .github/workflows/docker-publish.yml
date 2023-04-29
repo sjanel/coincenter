@@ -9,6 +9,7 @@ jobs:
   docker-publish:
     name: Publish Docker image to public Docker hub
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -25,14 +26,25 @@ jobs:
       - name: Build and push latest
         uses: docker/build-push-action@v2
         with:
+          file: Dockerfile
           context: .
           push: true
           tags: sjanel/coincenter:latest
+
+      - name: Build and push alpine
+        uses: docker/build-push-action@v2
+        with:
+          file: alpine.Dockerfile
+          context: .
+          push: true
+          tags: sjanel/coincenter:alpine
 
       - name: Tag current version (if release one)
         run: |
           VERSION=`docker run sjanel/coincenter --version | head -1 | cut -d' ' -f 3`
           case $VERSION in *.*.*.*) exit 0;; esac
           NEW_TAG="sjanel/coincenter:${VERSION}"
-          docker tag sjanel/coincenter:latest $NEW_TAG
-          docker push $NEW_TAG
+          docker tag sjanel/coincenter:latest ${NEW_TAG}
+          docker push ${NEW_TAG}
+          docker tag sjanel/coincenter:alpine ${NEW_TAG}-alpine
+          docker push ${NEW_TAG}-alpine

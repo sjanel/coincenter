@@ -32,7 +32,7 @@ If you don't want to build `coincenter` locally, you can just download the publi
 docker run -t sjanel/coincenter -h
 ```
 
-Docker image does not contain additional `data` directory needed by `coincenter` (see [Configuration](#configuration))
+Docker image does not contain additional `data` directory needed by `coincenter` (see [Configuration](CONFIG.md))
 
 To bind your 'data' directory from host to the docker container, you can use `--mount` option:
 
@@ -67,9 +67,14 @@ In addition, the basic minimum requirements are:
 
 #### Debian / Ubuntu
 
+Provided that your distribution is sufficiently recent, meta package `build-essential` should provide `gcc` with the correct version.
+Otherwise you can still force it:
+
 ```
 sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-11
 ```
+
+You can refer to the provided [Dockerfile](Dockerfile) for more information.
 
 #### Alpine
 
@@ -79,7 +84,7 @@ With `ninja` generator for instance:
 sudo apk update && sudo apk upgrade && sudo apk add g++ libc-dev curl-dev cmake ninja git linux-headers
 ```
 
-You can refer to the provided [Dockerfile](Dockerfile) for more information.
+You can refer to the provided [Dockerfile](alpine.Dockerfile) for more information.
 
 ### Windows
 
@@ -164,7 +169,12 @@ If you have it installed on your machine, `cmake` will link coincenter with it. 
 
 A **Docker** image is hosted in the public **Docker hub** registry with the name *sjanel/coincenter*, corresponding to latest successful build of `main` branch by the CI.
 
-You can create your own **Docker** image of `coincenter`. It uses **Alpine** Linux distribution as base and multi stage build to reduce the image size.
+It is built in two flavors:
+
+- **Ubuntu** based (default)
+- **Alpine** based (tagged `alpine` for the latest version and fixed versions with `-alpine` suffixes)
+
+You can create your own **Docker** image of `coincenter`.
 Build options (all optional):
 
 CMake build mode
