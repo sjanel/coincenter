@@ -305,7 +305,7 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
   }
 
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
-  return MonetaryAmount(result["price"].get<std::string_view>(), mk.quote());
+  return {result["price"].get<std::string_view>(), mk.quote()};
 }
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,

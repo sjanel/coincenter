@@ -79,8 +79,8 @@ TradeOptions ComputeTradeOptions(const CoincenterCmdLineOptions &cmdLineOptions,
       cmdLineOptions.tradeAsync ? TradeSyncPolicy::kAsynchronous : TradeSyncPolicy::kSynchronous;
   if (!cmdLineOptions.tradeStrategy.empty()) {
     PriceOptions priceOptions(cmdLineOptions.tradeStrategy);
-    return TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
-                        cmdLineOptions.tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy);
+    return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
+            tradeTypePolicy, tradeSyncPolicy};
   }
   if (!cmdLineOptions.tradePrice.empty()) {
     MonetaryAmount tradePrice(cmdLineOptions.tradePrice);
@@ -88,24 +88,24 @@ TradeOptions ComputeTradeOptions(const CoincenterCmdLineOptions &cmdLineOptions,
       // Then it must be a relative price
       RelativePrice relativePrice = static_cast<RelativePrice>(tradePrice.integerPart());
       PriceOptions priceOptions(relativePrice);
-      return TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
-                          cmdLineOptions.tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy);
+      return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
+              tradeTypePolicy, tradeSyncPolicy};
     }
     if (cmdLineOptions.isSmartTrade()) {
       throw invalid_argument("Absolute price is not compatible with smart buy / sell");
     }
     PriceOptions priceOptions(tradePrice);
-    return TradeOptions(priceOptions, timeoutAction, tradeMode, cmdLineOptions.tradeTimeout,
-                        cmdLineOptions.tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy);
+    return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
+            tradeTypePolicy, tradeSyncPolicy};
   }
-  return TradeOptions(timeoutAction, tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
-                      tradeTypePolicy, tradeSyncPolicy);
+  return {timeoutAction,   tradeMode,      cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
+          tradeTypePolicy, tradeSyncPolicy};
 }
 
 WithdrawOptions ComputeWithdrawOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
   WithdrawSyncPolicy withdrawSyncPolicy =
       cmdLineOptions.withdrawAsync ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
-  return WithdrawOptions(cmdLineOptions.withdrawRefreshTime, withdrawSyncPolicy);
+  return {cmdLineOptions.withdrawRefreshTime, withdrawSyncPolicy};
 }
 
 }  // namespace
