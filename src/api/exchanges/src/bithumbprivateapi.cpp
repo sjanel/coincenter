@@ -464,7 +464,7 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
 
       TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
 
-      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+      if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
 
@@ -473,13 +473,13 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
       id.push_back('-');
       id.append(ToString(microsecondsSinceEpoch));
 
-      if (depositsConstraints.isOrderIdDependent() && !depositsConstraints.depositIdSet().contains(id)) {
+      if (depositsConstraints.isIdDependent() && !depositsConstraints.idSet().contains(id)) {
         continue;
       }
 
       MonetaryAmount amountReceived(amountStr, currencyCode);
 
-      deposits.emplace_back(std::move(id), timestamp, amountReceived);
+      deposits.emplace_back(std::move(id), timestamp, amountReceived, Deposit::Status::kSuccess);
     }
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());

@@ -281,7 +281,7 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
     DepositsConstraints depositConstraints(currencyCode,
                                            std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMinAge),
                                            std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMaxAge),
-                                           DepositsConstraints::DepositIdSet(std::move(depositIds)));
+                                           DepositsConstraints::IdSet(std::move(depositIds)));
     _commands.emplace_back(CoincenterCommandType::kRecentDeposits)
         .setDepositsConstraints(std::move(depositConstraints))
         .setExchangeNames(std::move(exchanges));

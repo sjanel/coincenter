@@ -54,7 +54,10 @@ class CoincenterCommand {
   const ExchangeNames& exchangeNames() const { return _exchangeNames; }
 
   const OrdersConstraints& ordersConstraints() const { return std::get<OrdersConstraints>(_specialOptions); }
-  const DepositsConstraints& depositsConstraints() const { return std::get<DepositsConstraints>(_specialOptions); }
+
+  const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints() const {
+    return std::get<WithdrawsOrDepositsConstraints>(_specialOptions);
+  }
 
   const TradeOptions& tradeOptions() const { return std::get<TradeOptions>(_specialOptions); }
 
@@ -79,7 +82,7 @@ class CoincenterCommand {
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
 
  private:
-  using SpecialOptions = std::variant<OrdersConstraints, DepositsConstraints, TradeOptions, WithdrawOptions>;
+  using SpecialOptions = std::variant<OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions, WithdrawOptions>;
 
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;

@@ -495,20 +495,26 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
 }
 
 namespace {
-json DepositsConstraintsToJson(const DepositsConstraints &depositsConstraints) {
+
+enum class DepositOrWithdrawEnum : int8_t { kDeposit, kWithdraw };
+
+json DepositsConstraintsToJson(const WithdrawsOrDepositsConstraints &constraints,
+                               DepositOrWithdrawEnum depositOrWithdraw) {
   json ret;
-  if (depositsConstraints.isCurDefined()) {
-    ret.emplace("cur", depositsConstraints.currencyCode().str());
+  if (constraints.isCurDefined()) {
+    ret.emplace("cur", constraints.currencyCode().str());
   }
-  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
-    ret.emplace("receivedBefore", ToString(depositsConstraints.receivedBefore()));
+  if (constraints.isTimeBeforeDefined()) {
+    ret.emplace(depositOrWithdraw == DepositOrWithdrawEnum::kDeposit ? "receivedBefore" : "sentBefore",
+                ToString(constraints.timeBefore()));
   }
-  if (depositsConstraints.isReceivedTimeAfterDefined()) {
-    ret.emplace("receivedAfter", ToString(depositsConstraints.receivedAfter()));
+  if (constraints.isTimeAfterDefined()) {
+    ret.emplace(depositOrWithdraw == DepositOrWithdrawEnum::kDeposit ? "receivedAfter" : "sentAfter",
+                ToString(constraints.timeAfter()));
   }
-  if (depositsConstraints.isDepositIdDefined()) {
+  if (constraints.isIdDefined()) {
     json depositIds = json::array();
-    for (const string &depositId : depositsConstraints.depositIdSet()) {
+    for (const string &depositId : constraints.idSet()) {
       depositIds.emplace_back(depositId);
     }
     ret.emplace("matchIds", std::move(depositIds));
@@ -521,11 +527,11 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
                                              const DepositsConstraints &depositsConstraints) const {
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Received time", "Amount");
+      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Received time", "Amount", "Status");
       for (const auto &[exchangePtr, deposits] : depositsPerExchange) {
         for (const Deposit &deposit : deposits) {
-          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), deposit.depositId(),
-                                   deposit.receivedTimeStr(), deposit.amount().str());
+          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), deposit.id(), deposit.timeStr(),
+                                   deposit.amount().str(), deposit.statusStr());
         }
       }
       printTable(simpleTable);
@@ -534,7 +540,7 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
     case ApiOutputType::kJson: {
       json in;
       in.emplace("req", CoincenterCommandTypeToString(CoincenterCommandType::kRecentDeposits));
-      json inOpt = DepositsConstraintsToJson(depositsConstraints);
+      json inOpt = DepositsConstraintsToJson(depositsConstraints, DepositOrWithdrawEnum::kDeposit);
 
       if (!inOpt.empty()) {
         in.emplace("opt", std::move(inOpt));
@@ -545,10 +551,11 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
         json depositsJson = json::array();
         for (const Deposit &deposit : deposits) {
           json &depositJson = depositsJson.emplace_back();
-          depositJson.emplace("id", deposit.depositId());
+          depositJson.emplace("id", deposit.id());
           depositJson.emplace("cur", deposit.amount().currencyStr());
-          depositJson.emplace("receivedTime", deposit.receivedTimeStr());
+          depositJson.emplace("receivedTime", deposit.timeStr());
           depositJson.emplace("amount", deposit.amount().amountStr());
+          depositJson.emplace("status", deposit.statusStr());
         }
 
         auto it = out.find(exchangePtr->name());

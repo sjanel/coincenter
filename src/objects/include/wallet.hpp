@@ -31,7 +31,7 @@ class WalletCheck {
 class Wallet {
  public:
   /// Empty wallet that should not be used, just for temporary purposes.
-  Wallet() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+  Wallet() noexcept = default;
 
   /// Build a wallet with all information.
   Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,

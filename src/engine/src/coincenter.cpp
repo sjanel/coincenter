@@ -124,8 +124,9 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       break;
     }
     case CoincenterCommandType::kRecentDeposits: {
-      DepositsPerExchange depositsPerExchange = getRecentDeposits(cmd.exchangeNames(), cmd.depositsConstraints());
-      _queryResultPrinter.printRecentDeposits(depositsPerExchange, cmd.depositsConstraints());
+      DepositsPerExchange depositsPerExchange =
+          getRecentDeposits(cmd.exchangeNames(), cmd.withdrawsOrDepositsConstraints());
+      _queryResultPrinter.printRecentDeposits(depositsPerExchange, cmd.withdrawsOrDepositsConstraints());
       break;
     }
     case CoincenterCommandType::kTrade: {

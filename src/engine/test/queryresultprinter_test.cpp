@@ -1405,16 +1405,16 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterRecentDepositsBaseTest : public QueryResultPrinterTest {
  protected:
-  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC")};
-  Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP")};
-  Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR")};
-  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH")};
-  Deposit deposit5{"id5", tp4, MonetaryAmount("69204866.9", "DOGE")};
+  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC"), Deposit::Status::kSuccess};
+  Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP"), Deposit::Status::kSuccess};
+  Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR"), Deposit::Status::kFailureOrRejected};
+  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::kProcessing};
+  Deposit deposit5{"id5", tp4, MonetaryAmount("69204866.9", "DOGE"), Deposit::Status::kSuccess};
 };
 
 class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrinterRecentDepositsBaseTest {
  protected:
-  DepositsConstraints depositsConstraints;
+  DepositsConstraints constraints;
   DepositsPerExchange depositsPerExchange{{&exchange1, DepositsSet{}},
                                           {&exchange2, DepositsSet{deposit3, deposit5}},
                                           {&exchange4, DepositsSet{deposit2}},
@@ -1422,23 +1422,23 @@ class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrin
 };
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
-| Exchange | Account   | Exchange Id | Received time       | Amount          |
-------------------------------------------------------------------------------
-| bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    |
-| bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE |
-| huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          |
-| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       |
-| huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        |
-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+| Exchange | Account   | Exchange Id | Received time       | Amount          | Status     |
+-------------------------------------------------------------------------------------------
+| bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    | failed     |
+| bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE | success    |
+| huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          | success    |
+| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       | success    |
+| huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        | processing |
+-------------------------------------------------------------------------------------------
 )";
   expectStr(kExpected);
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(DepositsPerExchange{}, depositsConstraints);
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(DepositsPerExchange{}, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1450,7 +1450,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1466,13 +1466,15 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "15020.67",
           "cur": "EUR",
           "id": "id3",
-          "receivedTime": "2006-07-14 23:58:24"
+          "receivedTime": "2006-07-14 23:58:24",
+          "status": "failed"
         },
         {
           "amount": "69204866.9",
           "cur": "DOGE",
           "id": "id5",
-          "receivedTime": "2011-10-03 06:49:36"
+          "receivedTime": "2011-10-03 06:49:36",
+          "status": "success"
         }
       ]
     },
@@ -1482,13 +1484,15 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "0.045",
           "cur": "BTC",
           "id": "id1",
-          "receivedTime": "1999-03-25 04:46:43"
+          "receivedTime": "1999-03-25 04:46:43",
+          "status": "success"
         },
         {
           "amount": "1.31",
           "cur": "ETH",
           "id": "id4",
-          "receivedTime": "2011-10-03 06:49:36"
+          "receivedTime": "2011-10-03 06:49:36",
+          "status": "processing"
         }
       ],
       "testuser2": [
@@ -1496,7 +1500,8 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "37",
           "cur": "XRP",
           "id": "id2",
-          "receivedTime": "2002-06-23 07:58:35"
+          "receivedTime": "2002-06-23 07:58:35",
+          "status": "success"
         }
       ]
     }
@@ -1506,7 +1511,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentDeposits(depositsPerExchange, depositsConstraints);
+  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentDeposits(depositsPerExchange, constraints);
   expectNoStr();
 }
 

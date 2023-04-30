@@ -526,7 +526,7 @@ MonetaryAmount ExchangePrivate::queryWithdrawDelivery(
   ClosestRecentDepositPicker closestRecentDepositPicker;
 
   for (const Deposit &deposit : deposits) {
-    closestRecentDepositPicker.addDeposit(RecentDeposit(deposit.amount(), deposit.receivedTime()));
+    closestRecentDepositPicker.addDeposit(RecentDeposit(deposit.amount(), deposit.time()));
   }
 
   RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());

@@ -10,7 +10,7 @@ namespace cct {
 class MonitoringInfo {
  public:
   /// Creates an empty monitoring info without any monitoring usage
-  MonitoringInfo() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+  MonitoringInfo() noexcept = default;
 
   /// Creates a fully specified monitoring info.
   /// Port should be a valid port value (in [0-65535]). Note that port 0 is reserved and should not be attributed.

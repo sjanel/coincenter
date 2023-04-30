@@ -235,23 +235,34 @@ Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
   for (const json& depositDetail : depositJson) {
     std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
     int64_t id = depositDetail["id"].get<int64_t>();
-    if (depositStatus == "confirmed" || depositStatus == "safe" || depositStatus == "orphan") {
-      CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
-      MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
-      int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
-      TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
-      if (!depositsConstraints.validateReceivedTime(timestamp)) {
-        continue;
-      }
-      string idStr = ToString(id);
-      if (depositsConstraints.isDepositIdDefined() && !depositsConstraints.depositIdSet().contains(idStr)) {
-        continue;
-      }
-
-      deposits.emplace_back(std::move(idStr), timestamp, amount);
+    Deposit::Status status;
+    if (depositStatus == "unknown") {
+      status = Deposit::Status::kProcessing;
+    } else if (depositStatus == "confirming") {
+      status = Deposit::Status::kProcessing;
+    } else if (depositStatus == "confirmed") {
+      status = Deposit::Status::kSuccess;
+    } else if (depositStatus == "safe") {
+      status = Deposit::Status::kSuccess;
+    } else if (depositStatus == "orphan") {
+      status = Deposit::Status::kSuccess;
     } else {
-      log::debug("Discarding Huobi deposit {} with status {}", id, depositStatus);
+      throw exception("Unexpected deposit status '{}' from {}", depositStatus, exchangeName());
     }
+
+    CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
+    MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
+    int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
+    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    if (!depositsConstraints.validateTime(timestamp)) {
+      continue;
+    }
+    string idStr = ToString(id);
+    if (depositsConstraints.isIdDefined() && !depositsConstraints.idSet().contains(idStr)) {
+      continue;
+    }
+
+    deposits.emplace_back(std::move(idStr), timestamp, amount, status);
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;

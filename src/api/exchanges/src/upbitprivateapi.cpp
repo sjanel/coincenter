@@ -265,8 +265,8 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
   if (depositsConstraints.isCurDefined()) {
     options.append("currency", depositsConstraints.currencyCode().str());
   }
-  if (depositsConstraints.isDepositIdDefined()) {
-    for (std::string_view depositId : depositsConstraints.depositIdSet()) {
+  if (depositsConstraints.isIdDefined()) {
+    for (std::string_view depositId : depositsConstraints.idSet()) {
       // Use the "PHP" method of arrays in query string parameter
       options.append("txids[]", depositId);
     }
@@ -280,18 +280,38 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       deposits.reserve(result.size());
     }
     nbResults = static_cast<int>(result.size());
-    for (const json& trx : result) {
+    for (json& trx : result) {
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
       TimePoint timestamp =
           FromString(trx["done_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
-      if (!depositsConstraints.validateReceivedTime(timestamp)) {
+      if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
-      std::string_view id = trx["txid"].get<std::string_view>();
+      string& id = trx["txid"].get_ref<string&>();
 
-      deposits.emplace_back(id, timestamp, amount);
+      std::string_view statusStr = trx["state"].get<std::string_view>();
+      Deposit::Status status;
+      if (statusStr == "PROCESSING") {
+        status = Deposit::Status::kProcessing;
+      } else if (statusStr == "ACCEPTED") {
+        status = Deposit::Status::kSuccess;
+      } else if (statusStr == "CANCELLED") {
+        status = Deposit::Status::kFailureOrRejected;
+      } else if (statusStr == "REJECTED") {
+        status = Deposit::Status::kFailureOrRejected;
+      } else if (statusStr == "TRAVEL_RULE_SUSPECTED") {
+        status = Deposit::Status::kFailureOrRejected;
+      } else if (statusStr == "REFUNDING") {
+        status = Deposit::Status::kProcessing;
+      } else if (statusStr == "REFUNDED") {
+        status = Deposit::Status::kFailureOrRejected;
+      } else {
+        throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
+      }
+
+      deposits.emplace_back(std::move(id), timestamp, amount, status);
     }
   } while (nbResults == kNbResultsPerPage);  // there may be more pages
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());

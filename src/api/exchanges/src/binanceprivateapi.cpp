@@ -27,6 +27,24 @@ constexpr int kCancelRejectedStatusCode = -2011;
 constexpr int kNoSuchOrderStatusCode = -2013;
 constexpr int kInvalidApiKey = -2015;
 
+// Deposit statuses:
+// 0(0:pending,6: credited but cannot withdraw, 7=Wrong Deposit,8=Waiting User confirm, 1:success)
+constexpr int kDepositPendingCode = 0;
+constexpr int kDepositSuccessCode = 1;
+constexpr int kDepositCreditedButCannotWithdrawCode = 6;
+constexpr int kDepositWrongDepositCode = 7;
+constexpr int kDepositWaitingUserConfirmCode = 8;
+
+// Withdraw statuses:
+// 0(0:Email Sent,1:Cancelled 2:Awaiting Approval 3:Rejected 4:Processing 5:Failure 6:Completed)
+constexpr int kWithdrawEmailSentCode = 0;
+constexpr int kWithdrawCancelledCode = 1;
+constexpr int kWithdrawAwaitingApprovalCode = 2;
+constexpr int kWithdrawRejectedCode = 3;
+constexpr int kWithdrawProcessingCode = 4;
+constexpr int kWithdrawFailureCode = 5;
+constexpr int kWithdrawCompletedCode = 6;
+
 enum class QueryDelayDir : int8_t {
   kNoDir,
   kAhead,
@@ -330,30 +348,49 @@ Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& deposits
   if (depositsConstraints.isCurDefined()) {
     options.append("coin", depositsConstraints.currencyCode().str());
   }
-  if (depositsConstraints.isReceivedTimeAfterDefined()) {
-    options.append("startTime", TimestampToMs(depositsConstraints.receivedAfter()));
+  if (depositsConstraints.isTimeAfterDefined()) {
+    options.append("startTime", TimestampToMs(depositsConstraints.timeAfter()));
   }
-  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
-    options.append("endTime", TimestampToMs(depositsConstraints.receivedBefore()));
+  if (depositsConstraints.isTimeBeforeDefined()) {
+    options.append("endTime", TimestampToMs(depositsConstraints.timeBefore()));
   }
-  if (depositsConstraints.isDepositIdDefined()) {
-    if (depositsConstraints.depositIdSet().size() == 1) {
-      options.append("txId", depositsConstraints.depositIdSet().front());
+  if (depositsConstraints.isIdDefined()) {
+    if (depositsConstraints.idSet().size() == 1) {
+      options.append("txId", depositsConstraints.idSet().front());
     }
   }
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
                                     _queryDelay, std::move(options));
   for (json& depositDetail : depositStatus) {
-    int status = depositDetail["status"].get<int>();
-    if (status == 1) {  // 1: success, 0: pending, 6: credited but cannot withdraw
-      CurrencyCode currencyCode(depositDetail["coin"].get<std::string_view>());
-      string& id = depositDetail["id"].get_ref<string&>();
-      MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
-      int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
-      TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
-
-      deposits.emplace_back(std::move(id), timestamp, amountReceived);
+    int statusInt = depositDetail["status"].get<int>();
+    Deposit::Status status;
+    switch (statusInt) {
+      case kDepositPendingCode:
+        status = Deposit::Status::kProcessing;
+        break;
+      case kDepositSuccessCode:
+        status = Deposit::Status::kSuccess;
+        break;
+      case kDepositCreditedButCannotWithdrawCode:
+        status = Deposit::Status::kSuccess;
+        break;
+      case kDepositWrongDepositCode:
+        status = Deposit::Status::kFailureOrRejected;
+        break;
+      case kDepositWaitingUserConfirmCode:
+        status = Deposit::Status::kProcessing;
+        break;
+      default:
+        throw exception("Unknown deposit status code {}", statusInt);
     }
+
+    CurrencyCode currencyCode(depositDetail["coin"].get<std::string_view>());
+    string& id = depositDetail["id"].get_ref<string&>();
+    MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
+    int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
+    TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
+
+    deposits.emplace_back(std::move(id), timestamp, amountReceived, status);
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
