@@ -176,7 +176,7 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
       exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions).hasBeenInitiated());
 }
 
-inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
+inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
@@ -208,7 +208,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
   }
 
-  WithdrawInfo createWithdrawInfo(MonetaryAmount grossAmount, bool isPercentageWithdraw) {
+  DeliveredWithdrawInfo createWithdrawInfo(MonetaryAmount grossAmount, bool isPercentageWithdraw) {
     if (isPercentageWithdraw) {
       EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
       grossAmount = (grossAmount.toNeutral() * balancePortfolio1.get(cur)) / 100;
@@ -225,8 +225,8 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
     EXPECT_CALL(exchangePrivate1, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(sentWithdrawInfo));
-    EXPECT_CALL(exchangePrivate2, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
-        .WillOnce(testing::Return(api::ReceivedWithdrawInfo{netEmittedAmount, true}));
+    EXPECT_CALL(exchangePrivate2, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
+        .WillOnce(testing::Return(netEmittedAmount));
     return {std::move(initiatedWithdrawInfo), netEmittedAmount};
   }
 

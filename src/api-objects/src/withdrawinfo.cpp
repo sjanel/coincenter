@@ -12,13 +12,13 @@ InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, string with
       _initiatedTime(initiatedTime) {}
 }  // namespace api
 
-WithdrawInfo::WithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,
-                           TimePoint receivedTime)
+DeliveredWithdrawInfo::DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo,
+                                             MonetaryAmount receivedAmount, TimePoint receivedTime)
     : _initiatedWithdrawInfo(std::move(initiatedWithdrawInfo)),
       _receivedTime(receivedTime),
       _receivedAmount(receivedAmount) {}
 
-std::string_view WithdrawInfo::withdrawId() const {
+std::string_view DeliveredWithdrawInfo::withdrawId() const {
   if (!hasBeenInitiated()) {
     throw exception("Cannot retrieve withdraw id of an empty withdraw");
   }

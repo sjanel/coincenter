@@ -788,7 +788,7 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
   }
 }
 
-void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, MonetaryAmount grossAmount,
+void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
                                        bool isPercentageWithdraw, const ExchangeName &fromPrivateExchangeName,
                                        const ExchangeName &toPrivateExchangeName,
                                        const WithdrawOptions &withdrawOptions) const {
@@ -797,8 +797,9 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       SimpleTable simpleTable("From Exchange", "To Exchange", "Gross withdraw amount", "Initiated time",
                               "Received time", "Net received amount");
       simpleTable.emplace_back(fromPrivateExchangeName.name(), toPrivateExchangeName.name(), grossAmount.str(),
-                               ToString(withdrawInfo.initiatedTime()), ToString(withdrawInfo.receivedTime()),
-                               withdrawInfo.receivedAmount().str());
+                               ToString(deliveredWithdrawInfo.initiatedTime()),
+                               ToString(deliveredWithdrawInfo.receivedTime()),
+                               deliveredWithdrawInfo.receivedAmount().str());
       printTable(simpleTable);
       break;
     }
@@ -819,17 +820,17 @@ void QueryResultPrinter::printWithdraw(const WithdrawInfo &withdrawInfo, Monetar
       json to;
       to.emplace("exchange", toPrivateExchangeName.name());
       to.emplace("account", toPrivateExchangeName.keyName());
-      to.emplace("address", withdrawInfo.receivingWallet().address());
-      if (withdrawInfo.receivingWallet().hasTag()) {
-        to.emplace("tag", withdrawInfo.receivingWallet().tag());
+      to.emplace("address", deliveredWithdrawInfo.receivingWallet().address());
+      if (deliveredWithdrawInfo.receivingWallet().hasTag()) {
+        to.emplace("tag", deliveredWithdrawInfo.receivingWallet().tag());
       }
 
       json out;
       out.emplace("from", std::move(from));
       out.emplace("to", std::move(to));
-      out.emplace("initiatedTime", ToString(withdrawInfo.initiatedTime()));
-      out.emplace("receivedTime", ToString(withdrawInfo.receivedTime()));
-      out.emplace("netReceivedAmount", withdrawInfo.receivedAmount().amountStr());
+      out.emplace("initiatedTime", ToString(deliveredWithdrawInfo.initiatedTime()));
+      out.emplace("receivedTime", ToString(deliveredWithdrawInfo.receivedTime()));
+      out.emplace("netReceivedAmount", deliveredWithdrawInfo.receivedAmount().amountStr());
 
       printJson(std::move(in), std::move(out));
       break;

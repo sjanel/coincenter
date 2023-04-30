@@ -95,8 +95,8 @@ class ExchangePrivate : public ExchangeBase {
   /// @param targetExchange private exchange to which we should deliver the transfer
   /// @param withdrawOptions specific options for this withdraw
   /// @return information about the withdraw
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                        const WithdrawOptions &withdrawOptions);
+  DeliveredWithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
+                                 const WithdrawOptions &withdrawOptions);
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
@@ -155,9 +155,9 @@ class ExchangePrivate : public ExchangeBase {
   virtual SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) = 0;
 
   /// Check if withdraw has been received by 'this' exchange.
-  /// Default implementation is provided. It can be overriden if necessary.
-  virtual ReceivedWithdrawInfo isWithdrawReceived(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                                  const SentWithdrawInfo &sentWithdrawInfo);
+  /// If so, return a non-default MonetaryAmount with the net received amount
+  virtual MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
+                                               const SentWithdrawInfo &sentWithdrawInfo);
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
 

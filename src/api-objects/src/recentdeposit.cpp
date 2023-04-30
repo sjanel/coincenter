@@ -2,39 +2,53 @@
 
 #include <algorithm>
 
+#include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "timestring.hpp"
 
-namespace cct {
-const RecentDeposit *RecentDeposit::selectClosestRecentDeposit(RecentDepositVector &recentDeposits) const {
-  if (recentDeposits.empty()) {
+namespace cct::api {
+
+void ClosestRecentDepositPicker::addDeposit(const RecentDeposit &recentDeposit) {
+  _recentDeposits.push_back(recentDeposit);
+}
+
+RecentDeposit ClosestRecentDepositPicker::pickClosestRecentDepositOrDefault(const RecentDeposit &expectedDeposit) {
+  const RecentDeposit *pClosestRecentDeposit = selectClosestRecentDeposit(expectedDeposit);
+  if (pClosestRecentDeposit == nullptr) {
+    return {};
+  }
+  return *pClosestRecentDeposit;
+}
+
+const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(const RecentDeposit &expectedDeposit) {
+  if (_recentDeposits.empty()) {
     log::debug("No recent deposits yet");
     return nullptr;
   }
 
   // First step: sort from most recent to oldest
-  std::ranges::sort(recentDeposits, [](const auto &lhs, const auto &rhs) { return lhs.timePoint() > rhs.timePoint(); });
+  std::ranges::sort(_recentDeposits,
+                    [](const auto &lhs, const auto &rhs) { return lhs.timePoint() > rhs.timePoint(); });
 
   // Heuristic - before considering the amounts, only take the most recent deposits (1 day as upper security bound to
   // avoid potential UTC differences)
-  auto endIt = std::ranges::partition_point(recentDeposits, [this](const RecentDeposit &deposit) {
-    return deposit.timePoint() + std::chrono::days(1) > this->timePoint();
+  auto endIt = std::ranges::partition_point(_recentDeposits, [&expectedDeposit](const RecentDeposit &deposit) {
+    return deposit.timePoint() + std::chrono::days(1) > expectedDeposit.timePoint();
   });
 
-  if (endIt == recentDeposits.begin()) {
+  if (endIt == _recentDeposits.begin()) {
     log::debug("Found no time eligible recent deposit");
     return nullptr;
   }
 
-  if (recentDeposits.front().amount() == amount()) {
-    log::debug("Found recent deposit {} with exact amount", recentDeposits.front().str());
-    return std::addressof(recentDeposits.front());
+  if (_recentDeposits.front().amount() == expectedDeposit.amount()) {
+    log::debug("Found recent deposit {} with exact amount", _recentDeposits.front());
+    return std::addressof(_recentDeposits.front());
   }
 
   // Sort by amount difference
-  std::sort(recentDeposits.begin(), endIt, [this](const auto &lhs, const auto &rhs) {
-    auto diffLhs = (lhs.amount() - this->amount()).abs();
-    auto diffRhs = (rhs.amount() - this->amount()).abs();
+  std::sort(_recentDeposits.begin(), endIt, [&expectedDeposit](const auto &lhs, const auto &rhs) {
+    auto diffLhs = (lhs.amount() - expectedDeposit.amount()).abs();
+    auto diffRhs = (rhs.amount() - expectedDeposit.amount()).abs();
     if (diffLhs != diffRhs) {
       return diffLhs < diffRhs;
     }
@@ -44,24 +58,20 @@ const RecentDeposit *RecentDeposit::selectClosestRecentDeposit(RecentDepositVect
 
   static constexpr double kMaxRelativeDifferenceForSelection = 0.001;
 
-  double closestAmount = recentDeposits.front().amount().toDouble();
-  double ourAmount = amount().toDouble();
+  double closestAmount = _recentDeposits.front().amount().toDouble();
+  double ourAmount = expectedDeposit.amount().toDouble();
   double boundMin = ourAmount * (1.0 - kMaxRelativeDifferenceForSelection);
   double boundMax = ourAmount * (1.0 + kMaxRelativeDifferenceForSelection);
 
-  assert(boundMin >= 0 && boundMax >= 0);
+  if (boundMin < 0 || boundMax < 0) {
+    throw exception("Unexpected bounds [{}-{}]", boundMin, boundMax);
+  }
   if (closestAmount > boundMin && closestAmount < boundMax) {
-    log::debug("Found recent deposit {} with close amount", recentDeposits.front().str());
-    return std::addressof(recentDeposits.front());
+    log::debug("Found recent deposit {} with close amount", _recentDeposits.front());
+    return std::addressof(_recentDeposits.front());
   }
   log::debug("Found no recent deposit with close amount");
   return nullptr;
 }
 
-string RecentDeposit::str() const {
-  string ret(_amount.str());
-  ret.append(" at ");
-  ret.append(ToString(_timePoint));
-  return ret;
-}
-}  // namespace cct
+}  // namespace cct::api
