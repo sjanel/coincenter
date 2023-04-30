@@ -314,6 +314,77 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
   return deposits;
 }
 
+namespace {
+Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool logStatus) {
+  if (statusStr == "PROCESSING") {
+    if (logStatus) {
+      log::debug("Processing");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "WALLET_PROCESSING") {
+    if (logStatus) {
+      log::debug("Wallet processing");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "SUCCESS") {
+    if (logStatus) {
+      log::debug("Success");
+    }
+    return Withdraw::Status::kSuccess;
+  }
+  if (statusStr == "FAILURE") {
+    if (logStatus) {
+      log::warn("Failure");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  throw exception("unknown status value '{}' returned by Kucoin", statusStr);
+}
+}  // namespace
+
+Withdraws KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  CurlPostData options;
+  if (withdrawsConstraints.isCurDefined()) {
+    options.append("currency", withdrawsConstraints.currencyCode().str());
+  }
+  if (withdrawsConstraints.isTimeAfterDefined()) {
+    options.append("startAt", TimestampToMs(withdrawsConstraints.timeAfter()));
+  }
+  if (withdrawsConstraints.isTimeBeforeDefined()) {
+    options.append("endAt", TimestampToMs(withdrawsConstraints.timeBefore()));
+  }
+  json withdrawJson =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals", std::move(options))["data"];
+  auto itemsIt = withdrawJson.find("items");
+  if (itemsIt == withdrawJson.end()) {
+    throw exception("Unexpected result from Kucoin withdraw API");
+  }
+  Withdraws withdraws;
+  withdraws.reserve(itemsIt->size());
+  for (const json& withdrawDetail : *itemsIt) {
+    CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
+    MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);
+    MonetaryAmount fee(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
+    int64_t millisecondsSinceEpoch = withdrawDetail["updatedAt"].get<int64_t>();
+
+    std::string_view statusStr = withdrawDetail["status"].get<std::string_view>();
+    Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isIdDependent());
+
+    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+
+    std::string_view id = withdrawDetail["id"].get<std::string_view>();
+    if (!withdrawsConstraints.validateId(id)) {
+      continue;
+    }
+
+    withdraws.emplace_back(id, timestamp, netEmittedAmount, status, fee);
+  }
+  log::info("Retrieved {} recent withdrawals for {}", withdraws.size(), exchangeName());
+  return withdraws;
+}
+
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
                                          const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
@@ -424,41 +495,6 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/withdrawals", std::move(opts))["data"];
   return {std::move(destinationWallet), std::move(result["withdrawalId"].get_ref<string&>()), grossAmount};
-}
-
-SentWithdrawInfo KucoinPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
-  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
-                                   {{"currency", currencyCode.str()}})["data"];
-  MonetaryAmount netEmittedAmount;
-  MonetaryAmount fee;
-  bool isWithdrawSent = false;
-  for (const json& withdrawDetail : withdrawJson["items"]) {
-    if (withdrawDetail["id"].get<std::string_view>() == withdrawId) {
-      std::string_view withdrawStatus = withdrawDetail["status"].get<std::string_view>();
-      if (withdrawStatus == "PROCESSING") {
-        log::debug("Processing");
-      } else if (withdrawStatus == "WALLET_PROCESSING") {
-        log::debug("Wallet processing");
-      } else if (withdrawStatus == "SUCCESS") {
-        log::debug("Success");
-        isWithdrawSent = true;
-      } else if (withdrawStatus == "FAILURE") {
-        log::warn("Failure");
-      } else {
-        log::error("unknown status value '{}'", withdrawStatus);
-      }
-      netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);
-      fee = MonetaryAmount(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
-      if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
-        log::error("{} + {} != {}, maybe a change in API", netEmittedAmount, fee,
-                   initiatedWithdrawInfo.grossEmittedAmount());
-      }
-      break;
-    }
-  }
-  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 }  // namespace cct::api

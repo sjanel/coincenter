@@ -19,7 +19,6 @@
 #include "monetaryamount.hpp"
 #include "ssl_sha.hpp"
 #include "timestring.hpp"
-#include "toupperlower.hpp"
 #include "upbitpublicapi.hpp"
 
 namespace cct::api {
@@ -300,7 +299,13 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      TimePoint timestamp = FromString(trx["done_at"].get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      auto timeIt = trx.find("done_at");
+      if (timeIt == trx.end() || timeIt->is_null()) {
+        // It can be the case for deposits that failed - take the start time instead of the end time in this case
+        timeIt = trx.find("created_at");
+      }
+
+      TimePoint timestamp = FromString(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
@@ -314,6 +319,71 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
+}
+
+namespace {
+Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "WAITING" || statusStr == "PROCESSING") {
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "DONE") {
+    return Withdraw::Status::kSuccess;
+  }
+  // In earlier versions of Upbit API, 'CANCELED' was written with this typo.
+  // Let's support both spellings to avoid issues.
+  if (statusStr == "FAILED" || statusStr == "CANCELLED" || statusStr == "CANCELED" || statusStr == "REJECTED") {
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  throw exception("Unrecognized withdraw status '{}' from Upbit", statusStr);
+}
+}  // namespace
+
+Withdraws UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  static constexpr int kNbResultsPerPage = 100;
+  CurlPostData options{{"limit", kNbResultsPerPage}};
+  if (withdrawsConstraints.isCurDefined()) {
+    options.append("currency", withdrawsConstraints.currencyCode().str());
+  }
+  if (withdrawsConstraints.isIdDefined()) {
+    for (std::string_view depositId : withdrawsConstraints.idSet()) {
+      // Use the "PHP" method of arrays in query string parameter
+      options.append("txids[]", depositId);
+    }
+  }
+
+  // To make sure we retrieve all results, ask for next page when maximum results per page is returned
+  for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
+    options.set("page", page);
+    json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options);
+    if (withdraws.empty()) {
+      withdraws.reserve(result.size());
+    }
+    nbResults = static_cast<int>(result.size());
+    for (json& trx : result) {
+      CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
+      MonetaryAmount netEmittedAmount(trx["amount"].get<std::string_view>(), currencyCode);
+      MonetaryAmount withdrawFee(trx["fee"].get<std::string_view>(), currencyCode);
+      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
+      auto timeIt = trx.find("done_at");
+      if (timeIt == trx.end() || timeIt->is_null()) {
+        // It can be the case for withdraws that failed - take the start time instead of the end time in this case
+        timeIt = trx.find("created_at");
+      }
+      TimePoint timestamp = FromString(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      if (!withdrawsConstraints.validateTime(timestamp)) {
+        continue;
+      }
+      string& id = trx["txid"].get_ref<string&>();
+
+      std::string_view statusStr = trx["state"].get<std::string_view>();
+      Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr);
+
+      withdraws.emplace_back(std::move(id), timestamp, netEmittedAmount, status, withdrawFee);
+    }
+  }
+  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
+  return withdraws;
 }
 
 namespace {
@@ -473,30 +543,6 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
   return {std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount};
-}
-
-SentWithdrawInfo UpbitPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraw",
-                             {{"currency", currencyCode.str()}, {"uuid", initiatedWithdrawInfo.withdrawId()}});
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  MonetaryAmount fee(result["fee"].get<std::string_view>(), currencyCode);
-  if (fee != withdrawFee) {
-    log::warn("{} withdraw fee is {} instead of {}", _exchangePublic.name(), fee, withdrawFee);
-  }
-  MonetaryAmount netEmittedAmount(result["amount"].get<std::string_view>(), currencyCode);
-
-  std::string_view state(result["state"].get<std::string_view>());
-  string stateUpperStr = ToUpper(state);
-  log::debug("{} withdrawal status {}", _exchangePublic.name(), state);
-  // state values: {'submitting', 'submitted', 'almost_accepted', 'rejected', 'accepted', 'processing', 'done',
-  // 'canceled'}
-  const bool isCanceled = stateUpperStr == "CANCELED";
-  if (isCanceled) {
-    log::error("{} withdraw of {} has been cancelled", _exchangePublic.name(), currencyCode);
-  }
-  const bool isDone = stateUpperStr == "DONE";
-  return {netEmittedAmount, fee, isDone || isCanceled};
 }
 
 }  // namespace cct::api

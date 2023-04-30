@@ -183,6 +183,11 @@ struct CoincenterCmdLineOptions {
   Duration depositsMinAge{};
   Duration depositsMaxAge{};
 
+  std::optional<std::string_view> recentWithdrawsInfo;
+  std::string_view withdrawsIds;
+  Duration withdrawsMinAge{};
+  Duration withdrawsMaxAge{};
+
   std::string_view withdraw;
   std::string_view withdrawAll;
   std::string_view withdrawFee;
@@ -364,8 +369,25 @@ struct CoincenterAllowedOptions {
        &OptValueType::depositsIds},
       {{{"Private queries", 33}, "--deposits-min-age", "<time>", "Only select deposits with given minimum age."},
        &OptValueType::depositsMinAge},
-      {{{"Private queries", 34}, "--deposits-max-age", "<time>", "Only select deposits with given maximum age."},
+      {{{"Private queries", 33}, "--deposits-max-age", "<time>", "Only select deposits with given maximum age."},
        &OptValueType::depositsMaxAge},
+      {{{"Private queries", 34},
+        "--withdraws",
+        "<cur[,exch1,...]>",
+        "Print recent withdraws matching selection criteria.\n"
+        "Currency and exchanges are optional, "
+        "returned withdraws will be filtered accordingly."},
+       &OptValueType::recentWithdrawsInfo},
+      {{{"Private queries", 34},
+        "--withdraws-id",
+        "<id1,...>",
+        "Only select withdraws with given ID.\n"
+        "One or several IDs can be given, should be comma separated."},
+       &OptValueType::withdrawsIds},
+      {{{"Private queries", 34}, "--withdraws-min-age", "<time>", "Only select withdraws with given minimum age."},
+       &OptValueType::withdrawsMinAge},
+      {{{"Private queries", 34}, "--withdraws-max-age", "<time>", "Only select withdraws with given maximum age."},
+       &OptValueType::withdrawsMaxAge},
       {{{"Trade", 40}, "--buy", "<amt cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
       {{{"Trade", 40}, "--sell", "<amt[%]cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
       {{{"Trade", 40},

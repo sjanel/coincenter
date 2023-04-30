@@ -11,6 +11,7 @@
 #include "ordersconstraints.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 class CoincenterCommand {
@@ -25,6 +26,9 @@ class CoincenterCommand {
 
   CoincenterCommand& setDepositsConstraints(const DepositsConstraints& depositsConstraints);
   CoincenterCommand& setDepositsConstraints(DepositsConstraints&& depositsConstraints);
+
+  CoincenterCommand& setWithdrawsConstraints(const WithdrawsConstraints& withdrawsConstraints);
+  CoincenterCommand& setWithdrawsConstraints(WithdrawsConstraints&& withdrawsConstraints);
 
   CoincenterCommand& setTradeOptions(const TradeOptions& tradeOptions);
   CoincenterCommand& setTradeOptions(TradeOptions&& tradeOptions);

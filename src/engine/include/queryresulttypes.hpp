@@ -47,6 +47,8 @@ using OpenedOrdersPerExchange = SmallVector<std::pair<const Exchange *, OrdersSe
 
 using DepositsPerExchange = SmallVector<std::pair<const Exchange *, DepositsSet>, kTypicalNbPrivateAccounts>;
 
+using WithdrawsPerExchange = SmallVector<std::pair<const Exchange *, WithdrawsSet>, kTypicalNbPrivateAccounts>;
+
 using NbCancelledOrdersPerExchange = SmallVector<std::pair<const Exchange *, int>, kTypicalNbPrivateAccounts>;
 
 using ConversionPathPerExchange = FixedCapacityVector<std::pair<const Exchange *, MarketsPath>, kNbSupportedExchanges>;

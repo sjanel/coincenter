@@ -129,6 +129,12 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       _queryResultPrinter.printRecentDeposits(depositsPerExchange, cmd.withdrawsOrDepositsConstraints());
       break;
     }
+    case CoincenterCommandType::kRecentWithdraws: {
+      WithdrawsPerExchange withdrawsPerExchange =
+          getRecentWithdraws(cmd.exchangeNames(), cmd.withdrawsOrDepositsConstraints());
+      _queryResultPrinter.printRecentWithdraws(withdrawsPerExchange, cmd.withdrawsOrDepositsConstraints());
+      break;
+    }
     case CoincenterCommandType::kTrade: {
       TradedAmountsPerExchange tradedAmountsPerExchange =
           trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
@@ -228,6 +234,11 @@ NbCancelledOrdersPerExchange Coincenter::cancelOrders(std::span<const ExchangeNa
 DepositsPerExchange Coincenter::getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
                                                   const DepositsConstraints &depositsConstraints) {
   return _exchangesOrchestrator.getRecentDeposits(privateExchangeNames, depositsConstraints);
+}
+
+WithdrawsPerExchange Coincenter::getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
+                                                    const WithdrawsConstraints &withdrawsConstraints) {
+  return _exchangesOrchestrator.getRecentWithdraws(privateExchangeNames, withdrawsConstraints);
 }
 
 TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(

@@ -82,6 +82,10 @@ class Coincenter {
   DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
                                         const DepositsConstraints &depositsConstraints);
 
+  /// Get recent withdraws on given list of exchanges following given constraints
+  WithdrawsPerExchange getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
+                                          const WithdrawsConstraints &withdrawsConstraints);
+
   /// Attemps to sell all small amount of 'currencyCode' (dust) for given list of accounts.
   /// Dust threshold should be set first in the config file for the corresponding currency
   TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,

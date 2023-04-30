@@ -13,6 +13,7 @@
 #include "market.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 class SimpleTable;
@@ -66,6 +67,9 @@ class QueryResultPrinter {
 
   void printRecentDeposits(const DepositsPerExchange &depositsPerExchange,
                            const DepositsConstraints &depositsConstraints) const;
+
+  void printRecentWithdraws(const WithdrawsPerExchange &withdrawsPerExchange,
+                            const WithdrawsConstraints &withdrawsConstraints) const;
 
   void printConversionPath(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 

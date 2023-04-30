@@ -533,4 +533,36 @@ MonetaryAmount ExchangePrivate::queryWithdrawDelivery(
   return closestRecentDepositPicker.pickClosestRecentDepositOrDefault(expectedDeposit).amount();
 }
 
+SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) {
+  MonetaryAmount grossEmittedAmount = initiatedWithdrawInfo.grossEmittedAmount();
+  const CurrencyCode currencyCode = grossEmittedAmount.currencyCode();
+  std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
+  Withdraws withdraws = queryRecentWithdraws(WithdrawsConstraints(currencyCode, withdrawId));
+
+  MonetaryAmount netEmittedAmount;
+  MonetaryAmount fee;
+  bool isWithdrawSent = false;
+
+  auto mostRecentMatchingWithdrawIt = std::ranges::max_element(withdraws);
+  if (mostRecentMatchingWithdrawIt != withdraws.end()) {
+    if (withdraws.size() > 1) {
+      log::error("Unexpected number of matching withdraws ({}) with unique ID, only most recent one will be considered",
+                 withdraws.size());
+    }
+
+    const Withdraw &withdraw = *mostRecentMatchingWithdrawIt;
+    if (withdraw.status() == Withdraw::Status::kSuccess) {
+      isWithdrawSent = true;
+    }
+    netEmittedAmount = withdraw.amount();
+    fee = withdraw.withdrawFee();
+    if (netEmittedAmount + fee != grossEmittedAmount) {
+      log::warn("Net amount {} + fee {} != gross emitted amount {}, unharmful but may output incorrect amounts",
+                netEmittedAmount, fee, grossEmittedAmount);
+    }
+  }
+
+  return {netEmittedAmount, fee, isWithdrawSent};
+}
+
 }  // namespace cct::api

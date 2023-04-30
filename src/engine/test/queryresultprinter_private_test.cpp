@@ -1,384 +1,10 @@
-#include "queryresultprinter.hpp"
-
 #include <gtest/gtest.h>
 
-#include <sstream>
-#include <string_view>
-
-#include "cct_config.hpp"
-#include "exchangedata_test.hpp"
+#include "queryresultprinter.hpp"
+#include "queryresultprinter_base_test.hpp"
 #include "withdrawoptions.hpp"
 
 namespace cct {
-
-class QueryResultPrinterTest : public ExchangesBaseTest {
- protected:
-  TimePoint tp1{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 9000000}};
-  TimePoint tp3{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
-  TimePoint tp4{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
-
-  void SetUp() override { ss.clear(); }
-
-  void expectNoStr() const { EXPECT_TRUE(ss.view().empty()); }
-
-  void expectStr(std::string_view expected) const {
-    ASSERT_FALSE(expected.empty());
-    expected.remove_prefix(1);  // skip first newline char of expected string
-    EXPECT_EQ(ss.view(), expected);
-  }
-
-  void expectJson(std::string_view expected) const {
-    ASSERT_FALSE(expected.empty());
-    expected.remove_prefix(1);  // skip first newline char of expected string
-    EXPECT_EQ(json::parse(ss.view()), json::parse(expected));
-  }
-
-  std::ostringstream ss;
-};
-
-class QueryResultPrinterHealthCheckTest : public QueryResultPrinterTest {
- protected:
-  ExchangeHealthCheckStatus healthCheckPerExchange{{&exchange1, true}, {&exchange4, false}};
-};
-
-TEST_F(QueryResultPrinterHealthCheckTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printHealthCheck(healthCheckPerExchange);
-  static constexpr std::string_view kExpected = R"(
-----------------------------------
-| Exchange | Health Check status |
-----------------------------------
-| binance  | OK                  |
-| huobi    | Not OK!             |
-----------------------------------
-)";
-
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterHealthCheckTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(ExchangeHealthCheckStatus{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "req": "HealthCheck"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterHealthCheckTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(healthCheckPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "req": "HealthCheck"
-  },
-  "out": {
-    "binance": true,
-    "huobi": false
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterHealthCheckTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printHealthCheck(healthCheckPerExchange);
-  expectNoStr();
-}
-
-class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
- protected:
-  CurrencyCode cur1{"XRP"};
-  CurrencyCode cur2;
-  MarketsPerExchange marketsPerExchange{{&exchange1, MarketSet{Market{cur1, "KRW"}, Market{cur1, "BTC"}}},
-                                        {&exchange3, MarketSet{Market{cur1, "EUR"}}}};
-};
-
-TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
-  static constexpr std::string_view kExpected = R"(
--------------------------------
-| Exchange | Markets with XRP |
--------------------------------
-| binance  | XRP-BTC          |
-| binance  | XRP-KRW          |
-| huobi    | XRP-EUR          |
--------------------------------
-)";
-
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printMarkets(cur1, cur2, MarketsPerExchange{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "cur1": "XRP"
-    },
-    "req": "Markets"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "cur1": "XRP"
-    },
-    "req": "Markets"
-  },
-  "out": {
-    "binance": [
-      "XRP-BTC",
-      "XRP-KRW"
-    ],
-    "huobi": [
-      "XRP-EUR"
-    ]
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printMarkets(cur1, cur2, marketsPerExchange);
-  expectNoStr();
-}
-
-class QueryResultPrinterTickerTest : public QueryResultPrinterTest {
- protected:
-  ExchangeTickerMaps exchangeTickerMaps{
-      {&exchange2, MarketOrderBookMap{{Market{"ETH", "EUR"}, this->marketOrderBook11}}},
-      {&exchange4, MarketOrderBookMap{{Market{"BTC", "EUR"}, this->marketOrderBook21},
-                                      {Market{"XRP", "BTC"}, this->marketOrderBook3}}}};
-};
-
-TEST_F(QueryResultPrinterTickerTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printTickerInformation(exchangeTickerMaps);
-  static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
-| Exchange | Market  | Bid price    | Bid volume | Ask price    | Ask volume |
-------------------------------------------------------------------------------
-| bithumb  | ETH-EUR | 2301.05 EUR  | 17 ETH     | 2301.15 EUR  | 0.4 ETH    |
-| huobi    | BTC-EUR | 31051.01 EUR | 1.9087 BTC | 31051.02 EUR | 0.409 BTC  |
-| huobi    | XRP-BTC | 0.36 BTC     | 3494 XRP   | 0.37 BTC     | 916.4 XRP  |
-------------------------------------------------------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterTickerTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printTickerInformation(ExchangeTickerMaps{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "req": "Ticker"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterTickerTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printTickerInformation(exchangeTickerMaps);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "req": "Ticker"
-  },
-  "out": {
-    "bithumb": [
-      {
-        "ask": {
-          "a": "0.4",
-          "p": "2301.15"
-        },
-        "bid": {
-          "a": "17",
-          "p": "2301.05"
-        },
-        "pair": "ETH-EUR"
-      }
-    ],
-    "huobi": [
-      {
-        "ask": {
-          "a": "0.409",
-          "p": "31051.02"
-        },
-        "bid": {
-          "a": "1.9087",
-          "p": "31051.01"
-        },
-        "pair": "BTC-EUR"
-      },
-      {
-        "ask": {
-          "a": "916.4",
-          "p": "0.37"
-        },
-        "bid": {
-          "a": "3494",
-          "p": "0.36"
-        },
-        "pair": "XRP-BTC"
-      }
-    ]
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterTickerTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printTickerInformation(exchangeTickerMaps);
-  expectNoStr();
-}
-
-class QueryResultPrinterMarketOrderBookTest : public QueryResultPrinterTest {
- protected:
-  Market mk{"BTC", "EUR"};
-  int d = 3;
-  MarketOrderBook mob{askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec2, d};
-  MarketOrderBookConversionRates marketOrderBookConversionRates{{"exchangeA", mob, {}}, {"exchangeD", mob, {}}};
-};
-
-TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
-  static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------
-| Sellers of BTC (asks) | exchangeA BTC price in EUR | Buyers of BTC (bids) |
------------------------------------------------------------------------------
-| 0.18116               | 31056.7                    |                      |
-| 0.15058               | 31056.68                   |                      |
-| 0.12                  | 31056.67                   |                      |
-|                       | 31056.66                   | 0.00234              |
-|                       | 31056.65                   | 0.03292              |
-|                       | 31056.63                   | 0.0635               |
------------------------------------------------------------------------------
------------------------------------------------------------------------------
-| Sellers of BTC (asks) | exchangeD BTC price in EUR | Buyers of BTC (bids) |
------------------------------------------------------------------------------
-| 0.18116               | 31056.7                    |                      |
-| 0.15058               | 31056.68                   |                      |
-| 0.12                  | 31056.67                   |                      |
-|                       | 31056.66                   | 0.00234              |
-|                       | 31056.65                   | 0.03292              |
-|                       | 31056.63                   | 0.0635               |
------------------------------------------------------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printMarketOrderBooks(mk, CurrencyCode{}, d, MarketOrderBookConversionRates{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "depth": 3,
-      "pair": "BTC-EUR"
-    },
-    "req": "Orderbook"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "depth": 3,
-      "pair": "BTC-EUR"
-    },
-    "req": "Orderbook"
-  },
-  "out": {
-    "exchangeA": {
-      "ask": [
-        {
-          "a": "0.12",
-          "p": "31056.67"
-        },
-        {
-          "a": "0.15058",
-          "p": "31056.68"
-        },
-        {
-          "a": "0.18116",
-          "p": "31056.7"
-        }
-      ],
-      "bid": [
-        {
-          "a": "0.00234",
-          "p": "31056.66"
-        },
-        {
-          "a": "0.03292",
-          "p": "31056.65"
-        },
-        {
-          "a": "0.0635",
-          "p": "31056.63"
-        }
-      ]
-    },
-    "exchangeD": {
-      "ask": [
-        {
-          "a": "0.12",
-          "p": "31056.67"
-        },
-        {
-          "a": "0.15058",
-          "p": "31056.68"
-        },
-        {
-          "a": "0.18116",
-          "p": "31056.7"
-        }
-      ],
-      "bid": [
-        {
-          "a": "0.00234",
-          "p": "31056.66"
-        },
-        {
-          "a": "0.03292",
-          "p": "31056.65"
-        },
-        {
-          "a": "0.0635",
-          "p": "31056.63"
-        }
-      ]
-    }
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterMarketOrderBookTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
-  expectNoStr();
-}
 
 class QueryResultPrinterEmptyBalanceNoEquiCurTest : public QueryResultPrinterTest {
  protected:
@@ -1515,6 +1141,128 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
   expectNoStr();
 }
 
+class QueryResultPrinterRecentWithdrawsBaseTest : public QueryResultPrinterTest {
+ protected:
+  Withdraw withdraw1{"id1", tp3, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kSuccess,
+                     MonetaryAmount("0.00001", "BTC")};
+  Withdraw withdraw2{"id2", tp4, MonetaryAmount(37, "XRP"), Withdraw::Status::kSuccess, MonetaryAmount("0.02", "XRP")};
+  Withdraw withdraw3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Withdraw::Status::kFailureOrRejected,
+                     MonetaryAmount("0.1", "EUR")};
+  Withdraw withdraw4{"id4", tp2, MonetaryAmount("1.31", "ETH"), Withdraw::Status::kProcessing,
+                     MonetaryAmount("0.001", "ETH")};
+  Withdraw withdraw5{"id5", tp2, MonetaryAmount("69204866.9", "DOGE"), Withdraw::Status::kSuccess,
+                     MonetaryAmount(2, "DOGE")};
+};
+
+class QueryResultPrinterRecentWithdrawsNoConstraintsTest : public QueryResultPrinterRecentWithdrawsBaseTest {
+ protected:
+  WithdrawsConstraints constraints;
+  WithdrawsPerExchange withdrawsPerExchange{{&exchange1, WithdrawsSet{}},
+                                            {&exchange2, WithdrawsSet{withdraw3, withdraw5}},
+                                            {&exchange4, WithdrawsSet{withdraw2}},
+                                            {&exchange3, WithdrawsSet{withdraw4, withdraw1}}};
+};
+
+TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
+  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentWithdraws(withdrawsPerExchange, constraints);
+  static constexpr std::string_view kExpected = R"(
+------------------------------------------------------------------------------------------------------------
+| Exchange | Account   | Exchange Id | Sent time           | Net Emitted Amount | Fee         | Status     |
+------------------------------------------------------------------------------------------------------------
+| bithumb  | testuser1 | id3         | 1999-03-25 04:46:43 | 15020.67 EUR       | 0.1 EUR     | failed     |
+| bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | 69204866.9 DOGE    | 2 DOGE      | success    |
+| huobi    | testuser2 | id2         | 2011-10-03 06:49:36 | 37 XRP             | 0.02 XRP    | success    |
+| huobi    | testuser1 | id4         | 2002-06-23 07:58:35 | 1.31 ETH           | 0.001 ETH   | processing |
+| huobi    | testuser1 | id1         | 2006-07-14 23:58:24 | 0.045 BTC          | 0.00001 BTC | success    |
+------------------------------------------------------------------------------------------------------------
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, EmptyJson) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentWithdraws(WithdrawsPerExchange{}, constraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "RecentWithdraws"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
+  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentWithdraws(withdrawsPerExchange, constraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "RecentWithdraws"
+  },
+  "out": {
+    "binance": {
+      "testuser1": []
+    },
+    "bithumb": {
+      "testuser1": [
+        {
+          "cur": "EUR",
+          "fee": "0.1",
+          "id": "id3",
+          "netEmittedAmount": "15020.67",
+          "sentTime": "1999-03-25 04:46:43",
+          "status": "failed"
+        },
+        {
+          "cur": "DOGE",
+          "fee": "2",
+          "id": "id5",
+          "netEmittedAmount": "69204866.9",
+          "sentTime": "2002-06-23 07:58:35",
+          "status": "success"
+        }
+      ]
+    },
+    "huobi": {
+      "testuser1": [
+        {
+          "cur": "ETH",
+          "fee": "0.001",
+          "id": "id4",
+          "netEmittedAmount": "1.31",
+          "sentTime": "2002-06-23 07:58:35",
+          "status": "processing"
+        },
+        {
+          "cur": "BTC",
+          "fee": "0.00001",
+          "id": "id1",
+          "netEmittedAmount": "0.045",
+          "sentTime": "2006-07-14 23:58:24",
+          "status": "success"
+        }
+      ],
+      "testuser2": [
+        {
+          "cur": "XRP",
+          "fee": "0.02",
+          "id": "id2",
+          "netEmittedAmount": "37",
+          "sentTime": "2011-10-03 06:49:36",
+          "status": "success"
+        }
+      ]
+    }
+  }
+}
+)";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, NoPrint) {
+  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentWithdraws(withdrawsPerExchange, constraints);
+  expectNoStr();
+}
+
 class QueryResultPrinterCancelOrdersTest : public QueryResultPrinterTest {
  protected:
   OrdersConstraints ordersConstraints;
@@ -1583,401 +1331,6 @@ TEST_F(QueryResultPrinterCancelOrdersTest, Json) {
 
 TEST_F(QueryResultPrinterCancelOrdersTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint).printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
-  expectNoStr();
-}
-
-class QueryResultPrinterConversionPathTest : public QueryResultPrinterTest {
- protected:
-  Market marketForPath{"XLM", "XRP"};
-  ConversionPathPerExchange conversionPathPerExchange{
-      {&exchange1, MarketsPath{}},
-      {&exchange2, MarketsPath{Market{"XLM", "XRP"}}},
-      {&exchange4, MarketsPath{Market{"XLM", "AAA"}, Market{"BBB", "AAA"}, Market{"BBB", "XRP"}}}};
-};
-
-TEST_F(QueryResultPrinterConversionPathTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printConversionPath(marketForPath, conversionPathPerExchange);
-  static constexpr std::string_view kExpected = R"(
---------------------------------------------------
-| Exchange | Fastest conversion path for XLM-XRP |
---------------------------------------------------
-| bithumb  | XLM-XRP                             |
-| huobi    | XLM-AAA,BBB-AAA,BBB-XRP             |
---------------------------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterConversionPathTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printConversionPath(marketForPath, ConversionPathPerExchange{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "XLM-XRP"
-    },
-    "req": "ConversionPath"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterConversionPathTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printConversionPath(marketForPath, conversionPathPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "XLM-XRP"
-    },
-    "req": "ConversionPath"
-  },
-  "out": {
-    "bithumb": [
-      "XLM-XRP"
-    ],
-    "huobi": [
-      "XLM-AAA",
-      "BBB-AAA",
-      "BBB-XRP"
-    ]
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterConversionPathTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printConversionPath(marketForPath, conversionPathPerExchange);
-  expectNoStr();
-}
-
-class QueryResultPrinterWithdrawFeeTest : public QueryResultPrinterTest {
- protected:
-  CurrencyCode curWithdrawFee{"ETH"};
-  MonetaryAmountPerExchange withdrawFeePerExchange{{&exchange2, MonetaryAmount{"0.15", "ETH"}},
-                                                   {&exchange4, MonetaryAmount{"0.05", "ETH"}}};
-};
-
-TEST_F(QueryResultPrinterWithdrawFeeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
-  static constexpr std::string_view kExpected = R"(
----------------------------
-| Exchange | Withdraw fee |
----------------------------
-| bithumb  | 0.15 ETH     |
-| huobi    | 0.05 ETH     |
----------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printWithdrawFees(MonetaryAmountPerExchange{}, curWithdrawFee);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "cur": "ETH"
-    },
-    "req": "WithdrawFee"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterWithdrawFeeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "cur": "ETH"
-    },
-    "req": "WithdrawFee"
-  },
-  "out": {
-    "bithumb": "0.15",
-    "huobi": "0.05"
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterWithdrawFeeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
-  expectNoStr();
-}
-
-class QueryResultPrinterLast24HoursTradedVolumeTest : public QueryResultPrinterTest {
- protected:
-  Market marketLast24hTradedVolume{"BTC", "EUR"};
-  MonetaryAmountPerExchange monetaryAmountPerExchange{{&exchange1, MonetaryAmount{"37.8", "BTC"}},
-                                                      {&exchange3, MonetaryAmount{"14", "BTC"}}};
-};
-
-TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
-  static constexpr std::string_view kExpected = R"(
----------------------------------------------
-| Exchange | Last 24h BTC-EUR traded volume |
----------------------------------------------
-| binance  | 37.8 BTC                       |
-| huobi    | 14 BTC                         |
----------------------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printLast24hTradedVolume(marketLast24hTradedVolume, MonetaryAmountPerExchange{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "BTC-EUR"
-    },
-    "req": "Last24hTradedVolume"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "BTC-EUR"
-    },
-    "req": "Last24hTradedVolume"
-  },
-  "out": {
-    "binance": "37.8",
-    "huobi": "14"
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
-  expectNoStr();
-}
-
-class QueryResultPrinterLastTradesVolumeTest : public QueryResultPrinterTest {
- protected:
-  Market marketLastTrades{"ETH", "USDT"};
-  int nbLastTrades = 3;
-  LastTradesPerExchange lastTradesPerExchange{
-      {&exchange1,
-       LastTradesVector{
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
-      {&exchange3,
-       LastTradesVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
-      {&exchange2,
-       LastTradesVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
-};
-
-TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
-  static constexpr std::string_view kExpected = R"(
---------------------------------------------------------------------------------------------
-| binance trades - UTC | ETH buys           | Price in USDT            | ETH sells         |
---------------------------------------------------------------------------------------------
-| 1999-03-25 04:46:43  | 0.13               | 1500.5                   |                   |
-| 2002-06-23 07:58:35  |                    | 1500.5                   | 3.7               |
-| 2006-07-14 23:58:24  | 0.004              | 1501                     |                   |
---------------------------------------------------------------------------------------------
-| Summary              | 0.134 ETH (2 buys) | 1500.66666666666666 USDT | 3.7 ETH (1 sells) |
---------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------
-| huobi trades - UTC  | ETH buys           | Price in USDT | ETH sells          |
----------------------------------------------------------------------------------
-| 2011-10-03 06:49:36 |                    | 1500.5        | 0.13               |
-| 2002-06-23 07:58:35 | 0.004              | 1501          |                    |
----------------------------------------------------------------------------------
-| Summary             | 0.004 ETH (1 buys) | 1500.75 USDT  | 0.13 ETH (1 sells) |
----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------
-| bithumb trades - UTC | ETH buys            | Price in USDT            | ETH sells          |
-----------------------------------------------------------------------------------------------
-| 2011-10-03 06:49:36  |                     | 1500.5                   | 0.13               |
-| 2002-06-23 07:58:35  | 0.004               | 1501                     |                    |
-| 1999-03-25 04:46:43  | 47.78               | 1498                     |                    |
-----------------------------------------------------------------------------------------------
-| Summary              | 47.784 ETH (2 buys) | 1499.83333333333333 USDT | 0.13 ETH (1 sells) |
-----------------------------------------------------------------------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastTradesVolumeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, LastTradesPerExchange{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "ETH-USDT",
-      "nb": 3
-    },
-    "req": "LastTrades"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "ETH-USDT",
-      "nb": 3
-    },
-    "req": "LastTrades"
-  },
-  "out": {
-    "binance": [
-      {
-        "a": "0.13",
-        "p": "1500.5",
-        "side": "Buy",
-        "time": "1999-03-25 04:46:43"
-      },
-      {
-        "a": "3.7",
-        "p": "1500.5",
-        "side": "Sell",
-        "time": "2002-06-23 07:58:35"
-      },
-      {
-        "a": "0.004",
-        "p": "1501",
-        "side": "Buy",
-        "time": "2006-07-14 23:58:24"
-      }
-    ],
-    "bithumb": [
-      {
-        "a": "0.13",
-        "p": "1500.5",
-        "side": "Sell",
-        "time": "2011-10-03 06:49:36"
-      },
-      {
-        "a": "0.004",
-        "p": "1501",
-        "side": "Buy",
-        "time": "2002-06-23 07:58:35"
-      },
-      {
-        "a": "47.78",
-        "p": "1498",
-        "side": "Buy",
-        "time": "1999-03-25 04:46:43"
-      }
-    ],
-    "huobi": [
-      {
-        "a": "0.13",
-        "p": "1500.5",
-        "side": "Sell",
-        "time": "2011-10-03 06:49:36"
-      },
-      {
-        "a": "0.004",
-        "p": "1501",
-        "side": "Buy",
-        "time": "2002-06-23 07:58:35"
-      }
-    ]
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastTradesVolumeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
-  expectNoStr();
-}
-
-class QueryResultPrinterLastPriceTest : public QueryResultPrinterTest {
- protected:
-  Market marketLastPrice{"XRP", "KRW"};
-  MonetaryAmountPerExchange monetaryAmountPerExchange{{&exchange1, MonetaryAmount{417, "KRW"}},
-                                                      {&exchange3, MonetaryAmount{444, "KRW"}},
-                                                      {&exchange2, MonetaryAmount{590, "KRW"}}};
-};
-
-TEST_F(QueryResultPrinterLastPriceTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
-  static constexpr std::string_view kExpected = R"(
----------------------------------
-| Exchange | XRP-KRW last price |
----------------------------------
-| binance  | 417 KRW            |
-| huobi    | 444 KRW            |
-| bithumb  | 590 KRW            |
----------------------------------
-)";
-  expectStr(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastPriceTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastPrice(marketLastPrice, MonetaryAmountPerExchange{});
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "XRP-KRW"
-    },
-    "req": "LastPrice"
-  },
-  "out": {}
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastPriceTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
-  static constexpr std::string_view kExpected = R"(
-{
-  "in": {
-    "opt": {
-      "market": "XRP-KRW"
-    },
-    "req": "LastPrice"
-  },
-  "out": {
-    "binance": "417",
-    "bithumb": "590",
-    "huobi": "444"
-  }
-})";
-  expectJson(kExpected);
-}
-
-TEST_F(QueryResultPrinterLastPriceTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
   expectNoStr();
 }
 

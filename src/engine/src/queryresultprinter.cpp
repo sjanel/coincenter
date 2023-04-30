@@ -575,6 +575,59 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
   }
 }
 
+void QueryResultPrinter::printRecentWithdraws(const WithdrawsPerExchange &withdrawsPerExchange,
+                                              const WithdrawsConstraints &withdrawsConstraints) const {
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Sent time", "Net Emitted Amount", "Fee", "Status");
+      for (const auto &[exchangePtr, withdraws] : withdrawsPerExchange) {
+        for (const Withdraw &withdraw : withdraws) {
+          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), withdraw.id(), withdraw.timeStr(),
+                                   withdraw.amount().str(), withdraw.withdrawFee().str(), withdraw.statusStr());
+        }
+      }
+      printTable(simpleTable);
+      break;
+    }
+    case ApiOutputType::kJson: {
+      json in;
+      in.emplace("req", CoincenterCommandTypeToString(CoincenterCommandType::kRecentWithdraws));
+      json inOpt = DepositsConstraintsToJson(withdrawsConstraints, DepositOrWithdrawEnum::kWithdraw);
+
+      if (!inOpt.empty()) {
+        in.emplace("opt", std::move(inOpt));
+      }
+
+      json out = json::object();
+      for (const auto &[exchangePtr, withdraws] : withdrawsPerExchange) {
+        json withdrawsJson = json::array();
+        for (const Withdraw &withdraw : withdraws) {
+          json &withdrawJson = withdrawsJson.emplace_back();
+          withdrawJson.emplace("id", withdraw.id());
+          withdrawJson.emplace("cur", withdraw.amount().currencyStr());
+          withdrawJson.emplace("sentTime", withdraw.timeStr());
+          withdrawJson.emplace("netEmittedAmount", withdraw.amount().amountStr());
+          withdrawJson.emplace("fee", withdraw.withdrawFee().amountStr());
+          withdrawJson.emplace("status", withdraw.statusStr());
+        }
+
+        auto it = out.find(exchangePtr->name());
+        if (it == out.end()) {
+          json withdrawsPerExchangeUser;
+          withdrawsPerExchangeUser.emplace(exchangePtr->keyName(), std::move(withdrawsJson));
+          out.emplace(exchangePtr->name(), std::move(withdrawsPerExchangeUser));
+        } else {
+          it->emplace(exchangePtr->keyName(), std::move(withdrawsJson));
+        }
+      }
+      printJson(std::move(in), std::move(out));
+      break;
+    }
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+}
+
 void QueryResultPrinter::printConversionPath(Market mk,
                                              const ConversionPathPerExchange &conversionPathsPerExchange) const {
   switch (_apiOutputType) {

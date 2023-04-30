@@ -39,6 +39,8 @@ bool CoincenterCommand::isReadOnly() const {
       [[fallthrough]];
     case CoincenterCommandType::kRecentDeposits:
       [[fallthrough]];
+    case CoincenterCommandType::kRecentWithdraws:
+      [[fallthrough]];
     case CoincenterCommandType::kOrdersOpened:
       return true;
     default:
@@ -84,6 +86,22 @@ CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints
     throw exception("Deposit constraints can only be used for deposits related commands");
   }
   _specialOptions = std::move(depositsConstraints);
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  if (_type != CoincenterCommandType::kRecentWithdraws) {
+    throw exception("Withdraw constraints can only be used for withdraws related commands");
+  }
+  _specialOptions = withdrawsConstraints;
+  return *this;
+}
+
+CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstraints&& withdrawsConstraints) {
+  if (_type != CoincenterCommandType::kRecentWithdraws) {
+    throw exception("Withdraw constraints can only be used for withdraws related commands");
+  }
+  _specialOptions = std::move(withdrawsConstraints);
   return *this;
 }
 

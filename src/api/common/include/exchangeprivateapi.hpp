@@ -26,6 +26,7 @@
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 
@@ -70,6 +71,9 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Get recent deposits filtered according to given constraints
   virtual Deposits queryRecentDeposits(const DepositsConstraints &depositsConstraints = DepositsConstraints()) = 0;
+
+  /// Get recent withdraws filtered according to given constraints
+  virtual Withdraws queryRecentWithdraws(const WithdrawsConstraints &withdrawsConstraints = WithdrawsConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.
@@ -151,9 +155,6 @@ class ExchangePrivate : public ExchangeBase {
   /// Orders a withdraw in mode fire and forget.
   virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&destinationWallet) = 0;
 
-  /// Check if withdraw has been confirmed and successful from 'this' exchange
-  virtual SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) = 0;
-
   /// Check if withdraw has been received by 'this' exchange.
   /// If so, return a non-default MonetaryAmount with the net received amount
   virtual MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
@@ -180,6 +181,9 @@ class ExchangePrivate : public ExchangeBase {
                                                       MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
                                                       const BalancePortfolio &balance, const TradeOptions &tradeOptions,
                                                       const MonetaryAmountByCurrencySet &dustThresholds);
+
+  /// Check if withdraw has been confirmed and successful from 'this' exchange
+  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo);
 };
 }  // namespace api
 }  // namespace cct

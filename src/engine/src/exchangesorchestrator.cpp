@@ -219,6 +219,23 @@ DepositsPerExchange ExchangesOrchestrator::getRecentDeposits(std::span<const Exc
   return ret;
 }
 
+WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
+                                                               const WithdrawsConstraints &withdrawsConstraints) {
+  log::info("Query recent withdraws matching {} on {}", withdrawsConstraints,
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  WithdrawsPerExchange ret(selectedExchanges.size());
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [&](Exchange *exchange) {
+                   return std::make_pair(
+                       exchange, WithdrawsSet(exchange->apiPrivate().queryRecentWithdraws(withdrawsConstraints)));
+                 });
+
+  return ret;
+}
+
 ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {
   log::info("Query {} conversion path from {}", mk, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);

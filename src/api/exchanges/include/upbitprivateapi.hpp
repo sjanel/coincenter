@@ -37,6 +37,8 @@ class UpbitPrivate : public ExchangePrivate {
 
   Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
 
+  Withdraws queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
+
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
     return _withdrawalFeesCache.get(currencyCode);
   }
@@ -52,8 +54,6 @@ class UpbitPrivate : public ExchangePrivate {
   OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
-
-  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
  private:
   struct TradableCurrenciesFunc {

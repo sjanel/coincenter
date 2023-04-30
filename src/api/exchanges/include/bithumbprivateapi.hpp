@@ -37,6 +37,8 @@ class BithumbPrivate : public ExchangePrivate {
 
   Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
 
+  Withdraws queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
+
   void updateCacheFile() const override;
 
  protected:
@@ -50,8 +52,6 @@ class BithumbPrivate : public ExchangePrivate {
   OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) override;
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
-
-  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
  private:
   struct DepositWalletFunc {
@@ -81,6 +81,11 @@ class BithumbPrivate : public ExchangePrivate {
   };
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;
+
+  enum class DepositOrWithdrawEnum : int8_t { kDeposit, kWithdraw };
+
+  json queryRecentTransactions(const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints,
+                               DepositOrWithdrawEnum depositOrWithdrawEnum);
 
   CurlHandle _curlHandle;
   CurrencyOrderInfoMap _currencyOrderInfoMap;

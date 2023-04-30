@@ -287,6 +287,24 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
         .setExchangeNames(std::move(exchanges));
   }
 
+  if (cmdLineOptions.recentWithdrawsInfo) {
+    auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentWithdrawsInfo)
+                                         .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
+    auto withdrawIdViewVector = StringOptionParser(cmdLineOptions.withdrawsIds).getCSVValues();
+    vector<string> withdrawIds;
+    withdrawIds.reserve(withdrawIdViewVector.size());
+    for (std::string_view withdrawIdView : withdrawIdViewVector) {
+      withdrawIds.emplace_back(withdrawIdView);
+    }
+    WithdrawsConstraints withdrawConstraints(currencyCode,
+                                             std::chrono::duration_cast<Duration>(cmdLineOptions.withdrawsMinAge),
+                                             std::chrono::duration_cast<Duration>(cmdLineOptions.withdrawsMaxAge),
+                                             WithdrawsConstraints::IdSet(std::move(withdrawIds)));
+    _commands.emplace_back(CoincenterCommandType::kRecentWithdraws)
+        .setWithdrawsConstraints(std::move(withdrawConstraints))
+        .setExchangeNames(std::move(exchanges));
+  }
+
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
     auto [amountToWithdraw, isPercentageWithdraw, fromExchange, toExchange] =

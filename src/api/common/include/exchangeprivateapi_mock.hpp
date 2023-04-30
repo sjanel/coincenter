@@ -22,6 +22,8 @@ class MockExchangePrivate : public ExchangePrivate {
 
   MOCK_METHOD(Deposits, queryRecentDeposits, (const DepositsConstraints &), (override));
 
+  MOCK_METHOD(Withdraws, queryRecentWithdraws, (const WithdrawsConstraints &), (override));
+
   MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));
 
   MOCK_METHOD(PlaceOrderInfo, placeOrder, (MonetaryAmount, MonetaryAmount, MonetaryAmount, const TradeInfo &),
@@ -29,7 +31,6 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(OrderInfo, cancelOrder, (OrderIdView, const TradeContext &), (override));
   MOCK_METHOD(OrderInfo, queryOrderInfo, (OrderIdView, const TradeContext &), (override));
   MOCK_METHOD(InitiatedWithdrawInfo, launchWithdraw, (MonetaryAmount, Wallet &&), (override));
-  MOCK_METHOD(SentWithdrawInfo, isWithdrawSuccessfullySent, (const InitiatedWithdrawInfo &), (override));
   MOCK_METHOD(MonetaryAmount, queryWithdrawDelivery, (const InitiatedWithdrawInfo &, const SentWithdrawInfo &),
               (override));
 };
