@@ -39,6 +39,8 @@ class BinancePrivate : public ExchangePrivate {
 
   Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
 
+  Withdraws queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
+
   WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
@@ -58,8 +60,6 @@ class BinancePrivate : public ExchangePrivate {
   }
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
-
-  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
   MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                                        const SentWithdrawInfo& sentWithdrawInfo) override;

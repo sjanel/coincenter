@@ -246,6 +246,23 @@ class TestAPI {
     }
   }
 
+  void testRecentWithdraws() {
+    if (!exchangeStatusOK) {
+      log::warn("Skipping test as exchange has an outage right now");
+      return;
+    }
+    if (exchangePrivateOpt) {
+      for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
+        CurrencyCode cur(curExchange.standardCode());
+        log::info("Choosing {} as random currency code for Recent withdraws test", cur);
+        Withdraws withdraws = exchangePrivateOpt->queryRecentWithdraws(WithdrawsConstraints(cur));
+        if (!withdraws.empty()) {
+          EXPECT_EQ(withdraws.front().amount().currencyCode(), cur);
+        }
+      }
+    }
+  }
+
   void testTrade() {
     if (!exchangeStatusOK) {
       log::warn("Skipping test as exchange has an outage right now");
@@ -290,14 +307,15 @@ class TestAPI {
   }
 };
 
-#define CCT_TEST_ALL(TestAPIType, testAPI)                                  \
-  TEST(TestAPIType##Test, HealthCheck) { testAPI.testHealthCheck(); }       \
-  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }         \
-  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }               \
-  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); } \
-  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }               \
-  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }   \
-  TEST(TestAPIType##Test, RecentDeposits) { testAPI.testRecentDeposits(); } \
-  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(); }           \
+#define CCT_TEST_ALL(TestAPIType, testAPI)                                    \
+  TEST(TestAPIType##Test, HealthCheck) { testAPI.testHealthCheck(); }         \
+  TEST(TestAPIType##Test, Currencies) { testAPI.testCurrencies(); }           \
+  TEST(TestAPIType##Test, Markets) { testAPI.testMarkets(); }                 \
+  TEST(TestAPIType##Test, WithdrawalFees) { testAPI.testWithdrawalFees(); }   \
+  TEST(TestAPIType##Test, Balance) { testAPI.testBalance(); }                 \
+  TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }     \
+  TEST(TestAPIType##Test, RecentDeposits) { testAPI.testRecentDeposits(); }   \
+  TEST(TestAPIType##Test, RecentWithdraws) { testAPI.testRecentWithdraws(); } \
+  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(); }             \
   TEST(TestAPIType##Test, Trade) { testAPI.testTrade(); }
 }  // namespace cct::api

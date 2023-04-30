@@ -425,14 +425,70 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   return orders.size();
 }
 
-Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
-  Deposits deposits;
-  CurlPostData options{{kPaymentCurParamStr, "BTC"}, {"searchGb", 4}};
-  SmallVector<CurrencyCode, 1> currencies;
-  if (depositsConstraints.isCurDefined()) {
-    currencies.push_back(depositsConstraints.currencyCode());
+namespace {
+int64_t RetrieveMicrosecondsSinceEpochFromTrxJson(const json& trx) {
+  // In the official documentation, transfer_date field is an integer.
+  // But in fact (as of 2022) it's a string representation of the integer timestamp.
+  // Let's support both types to be safe.
+  // Bithumb returns a UTC based timestamp.
+  auto transferDateIt = trx.find("transfer_date");
+  if (transferDateIt == trx.end()) {
+    throw exception("Was expecting 'transfer_date' parameter");
+  }
+  int64_t microsecondsSinceEpoch;
+  if (transferDateIt->is_string()) {
+    microsecondsSinceEpoch = FromString<int64_t>(transferDateIt->get<std::string_view>());
+  } else if (transferDateIt->is_number_integer()) {
+    microsecondsSinceEpoch = transferDateIt->get<int64_t>();
   } else {
-    log::warn("Retrieval of recent deposits should be done currency by currency for {:e}", exchangeName());
+    throw exception("Cannot understand 'transfer_date' parameter type");
+  }
+
+  return microsecondsSinceEpoch;
+}
+string GenerateDepositIdFromTrx(int64_t microsecondsSinceEpoch, const json& trx) {
+  // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
+  string id{trx[kOrderCurrencyParamStr].get<std::string_view>()};
+  id.push_back('-');
+  id.append(ToString(microsecondsSinceEpoch));
+  return id;
+}
+
+string GenerateWithdrawId(MonetaryAmount netEmittedAmount, TimePoint withdrawTimestamp) {
+  auto millisecondsSinceEpoch = std::chrono::duration_cast<TimeInMs>(withdrawTimestamp.time_since_epoch()).count();
+  size_t withdrawHash = HashCombine(netEmittedAmount.code(), static_cast<size_t>(millisecondsSinceEpoch));
+  return ToString(withdrawHash);
+}
+
+MonetaryAmount RetrieveAmountFromTrxJson(const json& trx) {
+  // starts with "+ " for a deposit, "- " for a withdraw, return absolute
+  std::string_view amountStr = trx["units"].get<std::string_view>();
+
+  CurrencyCode currencyCode(trx["order_currency"].get<std::string_view>());
+  MonetaryAmount amount{amountStr, currencyCode};
+  if (amount == 0) {
+    // It's strange but for 'KRW' withdraws, Bithumb returns the KRW amount in the 'price' field (as negative!)
+    amount = MonetaryAmount{trx["price"].get<std::string_view>(), currencyCode};
+  }
+  return amount.abs();
+}
+
+MonetaryAmount RetrieveFeeFromTrxJson(const json& trx) {
+  std::string_view feeStr = trx["fee"].get<std::string_view>();  // starts with "+ "
+  CurrencyCode currencyCode(trx["fee_currency"].get<std::string_view>());
+  return {feeStr, currencyCode};
+}
+
+}  // namespace
+
+json BithumbPrivate::queryRecentTransactions(const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints,
+                                             DepositOrWithdrawEnum depositOrWithdrawEnum) {
+  CurlPostData options{{kPaymentCurParamStr, "BTC"}};
+  SmallVector<CurrencyCode, 1> currencies;
+  if (withdrawsOrDepositsConstraints.isCurDefined()) {
+    currencies.push_back(withdrawsOrDepositsConstraints.currencyCode());
+  } else {
+    log::warn("Retrieval of recent deposits / withdraws should be done currency by currency for {:e}", exchangeName());
     log::warn("Heuristic: only query for currencies which are present in the balance");
     log::warn("Doing such, we may miss some recent deposits in other currencies");
     for (const auto& amountWithEquivalent : queryAccountBalance()) {
@@ -442,48 +498,90 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
       }
     }
   }
+  json allResults;
+  FixedCapacityVector<int, 2> searchGbsVector;
+  switch (depositOrWithdrawEnum) {
+    case DepositOrWithdrawEnum::kDeposit:
+      searchGbsVector.push_back(4);
+      break;
+    case DepositOrWithdrawEnum::kWithdraw:
+      searchGbsVector.push_back(3);  // on-going withdrawals
+      searchGbsVector.push_back(5);  // processed withdrawals
+      break;
+    default:
+      throw exception("Unexpected deposit or withdraw enum value {}", static_cast<int>(depositOrWithdrawEnum));
+  }
+
   for (CurrencyCode currencyCode : currencies) {
     options.set(kOrderCurrencyParamStr, currencyCode.str());
-    json txrList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", options)["data"];
-    for (json& trx : txrList) {
-      std::string_view amountStr = trx["units"].get<std::string_view>();  // starts with "+ "
-      // In the official documentation, transfer_date field is an integer.
-      // But in fact (as of 2022) it's a string. Let's support both types to be safe.
-      auto transferDateIt = trx.find("transfer_date");
-      if (transferDateIt == trx.end()) {
-        throw exception("Was expecting 'transfer_date' parameter");
+    if (depositOrWithdrawEnum == DepositOrWithdrawEnum::kDeposit) {
+      searchGbsVector.back() = currencyCode == "KRW" ? 9 : 4;
+    }
+
+    for (int searchGb : searchGbsVector) {
+      options.set("searchGb", searchGb);
+      json txrList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", options)["data"];
+      for (json& trx : txrList) {
+        int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
+        TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
+        if (!withdrawsOrDepositsConstraints.validateTime(timestamp)) {
+          continue;
+        }
+
+        if (withdrawsOrDepositsConstraints.isIdDependent()) {
+          if (!withdrawsOrDepositsConstraints.validateId(GenerateDepositIdFromTrx(microsecondsSinceEpoch, trx))) {
+            continue;
+          }
+        }
+
+        allResults.push_back(std::move(trx));
       }
-      int64_t microsecondsSinceEpoch;
-      if (transferDateIt->is_string()) {
-        microsecondsSinceEpoch = FromString<int64_t>(transferDateIt->get<std::string_view>());
-      } else if (transferDateIt->is_number_integer()) {
-        microsecondsSinceEpoch = transferDateIt->get<int64_t>();
-      } else {
-        throw exception("Cannot understand 'transfer_date' parameter type");
-      }
-
-      TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
-
-      if (!depositsConstraints.validateTime(timestamp)) {
-        continue;
-      }
-
-      // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
-      string id = std::move(trx[kOrderCurrencyParamStr].get_ref<string&>());
-      id.push_back('-');
-      id.append(ToString(microsecondsSinceEpoch));
-
-      if (depositsConstraints.isIdDependent() && !depositsConstraints.idSet().contains(id)) {
-        continue;
-      }
-
-      MonetaryAmount amountReceived(amountStr, currencyCode);
-
-      deposits.emplace_back(std::move(id), timestamp, amountReceived, Deposit::Status::kSuccess);
     }
   }
+  return allResults;
+}
+
+Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+  Deposits deposits;
+
+  json txrList = queryRecentTransactions(depositsConstraints, DepositOrWithdrawEnum::kDeposit);
+  deposits.reserve(txrList.size());
+  for (const json& trx : txrList) {
+    int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
+    TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
+
+    string id = GenerateDepositIdFromTrx(microsecondsSinceEpoch, trx);
+
+    deposits.emplace_back(std::move(id), timestamp, RetrieveAmountFromTrxJson(trx), Deposit::Status::kSuccess);
+  }
+
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
+}
+
+Withdraws BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+
+  json txrList = queryRecentTransactions(withdrawsConstraints, DepositOrWithdrawEnum::kWithdraw);
+  withdraws.reserve(txrList.size());
+  for (const json& trx : txrList) {
+    int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
+    TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
+
+    MonetaryAmount grossEmittedAmount = RetrieveAmountFromTrxJson(trx);
+    MonetaryAmount fee = RetrieveFeeFromTrxJson(trx);
+    MonetaryAmount netEmittedAmount = grossEmittedAmount - fee;
+
+    withdraws.emplace_back(GenerateWithdrawId(netEmittedAmount, timestamp), timestamp, netEmittedAmount,
+                           Withdraw::Status::kSuccess, fee);
+  }
+
+  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
+
+  // Sort by date - latest is the last one
+  std::ranges::sort(withdraws);
+
+  return withdraws;
 }
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
@@ -707,49 +805,55 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
 InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  MonetaryAmount netWithdrawAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{{"units", netWithdrawAmount.amountStr()},
+  MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
+  CurlPostData withdrawPostData{{"units", netEmittedAmount.amountStr()},
                                 {"currency", currencyCode.str()},
                                 {"address", destinationWallet.address()}};
   if (destinationWallet.hasTag()) {
     withdrawPostData.append("destination", destinationWallet.tag());
   }
-  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal", std::move(withdrawPostData));
-  return {std::move(destinationWallet), "", grossAmount};
-}
 
-SentWithdrawInfo BithumbPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  CurlPostData checkWithdrawPostData{{kOrderCurrencyParamStr, currencyCode.str()}, {kPaymentCurParamStr, "BTC"}};
-  static constexpr int kSearchGbs[] = {3, 5};
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
-  for (int searchGb : kSearchGbs) {
-    checkWithdrawPostData.set("searchGb", searchGb);
-    json trxList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", checkWithdrawPostData)["data"];
-    for (const json& trx : trxList) {
-      assert(currencyCode.iequal(trx[kOrderCurrencyParamStr].get<std::string_view>()));
-      std::string_view unitsStr = trx["units"].get<std::string_view>();  // "- 151.0"
-      MonetaryAmount realFee(trx["fee"].get<std::string_view>(), currencyCode);
-      if (realFee != withdrawFee) {
-        log::warn("Bithumb withdraw fee is {} instead of parsed {}", realFee, withdrawFee);
+  // Unfortunately, Bithumb does not return any withdraw Id,
+  // so we return a generated ID which will be matched with 'queryRecentWithdrawals'
+  // We cannot generate an id based on the destination address either as it's not returned
+  // by Bithumb for 'queryRecentWithdrawals'.
+  // It's not ideal but better than nothing.
+
+  // Hint : to retrieve the exact timestamp from Bithumb and because it's not returned by this endpoint,
+  // We have to retrieve the withdraw from the other endpoint used by 'queryRecentWithdraws'.
+  WithdrawsConstraints withdrawConstraints(currencyCode);
+
+  Withdraws oldWithdraws = queryRecentWithdraws(withdrawConstraints);
+
+  // Actually launch the withdraw
+  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal", std::move(withdrawPostData));
+
+  // Query the withdraws, hopefully we will be able to find our withdraw
+  TimePoint newWithdrawTimestamp{};
+  static constexpr int kNbRetriesCatchWindow = 20;
+  for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTimestamp == TimePoint{}; ++retryPos) {
+    if (retryPos != 0) {
+      log::warn("Cannot retrieve just launched withdraw, retry {}/{}", retryPos, kNbRetriesCatchWindow);
+    }
+    Withdraws currentWithdraws = queryRecentWithdraws(withdrawConstraints);
+    Withdraws newWithdraws;
+
+    // Isolate the new withdraws since the launch of our new withdraw
+    std::set_difference(oldWithdraws.begin(), oldWithdraws.end(), currentWithdraws.begin(), currentWithdraws.end(),
+                        std::inserter(newWithdraws, newWithdraws.end()));
+
+    for (const Withdraw& withdraw : newWithdraws) {
+      if (withdraw.amount().isCloseTo(netEmittedAmount, 0.001)) {
+        newWithdrawTimestamp = withdraw.time();
       }
-      std::size_t first = unitsStr.find_first_of("0123456789");
-      if (first == std::string_view::npos) {
-        throw exception("Bithumb: cannot parse amount {}", unitsStr);
-      }
-      MonetaryAmount consumedAmt(std::string_view(unitsStr.begin() + first, unitsStr.end()), currencyCode);
-      if (consumedAmt == initiatedWithdrawInfo.grossEmittedAmount()) {
-        bool isWithdrawSuccess = searchGb == 5;
-        return {initiatedWithdrawInfo.grossEmittedAmount() - realFee, realFee, isWithdrawSuccess};
-      }
-      // TODO: Could we have rounding issues in case Bithumb returns to us a string representation of an amount coming
-      // from a double? In this case, we should offer a security interval, for instance, accepting +- 1 % error.
-      // Let's not implement this for now unless it becomes an issue
-      log::debug("Bithumb: similar withdraw found with different amount {} (expected {})", consumedAmt,
-                 initiatedWithdrawInfo.grossEmittedAmount());
     }
   }
-  throw exception("Bithumb: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
+
+  if (newWithdrawTimestamp == TimePoint{}) {
+    throw exception("Unable to retrieve just launch withdraw from Bithumb");
+  }
+
+  return {std::move(destinationWallet), GenerateWithdrawId(netEmittedAmount, newWithdrawTimestamp), grossAmount};
 }
 
 void BithumbPrivate::updateCacheFile() const {

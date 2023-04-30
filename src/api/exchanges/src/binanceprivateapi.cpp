@@ -396,6 +396,91 @@ Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& deposits
   return deposits;
 }
 
+namespace {
+Withdraw::Status WithdrawStatusFromStatusStr(int statusInt, bool logStatus) {
+  switch (statusInt) {
+    case kWithdrawAwaitingApprovalCode:  // NOLINT(bugprone-branch-clone)
+      if (logStatus) {
+        log::warn("Awaiting Approval");
+      }
+      return Withdraw::Status::kProcessing;
+    case kWithdrawProcessingCode:
+      if (logStatus) {
+        log::info("Processing withdraw...");
+      }
+      return Withdraw::Status::kProcessing;
+    case kWithdrawEmailSentCode:
+      if (logStatus) {
+        log::warn("Email was sent");
+      }
+      return Withdraw::Status::kProcessing;
+    case kWithdrawCancelledCode:  // NOLINT(bugprone-branch-clone)
+      if (logStatus) {
+        log::warn("Withdraw cancelled");
+      }
+      return Withdraw::Status::kFailureOrRejected;
+    case kWithdrawRejectedCode:
+      if (logStatus) {
+        log::error("Withdraw rejected");
+      }
+      return Withdraw::Status::kFailureOrRejected;
+    case kWithdrawFailureCode:
+      if (logStatus) {
+        log::error("Withdraw failed");
+      }
+      return Withdraw::Status::kFailureOrRejected;
+    case kWithdrawCompletedCode:
+      if (logStatus) {
+        log::info("Withdraw completed!");
+      }
+      return Withdraw::Status::kSuccess;
+    default:
+      throw exception("Unknown withdraw status code {}", statusInt);
+  }
+}
+}  // namespace
+
+Withdraws BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  CurlPostData options;
+  if (withdrawsConstraints.isCurDefined()) {
+    options.append("coin", withdrawsConstraints.currencyCode().str());
+  }
+  if (withdrawsConstraints.isTimeAfterDefined()) {
+    options.append("startTime", TimestampToMs(withdrawsConstraints.timeAfter()));
+  }
+  if (withdrawsConstraints.isTimeBeforeDefined()) {
+    options.append("endTime", TimestampToMs(withdrawsConstraints.timeBefore()));
+  }
+  // Binance provides field 'withdrawOrderId' tu customize user id, but it's not well documented
+  // so we use Binance generated 'id' instead.
+  // What is important is that the same field is considered in both queries 'launchWithdraw' and 'queryRecentWithdraws'
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history",
+                           _queryDelay, std::move(options));
+  for (json& withdrawJson : data) {
+    int statusInt = withdrawJson["status"].get<int>();
+    Withdraw::Status status = WithdrawStatusFromStatusStr(statusInt, withdrawsConstraints.isCurDefined());
+    CurrencyCode currencyCode(withdrawJson["coin"].get<std::string_view>());
+    string& id = withdrawJson["id"].get_ref<string&>();
+    if (!withdrawsConstraints.validateId(id)) {
+      continue;
+    }
+    MonetaryAmount amountReceived(withdrawJson["amount"].get<double>(), currencyCode);
+    MonetaryAmount withdrawFee(withdrawJson["transactionFee"].get<double>(), currencyCode);
+    int64_t millisecondsSinceEpoch;
+    auto completeTimeIt = withdrawJson.find("completeTime");
+    if (completeTimeIt != withdrawJson.end()) {
+      millisecondsSinceEpoch = completeTimeIt->get<int64_t>();
+    } else {
+      millisecondsSinceEpoch = withdrawJson["applyTime"].get<int64_t>();
+    }
+    TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
+    withdraws.emplace_back(std::move(id), timestamp, amountReceived, status, withdrawFee);
+  }
+  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
+  return withdraws;
+}
+
 WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay);
   WithdrawalFeeMap ret;
@@ -575,57 +660,6 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply",
                              _queryDelay, std::move(withdrawPostData));
   return {std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount};
-}
-
-SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  json withdrawStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history",
-                                     _queryDelay, {{"coin", currencyCode.str()}});
-  std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
-  MonetaryAmount netEmittedAmount;
-  MonetaryAmount fee;
-  bool isWithdrawSent = false;
-  for (const json& withdrawDetail : withdrawStatus) {
-    std::string_view withdrawDetailId(withdrawDetail["id"].get<std::string_view>());
-    if (withdrawDetailId == withdrawId) {
-      int withdrawStatusInt = withdrawDetail["status"].get<int>();
-      switch (withdrawStatusInt) {
-        case 0:
-          log::warn("Email was sent");
-          break;
-        case 1:
-          log::warn("Withdraw cancelled");
-          break;
-        case 2:
-          log::warn("Awaiting Approval");
-          break;
-        case 3:
-          log::error("Withdraw rejected");
-          break;
-        case 4:
-          log::info("Processing withdraw...");
-          break;
-        case 5:
-          log::error("Withdraw failed");
-          break;
-        case 6:
-          log::info("Withdraw completed!");
-          isWithdrawSent = true;
-          break;
-        default:
-          log::error("unknown status value {}", withdrawStatusInt);
-          break;
-      }
-      netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-      fee = MonetaryAmount(withdrawDetail["transactionFee"].get<double>(), currencyCode);
-      if (netEmittedAmount + fee != initiatedWithdrawInfo.grossEmittedAmount()) {
-        log::warn("{} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(), fee.amountStr(),
-                  initiatedWithdrawInfo.grossEmittedAmount().amountStr());
-      }
-      break;
-    }
-  }
-  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 MonetaryAmount BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,

@@ -37,6 +37,9 @@ class ExchangesOrchestrator {
   DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
                                         const DepositsConstraints &depositsConstraints);
 
+  WithdrawsPerExchange getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
+                                          const WithdrawsConstraints &withdrawsConstraints);
+
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);

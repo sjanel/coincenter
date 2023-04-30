@@ -17,6 +17,10 @@ class WithdrawsOrDepositsConstraints {
   explicit WithdrawsOrDepositsConstraints(CurrencyCode currencyCode = CurrencyCode(), Duration minAge = Duration(),
                                           Duration maxAge = Duration(), IdSet &&idSet = IdSet());
 
+  // Creates a WithdrawsOrDepositsConstraints based on a single transaction id and currency code.
+  // Useful for retrieval of a specific Deposit / Withdraw.
+  WithdrawsOrDepositsConstraints(CurrencyCode currencyCode, std::string_view id);
+
   TimePoint timeBefore() const { return _timeBefore; }
   TimePoint timeAfter() const { return _timeAfter; }
 
@@ -28,7 +32,10 @@ class WithdrawsOrDepositsConstraints {
   CurrencyCode currencyCode() const { return _currencyCode; }
 
   bool validateCur(CurrencyCode cur) const { return _currencyCode.isNeutral() || cur == _currencyCode; }
+
   bool validateTime(TimePoint t) const { return t >= _timeAfter && t <= _timeBefore; }
+
+  bool validateId(std::string_view id) const { return !isIdDefined() || _idSet.contains(id); }
 
   const IdSet &idSet() const { return _idSet; }
 
@@ -45,8 +52,8 @@ class WithdrawsOrDepositsConstraints {
 
  private:
   IdSet _idSet;
-  TimePoint _timeBefore;
-  TimePoint _timeAfter;
+  TimePoint _timeBefore{TimePoint::max()};
+  TimePoint _timeAfter{TimePoint::min()};
   CurrencyCode _currencyCode;
   CurrencyIdTimeConstraintsBmp _currencyIdTimeConstraintsBmp;
 };

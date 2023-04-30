@@ -80,6 +80,8 @@ Main features:
     - [Deposit information](#deposit-information)
     - [Recent deposits](#recent-deposits)
       - [Examples](#examples-1)
+    - [Recent withdraws](#recent-withdraws)
+      - [Examples](#examples-2)
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
@@ -591,6 +593,16 @@ By default, it returns all deposits on given currency, or any currency. You can 
 `coincenter --deposits kraken --deposits-max-age 2w`: retrieves all deposits of the last two weeks
 
 `coincenter --deposits eth --deposits-id myid1,myid2`: retrieves all deposits of Ethereum, if they have either id `myid1` or `myid2`
+
+### Recent withdraws
+
+Similarly to deposits, you can query the recent **withdraws** with command `--withdraws`. It works the same ways as deposits - you just need to replace `deposits` with `withdraws` in the option name (for instance, `--withdraws-max-age` specifies the maximum age for the withdraws to retrieve).
+
+#### Examples
+
+`coincenter --withdraws`: retrieves all recent withdraws from all accounts
+
+`coincenter --withdraws upbit,xrp --withdraws-id myid3`: retrieves the withdraw of XRP on Upbit with id `myid3`
 
 ### Opened orders
 

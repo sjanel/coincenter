@@ -257,7 +257,7 @@ Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       continue;
     }
     string idStr = ToString(id);
-    if (depositsConstraints.isIdDefined() && !depositsConstraints.idSet().contains(idStr)) {
+    if (!depositsConstraints.validateId(idStr)) {
       continue;
     }
 
@@ -265,6 +265,124 @@ Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
+}
+
+namespace {
+Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool logStatus) {
+  if (statusStr == "verifying") {
+    if (logStatus) {
+      log::debug("Awaiting verification");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "failed") {
+    if (logStatus) {
+      log::error("Verification failed");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  if (statusStr == "submitted") {
+    if (logStatus) {
+      log::debug("Withdraw request submitted successfully");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "reexamine") {
+    if (logStatus) {
+      log::warn("Under examination for withdraw validation");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "canceled") {
+    if (logStatus) {
+      log::error("Withdraw canceled");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  if (statusStr == "pass") {
+    if (logStatus) {
+      log::debug("Withdraw validation passed");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "reject") {
+    if (logStatus) {
+      log::error("Withdraw validation rejected");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  if (statusStr == "pre-transfer") {
+    if (logStatus) {
+      log::debug("Withdraw is about to be released");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "wallet-transfer") {
+    if (logStatus) {
+      log::debug("On-chain transfer initiated");
+    }
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "wallet-reject") {
+    if (logStatus) {
+      log::error("Transfer rejected by chain");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  if (statusStr == "confirmed") {
+    if (logStatus) {
+      log::debug("On-chain transfer completed with one confirmation");
+    }
+    return Withdraw::Status::kSuccess;
+  }
+  if (statusStr == "confirm-error") {
+    if (logStatus) {
+      log::error("On-chain transfer failed to get confirmation");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  if (statusStr == "repealed") {
+    if (logStatus) {
+      log::error("Withdraw terminated by system");
+    }
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  throw exception("unknown status value '{}'", statusStr);
+}
+}  // namespace
+
+Withdraws HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  CurlPostData options;
+  if (withdrawsConstraints.isCurDefined()) {
+    options.append("currency", ToLower(withdrawsConstraints.currencyCode().str()));
+  }
+  options.append("size", 500);
+  options.append("type", "withdraw");
+  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
+                                   std::move(options))["data"];
+  for (const json& withdrawDetail : withdrawJson) {
+    std::string_view statusStr = withdrawDetail["state"].get<std::string_view>();
+    int64_t id = withdrawDetail["id"].get<int64_t>();
+    Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isCurDefined());
+
+    CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
+    MonetaryAmount amount(withdrawDetail["amount"].get<double>(), currencyCode);
+    MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
+    int64_t millisecondsSinceEpoch = withdrawDetail["updated-at"].get<int64_t>();
+    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    if (!withdrawsConstraints.validateTime(timestamp)) {
+      continue;
+    }
+    string idStr = ToString(id);
+    if (!withdrawsConstraints.validateId(idStr)) {
+      continue;
+    }
+
+    withdraws.emplace_back(std::move(idStr), timestamp, amount, status, fee);
+  }
+  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
+  return withdraws;
 }
 
 int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
@@ -445,62 +563,6 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
                              std::move(withdrawPostData));
   string withdrawIdStr = ToString(result["data"].get<int64_t>());
   return {std::move(destinationWallet), std::move(withdrawIdStr), grossAmount};
-}
-
-SentWithdrawInfo HuobiPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  string lowerCaseCur = ToLower(currencyCode.str());
-  std::string_view withdrawIdStr = initiatedWithdrawInfo.withdrawId();
-  int64_t withdrawId = FromString<int64_t>(withdrawIdStr);
-  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                                   {{"currency", lowerCaseCur}, {"from", withdrawIdStr}, {"type", "withdraw"}});
-  MonetaryAmount netEmittedAmount;
-  MonetaryAmount fee;
-  bool isWithdrawSent = false;
-  for (const json& withdrawDetail : withdrawJson["data"]) {
-    if (withdrawDetail["id"].get<int64_t>() == withdrawId) {
-      std::string_view withdrawStatus = withdrawDetail["state"].get<std::string_view>();
-      if (withdrawStatus == "verifying") {
-        log::debug("Awaiting verification");
-      } else if (withdrawStatus == "failed") {
-        log::error("Verification failed");
-      } else if (withdrawStatus == "submitted") {
-        log::debug("Withdraw request submitted successfully");
-      } else if (withdrawStatus == "reexamine") {
-        log::warn("Under examination for withdraw validation");
-      } else if (withdrawStatus == "canceled") {
-        log::error("Withdraw canceled");
-      } else if (withdrawStatus == "pass") {
-        log::debug("Withdraw validation passed");
-      } else if (withdrawStatus == "reject") {
-        log::error("Withdraw validation rejected");
-      } else if (withdrawStatus == "pre-transfer") {
-        log::debug("Withdraw is about to be released");
-      } else if (withdrawStatus == "wallet-transfer") {
-        log::debug("On-chain transfer initiated");
-      } else if (withdrawStatus == "wallet-reject") {
-        log::error("Transfer rejected by chain");
-      } else if (withdrawStatus == "confirmed") {
-        isWithdrawSent = true;
-        log::debug("On-chain transfer completed with one confirmation");
-      } else if (withdrawStatus == "confirm-error") {
-        log::error("On-chain transfer failed to get confirmation");
-      } else if (withdrawStatus == "repealed") {
-        log::error("Withdraw terminated by system");
-      } else {
-        log::error("unknown status value '{}'", withdrawStatus);
-      }
-      netEmittedAmount = MonetaryAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-      fee = MonetaryAmount(withdrawDetail["fee"].get<double>(), currencyCode);
-      double diffExpected = (netEmittedAmount + fee - initiatedWithdrawInfo.grossEmittedAmount()).toDouble();
-      if (diffExpected > 0.001 || diffExpected < -0.001) {
-        log::error("Unexpected fee - {} + {} != {}, maybe a change in API", netEmittedAmount.amountStr(),
-                   fee.amountStr(), initiatedWithdrawInfo.grossEmittedAmount().amountStr());
-      }
-      break;
-    }
-  }
-  return {netEmittedAmount, fee, isWithdrawSent};
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {

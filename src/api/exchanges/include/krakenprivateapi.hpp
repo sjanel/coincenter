@@ -37,6 +37,8 @@ class KrakenPrivate : public ExchangePrivate {
 
   Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
 
+  Withdraws queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
+
  protected:
   bool isSimulatedOrderSupported() const override { return true; }
 
@@ -52,8 +54,6 @@ class KrakenPrivate : public ExchangePrivate {
   }
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
-
-  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
  private:
   struct DepositWalletFunc {

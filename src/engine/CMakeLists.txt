@@ -39,8 +39,15 @@ add_unit_test(
 )
 
 add_unit_test(
-  queryresultprinter_test
-  test/queryresultprinter_test.cpp
+  queryresultprinter_public_test
+  test/queryresultprinter_public_test.cpp
+  LIBRARIES
+  coincenter_engine
+)
+
+add_unit_test(
+  queryresultprinter_private_test
+  test/queryresultprinter_private_test.cpp
   LIBRARIES
   coincenter_engine
 )

@@ -339,7 +339,7 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
     if (!depositsConstraints.validateTime(timestamp)) {
       continue;
     }
-    if (depositsConstraints.isIdDefined() && !depositsConstraints.idSet().contains(id)) {
+    if (!depositsConstraints.validateId(id)) {
       continue;
     }
 
@@ -348,6 +348,54 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
 
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
+}
+
+namespace {
+Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "Initial" || statusStr == "Pending" || statusStr == "Settled" || statusStr == "On hold") {
+    return Withdraw::Status::kProcessing;
+  }
+  if (statusStr == "Success") {
+    return Withdraw::Status::kSuccess;
+  }
+  if (statusStr == "Failure") {
+    return Withdraw::Status::kFailureOrRejected;
+  }
+  throw exception("Unrecognized withdraw status '{}' from Kraken", statusStr);
+}
+}  // namespace
+
+Withdraws KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  CurlPostData options;
+  if (withdrawsConstraints.isCurDefined()) {
+    options.append("asset", withdrawsConstraints.currencyCode().str());
+  }
+  auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", options);
+  for (const json& trx : res) {
+    int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
+    TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
+    if (!withdrawsConstraints.validateTime(timestamp)) {
+      continue;
+    }
+
+    std::string_view id = trx["refid"].get<std::string_view>();
+    if (!withdrawsConstraints.validateId(id)) {
+      continue;
+    }
+
+    std::string_view statusStr(trx["status"].get<std::string_view>());
+    Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr);
+
+    CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(trx["asset"].get<std::string_view>()));
+    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+    MonetaryAmount fee(trx["fee"].get<std::string_view>(), currencyCode);
+
+    withdraws.emplace_back(id, timestamp, amount, status, fee);
+  }
+
+  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
+  return withdraws;
 }
 
 PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, MonetaryAmount volume,
@@ -531,24 +579,6 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 
   // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
   return {std::move(destinationWallet), std::move(withdrawData["refid"].get_ref<string&>()), grossAmount};
-}
-
-SentWithdrawInfo KrakenPrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
-  const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
-  auto [trxList, err] =
-      PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", {{"asset", krakenCurrency.altStr()}});
-  for (const json& trx : trxList) {
-    std::string_view withdrawId = trx["refid"].get<std::string_view>();
-    if (withdrawId == initiatedWithdrawInfo.withdrawId()) {
-      std::string_view status = trx["status"].get<std::string_view>();
-      log::info("{} withdraw status: {}", exchangeName(), status);
-      MonetaryAmount netWithdrawAmount(trx["amount"].get<std::string_view>(), currencyCode);
-      MonetaryAmount fee(trx["fee"].get<std::string_view>(), currencyCode);
-      return {netWithdrawAmount, fee, status == "Success"};
-    }
-  }
-  throw exception("Kraken: unable to find withdrawal confirmation of {}", initiatedWithdrawInfo.grossEmittedAmount());
 }
 
 }  // namespace cct::api

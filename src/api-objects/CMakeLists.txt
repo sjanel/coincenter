@@ -12,6 +12,13 @@ add_unit_test(
 )
 
 add_unit_test(
+    deposit_test
+    test/deposit_test.cpp
+    LIBRARIES
+    coincenter_objects
+)
+
+add_unit_test(
     withdrawsordepositsconstraints_test
     src/withdrawsordepositsconstraints.cpp
     test/withdrawsordepositsconstraints_test.cpp
@@ -38,4 +45,11 @@ add_unit_test(
     LIBRARIES
     coincenter_objects
     coincenter_iotools
+)
+
+add_unit_test(
+    withdraw_test
+    test/withdraw_test.cpp
+    LIBRARIES
+    coincenter_objects
 )

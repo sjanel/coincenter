@@ -219,12 +219,13 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     Wallet receivingWallet{toExchange, cur, "TestAddress", "TestTag", WalletCheck()};
     EXPECT_CALL(exchangePrivate2, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
-    api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, "WithdrawId", grossAmount};
+    api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
     EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
     api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
-    EXPECT_CALL(exchangePrivate1, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
-        .WillOnce(testing::Return(sentWithdrawInfo));
+    EXPECT_CALL(exchangePrivate1, queryRecentWithdraws(testing::_))
+        .WillOnce(testing::Return(
+            Withdraws{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
     EXPECT_CALL(exchangePrivate2, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .WillOnce(testing::Return(netEmittedAmount));
     return {std::move(initiatedWithdrawInfo), netEmittedAmount};
@@ -235,6 +236,8 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
   ExchangeName toExchange{exchange2.name(), exchange2.keyName()};
 
   MonetaryAmount fee{"0.02", cur};
+  std::string_view withdrawId = "WithdrawId";
+  TimePoint withdrawTimestamp = Clock::now();
 };
 
 TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossible) {

@@ -34,6 +34,8 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
       return "OrdersCancel";
     case CoincenterCommandType::kRecentDeposits:
       return "RecentDeposits";
+    case CoincenterCommandType::kRecentWithdraws:
+      return "RecentWithdraws";
     case CoincenterCommandType::kTrade:
       return "Trade";
     case CoincenterCommandType::kBuy:
