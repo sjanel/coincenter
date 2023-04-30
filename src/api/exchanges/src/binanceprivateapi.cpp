@@ -591,13 +591,15 @@ SentWithdrawInfo BinancePrivate::isWithdrawSuccessfullySent(const InitiatedWithd
   return {netEmittedAmount, fee, isWithdrawSent};
 }
 
-ReceivedWithdrawInfo BinancePrivate::isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                                        const SentWithdrawInfo& sentWithdrawInfo) {
+MonetaryAmount BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                                     const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
                                     _queryDelay, {{"coin", currencyCode.str()}});
   const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
-  RecentDeposit::RecentDepositVector recentDeposits;
+
+  ClosestRecentDepositPicker closestRecentDepositPicker;
+
   for (const json& depositDetail : depositStatus) {
     std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
     int status = depositDetail["status"].get<int>();
@@ -608,14 +610,12 @@ ReceivedWithdrawInfo BinancePrivate::isWithdrawReceived(const InitiatedWithdrawI
 
         TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
 
-        recentDeposits.emplace_back(amountReceived, timestamp);
+        closestRecentDepositPicker.addDeposit(RecentDeposit(amountReceived, timestamp));
       }
     }
   }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  const RecentDeposit* pClosestRecentDeposit = expectedDeposit.selectClosestRecentDeposit(recentDeposits);
-  return {pClosestRecentDeposit == nullptr ? MonetaryAmount() : pClosestRecentDeposit->amount(),
-          pClosestRecentDeposit != nullptr};
+  return closestRecentDepositPicker.pickClosestRecentDepositOrDefault(expectedDeposit).amount();
 }
 
 }  // namespace cct::api

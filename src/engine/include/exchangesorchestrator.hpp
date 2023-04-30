@@ -59,9 +59,9 @@ class ExchangesOrchestrator {
   TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
                                                             CurrencyCode currencyCode);
 
-  WithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                        const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
-                        const WithdrawOptions &withdrawOptions);
+  DeliveredWithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
+                                 const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
+                                 const WithdrawOptions &withdrawOptions);
 
   MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 

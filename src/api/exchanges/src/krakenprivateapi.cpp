@@ -11,7 +11,6 @@
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "krakenpublicapi.hpp"
-#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"

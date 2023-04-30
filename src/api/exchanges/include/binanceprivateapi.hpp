@@ -61,8 +61,8 @@ class BinancePrivate : public ExchangePrivate {
 
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) override;
 
-  ReceivedWithdrawInfo isWithdrawReceived(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                          const SentWithdrawInfo& sentWithdrawInfo) override;
+  MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                       const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
   OrderInfo queryOrder(OrderIdView orderId, const TradeContext& tradeContext, HttpRequestType requestType);

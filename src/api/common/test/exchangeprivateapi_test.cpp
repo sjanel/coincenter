@@ -12,7 +12,7 @@
 #include "withdrawoptions.hpp"
 
 namespace cct {
-inline bool operator==(const WithdrawInfo &lhs, const WithdrawInfo &rhs) {
+inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
@@ -443,25 +443,25 @@ TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedAfterSent) {
 
     EXPECT_CALL(exchangePrivate, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(unsentWithdrawInfo));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, unsentWithdrawInfo))
-        .WillOnce(testing::Return(ReceivedWithdrawInfo{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
+        .WillOnce(testing::Return(MonetaryAmount{}));
 
     EXPECT_CALL(exchangePrivate, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(unsentWithdrawInfo));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, unsentWithdrawInfo))
-        .WillOnce(testing::Return(ReceivedWithdrawInfo{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
+        .WillOnce(testing::Return(MonetaryAmount{}));
 
     EXPECT_CALL(exchangePrivate, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(sentWithdrawInfo));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .Times(2)
-        .WillRepeatedly(testing::Return(ReceivedWithdrawInfo{}));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, sentWithdrawInfo))
-        .WillOnce(testing::Return(ReceivedWithdrawInfo{netEmittedAmount, true}));
+        .WillRepeatedly(testing::Return(MonetaryAmount{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
+        .WillOnce(testing::Return(netEmittedAmount));
   }
 
-  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
-  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, withdrawOptions), withdrawInfo);
+  DeliveredWithdrawInfo deliveredWithdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
+  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, withdrawOptions), deliveredWithdrawInfo);
 }
 
 TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedBeforeSent) {
@@ -470,17 +470,17 @@ TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedBeforeSent) {
 
     EXPECT_CALL(exchangePrivate, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(unsentWithdrawInfo));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, unsentWithdrawInfo))
-        .WillOnce(testing::Return(ReceivedWithdrawInfo{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
+        .WillOnce(testing::Return(MonetaryAmount{}));
 
     EXPECT_CALL(exchangePrivate, isWithdrawSuccessfullySent(initiatedWithdrawInfo))
         .WillOnce(testing::Return(unsentWithdrawInfo));
-    EXPECT_CALL(destinationExchangePrivate, isWithdrawReceived(initiatedWithdrawInfo, unsentWithdrawInfo))
-        .WillOnce(testing::Return(ReceivedWithdrawInfo{netEmittedAmount, true}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
+        .WillOnce(testing::Return(netEmittedAmount));
   }
 
-  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
-  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, withdrawOptions), withdrawInfo);
+  DeliveredWithdrawInfo deliveredWithdrawInfo(std::move(initiatedWithdrawInfo), netEmittedAmount);
+  EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate, withdrawOptions), deliveredWithdrawInfo);
 }
 
 TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
@@ -495,11 +495,11 @@ TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
   EXPECT_CALL(exchangePrivate, launchWithdraw(grossAmount, std::move(receivingWallet)))
       .WillOnce(testing::Return(initiatedWithdrawInfo));
 
-  WithdrawInfo withdrawInfo(std::move(initiatedWithdrawInfo), MonetaryAmount{});
+  DeliveredWithdrawInfo deliveredWithdrawInfo(std::move(initiatedWithdrawInfo), MonetaryAmount{});
 
   EXPECT_EQ(exchangePrivate.withdraw(grossAmount, destinationExchangePrivate,
                                      WithdrawOptions(Duration{}, WithdrawSyncPolicy::kAsynchronous)),
-            withdrawInfo);
+            deliveredWithdrawInfo);
 }
 
 class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {

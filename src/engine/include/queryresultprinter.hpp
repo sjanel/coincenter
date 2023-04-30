@@ -17,7 +17,7 @@
 namespace cct {
 class SimpleTable;
 class TradeOptions;
-class WithdrawInfo;
+class DeliveredWithdrawInfo;
 class WithdrawOptions;
 
 class QueryResultPrinter {
@@ -77,9 +77,9 @@ class QueryResultPrinter {
 
   void printLastPrice(Market mk, const MonetaryAmountPerExchange &pricePerExchange) const;
 
-  void printWithdraw(const WithdrawInfo &withdrawInfo, MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                     const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
-                     const WithdrawOptions &withdrawOptions) const;
+  void printWithdraw(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
+                     bool isPercentageWithdraw, const ExchangeName &fromPrivateExchangeName,
+                     const ExchangeName &toPrivateExchangeName, const WithdrawOptions &withdrawOptions) const;
 
   void printDustSweeper(
       const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,

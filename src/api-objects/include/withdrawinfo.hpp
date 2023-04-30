@@ -55,32 +55,16 @@ class SentWithdrawInfo {
   bool _isWithdrawSent = false;
 };
 
-class ReceivedWithdrawInfo {
- public:
-  ReceivedWithdrawInfo() noexcept(std::is_nothrow_default_constructible_v<MonetaryAmount>) = default;
-
-  ReceivedWithdrawInfo(MonetaryAmount netReceivedAmount, bool isWithdrawReceived)
-      : _netReceivedAmount(netReceivedAmount), _isWithdrawReceived(isWithdrawReceived) {}
-
-  MonetaryAmount netReceivedAmount() const { return _netReceivedAmount; }
-
-  bool isWithdrawReceived() const { return _isWithdrawReceived; }
-
- private:
-  MonetaryAmount _netReceivedAmount;
-  bool _isWithdrawReceived = false;
-};
-
 }  // namespace api
 
-class WithdrawInfo {
+class DeliveredWithdrawInfo {
  public:
   /// Empty withdraw info, when no withdrawal has been done
-  explicit WithdrawInfo(string &&msg = string()) : _initiatedWithdrawInfo(std::move(msg)) {}
+  explicit DeliveredWithdrawInfo(string &&msg = string()) : _initiatedWithdrawInfo(std::move(msg)) {}
 
   /// Constructs a withdraw info with all information
-  WithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,
-               TimePoint receivedTime = Clock::now());
+  DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,
+                        TimePoint receivedTime = Clock::now());
 
   TimePoint initiatedTime() const { return _initiatedWithdrawInfo.initiatedTime(); }
 
@@ -109,7 +93,7 @@ class WithdrawInfo {
 
 #ifndef CCT_DISABLE_SPDLOG
 template <>
-struct fmt::formatter<cct::WithdrawInfo> {
+struct fmt::formatter<cct::DeliveredWithdrawInfo> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
     auto it = ctx.begin(), end = ctx.end();
     if (it != end && *it != '}') {
@@ -119,7 +103,7 @@ struct fmt::formatter<cct::WithdrawInfo> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::WithdrawInfo &wi, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::DeliveredWithdrawInfo &wi, FormatContext &ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "[{}] -> [{}]@{:ek}", wi.grossAmount(), wi.receivedAmount(),
                           wi.receivingWallet().exchangeName());
   }

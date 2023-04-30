@@ -1988,8 +1988,8 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   Wallet receivingWallet{toExchange, grossAmount.currencyCode(), "xrpaddress666", "xrptag2", WalletCheck{}};
   MonetaryAmount grossEmittedAmount;
   api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, isWithdrawSent};
-  WithdrawInfo withdrawInfo{api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1},
-                            netEmittedAmount, tp2};
+  DeliveredWithdrawInfo deliveredWithdrawInfo{
+      api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1}, netEmittedAmount, tp2};
   WithdrawOptions withdrawOptions;
 };
 
@@ -2000,7 +2000,8 @@ class QueryResultPrinterWithdrawAmountTest : public QueryResultPrinterWithdrawTe
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
   QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 -------------------------------------------------------------------------------------------------------------------------
 | From Exchange | To Exchange | Gross withdraw amount | Initiated time      | Received time       | Net received amount |
@@ -2013,7 +2014,8 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -2046,7 +2048,8 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   expectNoStr();
 }
 
@@ -2057,7 +2060,8 @@ class QueryResultPrinterWithdrawPercentageTest : public QueryResultPrinterWithdr
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
   QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 -------------------------------------------------------------------------------------------------------------------------
 | From Exchange | To Exchange | Gross withdraw amount | Initiated time      | Received time       | Net received amount |
@@ -2070,7 +2074,8 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -2103,7 +2108,8 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printWithdraw(withdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
+                     withdrawOptions);
   expectNoStr();
 }
 

@@ -15,7 +15,6 @@
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "file.hpp"
-#include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
