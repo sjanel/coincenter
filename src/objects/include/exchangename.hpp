@@ -15,7 +15,7 @@ namespace cct {
 
 class ExchangeName {
  public:
-  ExchangeName() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+  ExchangeName() noexcept = default;
 
   /// Constructs a ExchangeName with a unique identifier name.
   /// Two cases:

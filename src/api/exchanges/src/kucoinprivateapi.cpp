@@ -255,19 +255,19 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
 }
 
 Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
-  CurlPostData options{{"status", "SUCCESS"}};
+  CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.append("currency", depositsConstraints.currencyCode().str());
   }
-  if (depositsConstraints.isReceivedTimeAfterDefined()) {
-    options.append("startAt", TimestampToMs(depositsConstraints.receivedAfter()));
+  if (depositsConstraints.isTimeAfterDefined()) {
+    options.append("startAt", TimestampToMs(depositsConstraints.timeAfter()));
   }
-  if (depositsConstraints.isReceivedTimeBeforeDefined()) {
-    options.append("endAt", TimestampToMs(depositsConstraints.receivedBefore()));
+  if (depositsConstraints.isTimeBeforeDefined()) {
+    options.append("endAt", TimestampToMs(depositsConstraints.timeBefore()));
   }
-  if (depositsConstraints.isDepositIdDefined()) {
-    if (depositsConstraints.depositIdSet().size() == 1) {
-      options.append("txId", depositsConstraints.depositIdSet().front());
+  if (depositsConstraints.isIdDefined()) {
+    if (depositsConstraints.idSet().size() == 1) {
+      options.append("txId", depositsConstraints.idSet().front());
     }
   }
   json depositJson =
@@ -283,6 +283,18 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
     MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
     int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
 
+    std::string_view statusStr = depositDetail["status"].get<std::string_view>();
+    Deposit::Status status;
+    if (statusStr == "SUCCESS") {
+      status = Deposit::Status::kSuccess;
+    } else if (statusStr == "PROCESSING") {
+      status = Deposit::Status::kProcessing;
+    } else if (statusStr == "FAILURE") {
+      status = Deposit::Status::kFailureOrRejected;
+    } else {
+      throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
+    }
+
     TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
 
     // Kucoin does not provide any transaction id, let's generate it from currency and timestamp...
@@ -290,7 +302,7 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
     id.push_back('-');
     id.append(ToString(millisecondsSinceEpoch));
 
-    deposits.emplace_back(std::move(id), timestamp, amount);
+    deposits.emplace_back(std::move(id), timestamp, amount, status);
   }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;

@@ -112,7 +112,7 @@ class FlatKeyValueString {
 
   static constexpr char kArrayElemSepChar = ',';
 
-  FlatKeyValueString() noexcept(std::is_nothrow_default_constructible_v<string>) = default;
+  FlatKeyValueString() noexcept = default;
 
   FlatKeyValueString(std::initializer_list<KeyValuePair> init)
       : FlatKeyValueString(std::span<const KeyValuePair>(init.begin(), init.end())) {}

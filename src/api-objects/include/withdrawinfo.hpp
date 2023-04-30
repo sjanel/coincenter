@@ -13,7 +13,10 @@ namespace api {
 class InitiatedWithdrawInfo {
  public:
   /// Empty InitiatedWithdrawInfo, when no withdrawal has been done
-  InitiatedWithdrawInfo(string &&msg = string()) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
+  InitiatedWithdrawInfo() noexcept = default;
+
+  /// Empty InitiatedWithdrawInfo, when no withdrawal has been done
+  explicit InitiatedWithdrawInfo(string &&msg) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
 
   InitiatedWithdrawInfo(Wallet receivingWallet, string withdrawId, MonetaryAmount grossEmittedAmount,
                         TimePoint initiatedTime = Clock::now());

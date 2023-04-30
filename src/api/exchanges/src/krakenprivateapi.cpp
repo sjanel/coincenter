@@ -305,33 +305,39 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
   }
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", options);
   for (const json& trx : res) {
-    std::string_view status(trx["status"].get<std::string_view>());
-    if (status != "Success") {
-      log::debug("Deposit {} status {}", trx["refid"].get<std::string_view>(), status);
-      continue;
-    }
     auto additionalNoteIt = trx.find("status-prop");
     if (additionalNoteIt != trx.end()) {
       std::string_view statusNote(additionalNoteIt->get<std::string_view>());
       if (statusNote == "onhold") {
         log::debug("Additional status is {}", statusNote);
-        continue;
       }
     }
+    std::string_view statusStr(trx["status"].get<std::string_view>());
+    Deposit::Status status;
+    if (statusStr == "Settled") {
+      status = Deposit::Status::kProcessing;
+    } else if (statusStr == "Success") {
+      status = Deposit::Status::kSuccess;
+    } else if (statusStr == "Failure") {
+      status = Deposit::Status::kFailureOrRejected;
+    } else {
+      throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
+    }
+
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(trx["asset"].get<std::string_view>()));
     MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
     int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
     std::string_view id = trx["txid"].get<std::string_view>();
     TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
 
-    if (!depositsConstraints.validateReceivedTime(timestamp)) {
+    if (!depositsConstraints.validateTime(timestamp)) {
       continue;
     }
-    if (depositsConstraints.isDepositIdDefined() && !depositsConstraints.depositIdSet().contains(id)) {
+    if (depositsConstraints.isIdDefined() && !depositsConstraints.idSet().contains(id)) {
       continue;
     }
 
-    deposits.emplace_back(id, timestamp, amount);
+    deposits.emplace_back(id, timestamp, amount, status);
   }
 
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
