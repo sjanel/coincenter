@@ -297,6 +297,21 @@ int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   return openedOrders.size();
 }
 
+namespace {
+Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "Settled") {
+    return Deposit::Status::kProcessing;
+  }
+  if (statusStr == "Success") {
+    return Deposit::Status::kSuccess;
+  }
+  if (statusStr == "Failure") {
+    return Deposit::Status::kFailureOrRejected;
+  }
+  throw exception("Unrecognized deposit status '{}' from Kraken", statusStr);
+}
+}  // namespace
+
 Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
@@ -313,16 +328,7 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
       }
     }
     std::string_view statusStr(trx["status"].get<std::string_view>());
-    Deposit::Status status;
-    if (statusStr == "Settled") {
-      status = Deposit::Status::kProcessing;
-    } else if (statusStr == "Success") {
-      status = Deposit::Status::kSuccess;
-    } else if (statusStr == "Failure") {
-      status = Deposit::Status::kFailureOrRejected;
-    } else {
-      throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
-    }
+    Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(trx["asset"].get<std::string_view>()));
     MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);

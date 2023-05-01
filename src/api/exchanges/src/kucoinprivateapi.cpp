@@ -254,6 +254,21 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   return openedOrders.size();
 }
 
+namespace {
+Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "SUCCESS") {
+    return Deposit::Status::kSuccess;
+  }
+  if (statusStr == "PROCESSING") {
+    return Deposit::Status::kProcessing;
+  }
+  if (statusStr == "FAILURE") {
+    return Deposit::Status::kFailureOrRejected;
+  }
+  throw exception("Unrecognized deposit status '{}' from Kucoin", statusStr);
+}
+}  // namespace
+
 Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
@@ -284,16 +299,7 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
     int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
 
     std::string_view statusStr = depositDetail["status"].get<std::string_view>();
-    Deposit::Status status;
-    if (statusStr == "SUCCESS") {
-      status = Deposit::Status::kSuccess;
-    } else if (statusStr == "PROCESSING") {
-      status = Deposit::Status::kProcessing;
-    } else if (statusStr == "FAILURE") {
-      status = Deposit::Status::kFailureOrRejected;
-    } else {
-      throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
-    }
+    Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
     TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
 

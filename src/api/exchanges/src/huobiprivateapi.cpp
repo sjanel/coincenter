@@ -222,6 +222,18 @@ int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   return batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
 }
 
+namespace {
+Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "unknown" || statusStr == "confirming") {
+    return Deposit::Status::kProcessing;
+  }
+  if (statusStr == "confirmed" || statusStr == "safe" || statusStr == "orphan") {
+    return Deposit::Status::kSuccess;
+  }
+  throw exception("Unexpected deposit status '{}' from Huobi", statusStr);
+}
+}  // namespace
+
 Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
@@ -233,22 +245,9 @@ Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
   json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
                                   std::move(options))["data"];
   for (const json& depositDetail : depositJson) {
-    std::string_view depositStatus = depositDetail["state"].get<std::string_view>();
+    std::string_view statusStr = depositDetail["state"].get<std::string_view>();
     int64_t id = depositDetail["id"].get<int64_t>();
-    Deposit::Status status;
-    if (depositStatus == "unknown") {
-      status = Deposit::Status::kProcessing;
-    } else if (depositStatus == "confirming") {
-      status = Deposit::Status::kProcessing;
-    } else if (depositStatus == "confirmed") {
-      status = Deposit::Status::kSuccess;
-    } else if (depositStatus == "safe") {
-      status = Deposit::Status::kSuccess;
-    } else if (depositStatus == "orphan") {
-      status = Deposit::Status::kSuccess;
-    } else {
-      throw exception("Unexpected deposit status '{}' from {}", depositStatus, exchangeName());
-    }
+    Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
     CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
