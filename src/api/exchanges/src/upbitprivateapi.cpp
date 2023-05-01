@@ -258,10 +258,26 @@ int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   return openedOrders.size();
 }
 
+namespace {
+Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
+  if (statusStr == "PROCESSING" || statusStr == "REFUNDING") {
+    return Deposit::Status::kProcessing;
+  }
+  if (statusStr == "ACCEPTED") {
+    return Deposit::Status::kSuccess;
+  }
+  if (statusStr == "CANCELLED" || statusStr == "REJECTED" || statusStr == "TRAVEL_RULE_SUSPECTED" ||
+      statusStr == "REFUNDED") {
+    return Deposit::Status::kFailureOrRejected;
+  }
+  throw exception("Unrecognized deposit status '{}' from Upbit", statusStr);
+}
+}  // namespace
+
 Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   static constexpr int kNbResultsPerPage = 100;
-  CurlPostData options{{"state", "accepted"}, {"limit", kNbResultsPerPage}};
+  CurlPostData options{{"limit", kNbResultsPerPage}};
   if (depositsConstraints.isCurDefined()) {
     options.append("currency", depositsConstraints.currencyCode().str());
   }
@@ -271,10 +287,10 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       options.append("txids[]", depositId);
     }
   }
-  int nbResults;
-  int page = 0;
-  do {
-    options.set("page", ++page);
+
+  // To make sure we retrieve all results, ask for next page when maximum results per page is returned
+  for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
+    options.set("page", page);
     json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
     if (deposits.empty()) {
       deposits.reserve(result.size());
@@ -284,36 +300,18 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      TimePoint timestamp =
-          FromString(trx["done_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
+      TimePoint timestamp = FromString(trx["done_at"].get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
       string& id = trx["txid"].get_ref<string&>();
 
       std::string_view statusStr = trx["state"].get<std::string_view>();
-      Deposit::Status status;
-      if (statusStr == "PROCESSING") {
-        status = Deposit::Status::kProcessing;
-      } else if (statusStr == "ACCEPTED") {
-        status = Deposit::Status::kSuccess;
-      } else if (statusStr == "CANCELLED") {
-        status = Deposit::Status::kFailureOrRejected;
-      } else if (statusStr == "REJECTED") {
-        status = Deposit::Status::kFailureOrRejected;
-      } else if (statusStr == "TRAVEL_RULE_SUSPECTED") {
-        status = Deposit::Status::kFailureOrRejected;
-      } else if (statusStr == "REFUNDING") {
-        status = Deposit::Status::kProcessing;
-      } else if (statusStr == "REFUNDED") {
-        status = Deposit::Status::kFailureOrRejected;
-      } else {
-        throw exception("Unrecognized deposit status '{}' for {}", statusStr, exchangeName());
-      }
+      Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
       deposits.emplace_back(std::move(id), timestamp, amount, status);
     }
-  } while (nbResults == kNbResultsPerPage);  // there may be more pages
+  }
   log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
   return deposits;
 }

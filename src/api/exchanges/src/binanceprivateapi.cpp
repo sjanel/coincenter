@@ -342,6 +342,25 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
   return nbOrdersCancelled;
 }
 
+namespace {
+Deposit::Status DepositStatusFromCode(int statusInt) {
+  switch (statusInt) {
+    case kDepositPendingCode:
+      return Deposit::Status::kProcessing;
+    case kDepositSuccessCode:
+      [[fallthrough]];
+    case kDepositCreditedButCannotWithdrawCode:
+      return Deposit::Status::kSuccess;
+    case kDepositWrongDepositCode:
+      return Deposit::Status::kFailureOrRejected;
+    case kDepositWaitingUserConfirmCode:
+      return Deposit::Status::kProcessing;
+    default:
+      throw exception("Unknown deposit status code {} from Binance", statusInt);
+  }
+}
+}  // namespace
+
 Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
@@ -363,26 +382,7 @@ Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& deposits
                                     _queryDelay, std::move(options));
   for (json& depositDetail : depositStatus) {
     int statusInt = depositDetail["status"].get<int>();
-    Deposit::Status status;
-    switch (statusInt) {
-      case kDepositPendingCode:
-        status = Deposit::Status::kProcessing;
-        break;
-      case kDepositSuccessCode:
-        status = Deposit::Status::kSuccess;
-        break;
-      case kDepositCreditedButCannotWithdrawCode:
-        status = Deposit::Status::kSuccess;
-        break;
-      case kDepositWrongDepositCode:
-        status = Deposit::Status::kFailureOrRejected;
-        break;
-      case kDepositWaitingUserConfirmCode:
-        status = Deposit::Status::kProcessing;
-        break;
-      default:
-        throw exception("Unknown deposit status code {}", statusInt);
-    }
+    Deposit::Status status = DepositStatusFromCode(statusInt);
 
     CurrencyCode currencyCode(depositDetail["coin"].get<std::string_view>());
     string& id = depositDetail["id"].get_ref<string&>();

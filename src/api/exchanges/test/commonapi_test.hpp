@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <memory>
+#include <optional>
 #include <random>
 
 #include "apikeysprovider.hpp"
@@ -19,6 +19,8 @@ namespace cct::api {
 template <class PublicExchangeT, class PrivateExchangeT>
 class TestAPI {
  public:
+  TestAPI() { createPrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider); }
+
   static MarketSet ComputeMarketSetSample(const MarketSet &markets, const CurrencyExchangeFlatSet &currencies) {
     static constexpr int kNbSamples = 1;
     MarketSet consideredMarkets;
@@ -53,8 +55,7 @@ class TestAPI {
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
   CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
   PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};
-  std::unique_ptr<PrivateExchangeT> exchangePrivatePtr{
-      CreatePrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider)};
+  std::optional<PrivateExchangeT> exchangePrivateOpt;
 
   CurrencyExchangeFlatSet currencies;
   MarketSet markets;
@@ -68,17 +69,17 @@ class TestAPI {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    currencies = exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryTradableCurrencies()
-                                          : exchangePublic.queryTradableCurrencies();
+    currencies =
+        exchangePrivateOpt ? exchangePrivateOpt->queryTradableCurrencies() : exchangePublic.queryTradableCurrencies();
     ASSERT_FALSE(currencies.empty());
     EXPECT_TRUE(
         std::ranges::none_of(currencies, [](const CurrencyExchange &c) { return c.standardCode().str().empty(); }));
 
     // Uncomment below code to print updated Upbit withdrawal fees for static data of withdrawal fees of public API
-    // if (exchangePrivatePtr.get()) {
+    // if (exchangePrivateOpt) {
     //   json d;
     //   for (const auto &c : currencies) {
-    //     d[string(c.standardStr())] = exchangePrivatePtr.get()->queryWithdrawalFee(c.standardCode()).amountStr();
+    //     d[string(c.standardStr())] = exchangePrivateOpt->queryWithdrawalFee(c.standardCode()).amountStr();
     //   }
     //   std::cout << d.dump(2) << std::endl;
     // }
@@ -114,10 +115,10 @@ class TestAPI {
     EXPECT_NO_THROW(exchangePublic.queryLast24hVolume(mk));
     EXPECT_NO_THROW(exchangePublic.queryLastPrice(mk));
 
-    MarketOrderBookMap approximatedMarketOrderbooks = exchangePublic.queryAllApproximatedOrderBooks(1);
+    MarketOrderBookMap approximatedMarketOrderBooks = exchangePublic.queryAllApproximatedOrderBooks(1);
 
-    auto approximatedOrderbookIt = approximatedMarketOrderbooks.find(mk);
-    ASSERT_NE(approximatedOrderbookIt, approximatedMarketOrderbooks.end());
+    auto approximatedOrderbookIt = approximatedMarketOrderBooks.find(mk);
+    ASSERT_NE(approximatedOrderbookIt, approximatedMarketOrderBooks.end());
 
     MarketPriceMap marketPriceMap = exchangePublic.queryAllPrices();
 
@@ -147,8 +148,8 @@ class TestAPI {
         sample = std::move(withdrawableCryptos);
       }
 
-      WithdrawalFeeMap withdrawalFees = exchangePrivatePtr.get() ? exchangePrivatePtr.get()->queryWithdrawalFees()
-                                                                 : exchangePublic.queryWithdrawalFees();
+      WithdrawalFeeMap withdrawalFees =
+          exchangePrivateOpt ? exchangePrivateOpt->queryWithdrawalFees() : exchangePublic.queryWithdrawalFees();
 
       for (const CurrencyExchange &curExchange : sample) {
         CurrencyCode cur(curExchange.standardCode());
@@ -170,8 +171,8 @@ class TestAPI {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    if (exchangePrivatePtr.get()) {
-      EXPECT_NO_THROW(exchangePrivatePtr.get()->getAccountBalance());
+    if (exchangePrivateOpt) {
+      EXPECT_NO_THROW(exchangePrivateOpt->getAccountBalance());
     }
   }
 
@@ -180,7 +181,7 @@ class TestAPI {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    if (exchangePrivatePtr.get()) {
+    if (exchangePrivateOpt) {
       CurrencyExchangeFlatSet depositableCryptos;
       std::ranges::copy_if(
           currencies, std::inserter(depositableCryptos, depositableCryptos.end()), [this](const CurrencyExchange &c) {
@@ -189,7 +190,7 @@ class TestAPI {
           });
       if (!depositableCryptos.empty()) {
         CurrencyExchangeFlatSet sample;
-        int nbSamples = exchangePrivatePtr.get()->canGenerateDepositAddress() ? 1 : 5;
+        int nbSamples = exchangePrivateOpt->canGenerateDepositAddress() ? 1 : 5;
         std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), nbSamples,
                             std::mt19937{std::random_device{}()});
 
@@ -197,11 +198,11 @@ class TestAPI {
           CurrencyCode cur(curExchange.standardCode());
           log::info("Choosing {} as random currency code for Deposit wallet test", cur);
           try {
-            Wallet wallet = exchangePrivatePtr.get()->queryDepositWallet(cur);
+            Wallet wallet = exchangePrivateOpt->queryDepositWallet(cur);
             EXPECT_FALSE(wallet.address().empty());
             break;
           } catch (const exception &) {
-            if (exchangePrivatePtr.get()->canGenerateDepositAddress()) {
+            if (exchangePrivateOpt->canGenerateDepositAddress()) {
               throw;
             } else {
               log::info("Wallet for {} is not generated, taking next one", cur);
@@ -217,9 +218,9 @@ class TestAPI {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    if (exchangePrivatePtr.get() && !sampleMarkets.empty()) {
+    if (exchangePrivateOpt && !sampleMarkets.empty()) {
       Market mk = sampleMarkets.front();
-      Orders baseOpenedOrders = exchangePrivatePtr.get()->queryOpenedOrders(OrdersConstraints(mk.base()));
+      Orders baseOpenedOrders = exchangePrivateOpt->queryOpenedOrders(OrdersConstraints(mk.base()));
       if (!baseOpenedOrders.empty()) {
         const Order &openedOrder = baseOpenedOrders.front();
         EXPECT_TRUE(openedOrder.market().canTrade(mk.base()));
@@ -233,11 +234,11 @@ class TestAPI {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
-    if (exchangePrivatePtr.get()) {
+    if (exchangePrivateOpt) {
       for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent deposits test", cur);
-        Deposits deposits = exchangePrivatePtr.get()->queryRecentDeposits(DepositsConstraints(cur));
+        Deposits deposits = exchangePrivateOpt->queryRecentDeposits(DepositsConstraints(cur));
         if (!deposits.empty()) {
           EXPECT_EQ(deposits.front().amount().currencyCode(), cur);
         }
@@ -253,7 +254,7 @@ class TestAPI {
     if (!sampleMarkets.empty()) {
       Market mk = sampleMarkets.front();
       LastTradesVector lastTrades = exchangePublic.queryLastTrades(mk);
-      if (!lastTrades.empty() && exchangePrivatePtr.get()) {
+      if (!lastTrades.empty() && exchangePrivateOpt) {
         auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
           return lhs.amount() < rhs.amount();
         };
@@ -262,25 +263,30 @@ class TestAPI {
         TradeOptions tradeOptions(TradeMode::kSimulation);
         MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
         MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
-        EXPECT_GT(exchangePrivatePtr.get()->trade(smallFrom, mk.quote(), tradeOptions).tradedTo, 0);
-        EXPECT_NE(exchangePrivatePtr.get()->trade(bigFrom, mk.base(), tradeOptions).tradedFrom, 0);
+        EXPECT_GT(exchangePrivateOpt->trade(smallFrom, mk.quote(), tradeOptions).tradedTo, 0);
+        EXPECT_NE(exchangePrivateOpt->trade(bigFrom, mk.base(), tradeOptions).tradedFrom, 0);
       }
     }
   }
 
  private:
-  static std::unique_ptr<PrivateExchangeT> CreatePrivateExchangeIfKeyPresent(PublicExchangeT &exchangePublic,
-                                                                             const CoincenterInfo &coincenterInfo,
-                                                                             const APIKeysProvider &apiKeysProvider) {
+  void createPrivateExchangeIfKeyPresent(PublicExchangeT &exchangePublic, const CoincenterInfo &coincenterInfo,
+                                         const APIKeysProvider &apiKeysProvider) {
     std::string_view publicExchangeName = exchangePublic.name();
     if (!apiKeysProvider.contains(publicExchangeName)) {
       log::warn("Skip {} private API test as cannot find associated private key", publicExchangeName);
-      return {};
+      return;
     }
 
     ExchangeName exchangeName(publicExchangeName, apiKeysProvider.getKeyNames(publicExchangeName).front());
     const APIKey &firstAPIKey = apiKeysProvider.get(exchangeName);
-    return std::make_unique<PrivateExchangeT>(coincenterInfo, exchangePublic, firstAPIKey);
+
+    exchangePrivateOpt.emplace(coincenterInfo, exchangePublic, firstAPIKey);
+
+    if (!exchangePrivateOpt->validateApiKey()) {
+      log::warn("Skip {} private API test as the key has been detected as invalid", exchangeName);
+      exchangePrivateOpt.reset();
+    }
   }
 };
 
