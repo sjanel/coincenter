@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "cct_format.hpp"
+#include "cct_hash.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -117,6 +118,8 @@ class MonetaryAmount {
   [[nodiscard]] constexpr double toDouble() const {
     return static_cast<double>(_amount) / ipow(10, static_cast<uint8_t>(nbDecimals()));
   }
+
+  [[nodiscard]] bool isCloseTo(MonetaryAmount otherAmount, double relativeDifference) const;
 
   [[nodiscard]] constexpr CurrencyCode currencyCode() const {
     // We do not want to expose private nb decimals bits to outside world
@@ -323,6 +326,10 @@ class MonetaryAmount {
     appendCurrencyStr(str);
   }
 
+  uint64_t code() const noexcept {
+    return HashCombine(static_cast<size_t>(_amount), static_cast<size_t>(_curWithDecimals.code()));
+  }
+
   friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma);
 
  private:
@@ -399,3 +406,10 @@ struct fmt::formatter<cct::MonetaryAmount> {
   }
 };
 #endif
+
+namespace std {
+template <>
+struct hash<cct::MonetaryAmount> {
+  auto operator()(const cct::MonetaryAmount &monetaryAmount) const { return monetaryAmount.code(); }
+};
+}  // namespace std

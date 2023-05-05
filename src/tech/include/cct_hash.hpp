@@ -8,7 +8,7 @@
 #include <utility>
 
 namespace cct {
-inline uint64_t HashValue64(uint64_t x) {
+constexpr uint64_t HashValue64(uint64_t x) {
   // Murmur-inspired hashing.
   constexpr uint64_t kMul = 0x9ddfea08eb382d69ULL;
   uint64_t b = x * kMul;
@@ -19,7 +19,7 @@ inline uint64_t HashValue64(uint64_t x) {
   return b;
 }
 
-inline size_t HashCombine(size_t h1, size_t h2) {
+constexpr size_t HashCombine(size_t h1, size_t h2) {
   // Taken from boost::hash_combine
   static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "HashCombine not defined for this size_t");
   if constexpr (sizeof(size_t) == 4) {

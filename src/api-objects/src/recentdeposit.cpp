@@ -58,15 +58,7 @@ const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(cons
 
   static constexpr double kMaxRelativeDifferenceForSelection = 0.001;
 
-  double closestAmount = _recentDeposits.front().amount().toDouble();
-  double ourAmount = expectedDeposit.amount().toDouble();
-  double boundMin = ourAmount * (1.0 - kMaxRelativeDifferenceForSelection);
-  double boundMax = ourAmount * (1.0 + kMaxRelativeDifferenceForSelection);
-
-  if (boundMin < 0 || boundMax < 0) {
-    throw exception("Unexpected bounds [{}-{}]", boundMin, boundMax);
-  }
-  if (closestAmount > boundMin && closestAmount < boundMax) {
+  if (expectedDeposit.amount().isCloseTo(_recentDeposits.front().amount(), kMaxRelativeDifferenceForSelection)) {
     log::debug("Found recent deposit {} with close amount", _recentDeposits.front());
     return std::addressof(_recentDeposits.front());
   }
