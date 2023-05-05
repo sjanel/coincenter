@@ -673,6 +673,7 @@ TEST(MonetaryAmountTest, ExoticInput) {
   // Below ones are needed for Bithumb ('+ 5' for example)
   EXPECT_EQ(MonetaryAmount("+ 4.6   EUr "), MonetaryAmount("4.6EUR"));
   EXPECT_EQ(MonetaryAmount("+ 4.6 ", "EUr"), MonetaryAmount("4.6EUR"));
+  EXPECT_EQ(MonetaryAmount("- 0.54 krw "), MonetaryAmount("-0.54", "KRW"));
 
   EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
   EXPECT_EQ(MonetaryAmount(" -.9", "f&g"), MonetaryAmount("-0.9F&G"));
@@ -683,6 +684,18 @@ TEST(MonetaryAmountTest, ExoticInput) {
   EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
 
   EXPECT_THROW(MonetaryAmount("--.9"), exception);
+}
+
+TEST(MonetaryAmountTest, CloseTo) {
+  EXPECT_TRUE(MonetaryAmount(1000).isCloseTo(MonetaryAmount(1001), 0.01));
+  EXPECT_FALSE(MonetaryAmount(1000).isCloseTo(MonetaryAmount(1001), 0.001));
+  EXPECT_TRUE(MonetaryAmount(250).isCloseTo(MonetaryAmount("250.01"), 0.0001));
+  EXPECT_TRUE(MonetaryAmount("-3.4").isCloseTo(MonetaryAmount("-3.40001"), 0.0001));
+  EXPECT_FALSE(MonetaryAmount("-3.4").isCloseTo(MonetaryAmount("-3.40001"), 0.000001));
+  EXPECT_TRUE(MonetaryAmount("-0.90005").isCloseTo(MonetaryAmount("-0.90003"), 0.0001));
+  EXPECT_FALSE(MonetaryAmount("-0.90005").isCloseTo(MonetaryAmount("-0.90003"), 0.00001));
+  EXPECT_TRUE(MonetaryAmount("-0.90005").isCloseTo(MonetaryAmount("-0.9008"), 0.001));
+  EXPECT_FALSE(MonetaryAmount("-0.90005").isCloseTo(MonetaryAmount("-0.9008"), 0.0001));
 }
 
 }  // namespace cct

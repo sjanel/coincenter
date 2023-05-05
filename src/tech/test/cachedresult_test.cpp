@@ -9,26 +9,27 @@ namespace cct {
 namespace {
 class Incr {
  public:
-  int operator()() { return ++nbCalls; }
+  int operator()() { return ++_nbCalls; }
 
   int operator()(int val) {
-    nbCalls += val;
-    return nbCalls;
+    _nbCalls += val;
+    return _nbCalls;
   }
 
   int operator()(int lhs, int rhs) {
-    nbCalls += lhs;
-    nbCalls += rhs;
-    return nbCalls;
+    _nbCalls += lhs;
+    _nbCalls += rhs;
+    return _nbCalls;
   }
 
  private:
-  int nbCalls{};
+  int _nbCalls{};
 };
 
 // We use std::chrono::steady_clock for unit test as it is monotonic (system_clock is not)
-constexpr std::chrono::steady_clock::duration kCacheTime = std::chrono::milliseconds(2);
-constexpr auto kCacheExpireTime = 2 * kCacheTime;
+// Picking a number that is not too small to avoid issues with slow systems
+constexpr std::chrono::steady_clock::duration kCacheTime = std::chrono::milliseconds(10);
+constexpr auto kCacheExpireTime = kCacheTime + std::chrono::milliseconds(2);
 
 template <class T, class... FuncTArgs>
 using CachedResultSteadyClock = CachedResultT<std::chrono::steady_clock, T, FuncTArgs...>;
@@ -41,9 +42,6 @@ using CachedResultVaultSteadyClock = CachedResultVaultT<std::chrono::steady_cloc
 
 class CachedResultTestBasic : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   CachedResultVaultSteadyClock vault;
   CachedResultSteadyClock<Incr> cachedResult{CachedResultOptionsSteadyClock(kCacheTime, vault)};
 };
@@ -73,12 +71,7 @@ class CachedResultTest : public ::testing::Test {
  protected:
   using CachedResType = CachedResultSteadyClock<Incr, int, int>;
 
-  CachedResultTest() : cachedResult(CachedResultOptionsSteadyClock(kCacheTime)) {}
-
-  void SetUp() override {}
-  void TearDown() override {}
-
-  CachedResType cachedResult;
+  CachedResType cachedResult{CachedResultOptionsSteadyClock(kCacheTime)};
 };
 
 TEST_F(CachedResultTest, GetCache) {

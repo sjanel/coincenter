@@ -284,6 +284,18 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
   sanitizeDecimals(currentNbDecimals, nbDecimals);
 }
 
+bool MonetaryAmount::isCloseTo(MonetaryAmount otherAmount, double relativeDifference) const {
+  double ourAmount = std::abs(toDouble());
+  double boundMin = ourAmount * (1.0 - relativeDifference);
+  double boundMax = ourAmount * (1.0 + relativeDifference);
+
+  if (boundMin < 0 || boundMax < 0) {
+    throw exception("Unexpected bounds [{}-{}]", boundMin, boundMax);
+  }
+  double closestAmount = std::abs(otherAmount.toDouble());
+  return closestAmount > boundMin && closestAmount < boundMax;
+}
+
 std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &other) const {
   if (currencyCode() != other.currencyCode()) {
     throw exception("Cannot compare amounts with different currency");
