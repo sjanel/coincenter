@@ -217,7 +217,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
-                std::move(result["address"].get_ref<string&>()), tag, walletCheck);
+                std::move(result["address"].get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {} (URL: '{}')", wallet, result["url"].get<std::string_view>());
   return wallet;
 }
@@ -361,7 +361,7 @@ Deposit::Status DepositStatusFromCode(int statusInt) {
 }
 }  // namespace
 
-Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
@@ -392,8 +392,9 @@ Deposits BinancePrivate::queryRecentDeposits(const DepositsConstraints& deposits
 
     deposits.emplace_back(std::move(id), timestamp, amountReceived, status);
   }
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
 namespace {
@@ -438,10 +439,19 @@ Withdraw::Status WithdrawStatusFromStatusStr(int statusInt, bool logStatus) {
       throw exception("Unknown withdraw status code {}", statusInt);
   }
 }
-}  // namespace
 
-Withdraws BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
-  Withdraws withdraws;
+TimePoint RetrieveTimeStampFromWithdrawJson(const json& withdrawJson) {
+  int64_t millisecondsSinceEpoch;
+  auto completeTimeIt = withdrawJson.find("completeTime");
+  if (completeTimeIt != withdrawJson.end()) {
+    millisecondsSinceEpoch = completeTimeIt->get<int64_t>();
+  } else {
+    millisecondsSinceEpoch = withdrawJson["applyTime"].get<int64_t>();
+  }
+  return TimePoint{TimeInMs(millisecondsSinceEpoch)};
+}
+
+CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.append("coin", withdrawsConstraints.currencyCode().str());
@@ -452,11 +462,18 @@ Withdraws BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& withd
   if (withdrawsConstraints.isTimeBeforeDefined()) {
     options.append("endTime", TimestampToMs(withdrawsConstraints.timeBefore()));
   }
+  return options;
+}
+
+}  // namespace
+
+WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
   // Binance provides field 'withdrawOrderId' tu customize user id, but it's not well documented
   // so we use Binance generated 'id' instead.
   // What is important is that the same field is considered in both queries 'launchWithdraw' and 'queryRecentWithdraws'
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history",
-                           _queryDelay, std::move(options));
+                           _queryDelay, CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (json& withdrawJson : data) {
     int statusInt = withdrawJson["status"].get<int>();
     Withdraw::Status status = WithdrawStatusFromStatusStr(statusInt, withdrawsConstraints.isCurDefined());
@@ -465,20 +482,14 @@ Withdraws BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& withd
     if (!withdrawsConstraints.validateId(id)) {
       continue;
     }
-    MonetaryAmount amountReceived(withdrawJson["amount"].get<double>(), currencyCode);
+    MonetaryAmount netEmittedAmount(withdrawJson["amount"].get<double>(), currencyCode);
     MonetaryAmount withdrawFee(withdrawJson["transactionFee"].get<double>(), currencyCode);
-    int64_t millisecondsSinceEpoch;
-    auto completeTimeIt = withdrawJson.find("completeTime");
-    if (completeTimeIt != withdrawJson.end()) {
-      millisecondsSinceEpoch = completeTimeIt->get<int64_t>();
-    } else {
-      millisecondsSinceEpoch = withdrawJson["applyTime"].get<int64_t>();
-    }
-    TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
-    withdraws.emplace_back(std::move(id), timestamp, amountReceived, status, withdrawFee);
+    TimePoint timestamp = RetrieveTimeStampFromWithdrawJson(withdrawJson);
+    withdraws.emplace_back(std::move(id), timestamp, netEmittedAmount, status, withdrawFee);
   }
-  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {

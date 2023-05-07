@@ -87,17 +87,32 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
       for (auto& [name, keySecretObj] : keyObj.items()) {
         auto keyIt = keySecretObj.find("key");
         auto privateIt = keySecretObj.find("private");
-        if (keyIt != keySecretObj.end() && privateIt != keySecretObj.end()) {
-          string passphrase;
-          auto passphraseIt = keySecretObj.find("passphrase");
-          if (passphraseIt != keySecretObj.end()) {
-            passphrase = std::move(passphraseIt->get_ref<string&>());
-          }
-          map[publicExchangeName].emplace_back(publicExchangeName, name, std::move(keyIt->get_ref<string&>()),
-                                               std::move(privateIt->get_ref<string&>()), std::move(passphrase));
-        } else {
+        if (keyIt == keySecretObj.end() || privateIt == keySecretObj.end()) {
           log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
+          continue;
         }
+        string passphrase;
+        auto passphraseIt = keySecretObj.find("passphrase");
+        if (passphraseIt != keySecretObj.end()) {
+          passphrase = std::move(passphraseIt->get_ref<string&>());
+        }
+        std::string_view ownerEnName;
+        std::string_view ownerKoName;
+        auto accountOwnerPartIt = keySecretObj.find("accountOwner");
+        if (accountOwnerPartIt != keySecretObj.end()) {
+          auto ownerEnNameIt = accountOwnerPartIt->find("enName");
+          if (ownerEnNameIt != accountOwnerPartIt->end()) {
+            ownerEnName = ownerEnNameIt->get<std::string_view>();
+          }
+          auto ownerKoNameIt = accountOwnerPartIt->find("koName");
+          if (ownerKoNameIt != accountOwnerPartIt->end()) {
+            ownerKoName = ownerKoNameIt->get<std::string_view>();
+          }
+        }
+
+        map[publicExchangeName].emplace_back(publicExchangeName, name, std::move(keyIt->get_ref<string&>()),
+                                             std::move(privateIt->get_ref<string&>()), std::move(passphrase),
+                                             AccountOwner(ownerEnName, ownerKoName));
       }
     }
     if (map.empty()) {

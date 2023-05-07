@@ -48,7 +48,8 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  Wallet wallet2{privateExchangeNames[0], depositCurrency, "address1", "", WalletCheck()};
+  Wallet wallet2{privateExchangeNames[0],           depositCurrency, "address1", "", WalletCheck(),
+                 AccountOwner("en_name", "ko_name")};
   EXPECT_CALL(exchangePrivate2, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet2));
 
   WalletPerExchange ret{{&exchange2, wallet2}};
@@ -86,10 +87,12 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
   EXPECT_CALL(exchangePrivate3, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
   EXPECT_CALL(exchangePrivate4, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
 
-  Wallet wallet31{privateExchangeNames[2], depositCurrency, "address2", "tag2", WalletCheck()};
+  Wallet wallet31{privateExchangeNames[2],           depositCurrency, "address2", "tag2", WalletCheck(),
+                  AccountOwner("en_name", "ko_name")};
   EXPECT_CALL(exchangePrivate3, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet31));
 
-  Wallet wallet32{privateExchangeNames[3], depositCurrency, "address3", "tag3", WalletCheck()};
+  Wallet wallet32{privateExchangeNames[3],           depositCurrency, "address3", "tag3", WalletCheck(),
+                  AccountOwner("en_name", "ko_name")};
   EXPECT_CALL(exchangePrivate4, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet32));
 
   WalletPerExchange ret{{&exchange3, wallet31}, {&exchange4, wallet32}};
@@ -216,7 +219,8 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
       EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).Times(0);
     }
     MonetaryAmount netEmittedAmount = grossAmount - fee;
-    Wallet receivingWallet{toExchange, cur, "TestAddress", "TestTag", WalletCheck()};
+    Wallet receivingWallet{toExchange, cur,           "TestAddress",
+                           "TestTag",  WalletCheck(), AccountOwner("SmithJohn", "스미스존")};
     EXPECT_CALL(exchangePrivate2, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
     api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
@@ -225,7 +229,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
     EXPECT_CALL(exchangePrivate1, queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
-            Withdraws{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
+            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
     EXPECT_CALL(exchangePrivate2, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .WillOnce(testing::Return(netEmittedAmount));
     return {std::move(initiatedWithdrawInfo), netEmittedAmount};

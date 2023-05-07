@@ -70,10 +70,11 @@ class ExchangePrivate : public ExchangeBase {
   virtual int cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Get recent deposits filtered according to given constraints
-  virtual Deposits queryRecentDeposits(const DepositsConstraints &depositsConstraints = DepositsConstraints()) = 0;
+  virtual DepositsSet queryRecentDeposits(const DepositsConstraints &depositsConstraints = DepositsConstraints()) = 0;
 
   /// Get recent withdraws filtered according to given constraints
-  virtual Withdraws queryRecentWithdraws(const WithdrawsConstraints &withdrawsConstraints = WithdrawsConstraints()) = 0;
+  virtual WithdrawsSet queryRecentWithdraws(
+      const WithdrawsConstraints &withdrawsConstraints = WithdrawsConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.

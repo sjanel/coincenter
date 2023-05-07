@@ -238,7 +238,7 @@ class TestAPI {
       for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent deposits test", cur);
-        Deposits deposits = exchangePrivateOpt->queryRecentDeposits(DepositsConstraints(cur));
+        DepositsSet deposits = exchangePrivateOpt->queryRecentDeposits(DepositsConstraints(cur));
         if (!deposits.empty()) {
           EXPECT_EQ(deposits.front().amount().currencyCode(), cur);
         }
@@ -255,7 +255,7 @@ class TestAPI {
       for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent withdraws test", cur);
-        Withdraws withdraws = exchangePrivateOpt->queryRecentWithdraws(WithdrawsConstraints(cur));
+        WithdrawsSet withdraws = exchangePrivateOpt->queryRecentWithdraws(WithdrawsConstraints(cur));
         if (!withdraws.empty()) {
           EXPECT_EQ(withdraws.front().amount().currencyCode(), cur);
         }

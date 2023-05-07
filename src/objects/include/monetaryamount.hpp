@@ -119,6 +119,8 @@ class MonetaryAmount {
     return static_cast<double>(_amount) / ipow(10, static_cast<uint8_t>(nbDecimals()));
   }
 
+  /// Check if given amount is close to this amount.
+  /// Currency is not checked here, only amount
   [[nodiscard]] bool isCloseTo(MonetaryAmount otherAmount, double relativeDifference) const;
 
   [[nodiscard]] constexpr CurrencyCode currencyCode() const {

@@ -35,9 +35,9 @@ class BithumbPrivate : public ExchangePrivate {
 
   int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
-  Deposits queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
+  DepositsSet queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) override;
 
-  Withdraws queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
+  WithdrawsSet queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
 
   void updateCacheFile() const override;
 
@@ -82,10 +82,10 @@ class BithumbPrivate : public ExchangePrivate {
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;
 
-  enum class DepositOrWithdrawEnum : int8_t { kDeposit, kWithdraw };
+  enum class UserTransactionEnum : int8_t { kDeposit, kOngoingWithdraws, kProcessedWithdraws, kAllWithdraws };
 
   json queryRecentTransactions(const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints,
-                               DepositOrWithdrawEnum depositOrWithdrawEnum);
+                               UserTransactionEnum depositOrWithdrawEnum);
 
   CurlHandle _curlHandle;
   CurrencyOrderInfoMap _currencyOrderInfoMap;

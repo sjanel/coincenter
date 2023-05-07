@@ -142,7 +142,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag = std::string_view();
   }
 
-  Wallet wallet(std::move(exchangeName), currencyCode, std::move(address), tag, walletCheck);
+  Wallet wallet(std::move(exchangeName), currencyCode, std::move(address), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -234,7 +234,7 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
 }
 }  // namespace
 
-Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
@@ -263,8 +263,9 @@ Deposits HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
 
     deposits.emplace_back(std::move(idStr), timestamp, amount, status);
   }
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
 namespace {
@@ -349,25 +350,29 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
   }
   throw exception("unknown status value '{}'", statusStr);
 }
-}  // namespace
 
-Withdraws HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
-  Withdraws withdraws;
+CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.append("currency", ToLower(withdrawsConstraints.currencyCode().str()));
   }
   options.append("size", 500);
   options.append("type", "withdraw");
+  return options;
+}
+}  // namespace
+
+WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
   json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                                   std::move(options))["data"];
+                                   CreateOptionsFromWithdrawConstraints(withdrawsConstraints))["data"];
   for (const json& withdrawDetail : withdrawJson) {
     std::string_view statusStr = withdrawDetail["state"].get<std::string_view>();
     int64_t id = withdrawDetail["id"].get<int64_t>();
     Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isCurDefined());
 
     CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
-    MonetaryAmount amount(withdrawDetail["amount"].get<double>(), currencyCode);
+    MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<double>(), currencyCode);
     MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
     int64_t millisecondsSinceEpoch = withdrawDetail["updated-at"].get<int64_t>();
     TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
@@ -379,10 +384,11 @@ Withdraws HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdra
       continue;
     }
 
-    withdraws.emplace_back(std::move(idStr), timestamp, amount, status, fee);
+    withdraws.emplace_back(std::move(idStr), timestamp, netEmittedAmount, status, fee);
   }
-  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {

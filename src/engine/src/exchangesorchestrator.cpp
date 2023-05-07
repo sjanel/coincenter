@@ -211,10 +211,10 @@ DepositsPerExchange ExchangesOrchestrator::getRecentDeposits(std::span<const Exc
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
   DepositsPerExchange ret(selectedExchanges.size());
-  std::transform(
-      std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange, DepositsSet(exchange->apiPrivate().queryRecentDeposits(depositsConstraints)));
-      });
+  std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+                 [&](Exchange *exchange) {
+                   return std::make_pair(exchange, exchange->apiPrivate().queryRecentDeposits(depositsConstraints));
+                 });
 
   return ret;
 }
@@ -229,8 +229,7 @@ WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(std::span<const E
   WithdrawsPerExchange ret(selectedExchanges.size());
   std::transform(std::execution::par, selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
                  [&](Exchange *exchange) {
-                   return std::make_pair(
-                       exchange, WithdrawsSet(exchange->apiPrivate().queryRecentWithdraws(withdrawsConstraints)));
+                   return std::make_pair(exchange, exchange->apiPrivate().queryRecentWithdraws(withdrawsConstraints));
                  });
 
   return ret;

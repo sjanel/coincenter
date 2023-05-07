@@ -344,10 +344,11 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, NoPrint) {
 class QueryResultPrinterDepositInfoWithoutTagTest : public QueryResultPrinterTest {
  protected:
   CurrencyCode depositCurrencyCode{"ETH"};
-  WalletPerExchange walletPerExchange{{&exchange2, Wallet{exchange2.apiPrivate().exchangeName(), depositCurrencyCode,
-                                                          "ethaddress666", "", WalletCheck{}}},
-                                      {&exchange4, Wallet{exchange4.apiPrivate().exchangeName(), depositCurrencyCode,
-                                                          "ethaddress667", "", WalletCheck{}}}};
+  WalletPerExchange walletPerExchange{
+      {&exchange2, Wallet{exchange2.apiPrivate().exchangeName(), depositCurrencyCode, "ethaddress666", "",
+                          WalletCheck{}, AccountOwner("SmithJohn", "스미스존")}},
+      {&exchange4, Wallet{exchange4.apiPrivate().exchangeName(), depositCurrencyCode, "ethaddress667", "",
+                          WalletCheck{}, AccountOwner("GilbertDave", "길버트데이브")}}};
 };
 
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, FormattedTable) {
@@ -413,10 +414,11 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, NoPrint) {
 class QueryResultPrinterDepositInfoWithTagTest : public QueryResultPrinterTest {
  protected:
   CurrencyCode depositCurrencyCode{"XRP"};
-  WalletPerExchange walletPerExchange{{&exchange3, Wallet{exchange3.apiPrivate().exchangeName(), depositCurrencyCode,
-                                                          "xrpaddress666", "xrptag1", WalletCheck{}}},
-                                      {&exchange4, Wallet{exchange4.apiPrivate().exchangeName(), depositCurrencyCode,
-                                                          "xrpaddress666", "xrptag2", WalletCheck{}}}};
+  WalletPerExchange walletPerExchange{
+      {&exchange3, Wallet{exchange3.apiPrivate().exchangeName(), depositCurrencyCode, "xrpaddress666", "xrptag1",
+                          WalletCheck{}, AccountOwner("SmithJohn", "스미스존")}},
+      {&exchange4, Wallet{exchange4.apiPrivate().exchangeName(), depositCurrencyCode, "xrpaddress666", "xrptag2",
+                          WalletCheck{}, AccountOwner("GilbertDave", "길버트데이브")}}};
 };
 
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, FormattedTable) {
@@ -1343,7 +1345,8 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   ExchangeName fromExchange{exchange1.apiPrivate().exchangeName()};
   ExchangeName toExchange{exchange4.apiPrivate().exchangeName()};
 
-  Wallet receivingWallet{toExchange, grossAmount.currencyCode(), "xrpaddress666", "xrptag2", WalletCheck{}};
+  Wallet receivingWallet{toExchange,    grossAmount.currencyCode(),           "xrpaddress666", "xrptag2",
+                         WalletCheck{}, AccountOwner("SmithJohn", "스미스존")};
   MonetaryAmount grossEmittedAmount;
   api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, isWithdrawSent};
   DeliveredWithdrawInfo deliveredWithdrawInfo{

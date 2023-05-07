@@ -521,7 +521,7 @@ MonetaryAmount ExchangePrivate::queryWithdrawDelivery(
     [[maybe_unused]] const InitiatedWithdrawInfo &initiatedWithdrawInfo, const SentWithdrawInfo &sentWithdrawInfo) {
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
-  Deposits deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
+  DepositsSet deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
 
   ClosestRecentDepositPicker closestRecentDepositPicker;
 
@@ -537,20 +537,19 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
   MonetaryAmount grossEmittedAmount = initiatedWithdrawInfo.grossEmittedAmount();
   const CurrencyCode currencyCode = grossEmittedAmount.currencyCode();
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
-  Withdraws withdraws = queryRecentWithdraws(WithdrawsConstraints(currencyCode, withdrawId));
+  WithdrawsSet withdraws = queryRecentWithdraws(WithdrawsConstraints(currencyCode, withdrawId));
 
-  MonetaryAmount netEmittedAmount;
-  MonetaryAmount fee;
+  MonetaryAmount netEmittedAmount(0, currencyCode);
+  MonetaryAmount fee(0, currencyCode);
   bool isWithdrawSent = false;
 
-  auto mostRecentMatchingWithdrawIt = std::ranges::max_element(withdraws);
-  if (mostRecentMatchingWithdrawIt != withdraws.end()) {
+  if (!withdraws.empty()) {
     if (withdraws.size() > 1) {
       log::error("Unexpected number of matching withdraws ({}) with unique ID, only most recent one will be considered",
                  withdraws.size());
     }
 
-    const Withdraw &withdraw = *mostRecentMatchingWithdrawIt;
+    const Withdraw &withdraw = *(withdraws.end() - 1);
     if (withdraw.status() == Withdraw::Status::kSuccess) {
       isWithdrawSent = true;
     }

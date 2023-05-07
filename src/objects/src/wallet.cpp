@@ -60,9 +60,10 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
 }
 
 Wallet::Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
-               WalletCheck walletCheck)
+               WalletCheck walletCheck, const AccountOwner &accountOwner)
     : _exchangeName(std::move(exchangeName)),
       _addressAndTag(std::move(address)),
+      _accountOwner(accountOwner),
       _tagPos(tag.empty() ? std::string_view::npos : _addressAndTag.size()),
       _currency(currency) {
   _addressAndTag.append(tag);
