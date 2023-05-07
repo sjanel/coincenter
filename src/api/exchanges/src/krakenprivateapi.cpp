@@ -228,7 +228,8 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     tag.clear();
   }
 
-  Wallet wallet(std::move(eName), currencyCode, std::move(address), std::move(tag), walletCheck);
+  Wallet wallet(std::move(eName), currencyCode, std::move(address), std::move(tag), walletCheck,
+                _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -312,7 +313,7 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
 }
 }  // namespace
 
-Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
@@ -345,9 +346,9 @@ Deposits KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
 
     deposits.emplace_back(id, timestamp, amount, status);
   }
-
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
 namespace {
@@ -363,15 +364,20 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
   }
   throw exception("Unrecognized withdraw status '{}' from Kraken", statusStr);
 }
-}  // namespace
 
-Withdraws KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
-  Withdraws withdraws;
+CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.append("asset", withdrawsConstraints.currencyCode().str());
   }
-  auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus", options);
+  return options;
+}
+}  // namespace
+
+WithdrawsSet KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus",
+                                 CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (const json& trx : res) {
     int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
     TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
@@ -388,14 +394,14 @@ Withdraws KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdr
     Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr);
 
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(trx["asset"].get<std::string_view>()));
-    MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
+    MonetaryAmount netEmittedAmount(trx["amount"].get<std::string_view>(), currencyCode);
     MonetaryAmount fee(trx["fee"].get<std::string_view>(), currencyCode);
 
-    withdraws.emplace_back(id, timestamp, amount, status, fee);
+    withdraws.emplace_back(id, timestamp, netEmittedAmount, status, fee);
   }
-
-  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, MonetaryAmount volume,

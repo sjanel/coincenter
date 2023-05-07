@@ -165,7 +165,7 @@ bool IsSynchronizedTime(std::string_view msg) {
         int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
         int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
         log::error("Bithumb time is not synchronized with us (difference of {} s)", (reqTimeInt - nowTimeInt) / 1000);
-        log::error("It can sometimes come from a bug in Bithumb, retry");
+        log::error("It can sometimes come from a Bithumb bug, retry");
         return false;
       }
     }
@@ -204,6 +204,14 @@ bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json& dat
   return false;
 }
 
+int64_t ErrCodeFromQueryResponse(const json& queryResponse) {
+  auto statusCodeIt = queryResponse.find("status");
+  if (statusCodeIt != queryResponse.end()) {
+    return FromString<int64_t>(statusCodeIt->get<std::string_view>());
+  }
+  return 0;
+}
+
 json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                                     bool throwIfError, CurlOptions& opts) {
   json ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
@@ -211,36 +219,35 @@ json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey
   // Example of error json: {"status":"5300","message":"Invalid Apikey"}
   constexpr int kMaxNbRetries = 5;
   int nbRetries = 0;
-  while (ret.contains("status") && ++nbRetries < kMaxNbRetries) {
+  int64_t errorCode = ErrCodeFromQueryResponse(ret);
+  while (errorCode != 0 && ++nbRetries < kMaxNbRetries) {
     // "5300" for instance. "0000" stands for: request OK
-    std::string_view statusCode = ret["status"].get<std::string_view>();
-    int64_t errorCode = FromString<int64_t>(statusCode);
-    if (errorCode != 0) {
-      std::string_view msg;
-      auto messageIt = ret.find("message");
-      if (messageIt != ret.end()) {
-        msg = messageIt->get<std::string_view>();
-        switch (errorCode) {
-          case kBadRequestErrorCode:
-            if (!IsSynchronizedTime(msg)) {
-              ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
-              continue;
-            }
-            break;
-          case kOrderRelatedErrorCode:
-            if (CheckOrderErrors(endpoint, msg, ret)) {
-              return ret;
-            }
-            break;
-          default:
-            break;
-        }
-      }
-      if (throwIfError) {
-        log::error("Full Bithumb json error: '{}'", ret.dump());
-        throw exception("Bithumb error: {} \"{}\"", statusCode, msg);
+    std::string_view msg;
+    auto messageIt = ret.find("message");
+    if (messageIt != ret.end()) {
+      msg = messageIt->get<std::string_view>();
+      switch (errorCode) {
+        case kBadRequestErrorCode:
+          if (!IsSynchronizedTime(msg)) {
+            ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+            errorCode = ErrCodeFromQueryResponse(ret);
+            continue;
+          }
+          break;
+        case kOrderRelatedErrorCode:
+          if (CheckOrderErrors(endpoint, msg, ret)) {
+            return ret;
+          }
+          break;
+        default:
+          break;
       }
     }
+    break;
+  }
+  if (errorCode != 0 && throwIfError) {
+    log::error("Full Bithumb json error: '{}'", ret.dump());
+    throw exception("Bithumb error {}", errorCode);
   }
   return ret;
 }
@@ -335,7 +342,8 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, string(address), tag, walletCheck);
+  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, string(address), tag, walletCheck,
+                _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -426,6 +434,14 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
 }
 
 namespace {
+constexpr int kSearchGbAll = 0;
+constexpr int kSearchGbBuyCompleted = 1;
+constexpr int kSearchGbSellCompleted = 2;
+constexpr int kSearchGbOnGoingWithdrawals = 3;
+constexpr int kSearchGbDeposit = 4;
+constexpr int kSearchGbProcessedWithdrawals = 5;
+constexpr int kSearchGbKRWDeposits = 9;
+
 int64_t RetrieveMicrosecondsSinceEpochFromTrxJson(const json& trx) {
   // In the official documentation, transfer_date field is an integer.
   // But in fact (as of 2022) it's a string representation of the integer timestamp.
@@ -450,21 +466,33 @@ string GenerateDepositIdFromTrx(int64_t microsecondsSinceEpoch, const json& trx)
   // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
   string id{trx[kOrderCurrencyParamStr].get<std::string_view>()};
   id.push_back('-');
-  id.append(ToString(microsecondsSinceEpoch));
+  AppendString(id, microsecondsSinceEpoch);
   return id;
 }
 
-string GenerateWithdrawId(MonetaryAmount netEmittedAmount, TimePoint withdrawTimestamp) {
-  auto millisecondsSinceEpoch = std::chrono::duration_cast<TimeInMs>(withdrawTimestamp.time_since_epoch()).count();
-  size_t withdrawHash = HashCombine(netEmittedAmount.code(), static_cast<size_t>(millisecondsSinceEpoch));
-  return ToString(withdrawHash);
+string GenerateWithdrawIdFromTrx(MonetaryAmount netEmittedAmount, const json& trx) {
+  // We cannot use the timestamp for the withdraw ID because it changes where is switches from the state 'withdrawing'
+  // to the state 'withdraw done' (searchGb 3->5)
+  // There are two fields that does not seem to change over time, and we are going to use them to generate our id:
+  //  - order_balance
+  //  - payment_balance
+  MonetaryAmount orderBalance(trx["order_balance"].get<std::string_view>());
+  MonetaryAmount paymentBalance(trx["payment_balance"].get<std::string_view>());
+  string withdrawId = netEmittedAmount.str();
+  withdrawId.push_back(';');
+  orderBalance.appendStrTo(withdrawId);
+  withdrawId.push_back(';');
+  paymentBalance.appendStrTo(withdrawId);
+  return B64Encode(withdrawId);
 }
+
+CurrencyCode CurrencyCodeFromTrx(const json& trx) { return {trx["order_currency"].get<std::string_view>()}; }
 
 MonetaryAmount RetrieveAmountFromTrxJson(const json& trx) {
   // starts with "+ " for a deposit, "- " for a withdraw, return absolute
   std::string_view amountStr = trx["units"].get<std::string_view>();
 
-  CurrencyCode currencyCode(trx["order_currency"].get<std::string_view>());
+  CurrencyCode currencyCode = CurrencyCodeFromTrx(trx);
   MonetaryAmount amount{amountStr, currencyCode};
   if (amount == 0) {
     // It's strange but for 'KRW' withdraws, Bithumb returns the KRW amount in the 'price' field (as negative!)
@@ -479,57 +507,98 @@ MonetaryAmount RetrieveFeeFromTrxJson(const json& trx) {
   return {feeStr, currencyCode};
 }
 
+MonetaryAmount RetrieveNetEmittedAmountFromTrxJson(const json& trx) {
+  MonetaryAmount grossEmittedAmount = RetrieveAmountFromTrxJson(trx);
+  MonetaryAmount fee = RetrieveFeeFromTrxJson(trx);
+  return grossEmittedAmount - fee;
+}
+
+Withdraw::Status RetrieveWithdrawStatusFromTrxJson(const json& trx) {
+  int searchGb = FromString<int>(trx["search"].get<std::string_view>());
+
+  return searchGb == kSearchGbOnGoingWithdrawals ? Withdraw::Status::kProcessing : Withdraw::Status::kSuccess;
+}
+
 }  // namespace
 
 json BithumbPrivate::queryRecentTransactions(const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints,
-                                             DepositOrWithdrawEnum depositOrWithdrawEnum) {
-  CurlPostData options{{kPaymentCurParamStr, "BTC"}};
-  SmallVector<CurrencyCode, 1> currencies;
+                                             UserTransactionEnum depositOrWithdrawEnum) {
+  // It's not clear what the payment currency option is for user_transactions endpoint for deposits and withdraws.
+  // For withdraws it seems to have no impact, and even worse, it returns weird output when
+  // querying withdraws for a specific coin, it can return KRW withdraws to user bank account.
+  CurlPostData options{{"count", 50}, {kPaymentCurParamStr, "BTC"}};
+  SmallVector<CurrencyCode, 1> orderCurrencies;
+
   if (withdrawsOrDepositsConstraints.isCurDefined()) {
-    currencies.push_back(withdrawsOrDepositsConstraints.currencyCode());
+    CurrencyCode currencyCode = withdrawsOrDepositsConstraints.currencyCode();
+    orderCurrencies.push_back(currencyCode);
   } else {
     log::warn("Retrieval of recent deposits / withdraws should be done currency by currency for {:e}", exchangeName());
     log::warn("Heuristic: only query for currencies which are present in the balance");
     log::warn("Doing such, we may miss some recent deposits in other currencies");
     for (const auto& amountWithEquivalent : queryAccountBalance()) {
       CurrencyCode currencyCode = amountWithEquivalent.amount.currencyCode();
-      if (currencyCode != "KRW") {
-        currencies.push_back(currencyCode);
-      }
+      orderCurrencies.push_back(currencyCode);
     }
   }
   json allResults;
   FixedCapacityVector<int, 2> searchGbsVector;
   switch (depositOrWithdrawEnum) {
-    case DepositOrWithdrawEnum::kDeposit:
-      searchGbsVector.push_back(4);
+    case UserTransactionEnum::kDeposit:
+      searchGbsVector.push_back(kSearchGbDeposit);
       break;
-    case DepositOrWithdrawEnum::kWithdraw:
-      searchGbsVector.push_back(3);  // on-going withdrawals
-      searchGbsVector.push_back(5);  // processed withdrawals
+    case UserTransactionEnum::kOngoingWithdraws:
+      searchGbsVector.push_back(kSearchGbOnGoingWithdrawals);
+      break;
+    case UserTransactionEnum::kProcessedWithdraws:
+      searchGbsVector.push_back(kSearchGbProcessedWithdrawals);
+      break;
+    case UserTransactionEnum::kAllWithdraws:
+      searchGbsVector.push_back(kSearchGbOnGoingWithdrawals);
+      searchGbsVector.push_back(kSearchGbProcessedWithdrawals);
       break;
     default:
       throw exception("Unexpected deposit or withdraw enum value {}", static_cast<int>(depositOrWithdrawEnum));
   }
 
-  for (CurrencyCode currencyCode : currencies) {
-    options.set(kOrderCurrencyParamStr, currencyCode.str());
-    if (depositOrWithdrawEnum == DepositOrWithdrawEnum::kDeposit) {
-      searchGbsVector.back() = currencyCode == "KRW" ? 9 : 4;
+  for (CurrencyCode currencyCode : orderCurrencies) {
+    CurrencyCode orderCurrencyCode = currencyCode;
+    if (currencyCode == "KRW") {
+      // Strange bug (or something that I did not understand):
+      // - when querying explicitly an order currency KRW, we get an error, even if user has KRW deposits/withdraws
+      // - when querying a coin, we get the KRW user withdraws to bank (!)
+      orderCurrencyCode = "BTC";
+    }
+    options.set(kOrderCurrencyParamStr, orderCurrencyCode.str());
+    if (depositOrWithdrawEnum == UserTransactionEnum::kDeposit) {
+      if (currencyCode == "KRW") {
+        searchGbsVector.resize(2, kSearchGbKRWDeposits);
+      } else {
+        searchGbsVector.resize(1, kSearchGbDeposit);
+      }
     }
 
     for (int searchGb : searchGbsVector) {
       options.set("searchGb", searchGb);
       json txrList = PrivateQuery(_curlHandle, _apiKey, "/info/user_transactions", options)["data"];
       for (json& trx : txrList) {
+        if (!withdrawsOrDepositsConstraints.validateCur(CurrencyCodeFromTrx(trx))) {
+          continue;
+        }
+
         int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
         TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
         if (!withdrawsOrDepositsConstraints.validateTime(timestamp)) {
           continue;
         }
 
-        if (withdrawsOrDepositsConstraints.isIdDependent()) {
+        if (depositOrWithdrawEnum == UserTransactionEnum::kDeposit) {
           if (!withdrawsOrDepositsConstraints.validateId(GenerateDepositIdFromTrx(microsecondsSinceEpoch, trx))) {
+            continue;
+          }
+        } else {
+          MonetaryAmount netEmittedAmount = RetrieveNetEmittedAmountFromTrxJson(trx);
+          if (!withdrawsOrDepositsConstraints.validateId(GenerateWithdrawIdFromTrx(netEmittedAmount, trx))) {
             continue;
           }
         }
@@ -541,10 +610,10 @@ json BithumbPrivate::queryRecentTransactions(const WithdrawsOrDepositsConstraint
   return allResults;
 }
 
-Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
 
-  json txrList = queryRecentTransactions(depositsConstraints, DepositOrWithdrawEnum::kDeposit);
+  json txrList = queryRecentTransactions(depositsConstraints, UserTransactionEnum::kDeposit);
   deposits.reserve(txrList.size());
   for (const json& trx : txrList) {
     int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
@@ -552,36 +621,32 @@ Deposits BithumbPrivate::queryRecentDeposits(const DepositsConstraints& deposits
 
     string id = GenerateDepositIdFromTrx(microsecondsSinceEpoch, trx);
 
+    // No status information returned by Bithumb. Defaulting to Success
     deposits.emplace_back(std::move(id), timestamp, RetrieveAmountFromTrxJson(trx), Deposit::Status::kSuccess);
   }
-
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
-Withdraws BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+WithdrawsSet BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
 
-  json txrList = queryRecentTransactions(withdrawsConstraints, DepositOrWithdrawEnum::kWithdraw);
+  json txrList = queryRecentTransactions(withdrawsConstraints, UserTransactionEnum::kAllWithdraws);
   withdraws.reserve(txrList.size());
   for (const json& trx : txrList) {
     int64_t microsecondsSinceEpoch = RetrieveMicrosecondsSinceEpochFromTrxJson(trx);
     TimePoint timestamp{std::chrono::microseconds(microsecondsSinceEpoch)};
 
-    MonetaryAmount grossEmittedAmount = RetrieveAmountFromTrxJson(trx);
     MonetaryAmount fee = RetrieveFeeFromTrxJson(trx);
-    MonetaryAmount netEmittedAmount = grossEmittedAmount - fee;
+    MonetaryAmount netEmittedAmount = RetrieveNetEmittedAmountFromTrxJson(trx);
 
-    withdraws.emplace_back(GenerateWithdrawId(netEmittedAmount, timestamp), timestamp, netEmittedAmount,
-                           Withdraw::Status::kSuccess, fee);
+    withdraws.emplace_back(GenerateWithdrawIdFromTrx(netEmittedAmount, trx), timestamp, netEmittedAmount,
+                           RetrieveWithdrawStatusFromTrxJson(trx), fee);
   }
-
-  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
-
-  // Sort by date - latest is the last one
-  std::ranges::sort(withdraws);
-
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
@@ -802,16 +867,46 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
   return orderInfo;
 }
 
+namespace {
+bool CompareTrxByDate(const json& lhs, const json& rhs) {
+  int64_t lhsTs = RetrieveMicrosecondsSinceEpochFromTrxJson(lhs);
+  int64_t rhsTs = RetrieveMicrosecondsSinceEpochFromTrxJson(rhs);
+  return lhsTs < rhsTs;
+}
+
+CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, const Wallet& destinationWallet) {
+  const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
+  const AccountOwner& desAccountOwner = destinationWallet.accountOwner();
+  CurlPostData withdrawPostData{
+      {"units", netEmittedAmount.amountStr()},
+      {"currency", currencyCode.str()},
+      {"address", destinationWallet.address()},
+      {"exchange_name", destinationWallet.exchangeName().name()},
+      {"cust_type_cd", "01"}  // "01" means individual withdraw, "02" corporate
+  };
+
+  // Bithumb checks the destination's account owner. It is required by the API, so in order to use this method you need
+  // to have a Korean name.
+  // coincenter can retrieve the account owner name automatically provided that the user filled the fields in the
+  // destination api key part in the secrets json file.
+  if (desAccountOwner.isFullyDefined()) {
+    withdrawPostData.append("en_name", desAccountOwner.enName());
+    withdrawPostData.append("ko_name", desAccountOwner.koName());
+  } else {
+    log::error("Bithumb withdrawal needs further information for destination account");
+    log::error("it needs the English and Korean name of its owner so query will most probably fail");
+  }
+  if (destinationWallet.hasTag()) {
+    withdrawPostData.append("destination", destinationWallet.tag());
+  }
+  return withdrawPostData;
+}
+}  // namespace
+
 InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{{"units", netEmittedAmount.amountStr()},
-                                {"currency", currencyCode.str()},
-                                {"address", destinationWallet.address()}};
-  if (destinationWallet.hasTag()) {
-    withdrawPostData.append("destination", destinationWallet.tag());
-  }
 
   // Unfortunately, Bithumb does not return any withdraw Id,
   // so we return a generated ID which will be matched with 'queryRecentWithdrawals'
@@ -823,37 +918,52 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   // We have to retrieve the withdraw from the other endpoint used by 'queryRecentWithdraws'.
   WithdrawsConstraints withdrawConstraints(currencyCode);
 
-  Withdraws oldWithdraws = queryRecentWithdraws(withdrawConstraints);
+  json oldWithdraws = queryRecentTransactions(withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
+  std::sort(oldWithdraws.begin(), oldWithdraws.end(), CompareTrxByDate);
 
   // Actually launch the withdraw
-  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal", std::move(withdrawPostData));
+  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal",
+               ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
 
   // Query the withdraws, hopefully we will be able to find our withdraw
-  TimePoint newWithdrawTimestamp{};
-  static constexpr int kNbRetriesCatchWindow = 20;
-  for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTimestamp == TimePoint{}; ++retryPos) {
+  json newWithdrawTrx;
+  TimeInS sleepingTime(1);
+  static constexpr int kNbRetriesCatchWindow = 15;
+  for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTrx.empty(); ++retryPos) {
     if (retryPos != 0) {
-      log::warn("Cannot retrieve just launched withdraw, retry {}/{}", retryPos, kNbRetriesCatchWindow);
+      log::warn("Cannot retrieve just launched withdraw, retry {}/{} in {} s...", retryPos, kNbRetriesCatchWindow,
+                std::chrono::duration_cast<TimeInS>(sleepingTime).count());
+      std::this_thread::sleep_for(sleepingTime);
+      sleepingTime = (3 * sleepingTime) / 2;
     }
-    Withdraws currentWithdraws = queryRecentWithdraws(withdrawConstraints);
-    Withdraws newWithdraws;
+    json currentWithdraws = queryRecentTransactions(withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
+    std::sort(currentWithdraws.begin(), currentWithdraws.end(), CompareTrxByDate);
 
     // Isolate the new withdraws since the launch of our new withdraw
-    std::set_difference(oldWithdraws.begin(), oldWithdraws.end(), currentWithdraws.begin(), currentWithdraws.end(),
-                        std::inserter(newWithdraws, newWithdraws.end()));
+    json newWithdraws;
+    std::set_difference(currentWithdraws.begin(), currentWithdraws.end(), oldWithdraws.begin(), oldWithdraws.end(),
+                        std::back_inserter(newWithdraws), CompareTrxByDate);
 
-    for (const Withdraw& withdraw : newWithdraws) {
-      if (withdraw.amount().isCloseTo(netEmittedAmount, 0.001)) {
-        newWithdrawTimestamp = withdraw.time();
+    log::debug("Isolated {} new withdraws, one of them is probably the one just launched", newWithdraws.size());
+
+    for (json& withdrawTrx : newWithdraws) {
+      MonetaryAmount withdrawNetEmittedAmount = RetrieveNetEmittedAmountFromTrxJson(withdrawTrx);
+      if (withdrawNetEmittedAmount.isCloseTo(netEmittedAmount, 0.001)) {
+        log::debug("Found new withdraw {}", withdrawTrx.dump());
+        newWithdrawTrx = std::move(withdrawTrx);
+        break;
       }
+      log::debug("Withdraw {}'s is too different from our amount {}", withdrawTrx.dump(), netEmittedAmount);
     }
   }
 
-  if (newWithdrawTimestamp == TimePoint{}) {
-    throw exception("Unable to retrieve just launch withdraw from Bithumb");
+  if (newWithdrawTrx.empty()) {
+    throw exception(
+        "Unable to retrieve just launch withdraw from Bithumb - it may be pending verification, please check your "
+        "emails");
   }
 
-  return {std::move(destinationWallet), GenerateWithdrawId(netEmittedAmount, newWithdrawTimestamp), grossAmount};
+  return {std::move(destinationWallet), GenerateWithdrawIdFromTrx(netEmittedAmount, newWithdrawTrx), grossAmount};
 }
 
 void BithumbPrivate::updateCacheFile() const {

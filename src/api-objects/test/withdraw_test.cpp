@@ -29,4 +29,5 @@ TEST_F(WithdrawTest, SortByTimeFirst) {
   EXPECT_EQ(withdraws.front(), withdraw3);
   EXPECT_EQ(withdraws.back(), withdraw4);
 }
+
 }  // namespace cct

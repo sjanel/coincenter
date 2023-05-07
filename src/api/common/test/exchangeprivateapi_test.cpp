@@ -424,15 +424,18 @@ class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
   CurrencyCode cur{grossAmount.currencyCode()};
   MockExchangePublic destinationExchangePublic{"kraken", fiatConverter, cryptowatchAPI, coincenterInfo};
   MockExchangePrivate destinationExchangePrivate{destinationExchangePublic, coincenterInfo, key};
-  Wallet receivingWallet{destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck()};
+  Wallet receivingWallet{
+      destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(), AccountOwner()};
 
   std::string_view withdrawId = "WithdrawId";
   TimePoint withdrawTimestamp = Clock::now();
   InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
 
-  MonetaryAmount fee{1, "ETH", 2};
+  CurrencyCode currencyCode{"ETH"};
+  MonetaryAmount fee{1, currencyCode, 2};
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
+  SentWithdrawInfo defaultWithdrawInfo{MonetaryAmount{0, currencyCode}, MonetaryAmount{0, currencyCode}, false};
   SentWithdrawInfo unsentWithdrawInfo{netEmittedAmount, fee, false};
   SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
 
@@ -443,19 +446,19 @@ TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedAfterSent) {
   {
     testing::InSequence seq;
 
-    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(Withdraws{}));
-    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, SentWithdrawInfo{}))
+    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(WithdrawsSet{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, defaultWithdrawInfo))
         .WillOnce(testing::Return(MonetaryAmount{}));
 
     EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_))
-        .WillOnce(testing::Return(
-            Withdraws{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kProcessing, fee}}));
+        .WillOnce(testing::Return(WithdrawsSet{
+            Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kProcessing, fee}}));
     EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
         .WillOnce(testing::Return(MonetaryAmount{}));
 
     EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
-            Withdraws{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
+            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
     EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .Times(2)
         .WillRepeatedly(testing::Return(MonetaryAmount{}));
@@ -471,12 +474,12 @@ TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedBeforeSent) {
   {
     testing::InSequence seq;
 
-    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(Withdraws{}));
-    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, SentWithdrawInfo{}))
+    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(WithdrawsSet{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, defaultWithdrawInfo))
         .WillOnce(testing::Return(MonetaryAmount{}));
 
-    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(Withdraws{}));
-    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, SentWithdrawInfo{}))
+    EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_)).WillOnce(testing::Return(WithdrawsSet{}));
+    EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, defaultWithdrawInfo))
         .WillOnce(testing::Return(netEmittedAmount));
   }
 
@@ -489,7 +492,8 @@ TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
   CurrencyCode cur = grossAmount.currencyCode();
   MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, cryptowatchAPI, coincenterInfo);
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
-  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck());
+  Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(),
+                         AccountOwner("SmithJohn", "스미스존"));
   EXPECT_CALL(destinationExchangePrivate, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
   InitiatedWithdrawInfo initiatedWithdrawInfo(receivingWallet, "WithdrawId", grossAmount);

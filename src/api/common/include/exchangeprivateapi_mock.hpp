@@ -20,9 +20,9 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(Orders, queryOpenedOrders, (const OrdersConstraints &), (override));
   MOCK_METHOD(int, cancelOpenedOrders, (const OrdersConstraints &), (override));
 
-  MOCK_METHOD(Deposits, queryRecentDeposits, (const DepositsConstraints &), (override));
+  MOCK_METHOD(DepositsSet, queryRecentDeposits, (const DepositsConstraints &), (override));
 
-  MOCK_METHOD(Withdraws, queryRecentWithdraws, (const WithdrawsConstraints &), (override));
+  MOCK_METHOD(WithdrawsSet, queryRecentWithdraws, (const WithdrawsConstraints &), (override));
 
   MOCK_METHOD(bool, isSimulatedOrderSupported, (), (const override));
 

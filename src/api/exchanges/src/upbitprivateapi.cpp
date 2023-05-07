@@ -190,7 +190,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
-                std::move(addressIt->get_ref<string&>()), tag, walletCheck);
+                std::move(addressIt->get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -271,11 +271,13 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
   }
   throw exception("Unrecognized deposit status '{}' from Upbit", statusStr);
 }
+
+constexpr int kNbResultsPerPage = 100;
+
 }  // namespace
 
-Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
-  static constexpr int kNbResultsPerPage = 100;
   CurlPostData options{{"limit", kNbResultsPerPage}};
   if (depositsConstraints.isCurDefined()) {
     options.append("currency", depositsConstraints.currencyCode().str());
@@ -317,8 +319,9 @@ Deposits UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsCo
       deposits.emplace_back(std::move(id), timestamp, amount, status);
     }
   }
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
 namespace {
@@ -336,11 +339,8 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
   }
   throw exception("Unrecognized withdraw status '{}' from Upbit", statusStr);
 }
-}  // namespace
 
-Withdraws UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
-  Withdraws withdraws;
-  static constexpr int kNbResultsPerPage = 100;
+CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options{{"limit", kNbResultsPerPage}};
   if (withdrawsConstraints.isCurDefined()) {
     options.append("currency", withdrawsConstraints.currencyCode().str());
@@ -351,7 +351,14 @@ Withdraws UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdra
       options.append("txids[]", depositId);
     }
   }
+  return options;
+}
 
+}  // namespace
+
+WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  Withdraws withdraws;
+  CurlPostData options = CreateOptionsFromWithdrawConstraints(withdrawsConstraints);
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
@@ -382,8 +389,9 @@ Withdraws UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdra
       withdraws.emplace_back(std::move(id), timestamp, netEmittedAmount, status, withdrawFee);
     }
   }
-  log::info("Retrieved {} recent withdraws for {}", withdraws.size(), exchangeName());
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 namespace {

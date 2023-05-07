@@ -1,4 +1,5 @@
-# Configuration
+Configuration
+=============
 
 At this step, `coincenter` is built. To execute properly, it needs read/write access to a special directory `data` which contains a tree of files as follows:
 
@@ -12,20 +13,34 @@ This directory is set according to these rules, by decreasing priority:
 - or from `CCT_DATA_DIR` environment variable if it is set at runtime
 - or defaults to the default data directory chosen at build time from `CCT_DATA_DIR` environment variable
 
-## Important files
+# Important files
 
-### secret/secret.json
+## secret/secret.json
 
 Fill this file with your private keys for each of your account(s) in the exchanges. 
-Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image or *git* commit. 
+Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image/layer or *git* commit. 
 It is present in `.gitignore` and `.dockerignore` to avoid accidents. 
 For additional security, always bind your keys to your IP (some exchanges will force you to do it anyway).
 
 [data/secret/secret_test.json](data/secret/secret_test.json) shows the syntax.
 
-For *Kucoin*, in addition of the `key` and `private` values, you will need to provide your `passphrase` as well.
+### Additional information
 
-### static/exchangeconfig.json
+#### Kucoin
+
+In addition of the `key` and `private` values, you will need to provide your `passphrase` as well. It's provided as a string field along with your key in the `secret.json` file.
+
+#### Bithumb
+
+Bithumb **withdrawals** have an extra personal information check: they need to know the **English** and **Korean** name of the owner of the destination account.
+Thus it's also an information that you need to provide in the keys of your targeted accounts for a Bithumb withdrawal.
+For instance, if you wish to withdraw a coin from your **Bithumb** to your **Upbit** account from `coincenter`, you need to specify your name in the **Upbit** key used as destination of the withdraw.
+Korean name should be provided with the `accountOwner.koName` field in the key of the `secret.json` file, whereas English name with the `accountOwner.enName`.
+
+Refer to the [data/secret/secret_test.json](data/secret/secret_test.json) example file in case of doubt.
+
+
+## static/exchangeconfig.json
 
 This json file should follow this specific format:
 ```yaml
@@ -85,7 +100,7 @@ The chosen values will be:
 
 Refer to the hardcoded default json example as a model in case of doubt.
 
-#### Options description
+### Options description
 
 | Module      | Name                               | Value                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----------- | ---------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -112,15 +127,15 @@ Refer to the hardcoded default json example as a model in case of doubt.
 | *tradefees* | **taker**                          | String as decimal number representing a percentage (for instance, "0.15") | Trade fees occurring when a taker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
 | *withdraw*  | **validateDepositAddressesInFile** | Boolean (`true` or `false`)                                               | If `true`, each withdraw will perform an additional validation check from a trusted list of "whitelisted" addresses in `depositaddresses.json` file. Withdraw will not be processed if destination wallet is not present in the file.                                                                                                                                                                                          |
 
-##### Note
+#### Note
 `updateFrequency` is itself a json document containing all duration values as query frequencies. 
 See [ExchangeInfo default file](src/objects/src/exchangeinfodefault.hpp) as an example for the syntax.
 
-### static/generalconfig.json
+## static/generalconfig.json
 
 Contains options that are not exchange specific.
 
-#### Options description
+### Options description
 
 | Name                   | Value                                 | Description                                                                                                                                                                                                     |
 | ---------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

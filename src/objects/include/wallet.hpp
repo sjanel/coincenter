@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "accountowner.hpp"
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_format.hpp"
@@ -35,7 +36,7 @@ class Wallet {
 
   /// Build a wallet with all information.
   Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
-         WalletCheck walletCheck);
+         WalletCheck walletCheck, const AccountOwner &accountOwner);
 
   const ExchangeName &exchangeName() const { return _exchangeName; }
 
@@ -48,6 +49,8 @@ class Wallet {
     check();
     return std::string_view(startTag(), _addressAndTag.data() + _addressAndTag.size());
   }
+
+  const AccountOwner &accountOwner() const { return _accountOwner; }
 
   CurrencyCode currencyCode() const { return _currency; }
 
@@ -72,6 +75,7 @@ class Wallet {
 
   ExchangeName _exchangeName;
   string _addressAndTag;
+  AccountOwner _accountOwner;
   std::size_t _tagPos = std::string_view::npos;
   CurrencyCode _currency;
 };

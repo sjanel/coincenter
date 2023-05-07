@@ -170,7 +170,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
   Wallet wallet(std::move(exchangeName), currencyCode, std::move(result["address"].get_ref<string&>()), tag,
-                walletCheck);
+                walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -269,7 +269,7 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
 }
 }  // namespace
 
-Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
+DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.append("currency", depositsConstraints.currencyCode().str());
@@ -310,8 +310,9 @@ Deposits KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsC
 
     deposits.emplace_back(std::move(id), timestamp, amount, status);
   }
-  log::info("Retrieved {} recent deposits for {}", deposits.size(), exchangeName());
-  return deposits;
+  DepositsSet depositsSet(std::move(deposits));
+  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  return depositsSet;
 }
 
 namespace {
@@ -342,9 +343,8 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
   }
   throw exception("unknown status value '{}' returned by Kucoin", statusStr);
 }
-}  // namespace
 
-Withdraws KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.append("currency", withdrawsConstraints.currencyCode().str());
@@ -355,8 +355,14 @@ Withdraws KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdr
   if (withdrawsConstraints.isTimeBeforeDefined()) {
     options.append("endAt", TimestampToMs(withdrawsConstraints.timeBefore()));
   }
-  json withdrawJson =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals", std::move(options))["data"];
+  return options;
+}
+
+}  // namespace
+
+WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
+  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
+                                   CreateOptionsFromWithdrawConstraints(withdrawsConstraints))["data"];
   auto itemsIt = withdrawJson.find("items");
   if (itemsIt == withdrawJson.end()) {
     throw exception("Unexpected result from Kucoin withdraw API");
@@ -381,8 +387,9 @@ Withdraws KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdr
 
     withdraws.emplace_back(id, timestamp, netEmittedAmount, status, fee);
   }
-  log::info("Retrieved {} recent withdrawals for {}", withdraws.size(), exchangeName());
-  return withdraws;
+  WithdrawsSet withdrawsSet(std::move(withdraws));
+  log::info("Retrieved {} recent withdrawals for {}", withdrawsSet.size(), exchangeName());
+  return withdrawsSet;
 }
 
 PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
