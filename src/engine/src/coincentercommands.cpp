@@ -29,13 +29,6 @@ CoincenterCmdLineOptions CoincenterCommands::ParseOptions(int argc, const char *
   return parsedOptions;
 }
 
-MonitoringInfo CoincenterCommands::CreateMonitoringInfo(std::string_view programName,
-                                                        const CoincenterCmdLineOptions &cmdLineOptions) {
-  return {cmdLineOptions.useMonitoring,      programName,
-          cmdLineOptions.monitoringAddress,  cmdLineOptions.monitoringPort,
-          cmdLineOptions.monitoringUsername, cmdLineOptions.monitoringPassword};
-}
-
 namespace {
 std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
                                                               std::string_view orderRequestStr) {
