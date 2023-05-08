@@ -9,7 +9,7 @@ At this step, `coincenter` is built. To execute properly, it needs read/write ac
 
 This directory is set according to these rules, by decreasing priority:
 
-- `--data` or `-d` option from the command line
+- `--data` option from the command line
 - or from `CCT_DATA_DIR` environment variable if it is set at runtime
 - or defaults to the default data directory chosen at build time from `CCT_DATA_DIR` environment variable
 
@@ -19,8 +19,9 @@ This directory is set according to these rules, by decreasing priority:
 
 Fill this file with your private keys for each of your account(s) in the exchanges. 
 Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image/layer or *git* commit. 
-It is present in `.gitignore` and `.dockerignore` to avoid accidents. 
-For additional security, always bind your keys to your IP (some exchanges will force you to do it anyway).
+It is present in `.gitignore` and `.dockerignore` to avoid accidents.
+
+For additional security, always bind your keys to your IP (some exchanges will force you to do it anyway), especially if you wish to use it for sensitive commands such as withdraws.
 
 [data/secret/secret_test.json](data/secret/secret_test.json) shows the syntax.
 

@@ -30,6 +30,7 @@ Main features:
 - Trade (buy & sell in several flavors)
 - Deposit information (address & tag)
 - Recent Deposits
+- Recent Withdraws
 - Opened orders
 - Cancel opened orders
 - Withdraw (with check at destination that funds are well received)
@@ -291,14 +292,14 @@ Let's say you have `jack` and `joe` accounts (the name of the keys in `secret.js
 
 When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`.
 
-| Command                                 | Explanation                                                                                                           |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `coincenter -b kraken`                  | Sum of balances of 'jack' and 'joe' accounts of kraken                                                                |
-| `coincenter -b kraken_jack`             | Only balance of 'jack' account of kraken                                                                              |
-| `coincenter -t 1000usdt-sol,kraken`     | `coincenter` will trade a total of 1000 USDT from 'jack' and/or 'joe' (see [Single trade](#single-trade))             |
-| `coincenter -t 1000usdt-sol,kraken_joe` | Perform the trade on 'joe' account only                                                                               |
-|                                         |
-| `coincenter -w 1btc,kraken-binance`     | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' for withdraw |
+| Command                                           | Explanation                                                                                                           |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `coincenter -b kraken`                            | Sum of balances of 'jack' and 'joe' accounts of kraken                                                                |
+| `coincenter -b kraken_jack`                       | Only balance of 'jack' account of kraken                                                                              |
+| `coincenter -t 1000usdt-sol,kraken`               | `coincenter` will trade a total of 1000 USDT from 'jack' and/or 'joe' (see [Single trade](#single-trade))             |
+| `coincenter -t 1000usdt-sol,kraken_joe`           | Perform the trade on 'joe' account only                                                                               |
+|                                                   |
+| `coincenter --withdraw-apply 1btc,kraken-binance` | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' for withdraw |
 
 If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported):
 
@@ -386,7 +387,7 @@ Possible order price strategies:
 - `taker`: order placed at market price, should be matched immediately
 - `nibble`: order price continuously set at limit price + (buy)/- (sell) 1. This is a hybrid mode between the above two methods, ensuring continuous partial matches of the order over time, but at a controlled price (market price can be dangerously low for some short periods of time with large sells)
 
-Use command line option `--trade`, `--singletrade` or `-t` to make a single trade from a departure amount.
+Use command line option `--trade` or `-t` to make a trade from a departure amount.
 
 **Trade Price Picker**
 
@@ -417,7 +418,7 @@ A positive value indicates a higher price for a sell, and a lower price for a bu
 
 So, choosing a relative price of `1`: `--trade-price 1` is equivalent as the `maker` trade price strategy, and choosing a relative price of `-1` is equivalent to the `nibble` strategy.
 
-The relative price is, contrary to the **absolute** (fixed) price above, compatible with multi-trade. Also, it is continuously updated over time depending on the `--trade-updateprice` option.
+The relative price is, contrary to the **absolute** (fixed) price above, compatible with multi-trade. Also, it is continuously updated over time depending on the `--trade-update-price` option.
 
 Here is a visual example, considering an order book of market A-B:
 
@@ -600,9 +601,16 @@ Similarly to deposits, you can query the recent **withdraws** with command `--wi
 
 #### Examples
 
-`coincenter --withdraws`: retrieves all recent withdraws from all accounts
+Retrieve all recent withdraws from all accounts:
+```
+coincenter --withdraws
+```
 
-`coincenter --withdraws upbit,xrp --withdraws-id myid3`: retrieves the withdraw of XRP on Upbit with id `myid3`
+Retrieve the withdraw of XRP on Upbit with id `myid3`
+
+```
+coincenter --withdraws upbit,xrp --withdraws-id myid3
+```
 
 ### Opened orders
 
@@ -642,7 +650,7 @@ cancels order Id OID1 only, on the exchange where it is found on (no error is ra
 
 ### Withdraw coin
 
-It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-all` is a convenient command wrapper of `--withdraw 100%`.
+It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-apply-all` is a convenient command wrapper of `--withdraw-apply 100%`.
 
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
@@ -654,7 +662,7 @@ To ensure maximum safety, there are two checks performed by `coincenter` prior t
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 
 ```
-coincenter --withdraw 10000xlm,bithumb-huobi
+coincenter --withdraw-apply 10000xlm,bithumb-huobi
 ```
 
 #### Withdraw options

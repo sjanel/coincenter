@@ -99,7 +99,7 @@ struct CoincenterCmdLineOptions {
       "Withdraw amount from exchange 'from' to exchange 'to'."
       " Amount is gross, including fees, and can be absolute or percentage of all available amount. Address and tag "
       "will be retrieved"
-      " automatically from destination exchange and should match an entry in '";
+      " automatically from destination exchange and can additionally check if it matches an entry in '";
   static constexpr std::string_view kWithdraw2 = "' file.";
   static constexpr std::string_view kWithdraw = JoinStringView_v<kWithdraw1, kDepositAddressesFileName, kWithdraw2>;
 
@@ -224,7 +224,7 @@ struct CoincenterAllowedOptions {
 
   static constexpr CommandLineOptionWithValue value[] = {
       {{{"General", 1}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
-      {{{"General", 2}, "--data", 'd', "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
+      {{{"General", 2}, "--data", "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
       {{{"General", 3},
         "--log",
         'v',
@@ -356,6 +356,7 @@ struct CoincenterAllowedOptions {
        &OptValueType::ordersMaxAge},
       {{{"Private queries", 33},
         "--deposits",
+        'd',
         "<cur[,exch1,...]>",
         "Print recent deposits matching selection criteria.\n"
         "Currency and exchanges are optional, "
@@ -373,6 +374,7 @@ struct CoincenterAllowedOptions {
        &OptValueType::depositsMaxAge},
       {{{"Private queries", 34},
         "--withdraws",
+        'w',
         "<cur[,exch1,...]>",
         "Print recent withdraws matching selection criteria.\n"
         "Currency and exchanges are optional, "
@@ -449,7 +451,7 @@ struct CoincenterAllowedOptions {
         "  'maker' : order price set at limit price (default)\n"
         "  'nibble': order price set at limit price +(buy)/-(sell) 1\n"
         "  'taker' : order price will be at market price and matched immediately\n"
-        "Order price will be continuously updated and recomputed every '--trade-updateprice' step time.\n"
+        "Order price will be continuously updated and recomputed every '--trade-update-price' step time.\n"
         "This option is not compatible with '--trade-price'"},
        &OptValueType::tradeStrategy},
       {{{"Trade", 43}, "--trade-timeout", "<time>", CoincenterCmdLineOptions::kTradeTimeout},
@@ -460,7 +462,7 @@ struct CoincenterAllowedOptions {
         "If after the timeout some amount is still not traded,\n"
         "force match by placing a remaining order at market price\n"},
        &OptValueType::tradeTimeoutMatch},
-      {{{"Trade", 43}, "--trade-updateprice", "<time>", CoincenterCmdLineOptions::kTradeUpdatePrice},
+      {{{"Trade", 43}, "--trade-update-price", "<time>", CoincenterCmdLineOptions::kTradeUpdatePrice},
        &OptValueType::tradeUpdatePrice},
       {{{"Trade", 44}, "--trade-sim", "", CoincenterCmdLineOptions::kSimulationMode}, &OptValueType::tradeSim},
       {{{"Tools", 50}, "--dust-sweeper", "<cur[,exch1,...]>", CoincenterCmdLineOptions::kDustSweeper},
@@ -471,7 +473,7 @@ struct CoincenterAllowedOptions {
         "Get deposit wallet information for given currency."
         " If no exchange accounts are given, will query all of them by default"},
        &OptValueType::depositInfo},
-      {{{"Withdraw and deposit", 60}, "--withdraw", 'w', "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
+      {{{"Withdraw and deposit", 60}, "--withdraw-apply", "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
        &OptValueType::withdraw},
       {{{"Withdraw and deposit", 60},
         "--withdraw-async",
@@ -484,7 +486,7 @@ struct CoincenterAllowedOptions {
         CoincenterCmdLineOptions::kWithdrawRefreshTime},
        &OptValueType::withdrawRefreshTime},
       {{{"Withdraw and deposit", 60},
-        "--withdraw-all",
+        "--withdraw-apply-all",
         "<cur,from-to>",
         "Withdraw all available amount instead of a specified amount."},
        &OptValueType::withdrawAll},
