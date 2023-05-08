@@ -21,9 +21,6 @@ class CoincenterCommands {
 
   static CoincenterCmdLineOptions ParseOptions(int argc, const char *argv[]);
 
-  static MonitoringInfo CreateMonitoringInfo(std::string_view programName,
-                                             const CoincenterCmdLineOptions &cmdLineOptions);
-
   /// @brief Set this CoincenterCommands from given command line options.
   /// @return false if only help or version is asked, true otherwise
   bool setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
