@@ -99,7 +99,7 @@ CurrencyCode CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCo
       while (begIt != endIt && isSeparator(*begIt)) {
         ++begIt;
       }
-      std::transform(begIt, endIt, std::back_inserter(formattedCurrencyCode), [](char ch) { return toupper(ch); });
+      std::transform(begIt, endIt, std::back_inserter(formattedCurrencyCode), toupper);
       log::debug("Transformed '{}' into '{}'", currencyCode, formattedCurrencyCode);
       currencyCode = formattedCurrencyCode;
       break;
