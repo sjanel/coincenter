@@ -2,9 +2,9 @@ aux_source_directory(src ENGINE_SRC)
 
 add_library(coincenter_engine STATIC ${ENGINE_SRC})
 
-target_link_libraries(coincenter_engine PUBLIC coincenter_apicommon)
-target_link_libraries(coincenter_engine PUBLIC coincenter_exchangeapi)
-target_link_libraries(coincenter_engine PUBLIC coincenter_interfaceapi)
+target_link_libraries(coincenter_engine PUBLIC coincenter_api-common)
+target_link_libraries(coincenter_engine PUBLIC coincenter_api-exchange)
+target_link_libraries(coincenter_engine PUBLIC coincenter_api-interface)
 target_link_libraries(coincenter_engine PUBLIC coincenter_objects)
 target_include_directories(coincenter_engine PUBLIC include)
 
