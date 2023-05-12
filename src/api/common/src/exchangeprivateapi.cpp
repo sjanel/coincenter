@@ -218,7 +218,7 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
   log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {} s",
             initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
             targetExchange.exchangeName(), std::chrono::duration_cast<TimeInS>(withdrawRefreshTime).count());
-  SentWithdrawInfo sentWithdrawInfo;
+  SentWithdrawInfo sentWithdrawInfo(currencyCode);
   MonetaryAmount netDeliveredAmount;
 
   enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
@@ -236,6 +236,8 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
       unreachable();
   }
 
+  bool canLogAmountMismatchError = true;
+
   // When withdraw is in Check sender state, we alternatively check sender and then receiver.
   // It's possible that sender status is confirmed later than the receiver in some cases (this can happen for "fast"
   // coins such as Ripple for instance)
@@ -243,8 +245,14 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
     switch (nextAction) {
       case NextAction::kCheckSender:
         sentWithdrawInfo = isWithdrawSuccessfullySent(initiatedWithdrawInfo);
-        if (sentWithdrawInfo.isWithdrawSent()) {
-          log::info("Withdraw successfully sent from {}", exchangeName());
+        if (canLogAmountMismatchError && sentWithdrawInfo.netEmittedAmount() + sentWithdrawInfo.fee() !=
+                                             initiatedWithdrawInfo.grossEmittedAmount()) {
+          canLogAmountMismatchError = false;
+          log::warn(
+              "Net amount {} + actual fee {} != gross emitted amount {}, unharmful but may output incorrect amounts",
+              sentWithdrawInfo.netEmittedAmount(), sentWithdrawInfo.fee(), initiatedWithdrawInfo.grossEmittedAmount());
+        }
+        if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::kSuccess) {
           nextAction = NextAction::kCheckReceiver;
           continue;  // to skip the sleep and immediately check receiver
         }
@@ -539,29 +547,23 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
   WithdrawsSet withdraws = queryRecentWithdraws(WithdrawsConstraints(currencyCode, withdrawId));
 
-  MonetaryAmount netEmittedAmount(0, currencyCode);
-  MonetaryAmount fee(0, currencyCode);
-  bool isWithdrawSent = false;
-
   if (!withdraws.empty()) {
     if (withdraws.size() > 1) {
-      log::error("Unexpected number of matching withdraws ({}) with unique ID, only most recent one will be considered",
-                 withdraws.size());
+      log::warn("Unexpected number of matching withdraws ({}) with unique ID, only most recent one will be considered",
+                withdraws.size());
     }
 
-    const Withdraw &withdraw = *(withdraws.end() - 1);
-    if (withdraw.status() == Withdraw::Status::kSuccess) {
-      isWithdrawSent = true;
-    }
-    netEmittedAmount = withdraw.amount();
-    fee = withdraw.withdrawFee();
-    if (netEmittedAmount + fee != grossEmittedAmount) {
-      log::warn("Net amount {} + fee {} != gross emitted amount {}, unharmful but may output incorrect amounts",
-                netEmittedAmount, fee, grossEmittedAmount);
-    }
+    const Withdraw &withdraw = withdraws.back();
+
+    MonetaryAmount netEmittedAmount = withdraw.amount();
+    MonetaryAmount fee = withdraw.withdrawFee();
+
+    log::info("Withdraw status is '{}'", withdraw.statusStr());
+
+    return {netEmittedAmount, fee, withdraw.status()};
   }
 
-  return {netEmittedAmount, fee, isWithdrawSent};
+  return {currencyCode};
 }
 
 }  // namespace cct::api

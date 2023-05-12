@@ -6,6 +6,8 @@
 namespace cct {
 std::string_view WithdrawOrDeposit::statusStr() const {
   switch (_status) {
+    case Status::kInitial:
+      return "initial";
     case Status::kProcessing:
       return "processing";
     case Status::kFailureOrRejected:

@@ -7,6 +7,7 @@
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
 #include "wallet.hpp"
+#include "withdraw.hpp"
 
 namespace cct {
 namespace api {
@@ -41,21 +42,21 @@ class InitiatedWithdrawInfo {
 
 class SentWithdrawInfo {
  public:
-  SentWithdrawInfo() noexcept(std::is_nothrow_default_constructible_v<MonetaryAmount>) = default;
+  SentWithdrawInfo(CurrencyCode currencyCode) : _netEmittedAmount(0, currencyCode), _fee(0, currencyCode) {}
 
-  SentWithdrawInfo(MonetaryAmount netEmittedAmount, MonetaryAmount fee, bool isWithdrawSent)
-      : _netEmittedAmount(netEmittedAmount), _fee(fee), _isWithdrawSent(isWithdrawSent) {}
+  SentWithdrawInfo(MonetaryAmount netEmittedAmount, MonetaryAmount fee, Withdraw::Status withdrawStatus)
+      : _netEmittedAmount(netEmittedAmount), _fee(fee), _withdrawStatus(withdrawStatus) {}
 
   MonetaryAmount netEmittedAmount() const { return _netEmittedAmount; }
 
   MonetaryAmount fee() const { return _fee; }
 
-  bool isWithdrawSent() const { return _isWithdrawSent; }
+  Withdraw::Status withdrawStatus() const { return _withdrawStatus; }
 
  private:
   MonetaryAmount _netEmittedAmount;
   MonetaryAmount _fee;
-  bool _isWithdrawSent = false;
+  Withdraw::Status _withdrawStatus = Withdraw::Status::kInitial;
 };
 
 }  // namespace api

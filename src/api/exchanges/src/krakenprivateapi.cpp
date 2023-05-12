@@ -353,7 +353,10 @@ DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& deposi
 
 namespace {
 Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
-  if (statusStr == "Initial" || statusStr == "Pending" || statusStr == "Settled" || statusStr == "On hold") {
+  if (statusStr == "Initial" || statusStr == "Pending") {
+    return Withdraw::Status::kInitial;
+  }
+  if (statusStr == "Settled" || statusStr == "On hold") {
     return Withdraw::Status::kProcessing;
   }
   if (statusStr == "Success") {

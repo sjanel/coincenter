@@ -11,6 +11,7 @@ namespace cct {
 class WithdrawOrDeposit {
  public:
   enum class Status : int8_t {
+    kInitial,
     kSuccess,
     kProcessing,
     kFailureOrRejected,
