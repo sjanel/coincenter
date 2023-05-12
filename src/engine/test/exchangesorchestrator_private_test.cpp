@@ -189,7 +189,7 @@ inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdraw
 }
 
 inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
-  return lhs.isWithdrawSent() == rhs.isWithdrawSent() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
+  return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 }  // namespace api
 
@@ -226,7 +226,7 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
     EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
-    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
+    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
     EXPECT_CALL(exchangePrivate1, queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
             WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));

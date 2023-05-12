@@ -326,7 +326,10 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
 
 namespace {
 Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
-  if (statusStr == "WAITING" || statusStr == "PROCESSING") {
+  if (statusStr == "WAITING") {
+    return Withdraw::Status::kInitial;
+  }
+  if (statusStr == "PROCESSING") {
     return Withdraw::Status::kProcessing;
   }
   if (statusStr == "DONE") {

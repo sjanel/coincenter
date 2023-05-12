@@ -409,7 +409,7 @@ inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdraw
 }
 
 inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
-  return lhs.isWithdrawSent() == rhs.isWithdrawSent() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
+  return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 
 class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
@@ -435,9 +435,9 @@ class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
   MonetaryAmount fee{1, currencyCode, 2};
   MonetaryAmount netEmittedAmount = grossAmount - fee;
 
-  SentWithdrawInfo defaultWithdrawInfo{MonetaryAmount{0, currencyCode}, MonetaryAmount{0, currencyCode}, false};
-  SentWithdrawInfo unsentWithdrawInfo{netEmittedAmount, fee, false};
-  SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, true};
+  SentWithdrawInfo defaultWithdrawInfo{currencyCode};
+  SentWithdrawInfo unsentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kProcessing};
+  SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
 
   WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous};
 };

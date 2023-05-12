@@ -1033,7 +1033,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterRecentDepositsBaseTest : public QueryResultPrinterTest {
  protected:
-  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC"), Deposit::Status::kSuccess};
+  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC"), Deposit::Status::kInitial};
   Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP"), Deposit::Status::kSuccess};
   Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR"), Deposit::Status::kFailureOrRejected};
   Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::kProcessing};
@@ -1058,7 +1058,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
 | bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    | failed     |
 | bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE | success    |
 | huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          | success    |
-| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       | success    |
+| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       | initial    |
 | huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        | processing |
 -------------------------------------------------------------------------------------------
 )";
@@ -1113,7 +1113,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "cur": "BTC",
           "id": "id1",
           "receivedTime": "1999-03-25 04:46:43",
-          "status": "success"
+          "status": "initial"
         },
         {
           "amount": "1.31",
@@ -1145,7 +1145,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterRecentWithdrawsBaseTest : public QueryResultPrinterTest {
  protected:
-  Withdraw withdraw1{"id1", tp3, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kSuccess,
+  Withdraw withdraw1{"id1", tp3, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kInitial,
                      MonetaryAmount("0.00001", "BTC")};
   Withdraw withdraw2{"id2", tp4, MonetaryAmount(37, "XRP"), Withdraw::Status::kSuccess, MonetaryAmount("0.02", "XRP")};
   Withdraw withdraw3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Withdraw::Status::kFailureOrRejected,
@@ -1175,7 +1175,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
 | bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | 69204866.9 DOGE    | 2 DOGE      | success    |
 | huobi    | testuser2 | id2         | 2011-10-03 06:49:36 | 37 XRP             | 0.02 XRP    | success    |
 | huobi    | testuser1 | id4         | 2002-06-23 07:58:35 | 1.31 ETH           | 0.001 ETH   | processing |
-| huobi    | testuser1 | id1         | 2006-07-14 23:58:24 | 0.045 BTC          | 0.00001 BTC | success    |
+| huobi    | testuser1 | id1         | 2006-07-14 23:58:24 | 0.045 BTC          | 0.00001 BTC | initial    |
 ------------------------------------------------------------------------------------------------------------
 )";
   expectStr(kExpected);
@@ -1240,7 +1240,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "id": "id1",
           "netEmittedAmount": "0.045",
           "sentTime": "2006-07-14 23:58:24",
-          "status": "success"
+          "status": "initial"
         }
       ],
       "testuser2": [
@@ -1341,14 +1341,13 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   MonetaryAmount grossAmount{"76.55 XRP"};
   MonetaryAmount netEmittedAmount{"75.55 XRP"};
   MonetaryAmount fee = grossAmount - netEmittedAmount;
-  bool isWithdrawSent = true;
   ExchangeName fromExchange{exchange1.apiPrivate().exchangeName()};
   ExchangeName toExchange{exchange4.apiPrivate().exchangeName()};
 
   Wallet receivingWallet{toExchange,    grossAmount.currencyCode(),           "xrpaddress666", "xrptag2",
                          WalletCheck{}, AccountOwner("SmithJohn", "스미스존")};
   MonetaryAmount grossEmittedAmount;
-  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, isWithdrawSent};
+  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
   DeliveredWithdrawInfo deliveredWithdrawInfo{
       api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1}, netEmittedAmount, tp2};
   WithdrawOptions withdrawOptions;

@@ -224,7 +224,10 @@ int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
 
 namespace {
 Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
-  if (statusStr == "unknown" || statusStr == "confirming") {
+  if (statusStr == "unknown") {
+    return Deposit::Status::kInitial;
+  }
+  if (statusStr == "confirming") {
     return Deposit::Status::kProcessing;
   }
   if (statusStr == "confirmed" || statusStr == "safe" || statusStr == "orphan") {
@@ -294,7 +297,8 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
     }
     return Withdraw::Status::kProcessing;
   }
-  if (statusStr == "canceled") {
+  // Let's also check without typo error ('canceled' with the typo is from the official documentation)
+  if (statusStr == "canceled" || statusStr == "cancelled") {
     if (logStatus) {
       log::error("Withdraw canceled");
     }
