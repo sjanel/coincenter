@@ -204,7 +204,7 @@ function(add_unit_test name)
     endif()
 
     target_include_directories(${name} PRIVATE include)
-    target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/iotools/include)
+    target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/http-request/include)
 
     add_test(NAME ${name} COMMAND ${name})
     set_tests_properties(${name} PROPERTIES
@@ -252,7 +252,7 @@ endif()
 # (beware of cyclic dependencies)
 add_subdirectory(src/tech)
 add_subdirectory(src/monitoring)
-add_subdirectory(src/iotools)
+add_subdirectory(src/http-request)
 add_subdirectory(src/objects)
 add_subdirectory(src/api-objects)
 add_subdirectory(src/api)

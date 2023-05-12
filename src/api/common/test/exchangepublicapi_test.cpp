@@ -14,9 +14,6 @@
 namespace cct::api {
 class ExchangePublicTest : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};

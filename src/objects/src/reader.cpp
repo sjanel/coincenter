@@ -5,7 +5,7 @@ namespace cct {
 json Reader::readAllJson() const {
   string dataS = readAll();
   if (dataS.empty()) {
-    dataS = "{}";
+    dataS.append("{}");
   }
   return json::parse(std::move(dataS));
 }

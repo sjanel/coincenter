@@ -44,7 +44,6 @@ add_unit_test(
     test/recentdeposit_test.cpp
     LIBRARIES
     coincenter_objects
-    coincenter_iotools
 )
 
 add_unit_test(
