@@ -20,25 +20,24 @@ namespace {
 string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std::string_view method,
                      std::string_view postDataStr) {
   std::string_view urlBaseWithoutHttps(baseUrl.begin() + std::string_view("https://").size(), baseUrl.end());
+  std::string_view requestTypeStr = ToString(requestType);
+  string paramsStr(requestTypeStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U, '\n');
 
-  string paramsStr(ToString(requestType));
-  paramsStr.reserve(paramsStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U);
-  paramsStr.push_back('\n');
-  paramsStr.append(urlBaseWithoutHttps);
-  paramsStr.push_back('\n');
-  paramsStr.append(method);
-  paramsStr.push_back('\n');
-  paramsStr.append(postDataStr);
+  auto it = paramsStr.begin();
+  it = std::ranges::copy(requestTypeStr, it).out;
+  it = std::ranges::copy(urlBaseWithoutHttps, it + 1).out;
+  it = std::ranges::copy(method, it + 1).out;
+  std::ranges::copy(postDataStr, it + 1);
+
   return paramsStr;
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
-  CurlPostData signaturePostData{
-      {"AccessKeyId", apiKey.key()},
-      {"SignatureMethod", "HmacSHA256"},
-      {"SignatureVersion", 2},
-      {"Timestamp", curlHandle.urlEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat))}};
+  CurlPostData signaturePostData{{"AccessKeyId", apiKey.key()},
+                                 {"SignatureMethod", "HmacSHA256"},
+                                 {"SignatureVersion", 2},
+                                 {"Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat))}};
 
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postData.empty()) {
@@ -53,7 +52,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     }
   }
 
-  string sig = curlHandle.urlEncode(B64Encode(ssl::ShaBin(
+  string sig = URLEncode(B64Encode(ssl::ShaBin(
       ssl::ShaType::kSha256, BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostData.str()),
       apiKey.privateKey())));
 

@@ -1,6 +1,5 @@
 #include "codec.hpp"
 
-#include <cassert>
 #include <cstddef>
 
 #include "cct_cctype.hpp"
@@ -39,12 +38,9 @@ string B64Encode(std::span<const char> binData) {
     }
   }
   if (bitsCollected > 0) {  // Any trailing bits that are missing.
-    assert(bitsCollected < 6);
     accumulator <<= 6 - bitsCollected;
     ret[outPos++] = kB64Table[accumulator & 0x3FU];
   }
-  assert(ret.empty() || outPos >= (ret.size() - 2));
-  assert(outPos <= ret.size());
   return ret;
 }
 
@@ -75,6 +71,25 @@ string B64Decode(std::span<const char> ascData) {
       ret.push_back(static_cast<char>((accumulator >> bitsCollected) & 0xFFU));
     }
   }
+  return ret;
+}
+
+string URLEncode(std::span<const char> ascData) {
+  string ret(3U * ascData.size(), '\0');
+  char* outCharIt = ret.data();
+  for (char c : ascData) {
+    if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+      *outCharIt++ = c;
+    } else {
+#ifdef CCT_MSVC
+      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(c));
+#else
+      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
+#endif
+      outCharIt += 3;
+    }
+  }
+  ret.resize(outCharIt - ret.data());
   return ret;
 }
 }  // namespace cct
