@@ -122,12 +122,12 @@ class FlatKeyValueString {
   const_iterator begin() const { return const_iterator(_data); }
   const_iterator end() const { return const_iterator(_data, true); }
 
-  /// Append a new value for a key, even if it already exists in the parameters.
+  /// Append a new value for a key. No check is done on a duplicate key.
   /// There are several ways to set values as arrays (and none is standard). Choose the method depending on your usage:
   ///   - "aKey[]=val1&aKey[]=val2" can be used with several appends (one per value) with the same key suffixed with []
   ///     This method needs to be used for direct call as parameter string
-  ///   -If this query string will be transformed into json, set a key only once, with each value suffixed by a ','
-  ///   (even the last one)
+  ///   - If this query string will be transformed into json, set a key only once, with each value suffixed by a ','
+  ///     (even the last one)
   ///     Examples:
   ///       "val": value is a single string
   ///       "val,": value is an array of a single string
@@ -174,12 +174,12 @@ class FlatKeyValueString {
 
   void reserve(size_type capacity) { _data.reserve(capacity); }
 
-  /// Finds the position of the given key
+  /// Finds the position of the given key, or string::npos if key is not present
   size_type find(std::string_view key) const noexcept;
 
   bool contains(std::string_view key) const noexcept { return find(key) != string::npos; }
 
-  /// Get the value associated to given key
+  /// Get the value associated to given key, or an empty string if no value is found for this key.
   std::string_view get(std::string_view key) const;
 
   bool empty() const noexcept { return _data.empty(); }
@@ -196,7 +196,7 @@ class FlatKeyValueString {
   /// Limitation: all json values will be decoded as strings.
   json toJson() const;
 
-  /// Returns a new CurlPostData URL encoded except delimiters.
+  /// Returns a new FlatKeyValueString URL encoded except delimiters.
   FlatKeyValueString urlEncodeExceptDelimiters() const;
 
   auto operator<=>(const FlatKeyValueString &) const = default;

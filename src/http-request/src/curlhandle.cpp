@@ -118,7 +118,6 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
   CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
-  CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, opts.isFollowLocation());
 
 #ifdef CCT_MSVC
   // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
@@ -210,19 +209,6 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   }
 
   return responseStr;
-}
-
-string CurlHandle::urlEncode(std::string_view data) const {
-  CURL *curl = reinterpret_cast<CURL *>(_handle);
-
-  using CurlStringUniquePtr = std::unique_ptr<char, decltype([](char *ptr) { curl_free(ptr); })>;
-
-  CurlStringUniquePtr uniquePtr(curl_easy_escape(curl, data.data(), static_cast<int>(data.size())));
-  const char *encodedChars = uniquePtr.get();
-  if (encodedChars == nullptr) {
-    throw std::bad_alloc();
-  }
-  return encodedChars;
 }
 
 CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }

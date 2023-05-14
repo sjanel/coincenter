@@ -61,8 +61,6 @@ class CurlOptions {
 
   bool isPostDataInJsonFormat() const { return _postdataInJsonFormat; }
 
-  bool isFollowLocation() const { return _followLocation; }
-
   HttpRequestType requestType() const { return _requestType; }
 
   void clearHttpHeaders() { _httpHeaders.clear(); }
@@ -88,7 +86,6 @@ class CurlOptions {
   bool _proxyReset = false;
   bool _verbose = false;
   bool _postdataInJsonFormat = false;
-  bool _followLocation = false;
   HttpRequestType _requestType = HttpRequestType::kGet;
 };
 

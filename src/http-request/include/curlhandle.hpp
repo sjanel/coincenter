@@ -43,9 +43,6 @@ class CurlHandle {
 
   ~CurlHandle();
 
-  /// URL Encode using cURL encode algorithm on the given string
-  string urlEncode(std::string_view data) const;
-
   /// Launch a query on the given endpoint, it should start with a '/' and not contain the base URLs given at
   /// creation of this object.
   string query(std::string_view endpoint, const CurlOptions &opts);

@@ -52,7 +52,6 @@ add_unit_test(
     src/fiatconverter.cpp
     test/fiatconverter_test.cpp
     LIBRARIES
-    coincenter_http-request
     coincenter_objects
 )
 
