@@ -46,6 +46,11 @@ add_exchange_test(
 )
 
 add_exchange_test(
+  bithumb_place_order_test
+  test/bithumb_place_order_test.cpp
+)
+
+add_exchange_test(
   huobiapi_test
   test/huobiapi_test.cpp
 )

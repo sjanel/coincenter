@@ -45,15 +45,12 @@ constexpr std::string_view kWalletAddressEndpointStr = "/info/wallet_address";
 
 std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
-  string strData(endpoint);
-  strData.reserve(strData.size() + 2U + postDataStr.size() + nonce.size());
-
   static constexpr char kParChar = 1;
-  strData.push_back(kParChar);
-  strData.append(postDataStr);
-  strData.push_back(kParChar);
+  string strData(endpoint.size() + 2U + postDataStr.size() + nonce.size(), kParChar);
 
-  strData.append(nonce.begin(), nonce.end());
+  auto it = std::ranges::copy(endpoint, strData.begin()).out;
+  it = std::ranges::copy(postDataStr, it + 1).out;
+  it = std::ranges::copy(nonce, it + 1).out;
   return std::make_pair(std::move(strData), std::move(nonce));
 }
 
@@ -276,19 +273,21 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, bithumbPublic) {
-  json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAllJson();
-  for (const auto& [currencyCodeStr, currencyOrderInfoJson] : data.items()) {
-    CurrencyOrderInfo currencyOrderInfo;
+  if (config.getRunMode() != settings::RunMode::kQueryResponseOverriden) {
+    json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAllJson();
+    for (const auto& [currencyCodeStr, currencyOrderInfoJson] : data.items()) {
+      CurrencyOrderInfo currencyOrderInfo;
 
-    LoadCurrencyInfoField(currencyOrderInfoJson, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
-                          currencyOrderInfo.lastNbDecimalsUpdatedTime);
-    LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
-                          currencyOrderInfo.lastMinOrderSizeUpdatedTime);
-    LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
-                          currencyOrderInfo.lastMinOrderPriceUpdatedTime);
-    LoadCurrencyInfoField(currencyOrderInfoJson, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
-                          currencyOrderInfo.lastMaxOrderPriceUpdatedTime);
-    _currencyOrderInfoMap.insert_or_assign(CurrencyCode(currencyCodeStr), std::move(currencyOrderInfo));
+      LoadCurrencyInfoField(currencyOrderInfoJson, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
+                            currencyOrderInfo.lastNbDecimalsUpdatedTime);
+      LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
+                            currencyOrderInfo.lastMinOrderSizeUpdatedTime);
+      LoadCurrencyInfoField(currencyOrderInfoJson, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
+                            currencyOrderInfo.lastMinOrderPriceUpdatedTime);
+      LoadCurrencyInfoField(currencyOrderInfoJson, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
+                            currencyOrderInfo.lastMaxOrderPriceUpdatedTime);
+      _currencyOrderInfoMap.insert_or_assign(CurrencyCode(currencyCodeStr), std::move(currencyOrderInfo));
+    }
   }
 }
 
@@ -757,17 +756,21 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
                                 currencyOrderInfo.lastNbDecimalsUpdatedTime)) {
         volume.truncate(currencyOrderInfo.nbDecimals);
+        if (volume == 0) {
+          log::warn("No trade of {} into {} because volume is 0 after truncating to {} decimals", volume,
+                    toCurrencyCode, static_cast<int>(currencyOrderInfo.nbDecimals));
+          break;
+        }
         placePostData.set("units", volume.amountStr());
       } else if (LoadCurrencyInfoField(result, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
                                        currencyOrderInfo.lastMinOrderSizeUpdatedTime)) {
-        if (isSimulationWithRealOrder && currencyOrderInfo.minOrderSize.currencyCode() == price.currencyCode()) {
-          volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
-          placePostData.set("units", volume.amountStr());
-        } else {
+        if (!isSimulationWithRealOrder || currencyOrderInfo.minOrderSize.currencyCode() != price.currencyCode()) {
           log::warn("No trade of {} into {} because min order size is {} for this market", volume, toCurrencyCode,
                     currencyOrderInfo.minOrderSize);
           break;
         }
+        volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
+        placePostData.set("units", volume.amountStr());
       } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
                                        currencyOrderInfo.lastMinOrderPriceUpdatedTime)) {
         if (isSimulationWithRealOrder) {
