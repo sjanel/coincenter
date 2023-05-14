@@ -54,6 +54,8 @@ class BithumbPrivate : public ExchangePrivate {
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
 
  private:
+  friend class BithumbPrivateAPIPlaceOrderTest;
+
   struct DepositWalletFunc {
 #ifndef CCT_AGGR_INIT_CXX20
     DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BithumbPublic& exchangePublic)
