@@ -117,7 +117,7 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
   WithdrawalFeeMap ret;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
-  string dataStr = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
+  std::string_view dataStr = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
   // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
   // here is a line containing our coin with its additional withdrawal fees:
   //

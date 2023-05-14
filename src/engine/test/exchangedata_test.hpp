@@ -20,8 +20,6 @@ class ExchangesBaseTest : public ::testing::Test {
     EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
   }
 
-  void TearDown() override {}
-
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};

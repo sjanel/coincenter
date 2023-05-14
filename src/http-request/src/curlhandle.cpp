@@ -14,12 +14,17 @@
 #include "cct_log.hpp"
 #include "curlmetrics.hpp"
 #include "curloptions.hpp"
+#include "flatkeyvaluestring.hpp"
 #include "proxy.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {
 
 namespace {
+
+/// According to RFC3986 (https://www.rfc-editor.org/rfc/rfc3986#section-2)
+/// '"' cannot be used in a URI (not percent encoded), so it's a fine delimiter for our FlatQueryResponse map
+using FlatQueryResponseMap = FlatKeyValueString<'\0', '"'>;
 
 size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *userp) {
   try {
@@ -58,23 +63,28 @@ string GetCurlVersionInfo() {
 
 CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway,
                        Duration minDurationBetweenQueries, settings::RunMode runMode)
-    : _handle(curl_easy_init()),
-      _pMetricGateway(pMetricGateway),
+    : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(minDurationBetweenQueries),
       _bestUrlPicker(bestURLPicker) {
-  if (_handle == nullptr) {
-    throw std::bad_alloc();
-  }
-  CURL *curl = reinterpret_cast<CURL *>(_handle);
-  CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  log::debug("Initialize CurlHandle for {} with {} ms as minimum duration between queries",
-             bestURLPicker.getNextBaseURL(), std::chrono::duration_cast<TimeInMs>(minDurationBetweenQueries).count());
+  if (settings::AreQueryResponsesOverriden(runMode)) {
+    _handle = nullptr;
+  } else {
+    _handle = curl_easy_init();
+    if (_handle == nullptr) {
+      throw std::bad_alloc();
+    }
+    CURL *curl = reinterpret_cast<CURL *>(_handle);
+    CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
+    CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &_queryData);
+    log::debug("Initialize CurlHandle for {} with {} ms as minimum duration between queries",
+               bestURLPicker.getNextBaseURL(), std::chrono::duration_cast<TimeInMs>(minDurationBetweenQueries).count());
 
-  if (IsProxyRequested(runMode)) {
-    if (IsProxyAvailable()) {
-      setUpProxy(GetProxyURL(), false);
-    } else {
-      throw std::runtime_error("Requesting proxy usage without any available proxy.");
+    if (settings::IsProxyRequested(runMode)) {
+      if (IsProxyAvailable()) {
+        setUpProxy(GetProxyURL(), false);
+      } else {
+        throw std::runtime_error("Requesting proxy usage without any available proxy.");
+      }
     }
   }
 }
@@ -92,30 +102,44 @@ void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
   }
 }
 
-string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
-  CURL *curl = reinterpret_cast<CURL *>(_handle);
-
-  // General option settings.
+std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   const CurlPostData &postData = opts.getPostData();
-  const char *optsStr = postData.c_str();
+  const bool queryResponseOverrideMode = _handle == nullptr;
+  const bool appendParametersInQueryStr =
+      !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
 
-  int8_t baseUrlPos = _bestUrlPicker.nextBaseURLPos();
-  string modifiedURL(_bestUrlPicker.getBaseURL(baseUrlPos));
-  modifiedURL.append(endpoint);
-  string jsonBuf;  // Declared here as its scope should be valid until the actual curl call
-  if (opts.requestType() != HttpRequestType::kPost && !postData.empty()) {
-    // Add parameters as query string after the URL
-    modifiedURL.push_back('?');
-    modifiedURL.append(postData.str());
-    optsStr = "";
+  const int8_t baseUrlPos = _bestUrlPicker.nextBaseURLPos();
+  std::string_view baseUrl = _bestUrlPicker.getBaseURL(baseUrlPos);
+  std::string_view postDataStr = postData.str();
+  string modifiedURL(baseUrl.size() + endpoint.size() + (appendParametersInQueryStr ? (1U + postDataStr.size()) : 0U),
+                     '?');
+
+  auto it = std::ranges::copy(baseUrl, modifiedURL.begin()).out;
+  it = std::ranges::copy(endpoint, it).out;
+  string jsonStr;  // Declared here as its scope should be valid until the actual curl call
+  std::string_view optsStr;
+  if (appendParametersInQueryStr) {
+    it = std::ranges::copy(postDataStr, it + 1).out;
+  } else if (opts.isPostDataInJsonFormat() && !postData.empty()) {
+    jsonStr = postData.toJson().dump();
+    optsStr = jsonStr;
   } else {
-    if (opts.isPostDataInJsonFormat() && !postData.empty()) {
-      jsonBuf = postData.toJson().dump();
-      optsStr = jsonBuf.c_str();
-    }
+    optsStr = postData.str();
   }
 
-  CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr);
+  if (queryResponseOverrideMode) {
+    // Query response override mode
+    std::string_view path(modifiedURL.begin() + baseUrl.size(), modifiedURL.end());
+    std::string_view response = FlatQueryResponseMap::Get(_queryData, path);
+    if (response.empty()) {
+      throw exception("No response for path '{}'", path);
+    }
+    return response;
+  }
+
+  CURL *curl = reinterpret_cast<CURL *>(_handle);
+
+  CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr.data());
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
   CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
 
@@ -155,10 +179,10 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
 
   CurlSetLogIfError(curl, CURLOPT_HTTPHEADER, curlListPtr);
-  string responseStr;
-  CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &responseStr);
 
   setUpProxy(opts.getProxyUrl(), opts.isProxyReset());
+
+  _queryData.clear();
 
   if (_minDurationBetweenQueries != Duration::zero()) {
     // Check last request time
@@ -175,7 +199,7 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
     }
   }
 
-  log::info("{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr[0] == '\0' ? "" : "?", optsStr);
+  log::info("{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?", optsStr);
 
   // Actually make the query
   TimePoint t1 = Clock::now();
@@ -184,8 +208,16 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
     throw exception("Unexpected response from curl: Error {}", static_cast<int>(res));
   }
 
+  // Store stats
   uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
   _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
+
+  static constexpr int kReleaseMemoryRequestsFrequency = 100;
+
+  // Periodic memory release to avoid memory leak for a very large number of requests
+  if ((_bestUrlPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
+    _queryData.shrink_to_fit();
+  }
 
   if (_pMetricGateway != nullptr) {
     _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
@@ -197,21 +229,44 @@ string CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
 
   if (log::get_level() <= log::level::trace) {
     // Avoid polluting the logs for large response which are more likely to be HTML
-    const bool isJsonAnswer = responseStr.starts_with('{') || responseStr.starts_with('[');
+    const bool isJsonAnswer = _queryData.starts_with('{') || _queryData.starts_with('[');
     constexpr std::size_t kMaxLenResponse = 1000;
-    if (!isJsonAnswer && responseStr.size() > kMaxLenResponse) {
-      std::string_view outPrinted(responseStr.begin(),
-                                  responseStr.begin() + std::min(responseStr.size(), kMaxLenResponse));
+    if (!isJsonAnswer && _queryData.size() > kMaxLenResponse) {
+      std::string_view outPrinted(_queryData.begin(),
+                                  _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
       log::trace("Truncated non JSON response {}...", outPrinted);
     } else {
-      log::trace("Full{}JSON response {}", isJsonAnswer ? " " : " non ", responseStr);
+      log::trace("Full{}JSON response {}", isJsonAnswer ? " " : " non ", _queryData);
     }
   }
 
-  return responseStr;
+  return _queryData;
 }
 
-CurlHandle::~CurlHandle() { curl_easy_cleanup(reinterpret_cast<CURL *>(_handle)); }
+string CurlHandle::queryRelease(std::string_view endpoint, const CurlOptions &opts) {
+  query(endpoint, opts);
+  string queryData;
+  queryData.swap(_queryData);
+  return queryData;
+}
+
+void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap) {
+  if (_handle != nullptr) {
+    throw exception(
+        "CurlHandle should be created in Query response override mode in order to override its next response");
+  }
+  FlatQueryResponseMap flatQueryResponses;
+  for (const auto &[query, response] : queryResponsesMap) {
+    flatQueryResponses.append(query, response);
+  }
+  _queryData = string(flatQueryResponses.str());
+}
+
+CurlHandle::~CurlHandle() {
+  if (_handle != nullptr) {
+    curl_easy_cleanup(reinterpret_cast<CURL *>(_handle));
+  }
+}
 
 CurlInitRAII::CurlInitRAII() {
   CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);

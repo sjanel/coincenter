@@ -48,6 +48,8 @@ class BestURLPicker {
 
   int8_t nbBaseURL() const { return static_cast<int8_t>(_responseTimeStatsPerBaseUrl.size()); }
 
+  int nbRequestsDone() const;
+
  private:
   explicit BestURLPicker(std::span<const std::string_view> baseUrls)
       : _pBaseUrls(baseUrls.data()), _responseTimeStatsPerBaseUrl(baseUrls.size()) {}

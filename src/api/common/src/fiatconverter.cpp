@@ -73,8 +73,9 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
   method.append(opts.getPostData().str());
   opts.getPostData().clear();
 
-  string dataStr = _curlHandle.query(method, opts);
-  json data = json::parse(dataStr, nullptr, false /* allow exceptions */);
+  std::string_view dataStr = _curlHandle.query(method, opts);
+  static constexpr bool kAllowExceptions = false;
+  json data = json::parse(dataStr, nullptr, kAllowExceptions);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
     log::error("No JSON data received from fiat currency converter service");

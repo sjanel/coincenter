@@ -13,7 +13,7 @@
 
 namespace cct::api {
 namespace {
-string Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
+std::string_view Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
   return curlHandle.query(endpoint,
                           CurlOptions(HttpRequestType::kGet, std::move(postData), "Cryptowatch C++ API Client"));
 }

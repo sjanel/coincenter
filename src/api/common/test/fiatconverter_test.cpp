@@ -32,7 +32,7 @@ CurlHandle::CurlHandle([[maybe_unused]] const BestURLPicker &bestURLPicker,
     : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-string CurlHandle::query(std::string_view endpoint, [[maybe_unused]] const CurlOptions &opts) {
+std::string_view CurlHandle::query(std::string_view endpoint, [[maybe_unused]] const CurlOptions &opts) {
   json jsonData;
   if (endpoint.find("currencies") != std::string_view::npos) {
     // Currencies
@@ -69,7 +69,8 @@ string CurlHandle::query(std::string_view endpoint, [[maybe_unused]] const CurlO
       jsonData["results"][marketStr]["val"] = rate;
     }
   }
-  return jsonData.dump();
+  _queryData = jsonData.dump();
+  return _queryData;
 }
 
 CurlHandle::~CurlHandle() {}  // NOLINT

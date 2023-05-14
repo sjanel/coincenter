@@ -179,10 +179,14 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  string dataStr = _curlHandle.query("", CurlOptions(HttpRequestType::kGet));
+  string dataStr = _curlHandle.queryRelease("", CurlOptions(HttpRequestType::kGet));
   // This json is HUGE and contains numerous amounts of information
   static constexpr std::string_view appBegJson = "application/json\">";
-  string::const_iterator first = dataStr.begin() + dataStr.find(appBegJson) + appBegJson.size();
+  std::size_t beg = dataStr.find(appBegJson);
+  if (beg == string::npos) {
+    throw exception("Unexpected answer from {}", _curlHandle.getNextBaseUrl());
+  }
+  string::const_iterator first = dataStr.begin() + beg + appBegJson.size();
   std::string_view sv(first, dataStr.end());
   std::size_t reduxPos = sv.find("redux\":");
   std::size_t ssrStorePos = sv.find("ssrStore\":", reduxPos);

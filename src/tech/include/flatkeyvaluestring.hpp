@@ -112,6 +112,12 @@ class FlatKeyValueString {
 
   static constexpr char kArrayElemSepChar = ',';
 
+  /// Finds the position of the given key in given data, or string::npos if key is not present
+  static size_type Find(std::string_view data, std::string_view key);
+
+  /// Get the value associated to given key, or an empty string if no value is found for this key.
+  static std::string_view Get(std::string_view data, std::string_view key);
+
   FlatKeyValueString() noexcept = default;
 
   FlatKeyValueString(std::initializer_list<KeyValuePair> init)
@@ -175,12 +181,12 @@ class FlatKeyValueString {
   void reserve(size_type capacity) { _data.reserve(capacity); }
 
   /// Finds the position of the given key, or string::npos if key is not present
-  size_type find(std::string_view key) const noexcept;
+  size_type find(std::string_view key) const noexcept { return Find(_data, key); }
 
   bool contains(std::string_view key) const noexcept { return find(key) != string::npos; }
 
   /// Get the value associated to given key, or an empty string if no value is found for this key.
-  std::string_view get(std::string_view key) const;
+  std::string_view get(std::string_view key) const { return Get(_data, key); }
 
   bool empty() const noexcept { return _data.empty(); }
 
@@ -188,6 +194,8 @@ class FlatKeyValueString {
 
   void clear() noexcept { _data.clear(); }
 
+  /// Get a string_view on the full data hold by this FlatKeyValueString.
+  /// The returned string_view is guaranteed to be null-terminated.
   std::string_view str() const noexcept { return _data; }
 
   /// Converts to a json document.
@@ -224,13 +232,14 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(std::string_vie
   assert(key.find(KeyValuePairSep) == std::string_view::npos);
   assert(key.find(AssignmentChar) == std::string_view::npos);
   assert(value.find(KeyValuePairSep) == std::string_view::npos);
-  assert(value.find(AssignmentChar) == std::string_view::npos);
-  if (!_data.empty()) {
-    _data.push_back(KeyValuePairSep);
+  std::size_t pos = _data.size();
+  _data.append((pos == 0 ? 0U : 1U) + key.size() + 1U + value.size(), AssignmentChar);
+  if (pos != 0) {
+    _data[pos] = KeyValuePairSep;
+    ++pos;
   }
-  _data.append(key);
-  _data.push_back(AssignmentChar);
-  _data.append(value);
+  auto it = std::ranges::copy(key, _data.begin() + pos).out;
+  std::ranges::copy(value, it + 1);
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
@@ -264,8 +273,6 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::prepend(std::string_vi
   assert(key.find(KeyValuePairSep) == std::string_view::npos);
   assert(key.find(AssignmentChar) == std::string_view::npos);
   assert(value.find(KeyValuePairSep) == std::string_view::npos);
-  assert(value.find(AssignmentChar) == std::string_view::npos);
-  assert(!contains(key));
   if (_data.empty()) {
     _data.append(key);
     _data.push_back(AssignmentChar);
@@ -293,29 +300,12 @@ inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::prepend(const K
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-std::size_t FlatKeyValueString<KeyValuePairSep, AssignmentChar>::find(std::string_view key) const noexcept {
-  const std::size_t ks = key.size();
-  const std::size_t ds = _data.size();
-  // Ideally, we would like to search for key + AssignmentChar, but we don't want to make a new string
-  std::size_t pos = _data.find(key);
-  while (pos != string::npos && pos + ks < ds && _data[pos + ks] != AssignmentChar) {
-    pos = _data.find(key, pos + ks + 1);
-  }
-  if (pos != string::npos && (pos + ks == ds || _data[pos + ks] == KeyValuePairSep)) {
-    // we found a value, not a key
-    pos = string::npos;
-  }
-  return pos;
-}
-
-template <char KeyValuePairSep, char AssignmentChar>
 void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::set(std::string_view key, std::string_view value) {
   assert(!key.empty());
   assert(!value.empty());
   assert(key.find(KeyValuePairSep) == std::string_view::npos);
   assert(key.find(AssignmentChar) == std::string_view::npos);
   assert(value.find(KeyValuePairSep) == std::string_view::npos);
-  assert(value.find(AssignmentChar) == std::string_view::npos);
   std::size_t pos = find(key);
   if (pos == string::npos) {
     append(key, value);
@@ -347,20 +337,36 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(std::string_view
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-std::string_view FlatKeyValueString<KeyValuePairSep, AssignmentChar>::get(std::string_view key) const {
-  std::size_t pos = find(key);
-  string::const_iterator first;
-  string::const_iterator last;
+std::size_t FlatKeyValueString<KeyValuePairSep, AssignmentChar>::Find(std::string_view data, std::string_view key) {
+  const std::size_t ks = key.size();
+  const std::size_t ds = data.size();
+  // Ideally, we would like to search for key + AssignmentChar, but we don't want to make a new string
+  std::size_t pos = data.find(key);
+  while (pos != string::npos && pos + ks < ds && data[pos + ks] != AssignmentChar) {
+    pos = data.find(key, pos + ks + 1);
+  }
+  if (pos != string::npos && (pos + ks == ds || data[pos + ks] == KeyValuePairSep)) {
+    // we found a value, not a key
+    pos = string::npos;
+  }
+  return pos;
+}
+
+template <char KeyValuePairSep, char AssignmentChar>
+std::string_view FlatKeyValueString<KeyValuePairSep, AssignmentChar>::Get(std::string_view data, std::string_view key) {
+  std::size_t pos = Find(data, key);
+  std::string_view::const_iterator first;
+  std::string_view::const_iterator last;
   if (pos == string::npos) {
-    first = _data.end();
-    last = _data.end();
+    first = data.end();
+    last = data.end();
   } else {
-    first = _data.begin() + pos + key.size() + 1;
-    std::size_t endPos = _data.find(KeyValuePairSep, pos + key.size() + 1);
+    first = data.begin() + pos + key.size() + 1;
+    std::size_t endPos = data.find(KeyValuePairSep, pos + key.size() + 1);
     if (endPos == string::npos) {
-      last = _data.end();
+      last = data.end();
     } else {
-      last = _data.begin() + endPos;
+      last = data.begin() + endPos;
     }
   }
   return std::string_view(first, last);
