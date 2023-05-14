@@ -48,7 +48,16 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   kvPairs.set("d", "cestboncestfini");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
-  EXPECT_DEBUG_DEATH(kvPairs.append("newKey", "="), "");
+  kvPairs.append("newKey", "=");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==");
+  kvPairs.append("$5*(%", ".9h===,Mj");
+  EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj");
+  kvPairs.append("encoreplustricky", "=");
+  EXPECT_EQ(kvPairs.str(),
+            "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj&encoreplustricky==");
+  kvPairs.set("$5*(%", ".9h==,Mj");
+  EXPECT_EQ(kvPairs.str(),
+            "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h==,Mj&encoreplustricky==");
 }
 
 TEST(FlatKeyValueStringTest, Prepend) {

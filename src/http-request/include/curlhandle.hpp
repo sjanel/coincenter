@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -34,10 +35,10 @@ class CurlHandle {
                       Duration minDurationBetweenQueries = Duration::zero(),
                       settings::RunMode runMode = settings::RunMode::kProd);
 
-  // Move operations are deleted but could be implemented if needed. It's just to avoid useless code.
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;
 
+  // Move operations are deleted but could be implemented if needed. It's just to avoid useless code.
   CurlHandle(CurlHandle &&) = delete;
   CurlHandle &operator=(CurlHandle &&) = delete;
 
@@ -45,11 +46,23 @@ class CurlHandle {
 
   /// Launch a query on the given endpoint, it should start with a '/' and not contain the base URLs given at
   /// creation of this object.
-  string query(std::string_view endpoint, const CurlOptions &opts);
+  /// Response is returned as a std::string_view to a memory hold in cache by this CurlHandle.
+  /// The pointed memory is valid until a next call to 'query'.
+  std::string_view query(std::string_view endpoint, const CurlOptions &opts);
+
+  /// Same as 'query' except that internal memory buffer is immediately freed after the query.
+  /// This can be useful for rare queries with very large responses for instance.
+  string queryRelease(std::string_view endpoint, const CurlOptions &opts);
 
   std::string_view getNextBaseUrl() const { return _bestUrlPicker.getNextBaseURL(); }
 
   Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
+
+  /// Instead of actually performing real calls, instructs this CurlHandle to
+  /// return hardcoded responses (in values of given map) based on query endpoints with appended options (in key of
+  /// given map) This should be used only for tests purposes, as the search for the matching query is of linear
+  /// complexity in a flat key value string.
+  void setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap);
 
   // CurlHandle is trivially relocatable
   using trivially_relocatable = std::true_type;
@@ -64,6 +77,7 @@ class CurlHandle {
   Duration _minDurationBetweenQueries;
   TimePoint _lastQueryTime{};
   BestURLPicker _bestUrlPicker;
+  string _queryData;
 };
 
 // Simple RAII class managing global init and clean up of Curl library.

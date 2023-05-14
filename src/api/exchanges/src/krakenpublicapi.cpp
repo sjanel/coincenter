@@ -161,7 +161,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coinc
                    coincenterInfo.getRunMode()) {}
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {
-  string withdrawalFeesCsv = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
+  std::string_view withdrawalFeesCsv = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
   static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
@@ -235,7 +235,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource2() {
-  string withdrawalFeesCsv = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
+  std::string_view withdrawalFeesCsv = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Kraken Deposit & Withdrawal fees</h2>";
 

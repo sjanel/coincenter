@@ -27,9 +27,7 @@ int8_t BestURLPicker::nextBaseURLPos() const {
 
   // We favor the URL that has the least score for 90 % of the requests, and give a chance to the one with the least
   // number of requests 10 % of the time, not counting the one with the best score.
-  int totalNbRequestsDone =
-      std::accumulate(_responseTimeStatsPerBaseUrl.begin(), _responseTimeStatsPerBaseUrl.end(), 0,
-                      [](int sum, ResponseTimeStats stats) { return sum + stats.nbRequestsDone; });
+  int totalNbRequestsDone = nbRequestsDone();
   if ((totalNbRequestsDone % 10) == 9) {
     ResponseTimeStats minScoreResponseTimeStats = *nextBaseURLIt;
 
@@ -96,4 +94,10 @@ void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t resp
   log::debug("Response time stats for '{}': Avg: {} ms, Dev: {} ms, Nb: {} (last: {} ms)", _pBaseUrls[baseUrlPos],
              stats.avgResponseTime, stats.avgDeviation, stats.nbRequestsDone, responseTimeInMs);
 }
+
+int BestURLPicker::nbRequestsDone() const {
+  return std::accumulate(_responseTimeStatsPerBaseUrl.begin(), _responseTimeStatsPerBaseUrl.end(), 0,
+                         [](int sum, ResponseTimeStats stats) { return sum + stats.nbRequestsDone; });
+}
+
 }  // namespace cct

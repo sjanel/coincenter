@@ -11,15 +11,11 @@ namespace cct::api {
 namespace {
 
 std::string_view GetSecretFileName(settings::RunMode runMode) {
-  switch (runMode) {
-    case settings::RunMode::kTestKeys:
-      [[fallthrough]];
-    case settings::RunMode::kTestKeysWithProxy:
-      log::info("Test mode activated, shifting to secret_test.json file.");
-      return "secret_test.json";
-    default:
-      return "secret.json";
+  if (settings::AreTestKeysRequested(runMode)) {
+    log::info("Test mode activated, shifting to secret_test.json file.");
+    return "secret_test.json";
   }
+  return "secret.json";
 }
 
 }  // namespace
@@ -75,7 +71,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
   } else {
     std::string_view secretFileName = GetSecretFileName(runMode);
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
-                     AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
+                     settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
     json jsonData = secretsFile.readAllJson();
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
