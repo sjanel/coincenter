@@ -224,7 +224,13 @@ namespace {
 MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json& networkList) {
   MonetaryAmount withdrawFee(0, cur);
   for (const json& networkListPart : networkList) {
-    withdrawFee = std::max(withdrawFee, MonetaryAmount(networkListPart["withdrawFee"].get<std::string_view>(), cur));
+    MonetaryAmount fee(networkListPart["withdrawFee"].get<std::string_view>(), cur);
+    auto isDefaultIt = networkListPart.find("isDefault");
+    if (isDefaultIt != networkListPart.end() && isDefaultIt->get<bool>()) {
+      withdrawFee = fee;
+      break;
+    }
+    withdrawFee = std::max(withdrawFee, fee);
   }
   return withdrawFee;
 }
