@@ -26,8 +26,6 @@ class HuobiPublic : public ExchangePublic {
  public:
   static constexpr std::string_view kURLBases[] = {"https://api.huobi.pro", "https://api-aws.huobi.pro"};
 
-  static constexpr char kUserAgent[] = "Huobi C++ API Client";
-
   static constexpr int kHuobiStandardOrderBookDefaultDepth = 150;
 
   HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);

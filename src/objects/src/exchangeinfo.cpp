@@ -42,8 +42,9 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
                            CurrencyCodeVector &&preferredPaymentCurrencies,
                            MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
-                           Duration privateAPIRate, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
-                           bool validateDepositAddressesInFile, bool placeSimulateRealOrder, bool validateApiKey)
+                           Duration privateAPIRate, std::string_view acceptEncoding, int dustSweeperMaxNbTrades,
+                           bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
+                           bool placeSimulateRealOrder, bool validateApiKey)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
@@ -51,6 +52,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
       _apiUpdateFrequencies(apiUpdateFrequencies),
       _publicAPIRate(publicAPIRate),
       _privateAPIRate(privateAPIRate),
+      _acceptEncoding(acceptEncoding),
       _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
       _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
       _dustSweeperMaxNbTrades(dustSweeperMaxNbTrades),
@@ -72,6 +74,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
     log::trace(" - Dust sweeper nb max trades   : {}", _dustSweeperMaxNbTrades);
     log::trace(" - General update frequencies   : {} for public, {} for private", DurationToString(publicAPIRate),
                DurationToString(privateAPIRate));
+    log::trace(" - Accept encoding              : {}", _acceptEncoding);
     log::trace(" - Update frequencies by method : {}", BuildUpdateFrequenciesString(_apiUpdateFrequencies));
     log::trace(" - Taker / Maker fees           : {} / {}", makerStr, takerStr);
     log::trace(" - Multi Trade by default       : {}", _multiTradeAllowedByDefault ? "yes" : "no");

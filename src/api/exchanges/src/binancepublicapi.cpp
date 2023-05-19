@@ -30,7 +30,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
     endpoint.push_back('?');
     endpoint.append(curlPostData.str());
   }
-  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet)));
   auto foundErrorIt = ret.find("code");
   auto foundMsgIt = ret.find("msg");
   if (foundErrorIt != ret.end() && foundMsgIt != ret.end()) {
@@ -65,7 +65,12 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                          _commonInfo),
       _globalInfosCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
-          coincenterInfo.metricGatewayPtr(), _commonInfo._exchangeInfo.publicAPIRate(), coincenterInfo.getRunMode()),
+          coincenterInfo.metricGatewayPtr(),
+          PermanentCurlOptions::Builder()
+              .setMinDurationBetweenQueries(_commonInfo._exchangeInfo.publicAPIRate())
+              .setAcceptedEncoding(_commonInfo._exchangeInfo.acceptEncoding())
+              .build(),
+          coincenterInfo.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
       _allOrderBooksCache(
@@ -80,8 +85,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                    _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
-  json result = json::parse(
-      _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet, BinancePublic::kUserAgent)));
+  json result = json::parse(_commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)));
   if (!result.empty()) {
     log::error("{} health check is not empty: {}", _name, result.dump());
   }
@@ -91,7 +95,12 @@ bool BinancePublic::healthCheck() {
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
                                       settings::RunMode runMode)
     : _exchangeInfo(exchangeInfo),
-      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), _exchangeInfo.publicAPIRate(), runMode) {}
+      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate())
+                      .setAcceptedEncoding(_exchangeInfo.acceptEncoding())
+                      .build(),
+                  runMode) {}
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;

@@ -21,6 +21,8 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
     Duration publicAPIRate = queryTopLevelOption.getDuration(exchangeName, "publicAPIRate");
     Duration privateAPIRate = queryTopLevelOption.getDuration(exchangeName, "privateAPIRate");
 
+    std::string_view acceptEncoding = queryTopLevelOption.getStr(exchangeName, "acceptEncoding");
+
     static constexpr std::string_view kUpdFreqOptStr = "updateFrequency";
 
     ExchangeInfo::APIUpdateFrequencies apiUpdateFrequencies{
@@ -51,7 +53,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData) {
                      assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
                      assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
                      std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
-                     dustSweeperMaxNbTrades, multiTradeAllowedByDefault, validateDepositAddressesInFile,
+                     acceptEncoding, dustSweeperMaxNbTrades, multiTradeAllowedByDefault, validateDepositAddressesInFile,
                      placeSimulatedRealOrder, validateApiKey));
   }  // namespace cct
 

@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "abstractmetricgateway.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "curlmetrics.hpp"
@@ -62,9 +63,9 @@ string GetCurlVersionInfo() {
 }
 
 CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway,
-                       Duration minDurationBetweenQueries, settings::RunMode runMode)
+                       const PermanentCurlOptions &permanentCurlOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
-      _minDurationBetweenQueries(minDurationBetweenQueries),
+      _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
       _bestUrlPicker(bestURLPicker) {
   if (settings::AreQueryResponsesOverriden(runMode)) {
     _handle = nullptr;
@@ -74,10 +75,33 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
       throw std::bad_alloc();
     }
     CURL *curl = reinterpret_cast<CURL *>(_handle);
+
+    const string &userAgent = permanentCurlOptions.getUserAgent();
+    if (userAgent.empty()) {
+      string defaultUserAgent = "coincenter ";
+      defaultUserAgent.append(CCT_VERSION);
+      defaultUserAgent.append(", ");
+      defaultUserAgent.append(GetCurlVersionInfo());
+
+      CurlSetLogIfError(curl, CURLOPT_USERAGENT, defaultUserAgent.data());
+    } else {
+      CurlSetLogIfError(curl, CURLOPT_USERAGENT, userAgent.data());
+    }
     CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
     CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &_queryData);
+    const string &acceptedEncoding = permanentCurlOptions.getAcceptedEncoding();
+    if (!acceptedEncoding.empty()) {
+      CurlSetLogIfError(curl, CURLOPT_ACCEPT_ENCODING, acceptedEncoding.data());
+    }
+
+#ifdef CCT_MSVC
+    // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
+    CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+#endif
+
     log::debug("Initialize CurlHandle for {} with {} ms as minimum duration between queries",
-               bestURLPicker.getNextBaseURL(), std::chrono::duration_cast<TimeInMs>(minDurationBetweenQueries).count());
+               bestURLPicker.getNextBaseURL(),
+               std::chrono::duration_cast<TimeInMs>(_minDurationBetweenQueries).count());
 
     if (settings::IsProxyRequested(runMode)) {
       if (IsProxyAvailable()) {
@@ -141,12 +165,6 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr.data());
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
-  CurlSetLogIfError(curl, CURLOPT_USERAGENT, opts.getUserAgent());
-
-#ifdef CCT_MSVC
-  // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
-  CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-#endif
 
   // Important! We should reset ALL fields of curl object that may change for each call to query
   // as we don't reset curl options for each query
@@ -174,8 +192,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
     oldCurlListPtr = curlListPtr;
   }
-  using CurlListUniquePtr =
-      std::unique_ptr<curl_slist, decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); })>;
+  using CurlSlistDeleter = decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); });
+  using CurlListUniquePtr = std::unique_ptr<curl_slist, CurlSlistDeleter>;
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
 
   CurlSetLogIfError(curl, CURLOPT_HTTPHEADER, curlListPtr);

@@ -54,7 +54,6 @@ class BithumbPublic : public ExchangePublic {
   MonetaryAmount queryLastPrice(Market mk) override;
 
   static constexpr std::string_view kUrlBase = "https://api.bithumb.com";
-  static constexpr char kUserAgent[] = "Bithumb C++ API Client";
 
  private:
   friend class BithumbPrivate;
@@ -75,9 +74,9 @@ class BithumbPublic : public ExchangePublic {
   struct WithdrawalFeesFunc {
     static constexpr std::string_view kFeeUrl = "https://www.bithumb.com";
 
-    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
+    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
                        settings::RunMode runMode)
-        : _curlHandle(kFeeUrl, pMetricGateway, minDurationBetweenQueries, runMode) {}
+        : _curlHandle(kFeeUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
     WithdrawalFeeMap operator()();
 

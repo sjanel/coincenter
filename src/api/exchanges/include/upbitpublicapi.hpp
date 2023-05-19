@@ -54,7 +54,6 @@ class UpbitPublic : public ExchangePublic {
   MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 
   static constexpr std::string_view kUrlBase = "https://api.upbit.com";
-  static constexpr char kUserAgent[] = "Upbit C++ API Client";
 
  private:
   friend class UpbitPrivate;

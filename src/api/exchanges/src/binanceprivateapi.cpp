@@ -119,7 +119,7 @@ bool CheckError(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, D
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   Duration& queryDelay, CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
-  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData), BinancePublic::kUserAgent);
+  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
   opts.appendHttpHeader("X-MBX-APIKEY", apiKey.key());
 
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
@@ -160,7 +160,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,

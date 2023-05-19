@@ -34,7 +34,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     methodUrl.append(urlOpts);
   }
 
-  json ret = json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet)));
   auto errorIt = ret.find("status");
   if (errorIt != ret.end()) {
     std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
@@ -52,13 +52,23 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().publicAPIRate(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           cryptowatchAPI, _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
-          config.metricGatewayPtr(), exchangeInfo().publicAPIRate(), config.getRunMode()),
+          config.metricGatewayPtr(),
+          PermanentCurlOptions::Builder()
+              .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
+              .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+              .build(),
+          config.getRunMode()),
       _allOrderBooksCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
           _curlHandle, exchangeInfo()),
@@ -69,8 +79,7 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           _curlHandle) {}
 
 bool BithumbPublic::healthCheck() {
-  json result = json::parse(
-      _curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet, BithumbPublic::kUserAgent)));
+  json result = json::parse(_curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)));
   auto statusIt = result.find("status");
   if (statusIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());

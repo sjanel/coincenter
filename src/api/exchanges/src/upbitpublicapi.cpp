@@ -16,8 +16,7 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  json ret = json::parse(
-      curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData), UpbitPublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData))));
   //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
   auto errorIt = ret.find("error");
   if (errorIt != ret.end()) {
@@ -35,7 +34,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().publicAPIRate(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
+                  config.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _curlHandle, exchangeInfo()),
       _tradableCurrenciesCache(
@@ -56,8 +60,8 @@ UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                    _curlHandle) {}
 
 bool UpbitPublic::healthCheck() {
-  json result = json::parse(_curlHandle.query(
-      "/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}}, UpbitPublic::kUserAgent)));
+  json result =
+      json::parse(_curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})));
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
     log::error("Error in {} status: {}", _name, errorIt->dump());

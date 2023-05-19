@@ -39,7 +39,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
   string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
 
-  CurlOptions opts(requestType, std::move(postData), KucoinPublic::kUserAgent, postDataFormat);
+  CurlOptions opts(requestType, std::move(postData), postDataFormat);
   opts.appendHttpHeader("KC-API-KEY", apiKey.key());
   opts.appendHttpHeader("KC-API-SIGN", signature);
   opts.appendHttpHeader("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
@@ -118,7 +118,11 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
-      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

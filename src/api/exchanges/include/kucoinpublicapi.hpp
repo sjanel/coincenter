@@ -28,8 +28,6 @@ class KucoinPublic : public ExchangePublic {
  public:
   static constexpr std::string_view kUrlBase = "https://api.kucoin.com";
 
-  static constexpr char kUserAgent[] = "Kucoin C++ API Client";
-
   static constexpr int kKucoinStandardOrderBookDefaultDepth = 20;
 
   KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);

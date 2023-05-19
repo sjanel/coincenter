@@ -26,8 +26,6 @@ class BinancePublic : public ExchangePublic {
   static constexpr std::string_view kURLBases[] = {"https://api.binance.com", "https://api1.binance.com",
                                                    "https://api2.binance.com", "https://api3.binance.com"};
 
-  static constexpr char kUserAgent[] = "Binance C++ API Client";
-
   BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                 api::CryptowatchAPI& cryptowatchAPI);
 
@@ -98,9 +96,9 @@ class BinancePublic : public ExchangePublic {
   struct GlobalInfosFunc {
     static constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com/en/fee/cryptoFee";
 
-    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, Duration minDurationBetweenQueries,
+    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
                     settings::RunMode runMode)
-        : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, minDurationBetweenQueries, runMode) {}
+        : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
     json operator()();
 

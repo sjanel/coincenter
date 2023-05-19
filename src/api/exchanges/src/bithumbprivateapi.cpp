@@ -254,7 +254,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
                   CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
   postData.prepend("endpoint", endpoint);
-  CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters(), BithumbPublic::kUserAgent);
+  CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
 
   return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, throwIfError, opts);
 }
@@ -267,7 +267,11 @@ File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(config, bithumbPublic, apiKey),
-      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
                   config.getRunMode()),
       _currencyOrderInfoRefreshTime(exchangeInfo().getAPICallUpdateFrequency(kCurrencyInfoBithumb)),
       _depositWalletsCache(
