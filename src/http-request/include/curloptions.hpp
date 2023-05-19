@@ -19,31 +19,26 @@ class CurlOptions {
   enum class Verbose : int8_t { kOff, kOn };
   enum class PostDataFormat : int8_t { kString, kJson };
 
-  explicit CurlOptions(HttpRequestType requestType, const char *userAgent = nullptr, Verbose verbose = Verbose::kOff)
-      : _userAgent(userAgent), _verbose(verbose == Verbose::kOn), _requestType(requestType) {}
+  explicit CurlOptions(HttpRequestType requestType, Verbose verbose = Verbose::kOff)
+      : _verbose(verbose == Verbose::kOn), _requestType(requestType) {}
 
-  CurlOptions(HttpRequestType requestType, const CurlPostData &postData, const char *userAgent = nullptr,
+  CurlOptions(HttpRequestType requestType, const CurlPostData &postData,
               PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
-      : _userAgent(userAgent), _postdata(postData), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
+      : _postdata(postData), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
     if (postDataFormat == PostDataFormat::kJson) {
       setPostDataInJsonFormat();
     }
   }
 
-  CurlOptions(HttpRequestType requestType, CurlPostData &&postData, const char *userAgent = nullptr,
+  CurlOptions(HttpRequestType requestType, CurlPostData &&postData,
               PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
-      : _userAgent(userAgent),
-        _postdata(std::move(postData)),
-        _verbose(verbose == Verbose::kOn),
-        _requestType(requestType) {
+      : _postdata(std::move(postData)), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
     if (postDataFormat == PostDataFormat::kJson) {
       setPostDataInJsonFormat();
     }
   }
 
   const HttpHeaders &getHttpHeaders() const { return _httpHeaders; }
-
-  const char *getUserAgent() const { return _userAgent; }
 
   const char *getProxyUrl() const { return _proxyUrl; }
 
@@ -80,7 +75,6 @@ class CurlOptions {
   }
 
   HttpHeaders _httpHeaders;
-  const char *_userAgent = nullptr;
   const char *_proxyUrl = nullptr;
   CurlPostData _postdata;
   bool _proxyReset = false;

@@ -7,6 +7,7 @@
 
 #include "besturlpicker.hpp"
 #include "cct_string.hpp"
+#include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 
@@ -29,10 +30,10 @@ class CurlHandle {
   /// Constructs a new CurlHandle.
   /// @param bestURLPicker object managing which URL to pick at each query based on response time stats
   /// @param pMetricGateway if not null, queries will export some metrics
-  /// @param minDurationBetweenQueries delay query 'n + 1' in case query 'n' was too close
+  /// @param permanentCurlOptions curl options applied once and for all requests of this CurlHandle
   /// @param runMode run mode
   explicit CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway = nullptr,
-                      Duration minDurationBetweenQueries = Duration::zero(),
+                      const PermanentCurlOptions &permanentCurlOptions = PermanentCurlOptions(),
                       settings::RunMode runMode = settings::RunMode::kProd);
 
   CurlHandle(const CurlHandle &) = delete;

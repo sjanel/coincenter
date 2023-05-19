@@ -12,7 +12,7 @@
 
 namespace cct {
 namespace {
-const CurlOptions kVerboseHttpGetOptions(HttpRequestType::kGet, "CurlHandle C++ Test", CurlOptions::Verbose::kOn);
+const CurlOptions kVerboseHttpGetOptions(HttpRequestType::kGet, CurlOptions::Verbose::kOn);
 }  // namespace
 
 class KrakenBaseCurlHandle : public ::testing::Test {
@@ -55,7 +55,7 @@ TEST_F(TestCurlHandle, ProxyMockTest) {
   }
 }
 
-TEST_F(TestCurlHandle, CurlVersion) { EXPECT_NE(GetCurlVersionInfo(), string()); }
+TEST_F(TestCurlHandle, CurlVersion) { EXPECT_FALSE(GetCurlVersionInfo().empty()); }
 
 class TestOverrideQueryResponses : public ::testing::Test {
  protected:
@@ -66,9 +66,8 @@ class TestOverrideQueryResponses : public ::testing::Test {
   CurlOptions param1OptsPost{HttpRequestType::kPost, CurlPostData{{"param1", "v"}}};
 
   AbstractMetricGateway *pAbstractMetricGateway = nullptr;
-  Duration minDurationBetweenQueries = Duration::zero();
   settings::RunMode runMode = settings::RunMode::kQueryResponseOverriden;
-  CurlHandle handle{kTestUrl, pAbstractMetricGateway, minDurationBetweenQueries, runMode};
+  CurlHandle handle{kTestUrl, pAbstractMetricGateway, PermanentCurlOptions(), runMode};
 };
 
 TEST_F(TestOverrideQueryResponses, NoQueryResponses) { EXPECT_THROW(handle.query("/endpoint", emptyOpts), exception); }

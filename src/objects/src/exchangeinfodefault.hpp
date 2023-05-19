@@ -56,6 +56,7 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "acceptEncoding": "",
       "dustAmountsThreshold": [
         "1 EUR",
         "1 USD",
@@ -83,6 +84,7 @@ struct ExchangeInfoDefault {
     },
     "exchange": {
       "binance": {
+        "acceptEncoding": "gzip",
         "privateAPIRate": "150ms",
         "publicAPIRate": "55ms"
       },
@@ -177,6 +179,7 @@ struct ExchangeInfoDefault {
   },
   "query": {
     "default": {
+      "acceptEncoding": "",
       "dustAmountsThreshold": [
         "1 USDT",
         "1000 KRW",

@@ -14,8 +14,7 @@
 namespace cct::api {
 namespace {
 std::string_view Query(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  return curlHandle.query(endpoint,
-                          CurlOptions(HttpRequestType::kGet, std::move(postData), "Cryptowatch C++ API Client"));
+  return curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData)));
 }
 
 const json& CollectResults(const json& dataJson) {
@@ -36,7 +35,7 @@ constexpr std::string_view kCryptowatchBaseUrl = "https://api.cryptowat.ch";
 CryptowatchAPI::CryptowatchAPI(const CoincenterInfo& config, settings::RunMode runMode, Duration fiatsUpdateFrequency,
                                bool loadFromFileCacheAtInit)
     : _coincenterInfo(config),
-      _curlHandle(kCryptowatchBaseUrl, config.metricGatewayPtr(), Duration::zero(), runMode),
+      _curlHandle(kCryptowatchBaseUrl, config.metricGatewayPtr(), PermanentCurlOptions(), runMode),
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), _curlHandle),
       _supportedExchanges(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle),
       _allPricesCache(CachedResultOptions(std::chrono::seconds(30), _cachedResultVault), _curlHandle) {

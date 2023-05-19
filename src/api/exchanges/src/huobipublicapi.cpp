@@ -25,7 +25,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.push_back('?');
     method.append(curlPostData.str());
   }
-  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet)));
   bool returnData = ret.contains("data");
   if (!returnData && !ret.contains("tick")) {
     throw exception("No data for Huobi public endpoint");
@@ -39,9 +39,16 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                          api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
-      _curlHandle(kURLBases, config.metricGatewayPtr(), _exchangeInfo.publicAPIRate(), config.getRunMode()),
-      _healthCheckCurlHandle(kHealthCheckBaseUrl, config.metricGatewayPtr(), _exchangeInfo.publicAPIRate(),
-                             config.getRunMode()),
+      _curlHandle(kURLBases, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate())
+                      .setAcceptedEncoding(_exchangeInfo.acceptEncoding())
+                      .build(),
+                  config.getRunMode()),
+      _healthCheckCurlHandle(
+          kHealthCheckBaseUrl, config.metricGatewayPtr(),
+          PermanentCurlOptions::Builder().setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate()).build(),
+          config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle),
       _marketsCache(CachedResultOptions(_exchangeInfo.getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
@@ -57,8 +64,7 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                    _curlHandle) {}
 
 bool HuobiPublic::healthCheck() {
-  json result = json::parse(_healthCheckCurlHandle.query("/api/v2/summary.json",
-                                                         CurlOptions(HttpRequestType::kGet, HuobiPublic::kUserAgent)));
+  json result = json::parse(_healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet)));
   auto statusIt = result.find("status");
   if (statusIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());

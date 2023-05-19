@@ -18,8 +18,7 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  json ret = json::parse(
-      curlHandle.query(method, CurlOptions(HttpRequestType::kGet, std::move(postData), KrakenPublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, std::move(postData))));
   auto errorIt = ret.find("error");
   if (errorIt != ret.end() && !errorIt->empty()) {
     log::error("Full Kraken json error: '{}'", ret.dump());
@@ -68,11 +67,18 @@ File GetKrakenWithdrawInfoFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, "krakenwithdrawinfo.json", File::IfError::kNoThrow};
 }
 
+constexpr std::string_view kExchangeName = "kraken";
+
 }  // namespace
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("kraken", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().publicAPIRate(), config.getRunMode()),
+    : ExchangePublic(kExchangeName, fiatConverter, cryptowatchAPI, config),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           cryptowatchAPI, _curlHandle, exchangeInfo()),
@@ -116,8 +122,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
 }
 
 bool KrakenPublic::healthCheck() {
-  json result = json::parse(
-      _curlHandle.query("/public/SystemStatus", CurlOptions(HttpRequestType::kGet, KrakenPublic::kUserAgent)));
+  json result = json::parse(_curlHandle.query("/public/SystemStatus", CurlOptions(HttpRequestType::kGet)));
   auto errorIt = result.find("error");
   if (errorIt != result.end() && !errorIt->empty()) {
     log::error("Error in {} status: {}", _name, errorIt->dump());
@@ -155,9 +160,17 @@ constexpr std::string_view kUrlWithdrawFee2 = "https://www.cryptofeesaver.com/ex
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo,
                                                      Duration minDurationBetweenQueries)
-    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries,
+    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setMinDurationBetweenQueries(minDurationBetweenQueries)
+                       .setAcceptedEncoding(coincenterInfo.exchangeInfo(kExchangeName).acceptEncoding())
+                       .build(),
                    coincenterInfo.getRunMode()),
-      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(), minDurationBetweenQueries,
+      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setMinDurationBetweenQueries(minDurationBetweenQueries)
+                       .setAcceptedEncoding(coincenterInfo.exchangeInfo(kExchangeName).acceptEncoding())
+                       .build(),
                    coincenterInfo.getRunMode()) {}
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::updateFromSource1() {

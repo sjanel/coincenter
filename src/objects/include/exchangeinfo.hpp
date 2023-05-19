@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "apiquerytypeenum.hpp"
+#include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
@@ -23,8 +24,8 @@ class ExchangeInfo {
                CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
                CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
-               int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
-               bool placeSimulateRealOrder, bool validateApiKey);
+               std::string_view acceptEncoding, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
+               bool validateDepositAddressesInFile, bool placeSimulateRealOrder, bool validateApiKey);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -66,6 +67,10 @@ class ExchangeInfo {
   /// Get the minimum time between two private api queries
   Duration privateAPIRate() const { return _privateAPIRate; }
 
+  /// Get the comma separated list of accepted encodings sent to queries as header 'Accept-Encoding' (can be empty to
+  /// remove the header)
+  std::string_view acceptEncoding() const { return _acceptEncoding; }
+
   bool validateDepositAddressesInFile() const { return _validateDepositAddressesInFile; }
 
   // Returns true if we need to validate API key at each ExchangePrivate object construction.
@@ -90,6 +95,7 @@ class ExchangeInfo {
   APIUpdateFrequencies _apiUpdateFrequencies;
   Duration _publicAPIRate;
   Duration _privateAPIRate;
+  string _acceptEncoding;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
   int16_t _dustSweeperMaxNbTrades;  // max number of trades of a dust sweeper attempt per currency

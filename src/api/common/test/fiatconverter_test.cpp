@@ -28,7 +28,8 @@ constexpr std::string_view kSomeFakeURL = "some/fake/url";
 
 CurlHandle::CurlHandle([[maybe_unused]] const BestURLPicker &bestURLPicker,
                        [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
-                       [[maybe_unused]] Duration minDurationBetweenQueries, [[maybe_unused]] settings::RunMode runMode)
+                       [[maybe_unused]] const PermanentCurlOptions &permanentCurlOptions,
+                       [[maybe_unused]] settings::RunMode runMode)
     : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)

@@ -37,7 +37,7 @@ constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/ap
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
-    : _curlHandle(kFiatConverterBaseUrl, coincenterInfo.metricGatewayPtr(), Duration::zero(),
+    : _curlHandle(kFiatConverterBaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
                   coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),

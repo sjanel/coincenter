@@ -40,7 +40,7 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
   string path(KrakenPublic::kVersion);
   path.append(method);
 
-  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData), KrakenPublic::kUserAgent);
+  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
 
   Nonce nonce = Nonce_TimeSinceEpochInMs();
   opts.getPostData().append("nonce", nonce);
@@ -93,7 +93,11 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(config, krakenPublic, apiKey),
-      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), exchangeInfo().privateAPIRate(),
+      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
                   config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

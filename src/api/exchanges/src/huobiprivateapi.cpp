@@ -62,8 +62,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   method.push_back('?');
   method.append(signaturePostData.str());
 
-  json ret = json::parse(
-      curlHandle.query(method, CurlOptions(requestType, std::move(postData), HuobiPublic::kUserAgent, postDataFormat)));
+  json ret = json::parse(curlHandle.query(method, CurlOptions(requestType, std::move(postData), postDataFormat)));
   if (throwIfError) {
     auto statusIt = ret.find("status");
     if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
@@ -81,7 +80,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
       _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(),
-                  coincenterInfo.exchangeInfo(huobiPublic.name()).privateAPIRate(), coincenterInfo.getRunMode()),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
+                  coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

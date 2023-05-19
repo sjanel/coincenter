@@ -24,7 +24,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.push_back('?');
     method.append(curlPostData.str());
   }
-  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
+  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet)));
   auto errorIt = ret.find("code");
   if (errorIt != ret.end() && errorIt->get<std::string_view>() != "200000") {
     log::error("Full Kucoin json error: '{}'", ret.dump());
@@ -38,7 +38,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
                            api::CryptowatchAPI& cryptowatchAPI)
     : ExchangePublic("kucoin", fiatConverter, cryptowatchAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), exchangeInfo().publicAPIRate(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(),
+                  PermanentCurlOptions::Builder()
+                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
+                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _coincenterInfo, cryptowatchAPI),
@@ -56,8 +61,7 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                    _curlHandle) {}
 
 bool KucoinPublic::healthCheck() {
-  json result =
-      json::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet, KucoinPublic::kUserAgent)));
+  json result = json::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet)));
   auto dataIt = result.find("data");
   if (dataIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());

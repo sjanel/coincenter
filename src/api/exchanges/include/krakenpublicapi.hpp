@@ -61,8 +61,6 @@ class KrakenPublic : public ExchangePublic {
   static constexpr std::string_view kVersion = "/0";
   static constexpr std::string_view kUrlBase = JoinStringView_v<kUrlPrefix, kVersion>;
 
-  static constexpr char kUserAgent[] = "Kraken C++ API Client";
-
  private:
   friend class KrakenPrivate;
 
