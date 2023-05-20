@@ -129,9 +129,12 @@ Refer to the hardcoded default json example as a model in case of doubt.
 | *tradefees* | **taker**                          | String as decimal number representing a percentage (for instance, "0.15")        | Trade fees occurring when a taker order is matched                                                                                                                                                                                                                                                                                                                                                                             |
 | *withdraw*  | **validateDepositAddressesInFile** | Boolean (`true` or `false`)                                                      | If `true`, each withdraw will perform an additional validation check from a trusted list of "whitelisted" addresses in `depositaddresses.json` file. Withdraw will not be processed if destination wallet is not present in the file.                                                                                                                                                                                          |
 
-#### Note
-`updateFrequency` is itself a json document containing all duration values as query frequencies. 
-See [ExchangeInfo default file](src/objects/src/exchangeinfodefault.hpp) as an example for the syntax.
+#### Notes
+ - `updateFrequency` is itself a json document containing all duration values as query frequencies. 
+  See [ExchangeInfo default file](src/objects/src/exchangeinfodefault.hpp) as an example for the syntax.
+ - Unused and not explicitly set values (so, when loaded from default values) from your personal `exchangeconfig.json` file will be logged for information about what will actually be used by `coincenter`.
+
+
 
 ## static/generalconfig.json
 
@@ -139,11 +142,11 @@ Contains options that are not exchange specific.
 
 ### Options description
 
-| Name                   | Value                                 | Description                                                                                                                                                                                                     |
-| ---------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **apiOutputType**      | String among {`off`, `table`, `json`} | Configure the output type of coincenter queries                                                                                                                                                                 |
-| **fiatConversionRate** | Duration string (ex: `8h`)            | Minimum time between two consecutive requests of the same fiat conversion                                                                                                                                       |
-| **log.console**        | String                                | Defines the log level for standard output. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                             |
-| **log.file**           | String                                | Defines the log level in files. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                        |
-| **log.maxFileSize**    | String (ex: `5Mi` for 5 Megabytes)    | Defines in bytes the maximum logging file size. A string representation of an integral, possibly with one suffix ending such as k, M, G, T (1k multipliers) or Ki, Mi, Gi, Ti (1024 multipliers) are supported. |
-| **log.maxNbFiles**     | Integer                               | Number of maximum rotating files for log in files                                                                                                                                                               |
+| Name                    | Value                                 | Description                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **apiOutputType**       | String among {`off`, `table`, `json`} | Configure the output type of coincenter queries                                                                                                                                                                 |
+| **fiatConversion.rate** | Duration string (ex: `8h`)            | Minimum time between two consecutive requests of the same fiat conversion                                                                                                                                       |
+| **log.console**         | String                                | Defines the log level for standard output. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                             |
+| **log.file**            | String                                | Defines the log level in files. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                        |
+| **log.maxFileSize**     | String (ex: `5Mi` for 5 Megabytes)    | Defines in bytes the maximum logging file size. A string representation of an integral, possibly with one suffix ending such as k, M, G, T (1k multipliers) or Ki, Mi, Gi, Ti (1024 multipliers) are supported. |
+| **log.maxNbFiles**      | Integer                               | Number of maximum rotating files for log in files                                                                                                                                                               |

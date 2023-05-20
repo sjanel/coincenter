@@ -17,7 +17,7 @@ class LoadConfiguration {
 
   std::string_view dataDir() const { return _dataDir; }
 
-  std::string_view exchangeConfigFile() const;
+  std::string_view exchangeConfigFileName() const;
 
   ExchangeConfigFileType exchangeConfigFileType() const { return _exchangeConfigFileType; }
 

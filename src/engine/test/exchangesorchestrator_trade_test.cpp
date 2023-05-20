@@ -306,8 +306,8 @@ TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
                                                ExchangeName(exchange2.name(), exchange2.keyName())};
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(exchangePrivate1, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(exchangePrivate2, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio2));
 
   MonetaryAmount zero(0, from.currencyCode());
   expectSingleTrade(2, zero, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
@@ -327,14 +327,17 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
                                                ExchangeName(exchange4.name(), exchange4.keyName())};
 
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  // 1.5ETH
+  EXPECT_CALL(exchangePrivate3, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio1));
 
-  MonetaryAmount ratio3("0.75");
-  MonetaryAmount ratio4 = MonetaryAmount(1) - ratio3;
-  TradedAmounts tradedAmounts3 = expectSingleTrade(3, from * ratio3, toCurrency, side, TradableMarkets::kExpectCall,
+  // 0.6ETH
+  EXPECT_CALL(exchangePrivate4, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio3));
+
+  MonetaryAmount traded1("1.5 ETH");
+  MonetaryAmount traded2("0.5 ETH");
+  TradedAmounts tradedAmounts3 = expectSingleTrade(3, traded1, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpect2Calls, AllOrderBooks::kExpectNoCall, true);
-  TradedAmounts tradedAmounts4 = expectSingleTrade(4, from * ratio4, toCurrency, side, TradableMarkets::kNoExpectation,
+  TradedAmounts tradedAmounts4 = expectSingleTrade(4, traded2, toCurrency, side, TradableMarkets::kNoExpectation,
                                                    OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
   TradedAmountsPerExchange tradedAmountsPerExchange{std::make_pair(&exchange3, tradedAmounts3),
                                                     std::make_pair(&exchange4, tradedAmounts4)};

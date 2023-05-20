@@ -140,7 +140,8 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
         if (placeOrderInfo.isClosed() || tradeOptions.tradeSyncPolicy() == TradeSyncPolicy::kAsynchronous) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
           if (placeOrderInfo.isClosed()) {
-            log::debug("Order {} closed with last traded amounts {}", orderId, placeOrderInfo.tradedAmounts());
+            log::debug("Order {} immediately closed with last traded amounts {}", orderId,
+                       placeOrderInfo.tradedAmounts());
           } else {
             log::info("Asynchronous mode, exit with order {} placed and traded amounts {}", orderId,
                       placeOrderInfo.tradedAmounts());
