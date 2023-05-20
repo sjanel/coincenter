@@ -7,7 +7,7 @@ LoadConfiguration::LoadConfiguration() noexcept
 LoadConfiguration::LoadConfiguration(std::string_view dataDir, ExchangeConfigFileType exchangeConfigFileType)
     : _dataDir(dataDir), _exchangeConfigFileType(exchangeConfigFileType) {}
 
-std::string_view LoadConfiguration::exchangeConfigFile() const {
+std::string_view LoadConfiguration::exchangeConfigFileName() const {
   return _exchangeConfigFileType == ExchangeConfigFileType::kProd ? kProdDefaultExchangeConfigFile
                                                                   : kTestDefaultExchangeConfigFile;
 }

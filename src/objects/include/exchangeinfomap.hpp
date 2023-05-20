@@ -14,5 +14,6 @@ static constexpr std::string_view kPreferredPaymentCurrenciesOptName = "preferre
 /// string_view is possible as key because exchange names are compile time std::string_view
 using ExchangeInfoMap = std::map<std::string_view, ExchangeInfo, std::less<>>;
 
-ExchangeInfoMap ComputeExchangeInfoMap(const json &jsonData);
+/// @brief Builds the exchange info map based on given json
+ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &jsonData);
 }  // namespace cct

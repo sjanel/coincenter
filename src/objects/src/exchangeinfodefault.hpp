@@ -15,20 +15,18 @@ struct ExchangeInfoDefault {
     "default": {
       "allExclude": [],
       "withdrawExclude": [
-        "BTC",
         "AUD",
         "CAD",
+        "CHF",
+        "EUR",
         "GBP",
         "JPY",
-        "USD",
-        "CHF"
+        "KRW",
+        "USD"
       ],
       "preferredPaymentCurrencies": [
         "USDT",
-        "USDC",
-        "EUR",
-        "USD",
-        "KRW"
+        "USDC"
       ]
     },
     "exchange": {
@@ -37,19 +35,9 @@ struct ExchangeInfoDefault {
           "BQX"
         ]
       },
-      "bithumb": {
-        "withdrawExclude": [
-          "KRW"
-        ]
-      },
       "kraken": {
         "withdrawExclude": [
           "KFEE"
-        ]
-      },
-      "upbit": {
-        "withdrawExclude": [
-          "KRW"
         ]
       }
     }
@@ -66,8 +54,6 @@ struct ExchangeInfoDefault {
       ],
       "dustSweeperMaxNbTrades": 7,
       "multiTradeAllowedByDefault": false,
-      "privateAPIRate": "1000ms",
-      "publicAPIRate": "1000ms",
       "placeSimulateRealOrder": false,
       "updateFrequency": {
         "currencies": "8h",
@@ -111,10 +97,6 @@ struct ExchangeInfoDefault {
     }
   },
   "tradefees": {
-    "default": {
-      "maker": "0.1",
-      "taker": "0.1"
-    },
     "exchange": {
       "binance": {
         "maker": "0.1",
@@ -163,18 +145,18 @@ struct ExchangeInfoDefault {
 {
   "asset": {
     "default": {
-      "allExclude": [
-        "AUD",
-        "CAD"
-      ],
-      "withdrawExclude": [
-        "BTC",
-        "EUR"
-      ],
       "preferredPaymentCurrencies": [
         "USDT",
         "EUR"
       ]
+    },
+    "exchange": {
+      "bithumb": {
+        "allExclude": [
+          "AUD",
+          "CAD"
+        ]
+      }
     }
   },
   "query": {

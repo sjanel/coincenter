@@ -53,7 +53,8 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
                                const Reader& currencyPrefixesReader)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(currencyAcronymsReader)),
       _stableCoinsMap(ComputeStableCoinsMap(stableCoinsReader)),
-      _exchangeInfoMap(ComputeExchangeInfoMap(LoadExchangeConfigData(loadConfiguration))),
+      _exchangeInfoMap(ComputeExchangeInfoMap(loadConfiguration.exchangeConfigFileName(),
+                                              LoadExchangeConfigData(loadConfiguration))),
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
       _generalConfig(std::move(generalConfig)),

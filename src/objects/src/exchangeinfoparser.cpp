@@ -9,10 +9,15 @@
 
 namespace cct {
 
+namespace {
+constexpr std::string_view kDefaultPart = "default";
+constexpr std::string_view kExchangePart = "exchange";
+}  // namespace
+
 json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {
     case LoadConfiguration::ExchangeConfigFileType::kProd: {
-      std::string_view filename = loadConfiguration.exchangeConfigFile();
+      std::string_view filename = loadConfiguration.exchangeConfigFileName();
       File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfError::kNoThrow);
       json jsonData = ExchangeInfoDefault::Prod();
       json exchangeConfigJsonData = exchangeConfigFile.readAllJson();
@@ -20,18 +25,17 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
         // Create a file with default values. User can then update them as he wishes.
         log::warn("No {} file found. Creating a default one which can be updated freely at your convenience", filename);
         exchangeConfigFile.write(jsonData);
-      } else {
-        for (std::string_view optName : {TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr,
-                                         TopLevelOption::kTradeFeesOptionStr, TopLevelOption::kWithdrawOptionStr}) {
-          if (!exchangeConfigJsonData.contains(optName)) {  // basic backward compatibility
-            log::error("Invalid {} file (or wrong format), using default configuration instead", filename);
-            log::error("Follow same pattern as default one in 'kDefaultConfig'");
-            return jsonData;
-          }
-        }
-        jsonData.update(exchangeConfigJsonData, true);
+        return jsonData;
       }
-      return jsonData;
+      for (std::string_view optName : {TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr,
+                                       TopLevelOption::kTradeFeesOptionStr, TopLevelOption::kWithdrawOptionStr}) {
+        if (!exchangeConfigJsonData.contains(optName)) {  // basic backward compatibility
+          log::error("Invalid {} file (or wrong format), using default configuration instead", filename);
+          log::error("Follow same pattern as default one in 'kDefaultConfig'");
+          return jsonData;
+        }
+      }
+      return exchangeConfigJsonData;
     }
     case LoadConfiguration::ExchangeConfigFileType::kTest:
       return ExchangeInfoDefault::Test();
@@ -40,48 +44,44 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
   }
 }
 
-TopLevelOption::TopLevelOption(const json& jsonData, std::string_view optionName) {
-  auto optIt = jsonData.find(optionName);
-  if (optIt == jsonData.end()) {
-    throw exception("Unable to find '{}' top level option in config file content", optionName);
-  }
-  _defaultPart = optIt->find("default");
-  _hasDefaultPart = _defaultPart != optIt->end();
-  _exchangePart = optIt->find("exchange");
-  _hasExchangePart = _exchangePart != optIt->end();
-}
-
-TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::string_view subOptionName1,
-                                           std::string_view subOptionName2) const {
-  if (_hasExchangePart) {
-    JsonIt it = _exchangePart->find(exchangeName);
-    if (it != _exchangePart->end()) {
-      JsonIt optValIt = it->find(subOptionName1);
-      if (optValIt != it->end()) {
-        if (subOptionName2.empty()) {
-          // Exchange defined the option, it has priority, return it
-          return optValIt;
-        }
-        JsonIt optValIt2 = optValIt->find(subOptionName2);
-        if (optValIt2 != optValIt->end()) {
-          return optValIt2;
+TopLevelOption::TopLevelOption(std::string_view optionName, const json& defaultJsonData, const json& personalJsonData) {
+  for (const json* jsonData : {std::addressof(personalJsonData), std::addressof(defaultJsonData)}) {
+    JsonIt optIt = jsonData->find(optionName);
+    if (optIt != jsonData->end()) {
+      bool isPersonal = jsonData == std::addressof(personalJsonData);
+      for (std::string_view partName : {kExchangePart, kDefaultPart}) {
+        JsonIt it = optIt->find(partName);
+        if (it != optIt->end()) {
+          bool isExchange = partName == kExchangePart;
+          _orderedDataSource.emplace_back(it, isPersonal, isExchange);
         }
       }
     }
   }
-  if (_hasDefaultPart) {
-    JsonIt optValIt = _defaultPart->find(subOptionName1);
-    if (optValIt != _defaultPart->end()) {
+
+  if (_orderedDataSource.empty()) {
+    throw exception("Unable to find '{}' top level option in config file content", optionName);
+  }
+}
+
+TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::string_view subOptionName1,
+                                           std::string_view subOptionName2) {
+  for (const DataSource& dataSource : _orderedDataSource) {
+    JsonIt exchangeIt = dataSource.exchangeIt(exchangeName);
+    JsonIt optValIt = exchangeIt->find(subOptionName1);
+    if (optValIt != exchangeIt->end()) {
       if (subOptionName2.empty()) {
-        // Exchange defined the option, it has priority, return it
+        setReadValue(dataSource, exchangeName, subOptionName1, subOptionName2, optValIt);
         return optValIt;
       }
       JsonIt optValIt2 = optValIt->find(subOptionName2);
       if (optValIt2 != optValIt->end()) {
+        setReadValue(dataSource, exchangeName, subOptionName1, subOptionName2, optValIt2);
         return optValIt2;
       }
     }
   }
+
   string err("Unable to find option '");
   err.append(subOptionName1);
   if (!subOptionName2.empty()) {
@@ -94,26 +94,40 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
   throw exception(std::move(err));
 }
 
+void TopLevelOption::setReadValue(const DataSource& dataSource, std::string_view exchangeName,
+                                  std::string_view subOptionName1, std::string_view subOptionName2, JsonIt valueIt) {
+  json emptyJson;
+  bool isExchange = dataSource.isExchange;
+  auto readValuesExchangePartIt = _readValues.emplace(isExchange ? kExchangePart : kDefaultPart, emptyJson).first;
+  if (isExchange) {
+    readValuesExchangePartIt = readValuesExchangePartIt->emplace(exchangeName, emptyJson).first;
+  }
+  auto readValuesSubOptionNameIt =
+      readValuesExchangePartIt->emplace(subOptionName1, subOptionName2.empty() ? *valueIt : emptyJson).first;
+  if (!subOptionName2.empty()) {
+    readValuesSubOptionNameIt->emplace(subOptionName2, *valueIt);
+  }
+}
+
 CurrencyCodeVector TopLevelOption::getUnorderedCurrencyUnion(std::string_view exchangeName,
-                                                             std::string_view subOptionName) const {
+                                                             std::string_view subOptionName) {
   CurrencyCodeVector ret;
-  const auto appendFunc = [&](JsonIt it) {
-    JsonIt optValIt = it->find(subOptionName);
-    if (optValIt != it->end()) {
-      assert(optValIt->is_array());
+  bool personalSourceFilled = false;
+  for (const DataSource& dataSource : _orderedDataSource) {
+    JsonIt exchangeIt = dataSource.exchangeIt(exchangeName);
+    JsonIt optValIt = exchangeIt->find(subOptionName);
+    if (optValIt != exchangeIt->end()) {
+      if (dataSource.isPersonal) {
+        personalSourceFilled = true;
+      } else if (personalSourceFilled) {
+        // Personal source has priority for this type of data.
+        break;
+      }
+      setReadValue(dataSource, exchangeName, subOptionName, "", optValIt);
       for (const auto& val : *optValIt) {
         ret.emplace_back(val.get<std::string_view>());
       }
     }
-  };
-  if (_hasExchangePart) {
-    JsonIt it = _exchangePart->find(exchangeName);
-    if (it != _exchangePart->end()) {
-      appendFunc(it);
-    }
-  }
-  if (_hasDefaultPart) {
-    appendFunc(_defaultPart);
   }
   return ret;
 }
