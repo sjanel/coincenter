@@ -580,17 +580,18 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   string krakenWalletKey = KrakenWalletKeyName(destinationWallet);
 
-  auto [withdrawData, err] =
-      PrivateQuery(_curlHandle, _apiKey, "/private/Withdraw",
-                   {{"amount", grossAmount.amountStr()}, {"asset", krakenCurrency.altStr()}, {"key", krakenWalletKey}});
+  auto [withdrawData, err] = PrivateQuery(_curlHandle, _apiKey, "/private/Withdraw",
+                                          {{"amount", grossAmount.amountStr()},
+                                           {"asset", krakenCurrency.altStr()},
+                                           {"key", krakenWalletKey},
+                                           {"address", destinationWallet.address()}});
 
   if (err == KrakenErrorEnum::kUnknownWithdrawKey) {
     throw exception(
         "In order to withdraw {} to {} with the API, you need to create a wallet key from {} UI, with the name '{}'",
-        grossAmount.currencyCode(), destinationWallet.exchangeName(), exchangeName(), krakenWalletKey);
+        grossAmount.currencyCode(), destinationWallet, exchangeName(), krakenWalletKey);
   }
 
-  // {"refid":"BSH3QF5-TDIYVJ-X6U74X"}
   return {std::move(destinationWallet), std::move(withdrawData["refid"].get_ref<string&>()), grossAmount};
 }
 
