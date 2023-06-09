@@ -249,9 +249,10 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
         if (canLogAmountMismatchError && sentWithdrawInfo.netEmittedAmount() + sentWithdrawInfo.fee() !=
                                              initiatedWithdrawInfo.grossEmittedAmount()) {
           canLogAmountMismatchError = false;
-          log::warn(
+          log::info(
               "Net amount {} + actual fee {} != gross emitted amount {}, unharmful but may output incorrect amounts",
               sentWithdrawInfo.netEmittedAmount(), sentWithdrawInfo.fee(), initiatedWithdrawInfo.grossEmittedAmount());
+          log::info("Maybe because actual withdraw fee is different");
         }
         if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::kSuccess) {
           nextAction = NextAction::kCheckReceiver;
