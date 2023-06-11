@@ -2,42 +2,41 @@
 
 #include <gtest/gtest.h>
 
-namespace cct {
-TEST(LoggingInfo, DefaultConstructor) {
-  LoggingInfo loggingInfo;
+#include "generalconfigdefault.hpp"
 
-  log::info("test");
+namespace cct {
+TEST(LoggingInfo, SimpleConstructor) {
+  LoggingInfo loggingInfo1(LoggingInfo::WithLoggersCreation::kYes);
+
+  log::info("test1");
+
+  LoggingInfo loggingInfo2(LoggingInfo::WithLoggersCreation::kNo);
+
+  log::info("test2");
 }
 
 TEST(LoggingInfo, ConstructorFromJson) {
-  json generalConfigJsonLogPart;
-
-  generalConfigJsonLogPart.emplace("maxFileSize", "1Mi");
-  generalConfigJsonLogPart.emplace("maxNbFiles", 42);
-  generalConfigJsonLogPart.emplace("console", "debug");
-  generalConfigJsonLogPart.emplace("file", "trace");
-
-  LoggingInfo loggingInfo(generalConfigJsonLogPart);
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, kDefaultDataDir, GeneralConfigDefault::Prod()["log"]);
 
   log::info("test");
 }
 
 TEST(LoggingInfo, ReentrantTest) {
   {
-    LoggingInfo loggingInfo;
+    LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes);
 
     log::info("test1");
   }
 
   {
-    LoggingInfo loggingInfo;
+    LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes);
 
     log::info("test2");
   }
 }
 
 TEST(LoggingInfo, MoveConstructor) {
-  LoggingInfo loggingInfo;
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes);
 
   log::info("test1");
 

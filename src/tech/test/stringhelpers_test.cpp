@@ -61,4 +61,10 @@ TEST(FromString, NegativeValue) {
   EXPECT_EQ(FromString<int>("-9105470"), -9105470);
 }
 
+TEST(strnlen, strnlen) {
+  EXPECT_EQ(strnlen("123456789", 2), 2);
+  EXPECT_EQ(strnlen("123456789", 3), 3);
+  EXPECT_EQ(strnlen("123456789", 12), 9);
+}
+
 }  // namespace cct

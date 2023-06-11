@@ -132,13 +132,14 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       }
       std::string_view depositAllowedStr = chainDetail["depositStatus"].get<std::string_view>();
       std::string_view withdrawAllowedStr = chainDetail["withdrawStatus"].get<std::string_view>();
-      CurrencyExchange newCurrency(cur, curStr, curStr,
-                                   depositAllowedStr == "allowed" ? CurrencyExchange::Deposit::kAvailable
-                                                                  : CurrencyExchange::Deposit::kUnavailable,
-                                   withdrawAllowedStr == "allowed" ? CurrencyExchange::Withdraw::kAvailable
-                                                                   : CurrencyExchange::Withdraw::kUnavailable,
-                                   _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
-                                                                                : CurrencyExchange::Type::kCrypto);
+      auto depositAllowed = depositAllowedStr == "allowed" ? CurrencyExchange::Deposit::kAvailable
+                                                           : CurrencyExchange::Deposit::kUnavailable;
+      auto withdrawAllowed = withdrawAllowedStr == "allowed" ? CurrencyExchange::Withdraw::kAvailable
+                                                             : CurrencyExchange::Withdraw::kUnavailable;
+      auto curExchangeType = _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
+                                                                          : CurrencyExchange::Type::kCrypto;
+
+      CurrencyExchange newCurrency(cur, curStr, curStr, depositAllowed, withdrawAllowed, curExchangeType);
 
       log::debug("Retrieved Huobi Currency {}", newCurrency.str());
       currencies.push_back(std::move(newCurrency));

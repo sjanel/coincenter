@@ -3,23 +3,30 @@
 #include <cstdint>
 #include <string_view>
 
+#include "cct_const.hpp"
+#include "cct_flatset.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "coincentercommandtype.hpp"
+#include "file.hpp"
 
 namespace cct {
 
-/// @brief Singleton encapsulating loggers lifetime and set-up.
+/// @brief Encapsulates loggers lifetime and set-up.
 class LoggingInfo {
  public:
   static constexpr int64_t kDefaultFileSizeInBytes = 5 * 1024 * 1024;
   static constexpr int32_t kDefaultNbMaxFiles = 10;
   static constexpr char const *const kOutputLoggerName = "output";
 
+  enum class WithLoggersCreation : int8_t { kNo, kYes };
+
   /// Creates a default logging info, with level 'info' on standard output.
-  LoggingInfo() { createLoggers(); }
+  explicit LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir = kDefaultDataDir);
 
   /// Creates a logging info from general config json file.
-  explicit LoggingInfo(const json &generalConfigJsonLogPart);
+  LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const json &generalConfigJsonLogPart);
 
   LoggingInfo(const LoggingInfo &) = delete;
   LoggingInfo(LoggingInfo &&loggingInfo) noexcept;
@@ -28,15 +35,19 @@ class LoggingInfo {
 
   ~LoggingInfo();
 
-  int64_t maxFileSizeInBytes() const { return _maxFileSizeInBytes; }
+  int64_t maxFileSizeLogFileInBytes() const { return _maxFileSizeLogFileInBytes; }
 
-  int32_t maxNbFiles() const { return _maxNbFiles; }
+  int32_t maxNbLogFiles() const { return _maxNbLogFiles; }
 
   log::level::level_enum logConsole() const { return LevelFromPos(_logLevelConsolePos); }
   log::level::level_enum logFile() const { return LevelFromPos(_logLevelFilePos); }
 
+  bool isCommandTypeTracked(CoincenterCommandType cmd) const { return _trackedCommandTypes.contains(cmd); }
+
+  File getActivityFile() const;
+
  private:
-  void createLoggers() const;
+  void createLoggers();
 
   static void CreateOutputLogger();
 
@@ -47,11 +58,16 @@ class LoggingInfo {
     return static_cast<log::level::level_enum>(static_cast<int8_t>(log::level::off) - levelPos);
   }
 
-  int64_t _maxFileSizeInBytes = kDefaultFileSizeInBytes;
-  int32_t _maxNbFiles = kDefaultNbMaxFiles;
+  using TrackedCommandTypes = FlatSet<CoincenterCommandType>;
+
+  std::string_view _dataDir = kDefaultDataDir;
+  string _dateFormatStrActivityFiles;
+  TrackedCommandTypes _trackedCommandTypes;
+  int64_t _maxFileSizeLogFileInBytes = kDefaultFileSizeInBytes;
+  int32_t _maxNbLogFiles = kDefaultNbMaxFiles;
   int8_t _logLevelConsolePos = PosFromLevel(log::level::info);
   int8_t _logLevelFilePos = PosFromLevel(log::level::off);
-  bool _destroyLoggers = true;
+  bool _destroyLoggers = false;
 };
 
 }  // namespace cct

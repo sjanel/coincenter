@@ -4,7 +4,8 @@ Configuration
 At this step, `coincenter` is built. To execute properly, it needs read/write access to a special directory `data` which contains a tree of files as follows:
 
 - `cache`: Files containing cache data aiming to reduce external calls to some costly services. They are typically read at the start of the program, and flushed at the normal termination of the program, potentially with updated data retrieved dynamically during the run. It is not thread-safe: only one `coincenter` service should have access to it at the same time.
-- `secret`: contains all sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder!
+- `log`: Files that store history of logs and activity of relevant commands. It can be configured with the log levels of your choice thanks to `generalconfig.json` file. It can contain sensitive information (such as history of buy, sells, withdraws) and will not be included in any docker build or git
+- `secret`: contains all **extremely** sensitive information and data such as secrets and deposit addresses. Do not share or publish this folder! If you did it by mistake, immediately delete the keys from each of the compromised accounts and generate new ones for each exchange.
 - `static`: contains data which is not supposed to be updated regularly, typically loaded once at start up of `coincenter` and not updated automatically. `exchangeconfig.json` contains various options which can control general behavior of `coincenter`. If none is found, a default one will be generated automatically, which you can later on update according to your needs. `generalconfig.json` contains general options independent from exchanges (such as logging, fiat converter).
 
 This directory is set according to these rules, by decreasing priority:
@@ -39,6 +40,25 @@ For instance, if you wish to withdraw a coin from your **Bithumb** to your **Upb
 Korean name should be provided with the `accountOwner.koName` field in the key of the `secret.json` file, whereas English name with the `accountOwner.enName`.
 
 Refer to the [data/secret/secret_test.json](data/secret/secret_test.json) example file in case of doubt.
+
+## static/generalconfig.json
+
+Contains options that are not exchange specific.
+
+Configures the logging, tracking activity of relevant commands, and console output type.
+
+### Options description
+
+| Name                                        | Value                                    | Description                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **apiOutputType**                           | String among {`off`, `table`, `json`}    | Configure the default output type of coincenter (can be overridden by command line)queries                                                                                                                                                                                                                      |
+| **fiatConversion.rate**                     | Duration string (ex: `8h`)               | Minimum time between two consecutive requests of the same fiat conversion                                                                                                                                                                                                                                       |
+| **log.activityTracking.commandTypes**       | Array of strings (ex: `["Buy", "Sell"]`) | Array of command types whose output will be stored to activity history files.                                                                                                                                                                                                                                   |
+| **log.activityTracking.dateFileNameFormat** | String (ex: `%Y-%m` for month split)     | Defines the date string format suffix used by activity history files. The string should be compatible with [std::strftime](https://en.cppreference.com/w/cpp/chrono/c/strftime). Old data will never be clean-up by `coincenter` (as it may contain important data). User should manage the clean-up / storage. |
+| **log.consoleLevel**                        | String                                   | Defines the log level for standard output. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                                                                                                             |
+| **log.fileLevel**                           | String                                   | Defines the log level in files. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                                                                                                                        |
+| **log.maxFileSize**                         | String (ex: `5Mi` for 5 Megabytes)       | Defines in bytes the maximum logging file size. A string representation of an integral, possibly with one suffix ending such as k, M, G, T (1k multipliers) or Ki, Mi, Gi, Ti (1024 multipliers) are supported.                                                                                                 |
+| **log.maxNbFiles**                          | Integer                                  | Number of maximum rotating files for log in files                                                                                                                                                                                                                                                               |
 
 
 ## static/exchangeconfig.json
@@ -136,17 +156,3 @@ Refer to the hardcoded default json example as a model in case of doubt.
 
 
 
-## static/generalconfig.json
-
-Contains options that are not exchange specific.
-
-### Options description
-
-| Name                    | Value                                 | Description                                                                                                                                                                                                     |
-| ----------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **apiOutputType**       | String among {`off`, `table`, `json`} | Configure the output type of coincenter queries                                                                                                                                                                 |
-| **fiatConversion.rate** | Duration string (ex: `8h`)            | Minimum time between two consecutive requests of the same fiat conversion                                                                                                                                       |
-| **log.console**         | String                                | Defines the log level for standard output. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                             |
-| **log.file**            | String                                | Defines the log level in files. Can be {'off', 'critical', 'error', 'warning', 'info', 'debug', 'trace'}                                                                                                        |
-| **log.maxFileSize**     | String (ex: `5Mi` for 5 Megabytes)    | Defines in bytes the maximum logging file size. A string representation of an integral, possibly with one suffix ending such as k, M, G, T (1k multipliers) or Ki, Mi, Gi, Ti (1024 multipliers) are supported. |
-| **log.maxNbFiles**      | Integer                               | Number of maximum rotating files for log in files                                                                                                                                                               |

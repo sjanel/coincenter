@@ -34,6 +34,8 @@ MonitoringInfo MonitoringInfo_Create(std::string_view programName, const Coincen
 
 CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
                                      settings::RunMode runMode) {
+  auto dataDir = cmdLineOptions.dataDir;
+
   json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
 
   Duration fiatConversionQueryRate = ParseDuration(generalConfigData["fiatConversion"]["rate"].get<std::string_view>());
@@ -41,13 +43,12 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
 
   // Create LoggingInfo first as it is a RAII structure re-initializing spdlog loggers.
   // It will be held by GeneralConfig and then itself by CoincenterInfo though.
-  LoggingInfo loggingInfo(static_cast<const json &>(generalConfigData["log"]));
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir,
+                          static_cast<const json &>(generalConfigData["log"]));
 
   GeneralConfig generalConfig(std::move(loggingInfo), fiatConversionQueryRate, apiOutputType);
 
-  LoadConfiguration loadConfiguration(cmdLineOptions.dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
-
-  auto dataDir = loadConfiguration.dataDir();
+  LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
   File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
                                       File::IfError::kThrow);

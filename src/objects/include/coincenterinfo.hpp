@@ -71,6 +71,8 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
+  const LoggingInfo &loggingInfo() const { return _generalConfig.loggingInfo(); }
+
   ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType(); }
 
   Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversionQueryRate(); }

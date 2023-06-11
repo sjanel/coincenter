@@ -8,7 +8,6 @@ struct ExchangeInfoDefault {
     // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
     // fiasco' problem.
 
-    // clang-format off
     static const json kProd = R"(
 {
   "asset": {
@@ -131,7 +130,6 @@ struct ExchangeInfoDefault {
   }
 } 
 )"_json;
-    // clang-format on
     return kProd;
   }
 
@@ -140,7 +138,6 @@ struct ExchangeInfoDefault {
     // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
     // fiasco' problem.
 
-    // clang-format off
     static const json kTest = R"(
 {
   "asset": {
@@ -200,7 +197,6 @@ struct ExchangeInfoDefault {
   }
 }
 )"_json;
-    // clang-format on
     return kTest;
   }
 };

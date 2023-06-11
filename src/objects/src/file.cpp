@@ -15,6 +15,9 @@ string FullFileName(std::string_view dataDir, std::string_view fileName, File::T
     case File::Type::kCache:
       fullFilePath.append("/cache/");
       break;
+    case File::Type::kLog:
+      fullFilePath.append("/log/");
+      break;
     case File::Type::kSecret:
       fullFilePath.append("/secret/");
       break;
@@ -50,9 +53,10 @@ string File::readAll() const {
   return data;
 }
 
-int File::write(const json& data) const {
+int File::write(const json& data, Writer::Mode mode) const {
   log::debug("Opening file {} for writing", _filePath);
-  std::ofstream fileOfStream(_filePath.c_str());
+  auto openMode = mode == Writer::Mode::FromStart ? std::ios_base::out : std::ios_base::app;
+  std::ofstream fileOfStream(_filePath.c_str(), openMode);
   if (!fileOfStream) {
     string err("Unable to open ");
     err.append(_filePath).append(" for writing");
@@ -68,7 +72,8 @@ int File::write(const json& data) const {
       fileOfStream << kEmptyJsonStr << std::endl;
       return kEmptyJsonStr.length() + 1;
     }
-    string outStr = data.dump(2);
+    const int indent = mode == Writer::Mode::FromStart ? 2 : -1;
+    string outStr = data.dump(indent);
     fileOfStream << outStr << std::endl;
     return outStr.length() + 1;
   } catch (const std::exception& e) {

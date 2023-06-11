@@ -25,11 +25,21 @@ string ToString(TimePoint timePoint, const char* format) {
     throw exception("Issue in gmtime_r");
   }
 #endif
-  string buf(50, '\0');
-  std::size_t bytesWritten = std::strftime(buf.data(), buf.size(), format, pUtc);
-  if (bytesWritten == 0) {
-    throw exception("Buffer size is not sufficient for std::strftime");
-  }
+  static constexpr string::size_type kMaxFormatLen = 4096;
+  string::size_type bufSize = strnlen(format, kMaxFormatLen);
+  string buf(bufSize, '\0');
+
+  std::size_t bytesWritten;
+  do {
+    bytesWritten = std::strftime(buf.data(), buf.size(), format, pUtc);
+    if (bytesWritten == 0) {
+      if (buf.size() > kMaxFormatLen) {
+        throw exception("Format string {} is too long, maximum length is {}", format, kMaxFormatLen);
+      }
+      buf.resize((3U * buf.size()) / 2U);
+    }
+  } while (bytesWritten == 0);
+
   buf.resize(bytesWritten);
   return buf;
 }

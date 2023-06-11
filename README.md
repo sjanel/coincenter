@@ -57,6 +57,7 @@ Main features:
   - [Input / output](#input--output)
     - [Format](#format)
     - [Logging](#logging)
+      - [Activity history](#activity-history)
   - [Public requests](#public-requests)
     - [Health check](#health-check)
     - [Markets](#markets)
@@ -152,12 +153,25 @@ You can also choose a *json* output format with option `-o json`.
 
 ### Logging
 
-`coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging. By default, it logs in the console with the 'info' level.
+`coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging.
 
 `spdlog` is set up asynchronously, and it's possible to log in rotating files in addition of the console, with different levels for each.
 
+By default, it logs in the console with the 'info' level, and in 'debug' in rotating files.
+
 For this, you can configure statically the default level for each in the [config file](CONFIG.md#options-description).
-It is also overridable on the command line, with options `--log <log-level>` and `--log-file <log-level>`.
+It can be overridden on the command line, with options `--log <log-level>` and `--log-file <log-level>`.
+
+#### Activity history
+
+It is also possible to store relevant commands results (in `data/log/activity_history_YYYY-MM.txt` files) to keep track of the most important commands of `coincenter`.
+Each time a command of type present in the user defined list in `log.activityTracking.commandTypes` from `generalconfig.json` file is finished, its result is appended in json format to the corresponding activity history file of the current year and month.
+
+This is useful for instance to keep track of all trades performed and can be later used for analytics of past performance gains / losses.
+
+By default, it stores all types of trades and withdraws results, but the list is configurable to follow your needs.
+
+**Important**: those files contain important information so `coincenter` does not clean them automatically. You can move the old activity history files if they take to much space after a while.
 
 ## Public requests
 

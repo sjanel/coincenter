@@ -15,7 +15,7 @@ class GeneralConfig {
 
   static json LoadFile(std::string_view dataDir);
 
-  GeneralConfig() = default;
+  GeneralConfig() : _loggingInfo(LoggingInfo::WithLoggersCreation::kYes) {}
 
   GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
 
