@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string.h>
+
 #include <charconv>
 #include <concepts>
 
@@ -19,7 +21,7 @@ inline void ToChars(char *first, SizeType s, std::integral auto i) {
 }
 }  // namespace details
 
-string ToString(std::integral auto i) {
+inline string ToString(std::integral auto i) {
   const int nbDigitsInt = nchars(i);
   string s(nbDigitsInt, '0');
   details::ToChars(s.data(), nbDigitsInt, i);
@@ -47,6 +49,14 @@ void AppendString(StringType &s, std::integral auto i) {
   const int nbDigitsInt = nchars(i);
   s.append(nbDigitsInt, '0');
   details::ToChars(s.data() + static_cast<int>(s.size()) - nbDigitsInt, nbDigitsInt, i);
+}
+
+inline std::size_t strnlen(const char *start, std::size_t maxLen) {
+  const void *outPtr = memchr(start, 0, maxLen);
+  if (outPtr == nullptr) {
+    return maxLen;
+  }
+  return static_cast<const char *>(outPtr) - start;
 }
 
 }  // namespace cct

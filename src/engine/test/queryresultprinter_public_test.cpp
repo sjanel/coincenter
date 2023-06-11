@@ -11,7 +11,7 @@ class QueryResultPrinterHealthCheckTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterHealthCheckTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printHealthCheck(healthCheckPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printHealthCheck(healthCheckPerExchange);
   static constexpr std::string_view kExpected = R"(
 ----------------------------------
 | Exchange | Health Check status |
@@ -25,7 +25,7 @@ TEST_F(QueryResultPrinterHealthCheckTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterHealthCheckTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(ExchangeHealthCheckStatus{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printHealthCheck(ExchangeHealthCheckStatus{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -37,7 +37,7 @@ TEST_F(QueryResultPrinterHealthCheckTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterHealthCheckTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printHealthCheck(healthCheckPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printHealthCheck(healthCheckPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -52,7 +52,7 @@ TEST_F(QueryResultPrinterHealthCheckTest, Json) {
 }
 
 TEST_F(QueryResultPrinterHealthCheckTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printHealthCheck(healthCheckPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printHealthCheck(healthCheckPerExchange);
   expectNoStr();
 }
 
@@ -65,7 +65,7 @@ class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
   static constexpr std::string_view kExpected = R"(
 -------------------------------
 | Exchange | Markets with XRP |
@@ -80,7 +80,7 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printMarkets(cur1, cur2, MarketsPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, MarketsPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -95,7 +95,7 @@ TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -118,7 +118,7 @@ TEST_F(QueryResultPrinterMarketsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarkets(cur1, cur2, marketsPerExchange);
   expectNoStr();
 }
 
@@ -131,7 +131,7 @@ class QueryResultPrinterTickerTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterTickerTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printTickerInformation(exchangeTickerMaps);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printTickerInformation(exchangeTickerMaps);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------
 | Exchange | Market  | Bid price    | Bid volume | Ask price    | Ask volume |
@@ -145,7 +145,7 @@ TEST_F(QueryResultPrinterTickerTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterTickerTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printTickerInformation(ExchangeTickerMaps{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printTickerInformation(ExchangeTickerMaps{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -157,7 +157,7 @@ TEST_F(QueryResultPrinterTickerTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterTickerTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printTickerInformation(exchangeTickerMaps);
+  basicQueryResultPrinter(ApiOutputType::kJson).printTickerInformation(exchangeTickerMaps);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -207,7 +207,7 @@ TEST_F(QueryResultPrinterTickerTest, Json) {
 }
 
 TEST_F(QueryResultPrinterTickerTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printTickerInformation(exchangeTickerMaps);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printTickerInformation(exchangeTickerMaps);
   expectNoStr();
 }
 
@@ -220,7 +220,7 @@ class QueryResultPrinterMarketOrderBookTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------
@@ -248,7 +248,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, MarketOrderBookConversionRates{});
   static constexpr std::string_view kExpected = R"(
 {
@@ -265,7 +265,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
 {
@@ -343,7 +343,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
 }
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   expectNoStr();
 }
@@ -358,7 +358,7 @@ class QueryResultPrinterConversionPathTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterConversionPathTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printConversionPath(marketForPath, conversionPathPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printConversionPath(marketForPath, conversionPathPerExchange);
   static constexpr std::string_view kExpected = R"(
 --------------------------------------------------
 | Exchange | Fastest conversion path for XLM-XRP |
@@ -371,7 +371,7 @@ TEST_F(QueryResultPrinterConversionPathTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterConversionPathTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printConversionPath(marketForPath, ConversionPathPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printConversionPath(marketForPath, ConversionPathPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -386,7 +386,7 @@ TEST_F(QueryResultPrinterConversionPathTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterConversionPathTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printConversionPath(marketForPath, conversionPathPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printConversionPath(marketForPath, conversionPathPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -410,7 +410,7 @@ TEST_F(QueryResultPrinterConversionPathTest, Json) {
 }
 
 TEST_F(QueryResultPrinterConversionPathTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printConversionPath(marketForPath, conversionPathPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printConversionPath(marketForPath, conversionPathPerExchange);
   expectNoStr();
 }
 
@@ -422,7 +422,7 @@ class QueryResultPrinterWithdrawFeeTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
 ---------------------------
 | Exchange | Withdraw fee |
@@ -435,7 +435,7 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printWithdrawFees(MonetaryAmountPerExchange{}, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kJson).printWithdrawFees(MonetaryAmountPerExchange{}, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -450,7 +450,7 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kJson).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -468,7 +468,7 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, Json) {
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
   expectNoStr();
 }
 
@@ -480,7 +480,7 @@ class QueryResultPrinterLast24HoursTradedVolumeTest : public QueryResultPrinterT
 };
 
 TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
 ---------------------------------------------
@@ -494,7 +494,7 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printLast24hTradedVolume(marketLast24hTradedVolume, MonetaryAmountPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
@@ -510,7 +510,7 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
@@ -529,7 +529,7 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, Json) {
 }
 
 TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
   expectNoStr();
 }
@@ -556,7 +556,7 @@ class QueryResultPrinterLastTradesVolumeTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
   static constexpr std::string_view kExpected = R"(
 --------------------------------------------------------------------------------------------
@@ -590,7 +590,8 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, LastTradesPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printLastTrades(marketLastTrades, nbLastTrades, LastTradesPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -606,7 +607,7 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -677,7 +678,7 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
 }
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
   expectNoStr();
 }
@@ -691,7 +692,7 @@ class QueryResultPrinterLastPriceTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterLastPriceTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
 ---------------------------------
 | Exchange | XRP-KRW last price |
@@ -705,7 +706,7 @@ TEST_F(QueryResultPrinterLastPriceTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterLastPriceTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastPrice(marketLastPrice, MonetaryAmountPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printLastPrice(marketLastPrice, MonetaryAmountPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -720,7 +721,7 @@ TEST_F(QueryResultPrinterLastPriceTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterLastPriceTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -739,7 +740,7 @@ TEST_F(QueryResultPrinterLastPriceTest, Json) {
 }
 
 TEST_F(QueryResultPrinterLastPriceTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
   expectNoStr();
 }
 

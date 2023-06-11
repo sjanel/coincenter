@@ -1,6 +1,7 @@
 #include "generalconfig.hpp"
 
 #include "file.hpp"
+#include "generalconfigdefault.hpp"
 
 namespace cct {
 
@@ -11,21 +12,7 @@ GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQ
 
 json GeneralConfig::LoadFile(std::string_view dataDir) {
   File generalConfigFile(dataDir, File::Type::kStatic, GeneralConfig::kFilename, File::IfError::kNoThrow);
-  static const json kDefaultGeneralConfig = R"(
-{
-  "apiOutputType": "table",
-  "log": {
-    "console": "info",
-    "file": "off",
-    "maxNbFiles": 10,
-    "maxFileSize": "5Mi"
-  },
-  "fiatConversion": {
-    "rate": "8h"
-  }
-}
-)"_json;
-  json jsonData = kDefaultGeneralConfig;
+  json jsonData = GeneralConfigDefault::Prod();
   json generalConfigJsonData = generalConfigFile.readAllJson();
   if (generalConfigJsonData.empty()) {
     // Create a file with default values. User can then update them as he wishes.

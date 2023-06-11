@@ -33,6 +33,10 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
     EXPECT_EQ(json::parse(ss.view()), json::parse(expected));
   }
 
+  QueryResultPrinter basicQueryResultPrinter(ApiOutputType apiOutputType) {
+    return QueryResultPrinter(ss, apiOutputType, coincenterInfo.loggingInfo());
+  }
+
   std::ostringstream ss;
 };
 }  // namespace cct

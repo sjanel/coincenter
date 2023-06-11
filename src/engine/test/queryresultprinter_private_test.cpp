@@ -14,7 +14,7 @@ class QueryResultPrinterEmptyBalanceNoEquiCurTest : public QueryResultPrinterTes
 };
 
 TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------
 | Currency | Total amount on selected | binance_testuser1 | huobi_testuser2 |
@@ -24,7 +24,7 @@ TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -42,7 +42,7 @@ TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -67,7 +67,7 @@ TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, Json) {
 }
 
 TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
   expectNoStr();
 }
 
@@ -80,7 +80,7 @@ class QueryResultPrinterBalanceNoEquiCurTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterBalanceNoEquiCurTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 -------------------------------------------------------------------------------------------------
 | Currency | Total amount on selected | binance_testuser1 | huobi_testuser2 | bithumb_testuser1 |
@@ -100,7 +100,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterBalanceNoEquiCurTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -118,7 +118,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterBalanceNoEquiCurTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -206,7 +206,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, Json) {
 }
 
 TEST_F(QueryResultPrinterBalanceNoEquiCurTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
   expectNoStr();
 }
 
@@ -223,7 +223,7 @@ class QueryResultPrinterBalanceEquiCurTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterBalanceEquiCurTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 ----------------------------------------------------------------------------------------------------------------------------------
 | Currency | Total amount on selected | Total EUR eq | binance_testuser1 | huobi_testuser2 | bithumb_testuser1 | huobi_testuser1 |
@@ -241,7 +241,7 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterBalanceEquiCurTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(BalancePerExchange{}, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -262,7 +262,7 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterBalanceEquiCurTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -337,7 +337,7 @@ TEST_F(QueryResultPrinterBalanceEquiCurTest, Json) {
 }
 
 TEST_F(QueryResultPrinterBalanceEquiCurTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printBalance(balancePerExchange, equiCur);
   expectNoStr();
 }
 
@@ -352,7 +352,7 @@ class QueryResultPrinterDepositInfoWithoutTagTest : public QueryResultPrinterTes
 };
 
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
 ----------------------------------------------------------
 | Exchange | Account   | ETH address   | Destination Tag |
@@ -366,7 +366,7 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, WalletPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, WalletPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -381,7 +381,7 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -407,7 +407,7 @@ TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, Json) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printDepositInfo(depositCurrencyCode, walletPerExchange);
   expectNoStr();
 }
 
@@ -422,7 +422,7 @@ class QueryResultPrinterDepositInfoWithTagTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
 ----------------------------------------------------------
 | Exchange | Account   | XRP address   | Destination Tag |
@@ -435,7 +435,7 @@ TEST_F(QueryResultPrinterDepositInfoWithTagTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, WalletPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, WalletPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -450,7 +450,7 @@ TEST_F(QueryResultPrinterDepositInfoWithTagTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -476,7 +476,7 @@ TEST_F(QueryResultPrinterDepositInfoWithTagTest, Json) {
 }
 
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printDepositInfo(depositCurrencyCode, walletPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printDepositInfo(depositCurrencyCode, walletPerExchange);
   expectNoStr();
 }
 
@@ -493,7 +493,7 @@ class QueryResultPrinterTradesAmountTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------
@@ -509,7 +509,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printTrades(TradedAmountsPerExchange{}, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -542,7 +542,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterTradesAmountTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -592,7 +592,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
 }
 
 TEST_F(QueryResultPrinterTradesAmountTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   expectNoStr();
 }
@@ -608,7 +608,7 @@ class QueryResultPrinterTradesPercentageTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterTradesPercentageTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------
@@ -621,7 +621,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterTradesPercentageTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printTrades(TradedAmountsPerExchange{}, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -654,7 +654,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterTradesPercentageTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -694,7 +694,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, Json) {
 }
 
 TEST_F(QueryResultPrinterTradesPercentageTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   expectNoStr();
 }
@@ -708,7 +708,7 @@ class QueryResultPrinterSmartBuyTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------
@@ -721,7 +721,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBuyTrades(TradedAmountsPerExchange{}, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBuyTrades(TradedAmountsPerExchange{}, endAmount, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -750,7 +750,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -786,7 +786,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, Json) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
   expectNoStr();
 }
 
@@ -802,7 +802,7 @@ class QueryResultPrinterSmartSellTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printSellTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------
@@ -818,7 +818,7 @@ TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printSellTrades(TradedAmountsPerExchange{}, startAmount, isPercentageTrade, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -848,7 +848,7 @@ TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterSmartSellTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printSellTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, tradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -895,7 +895,7 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
 }
 
 TEST_F(QueryResultPrinterSmartSellTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printSellTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, tradeOptions);
   expectNoStr();
 }
@@ -928,7 +928,7 @@ class QueryResultPrinterOpenedOrdersNoConstraintsTest : public QueryResultPrinte
 };
 
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 ---------------------------------------------------------------------------------------------------------------------------
 | Exchange | Account   | Exchange Id | Placed time         | Side | Price           | Matched Amount   | Remaining Amount |
@@ -944,7 +944,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printOpenedOrders(OpenedOrdersPerExchange{}, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printOpenedOrders(OpenedOrdersPerExchange{}, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -956,7 +956,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1027,7 +1027,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
   expectNoStr();
 }
 
@@ -1050,7 +1050,7 @@ class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrin
 };
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
 -------------------------------------------------------------------------------------------
 | Exchange | Account   | Exchange Id | Received time       | Amount          | Status     |
@@ -1066,7 +1066,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(DepositsPerExchange{}, constraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printRecentDeposits(DepositsPerExchange{}, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1078,7 +1078,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentDeposits(depositsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1139,7 +1139,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentDeposits(depositsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printRecentDeposits(depositsPerExchange, constraints);
   expectNoStr();
 }
 
@@ -1166,7 +1166,7 @@ class QueryResultPrinterRecentWithdrawsNoConstraintsTest : public QueryResultPri
 };
 
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable).printRecentWithdraws(withdrawsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentWithdraws(withdrawsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
 ------------------------------------------------------------------------------------------------------------
 | Exchange | Account   | Exchange Id | Sent time           | Net Emitted Amount | Fee         | Status     |
@@ -1182,7 +1182,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentWithdraws(WithdrawsPerExchange{}, constraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printRecentWithdraws(WithdrawsPerExchange{}, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1194,7 +1194,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printRecentWithdraws(withdrawsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printRecentWithdraws(withdrawsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1261,7 +1261,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printRecentWithdraws(withdrawsPerExchange, constraints);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printRecentWithdraws(withdrawsPerExchange, constraints);
   expectNoStr();
 }
 
@@ -1273,7 +1273,7 @@ class QueryResultPrinterCancelOrdersTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterCancelOrdersTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------
@@ -1289,7 +1289,7 @@ TEST_F(QueryResultPrinterCancelOrdersTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterCancelOrdersTest, EmptyJson) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printCancelledOrders(NbCancelledOrdersPerExchange{}, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printCancelledOrders(NbCancelledOrdersPerExchange{}, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1301,7 +1301,7 @@ TEST_F(QueryResultPrinterCancelOrdersTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterCancelOrdersTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kJson).printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1332,7 +1332,8 @@ TEST_F(QueryResultPrinterCancelOrdersTest, Json) {
 }
 
 TEST_F(QueryResultPrinterCancelOrdersTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
   expectNoStr();
 }
 
@@ -1362,7 +1363,7 @@ class QueryResultPrinterWithdrawAmountTest : public QueryResultPrinterWithdrawTe
 };
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1375,7 +1376,7 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -1408,7 +1409,7 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
 }
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   expectNoStr();
 }
@@ -1419,7 +1420,7 @@ class QueryResultPrinterWithdrawPercentageTest : public QueryResultPrinterWithdr
 };
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1432,7 +1433,7 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson)
+  basicQueryResultPrinter(ApiOutputType::kJson)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
@@ -1465,7 +1466,7 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
 }
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint)
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   expectNoStr();
 }
@@ -1487,7 +1488,7 @@ class QueryResultPrinterDustSweeperTest : public QueryResultPrinterTest {
 };
 
 TEST_F(QueryResultPrinterDustSweeperTest, FormattedTable) {
-  QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
   static constexpr std::string_view kExpected = R"(
 -----------------------------------------------------------------------------------------------
@@ -1502,7 +1503,7 @@ TEST_F(QueryResultPrinterDustSweeperTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterDustSweeperTest, Json) {
-  QueryResultPrinter(ss, ApiOutputType::kJson).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
+  basicQueryResultPrinter(ApiOutputType::kJson).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1548,7 +1549,7 @@ TEST_F(QueryResultPrinterDustSweeperTest, Json) {
 }
 
 TEST_F(QueryResultPrinterDustSweeperTest, NoPrint) {
-  QueryResultPrinter(ss, ApiOutputType::kNoPrint).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
   expectNoStr();
 }
 

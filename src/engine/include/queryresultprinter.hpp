@@ -16,18 +16,20 @@
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
+
+class DeliveredWithdrawInfo;
+class LoggingInfo;
 class SimpleTable;
 class TradeOptions;
-class DeliveredWithdrawInfo;
 class WithdrawOptions;
 
 class QueryResultPrinter {
  public:
-  /// @brief  Creates a QueryResultPrinter that will output result in the output logger.
-  explicit QueryResultPrinter(ApiOutputType apiOutputType);
+  /// @brief Creates a QueryResultPrinter that will output result in the output logger.
+  QueryResultPrinter(ApiOutputType apiOutputType, const LoggingInfo &loggingInfo);
 
-  /// @brief  Creates a QueryResultPrinter that will output result in given ostream
-  QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType);
+  /// @brief Creates a QueryResultPrinter that will output result in given ostream
+  QueryResultPrinter(std::ostream &os, ApiOutputType apiOutputType, const LoggingInfo &loggingInfo);
 
   void printHealthCheck(const ExchangeHealthCheckStatus &healthCheckPerExchange) const;
 
@@ -95,8 +97,11 @@ class QueryResultPrinter {
 
   void printTable(const SimpleTable &simpleTable) const;
 
-  void printJson(json &&in, json &&out) const;
+  void printJson(const json &jsonData) const;
 
+  void logActivity(CoincenterCommandType commandType, const json &data) const;
+
+  const LoggingInfo &_loggingInfo;
   std::ostream *_pOs = nullptr;
   std::shared_ptr<log::logger> _outputLogger;
   ApiOutputType _apiOutputType;

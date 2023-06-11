@@ -10,6 +10,7 @@
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
+#include "timestring.hpp"
 #ifndef CCT_MSVC
 #include "static_string_view_helpers.hpp"
 #endif
@@ -53,30 +54,41 @@ int8_t LogPosFromLogStr(std::string_view logStr) {
                   logStr);
 }
 
-log::filename_t GetLogFilename() {
-#ifdef CCT_MSVC
-  return log::filename_t(kDefaultDataDir) + "/log/log.txt";
-#else
-  // Internal error in MSVC for below code...
-  static constexpr std::string_view kLogDir2 = "/log/log.txt";
-  static constexpr std::string_view kLogDir = JoinStringView_v<kDefaultDataDir, kLogDir2>;
-  return log::filename_t(kLogDir);
-#endif
-}
-
 }  // namespace
 
-LoggingInfo::LoggingInfo(const json &generalConfigJsonLogPart)
-    : _maxFileSizeInBytes(ParseNumberOfBytes(generalConfigJsonLogPart["maxFileSize"].get<std::string_view>())),
-      _maxNbFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
-      _logLevelConsolePos(LogPosFromLogStr(generalConfigJsonLogPart["console"].get<std::string_view>())),
-      _logLevelFilePos(LogPosFromLogStr(generalConfigJsonLogPart["file"].get<std::string_view>())) {
-  createLoggers();
+LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir) : _dataDir(dataDir) {
+  if (withLoggersCreation == WithLoggersCreation::kYes) {
+    createLoggers();
+  }
+}
+
+LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir,
+                         const json &generalConfigJsonLogPart)
+    : _dataDir(dataDir),
+      _maxFileSizeLogFileInBytes(ParseNumberOfBytes(generalConfigJsonLogPart["maxFileSize"].get<std::string_view>())),
+      _maxNbLogFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
+      _logLevelConsolePos(LogPosFromLogStr(generalConfigJsonLogPart["consoleLevel"].get<std::string_view>())),
+      _logLevelFilePos(LogPosFromLogStr(generalConfigJsonLogPart["fileLevel"].get<std::string_view>())) {
+  if (withLoggersCreation == WithLoggersCreation::kYes) {
+    createLoggers();
+  }
+
+  const json &activityTrackingPart = generalConfigJsonLogPart["activityTracking"];
+  const json &commandTypes = activityTrackingPart["commandTypes"];
+  _trackedCommandTypes.reserve(commandTypes.size());
+  std::ranges::transform(
+      commandTypes, std::inserter(_trackedCommandTypes, _trackedCommandTypes.end()),
+      [](const json &elem) { return CoincenterCommandTypeFromString(elem.get<std::string_view>()); });
+
+  _dateFormatStrActivityFiles = activityTrackingPart["dateFileNameFormat"];
 }
 
 LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
-    : _maxFileSizeInBytes(loggingInfo._maxFileSizeInBytes),
-      _maxNbFiles(loggingInfo._maxNbFiles),
+    : _dataDir(loggingInfo._dataDir),
+      _dateFormatStrActivityFiles(std::move(loggingInfo._dateFormatStrActivityFiles)),
+      _trackedCommandTypes(std::move(loggingInfo._trackedCommandTypes)),
+      _maxFileSizeLogFileInBytes(loggingInfo._maxFileSizeLogFileInBytes),
+      _maxNbLogFiles(loggingInfo._maxNbLogFiles),
       _logLevelConsolePos(loggingInfo._logLevelConsolePos),
       _logLevelFilePos(loggingInfo._logLevelFilePos),
       _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)) {}
@@ -87,7 +99,14 @@ LoggingInfo::~LoggingInfo() {
   }
 }
 
-void LoggingInfo::createLoggers() const {
+File LoggingInfo::getActivityFile() const {
+  string activityFileName("activity_history_");
+  activityFileName.append(ToString(Clock::now(), _dateFormatStrActivityFiles.data()));
+  activityFileName.append(".txt");
+  return File(_dataDir, File::Type::kLog, activityFileName, File::IfError::kThrow);
+}
+
+void LoggingInfo::createLoggers() {
   FixedCapacityVector<log::sink_ptr, 2> sinks;
 
   if (_logLevelConsolePos != 0) {
@@ -96,8 +115,9 @@ void LoggingInfo::createLoggers() const {
   }
 
   if (_logLevelFilePos != 0) {
+    auto logFileName = log::filename_t(_dataDir) + "/log/log.txt";
     auto &rotatingSink = sinks.emplace_back(
-        std::make_shared<log::sinks::rotating_file_sink_mt>(GetLogFilename(), _maxFileSizeInBytes, _maxNbFiles));
+        std::make_shared<log::sinks::rotating_file_sink_mt>(logFileName, _maxFileSizeLogFileInBytes, _maxNbLogFiles));
     rotatingSink->set_level(LevelFromPos(_logLevelFilePos));
   }
 
@@ -114,6 +134,8 @@ void LoggingInfo::createLoggers() const {
   log::set_default_logger(logger);
 
   CreateOutputLogger();
+
+  _destroyLoggers = true;
 }
 
 void LoggingInfo::CreateOutputLogger() {
