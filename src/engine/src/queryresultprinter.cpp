@@ -848,18 +848,20 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
   }
 }
 
-void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
-                                       bool isPercentageWithdraw, const ExchangeName &fromPrivateExchangeName,
-                                       const ExchangeName &toPrivateExchangeName,
-                                       const WithdrawOptions &withdrawOptions) const {
+void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges &deliveredWithdrawInfoWithExchanges,
+                                       bool isPercentageWithdraw, const WithdrawOptions &withdrawOptions) const {
+  const DeliveredWithdrawInfo &deliveredWithdrawInfo = deliveredWithdrawInfoWithExchanges.second;
+  MonetaryAmount grossAmount = deliveredWithdrawInfo.grossAmount();
+  const Exchange &fromExchange = *deliveredWithdrawInfoWithExchanges.first.front();
+  const Exchange &toExchange = *deliveredWithdrawInfoWithExchanges.first.back();
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("From Exchange", "To Exchange", "Gross withdraw amount", "Initiated time",
-                              "Received time", "Net received amount");
-      simpleTable.emplace_back(fromPrivateExchangeName.name(), toPrivateExchangeName.name(), grossAmount.str(),
-                               ToString(deliveredWithdrawInfo.initiatedTime()),
-                               ToString(deliveredWithdrawInfo.receivedTime()),
-                               deliveredWithdrawInfo.receivedAmount().str());
+      SimpleTable simpleTable("From Exchange", "From Account", "Gross withdraw amount", "Initiated time", "To Exchange",
+                              "To Account", "Net received amount", "Received time");
+      simpleTable.emplace_back(fromExchange.name(), fromExchange.keyName(), grossAmount.str(),
+                               ToString(deliveredWithdrawInfo.initiatedTime()), toExchange.name(), toExchange.keyName(),
+                               deliveredWithdrawInfo.receivedAmount().str(),
+                               ToString(deliveredWithdrawInfo.receivedTime()));
       printTable(simpleTable);
       break;
     }
@@ -874,12 +876,12 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfo &deliveredWit
       in.emplace("opt", std::move(inOpt));
 
       json from;
-      from.emplace("exchange", fromPrivateExchangeName.name());
-      from.emplace("account", fromPrivateExchangeName.keyName());
+      from.emplace("exchange", fromExchange.name());
+      from.emplace("account", fromExchange.keyName());
 
       json to;
-      to.emplace("exchange", toPrivateExchangeName.name());
-      to.emplace("account", toPrivateExchangeName.keyName());
+      to.emplace("exchange", toExchange.name());
+      to.emplace("account", toExchange.keyName());
       to.emplace("address", deliveredWithdrawInfo.receivingWallet().address());
       if (deliveredWithdrawInfo.receivingWallet().hasTag()) {
         to.emplace("tag", deliveredWithdrawInfo.receivingWallet().tag());

@@ -695,10 +695,11 @@ TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper
   return ret;
 }
 
-DeliveredWithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                                      const ExchangeName &fromPrivateExchangeName,
-                                                      const ExchangeName &toPrivateExchangeName,
-                                                      const WithdrawOptions &withdrawOptions) {
+DeliveredWithdrawInfoWithExchanges ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount,
+                                                                   bool isPercentageWithdraw,
+                                                                   const ExchangeName &fromPrivateExchangeName,
+                                                                   const ExchangeName &toPrivateExchangeName,
+                                                                   const WithdrawOptions &withdrawOptions) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   if (isPercentageWithdraw) {
     log::info("Withdraw gross {}% {} from {} to {} requested", grossAmount.amountStr(), currencyCode,
@@ -717,27 +718,31 @@ DeliveredWithdrawInfo ExchangesOrchestrator::withdraw(MonetaryAmount grossAmount
   std::transform(std::execution::par, exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
                  [](Exchange *exchange) { return exchange->queryTradableCurrencies(); });
 
+  DeliveredWithdrawInfoWithExchanges ret{{&fromExchange, &toExchange}, DeliveredWithdrawInfo{}};
+
   if (!fromExchange.canWithdraw(currencyCode, currencyExchangeSets.front())) {
     string errMsg("It's currently not possible to withdraw ");
     currencyCode.appendStrTo(errMsg);
     errMsg.append(" from ").append(fromPrivateExchangeName.str());
     log::error(errMsg);
-    return DeliveredWithdrawInfo(std::move(errMsg));
+    ret.second = DeliveredWithdrawInfo(std::move(errMsg));
+    return ret;
   }
   if (!toExchange.canDeposit(currencyCode, currencyExchangeSets.back())) {
     string errMsg("It's currently not possible to deposit ");
     currencyCode.appendStrTo(errMsg);
     errMsg.append(" to ").append(fromPrivateExchangeName.str());
     log::error(errMsg);
-    return DeliveredWithdrawInfo(std::move(errMsg));
+    ret.second = DeliveredWithdrawInfo(std::move(errMsg));
+    return ret;
   }
 
   if (isPercentageWithdraw) {
     MonetaryAmount avAmount = fromExchange.apiPrivate().getAccountBalance().get(currencyCode);
     grossAmount = (avAmount * grossAmount.toNeutral()) / 100;
   }
-
-  return fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawOptions);
+  ret.second = fromExchange.apiPrivate().withdraw(grossAmount, toExchange.apiPrivate(), withdrawOptions);
+  return ret;
 }
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
