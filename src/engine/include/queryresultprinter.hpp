@@ -81,9 +81,8 @@ class QueryResultPrinter {
 
   void printLastPrice(Market mk, const MonetaryAmountPerExchange &pricePerExchange) const;
 
-  void printWithdraw(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
-                     bool isPercentageWithdraw, const ExchangeName &fromPrivateExchangeName,
-                     const ExchangeName &toPrivateExchangeName, const WithdrawOptions &withdrawOptions) const;
+  void printWithdraw(const DeliveredWithdrawInfoWithExchanges &deliveredWithdrawInfoWithExchanges,
+                     bool isPercentageWithdraw, const WithdrawOptions &withdrawOptions) const;
 
   void printDustSweeper(
       const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,

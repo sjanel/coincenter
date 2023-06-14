@@ -153,8 +153,9 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(
-      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions).hasBeenInitiated());
+  auto [exchanges, deliveredWithdrawInfo] =
+      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions);
+  EXPECT_FALSE(deliveredWithdrawInfo.hasBeenInitiated());
 }
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
@@ -175,8 +176,9 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  EXPECT_FALSE(
-      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions).hasBeenInitiated());
+  auto [exchanges, deliveredWithdrawInfo] =
+      exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions);
+  EXPECT_FALSE(deliveredWithdrawInfo.hasBeenInitiated());
 }
 
 inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
@@ -248,7 +250,7 @@ TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossible) {
   MonetaryAmount grossAmount{1000, cur};
   bool isPercentageWithdraw = false;
   auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
-  auto ret =
+  auto [exchanges, ret] =
       exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   EXPECT_EQ(exp, ret);
 }
@@ -257,7 +259,7 @@ TEST_F(ExchangeOrchestratorWithdrawTest, WithdrawPossiblePercentage) {
   MonetaryAmount grossAmount{25, cur};
   bool isPercentageWithdraw = true;
   auto exp = createWithdrawInfo(grossAmount, isPercentageWithdraw);
-  auto ret =
+  auto [exchanges, ret] =
       exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   EXPECT_EQ(exp, ret);
 }

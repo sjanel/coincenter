@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <string_view>
 #include <tuple>
@@ -15,6 +16,7 @@
 #include "monetaryamount.hpp"
 #include "tradedamounts.hpp"
 #include "wallet.hpp"
+#include "withdrawinfo.hpp"
 
 namespace cct {
 class Exchange;
@@ -48,6 +50,8 @@ using OpenedOrdersPerExchange = SmallVector<std::pair<const Exchange *, OrdersSe
 using DepositsPerExchange = SmallVector<std::pair<const Exchange *, DepositsSet>, kTypicalNbPrivateAccounts>;
 
 using WithdrawsPerExchange = SmallVector<std::pair<const Exchange *, WithdrawsSet>, kTypicalNbPrivateAccounts>;
+
+using DeliveredWithdrawInfoWithExchanges = std::pair<std::array<const Exchange *, 2>, DeliveredWithdrawInfo>;
 
 using NbCancelledOrdersPerExchange = SmallVector<std::pair<const Exchange *, int>, kTypicalNbPrivateAccounts>;
 

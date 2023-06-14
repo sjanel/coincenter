@@ -1348,8 +1348,11 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
                          WalletCheck{}, AccountOwner("SmithJohn", "스미스존")};
   MonetaryAmount grossEmittedAmount;
   api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
-  DeliveredWithdrawInfo deliveredWithdrawInfo{
-      api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1}, netEmittedAmount, tp2};
+
+  DeliveredWithdrawInfoWithExchanges deliveredWithdrawInfoWithExchanges{
+      {&exchange1, &exchange4},
+      DeliveredWithdrawInfo{api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1},
+                            netEmittedAmount, tp2}};
   WithdrawOptions withdrawOptions;
 };
 
@@ -1360,22 +1363,20 @@ class QueryResultPrinterWithdrawAmountTest : public QueryResultPrinterWithdrawTe
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
   QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
--------------------------------------------------------------------------------------------------------------------------
-| From Exchange | To Exchange | Gross withdraw amount | Initiated time      | Received time       | Net received amount |
--------------------------------------------------------------------------------------------------------------------------
-| binance       | huobi       | 76.55 XRP             | 1999-03-25 04:46:43 | 2002-06-23 07:58:35 | 75.55 XRP           |
--------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+| From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+| binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 )";
   expectStr(kExpected);
 }
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1408,8 +1409,7 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
 
 TEST_F(QueryResultPrinterWithdrawAmountTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   expectNoStr();
 }
 
@@ -1420,22 +1420,20 @@ class QueryResultPrinterWithdrawPercentageTest : public QueryResultPrinterWithdr
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
   QueryResultPrinter(ss, ApiOutputType::kFormattedTable)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
--------------------------------------------------------------------------------------------------------------------------
-| From Exchange | To Exchange | Gross withdraw amount | Initiated time      | Received time       | Net received amount |
--------------------------------------------------------------------------------------------------------------------------
-| binance       | huobi       | 76.55 XRP             | 1999-03-25 04:46:43 | 2002-06-23 07:58:35 | 75.55 XRP           |
--------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+| From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+| binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 )";
   expectStr(kExpected);
 }
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
   QueryResultPrinter(ss, ApiOutputType::kJson)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -1468,8 +1466,7 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
 
 TEST_F(QueryResultPrinterWithdrawPercentageTest, NoPrint) {
   QueryResultPrinter(ss, ApiOutputType::kNoPrint)
-      .printWithdraw(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange,
-                     withdrawOptions);
+      .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   expectNoStr();
 }
 

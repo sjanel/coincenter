@@ -112,9 +112,10 @@ class Coincenter {
                                      const TradeOptions &tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
-  DeliveredWithdrawInfo withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                 const ExchangeName &fromPrivateExchangeName, const ExchangeName &toPrivateExchangeName,
-                                 const WithdrawOptions &withdrawOptions);
+  DeliveredWithdrawInfoWithExchanges withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
+                                              const ExchangeName &fromPrivateExchangeName,
+                                              const ExchangeName &toPrivateExchangeName,
+                                              const WithdrawOptions &withdrawOptions);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
