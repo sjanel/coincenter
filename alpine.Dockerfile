@@ -1,5 +1,5 @@
 # Multi stage build to separate docker build image from executable (to make the latter smaller)
-FROM alpine:3.17.3 AS build
+FROM alpine:3.18.2 AS build
 
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apk add --update --upgrade --no-cache g++ libc-dev curl-dev cmake ninja git ca-certificates
