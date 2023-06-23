@@ -39,12 +39,18 @@ jobs:
           push: true
           tags: sjanel/coincenter:alpine
 
-      - name: Tag current version (if release one)
+      - name: Tag current ubuntu version (if release one)
         run: |
-          VERSION=`docker run sjanel/coincenter --version | head -1 | cut -d' ' -f 3`
+          VERSION=`docker run sjanel/coincenter:latest --version | head -1 | cut -d' ' -f 3`
           case $VERSION in *.*.*.*) exit 0;; esac
           NEW_TAG="sjanel/coincenter:${VERSION}"
           docker tag sjanel/coincenter:latest ${NEW_TAG}
           docker push ${NEW_TAG}
-          docker tag sjanel/coincenter:alpine ${NEW_TAG}-alpine
-          docker push ${NEW_TAG}-alpine
+
+      - name: Tag current alpine version (if release one)
+        run: |
+          VERSION=`docker run sjanel/coincenter:alpine --version | head -1 | cut -d' ' -f 3`
+          case $VERSION in *.*.*.*) exit 0;; esac
+          NEW_TAG="sjanel/coincenter:${VERSION}-alpine"
+          docker tag sjanel/coincenter:alpine ${NEW_TAG}
+          docker push ${NEW_TAG}
