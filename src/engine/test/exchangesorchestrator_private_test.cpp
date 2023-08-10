@@ -10,7 +10,7 @@ using Type = CurrencyExchange::Type;
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
   BalanceOptions balanceOptions;
   WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous};
 };

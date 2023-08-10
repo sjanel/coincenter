@@ -11,6 +11,9 @@ struct GeneralConfigDefault {
     static const json kProd = R"(
 {
   "apiOutputType": "table",
+  "fiatConversion": {
+    "rate": "8h"
+  },
   "log": {
     "activityTracking": {
       "commandTypes": [
@@ -27,8 +30,10 @@ struct GeneralConfigDefault {
     "maxNbFiles": 20,
     "maxFileSize": "5Mi"
   },
-  "fiatConversion": {
-    "rate": "8h"
+  "requests": {
+    "concurrency": {
+      "nbMaxParallelRequests": 1
+    }
   }
 }
 )"_json;

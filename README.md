@@ -368,6 +368,13 @@ If only one private exchange is given and start amount is absolute, `coincenter`
 
 #### Options
 
+**Parallel requests**
+
+You may want to query several exchanges for a command at the same time. In this case, it's possible to ask `coincenter` to launch requests in parallel when it's possible.
+By default, the number of requests in parallel is `1`. To increase it, change the value of the field `nbMaxParallelRequests` in `generalconfig.json` file (more information [here](CONFIG.md#options-description)).
+
+You will have a nice boost of speed when you query the same thing from multiple exchanges / or accounts. However, the logs may not be ordered anymore.
+
 **Trade timeout**
 
 A trade is **synchronous** by default with the created order of `coincenter` (it follows the lifetime of the order).

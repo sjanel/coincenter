@@ -73,6 +73,8 @@ class CoincenterInfo {
 
   const LoggingInfo &loggingInfo() const { return _generalConfig.loggingInfo(); }
 
+  const RequestsConfig &requestsConfig() const { return _generalConfig.requestsConfig(); }
+
   ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType(); }
 
   Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversionQueryRate(); }

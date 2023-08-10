@@ -22,7 +22,7 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
       _metricsExporter(coincenterInfo.metricGatewayPtr()),
       _exchangePool(coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
-      _exchangesOrchestrator(_exchangePool.exchanges()),
+      _exchangesOrchestrator(coincenterInfo.requestsConfig(), _exchangePool.exchanges()),
       _queryResultPrinter(coincenterInfo.apiOutputType(), _coincenterInfo.loggingInfo()) {}
 
 int Coincenter::process(const CoincenterCommands &coincenterCommands) {
