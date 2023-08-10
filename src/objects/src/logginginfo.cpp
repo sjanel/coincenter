@@ -103,7 +103,7 @@ File LoggingInfo::getActivityFile() const {
   string activityFileName("activity_history_");
   activityFileName.append(ToString(Clock::now(), _dateFormatStrActivityFiles.data()));
   activityFileName.append(".txt");
-  return File(_dataDir, File::Type::kLog, activityFileName, File::IfError::kThrow);
+  return {_dataDir, File::Type::kLog, activityFileName, File::IfError::kThrow};
 }
 
 void LoggingInfo::createLoggers() {

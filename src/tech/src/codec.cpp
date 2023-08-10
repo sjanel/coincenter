@@ -77,14 +77,14 @@ string B64Decode(std::span<const char> ascData) {
 string URLEncode(std::span<const char> ascData) {
   string ret(3U * ascData.size(), '\0');
   char* outCharIt = ret.data();
-  for (char c : ascData) {
-    if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-      *outCharIt++ = c;
+  for (char ch : ascData) {
+    if (isalnum(ch) || ch == '-' || ch == '.' || ch == '_' || ch == '~') {
+      *outCharIt++ = ch;
     } else {
 #ifdef CCT_MSVC
-      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(c));
+      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(ch));
 #else
-      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(c));
+      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(ch));
 #endif
       outCharIt += 3;
     }
