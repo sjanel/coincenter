@@ -5,8 +5,10 @@
 
 namespace cct {
 
-GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, Duration fiatConversionQueryRate, ApiOutputType apiOutputType)
+GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig,
+                             Duration fiatConversionQueryRate, ApiOutputType apiOutputType)
     : _loggingInfo(std::move(loggingInfo)),
+      _requestsConfig(std::move(requestsConfig)),
       _fiatConversionQueryRate(fiatConversionQueryRate),
       _apiOutputType(apiOutputType) {}
 

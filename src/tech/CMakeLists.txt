@@ -80,6 +80,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    threadpool_test
+    test/threadpool_test.cpp
+)
+
+add_unit_test(
     timedef_test
     test/timedef_test.cpp
 )

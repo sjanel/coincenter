@@ -11,7 +11,7 @@ using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExc
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
 };
 
 TEST_F(ExchangeOrchestratorTest, HealthCheck) {

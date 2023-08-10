@@ -6,15 +6,18 @@
 #include "exchangeretriever.hpp"
 #include "market.hpp"
 #include "queryresulttypes.hpp"
+#include "threadpool.hpp"
 #include "tradedamounts.hpp"
 #include "withdrawoptions.hpp"
 
 namespace cct {
+
+class RequestsConfig;
 class ExchangesOrchestrator {
  public:
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-  explicit ExchangesOrchestrator(std::span<Exchange> exchangesSpan) : _exchangeRetriever(exchangesSpan) {}
+  explicit ExchangesOrchestrator(const RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
@@ -77,5 +80,6 @@ class ExchangesOrchestrator {
 
  private:
   ExchangeRetriever _exchangeRetriever;
+  ThreadPool _threadPool;
 };
 }  // namespace cct

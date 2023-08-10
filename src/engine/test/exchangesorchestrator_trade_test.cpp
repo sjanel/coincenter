@@ -11,7 +11,7 @@ using PlaceOrderInfo = api::PlaceOrderInfo;
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
 };
 
 /// For the trade tests, 'exchangeprivateapi_test' already tests a lot of complex trade options.

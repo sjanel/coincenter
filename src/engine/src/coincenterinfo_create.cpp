@@ -46,7 +46,10 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
   LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir,
                           static_cast<const json &>(generalConfigData["log"]));
 
-  GeneralConfig generalConfig(std::move(loggingInfo), fiatConversionQueryRate, apiOutputType);
+  RequestsConfig requestsConfig(generalConfigData["requests"]["concurrency"]["nbMaxParallelRequests"].get<int>());
+
+  GeneralConfig generalConfig(std::move(loggingInfo), std::move(requestsConfig), fiatConversionQueryRate,
+                              apiOutputType);
 
   LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
