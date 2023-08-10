@@ -37,21 +37,21 @@ TEST(TimeStringTest, LiteralDate) {
 }
 
 TEST(TimeStringTest, ToString) {
-  TimePoint p{};
-  p += std::chrono::years(15);
-  p += std::chrono::months(9);
-  p += std::chrono::days(25);
+  TimePoint tp{};
+  tp += std::chrono::years(15);
+  tp += std::chrono::months(9);
+  tp += std::chrono::days(25);
 
-  EXPECT_EQ(ToString(p, "%Y"), "1985");
-  EXPECT_EQ(ToString(p, "%Y-%m"), "1985-10");
-  EXPECT_EQ(ToString(p, "%Y-%m-%d"), "1985-10-26");
-  EXPECT_EQ(ToString(p, "%Y-%m-%d %H"), "1985-10-26 13");
-  EXPECT_EQ(ToString(p, "%Y-%m-%d %H:%M"), "1985-10-26 13:39");
-  EXPECT_EQ(ToString(p, "%Y-%m-%d %H:%M:%S"), "1985-10-26 13:39:54");
-  EXPECT_EQ(ToString(p, "%Y-%m-%d W%U %H:%M:%S"), "1985-10-26 W42 13:39:54");
+  EXPECT_EQ(ToString(tp, "%Y"), "1985");
+  EXPECT_EQ(ToString(tp, "%Y-%m"), "1985-10");
+  EXPECT_EQ(ToString(tp, "%Y-%m-%d"), "1985-10-26");
+  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H"), "1985-10-26 13");
+  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H:%M"), "1985-10-26 13:39");
+  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H:%M:%S"), "1985-10-26 13:39:54");
+  EXPECT_EQ(ToString(tp, "%Y-%m-%d W%U %H:%M:%S"), "1985-10-26 W42 13:39:54");
 
-  EXPECT_EQ(ToString(p, "%D - %T"), "10/26/85 - 13:39:54");
-  EXPECT_EQ(ToString(p, "%D custom string %T"), "10/26/85 custom string 13:39:54");
+  EXPECT_EQ(ToString(tp, "%D - %T"), "10/26/85 - 13:39:54");
+  EXPECT_EQ(ToString(tp, "%D custom string %T"), "10/26/85 custom string 13:39:54");
 }
 
 TEST(TimeStringTest, FromToString) {
