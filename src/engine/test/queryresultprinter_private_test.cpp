@@ -16,9 +16,9 @@ class QueryResultPrinterEmptyBalanceNoEquiCurTest : public QueryResultPrinterTes
 TEST_F(QueryResultPrinterEmptyBalanceNoEquiCurTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------
++----------+--------------------------+-------------------+-----------------+
 | Currency | Total amount on selected | binance_testuser1 | huobi_testuser2 |
------------------------------------------------------------------------------
++----------+--------------------------+-------------------+-----------------+
 )";
   expectStr(kExpected);
 }
@@ -82,9 +82,9 @@ class QueryResultPrinterBalanceNoEquiCurTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterBalanceNoEquiCurTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
--------------------------------------------------------------------------------------------------
++----------+--------------------------+-------------------+-----------------+-------------------+
 | Currency | Total amount on selected | binance_testuser1 | huobi_testuser2 | bithumb_testuser1 |
--------------------------------------------------------------------------------------------------
++----------+--------------------------+-------------------+-----------------+-------------------+
 | ADA      | 147                      | 0                 | 147             | 0                 |
 | BTC      | 15                       | 15                | 0               | 0                 |
 | DOT      | 4.76                     | 0                 | 4.76            | 0                 |
@@ -94,7 +94,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, FormattedTable) {
 | USD      | 155                      | 0                 | 155             | 0                 |
 | USDT     | 5107.5                   | 5000              | 107.5           | 0                 |
 | XRP      | 1500                     | 1500              | 0               | 0                 |
--------------------------------------------------------------------------------------------------
++----------+--------------------------+-------------------+-----------------+-------------------+
 )";
   expectStr(kExpected);
 }
@@ -225,17 +225,17 @@ class QueryResultPrinterBalanceEquiCurTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterBalanceEquiCurTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printBalance(balancePerExchange, equiCur);
   static constexpr std::string_view kExpected = R"(
-----------------------------------------------------------------------------------------------------------------------------------
++----------+--------------------------+--------------+-------------------+-----------------+-------------------+-----------------+
 | Currency | Total amount on selected | Total EUR eq | binance_testuser1 | huobi_testuser2 | bithumb_testuser1 | huobi_testuser1 |
-----------------------------------------------------------------------------------------------------------------------------------
++----------+--------------------------+--------------+-------------------+-----------------+-------------------+-----------------+
 | ETH      | 15                       | 25000        | 0                 | 15              | 0                 | 0               |
 | ADA      | 15000                    | 10000        | 15000             | 0               | 0                 | 0               |
 | BTC      | 0.56                     | 9067.7       | 0.56              | 0               | 0                 | 0               |
 | XLM      | 123                      | 67.5         | 0                 | 123             | 0                 | 0               |
 | XRP      | 34.7                     | 45.08        | 0                 | 34.7            | 0                 | 0               |
-----------------------------------------------------------------------------------------------------------------------------------
++----------+--------------------------+--------------+-------------------+-----------------+-------------------+-----------------+
 | Total    |                          | 44180.28     |                   |                 |                   |                 |
-----------------------------------------------------------------------------------------------------------------------------------
++----------+--------------------------+--------------+-------------------+-----------------+-------------------+-----------------+
 )";
   expectStr(kExpected);
 }
@@ -354,12 +354,12 @@ class QueryResultPrinterDepositInfoWithoutTagTest : public QueryResultPrinterTes
 TEST_F(QueryResultPrinterDepositInfoWithoutTagTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 | Exchange | Account   | ETH address   | Destination Tag |
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 | bithumb  | testuser1 | ethaddress666 |                 |
 | huobi    | testuser2 | ethaddress667 |                 |
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 )";
 
   expectStr(kExpected);
@@ -424,12 +424,12 @@ class QueryResultPrinterDepositInfoWithTagTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterDepositInfoWithTagTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printDepositInfo(depositCurrencyCode, walletPerExchange);
   static constexpr std::string_view kExpected = R"(
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 | Exchange | Account   | XRP address   | Destination Tag |
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 | huobi    | testuser1 | xrpaddress666 | xrptag1         |
 | huobi    | testuser2 | xrpaddress666 | xrptag2         |
-----------------------------------------------------------
++----------+-----------+---------------+-----------------+
 )";
   expectStr(kExpected);
 }
@@ -496,13 +496,13 @@ TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | Exchange | Account   | Traded from amount (real) | Traded to amount (real) |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | binance  | testuser1 | 0.1 BTC                   | 1050 XRP                |
 | huobi    | testuser1 | 0.3 BTC                   | 3500.6 XRP              |
 | huobi    | testuser2 | 0 BTC                     | 0 XRP                   |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 )";
 
   expectStr(kExpected);
@@ -611,11 +611,11 @@ TEST_F(QueryResultPrinterTradesPercentageTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | Exchange | Account   | Traded from amount (real) | Traded to amount (real) |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | bithumb  | testuser1 | 15000.56 EUR              | 885475102 SHIB          |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 )";
   expectStr(kExpected);
 }
@@ -711,11 +711,11 @@ TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printBuyTrades(tradedAmountsPerExchange, endAmount, tradeOptions);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | Exchange | Account   | Traded from amount (real) | Traded to amount (real) |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | binance  | testuser1 | 4500.67 EUR               | 3 ETH                   |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 )";
   expectStr(kExpected);
 }
@@ -805,13 +805,13 @@ TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printSellTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, tradeOptions);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | Exchange | Account   | Traded from amount (real) | Traded to amount (real) |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 | binance  | testuser1 | 0.01 BTC                  | 1500 USDT               |
 | huobi    | testuser1 | 0.004 BTC                 | 350 EUR                 |
 | huobi    | testuser2 | 0.1 BTC                   | 17 ETH                  |
-------------------------------------------------------------------------------
++----------+-----------+---------------------------+-------------------------+
 )";
 
   expectStr(kExpected);
@@ -930,15 +930,15 @@ class QueryResultPrinterOpenedOrdersNoConstraintsTest : public QueryResultPrinte
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
----------------------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
 | Exchange | Account   | Exchange Id | Placed time         | Side | Price           | Matched Amount   | Remaining Amount |
----------------------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
 | bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | Sell | 0.00000045 USDT | 11235435435 SHIB | 11235435.59 SHIB |
 | bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | Buy  | 1.31 USDT       | 13 XRP           | 500.45 XRP       |
 | huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | Sell | 1500.56 USDT    | 0.56 ETH         | 0.44 ETH         |
 | huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | Buy  | 50000 EUR       | 0 BTC            | 1 BTC            |
 | huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | Sell | 1574564 KRW     | 34.56 LTC        | 0.4 LTC          |
----------------------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
 )";
   expectStr(kExpected);
 }
@@ -1052,15 +1052,15 @@ class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrin
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
--------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+-----------------+------------+
 | Exchange | Account   | Exchange Id | Received time       | Amount          | Status     |
--------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+-----------------+------------+
 | bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    | failed     |
 | bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE | success    |
 | huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          | success    |
 | huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       | initial    |
 | huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        | processing |
--------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+-----------------+------------+
 )";
   expectStr(kExpected);
 }
@@ -1168,15 +1168,15 @@ class QueryResultPrinterRecentWithdrawsNoConstraintsTest : public QueryResultPri
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentWithdraws(withdrawsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+--------------------+-------------+------------+
 | Exchange | Account   | Exchange Id | Sent time           | Net Emitted Amount | Fee         | Status     |
-------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+--------------------+-------------+------------+
 | bithumb  | testuser1 | id3         | 1999-03-25 04:46:43 | 15020.67 EUR       | 0.1 EUR     | failed     |
 | bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | 69204866.9 DOGE    | 2 DOGE      | success    |
 | huobi    | testuser2 | id2         | 2011-10-03 06:49:36 | 37 XRP             | 0.02 XRP    | success    |
 | huobi    | testuser1 | id4         | 2002-06-23 07:58:35 | 1.31 ETH           | 0.001 ETH   | processing |
 | huobi    | testuser1 | id1         | 2006-07-14 23:58:24 | 0.045 BTC          | 0.00001 BTC | initial    |
-------------------------------------------------------------------------------------------------------------
++----------+-----------+-------------+---------------------+--------------------+-------------+------------+
 )";
   expectStr(kExpected);
 }
@@ -1276,14 +1276,14 @@ TEST_F(QueryResultPrinterCancelOrdersTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printCancelledOrders(nbCancelledOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------
++----------+-----------+----------------------------+
 | Exchange | Account   | Number of cancelled orders |
------------------------------------------------------
++----------+-----------+----------------------------+
 | binance  | testuser1 | 2                          |
 | bithumb  | testuser1 | 3                          |
 | huobi    | testuser2 | 1                          |
 | huobi    | testuser1 | 17                         |
------------------------------------------------------
++----------+-----------+----------------------------+
 )";
   expectStr(kExpected);
 }
@@ -1366,11 +1366,11 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 | From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 | binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 )";
   expectStr(kExpected);
 }
@@ -1423,11 +1423,11 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 | From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 | binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
------------------------------------------------------------------------------------------------------------------------------------------------------
++---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
 )";
   expectStr(kExpected);
 }
@@ -1491,13 +1491,13 @@ TEST_F(QueryResultPrinterDustSweeperTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------------------------
++----------+-----------+-------------------------------------------------------+--------------+
 | Exchange | Account   | Trades                                                | Final Amount |
------------------------------------------------------------------------------------------------
++----------+-----------+-------------------------------------------------------+--------------+
 | binance  | testuser1 | 98.47 ETH -> 0.00005 BTC                              | 0 ETH        |
 | huobi    | testuser1 |                                                       | 1.56 ETH     |
 | huobi    | testuser2 | 0.45609 EUR -> 98.47 ETH, 1509.45 ETH -> 0.000612 BTC | 0 ETH        |
------------------------------------------------------------------------------------------------
++----------+-----------+-------------------------------------------------------+--------------+
 )";
   expectStr(kExpected);
 }

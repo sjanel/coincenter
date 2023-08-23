@@ -11,6 +11,7 @@
 #include <string>
 #endif
 
+#include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
@@ -120,11 +121,11 @@ class SimpleTable {
 
     bool operator==(const Row &) const = default;
 
-    // TODO: to be replaced by spaceship defaulted operator once vector supports it
-    bool operator<(const Row &o) const { return _cells < o._cells; }
+    auto operator<=>(const Row &) const = default;
 
    private:
     friend class SimpleTable;
+    friend std::ostream &operator<<(std::ostream &, const SimpleTable &);
 
     void print(std::ostream &os, std::span<const uint16_t> maxWidthPerColumn) const;
 
@@ -167,11 +168,17 @@ class SimpleTable {
 
   void reserve(size_type s) { _rows.reserve(s); }
 
-  void print(std::ostream &os = std::cout) const;
+  friend std::ostream &operator<<(std::ostream &os, const SimpleTable &t);
 
   using trivially_relocatable = is_trivially_relocatable<vector<Row>>::type;
 
  private:
+  using MaxWidthPerColumnVector = SmallVector<uint16_t, 8>;
+
+  MaxWidthPerColumnVector computeMaxWidthPerColumn() const;
+
+  Cell::string_type computeLineSep(std::span<const uint16_t> maxWidthPerColumnVector) const;
+
   vector<Row> _rows;
 };
 }  // namespace cct

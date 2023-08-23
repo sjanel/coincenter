@@ -1071,7 +1071,8 @@ void QueryResultPrinter::printDustSweeper(
 void QueryResultPrinter::printTable(const SimpleTable &simpleTable) const {
   std::ostringstream ss;
   std::ostream &os = _pOs != nullptr ? *_pOs : ss;
-  simpleTable.print(os);
+
+  os << simpleTable;
 
   if (_pOs != nullptr) {
     *_pOs << std::endl;

@@ -13,12 +13,12 @@ class QueryResultPrinterHealthCheckTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterHealthCheckTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printHealthCheck(healthCheckPerExchange);
   static constexpr std::string_view kExpected = R"(
-----------------------------------
++----------+---------------------+
 | Exchange | Health Check status |
-----------------------------------
++----------+---------------------+
 | binance  | OK                  |
 | huobi    | Not OK!             |
-----------------------------------
++----------+---------------------+
 )";
 
   expectStr(kExpected);
@@ -67,13 +67,13 @@ class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
   static constexpr std::string_view kExpected = R"(
--------------------------------
++----------+------------------+
 | Exchange | Markets with XRP |
--------------------------------
++----------+------------------+
 | binance  | XRP-BTC          |
 | binance  | XRP-KRW          |
 | huobi    | XRP-EUR          |
--------------------------------
++----------+------------------+
 )";
 
   expectStr(kExpected);
@@ -133,13 +133,13 @@ class QueryResultPrinterTickerTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterTickerTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printTickerInformation(exchangeTickerMaps);
   static constexpr std::string_view kExpected = R"(
-------------------------------------------------------------------------------
++----------+---------+--------------+------------+--------------+------------+
 | Exchange | Market  | Bid price    | Bid volume | Ask price    | Ask volume |
-------------------------------------------------------------------------------
++----------+---------+--------------+------------+--------------+------------+
 | bithumb  | ETH-EUR | 2301.05 EUR  | 17 ETH     | 2301.15 EUR  | 0.4 ETH    |
 | huobi    | BTC-EUR | 31051.01 EUR | 1.9087 BTC | 31051.02 EUR | 0.409 BTC  |
 | huobi    | XRP-BTC | 0.36 BTC     | 3494 XRP   | 0.37 BTC     | 916.4 XRP  |
-------------------------------------------------------------------------------
++----------+---------+--------------+------------+--------------+------------+
 )";
   expectStr(kExpected);
 }
@@ -223,26 +223,26 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
------------------------------------------------------------------------------
++-----------------------+----------------------------+----------------------+
 | Sellers of BTC (asks) | exchangeA BTC price in EUR | Buyers of BTC (bids) |
------------------------------------------------------------------------------
++-----------------------+----------------------------+----------------------+
 | 0.18116               | 31056.7                    |                      |
 | 0.15058               | 31056.68                   |                      |
 | 0.12                  | 31056.67                   |                      |
 |                       | 31056.66                   | 0.00234              |
 |                       | 31056.65                   | 0.03292              |
 |                       | 31056.63                   | 0.0635               |
------------------------------------------------------------------------------
------------------------------------------------------------------------------
++-----------------------+----------------------------+----------------------+
++-----------------------+----------------------------+----------------------+
 | Sellers of BTC (asks) | exchangeD BTC price in EUR | Buyers of BTC (bids) |
------------------------------------------------------------------------------
++-----------------------+----------------------------+----------------------+
 | 0.18116               | 31056.7                    |                      |
 | 0.15058               | 31056.68                   |                      |
 | 0.12                  | 31056.67                   |                      |
 |                       | 31056.66                   | 0.00234              |
 |                       | 31056.65                   | 0.03292              |
 |                       | 31056.63                   | 0.0635               |
------------------------------------------------------------------------------
++-----------------------+----------------------------+----------------------+
 )";
   expectStr(kExpected);
 }
@@ -360,12 +360,12 @@ class QueryResultPrinterConversionPathTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterConversionPathTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printConversionPath(marketForPath, conversionPathPerExchange);
   static constexpr std::string_view kExpected = R"(
---------------------------------------------------
++----------+-------------------------------------+
 | Exchange | Fastest conversion path for XLM-XRP |
---------------------------------------------------
++----------+-------------------------------------+
 | bithumb  | XLM-XRP                             |
 | huobi    | XLM-AAA,BBB-AAA,BBB-XRP             |
---------------------------------------------------
++----------+-------------------------------------+
 )";
   expectStr(kExpected);
 }
@@ -424,12 +424,12 @@ class QueryResultPrinterWithdrawFeeTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterWithdrawFeeTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
----------------------------
++----------+--------------+
 | Exchange | Withdraw fee |
----------------------------
++----------+--------------+
 | bithumb  | 0.15 ETH     |
 | huobi    | 0.05 ETH     |
----------------------------
++----------+--------------+
 )";
   expectStr(kExpected);
 }
@@ -483,12 +483,12 @@ TEST_F(QueryResultPrinterLast24HoursTradedVolumeTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printLast24hTradedVolume(marketLast24hTradedVolume, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
----------------------------------------------
++----------+--------------------------------+
 | Exchange | Last 24h BTC-EUR traded volume |
----------------------------------------------
++----------+--------------------------------+
 | binance  | 37.8 BTC                       |
 | huobi    | 14 BTC                         |
----------------------------------------------
++----------+--------------------------------+
 )";
   expectStr(kExpected);
 }
@@ -559,32 +559,32 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printLastTrades(marketLastTrades, nbLastTrades, lastTradesPerExchange);
   static constexpr std::string_view kExpected = R"(
---------------------------------------------------------------------------------------------
++----------------------+--------------------+--------------------------+-------------------+
 | binance trades - UTC | ETH buys           | Price in USDT            | ETH sells         |
---------------------------------------------------------------------------------------------
++----------------------+--------------------+--------------------------+-------------------+
 | 1999-03-25 04:46:43  | 0.13               | 1500.5                   |                   |
 | 2002-06-23 07:58:35  |                    | 1500.5                   | 3.7               |
 | 2006-07-14 23:58:24  | 0.004              | 1501                     |                   |
---------------------------------------------------------------------------------------------
++----------------------+--------------------+--------------------------+-------------------+
 | Summary              | 0.134 ETH (2 buys) | 1500.66666666666666 USDT | 3.7 ETH (1 sells) |
---------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------
++----------------------+--------------------+--------------------------+-------------------+
++---------------------+--------------------+---------------+--------------------+
 | huobi trades - UTC  | ETH buys           | Price in USDT | ETH sells          |
----------------------------------------------------------------------------------
++---------------------+--------------------+---------------+--------------------+
 | 2011-10-03 06:49:36 |                    | 1500.5        | 0.13               |
 | 2002-06-23 07:58:35 | 0.004              | 1501          |                    |
----------------------------------------------------------------------------------
++---------------------+--------------------+---------------+--------------------+
 | Summary             | 0.004 ETH (1 buys) | 1500.75 USDT  | 0.13 ETH (1 sells) |
----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------
++---------------------+--------------------+---------------+--------------------+
++----------------------+---------------------+--------------------------+--------------------+
 | bithumb trades - UTC | ETH buys            | Price in USDT            | ETH sells          |
-----------------------------------------------------------------------------------------------
++----------------------+---------------------+--------------------------+--------------------+
 | 2011-10-03 06:49:36  |                     | 1500.5                   | 0.13               |
 | 2002-06-23 07:58:35  | 0.004               | 1501                     |                    |
 | 1999-03-25 04:46:43  | 47.78               | 1498                     |                    |
-----------------------------------------------------------------------------------------------
++----------------------+---------------------+--------------------------+--------------------+
 | Summary              | 47.784 ETH (2 buys) | 1499.83333333333333 USDT | 0.13 ETH (1 sells) |
-----------------------------------------------------------------------------------------------
++----------------------+---------------------+--------------------------+--------------------+
 )";
   expectStr(kExpected);
 }
@@ -694,13 +694,13 @@ class QueryResultPrinterLastPriceTest : public QueryResultPrinterTest {
 TEST_F(QueryResultPrinterLastPriceTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
----------------------------------
++----------+--------------------+
 | Exchange | XRP-KRW last price |
----------------------------------
++----------+--------------------+
 | binance  | 417 KRW            |
 | huobi    | 444 KRW            |
 | bithumb  | 590 KRW            |
----------------------------------
++----------+--------------------+
 )";
   expectStr(kExpected);
 }

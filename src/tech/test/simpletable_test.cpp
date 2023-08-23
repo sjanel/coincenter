@@ -6,7 +6,8 @@ namespace cct {
 TEST(SimpleTable, DefaultConstructor) {
   SimpleTable table;
   EXPECT_TRUE(table.empty());
-  table.print(std::cout);
+
+  std::cout << table;
 }
 
 TEST(SimpleTable, OneLinePrint) {
@@ -14,7 +15,8 @@ TEST(SimpleTable, OneLinePrint) {
   string str("I am a string");
   table.emplace_back("Header 1", 42, std::move(str));
   EXPECT_EQ(table.size(), 1U);
-  table.print(std::cout);
+
+  std::cout << table;
 }
 
 TEST(SimpleTable, SimplePrint) {
@@ -32,7 +34,8 @@ TEST(SimpleTable, SimplePrint) {
   row3.emplace_back("BTC");
   table.push_back(std::move(row3));
   EXPECT_EQ(table.size(), 3U);
-  table.print(std::cout);
+
+  std::cout << table;
 }
 
 TEST(SimpleTable, SettingRowDirectly) {
@@ -44,6 +47,7 @@ TEST(SimpleTable, SettingRowDirectly) {
   table.emplace_back(-677256340000, "KEBAB", "-34.09");
   EXPECT_EQ(table[2].front().size(), 7U);
   EXPECT_EQ(table.back().front().size(), 13U);
-  table.print(std::cout);
+
+  std::cout << table;
 }
 }  // namespace cct

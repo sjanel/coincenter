@@ -5,7 +5,6 @@
 #include <iomanip>
 #include <numeric>
 
-#include "cct_smallvector.hpp"
 #include "mathhelpers.hpp"
 #include "unreachable.hpp"
 
@@ -17,7 +16,6 @@ const SimpleTable::Row SimpleTable::Row::kDivider;
 
 namespace {
 constexpr char kColumnSep = '|';
-constexpr char kLineSep = '-';
 
 enum class AlignTo : int8_t { kLeft, kRight };
 
@@ -76,33 +74,52 @@ void SimpleTable::Row::print(std::ostream &os, std::span<const uint16_t> maxWidt
   os << std::endl;
 }
 
-void SimpleTable::print(std::ostream &os) const {
-  if (_rows.empty()) {
-    return;
-  }
+SimpleTable::MaxWidthPerColumnVector SimpleTable::computeMaxWidthPerColumn() const {
   // We assume that each row has same number of cells, no silly checks here
   const size_type nbColumns = _rows.front().size();
-  SmallVector<uint16_t, 8> maxWidthPerColumn(nbColumns, 0);
+  MaxWidthPerColumnVector res(nbColumns, 0);
   for (const Row &row : _rows) {
     if (!row.isDivider()) {
       for (size_type columnPos = 0; columnPos < nbColumns; ++columnPos) {
-        maxWidthPerColumn[columnPos] =
-            std::max(maxWidthPerColumn[columnPos], static_cast<uint16_t>(row[columnPos].size()));
+        res[columnPos] = std::max(res[columnPos], static_cast<uint16_t>(row[columnPos].size()));
       }
     }
   }
-  const size_type sumWidths = std::accumulate(maxWidthPerColumn.begin(), maxWidthPerColumn.end(), 0U);
-  const size_type maxTableWidth = sumWidths + nbColumns * 3 + 1;
-  const Cell::string_type lineSep(maxTableWidth, kLineSep);
+  return res;
+}
+
+SimpleTable::Cell::string_type SimpleTable::computeLineSep(std::span<const uint16_t> maxWidthPerColumnVector) const {
+  const size_type sumWidths = std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), 0U);
+
+  // 3 as one space before, one space after the field name and column separator. +1 for the first column separator
+  const size_type tableWidth = sumWidths + maxWidthPerColumnVector.size() * 3 + 1;
+  Cell::string_type lineSep(tableWidth, '-');
+
+  size_type curWidth = 0;
+  lineSep[curWidth] = '+';
+  for (auto maxWidth : maxWidthPerColumnVector) {
+    curWidth += maxWidth + 3;
+    lineSep[curWidth] = '+';
+  }
+
+  return lineSep;
+}
+
+std::ostream &operator<<(std::ostream &os, const SimpleTable &t) {
+  if (t._rows.empty()) {
+    return os;
+  }
+  const auto maxWidthPerColumnVector = t.computeMaxWidthPerColumn();
+  const auto lineSep = t.computeLineSep(maxWidthPerColumnVector);
 
   os << lineSep << std::endl;
 
-  bool printHeader = _rows.size() > 1U;
-  for (const Row &row : _rows) {
+  bool printHeader = t._rows.size() > 1U;
+  for (const auto &row : t._rows) {
     if (row.isDivider()) {
       os << lineSep << std::endl;
     } else {
-      row.print(os, maxWidthPerColumn);
+      row.print(os, maxWidthPerColumnVector);
     }
     if (printHeader) {
       os << lineSep << std::endl;
@@ -110,6 +127,6 @@ void SimpleTable::print(std::ostream &os) const {
     }
   }
 
-  os << lineSep;
+  return os << lineSep;
 }
 }  // namespace cct
