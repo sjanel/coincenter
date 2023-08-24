@@ -51,7 +51,7 @@ class KrakenPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market mk) override { return _tickerCache.get(mk).first; }
 
-  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
+  LastTradesVector queryLastTrades(Market mk, int nbLastTrades = kNbLastTradesDefault) override;
 
   MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk).second; }
 

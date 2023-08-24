@@ -505,10 +505,11 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
   throw exception("Invalid data retrieved from ticker information");
 }
 
-LastTradesVector KrakenPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+LastTradesVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
                       _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
-  json result = PublicQuery(_curlHandle, "/public/Trades", {{"pair", krakenMarket.assetsPairStrUpper()}});
+  json result = PublicQuery(_curlHandle, "/public/Trades",
+                            {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
   LastTradesVector ret;
   for (const json& det : result.front()) {
     MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
