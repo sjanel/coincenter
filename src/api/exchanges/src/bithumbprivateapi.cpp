@@ -437,9 +437,6 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
 }
 
 namespace {
-constexpr int kSearchGbAll = 0;
-constexpr int kSearchGbBuyCompleted = 1;
-constexpr int kSearchGbSellCompleted = 2;
 constexpr int kSearchGbOnGoingWithdrawals = 3;
 constexpr int kSearchGbDeposit = 4;
 constexpr int kSearchGbProcessedWithdrawals = 5;

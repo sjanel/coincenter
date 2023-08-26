@@ -59,8 +59,8 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
   postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
 }
 
-bool CheckError(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
-                Duration& queryDelay) {
+bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
+                       Duration& queryDelay) {
   static constexpr Duration kInitialDurationQueryDelay = std::chrono::milliseconds(200);
   switch (statusCode) {
     case kInvalidTimestamp: {
@@ -108,6 +108,9 @@ bool CheckError(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, D
       // Order does not exist : this may be possible when we query an order info too fast
       log::warn("Binance cannot find order");
       return true;
+    case kInvalidApiKey:
+      log::error("Binance reported invalid API Key error");
+      return false;
     default:
       break;
   }
@@ -143,7 +146,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     // error in query
     statusCode = *codeIt;  // "1100" for instance
 
-    if (CheckError(statusCode, ret, queryDelayDir, sleepingTime, queryDelay)) {
+    if (CheckErrorDoRetry(statusCode, ret, queryDelayDir, sleepingTime, queryDelay)) {
       continue;
     }
 

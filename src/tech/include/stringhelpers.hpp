@@ -16,7 +16,7 @@ namespace details {
 template <class SizeType>
 inline void ToChars(char *first, SizeType s, std::integral auto i) {
   if (auto [ptr, errc] = std::to_chars(first, first + s, i); CCT_UNLIKELY(errc != std::errc())) {
-    throw exception("Unable to decode integral in string");
+    throw exception("Unable to decode integral into string");
   }
 }
 }  // namespace details
@@ -32,7 +32,7 @@ template <std::integral Integral>
 Integral FromString(std::string_view str) {
   Integral ret;
   if (auto [ptr, errc] = std::from_chars(str.data(), str.data() + str.size(), ret); CCT_UNLIKELY(errc != std::errc())) {
-    throw exception("Unable to decode string in integral");
+    throw exception("Unable to decode string into integral");
   }
   return ret;
 }

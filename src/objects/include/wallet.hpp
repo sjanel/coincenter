@@ -36,7 +36,7 @@ class Wallet {
 
   /// Build a wallet with all information.
   Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
-         WalletCheck walletCheck, const AccountOwner &accountOwner);
+         WalletCheck walletCheck, AccountOwner accountOwner);
 
   const ExchangeName &exchangeName() const { return _exchangeName; }
 
