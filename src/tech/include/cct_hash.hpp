@@ -11,12 +11,12 @@ namespace cct {
 constexpr uint64_t HashValue64(uint64_t x) {
   // Murmur-inspired hashing.
   constexpr uint64_t kMul = 0x9ddfea08eb382d69ULL;
-  uint64_t b = x * kMul;
-  b ^= (b >> 44);
-  b *= kMul;
-  b ^= (b >> 41);
-  b *= kMul;
-  return b;
+  x *= kMul;
+  x ^= (x >> 44);
+  x *= kMul;
+  x ^= (x >> 41);
+  x *= kMul;
+  return x;
 }
 
 constexpr size_t HashCombine(size_t h1, size_t h2) {

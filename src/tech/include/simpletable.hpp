@@ -175,9 +175,9 @@ class SimpleTable {
  private:
   using MaxWidthPerColumnVector = SmallVector<uint16_t, 8>;
 
-  MaxWidthPerColumnVector computeMaxWidthPerColumn() const;
+  static Cell::string_type ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector);
 
-  Cell::string_type computeLineSep(std::span<const uint16_t> maxWidthPerColumnVector) const;
+  MaxWidthPerColumnVector computeMaxWidthPerColumn() const;
 
   vector<Row> _rows;
 };

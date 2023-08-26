@@ -88,7 +88,7 @@ SimpleTable::MaxWidthPerColumnVector SimpleTable::computeMaxWidthPerColumn() con
   return res;
 }
 
-SimpleTable::Cell::string_type SimpleTable::computeLineSep(std::span<const uint16_t> maxWidthPerColumnVector) const {
+SimpleTable::Cell::string_type SimpleTable::ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector) {
   const size_type sumWidths = std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), 0U);
 
   // 3 as one space before, one space after the field name and column separator. +1 for the first column separator
@@ -105,17 +105,17 @@ SimpleTable::Cell::string_type SimpleTable::computeLineSep(std::span<const uint1
   return lineSep;
 }
 
-std::ostream &operator<<(std::ostream &os, const SimpleTable &t) {
-  if (t._rows.empty()) {
+std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
+  if (table._rows.empty()) {
     return os;
   }
-  const auto maxWidthPerColumnVector = t.computeMaxWidthPerColumn();
-  const auto lineSep = t.computeLineSep(maxWidthPerColumnVector);
+  const auto maxWidthPerColumnVector = table.computeMaxWidthPerColumn();
+  const auto lineSep = SimpleTable::ComputeLineSep(maxWidthPerColumnVector);
 
   os << lineSep << std::endl;
 
-  bool printHeader = t._rows.size() > 1U;
-  for (const auto &row : t._rows) {
+  bool printHeader = table._rows.size() > 1U;
+  for (const auto &row : table._rows) {
     if (row.isDivider()) {
       os << lineSep << std::endl;
     } else {
