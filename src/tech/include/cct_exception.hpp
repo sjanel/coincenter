@@ -12,7 +12,7 @@
 
 namespace cct {
 
-/// Implementation of a simple string (untruncated) storage with noexcept constructors and what() method.
+/// Implementation of a simple string (un-truncated) storage with noexcept constructors and what() method.
 /// To be constructed from a 'const char []', it needs to be small enough to fill in the buffer. For custom, longer
 /// error messages, the constructor from the rvalue of a string should be used instead.
 class exception : public std::exception {

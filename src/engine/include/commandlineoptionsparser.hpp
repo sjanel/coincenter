@@ -3,20 +3,18 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <unordered_map>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "commandlineoption.hpp"
 #include "durationstring.hpp"
-#include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {
@@ -35,164 +33,180 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 template <class OptValueType>
-class CommandLineOptionsParser : private OptValueType {
+class CommandLineOptionsParser {
  public:
   using CommandLineOptionType = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionType;
   using CommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
 
   template <unsigned N>
-  explicit CommandLineOptionsParser(const CommandLineOptionWithValue (&init)[N])
-      : _opts(std::begin(init), std::end(init)) {}
-
-  template <unsigned N>
-  void append(const CommandLineOptionWithValue (&opts)[N]) {
-    _opts.append(std::begin(opts), std::end(opts));
+  explicit CommandLineOptionsParser(const CommandLineOptionWithValue (&init)[N]) {
+    append(init);
   }
 
-  OptValueType parse(std::span<const char*> vargv) {
-    // First register the callbacks
-    for (const CommandLineOptionWithValue& arg : _opts) {
-      registerCallback(arg.first, arg.second);
-    }
+  template <unsigned N>
+  CommandLineOptionsParser& append(const CommandLineOptionWithValue (&opts)[N]) {
+    const auto insertedIt = _opts.insert(_opts.end(), std::begin(opts), std::end(opts));
+    const auto sortByFirst = [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; };
+    std::sort(insertedIt, _opts.end(), sortByFirst);
+    std::inplace_merge(_opts.begin(), insertedIt, _opts.end(), sortByFirst);
+    return *this;
+  }
 
-    vargv = vargv.last(vargv.size() - 1U);  // skip first argument which is program name
-    const int vargvSize = static_cast<int>(vargv.size());
-    for (int idxOpt = 0; idxOpt < vargvSize; ++idxOpt) {
-      const char* argStr = vargv[idxOpt];
+  OptValueType parse(std::span<const char*> groupedArguments) {
+    std::unordered_map<CommandLineOption, CallbackType> callbacks;
+    callbacks.reserve(_opts.size());
+    OptValueType data;
+    for (const auto& [cmdLineOption, prop] : _opts) {
+      callbacks[cmdLineOption] = registerCallback(cmdLineOption, prop, data);
+    }
+    const int nbArgs = static_cast<int>(groupedArguments.size());
+    for (int argPos = 0; argPos < nbArgs; ++argPos) {
+      std::string_view argStr(groupedArguments[argPos]);
       if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
         throw invalid_argument("Unrecognized command-line option {}", argStr);
       }
 
-      for (auto& cbk : _callbacks) {
-        cbk.second(idxOpt, vargv);
+      for (auto& callback : callbacks) {
+        callback.second(argPos, groupedArguments);
       }
     }
 
-    return static_cast<OptValueType>(*this);
+    return data;
   }
 
-  OptValueType parse(int argc, const char* argv[]) { return parse(std::span(argv, argc)); }
-
-  template <typename StreamType>
-  void displayHelp(std::string_view programName, StreamType& stream) {
-    stream << "usage: " << programName << " <options>" << std::endl;
+  void displayHelp(std::string_view programName, std::ostream& stream) const {
+    stream << "usage: " << programName << " <general options> <command(s)>" << std::endl;
     if (_opts.empty()) {
       return;
     }
     stream << "Options:" << std::endl;
 
-    std::ranges::sort(_opts, [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
-
-    int lenFirstRows = 0;
-    static constexpr int kMaxCharLine = 120;
+    const int lenTabRow = computeLenTabRow();
+    std::string_view previousGroup;
     for (const auto& [opt, pm] : _opts) {
-      int lenRows = static_cast<int>(opt.fullName().size() + opt.valueDescription().size() + 1);
-      if (opt.hasShortName()) {
-        lenRows += 4;
-      }
-      lenFirstRows = std::max(lenFirstRows, lenRows);
-    }
-    std::string_view currentGroup, previousGroup;
-    for (const auto& [opt, pm] : _opts) {
-      currentGroup = opt.optionGroupName();
+      std::string_view currentGroup = opt.commandHeader().groupName();
       if (currentGroup != previousGroup) {
         stream << std::endl << ' ' << currentGroup << std::endl;
+        previousGroup = currentGroup;
       }
-      string firstRowsStr(opt.fullName());
-      if (opt.hasShortName()) {
-        firstRowsStr.append(", -");
-        firstRowsStr.push_back(opt.shortNameChar());
+      if (opt.fullName()[0] != '-') {
+        stream << std::endl;
       }
-      firstRowsStr.push_back(' ');
-      firstRowsStr.append(opt.valueDescription());
-      firstRowsStr.insert(firstRowsStr.end(), lenFirstRows - firstRowsStr.size(), ' ');
-      stream << "  " << firstRowsStr << ' ';
+
+      RowPrefix(opt, lenTabRow, stream);
 
       std::string_view descr = opt.description();
-      int linePos = lenFirstRows + 3;
-      string spaces(linePos, ' ');
+      int linePos = lenTabRow;
       while (!descr.empty()) {
-        if (linePos + descr.size() <= kMaxCharLine) {
+        static constexpr std::string_view kSpaceOrNewLine = " \n";
+        auto breakPos = descr.find_first_of(kSpaceOrNewLine);
+        if (breakPos == std::string_view::npos) {
+          if (linePos + descr.size() > kMaxCharLine) {
+            stream << std::endl;
+            Spaces(lenTabRow, stream);
+          }
           stream << descr << std::endl;
           break;
         }
-        std::size_t breakPos = descr.find_first_of(" \n");
-        if (breakPos == std::string_view::npos) {
-          stream << std::endl << spaces << descr << std::endl;
-          break;
-        }
         if (linePos + breakPos > kMaxCharLine) {
-          stream << std::endl << spaces;
-          linePos = lenFirstRows + 3;
+          stream << std::endl;
+          Spaces(lenTabRow, stream);
+          linePos = lenTabRow;
         }
-        stream << std::string_view(descr.data(), breakPos + 1);
+        stream << descr.substr(0, breakPos + 1);
         if (descr[breakPos] == '\n') {
-          stream << spaces;
-          linePos = lenFirstRows + 3;
+          Spaces(lenTabRow, stream);
+          linePos = lenTabRow;
+        } else {
+          linePos += static_cast<int>(breakPos) + 1;
         }
 
-        linePos += static_cast<int>(breakPos) + 1;
         descr.remove_prefix(breakPos + 1);
       }
-
-      previousGroup = currentGroup;
     }
-
-    stream << std::endl;
   }
 
  private:
+  static constexpr std::string_view kEmptyLine =
+      "                                                                                                                "
+      "        ";
+  static constexpr int kMaxCharLine = kEmptyLine.length();
+
+  static_assert(kMaxCharLine >= 80);
+
+  template <class>
+  friend class CommandLineOptionsParserIterator;
+
   using CallbackType = std::function<void(int&, std::span<const char*>)>;
 
-  vector<CommandLineOptionWithValue> _opts;
-  std::map<CommandLineOption, CallbackType> _callbacks;
+  [[nodiscard]] bool isOptionValue(std::string_view opt) const {
+    return std::ranges::none_of(_opts, [opt](const auto& cmdLineOpt) { return cmdLineOpt.first.matches(opt); });
+  }
 
-  static bool IsOptionValue(const char* argv) { return argv[0] != '-' || isdigit(argv[1]); }
+  static bool IsOptionPositiveInt(std::string_view opt) { return std::ranges::all_of(opt, isdigit); }
 
-  void registerCallback(const CommandLineOption& commandLineOption, CommandLineOptionType prop) {
-    _callbacks[commandLineOption] = [this, &commandLineOption, prop](int& idx, std::span<const char*> argv) {
+  static bool IsOptionInt(std::string_view opt) {
+    return ((opt[0] == '-' || opt[0] == '+') && std::all_of(std::next(opt.begin()), opt.end(), isdigit)) ||
+           IsOptionPositiveInt(opt);
+  }
+
+  CallbackType registerCallback(const CommandLineOption& commandLineOption, CommandLineOptionType prop,
+                                OptValueType& data) {
+    return [this, &commandLineOption, prop, &data](int& idx, std::span<const char*> argv) {
       if (commandLineOption.matches(argv[idx])) {
         std::visit(overloaded{
-                       [this](bool OptValueType::*arg) { this->*arg = true; },
-                       [this, &idx, argv, &commandLineOption](int OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           const char* beg = argv[idx + 1];
-                           const char* end = beg + strlen(beg);
-                           this->*arg = FromString<int>(std::string_view(beg, end));
+                       // bool value matcher
+                       [&data](bool OptValueType::*arg) { data.*arg = true; },
+
+                       // int value matcher
+                       [&data, &idx, argv, &commandLineOption](int OptValueType::*arg) {
+                         if (idx + 1U < argv.size()) {
+                           std::string_view nextOpt(argv[idx + 1]);
+                           if (IsOptionInt(nextOpt)) {
+                             data.*arg = FromString<int>(nextOpt);
+                             ++idx;
+                             return;
+                           }
+                         }
+                         ThrowExpectingValueException(commandLineOption);
+                       },
+
+                       // CommandLineOptionalInt value matcher
+                       [&data, &idx, argv](CommandLineOptionalInt OptValueType::*arg) {
+                         data.*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+                         if (idx + 1U < argv.size()) {
+                           std::string_view nextOpt(argv[idx + 1]);
+                           if (IsOptionInt(nextOpt)) {
+                             data.*arg = FromString<int>(nextOpt);
+                             ++idx;
+                           }
+                         }
+                       },
+
+                       // std::string_view value matcher
+                       [&data, &idx, argv, &commandLineOption](std::string_view OptValueType::*arg) {
+                         if (idx + 1U < argv.size()) {
+                           data.*arg = std::string_view(argv[idx + 1]);
                            ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
                          }
                        },
-                       [this, &idx, argv](CommandLineOptionalInt OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           const char* beg = argv[idx + 1];
-                           const char* end = beg + strlen(beg);
-                           this->*arg = FromString<int>(std::string_view(beg, end));
+
+                       // optional std::string_view value matcher
+                       [this, &data, &idx, argv](std::optional<std::string_view> OptValueType::*arg) {
+                         if (idx + 1U < argv.size() && this->isOptionValue(argv[idx + 1])) {
+                           data.*arg = std::string_view(argv[idx + 1]);
                            ++idx;
                          } else {
-                           this->*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+                           data.*arg = std::string_view();
                          }
                        },
-                       [this, &idx, argv, &commandLineOption](std::string_view OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = argv[idx + 1];
-                           ++idx;
-                         } else {
-                           ThrowExpectingValueException(commandLineOption);
-                         }
-                       },
-                       [this, &idx, argv](std::optional<std::string_view> OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = argv[idx + 1];
-                           ++idx;
-                         } else {
-                           this->*arg = std::string_view();
-                         }
-                       },
-                       [this, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && IsOptionValue(argv[idx + 1])) {
-                           this->*arg = ParseDuration(argv[idx + 1]);
+
+                       // duration value matcher
+                       [&data, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
+                         if (idx + 1U < argv.size()) {
+                           data.*arg = ParseDuration(argv[idx + 1]);
                            ++idx;
                          } else {
                            ThrowExpectingValueException(commandLineOption);
@@ -202,7 +216,41 @@ class CommandLineOptionsParser : private OptValueType {
                    prop);
       }
     };
-  };
+  }
+
+  static std::ostream& RowPrefix(const CommandLineOption& opt, int lenFirstRows, std::ostream& stream) {
+    stream << "  ";
+    int nbPrintedChars = opt.fullName().size();
+    stream << opt.fullName();
+    if (opt.hasShortName()) {
+      static constexpr std::string_view kShortNameSep = ", -";
+      stream << kShortNameSep;
+      stream << opt.shortNameChar();
+      nbPrintedChars += kShortNameSep.size() + 1;
+    }
+    stream << ' ';
+    stream << opt.valueDescription();
+    nbPrintedChars += opt.valueDescription().size();
+    return Spaces(lenFirstRows - nbPrintedChars - 3, stream);
+  }
+
+  static std::ostream& Spaces(int nbSpaces, std::ostream& stream) {
+    return stream << std::string_view(kEmptyLine.data(), nbSpaces);
+  }
+
+  int computeLenTabRow() const {
+    int lenFirstRows = 0;
+    for (const auto& [opt, _] : _opts) {
+      int lenRows = static_cast<int>(opt.fullName().size() + opt.valueDescription().size() + 1);
+      if (opt.hasShortName()) {
+        lenRows += 4;
+      }
+      lenFirstRows = std::max(lenFirstRows, lenRows);
+    }
+    return lenFirstRows + 3;
+  }
+
+  vector<CommandLineOptionWithValue> _opts;
 };
 
 }  // namespace cct

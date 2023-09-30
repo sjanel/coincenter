@@ -7,14 +7,14 @@
 namespace cct {
 
 void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &cmdLineOptions, settings::RunMode runMode) {
+                            const CoincenterCmdLineOptions &generalOptions, settings::RunMode runMode) {
   // Should be outside the try / catch as it holds the RAII object managing the Logging (LoggingInfo)
-  CoincenterInfo coincenterInfo = CoincenterInfo_Create(programName, cmdLineOptions, runMode);
+  CoincenterInfo coincenterInfo = CoincenterInfo_Create(programName, generalOptions, runMode);
 
   CurlInitRAII curlInitRAII;  // Should be before any curl query
 
   try {
-    Coincenter coincenter(coincenterInfo, ExchangeSecretsInfo_Create(cmdLineOptions));
+    Coincenter coincenter(coincenterInfo, ExchangeSecretsInfo_Create(generalOptions));
 
     int nbCommandsProcessed = coincenter.process(coincenterCommands);
 
