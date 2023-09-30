@@ -5,56 +5,65 @@
 #include <string_view>
 #include <variant>
 
-#include "cct_cctype.hpp"
-#include "cct_invalid_argument_exception.hpp"
-#include "stringhelpers.hpp"
+#include "cct_hash.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 
+class CommandHeader {
+ public:
+  constexpr CommandHeader() noexcept = default;
+
+  constexpr CommandHeader(std::string_view groupName, int prio) : _prio(prio), _groupName(groupName) {}
+
+  constexpr std::string_view groupName() const { return _groupName; }
+
+  constexpr int prio() const { return _prio; }
+
+  constexpr auto operator<=>(const CommandHeader& other) const = default;
+
+ private:
+  int _prio = 0;
+  std::string_view _groupName;
+};
+
 /// Description of a command line option.
 class CommandLineOption {
  public:
-  using GroupNameAndPrio = std::pair<const char*, int>;
-
   constexpr CommandLineOption() noexcept = default;
 
-  template <class StringViewType>
-  constexpr CommandLineOption(GroupNameAndPrio optionGroupName, const char* fullName, char shortName,
-                              const char* valueDescription, StringViewType description)
-      : _optionGroupName(optionGroupName.first),
+  constexpr CommandLineOption(CommandHeader commandHeader, std::string_view fullName, char shortName,
+                              std::string_view valueDescription, std::string_view description)
+      : _commandHeader(commandHeader),
         _fullName(fullName),
         _valueDescription(valueDescription),
         _description(description),
-        _prio(optionGroupName.second),
-        _shortName(shortName) {
-    static_assert(std::is_same_v<StringViewType, std::string_view> || std::is_same_v<StringViewType, const char*>);
-  }
+        _shortName(shortName) {}
 
-  template <class StringViewType>
-  constexpr CommandLineOption(GroupNameAndPrio optionGroupName, const char* fullName, const char* valueDescription,
-                              StringViewType description)
-      : CommandLineOption(optionGroupName, fullName, '\0', valueDescription, description) {}
+  constexpr CommandLineOption(CommandHeader commandHeader, std::string_view fullName, std::string_view valueDescription,
+                              std::string_view description)
+      : CommandLineOption(commandHeader, fullName, '\0', valueDescription, description) {}
 
   constexpr bool matches(std::string_view optName) const;
 
-  constexpr std::string_view optionGroupName() const { return _optionGroupName; }
+  constexpr const CommandHeader& commandHeader() const { return _commandHeader; }
   constexpr std::string_view fullName() const { return _fullName; }
-  constexpr std::string_view description() const { return _description; }
   constexpr std::string_view valueDescription() const { return _valueDescription; }
+  constexpr std::string_view description() const { return _description; }
 
   constexpr char shortNameChar() const { return _shortName; }
 
   constexpr bool hasShortName() const { return _shortName != '\0'; }
 
-  constexpr std::strong_ordering operator<=>(const CommandLineOption& o) const;
+  constexpr auto operator<=>(const CommandLineOption& other) const = default;
 
  private:
-  std::string_view _optionGroupName;
+  static constexpr std::string_view kLegacyFullNamePrefixOption = "--";
+
+  CommandHeader _commandHeader;
   std::string_view _fullName;
   std::string_view _valueDescription;
   std::string_view _description;
-  int _prio = 0;
   char _shortName = '\0';
 };
 
@@ -92,19 +101,36 @@ struct AllowedCommandLineOptionsBase {
 
 constexpr bool CommandLineOption::matches(std::string_view optName) const {
   if (optName.size() == 2 && optName.front() == '-' && optName.back() == _shortName) {
-    return true;
+    return true;  // it is a short hand flag
   }
-  return optName == _fullName;
-}
-
-constexpr std::strong_ordering CommandLineOption::operator<=>(const CommandLineOption& o) const {
-  if (_prio != o._prio) {
-    return _prio <=> o._prio;
+  if (optName == _fullName) {
+    return true;  // standard full match
   }
-  if (_optionGroupName != o._optionGroupName) {
-    return _optionGroupName <=> o._optionGroupName;
+  if (optName.starts_with(kLegacyFullNamePrefixOption)) {
+    // backwards compatibility check
+    optName.remove_prefix(kLegacyFullNamePrefixOption.length());
+    return optName == _fullName;
   }
-  return _fullName <=> o._fullName;
+  return false;
 }
 
 }  // namespace cct
+
+// Specialize std::hash<CommandLineOption> for easy usage of CommandLineOption as unordered_map key
+namespace std {
+template <>
+struct hash<cct::CommandHeader> {
+  auto operator()(const cct::CommandHeader& commandHeader) const {
+    return cct::HashCombine(hash<std::string_view>()(commandHeader.groupName()),
+                            static_cast<size_t>(commandHeader.prio()));
+  }
+};
+
+template <>
+struct hash<cct::CommandLineOption> {
+  auto operator()(const cct::CommandLineOption& commandLineOption) const {
+    return cct::HashCombine(hash<cct::CommandHeader>()(commandLineOption.commandHeader()),
+                            hash<std::string_view>()(commandLineOption.fullName()));
+  }
+};
+}  // namespace std

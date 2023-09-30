@@ -1,5 +1,6 @@
 #include "coincentercommands.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -9,23 +10,54 @@
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "commandlineoptionsparser.hpp"
+#include "commandlineoptionsparseriterator.hpp"
 #include "stringoptionparser.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
 
-CoincenterCmdLineOptions CoincenterCommands::ParseOptions(int argc, const char *argv[]) {
+vector<CoincenterCmdLineOptions> CoincenterCommands::ParseOptions(int argc, const char *argv[]) {
   using OptValueType = CoincenterCmdLineOptions;
 
   auto parser = CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
-  CoincenterCmdLineOptions parsedOptions = parser.parse(argc, argv);
 
   auto programName = std::filesystem::path(argv[0]).filename().string();
-  if (parsedOptions.help) {
-    parser.displayHelp(programName, std::cout);
-  } else if (parsedOptions.version) {
-    CoincenterCmdLineOptions::PrintVersion(programName);
+
+  vector<CoincenterCmdLineOptions> parsedOptions;
+
+  std::span<const char *> allArguments(argv, argc);
+  allArguments = allArguments.last(allArguments.size() - 1U);  // skip first argument which is program name
+
+  CommandLineOptionsParserIterator parserIt(parser, allArguments);
+
+  CoincenterCmdLineOptions globalOptions;
+
+  // Support for command line multiple commands. Only full name flags are supported for multi command line commands.
+  // Note: maybe it better to just decommission short hand flags.
+  while (parserIt.hasNext()) {
+    std::span<const char *> groupedArguments = parserIt.next();
+
+    CoincenterCmdLineOptions groupParsedOptions = parser.parse(groupedArguments);
+    globalOptions.mergeGlobalWith(groupParsedOptions);
+
+    if (groupedArguments.empty()) {
+      groupParsedOptions.help = true;
+    }
+    if (groupParsedOptions.help) {
+      parser.displayHelp(programName, std::cout);
+    } else if (groupParsedOptions.version) {
+      CoincenterCmdLineOptions::PrintVersion(programName);
+    } else {
+      // Only store commands if they are not 'help' nor 'version'
+      parsedOptions.push_back(std::move(groupParsedOptions));
+    }
   }
+
+  // Apply global options to all parsed options containing commands
+  for (CoincenterCmdLineOptions &groupParsedOptions : parsedOptions) {
+    groupParsedOptions.mergeGlobalWith(globalOptions);
+  }
+
   return parsedOptions;
 }
 
@@ -33,7 +65,7 @@ namespace {
 std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
                                                               std::string_view orderRequestStr) {
   auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
-  auto orderIdViewVector = StringOptionParser(cmdLineOptions.ordersIds).getCSVValues();
+  auto orderIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
   vector<OrderId> orderIds;
   orderIds.reserve(orderIdViewVector.size());
   for (std::string_view orderIdView : orderIdViewVector) {
@@ -41,8 +73,8 @@ std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCm
   }
   return std::make_pair(
       OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
-                        std::chrono::duration_cast<Duration>(cmdLineOptions.ordersMinAge),
-                        std::chrono::duration_cast<Duration>(cmdLineOptions.ordersMaxAge),
+                        std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
+                        std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                         OrdersConstraints::OrderIdSet(std::move(orderIds))),
       std::get<2>(currenciesPrivateExchangesTuple));
 }
@@ -103,15 +135,13 @@ WithdrawOptions ComputeWithdrawOptions(const CoincenterCmdLineOptions &cmdLineOp
 
 }  // namespace
 
-CoincenterCommands::CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions) {
-  setFromOptions(cmdLineOptions);
+CoincenterCommands::CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan) {
+  for (const CoincenterCmdLineOptions &cmdLineOptions : cmdLineOptionsSpan) {
+    addOption(cmdLineOptions);
+  }
 }
 
-bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
-  if (cmdLineOptions.help || cmdLineOptions.version) {
-    return false;
-  }
-
+bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.repeats.isPresent()) {
     if (cmdLineOptions.repeats.isSet()) {
       _repeats = *cmdLineOptions.repeats;
@@ -265,15 +295,14 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (cmdLineOptions.recentDepositsInfo) {
     auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentDepositsInfo)
                                          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
-    auto depositIdViewVector = StringOptionParser(cmdLineOptions.depositsIds).getCSVValues();
+    auto depositIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
     vector<string> depositIds;
     depositIds.reserve(depositIdViewVector.size());
     for (std::string_view depositIdView : depositIdViewVector) {
       depositIds.emplace_back(depositIdView);
     }
-    DepositsConstraints depositConstraints(currencyCode,
-                                           std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMinAge),
-                                           std::chrono::duration_cast<Duration>(cmdLineOptions.depositsMaxAge),
+    DepositsConstraints depositConstraints(currencyCode, std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
+                                           std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                                            DepositsConstraints::IdSet(std::move(depositIds)));
     _commands.emplace_back(CoincenterCommandType::kRecentDeposits)
         .setDepositsConstraints(std::move(depositConstraints))
@@ -283,15 +312,14 @@ bool CoincenterCommands::setFromOptions(const CoincenterCmdLineOptions &cmdLineO
   if (cmdLineOptions.recentWithdrawsInfo) {
     auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentWithdrawsInfo)
                                          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
-    auto withdrawIdViewVector = StringOptionParser(cmdLineOptions.withdrawsIds).getCSVValues();
+    auto withdrawIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
     vector<string> withdrawIds;
     withdrawIds.reserve(withdrawIdViewVector.size());
     for (std::string_view withdrawIdView : withdrawIdViewVector) {
       withdrawIds.emplace_back(withdrawIdView);
     }
-    WithdrawsConstraints withdrawConstraints(currencyCode,
-                                             std::chrono::duration_cast<Duration>(cmdLineOptions.withdrawsMinAge),
-                                             std::chrono::duration_cast<Duration>(cmdLineOptions.withdrawsMaxAge),
+    WithdrawsConstraints withdrawConstraints(currencyCode, std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
+                                             std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                                              WithdrawsConstraints::IdSet(std::move(withdrawIds)));
     _commands.emplace_back(CoincenterCommandType::kRecentWithdraws)
         .setWithdrawsConstraints(std::move(withdrawConstraints))

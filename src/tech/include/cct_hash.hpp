@@ -8,15 +8,15 @@
 #include <utility>
 
 namespace cct {
-constexpr uint64_t HashValue64(uint64_t x) {
+constexpr uint64_t HashValue64(uint64_t h1) {
   // Murmur-inspired hashing.
   constexpr uint64_t kMul = 0x9ddfea08eb382d69ULL;
-  x *= kMul;
-  x ^= (x >> 44);
-  x *= kMul;
-  x ^= (x >> 41);
-  x *= kMul;
-  return x;
+  h1 *= kMul;
+  h1 ^= (h1 >> 44);
+  h1 *= kMul;
+  h1 ^= (h1 >> 41);
+  h1 *= kMul;
+  return h1;
 }
 
 constexpr size_t HashCombine(size_t h1, size_t h2) {

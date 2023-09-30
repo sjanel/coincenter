@@ -9,13 +9,14 @@
 
 int main(int argc, const char* argv[]) {
   try {
-    auto cmdLineOptions = cct::CoincenterCommands::ParseOptions(argc, argv);
+    auto cmdLineOptionsVector = cct::CoincenterCommands::ParseOptions(argc, argv);
 
-    if (!cmdLineOptions.help && !cmdLineOptions.version) {
-      cct::CoincenterCommands coincenterCommands(cmdLineOptions);
+    if (!cmdLineOptionsVector.empty()) {
+      cct::CoincenterCommands coincenterCommands(cmdLineOptionsVector);
       auto programName = std::filesystem::path(argv[0]).filename().string();
 
-      cct::ProcessCommandsFromCLI(programName, coincenterCommands, cmdLineOptions, cct::settings::RunMode::kProd);
+      cct::ProcessCommandsFromCLI(programName, coincenterCommands, cmdLineOptionsVector.front(),
+                                  cct::settings::RunMode::kProd);
     }
   } catch (const cct::invalid_argument& e) {
     cct::log::critical("Invalid argument: {}", e.what());

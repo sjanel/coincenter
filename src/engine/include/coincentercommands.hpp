@@ -17,13 +17,17 @@ class CoincenterCommands {
   CoincenterCommands() noexcept(std::is_nothrow_default_constructible_v<Commands>) = default;
 
   // Builds a CoincenterCommands and add commands from given command line options.
-  explicit CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions);
+  explicit CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions)
+      : CoincenterCommands(std::span<const CoincenterCmdLineOptions>{&cmdLineOptions, 1U}) {}
 
-  static CoincenterCmdLineOptions ParseOptions(int argc, const char *argv[]);
+  // Builds a CoincenterCommands and add commands from given command line options span.
+  explicit CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan);
+
+  static vector<CoincenterCmdLineOptions> ParseOptions(int argc, const char *argv[]);
 
   /// @brief Set this CoincenterCommands from given command line options.
   /// @return false if only help or version is asked, true otherwise
-  bool setFromOptions(const CoincenterCmdLineOptions &cmdLineOptions);
+  bool addOption(const CoincenterCmdLineOptions &cmdLineOptions);
 
   std::span<const CoincenterCommand> commands() const { return _commands; }
 

@@ -56,6 +56,8 @@ Main features:
 - [Usage](#usage)
   - [Input / output](#input--output)
     - [Format](#format)
+      - [Unique command](#unique-command)
+      - [Multiple commands](#multiple-commands)
     - [Logging](#logging)
       - [Activity history](#activity-history)
   - [Public requests](#public-requests)
@@ -130,9 +132,11 @@ See [CONFIG.md](CONFIG.md)
 
 ### Format
 
+#### Unique command
+
 `coincenter` is a command line tool with ergonomic and easy to remember option schema. You will usually provide this kind of input:
 
-- Command name, with short hand flag or long name (check with `-h` or `--help`)
+- Command name, without hyphen (check what are the available ones with `help`)
 - Followed by either:
   - Nothing, meaning that command will be applied globally
   - Amount with currency or any currency, separated by dash to specify pairs, or source - destination
@@ -141,15 +145,29 @@ See [CONFIG.md](CONFIG.md)
 Example:
 
 ```
-                    Ori curr.   exchange1
-                        |          |
-coincenter --trade 0.05BTC-USDT,kraken,huobi
-                    |        |           |
-               from amt.  to curr.    exchange2
+                  Ori curr.   exchange1
+                      |          |
+coincenter trade 0.05BTC-USDT,kraken,huobi
+                  |        |           |
+             from amt.  to curr.    exchange2
 ```
 
 By default, result of command is printed in a formatted table on standard output.
 You can also choose a *json* output format with option `-o json`.
+
+#### Multiple commands
+
+It is possible to give multiple commands that are to be executed sequentially. A new command name indicates the beginning of a new command.
+
+For instance:
+
+```
+         1st command                      2nd command options
+              |                               /       \
+coincenter balance orderbook XRP-USDT,binance --cur EUR
+                   \                        /
+                           2nd command
+```
 
 ### Logging
 
@@ -177,101 +195,107 @@ By default, it stores all types of trades and withdraws results, but the list is
 
 ### Health check
 
-`--health-check` pings the exchanges and checks if there are up and running.
+`health-check` pings the exchanges and checks if there are up and running.
 It is the first thing that is checked in exchanges unit tests, hence if the health check fails for an exchange, the tests are skipped for the exchange.
 
 ### Markets
 
-Use the `--markets` (or `-m`) command to list all markets trading a given currencies. This is useful to check how you can trade your coin.
+Use the `markets` command to list all markets trading a given currencies. This is useful to check how you can trade your coin.
 At least one currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currencies if they exist.
 
 One or two (in this case, querying existence of a market) currencies can be given, separated by a `-`.
 
-**Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `--trade` option of `coincenter`)
+**Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `trade` option of `coincenter`)
 
 #### Examples
 
 List all markets involving Ethereum in Huobi
 
 ```
-coincenter --markets eth,huobi
+coincenter markets eth,huobi
 ```
 
 List exchanges where the pair AVAX-USDT is supported
 
 ```
-coincenter -m avax-usdt
+coincenter markets avax-usdt
 ```
 
 ### Ticker information
 
-Retrieve ticker information for all markets of one, several or all exchanges with `--ticker [exchange1,exchange2,...]` option.
+Retrieve ticker information for all markets of one, several or all exchanges with `ticker [exchange1,exchange2,...]` option.
 List of exchanges should be given as lower case, comma separated. But it is optional, all exchanges are considered if not provided.
 
 Example: Print ticker information for kraken and huobi exchanges
 
 ```
-coincenter --ticker kraken,huobi
+coincenter ticker kraken,huobi
 ```
 
 ### Order books
 
-Check market order books of a currency pair with `--orderbook` option. By default, chosen `depth` is `10`, can be configured with `--orderbook-depth`.
-Similarly to `--ticker` option, exchanges list is optional. If not provided, all exchanges will be queried and only the market order books from exchange with proposes this market are returned.
+Check market order books of a currency pair with `orderbook` option. By default, chosen `depth` is `10`, can be configured with `--depth`.
+Similarly to `ticker` option, exchanges list is optional. If not provided, all exchanges will be queried and only the market order books from exchange with proposes this market are returned.
 
-In addition, for convenience, you can also specify a currency in which to convert the price if you are more familiar with it. For instance, you want to print the order book of BTC-KRW in Bithumb exchange, but as you are not familiar with Korean won, you want to convert to USD as well. `--orderbook-cur usd` is for this purpose.
+In addition, for convenience, you can also specify a currency in which to convert the price if you are more familiar with it. For instance, you want to print the order book of BTC-KRW in Bithumb exchange, but as you are not familiar with Korean won, you want to convert to USD as well. `--cur usd` is for this purpose.
 
 Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance
 
 ```
-coincenter --orderbook ada-usdt,kraken,binance --orderbook-depth 20
+coincenter orderbook ada-usdt,kraken,binance --depth 20
 ```
 
 ### Last 24h traded volume
 
-Fast query last 24h traded volume with `--volume-day` option on one market on one, several or all exchanges (as usual, see above options).
+Fast query last 24h traded volume with `volume-day` option on one market on one, several or all exchanges (as usual, see above options).
 
 Example: Print last 24h traded volume on market XLM-BTC for all exchanges supporting it
 
 ```
-coincenter --volume-day xlm-btc
+coincenter volume-day xlm-btc
 ```
 
 ### Last price
 
-Fast query last traded price with `--price` option on one market on one, several or all exchanges (as usual, see above options).
+Fast query last traded price with `price` option on one market on one, several or all exchanges (as usual, see above options).
 
 Example: Print last price on market SOL-BTC for all exchanges supporting it
 
 ```
-coincenter --price sol-btc
+coincenter price sol-btc
 ```
 
 ### Last trades
 
-Get a sorted list of last trades with `--last-trades` option on one market on one, several or all exchanges.
-You can specify the number of last trades to query (for exchanges supporting this option) with `--last-trades-n`.
+Get a sorted list of last trades with `last-trades` option on one market on one, several or all exchanges.
+You can specify the number of last trades to query (for exchanges supporting this option) with `--n`.
 
 Example: Print the last 15 trades on DOT-USDT on Binance and Huobi
 
 ```
-coincenter --last-trades dot-usdt,binance,huobi --last-trades-n 15
+coincenter last-trades dot-usdt,binance,huobi --n 15
 ```
 
 ### Conversion path
 
-From a starting currency to a destination currency, `--conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
+From a starting currency to a destination currency, `conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
 
 It will print the result as an ordered list of markets for each exchange.
 
-Option `--conversion` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query sfor information.
+Option `conversion` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query for information.
+
+Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible
+
+```
+coincenter conversion shib-sol
+```
 
 **Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
 
 ## Private requests
 
 These requests will require that you have your secret keys in `data/secret/secret.json` file, for each exchange used.
-You can check easily that it works correctly with the `--balance` option.
+You can check easily that it works correctly with the `balance` option.
 
 ### How to target keys on exchanges
 
@@ -283,7 +307,7 @@ You can check easily that it works correctly with the `--balance` option.
 All options use this pattern, but they will behave differently if several keys are matched for one exchange. For instance:
 
 - Balance will sum all balance for matching accounts
-- Trade and multi trade will share the amount to be trade accross the matching exchanges, depending on the amount available on each (see [Single trade](#single-trade)).
+- Trade and multi trade will share the amount to be trade across the matching exchanges, depending on the amount available on each (see [Single trade](#single-trade)).
 
 Example:
 
@@ -305,15 +329,15 @@ Let's say you have `jack` and `joe` accounts (the name of the keys in `secret.js
 ```
 
 When you need to specify one key, you can suffix `jack` or `joe` after the exchange name `kraken`: `kraken_joe`.
-
-| Command                                           | Explanation                                                                                                           |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `coincenter -b kraken`                            | Sum of balances of 'jack' and 'joe' accounts of kraken                                                                |
-| `coincenter -b kraken_jack`                       | Only balance of 'jack' account of kraken                                                                              |
-| `coincenter -t 1000usdt-sol,kraken`               | `coincenter` will trade a total of 1000 USDT from 'jack' and/or 'joe' (see [Single trade](#single-trade))             |
-| `coincenter -t 1000usdt-sol,kraken_joe`           | Perform the trade on 'joe' account only                                                                               |
-|                                                   |
-| `coincenter --withdraw-apply 1btc,kraken-binance` | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' for withdraw |
+ 
+| Command                                         | Explanation                                                                                                           |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `coincenter balance kraken`                     | Sum of balances of 'jack' and 'joe' accounts of kraken                                                                |
+| `coincenter balance kraken_jack`                | Only balance of 'jack' account of kraken                                                                              |
+| `coincenter trade 1000usdt-sol,kraken`          | `coincenter` will trade a total of 1000 USDT from 'jack' and/or 'joe' (see [Single trade](#single-trade))             |
+| `coincenter trade 1000usdt-sol,kraken_joe`      | Perform the trade on 'joe' account only                                                                               |
+|                                                 |
+| `coincenter withdraw-apply 1btc,kraken-binance` | <span style="color:red">**Error**</span>: `coincenter` does not know if it should choose 'jack' or 'joe' for withdraw |
 
 If you have only one key per exchange, suffixing with the name is not necessary for **all** commands (but supported):
 
@@ -328,19 +352,19 @@ If you have only one key per exchange, suffixing with the name is not necessary 
 }
 ```
 
-| Command                                      | Explanation                                              |
-| -------------------------------------------- | -------------------------------------------------------- |
-| `coincenter -b binance`                      | Only one account in `binance`, this will print `averell` |
-| `coincenter -b binance_averell`              | Same as above                                            |
-| `coincenter -t 1000usdt-sol,binance`         | **OK** as no ambiguity                                   |
-| `coincenter -t 1000usdt-sol,binance_averell` | **OK** as well                                           |
+| Command                                         | Explanation                                              |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| `coincenter balance binance`                    | Only one account in `binance`, this will print `averell` |
+| `coincenter balance binance_averell`            | Same as above                                            |
+| `coincenter trade 1000usdt-sol,binance`         | **OK** as no ambiguity                                   |
+| `coincenter trade 1000usdt-sol,binance_averell` | **OK** as well                                           |
 
 ### Balance
 
 Check your available balance across supported exchanges at one glance!
 
 ```
-coincenter --balance
+coincenter balance
 ```
 
 prints a formatted table with sum of assets from all loaded private keys (for all exchanges).
@@ -351,15 +375,15 @@ The currency acronym should be at the first position of the comma separated valu
 For instance, to print total balance on Kraken and Bithumb exchanges, with a summary currency of *Euro*:
 
 ```
-coincenter --balance eur,kraken,bithumb
+coincenter balance eur,kraken,bithumb
 ```
 
 By default, the balance displayed is the available one, with opened orders remaining unmatched amounts deduced.
-To include balance in use as well, `--balance-in-use` should be added.
+To include balance in use as well, `--in-use` should be added.
 
 ### Single Trade
 
-A single trade per market / exchange can be done in a simple way supporting 3 parameterized price choser strategies.
+A single trade per market / exchange can be done in a simple way supporting 3 parameterized price chooser strategies.
 It is 'single' in the sense that trade is made in one step (see [Multi Trade](#multi-trade)), in an existing market of provided exchange(s) Similarly to other options, list of exchanges is optional. If empty, all exchanges having some balance for given start amount may be considered. Then, exchanges are sorted in decreasing order of available amounts, and are selected until total available reaches the desired one.
 
 Given start amount can be absolute, or relative with the `%` character. In the latter case, the total start amount will be computed from the total available amounts of the matching exchanges. Percentages should not be larger than `100` and may be decimal numbers.
@@ -383,16 +407,16 @@ The trade ends when one of the following events occur:
 - Order is matched completely
 - Order has still some unmatched amount when trade reaches the **timeout**
 
-By default, the trade timeout is set to **30 seconds*. If you wish to change it, you can use `--trade-timeout` option. It expects a time and supports all the common time suffixes `y` (years), `mon` (months), `w` (weeks), `d` (days), `h` (hours), `min` (minutes), `s` (seconds), `ms` (milliseconds) and `us` (microseconds).
+By default, the trade timeout is set to **30 seconds*. If you wish to change it, you can use `--timeout` option. It expects a time and supports all the common time suffixes `y` (years), `mon` (months), `w` (weeks), `d` (days), `h` (hours), `min` (minutes), `s` (seconds), `ms` (milliseconds) and `us` (microseconds).
 
 Value can contain several units, but do not support decimal values. For instance, use `2min30s` instead of `2.5min`.
 
-Another example: `--trade-timeout 3min30s504ms`
+Another example: `--timeout 3min30s504ms`
 
 **Trade asynchronous mode**
 
 Above option allows to control the full life time of a trade until it is either fully matched or cancelled (at timeout).
-If you want to only **fire and forget** an order placement, you can use `--trade-async` flag.
+If you want to only **fire and forget** an order placement, you can use `--async` flag.
 It will exit the place process as soon as the order is placed, before any query of order information, hence it's the fastest way to place an order.
 
 Note that it's not equivalent of choosing a **zero** trade timeout (above option), here are the differences:
@@ -408,20 +432,20 @@ Possible order price strategies:
 - `taker`: order placed at market price, should be matched immediately
 - `nibble`: order price continuously set at limit price + (buy)/- (sell) 1. This is a hybrid mode between the above two methods, ensuring continuous partial matches of the order over time, but at a controlled price (market price can be dangerously low for some short periods of time with large sells)
 
-Use command line option `--trade` or `-t` to make a trade from a departure amount.
+Use command line option `trade` to make a trade from a departure amount.
 
 **Trade Price Picker**
 
-In order to control more precisely the price of the order, `coincenter` supports custom price as well thanks to `--trade-price` option. Note that this is not compatible with above **trade price strategy** option.
-`--trade-price` expects either an integer (!= 0) representing a **relative** price compared to the limit price, or a monetary amount representing an **absolute** fixed price (decimal amount with the price currency).
+In order to control more precisely the price of the order, `coincenter` supports custom price as well thanks to `--price` option. Note that this is not compatible with above **trade price strategy** option.
+`--price` expects either an integer (!= 0) representing a **relative** price compared to the limit price, or a monetary amount representing an **absolute** fixed price (decimal amount with the price currency).
 In fact, parser will recognize a relative price if the amount is without any decimals and without any currency. The price currency will be overriden by the engine, but you can add it for readability and to remove ambiguity of an integer price for the parser.
 
-| `--trade-price` value examples | Explanation                                                                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `35`                           | *relative* price                                                                                                                  |
-| `-2`                           | *relative* price                                                                                                                  |
-| `34.6`                         | *absolute* price (engine will take the currency from the market of the trade)                                                     |
-| `25 XXX`                       | *absolute* price (engine will override the currency from the market of the trade and not consider `XXX`, no error will be raised) |
+| `--price` value examples | Explanation                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `35`                     | *relative* price                                                                                                                  |
+| `-2`                     | *relative* price                                                                                                                  |
+| `34.6`                   | *absolute* price (engine will take the currency from the market of the trade)                                                     |
+| `25 XXX`                 | *absolute* price (engine will override the currency from the market of the trade and not consider `XXX`, no error will be raised) |
 
 *Absolute price*
 
@@ -437,9 +461,9 @@ The **relative price** makes it possible to easily settle a price anywhere in th
 
 A positive value indicates a higher price for a sell, and a lower price for a buy, resulting in a safe position that should not be matched immediately. A negative value is the opposite - which will most probably be matched immediately, depending on the amount of the order.
 
-So, choosing a relative price of `1`: `--trade-price 1` is equivalent as the `maker` trade price strategy, and choosing a relative price of `-1` is equivalent to the `nibble` strategy.
+So, choosing a relative price of `1`: `--price 1` is equivalent as the `maker` trade price strategy, and choosing a relative price of `-1` is equivalent to the `nibble` strategy.
 
-The relative price is, contrary to the **absolute** (fixed) price above, compatible with multi-trade. Also, it is continuously updated over time depending on the `--trade-update-price` option.
+The relative price is, contrary to the **absolute** (fixed) price above, compatible with multi-trade. Also, it is continuously updated over time depending on the `--update-price` option.
 
 Here is a visual example, considering an order book of market A-B:
 
@@ -462,19 +486,19 @@ Here is a visual example, considering an order book of market A-B:
 Say you want to place a buy order of *A* with n *B* at relative price **3** for instance:
 
 ```
-./coincenter -t nB-A --trade-price 3
+coincenter trade nB-A --price 3
 ```
 
 The chosen price will be `0.42`.
 
 #### Single trade all
 
-If you want to simply sell all available amount from a given currency, you can use `--trade-all` option which takes a departure currency instead of an input amount. This command will ask to trade all available amount for all considered exchanges - use with care!
+If you want to simply sell all available amount from a given currency, you can use `trade-all` flavor which takes a departure currency instead of an input amount. This command will ask to trade all available amount for all considered exchanges - use with care!
 
 #### Examples with explanation
 
 ```
-coincenter -t 1btc-usdt
+coincenter trade 1btc-usdt
 ```
 
 Trade 1 BTC to USDT on all exchanges supporting BTC-USDT market and having some available BTC.
@@ -487,7 +511,7 @@ Trade 1 BTC to USDT on all exchanges supporting BTC-USDT market and having some 
 | exchange4_user1 | 0 BTC   | 0 BTC                       |
 
 ```
-coincenter -t 66.6%xlm-btc,kraken,huobi
+coincenter trade 66.6%xlm-btc,kraken,huobi
 ```
 
 Among all available XLM amount on all accounts on Kraken and Huobi, launch trades with a total of 66.6 % of starting XLM.
@@ -503,18 +527,18 @@ There is a total of `600` XLM available on all accounts of Kraken and Huobi, tra
 Prioritize the accounts with the largest amount of XLM first.
 
 ```
-coincenter --trade 0.5btc-eur,kraken --trade-sim --trade-strategy nibble --trade-timeout 1min
+coincenter trade 0.5btc-eur,kraken --sim --strategy nibble --timeout 1min
 ```
 
 Trade 0.5 BTC to euros on all Kraken accounts, in simulated mode (no real order will be placed, useful for tests), with the 'nibble' strategy, an emergency mode triggered before 2 seconds of the timeout of 1 minute
 
 ```
-coincenter --trade-all doge-usdt,binance_user1,huobi --trade-strategy taker
+coincenter trade-all doge-usdt,binance_user1,huobi --strategy taker
 ```
 
 Trade all DOGE to USDT on Binance account with key name 'user1' and all Huobi accounts, with the 'taker' strategy, keeping default time out and cancel remaining untouched amount when trade expires
 
-You can also choose the behavior of the trade when timeout is reached, thanks to `--trade-timeout-match` option. By default, when the trade expires, the last unmatched order is cancelled. With above option, instead it places a last order at market price (should be matched immediately).
+You can also choose the behavior of the trade when timeout is reached, thanks to `--timeout-match` option. By default, when the trade expires, the last unmatched order is cancelled. With above option, instead it places a last order at market price (should be matched immediately).
 
 ### Multi Trade
 
@@ -529,13 +553,13 @@ In the case it's activated in the config file, `--no-multi-trade` can force deac
 
 #### Trade simulation
 
-Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--trade-sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
+Some exchanges (**Kraken** and **Binance** for instance) allow to actually query their REST API in simulation mode to validate the query and not perform the trade. It is possible to do this with `--sim` option. For exchanges which do not support this validation mode, `coincenter` will simply directly finish the trade entirely (taking fees into account) ignoring the trade strategy.
 
 ### Buy / Sell
 
-Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `--buy` and `--sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `buy` and `sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
 
-Sell option also supports percentage as start amount. In this case, the desired percentage of total available amount of given currency on matching exchanges (the ones specified after the `,` or all if none given as usual) will be sold. To complement this, `--sell-all` option with a start currency instead of an amount is supported as well, which is syntaxic sugar of a sell of `100%` of available amount.
+Sell option also supports percentage as start amount. In this case, the desired percentage of total available amount of given currency on matching exchanges (the ones specified after the `,` or all if none given as usual) will be sold. To complement this, `sell-all` option with a start currency instead of an amount is supported as well, which is syntactic sugar of a sell of `100%` of available amount.
 
 Buy a percentage is not available yet, simply because I am not sure about what should be the behavior of this option. If you have ideas about it, do not hesitate to propose them.
 
@@ -551,7 +575,7 @@ The list of preferred currencies should be filled prior to **buy / sell** comman
 #### Examples with explanation
 
 ```bash
-coincenter --sell 1 BTC,exchange1,exchange3_user1
+coincenter sell 1 BTC,exchange1,exchange3_user1
 ```
 
 Sell `1 BTC` on all accounts on `exchange1` and `exchange3_user1` to any preferred currencies
@@ -567,7 +591,7 @@ Sell `1 BTC` on all accounts on `exchange1` and `exchange3_user1` to any preferr
 A total of `0.9 BTC` will be sold, to `USDT` on `exchange1` and to `KRW` on `exchange3`.
 
 ```bash
-coincenter --buy 2.5ETH
+coincenter buy 2.5ETH
 ```
 
 Buy `2 ETH` on all accounts which has some available amount in preferred currencies.
@@ -585,11 +609,11 @@ Let's consider following prices, without any trade fees (`coincenter` takes trad
 | exchange3_user1 | 800 EUR, 300 USDT | **800 EUR, 240 USDT**     | `[USDT,KRW,EUR]`     | **ETH-EUR,ETH-USDT** | **0.8 + 0.20 ETH**        |
 | exchange4_user1 | 500000 KRW        | **500000 KRW**            | `[USDT,KRW]`         | **ETH-KRW**          | **0.5 ETH**               |
 
-A total of `2 ETH` will be bought, from **600 USDT** on `exchange1_user2`, **800 EUR** and **240 USDT** from `exchange3_user1` and **500000 KRW** from `exchange4_user1`. As you can see in this example, it's possible to make several trades per account for one `--buy` request.
+A total of `2 ETH` will be bought, from **600 USDT** on `exchange1_user2`, **800 EUR** and **240 USDT** from `exchange3_user1` and **500000 KRW** from `exchange4_user1`. As you can see in this example, it's possible to make several trades per account for one `buy` request.
 
 ### Deposit information
 
-You can retrieve one deposit address and tag from your accounts on a given currency provided that the exchange can receive it with `--deposit-info` option. It requires a currency code, and an optional list of exchanges (private or public names, see [Handle several accounts per exchange](#handle-several-accounts-per-exchange)). If no exchanges are given, program will query all accounts and retrieve the possible ones.
+You can retrieve one deposit address and tag from your accounts on a given currency provided that the exchange can receive it with `deposit-info` option. It requires a currency code, and an optional list of exchanges (private or public names, see [Handle several accounts per exchange](#handle-several-accounts-per-exchange)). If no exchanges are given, program will query all accounts and retrieve the possible ones.
 
 If for a given exchange account a deposit address is not created yet, `coincenter` will create one automatically.
 
@@ -599,79 +623,79 @@ Only one deposit address per currency / account is returned.
 
 ### Recent deposits
 
-To retrieve the most recent deposits, use the `--deposits` option. Currency is optional - if not provided, deposits in all currencies will be returned.
+To retrieve the most recent deposits, use the `deposits` option. Currency is optional - if not provided, deposits in all currencies will be returned.
 
 Some exchanges do not provide a method to retrieve recent deposits for more than one currency (Kraken and Bithumb for instance).
 If you request all currencies on these exchanges, `coincenter` will not query deposits for all existing currencies, but only for the currencies present in your balance to decrease the number of queries. Still, it's an heuristic so it may of course miss other deposits.
 
 By default, it returns all deposits on given currency, or any currency. You can filter the deposits with options:
 
-- `--deposits-max-age <time>` to set a maximum age for the deposits to retrieve
-- `--deposits-min-age <time>` to set a minimum age for the deposits to retrieve
-- `--deposits-id <id1,id2,...>` to retrieve only deposits with given IDs
+- `--max-age <time>` to set a maximum age for the deposits to retrieve
+- `--min-age <time>` to set a minimum age for the deposits to retrieve
+- `--id <id1,id2,...>` to retrieve only deposits with given IDs
 
 #### Examples
 
-`coincenter --deposits kraken --deposits-max-age 2w`: retrieves all deposits of the last two weeks
+`coincenter deposits kraken --max-age 2w`: retrieves all deposits of the last two weeks
 
-`coincenter --deposits eth --deposits-id myid1,myid2`: retrieves all deposits of Ethereum, if they have either id `myid1` or `myid2`
+`coincenter deposits eth --id myid1,myid2`: retrieves all deposits of Ethereum, if they have either id `myid1` or `myid2`
 
 ### Recent withdraws
 
-Similarly to deposits, you can query the recent **withdraws** with command `--withdraws`. It works the same ways as deposits - you just need to replace `deposits` with `withdraws` in the option name (for instance, `--withdraws-max-age` specifies the maximum age for the withdraws to retrieve).
+Similarly to deposits, you can query the recent **withdraws** with command `withdraws`. It works the same ways as deposits - you just need to replace `deposits` with `withdraws` in the option name (for instance, `--max-age` specifies the maximum age for the withdraws to retrieve).
 
 #### Examples
 
 Retrieve all recent withdraws from all accounts:
 ```
-coincenter --withdraws
+coincenter withdraws
 ```
 
 Retrieve the withdraw of XRP on Upbit with id `myid3`
 
 ```
-coincenter --withdraws upbit,xrp --withdraws-id myid3
+coincenter withdraws upbit,xrp --id myid3
 ```
 
 ### Opened orders
 
-Use option `--orders-opened` to retrieve and print currently opened orders on your accounts. You can provide only one currency code, two currency codes separated with a `-`, and / or a list of exchanges on which to filter the orders. It is possible to not specify anything as well, in this case, all opened orders will be returned.
+Use option `orders-opened` to retrieve and print currently opened orders on your accounts. You can provide only one currency code, two currency codes separated with a `-`, and / or a list of exchanges on which to filter the orders. It is possible to not specify anything as well, in this case, all opened orders will be returned.
 
-Orders can be filtered according to placed time with options `--orders-min-age` and `--orders-max-age` specifying respectively the minimum and maximum age of the orders.
+Orders can be filtered according to placed time with options `--min-age` and `--max-age` specifying respectively the minimum and maximum age of the orders.
 
-Finally, they can also be filtered by their ID, thanks to `--orders-id` option. Give a list of comma separated string Ids.
+Finally, they can also be filtered by their ID, thanks to `--id` option. Give a list of comma separated string Ids.
 
 Examples:
 
 ```bash
-coincenter --orders-opened --orders-min-age 10min            # Retrieve all opened orders placed within the last 10 minutes
-coincenter --orders-opened kraken                            # Retrieve all opened orders on Kraken only
-coincenter --orders-opened eth --orders-max-age 1w           # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
-coincenter --orders-opened xlm-usdt                          # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
-coincenter --orders-opened btc-krw,upbit,bithumb             # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
-coincenter --orders-opened binance_joe --orders-id OID1,OID2 # Check if 'OID1' and 'OID2' are still opened on 'joe' account on Binance
+coincenter orders-opened --min-age 10min            # Retrieve all opened orders placed within the last 10 minutes
+coincenter orders-opened kraken                     # Retrieve all opened orders on Kraken only
+coincenter orders-opened eth --max-age 1w           # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
+coincenter orders-opened xlm-usdt                   # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
+coincenter orders-opened btc-krw,upbit,bithumb      # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
+coincenter orders-opened binance_joe --id OID1,OID2 # Check if 'OID1' and 'OID2' are still opened on 'joe' account on Binance
 ```
 
 ### Cancel opened orders
 
-Opened orders can be cancelled with `--orders-cancel` option, with the same filter arguments as opened orders option above.
+Opened orders can be cancelled with `orders-cancel` option, with the same filter arguments as opened orders option above.
 **Beware**, no filtering options matches all opened orders, so this command:
 
 ```bash
-coincenter --orders-cancel
+coincenter orders-cancel
 ```
 
 will cancel all opened orders on all available exchanges. You can first check the current open orders and order cancellations by ID:
 
 ```bash
-coincenter --orders-cancel --orders-id OID1
+coincenter orders-cancel --id OID1
 ```
 
 cancels order Id OID1 only, on the exchange where it is found on (no error is raised if no such opened order has this ID).
 
 ### Withdraw coin
 
-It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `--withdraw-apply-all` is a convenient command wrapper of `--withdraw-apply 100%`.
+It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `withdraw-apply-all` is a convenient command wrapper of `withdraw-apply 100%`.
 
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
@@ -683,7 +707,7 @@ To ensure maximum safety, there are two checks performed by `coincenter` prior t
 Example: Withdraw 10000 XLM (Stellar) from Bithumb to Huobi:
 
 ```
-coincenter --withdraw-apply 10000xlm,bithumb-huobi
+coincenter withdraw-apply 10000xlm,bithumb-huobi
 ```
 
 #### Withdraw options
@@ -691,14 +715,14 @@ coincenter --withdraw-apply 10000xlm,bithumb-huobi
 ##### Withdraw refresh time
 
 You can customize the withdraw refresh time of the periodic checks during the continuous checking of withdraw status and receive at destination in **synchronous** mode.
-For that, specify a different time period with `--withdraw-refresh-time` that expects a string representation of a time.
+For that, specify a different time period with `--refresh-time` that expects a string representation of a time.
 
 Defaults to 5 seconds.
 
 ##### Withdraw asynchronous mode
 
 By default `coincenter` will exit withdraw process only once destination has received the funds.
-You can change the behavior to an **asynchronous** mode thanks to `--withdraw-async` option, which is like a fire and forget mode. Once the withdraw is initiated, withdraw process is finished and the withdraw is not followed anymore.
+You can change the behavior to an **asynchronous** mode thanks to `--async` option, which is like a fire and forget mode. Once the withdraw is initiated, withdraw process is finished and the withdraw is not followed anymore.
 
 ### Dust sweeper
 
@@ -712,7 +736,7 @@ If you are annoyed with this kind of balance:
 
 and you would like to "clean" these small amounts to zero, then *dust sweeper* is the option to use!
 
-When user defines a threshold amount on a given currency, `--dust-sweeper` can be used to attempt to sell all amount (if below this threshold) trying to reach exactly 0 amount on this currency for a clean balance.
+When user defines a threshold amount on a given currency, `dust-sweeper` can be used to attempt to sell all amount (if below this threshold) trying to reach exactly 0 amount on this currency for a clean balance.
 The algorithm used by `coincenter` is a simple heuristic:
 
 - it finds the best markets involving currency to be sold
@@ -723,7 +747,7 @@ The algorithm used by `coincenter` is a simple heuristic:
 Example: Attempts to clean amount of BTG on bithumb and upbit
 
 ```
-coincenter --dust-sweeper btg,bithumb,upbit
+coincenter dust-sweeper btg,bithumb,upbit
 ```
 
 ## Monitoring options
@@ -747,19 +771,19 @@ Between each repeat you can set a waiting time with `--repeat-time` option which
 ### Get an overview of your portfolio in Korean Won
 
 ```
-coincenter -b krw
+coincenter balance krw
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy
 
 ```
-coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 60s
+coincenter trade "1000eur-xrp,kraken" --strategy maker --timeout 60s
 ```
 
 ### Trade 1000 euros to XRP on kraken with a maker strategy in simulation mode
 
 ```
-coincenter --trade "1000eur-xrp,kraken" --trade-strategy maker --trade-timeout 1min --trade-sim
+coincenter trade "1000eur-xrp,kraken" --strategy maker --timeout 1min --sim
 ```
 
 Possible output
@@ -773,7 +797,7 @@ Possible output
 How to change Yearn Finance to Bitcoin on all exchanges
 
 ```
-coincenter -c yfi-btc
+coincenter conversion yfi-btc
 ```
 
 Possible output
@@ -793,7 +817,7 @@ Possible output
 ### Prints all markets trading Stellar (XLM)
 
 ```
-coincenter -m xlm
+coincenter markets xlm
 ```
 
 Possible output
@@ -824,7 +848,7 @@ Possible output
 ### Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros
 
 ```
-coincenter -o eth-krw,bithumb,upbit --orderbook-cur eur --orderbook-depth 5
+coincenter orderbook eth-krw,bithumb,upbit --cur eur --depth 5
 ```
 
 Possible output
@@ -864,7 +888,7 @@ Possible output
 ### Prints last 24h traded volume for all exchanges supporting ETH-USDT market
 
 ```
-coincenter --volume-day eth-usdt
+coincenter volume-day eth-usdt
 ```
 
 Possible output:
@@ -883,7 +907,7 @@ Possible output:
 ### Prints last price of Cardano in Bitcoin for all exchanges supporting it
 
 ```
-coincenter --price ada-btc
+coincenter price ada-btc
 ```
 
 Possible output:

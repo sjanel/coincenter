@@ -134,6 +134,8 @@ struct CoincenterCmdLineOptions {
 
   bool isSmartTrade() const noexcept;
 
+  void mergeGlobalWith(const CoincenterCmdLineOptions& other);
+
   std::string_view dataDir = SelectDefaultDataDir();
 
   std::string_view apiOutputType;
@@ -174,19 +176,14 @@ struct CoincenterCmdLineOptions {
 
   std::optional<std::string_view> openedOrdersInfo;
   std::optional<std::string_view> cancelOpenedOrders;
-  std::string_view ordersIds;
-  Duration ordersMinAge{};
-  Duration ordersMaxAge{};
 
   std::optional<std::string_view> recentDepositsInfo;
-  std::string_view depositsIds;
-  Duration depositsMinAge{};
-  Duration depositsMaxAge{};
 
   std::optional<std::string_view> recentWithdrawsInfo;
-  std::string_view withdrawsIds;
-  Duration withdrawsMinAge{};
-  Duration withdrawsMaxAge{};
+
+  std::string_view ids;
+  Duration minAge{};
+  Duration maxAge{};
 
   std::string_view withdraw;
   std::string_view withdrawAll;
@@ -222,9 +219,9 @@ struct CoincenterAllowedOptions {
   using CommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
 
   static constexpr CommandLineOptionWithValue value[] = {
-      {{{"General", 1}, "--help", 'h', "", "Display this information"}, &OptValueType::help},
-      {{{"General", 2}, "--data", "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
-      {{{"General", 3},
+      {{{"General", 100}, "help", 'h', "", "Display this information"}, &OptValueType::help},
+      {{{"General", 200}, "--data", "<path/to/data>", CoincenterCmdLineOptions::kData}, &OptValueType::dataDir},
+      {{{"General", 300},
         "--log",
         'v',
         "<levelName|0-6>",
@@ -232,21 +229,21 @@ struct CoincenterAllowedOptions {
         "Possible values are: (off|critical|error|warning|info|debug|trace) or "
         "(0-6) (overrides .log.console in general config file)"},
        &OptValueType::logConsole},
-      {{{"General", 4}, "--log-console", "<levelName|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
-      {{{"General", 4},
+      {{{"General", 400}, "--log-console", "<levelName|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
+      {{{"General", 400},
         "--log-file",
         "<levelName|0-6>",
         "Sets the log level in files during all execution (overrides .log.file in general config file). "
         "Number of rotating files to keep and their size is configurable in the general config file"},
        &OptValueType::logFile},
-      {{{"General", 5}, "--output", 'o', "", CoincenterCmdLineOptions::kOutput}, &OptValueType::apiOutputType},
-      {{{"General", 7},
+      {{{"General", 500}, "--output", 'o', "", CoincenterCmdLineOptions::kOutput}, &OptValueType::apiOutputType},
+      {{{"General", 700},
         "--no-secrets",
         "<[exch1,...]>",
         "Do not load secrets for specified exchanges.\n"
         "If no exchange is specified, no key will be loaded at all"},
        &OptValueType::noSecrets},
-      {{{"General", 8},
+      {{{"General", 800},
         "--repeat",
         'r',
         "<[n]>",
@@ -254,151 +251,143 @@ struct CoincenterAllowedOptions {
         "Modifying requests such as trades and withdraws are not impacted by this option. "
         "This is useful for monitoring for instance. 'n' is optional, if not given, will repeat endlessly"},
        &OptValueType::repeats},
-      {{{"General", 9}, "--repeat-time", "<time>", CoincenterCmdLineOptions::kRepeat}, &OptValueType::repeatTime},
-      {{{"General", 10}, "--version", "", "Display program version"}, &OptValueType::version},
-      {{{"Public queries", 20},
-        "--health-check",
+      {{{"General", 900}, "--repeat-time", "<time>", CoincenterCmdLineOptions::kRepeat}, &OptValueType::repeatTime},
+      {{{"General", 1000}, "version", "", "Display program version"}, &OptValueType::version},
+      {{{"Public queries", 2000},
+        "health-check",
         "<[exch1,...]>",
         "Simple health check for all exchanges or specified ones"},
        &OptValueType::healthCheck},
-      {{{"Public queries", 20},
-        "--markets",
-        'm',
+      {{{"Public queries", 2100},
+        "markets",
         "<cur1[-cur2][,exch1,...]>",
         "Print markets involving given currencies for all exchanges, "
         "or only the specified ones. "
         "Either a single currency or a full market can be specified."},
        &OptValueType::markets},
 
-      {{{"Public queries", 20},
-        "--orderbook",
+      {{{"Public queries", 2200},
+        "orderbook",
         "<cur1-cur2[,exch1,...]>",
         "Print order book of currency pair for all exchanges offering "
         "this market, or only for specified exchanges."},
        &OptValueType::orderbook},
-      {{{"Public queries", 20}, "--orderbook-depth", "<n>", "Override default depth of order book"},
-       &OptValueType::orderbookDepth},
-      {{{"Public queries", 20},
-        "--orderbook-cur",
+      {{{"Public queries", 2300},
+        "--cur",
         "<cur>",
         "If conversion of cur2 into cur is possible (for each exchange), "
         "prints additional column converted to given asset"},
        &OptValueType::orderbookCur},
-      {{{"Public queries", 20},
-        "--ticker",
+      {{{"Public queries", 2300}, "--depth", "<n>", "Override default depth of order book"},
+       &OptValueType::orderbookDepth},
+      {{{"Public queries", 2400},
+        "ticker",
         "<[exch1,...]>",
         "Print ticker information for all markets for all exchanges,"
         " or only for specified ones"},
        &OptValueType::ticker},
-      {{{"Public queries", 20},
-        "--conversion",
-        'c',
+      {{{"Public queries", 2500},
+        "conversion",
         "<cur1-cur2[,exch1,...]>",
         "Print fastest conversion path of 'cur1' to 'cur2' "
         "for given exchanges if possible"},
        &OptValueType::conversionPath},
-      {{{"Public queries", 20},
-        "--volume-day",
+      {{{"Public queries", 2600},
+        "volume-day",
         "<cur1-cur2[,exch1,...]>",
         "Print last 24h traded volume for market 'cur1'-'cur2' "
         "for all exchanges (or specified one)"},
        &OptValueType::last24hTradedVolume},
-      {{{"Public queries", 20},
-        "--last-trades",
+      {{{"Public queries", 2700},
+        "last-trades",
         "<cur1-cur2[,exch1,...]>",
         "Print last trades for market 'cur1'-'cur2' "
         "for all exchanges (or specified one)"},
        &OptValueType::lastTrades},
-      {{{"Public queries", 20}, "--last-trades-n", "<n>", CoincenterCmdLineOptions::kLastTradesN},
-       &OptValueType::nbLastTrades},
-      {{{"Public queries", 20},
-        "--price",
-        'p',
+      {{{"Public queries", 2800}, "--n", "<n>", CoincenterCmdLineOptions::kLastTradesN}, &OptValueType::nbLastTrades},
+      {{{"Public queries", 2900},
+        "price",
         "<cur1-cur2[,exch1,...]>",
         "Print last price for market 'cur1'-'cur2' "
         "for all exchanges (or specified one)"},
        &OptValueType::lastPrice},
 
-      {{{"Private queries", 30},
-        "--balance",
-        'b',
+      {{{"Private queries", 3000},
+        "balance",
         "<[cur][,exch1,...]>",
         "Prints sum of available balance for all selected accounts, "
         "or all if none given. Optional acronym can be provided, "
         "in this case a total amount will be printed in this currency "
         "if conversion is possible."},
        &OptValueType::balance},
-      {{{"Private queries", 30}, "--balance-in-use", "", "Include balance in use as well from opened orders"},
+      {{{"Private queries", 3100}, "--in-use", "", "Include balance in use as well from opened orders"},
        &OptValueType::withBalanceInUse},
-      {{{"Private queries", 30},
-        "--orders-opened",
+      {{{"Private queries", 3250},
+        "orders-opened",
         "<cur1-cur2[,exch1,...]>",
         "Print opened orders matching selection criteria.\n"
         "All cur1, cur2 and exchanges are optional, "
         "returned opened orders will be filtered accordingly."},
        &OptValueType::openedOrdersInfo},
-      {{{"Private queries", 31},
-        "--orders-cancel",
+      {{{"Private queries", 3260},
+        "orders-cancel",
         "<cur1-cur2[,exch1,...]>",
         "Cancel opened orders matching selection criteria.\n"
         "All cur1, cur2 and exchanges are optional."},
        &OptValueType::cancelOpenedOrders},
-      {{{"Private queries", 31},
-        "--orders-id",
+      {{{"Private queries", 3300},
+        "--id",
         "<id1,...>",
         "Only select orders with given ID.\n"
         "One or several IDs can be given, should be comma separated."},
-       &OptValueType::ordersIds},
-      {{{"Private queries", 31}, "--orders-min-age", "<time>", "Only select orders with given minimum age."},
-       &OptValueType::ordersMinAge},
-      {{{"Private queries", 32}, "--orders-max-age", "<time>", "Only select orders with given maximum age."},
-       &OptValueType::ordersMaxAge},
-      {{{"Private queries", 33},
-        "--deposits",
-        'd',
+       &OptValueType::ids},
+      {{{"Private queries", 3301}, "--min-age", "<time>", "Only select orders with given minimum age."},
+       &OptValueType::minAge},
+      {{{"Private queries", 3302}, "--max-age", "<time>", "Only select orders with given maximum age."},
+       &OptValueType::maxAge},
+      {{{"Private queries", 3400},
+        "deposits",
         "<cur[,exch1,...]>",
         "Print recent deposits matching selection criteria.\n"
         "Currency and exchanges are optional, "
         "returned deposits will be filtered accordingly."},
        &OptValueType::recentDepositsInfo},
-      {{{"Private queries", 33},
-        "--deposits-id",
+      {{{"Private queries", 3600},
+        "--id",
         "<id1,...>",
         "Only select deposits with given ID.\n"
         "One or several IDs can be given, should be comma separated."},
-       &OptValueType::depositsIds},
-      {{{"Private queries", 33}, "--deposits-min-age", "<time>", "Only select deposits with given minimum age."},
-       &OptValueType::depositsMinAge},
-      {{{"Private queries", 33}, "--deposits-max-age", "<time>", "Only select deposits with given maximum age."},
-       &OptValueType::depositsMaxAge},
-      {{{"Private queries", 34},
-        "--withdraws",
-        'w',
+       &OptValueType::ids},
+      {{{"Private queries", 3601}, "--min-age", "<time>", "Only select deposits with given minimum age."},
+       &OptValueType::minAge},
+      {{{"Private queries", 3602}, "--max-age", "<time>", "Only select deposits with given maximum age."},
+       &OptValueType::maxAge},
+      {{{"Private queries", 3800},
+        "withdraws",
         "<cur[,exch1,...]>",
         "Print recent withdraws matching selection criteria.\n"
         "Currency and exchanges are optional, "
         "returned withdraws will be filtered accordingly."},
        &OptValueType::recentWithdrawsInfo},
-      {{{"Private queries", 34},
-        "--withdraws-id",
+      {{{"Private queries", 3900},
+        "--id",
         "<id1,...>",
         "Only select withdraws with given ID.\n"
         "One or several IDs can be given, should be comma separated."},
-       &OptValueType::withdrawsIds},
-      {{{"Private queries", 34}, "--withdraws-min-age", "<time>", "Only select withdraws with given minimum age."},
-       &OptValueType::withdrawsMinAge},
-      {{{"Private queries", 34}, "--withdraws-max-age", "<time>", "Only select withdraws with given maximum age."},
-       &OptValueType::withdrawsMaxAge},
-      {{{"Trade", 40}, "--buy", "<amt cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
-      {{{"Trade", 40}, "--sell", "<amt[%]cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
-      {{{"Trade", 40},
-        "--sell-all",
+       &OptValueType::ids},
+      {{{"Private queries", 3901}, "--min-age", "<time>", "Only select withdraws with given minimum age."},
+       &OptValueType::minAge},
+      {{{"Private queries", 3902}, "--max-age", "<time>", "Only select withdraws with given maximum age."},
+       &OptValueType::maxAge},
+      {{{"Trade", 4000}, "buy", "<amt cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartBuy}, &OptValueType::buy},
+      {{{"Trade", 4000}, "sell", "<amt[%]cur[,exch1,...]>", CoincenterCmdLineOptions::kSmartSell}, &OptValueType::sell},
+      {{{"Trade", 4000},
+        "sell-all",
         "<cur[,exch1,...]>",
         "Sell all available amount on matching exchanges (or all if none specified), behaving like sell option."},
        &OptValueType::sellAll},
-      {{{"Trade", 40},
-        "--trade",
-        't',
+      {{{"Trade", 4000},
+        "trade",
         "<amt[%]cur1-cur2[,exch1,...]>",
         "Single trade from given start amount on a list of exchanges, "
         "or all that have sufficient balance on cur1 if none provided.\n"
@@ -406,20 +395,20 @@ struct CoincenterAllowedOptions {
         "of available amount on matching exchanges will be traded.\n"
         "Orders will be placed prioritizing accounts with largest amounts, at limit price by default."},
        &OptValueType::trade},
-      {{{"Trade", 40},
-        "--trade-all",
+      {{{"Trade", 4000},
+        "trade-all",
         "<cur1-cur2[,exch1,...]>",
         "Single trade from available amount from given currency on a list of exchanges,"
         " or all that have some balance on cur1 if none provided\n"
         "Order will be placed at limit price by default"},
        &OptValueType::tradeAll},
-      {{{"Trade", 40},
-        "--trade-async",
+      {{{"Trade", 4010},
+        "--async",
         "",
         "Asynchronous trade mode. Trade orders will be sent in fire and forget mode, not following their lifetime "
-        "until either match or cancel occurs.\n This option is not compatible with multi trade."},
+        "until either match or cancel occurs.\nThis option is not compatible with multi trade."},
        &OptValueType::tradeAsync},
-      {{{"Trade", 41},
+      {{{"Trade", 4010},
         "--multi-trade",
         "",
         "Force activation of multi trade mode for all exchanges, overriding default configuration of config file.\n"
@@ -428,96 +417,94 @@ struct CoincenterAllowedOptions {
         "step (for instance, the trade timeout is related to a single trade, not the series of all trades of a multi "
         "trade)."},
        &OptValueType::forceMultiTrade},
-      {{{"Trade", 42},
+      {{{"Trade", 4020},
         "--no-multi-trade",
         "",
         "Force deactivation of multi trade mode for all exchanges, overriding default configuration of config file."},
        &OptValueType::forceSingleTrade},
-      {{{"Trade", 43},
-        "--trade-price",
+      {{{"Trade", 4030},
+        "--price",
         "<n|amt cur>",
         "Manually select trade price, supporting two flavors.\n"
         "  'n'      : price will be chosen according to the 'n'th price\n"
         "             of the order book (0: limit price)\n"
         "  'amt cur': price will be fixed at given price\n"
         "             Order price will not be continuously updated.\n"
-        "This option is not compatible with '--trade-strategy'"},
+        "This option is not compatible with '--strategy'"},
        &OptValueType::tradePrice},
-      {{{"Trade", 43},
-        "--trade-strategy",
+      {{{"Trade", 4030},
+        "--strategy",
         "<maker|nibble|taker>",
         "Customize the order price strategy of the trade\n"
         "  'maker' : order price set at limit price (default)\n"
         "  'nibble': order price set at limit price +(buy)/-(sell) 1\n"
         "  'taker' : order price will be at market price and matched immediately\n"
-        "Order price will be continuously updated and recomputed every '--trade-update-price' step time.\n"
-        "This option is not compatible with '--trade-price'"},
+        "Order price will be continuously updated and recomputed every '--update-price' step time.\n"
+        "This option is not compatible with '--price'"},
        &OptValueType::tradeStrategy},
-      {{{"Trade", 43}, "--trade-timeout", "<time>", CoincenterCmdLineOptions::kTradeTimeout},
-       &OptValueType::tradeTimeout},
-      {{{"Trade", 43},
-        "--trade-timeout-match",
+      {{{"Trade", 4030}, "--timeout", "<time>", CoincenterCmdLineOptions::kTradeTimeout}, &OptValueType::tradeTimeout},
+      {{{"Trade", 4030},
+        "--timeout-match",
         "",
         "If after the timeout some amount is still not traded,\n"
-        "force match by placing a remaining order at market price\n"},
+        "force match by placing a remaining order at market price"},
        &OptValueType::tradeTimeoutMatch},
-      {{{"Trade", 43}, "--trade-update-price", "<time>", CoincenterCmdLineOptions::kTradeUpdatePrice},
+      {{{"Trade", 4030}, "--update-price", "<time>", CoincenterCmdLineOptions::kTradeUpdatePrice},
        &OptValueType::tradeUpdatePrice},
-      {{{"Trade", 44}, "--trade-sim", "", CoincenterCmdLineOptions::kSimulationMode}, &OptValueType::tradeSim},
-      {{{"Tools", 50}, "--dust-sweeper", "<cur[,exch1,...]>", CoincenterCmdLineOptions::kDustSweeper},
+      {{{"Trade", 4030}, "--sim", "", CoincenterCmdLineOptions::kSimulationMode}, &OptValueType::tradeSim},
+      {{{"Tools", 5000}, "dust-sweeper", "<cur[,exch1,...]>", CoincenterCmdLineOptions::kDustSweeper},
        &OptValueType::dustSweeper},
-      {{{"Withdraw and deposit", 60},
-        "--deposit-info",
+      {{{"Withdraw and deposit", 6000},
+        "deposit-info",
         "<cur[,exch1,...]>",
         "Get deposit wallet information for given currency."
         " If no exchange accounts are given, will query all of them by default"},
        &OptValueType::depositInfo},
-      {{{"Withdraw and deposit", 60}, "--withdraw-apply", "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
+      {{{"Withdraw and deposit", 6000}, "withdraw-apply", "<amt[%]cur,from-to>", CoincenterCmdLineOptions::kWithdraw},
        &OptValueType::withdraw},
-      {{{"Withdraw and deposit", 60},
-        "--withdraw-async",
+      {{{"Withdraw and deposit", 6010},
+        "--async",
         "",
         "Initiate withdraw but do not wait for funds' arrival at destination."},
        &OptValueType::withdrawAsync},
-      {{{"Withdraw and deposit", 60},
-        "--withdraw-refresh-time",
-        "<time>",
-        CoincenterCmdLineOptions::kWithdrawRefreshTime},
+      {{{"Withdraw and deposit", 6010}, "--refresh-time", "<time>", CoincenterCmdLineOptions::kWithdrawRefreshTime},
        &OptValueType::withdrawRefreshTime},
-      {{{"Withdraw and deposit", 60},
-        "--withdraw-apply-all",
+      {{{"Withdraw and deposit", 7000},
+        "withdraw-apply-all",
         "<cur,from-to>",
         "Withdraw all available amount instead of a specified amount."},
        &OptValueType::withdrawAll},
-      {{{"Withdraw and deposit", 60},
-        "--withdraw-fee",
+      {{{"Withdraw and deposit", 8000},
+        "withdraw-fee",
         "<cur[,exch1,...]>",
         "Prints withdraw fees of given currency on all supported exchanges,"
         " or only for the list of specified ones if provided (comma separated)."},
        &OptValueType::withdrawFee},
-      {{{"Monitoring", 70},
+      {{{"Monitoring", 9000},
         "--monitoring",
         "",
         "Progressively send metrics to external instance provided that it's correctly set up "
         "(Prometheus by default). Refer to the README for more information"},
        &OptValueType::useMonitoring},
-      {{{"Monitoring", 70}, "--monitoring-port", "<port>", CoincenterCmdLineOptions::kMonitoringPort},
+      {{{"Monitoring", 9000}, "--monitoring-port", "<port>", CoincenterCmdLineOptions::kMonitoringPort},
        &OptValueType::monitoringPort},
-      {{{"Monitoring", 70}, "--monitoring-ip", "<IPv4>", CoincenterCmdLineOptions::kMonitoringIP},
+      {{{"Monitoring", 9000}, "--monitoring-ip", "<IPv4>", CoincenterCmdLineOptions::kMonitoringIP},
        &OptValueType::monitoringAddress},
-      {{{"Monitoring", 70},
+      {{{"Monitoring", 9000},
         "--monitoring-user",
         "<username>",
         "Specify username of metric gateway instance (default: none)"},
        &OptValueType::monitoringUsername},
-      {{{"Monitoring", 70},
+      {{{"Monitoring", 9000},
         "--monitoring-pass",
         "<password>",
         "Specify password of metric gateway instance (default: none)"},
        &OptValueType::monitoringPassword}};
 
-  static_assert(StaticCommandLineOptionsCheck(std::to_array(value)),
+  static_assert(StaticCommandLineOptionsDuplicatesCheck(std::to_array(value)),
                 "Duplicated option names (short hand flag / long name)");
+  static_assert(StaticCommandLineOptionsDescriptionCheck(std::to_array(value)),
+                "Description of a command line option should not start nor end with a '\n' or space");
 };
 
 }  // namespace cct

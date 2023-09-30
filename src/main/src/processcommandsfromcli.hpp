@@ -8,5 +8,5 @@
 
 namespace cct {
 void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &cmdLineOptions, settings::RunMode runMode);
+                            const CoincenterCmdLineOptions &generalOptions, settings::RunMode runMode);
 }
