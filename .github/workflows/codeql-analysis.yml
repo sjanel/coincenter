@@ -31,7 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         language: ["cpp"]
-        compiler: [g++-11]
         buildmode: [Debug]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
@@ -54,14 +53,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install libcurl4-gnutls-dev ninja-build ${{matrix.compiler}} --no-install-recommends
+          sudo apt install build-essential ninja-build libssl-dev libcurl4-gnutls-dev cmake git ca-certificates gzip -y --no-install-recommends
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja ..
+        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -GNinja ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -75,4 +74,4 @@ jobs:
       #    uses a compiled language
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
+        uses: github/codeql-action/analyze@v3
