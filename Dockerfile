@@ -4,7 +4,7 @@ FROM ubuntu:22.04 AS build
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apt update && \
     apt upgrade -y && \
-    apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip -y --no-install-recommends
+    apt install build-essential ninja-build libssl-dev libcurl4-gnutls-dev cmake git ca-certificates gzip -y --no-install-recommends
 
 # Copy source files
 WORKDIR /app/src
