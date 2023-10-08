@@ -8,7 +8,7 @@
 
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -53,8 +53,8 @@ class TestAPI {
   CoincenterInfo coincenterInfo{runMode, loadConfig};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
-  PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};
+  CommonAPI commonAPI{coincenterInfo};
+  PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, commonAPI};
   std::optional<PrivateExchangeT> exchangePrivateOpt;
 
   CurrencyExchangeFlatSet currencies;

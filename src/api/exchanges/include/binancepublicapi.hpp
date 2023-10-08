@@ -19,15 +19,14 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class BinancePublic : public ExchangePublic {
  public:
   static constexpr std::string_view kURLBases[] = {"https://api.binance.com", "https://api1.binance.com",
                                                    "https://api2.binance.com", "https://api3.binance.com"};
 
-  BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
-                api::CryptowatchAPI& cryptowatchAPI);
+  BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter, api::CommonAPI& commonAPI);
 
   bool healthCheck() override;
 

@@ -49,10 +49,10 @@ class ExchangePrivateTest : public ::testing::Test {
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
-  CryptowatchAPI cryptowatchAPI{coincenterInfo, settings::RunMode::kTestKeys, Duration::max(), true};
+  CommonAPI commonAPI{coincenterInfo, Duration::max(), true};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
 
-  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
+  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
   APIKey key{"test", "testUser", "", "", ""};
   MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
 
@@ -422,7 +422,7 @@ class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
 
   MonetaryAmount grossAmount{"2.5ETH"};
   CurrencyCode cur{grossAmount.currencyCode()};
-  MockExchangePublic destinationExchangePublic{"kraken", fiatConverter, cryptowatchAPI, coincenterInfo};
+  MockExchangePublic destinationExchangePublic{"kraken", fiatConverter, commonAPI, coincenterInfo};
   MockExchangePrivate destinationExchangePrivate{destinationExchangePublic, coincenterInfo, key};
   Wallet receivingWallet{
       destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(), AccountOwner()};
@@ -490,7 +490,7 @@ TEST_F(ExchangePrivateWithdrawTest, WithdrawSynchronousReceivedBeforeSent) {
 TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
   MonetaryAmount grossAmount("2.5ETH");
   CurrencyCode cur = grossAmount.currencyCode();
-  MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, cryptowatchAPI, coincenterInfo);
+  MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, commonAPI, coincenterInfo);
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
   Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(),
                          AccountOwner("SmithJohn", "스미스존"));

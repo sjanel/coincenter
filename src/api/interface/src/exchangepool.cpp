@@ -15,17 +15,17 @@
 
 namespace cct {
 ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
-                           api::CryptowatchAPI& cryptowatchAPI, const api::APIKeysProvider& apiKeyProvider)
+                           api::CommonAPI& commonAPI, const api::APIKeysProvider& apiKeyProvider)
     : _coincenterInfo(coincenterInfo),
       _fiatConverter(fiatConverter),
-      _cryptowatchAPI(cryptowatchAPI),
+      _commonAPI(commonAPI),
       _apiKeyProvider(apiKeyProvider),
-      _binancePublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _bithumbPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _huobiPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _krakenPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _kucoinPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI),
-      _upbitPublic(_coincenterInfo, _fiatConverter, _cryptowatchAPI) {
+      _binancePublic(_coincenterInfo, _fiatConverter, _commonAPI),
+      _bithumbPublic(_coincenterInfo, _fiatConverter, _commonAPI),
+      _huobiPublic(_coincenterInfo, _fiatConverter, _commonAPI),
+      _krakenPublic(_coincenterInfo, _fiatConverter, _commonAPI),
+      _kucoinPublic(_coincenterInfo, _fiatConverter, _commonAPI),
+      _upbitPublic(_coincenterInfo, _fiatConverter, _commonAPI) {
   for (std::string_view exchangeStr : kSupportedExchanges) {
     api::ExchangePublic* exchangePublic;
     if (exchangeStr == "binance") {

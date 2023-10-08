@@ -29,3 +29,11 @@ add_unit_test(
     LIBRARIES
     coincenter_http-request
 )
+
+
+add_unit_test(
+    permanentcurloptions_test
+    test/permanentcurloptions_test.cpp
+    LIBRARIES
+    coincenter_tech
+)

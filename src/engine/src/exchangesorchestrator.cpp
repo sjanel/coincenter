@@ -312,8 +312,8 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingMarket(M
 namespace {
 using MarketSetsPerPublicExchange = FixedCapacityVector<MarketSet, kNbSupportedExchanges>;
 
-api::CryptowatchAPI::Fiats QueryFiats(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
-  api::CryptowatchAPI::Fiats fiats;
+api::CommonAPI::Fiats QueryFiats(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
+  api::CommonAPI::Fiats fiats;
   if (!publicExchanges.empty()) {
     fiats = publicExchanges.front()->queryFiats();
   }
@@ -342,7 +342,7 @@ using KeepExchangeBoolArray = std::array<bool, kNbSupportedExchanges>;
 ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVector &exchangeAmountPairVector,
                                                       CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                                       MarketSetsPerPublicExchange &marketsPerPublicExchange,
-                                                      const api::CryptowatchAPI::Fiats &fiats,
+                                                      const api::CommonAPI::Fiats &fiats,
                                                       const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector ret;
 
@@ -426,7 +426,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
 
   MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
-  api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
+  api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
 
   return FilterConversionPaths(exchangeAmountPairVector, fromCurrency, toCurrency, marketsPerPublicExchange, fiats,
                                tradeOptions);
@@ -508,11 +508,10 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
   FixedCapacityVector<MarketOrderBookMap, kNbSupportedExchanges> marketOrderbooksPerPublicExchange(
       publicExchanges.size());
 
-  api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
+  api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
 
   ExchangeAmountToCurrencyToAmountVector trades;
   MonetaryAmount remEndAmount = endAmount;
-  constexpr bool canUseCryptowatchAPI = false;
   constexpr bool considerStableCoinsAsFiats = false;
   for (int nbSteps = 1;; ++nbSteps) {
     bool continuingHigherStepsPossible = false;
@@ -555,9 +554,8 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
             continuingHigherStepsPossible = true;
           } else if (nbConversions == nbSteps) {
             MonetaryAmount startAmount = avAmount;
-            std::optional<MonetaryAmount> optEndAmount =
-                exchangePublic.convert(startAmount, toCurrency, conversionPath, fiats, marketOrderBookMap,
-                                       canUseCryptowatchAPI, tradeOptions.priceOptions());
+            std::optional<MonetaryAmount> optEndAmount = exchangePublic.convert(
+                startAmount, toCurrency, conversionPath, fiats, marketOrderBookMap, tradeOptions.priceOptions());
             if (optEndAmount) {
               trades.emplace_back(pExchange, startAmount, toCurrency, std::move(conversionPath), *optEndAmount);
             }
@@ -623,7 +621,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAm
     MarketSetsPtrPerExchange marketSetsPtrPerExchange =
         MapMarketSetsPtrInExchangesOrder(exchangeAmountPairVector, publicExchanges, marketsPerPublicExchange);
 
-    api::CryptowatchAPI::Fiats fiats = QueryFiats(publicExchanges);
+    api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
 
     if (isPercentageTrade) {
       MonetaryAmount totalAvailableAmount = std::accumulate(

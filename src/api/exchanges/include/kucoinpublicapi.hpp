@@ -22,7 +22,7 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class KucoinPublic : public ExchangePublic {
  public:
@@ -30,7 +30,7 @@ class KucoinPublic : public ExchangePublic {
 
   static constexpr int kKucoinStandardOrderBookDefaultDepth = 20;
 
-  KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI);
 
   bool healthCheck() override;
 
@@ -73,8 +73,8 @@ class KucoinPublic : public ExchangePublic {
 
   struct TradableCurrenciesFunc {
 #ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesFunc(CurlHandle& curlHandle, const CoincenterInfo& coincenterInfo, CryptowatchAPI& cryptowatchApi)
-        : _curlHandle(curlHandle), _coincenterInfo(coincenterInfo), _cryptowatchApi(cryptowatchApi) {}
+    TradableCurrenciesFunc(CurlHandle& curlHandle, const CoincenterInfo& coincenterInfo, CommonAPI& commonApi)
+        : _curlHandle(curlHandle), _coincenterInfo(coincenterInfo), _commonApi(commonApi) {}
 #endif
 
     struct CurrencyInfo {
@@ -98,7 +98,7 @@ class KucoinPublic : public ExchangePublic {
 
     CurlHandle& _curlHandle;
     const CoincenterInfo& _coincenterInfo;
-    CryptowatchAPI& _cryptowatchApi;
+    CommonAPI& _commonApi;
   };
 
   struct MarketsFunc {

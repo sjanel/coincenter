@@ -17,11 +17,11 @@ using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExc
 
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
     : _coincenterInfo(coincenterInfo),
-      _cryptowatchAPI(coincenterInfo, coincenterInfo.getRunMode()),
+      _commonAPI(coincenterInfo),
       _fiatConverter(coincenterInfo, coincenterInfo.fiatConversionQueryRate()),
       _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
       _metricsExporter(coincenterInfo.metricGatewayPtr()),
-      _exchangePool(coincenterInfo, _fiatConverter, _cryptowatchAPI, _apiKeyProvider),
+      _exchangePool(coincenterInfo, _fiatConverter, _commonAPI, _apiKeyProvider),
       _exchangesOrchestrator(coincenterInfo.requestsConfig(), _exchangePool.exchanges()),
       _queryResultPrinter(coincenterInfo.apiOutputType(), _coincenterInfo.loggingInfo()) {}
 
@@ -315,7 +315,7 @@ MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market mk, Exchang
 
 void Coincenter::updateFileCaches() const {
   log::debug("Store all cache files");
-  _cryptowatchAPI.updateCacheFile();
+  _commonAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
   auto exchanges = _exchangePool.exchanges();
   std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &exchange) { exchange.updateCacheFile(); });

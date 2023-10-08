@@ -32,8 +32,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
 
 }  // namespace
 
-UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("upbit", fiatConverter, cryptowatchAPI, config),
+UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
+    : ExchangePublic("upbit", fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())

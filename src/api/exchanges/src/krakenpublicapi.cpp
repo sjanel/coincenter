@@ -9,7 +9,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "curloptions.hpp"
 #include "file.hpp"
 #include "timedef.hpp"
@@ -71,8 +71,8 @@ constexpr std::string_view kExchangeName = "kraken";
 
 }  // namespace
 
-KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic(kExchangeName, fiatConverter, cryptowatchAPI, config),
+KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
+    : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
@@ -81,7 +81,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
-          cryptowatchAPI, _curlHandle, exchangeInfo()),
+          commonAPI, _curlHandle, exchangeInfo()),
       _withdrawalFeesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), config,
           exchangeInfo().publicAPIRate()),
@@ -336,9 +336,8 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
     CurrencyCode standardCode(_coincenterInfo.standardizeCurrencyCode(altCodeStr));
     CurrencyExchange newCurrency(standardCode, CurrencyCode(krakenAssetName), CurrencyCode(altCodeStr),
                                  CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
-                                 _cryptowatchApi.queryIsCurrencyCodeFiat(standardCode)
-                                     ? CurrencyExchange::Type::kFiat
-                                     : CurrencyExchange::Type::kCrypto);
+                                 _commonApi.queryIsCurrencyCodeFiat(standardCode) ? CurrencyExchange::Type::kFiat
+                                                                                  : CurrencyExchange::Type::kCrypto);
 
     log::debug("Retrieved Kraken Currency {}", newCurrency.str());
     currencies.push_back(std::move(newCurrency));

@@ -13,7 +13,7 @@
 #include "cct_log.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
@@ -58,8 +58,8 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 }  // namespace
 
 BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
-                             api::CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("binance", fiatConverter, cryptowatchAPI, coincenterInfo),
+                             api::CommonAPI& commonAPI)
+    : ExchangePublic("binance", fiatConverter, commonAPI, coincenterInfo),
       _commonInfo(coincenterInfo, exchangeInfo(), coincenterInfo.getRunMode()),
       _exchangeInfoCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
                          _commonInfo),

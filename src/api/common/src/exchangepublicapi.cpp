@@ -9,17 +9,17 @@
 #include "unreachable.hpp"
 
 namespace cct::api {
-ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                                const CoincenterInfo &coincenterInfo)
     : _name(name),
       _fiatConverter(fiatConverter),
-      _cryptowatchApi(cryptowatchApi),
+      _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
       _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
-                                                      MarketOrderBookMap &marketOrderBookMap, bool canUseCryptowatchAPI,
+                                                      MarketOrderBookMap &marketOrderBookMap,
                                                       const PriceOptions &priceOptions) {
   if (amount.currencyCode() == toCurrency) {
     return amount;
@@ -29,8 +29,6 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, Cur
   }
   const ExchangeInfo::FeeType feeType =
       priceOptions.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-  bool canUseCryptoWatch =
-      canUseCryptowatchAPI && priceOptions.isAveragePrice() && _cryptowatchApi.queryIsExchangeSupported(_name);
   for (Market mk : conversionPath) {
     CurrencyCode mFromCurrencyCode = amount.currencyCode();
     assert(mk.canTrade(mFromCurrencyCode));
@@ -44,13 +42,6 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, Cur
     if (isFromFiatLike && isToFiatLike) {
       amount = _fiatConverter.convert(MonetaryAmount(amount, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
-      if (canUseCryptoWatch) {
-        std::optional<double> rate = _cryptowatchApi.queryPrice(_name, Market(mFromCurrencyCode, mToCurrencyCode));
-        if (rate) {
-          amount = amount.toNeutral() * MonetaryAmount(*rate, mToCurrencyCode);
-          continue;
-        }
-      }
       if (marketOrderBookMap.empty()) {
         marketOrderBookMap = queryAllApproximatedOrderBooks(1);
       }
@@ -86,7 +77,7 @@ using CurrencyDirPath = SmallVector<CurrencyDir, 3>;
 
 class CurrencyDirFastestPathComparator {
  public:
-  explicit CurrencyDirFastestPathComparator(CryptowatchAPI &cryptowatchApi) : _cryptowatchApi(cryptowatchApi) {}
+  explicit CurrencyDirFastestPathComparator(CommonAPI &commonApi) : _commonApi(commonApi) {}
 
   bool operator()(const CurrencyDirPath &lhs, const CurrencyDirPath &rhs) {
     // First, favor the shortest path
@@ -96,12 +87,12 @@ class CurrencyDirFastestPathComparator {
     // For equal path sizes, favor non-fiat currencies. Two reasons for this:
     // - In some countries, tax are automatically collected when any conversion to a fiat on an exchange is made
     // - It may have the highest volume, as fiats are only present on some regions
-    auto isFiat = [this](CurrencyDir curDir) { return _cryptowatchApi.queryIsCurrencyCodeFiat(curDir.cur); };
+    auto isFiat = [this](CurrencyDir curDir) { return _commonApi.queryIsCurrencyCodeFiat(curDir.cur); };
     return std::ranges::count_if(lhs, isFiat) > std::ranges::count_if(rhs, isFiat);
   }
 
  private:
-  CryptowatchAPI &_cryptowatchApi;
+  CommonAPI &_commonApi;
 };
 }  // namespace
 
@@ -116,7 +107,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
       considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(toCurrency) : std::nullopt;
   const bool isToFiatLike = optFiatFromStableCoin.has_value() || fiats.contains(toCurrency);
 
-  CurrencyDirFastestPathComparator comp(_cryptowatchApi);
+  CurrencyDirFastestPathComparator comp(_commonApi);
 
   vector<CurrencyDirPath> searchPaths(1, CurrencyDirPath(1, CurrencyDir(fromCurrency, false)));
   using VisitedCurrenciesSet = std::unordered_set<CurrencyCode>;

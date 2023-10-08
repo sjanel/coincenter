@@ -30,7 +30,7 @@ class UniqueQueryHandle {
   }
 
   ~UniqueQueryHandle() {
-    if (_pCachedResultVault) {
+    if (_pCachedResultVault != nullptr) {
       _pCachedResultVault->unfreezeAll();
     }
   }
@@ -43,7 +43,7 @@ class ExchangeBase {
  public:
   virtual void updateCacheFile() const {}
 
-  virtual ~ExchangeBase() {}
+  virtual ~ExchangeBase() = default;
 
  protected:
   ExchangeBase() = default;

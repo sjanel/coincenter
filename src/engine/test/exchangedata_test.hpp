@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "exchange.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
@@ -23,11 +23,11 @@ class ExchangesBaseTest : public ::testing::Test {
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};
-  api::CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode, Duration::max(), true};
+  api::CommonAPI commonAPI{coincenterInfo, Duration::max(), true};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
-  api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, cryptowatchAPI, coincenterInfo};
-  api::MockExchangePublic exchangePublic3{kSupportedExchanges[2], fiatConverter, cryptowatchAPI, coincenterInfo};
+  api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
+  api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, commonAPI, coincenterInfo};
+  api::MockExchangePublic exchangePublic3{kSupportedExchanges[2], fiatConverter, commonAPI, coincenterInfo};
   api::APIKey key1{"test1", "testuser1", "", "", ""};
   api::APIKey key2{"test2", "testuser2", "", "", ""};
   api::APIKey key3{"test3", "testuser3", "", "", ""};

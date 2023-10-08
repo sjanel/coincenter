@@ -10,7 +10,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
@@ -50,8 +50,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 
 }  // namespace
 
-BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("bithumb", fiatConverter, cryptowatchAPI, config),
+BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
+    : ExchangePublic("bithumb", fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
@@ -60,7 +60,7 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
-          cryptowatchAPI, _curlHandle),
+          commonAPI, _curlHandle),
       _withdrawalFeesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           config.metricGatewayPtr(),
@@ -179,9 +179,8 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
                                                                           : CurrencyExchange::Deposit::kUnavailable,
                                  withdrawalDeposit["withdrawal_status"] == 1 ? CurrencyExchange::Withdraw::kAvailable
                                                                              : CurrencyExchange::Withdraw::kUnavailable,
-                                 _cryptowatchAPI.queryIsCurrencyCodeFiat(currencyCode)
-                                     ? CurrencyExchange::Type::kFiat
-                                     : CurrencyExchange::Type::kCrypto);
+                                 _commonAPI.queryIsCurrencyCodeFiat(currencyCode) ? CurrencyExchange::Type::kFiat
+                                                                                  : CurrencyExchange::Type::kCrypto);
 
     log::debug("Retrieved Bithumb Currency {}", newCurrency.str());
     currencies.push_back(std::move(newCurrency));
