@@ -15,11 +15,11 @@ class CoincenterInfo;
 class ExchangeInfo;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class KrakenPublic : public ExchangePublic {
  public:
-  KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
+  KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
 
@@ -66,18 +66,15 @@ class KrakenPublic : public ExchangePublic {
 
   struct TradableCurrenciesFunc {
 #ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchApi, CurlHandle& curlHandle,
+    TradableCurrenciesFunc(const CoincenterInfo& config, CommonAPI& commonApi, CurlHandle& curlHandle,
                            const ExchangeInfo& exchangeInfo)
-        : _coincenterInfo(config),
-          _cryptowatchApi(cryptowatchApi),
-          _curlHandle(curlHandle),
-          _exchangeInfo(exchangeInfo) {}
+        : _coincenterInfo(config), _commonApi(commonApi), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
 #endif
 
     CurrencyExchangeFlatSet operator()();
 
     const CoincenterInfo& _coincenterInfo;
-    CryptowatchAPI& _cryptowatchApi;
+    CommonAPI& _commonApi;
     CurlHandle& _curlHandle;
     const ExchangeInfo& _exchangeInfo;
   };

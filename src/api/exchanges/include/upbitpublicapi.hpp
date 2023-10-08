@@ -15,11 +15,11 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class UpbitPublic : public ExchangePublic {
  public:
-  UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
+  UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
 

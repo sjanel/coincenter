@@ -6,7 +6,7 @@
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "fiatconverter.hpp"
@@ -17,9 +17,9 @@ class ExchangePublicTest : public ::testing::Test {
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};
-  CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
+  CommonAPI commonAPI{coincenterInfo};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, cryptowatchAPI, coincenterInfo};
+  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
 };
 
 namespace {
@@ -82,17 +82,16 @@ class ExchangePublicConvertTest : public ExchangePublicTest {
                                         {Market("XRP", "BTC"), marketOrderBook2},
                                         {Market("SOL", "EUR"), marketOrderBook3}};
 
-  bool canUseCryptowatchAPI = false;
   PriceOptions priceOptions;
 };
 
 TEST_F(ExchangePublicConvertTest, ConvertImpossible) {
   MonetaryAmount from{50000, "XLM"};
   CurrencyCode toCurrency{"BTC"};
-  MarketsPath conversionPath{};
+  MarketsPath conversionPath;
 
-  std::optional<MonetaryAmount> ret = exchangePublic.convert(from, toCurrency, conversionPath, fiats,
-                                                             marketOrderBookMap, canUseCryptowatchAPI, priceOptions);
+  std::optional<MonetaryAmount> ret =
+      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_FALSE(ret.has_value());
 }
 
@@ -101,8 +100,8 @@ TEST_F(ExchangePublicConvertTest, ConvertSimple) {
   CurrencyCode toCurrency{"BTC"};
   MarketsPath conversionPath{{"XLM", "BTC"}};
 
-  std::optional<MonetaryAmount> ret = exchangePublic.convert(from, toCurrency, conversionPath, fiats,
-                                                             marketOrderBookMap, canUseCryptowatchAPI, priceOptions);
+  std::optional<MonetaryAmount> ret =
+      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
   MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(*marketOrderBook1.convert(from, priceOptions),
                                                               ExchangeInfo::FeeType::kMaker);
@@ -113,8 +112,8 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
   MonetaryAmount from{50000, "XLM"};
   CurrencyCode toCurrency{"XRP"};
   MarketsPath conversionPath{{"XLM", "BTC"}, {"XRP", "BTC"}};
-  std::optional<MonetaryAmount> ret = exchangePublic.convert(from, toCurrency, conversionPath, fiats,
-                                                             marketOrderBookMap, canUseCryptowatchAPI, priceOptions);
+  std::optional<MonetaryAmount> ret =
+      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
   MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(*marketOrderBook1.convert(from, priceOptions),
                                                               ExchangeInfo::FeeType::kMaker);

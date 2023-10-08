@@ -20,7 +20,7 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class HuobiPublic : public ExchangePublic {
  public:
@@ -28,7 +28,7 @@ class HuobiPublic : public ExchangePublic {
 
   static constexpr int kHuobiStandardOrderBookDefaultDepth = 150;
 
-  HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI);
+  HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI);
 
   bool healthCheck() override;
 

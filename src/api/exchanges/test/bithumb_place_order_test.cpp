@@ -26,8 +26,8 @@ class BithumbPrivateAPIPlaceOrderTest : public ::testing::Test {
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{runMode, loadConfig};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
-  CryptowatchAPI cryptowatchAPI{coincenterInfo, runMode};
-  BithumbPublic exchangePublic{coincenterInfo, fiatConverter, cryptowatchAPI};
+  CommonAPI commonAPI{coincenterInfo};
+  BithumbPublic exchangePublic{coincenterInfo, fiatConverter, commonAPI};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
   ExchangeName exchangeName{exchangePublic.name(), apiKeysProvider.getKeyNames(exchangePublic.name()).front()};
   const APIKey& testKey = apiKeysProvider.get(exchangeName);

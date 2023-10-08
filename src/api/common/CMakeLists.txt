@@ -19,7 +19,7 @@ function(add_common_test name)
    add_unit_test(
      ${name} 
      ${MY_UNPARSED_ARGUMENTS}
-     src/cryptowatchapi.cpp
+     src/commonapi.cpp
      LIBRARIES
      coincenter_api-objects
      coincenter_http-request
@@ -28,8 +28,8 @@ function(add_common_test name)
 endfunction()
 
 add_common_test(
-  cryptowatchapi_test
-  test/cryptowatchapi_test.cpp
+  commonapi_test
+  test/commonapi_test.cpp
 )
 
 add_common_test(

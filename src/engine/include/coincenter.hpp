@@ -6,7 +6,7 @@
 
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
 #include "exchangepool.hpp"
@@ -125,8 +125,8 @@ class Coincenter {
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
-  api::CryptowatchAPI &cryptowatchAPI() { return _cryptowatchAPI; }
-  const api::CryptowatchAPI &cryptowatchAPI() const { return _cryptowatchAPI; }
+  api::CommonAPI &commonAPI() { return _commonAPI; }
+  const api::CommonAPI &commonAPI() const { return _commonAPI; }
 
   FiatConverter &fiatConverter() { return _fiatConverter; }
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
@@ -135,7 +135,7 @@ class Coincenter {
   void processCommand(const CoincenterCommand &cmd);
 
   const CoincenterInfo &_coincenterInfo;
-  api::CryptowatchAPI _cryptowatchAPI;
+  api::CommonAPI _commonAPI;
   FiatConverter _fiatConverter;
   api::APIKeysProvider _apiKeyProvider;
 

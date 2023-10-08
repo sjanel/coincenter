@@ -28,13 +28,13 @@ class KrakenPrivate;
 class KucoinPrivate;
 class UpbitPrivate;
 
-class CryptowatchAPI;
+class CommonAPI;
 class APIKeysProvider;
 }  // namespace api
 
 class ExchangePool {
  public:
-  ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter, api::CryptowatchAPI& cryptowatchAPI,
+  ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter, api::CommonAPI& commonAPI,
                const api::APIKeysProvider& apiKeyProvider);
 
   ExchangePool(const ExchangePool&) = delete;
@@ -52,7 +52,7 @@ class ExchangePool {
 
   const CoincenterInfo& _coincenterInfo;
   FiatConverter& _fiatConverter;
-  api::CryptowatchAPI& _cryptowatchAPI;
+  api::CommonAPI& _commonAPI;
   const api::APIKeysProvider& _apiKeyProvider;
 
   // Public exchanges

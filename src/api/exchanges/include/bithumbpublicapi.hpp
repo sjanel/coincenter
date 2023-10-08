@@ -13,13 +13,13 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
-class CryptowatchAPI;
+class CommonAPI;
 
 class BithumbPublic : public ExchangePublic {
  public:
   static constexpr std::string_view kStatusOKStr = "0000";
 
-  BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CryptowatchAPI& cryptowatchAPI);
+  BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
 
@@ -60,14 +60,14 @@ class BithumbPublic : public ExchangePublic {
 
   struct TradableCurrenciesFunc {
 #ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesFunc(const CoincenterInfo& config, CryptowatchAPI& cryptowatchAPI, CurlHandle& curlHandle)
-        : _coincenterInfo(config), _cryptowatchAPI(cryptowatchAPI), _curlHandle(curlHandle) {}
+    TradableCurrenciesFunc(const CoincenterInfo& config, CommonAPI& commonAPI, CurlHandle& curlHandle)
+        : _coincenterInfo(config), _commonAPI(commonAPI), _curlHandle(curlHandle) {}
 #endif
 
     CurrencyExchangeFlatSet operator()();
 
     const CoincenterInfo& _coincenterInfo;
-    CryptowatchAPI& _cryptowatchAPI;
+    CommonAPI& _commonAPI;
     CurlHandle& _curlHandle;
   };
 

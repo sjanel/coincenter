@@ -8,7 +8,7 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
@@ -35,9 +35,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 
 }  // namespace
 
-HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
-                         api::CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("huobi", fiatConverter, cryptowatchAPI, config),
+HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
+    : ExchangePublic("huobi", fiatConverter, commonAPI, config),
       _exchangeInfo(config.exchangeInfo(_name)),
       _curlHandle(kURLBases, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
@@ -136,8 +135,8 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
                                                            : CurrencyExchange::Deposit::kUnavailable;
       auto withdrawAllowed = withdrawAllowedStr == "allowed" ? CurrencyExchange::Withdraw::kAvailable
                                                              : CurrencyExchange::Withdraw::kUnavailable;
-      auto curExchangeType = _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat
-                                                                          : CurrencyExchange::Type::kCrypto;
+      auto curExchangeType =
+          _commonApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto;
 
       CurrencyExchange newCurrency(cur, curStr, curStr, depositAllowed, withdrawAllowed, curExchangeType);
 

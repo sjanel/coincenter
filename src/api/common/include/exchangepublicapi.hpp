@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "cct_string.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
@@ -28,7 +28,7 @@ class ExchangePublic : public ExchangeBase {
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
   static constexpr int kNbLastTradesDefault = 100;
 
-  using Fiats = CryptowatchAPI::Fiats;
+  using Fiats = CommonAPI::Fiats;
 
   virtual ~ExchangePublic() = default;
 
@@ -57,7 +57,7 @@ class ExchangePublic : public ExchangeBase {
     Fiats fiats = queryFiats();
     MarketSet markets;
     MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrency, markets, fiats, true);
-    return convert(a, toCurrency, conversionPath, fiats, marketOrderBookMap, true, priceOptions);
+    return convert(a, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   }
 
   /// Attempts to convert amount into a target currency.
@@ -65,7 +65,7 @@ class ExchangePublic : public ExchangeBase {
   /// No external calls is made with this version, it has all what it needs
   std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrency, const MarketsPath &conversionPath,
                                         const Fiats &fiats, MarketOrderBookMap &marketOrderBookMap,
-                                        bool canUseCryptowatchAPI, const PriceOptions &priceOptions = PriceOptions());
+                                        const PriceOptions &priceOptions = PriceOptions());
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
@@ -97,7 +97,7 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market mk) = 0;
 
-  Fiats queryFiats() { return _cryptowatchApi.queryFiats(); }
+  Fiats queryFiats() { return _commonApi.queryFiats(); }
 
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
@@ -160,18 +160,18 @@ class ExchangePublic : public ExchangeBase {
 
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
-  CryptowatchAPI &cryptowatchAPI() { return _cryptowatchApi; }
+  CommonAPI &commonAPI() { return _commonApi; }
 
  protected:
   friend class ExchangePrivate;
 
-  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                  const CoincenterInfo &coincenterInfo);
 
   string _name;
   CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
-  CryptowatchAPI &_cryptowatchApi;
+  CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
   const ExchangeInfo &_exchangeInfo;
 };

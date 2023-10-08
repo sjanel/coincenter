@@ -2,7 +2,7 @@
 
 #include <gmock/gmock.h>
 
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -10,9 +10,9 @@
 namespace cct::api {
 class MockExchangePublic : public ExchangePublic {
  public:
-  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CryptowatchAPI &cryptowatchApi,
+  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                      const CoincenterInfo &config)
-      : ExchangePublic(name, fiatConverter, cryptowatchApi, config) {}
+      : ExchangePublic(name, fiatConverter, commonApi, config) {}
 
   MOCK_METHOD(bool, healthCheck, (), (override));
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));

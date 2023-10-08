@@ -59,8 +59,8 @@ class UpbitPrivate : public ExchangePrivate {
   struct TradableCurrenciesFunc {
 #ifndef CCT_AGGR_INIT_CXX20
     TradableCurrenciesFunc(CurlHandle& curlHandle, const APIKey& apiKey, const ExchangeInfo& exchangeInfo,
-                           CryptowatchAPI& cryptowatchApi)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangeInfo(exchangeInfo), _cryptowatchApi(cryptowatchApi) {}
+                           CommonAPI& commonApi)
+        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangeInfo(exchangeInfo), _commonApi(commonApi) {}
 #endif
 
     CurrencyExchangeFlatSet operator()();
@@ -68,7 +68,7 @@ class UpbitPrivate : public ExchangePrivate {
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
     const ExchangeInfo& _exchangeInfo;
-    CryptowatchAPI& _cryptowatchApi;
+    CommonAPI& _commonApi;
   };
 
   struct DepositWalletFunc {

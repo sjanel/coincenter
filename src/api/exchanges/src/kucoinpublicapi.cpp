@@ -8,7 +8,7 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
-#include "cryptowatchapi.hpp"
+#include "commonapi.hpp"
 #include "curloptions.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
@@ -35,9 +35,8 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 
 }  // namespace
 
-KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter,
-                           api::CryptowatchAPI& cryptowatchAPI)
-    : ExchangePublic("kucoin", fiatConverter, cryptowatchAPI, config),
+KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
+    : ExchangePublic("kucoin", fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
@@ -46,7 +45,7 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
-          _coincenterInfo, cryptowatchAPI),
+          _coincenterInfo, commonAPI),
       _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _curlHandle, exchangeInfo()),
       _allOrderBooksCache(
@@ -90,7 +89,7 @@ KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurr
                                                   : CurrencyExchange::Deposit::kUnavailable,
         curDetail["isWithdrawEnabled"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
                                                    : CurrencyExchange::Withdraw::kUnavailable,
-        _cryptowatchApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
+        _commonApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
 
     log::debug("Retrieved Kucoin Currency {}", currencyExchange.str());
 

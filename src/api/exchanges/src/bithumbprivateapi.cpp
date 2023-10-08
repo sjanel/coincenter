@@ -530,8 +530,7 @@ json BithumbPrivate::queryRecentTransactions(const WithdrawsOrDepositsConstraint
   SmallVector<CurrencyCode, 1> orderCurrencies;
 
   if (withdrawsOrDepositsConstraints.isCurDefined()) {
-    CurrencyCode currencyCode = withdrawsOrDepositsConstraints.currencyCode();
-    orderCurrencies.push_back(currencyCode);
+    orderCurrencies.push_back(withdrawsOrDepositsConstraints.currencyCode());
   } else {
     log::warn("Retrieval of recent deposits / withdraws should be done currency by currency for {:e}", exchangeName());
     log::warn("Heuristic: only query for currencies which are present in the balance");
