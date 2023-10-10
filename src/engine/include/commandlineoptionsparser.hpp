@@ -15,6 +15,7 @@
 #include "cct_vector.hpp"
 #include "commandlineoption.hpp"
 #include "durationstring.hpp"
+#include "levenshteindistancecalculator.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {
@@ -53,20 +54,26 @@ class CommandLineOptionsParser {
   }
 
   OptValueType parse(std::span<const char*> groupedArguments) {
-    std::unordered_map<CommandLineOption, CallbackType> callbacks;
-    callbacks.reserve(_opts.size());
+    _callbacks.clear();
+    _callbacks.reserve(_opts.size());
     OptValueType data;
     for (const auto& [cmdLineOption, prop] : _opts) {
-      callbacks[cmdLineOption] = registerCallback(cmdLineOption, prop, data);
+      _callbacks[cmdLineOption] = registerCallback(cmdLineOption, prop, data);
     }
     const int nbArgs = static_cast<int>(groupedArguments.size());
     for (int argPos = 0; argPos < nbArgs; ++argPos) {
       std::string_view argStr(groupedArguments[argPos]);
       if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
-        throw invalid_argument("Unrecognized command-line option {}", argStr);
+        const auto [possibleOptionIdx, minDistance] = minLevenshteinDistanceOpt(argStr);
+
+        if (minDistance <= 2) {
+          throw invalid_argument("Unrecognized command-line option '{}' - did you mean '{}'?", argStr,
+                                 _opts[possibleOptionIdx].first.fullName());
+        }
+        throw invalid_argument("Unrecognized command-line option '{}'", argStr);
       }
 
-      for (auto& callback : callbacks) {
+      for (auto& callback : _callbacks) {
         callback.second(argPos, groupedArguments);
       }
     }
@@ -250,7 +257,17 @@ class CommandLineOptionsParser {
     return lenFirstRows + 3;
   }
 
+  std::pair<int, int> minLevenshteinDistanceOpt(std::string_view argStr) const {
+    vector<int> minDistancesToFullNameOptions(_opts.size());
+    LevenshteinDistanceCalculator calc;
+    std::ranges::transform(_opts, minDistancesToFullNameOptions.begin(),
+                           [argStr, &calc](const auto opt) { return calc(opt.first.fullName(), argStr); });
+    auto optIt = std::ranges::min_element(minDistancesToFullNameOptions);
+    return {optIt - minDistancesToFullNameOptions.begin(), *optIt};
+  }
+
   vector<CommandLineOptionWithValue> _opts;
+  std::unordered_map<CommandLineOption, CallbackType> _callbacks;
 };
 
 }  // namespace cct

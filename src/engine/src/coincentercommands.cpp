@@ -33,7 +33,6 @@ vector<CoincenterCmdLineOptions> CoincenterCommands::ParseOptions(int argc, cons
   CoincenterCmdLineOptions globalOptions;
 
   // Support for command line multiple commands. Only full name flags are supported for multi command line commands.
-  // Note: maybe it better to just decommission short hand flags.
   while (parserIt.hasNext()) {
     std::span<const char *> groupedArguments = parserIt.next();
 

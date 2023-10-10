@@ -46,6 +46,14 @@ add_unit_test(
 )
 
 add_unit_test(
+    levenshteindistancecalculator_test
+    src/levenshteindistancecalculator.cpp
+    test/levenshteindistancecalculator_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
     flatkeyvaluestring_test
     test/flatkeyvaluestring_test.cpp
     DEFINITIONS
