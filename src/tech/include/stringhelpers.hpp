@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string.h>
-
 #include <charconv>
 #include <concepts>
+#include <cstring>
+#include <string_view>
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
@@ -14,7 +14,7 @@ namespace cct {
 
 namespace details {
 template <class SizeType>
-inline void ToChars(char *first, SizeType s, std::integral auto i) {
+void ToChars(char *first, SizeType s, std::integral auto i) {
   if (auto [ptr, errc] = std::to_chars(first, first + s, i); CCT_UNLIKELY(errc != std::errc())) {
     throw exception("Unable to decode integral into string");
   }
