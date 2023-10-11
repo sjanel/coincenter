@@ -57,12 +57,6 @@ class UpbitPrivate : public ExchangePrivate {
 
  private:
   struct TradableCurrenciesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesFunc(CurlHandle& curlHandle, const APIKey& apiKey, const ExchangeInfo& exchangeInfo,
-                           CommonAPI& commonApi)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangeInfo(exchangeInfo), _commonApi(commonApi) {}
-#endif
-
     CurrencyExchangeFlatSet operator()();
 
     CurlHandle& _curlHandle;
@@ -72,11 +66,6 @@ class UpbitPrivate : public ExchangePrivate {
   };
 
   struct DepositWalletFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-#endif
-
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;
@@ -85,11 +74,6 @@ class UpbitPrivate : public ExchangePrivate {
   };
 
   struct WithdrawFeesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, UpbitPublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-#endif
-
     MonetaryAmount operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;

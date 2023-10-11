@@ -77,10 +77,6 @@ class TopLevelOption {
   using JsonIt = json::const_iterator;
 
   struct DataSource {
-#ifndef CCT_AGGR_INIT_CXX20
-    DataSource(JsonIt it, bool isPersonal, bool isExchange) : it(it), isPersonal(isPersonal), isExchange(isExchange) {}
-#endif
-
     JsonIt exchangeIt(std::string_view exchangeName) const {
       JsonIt exchangeIt = it->find(exchangeName);
       return exchangeIt == it->end() ? it : exchangeIt;

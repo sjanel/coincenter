@@ -52,11 +52,6 @@ class KucoinPrivate : public ExchangePrivate {
 
  private:
   struct DepositWalletFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, const KucoinPublic& kucoinPublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _kucoinPublic(kucoinPublic) {}
-#endif
-
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;

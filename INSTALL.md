@@ -44,14 +44,14 @@ docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data 
 
 This is a **C++20** project.
 
-It's still currently (as of beginning of 2023) not fully supported by any compiler (although GCC is very close, see [here](https://en.cppreference.com/w/cpp/compiler_support)).
+It's still currently (as of beginning of 2023) not fully supported by most compilers (MSVC does, GCC is very close, see [here](https://en.cppreference.com/w/cpp/compiler_support)).
 
 But they have partial support which is sufficient to build `coincenter`.
 
 The following compilers are known to compile `coincenter` (and are tested in the CI):
 
 - **GCC** version >= 11
-- **Clang** version >= 14
+- **Clang** version >= 17
 - **MSVC** version >= 19.30
 
 Other compilers have not been tested.

@@ -58,11 +58,6 @@ class BithumbPrivate : public ExchangePrivate {
   friend class BithumbPrivateAPIPlaceOrderTest;
 
   struct DepositWalletFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BithumbPublic& exchangePublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic) {}
-#endif
-
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;
