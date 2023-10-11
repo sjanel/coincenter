@@ -383,8 +383,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
     auto mkIt = ret.first.emplace(base, quote).first;
     log::debug("Retrieved Kraken market {}", *mkIt);
     MonetaryAmount orderMin(value["ordermin"].get<std::string_view>(), base);
-    ret.second.insert_or_assign(
-        *mkIt, MarketInfo{VolAndPriNbDecimals(value["lot_decimals"], value["pair_decimals"]), orderMin});
+    ret.second.insert_or_assign(*mkIt, MarketInfo{{value["lot_decimals"], value["pair_decimals"]}, orderMin});
   }
   log::info("Retrieved {} markets from Kraken", ret.first.size());
   return ret;

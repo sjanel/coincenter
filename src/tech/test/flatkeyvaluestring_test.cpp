@@ -116,6 +116,8 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
       case 2:
         ASSERT_STREQ(kvPairPtr, "&newField:&&newValue&&");
         break;
+      default:
+        ASSERT_TRUE(false);
     }
   }
   EXPECT_EQ(kvPairPos, 3);
@@ -125,9 +127,6 @@ TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(),
 
 class CurlOptionsCase1 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},
                   {"hola", "quetal"},   {"array1", "val1,,"}, {"array2", ",val1,val2,value,"},
                   {"emptyArray", ","}};
@@ -177,6 +176,8 @@ TEST_F(CurlOptionsCase1, Iterator) {
         EXPECT_EQ(key, "emptyArray");
         EXPECT_EQ(val, ",");
         break;
+      default:
+        EXPECT_TRUE(false);
     }
   }
   EXPECT_EQ(itPos, 7);

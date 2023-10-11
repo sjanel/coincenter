@@ -90,9 +90,7 @@ TEST_F(ExchangePublicConvertTest, ConvertImpossible) {
   CurrencyCode toCurrency{"BTC"};
   MarketsPath conversionPath;
 
-  std::optional<MonetaryAmount> ret =
-      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
-  ASSERT_FALSE(ret.has_value());
+  ASSERT_FALSE(exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions));
 }
 
 TEST_F(ExchangePublicConvertTest, ConvertSimple) {
@@ -103,9 +101,9 @@ TEST_F(ExchangePublicConvertTest, ConvertSimple) {
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
-  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(*marketOrderBook1.convert(from, priceOptions),
-                                                              ExchangeInfo::FeeType::kMaker);
-  EXPECT_EQ(*ret, res);
+  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeInfo::FeeType::kMaker);
+  EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
 }
 
 TEST_F(ExchangePublicConvertTest, ConvertDouble) {
@@ -115,11 +113,11 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
-  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(*marketOrderBook1.convert(from, priceOptions),
-                                                              ExchangeInfo::FeeType::kMaker);
-  res = exchangePublic.exchangeInfo().applyFee(*marketOrderBook2.convert(res, priceOptions),
+  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeInfo::FeeType::kMaker);
+  res = exchangePublic.exchangeInfo().applyFee(marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}),
                                                ExchangeInfo::FeeType::kMaker);
-  EXPECT_EQ(*ret, res);
+  EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
 }
 
 }  // namespace cct::api

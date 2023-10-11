@@ -116,8 +116,8 @@ TEST_F(CommandLineOptionsParserTest, OptStringViewEmpty) {
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringViewNotEmpty) {
-  EXPECT_EQ(*createOptions({"--optSV2", "I need to save the world"}).optSV,
-            std::string_view("I need to save the world"));
+  EXPECT_EQ(createOptions({"--optSV2", "I need to save the world"}).optSV,
+            std::optional<std::string_view>("I need to save the world"));
 }
 
 TEST_F(CommandLineOptionsParserTest, AlternativeOptionName) {
@@ -130,15 +130,16 @@ TEST_F(CommandLineOptionsParserTest, String) {
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringNotEmpty) {
-  EXPECT_EQ(*createOptions({"--opt4", "2000 EUR, kraken"}).optStr, "2000 EUR, kraken");
+  EXPECT_EQ(createOptions({"--opt4", "2000 EUR, kraken"}).optStr, std::optional<std::string_view>("2000 EUR, kraken"));
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty1) {
-  EXPECT_EQ(*createOptions({"--opt4", "--opt1", "Opt1 value"}).optStr, std::string_view());
+  EXPECT_EQ(createOptions({"--opt4", "--opt1", "Opt1 value"}).optStr,
+            std::optional<std::string_view>(std::string_view{}));
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
-  EXPECT_EQ(*createOptions({"--opt4"}).optStr, std::string_view());
+  EXPECT_EQ(createOptions({"--opt4"}).optStr, std::optional<std::string_view>(std::string_view{}));
 }
 
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) { EXPECT_EQ(createOptions({"--help"}).optStr, std::nullopt); }

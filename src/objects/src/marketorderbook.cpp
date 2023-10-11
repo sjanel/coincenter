@@ -37,10 +37,14 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
         // Just ignore empty lines
         continue;
       }
-      AmountPrice::AmountType amountIntegral = *orderBookLine._amount.amount(_volAndPriNbDecimals.volNbDecimals);
-      AmountPrice::AmountType priceIntegral = *orderBookLine._price.amount(_volAndPriNbDecimals.priNbDecimals);
 
-      _orders.emplace_back(amountIntegral, priceIntegral);
+      const auto amountIntegral = orderBookLine._amount.amount(_volAndPriNbDecimals.volNbDecimals);
+      const auto priceIntegral = orderBookLine._price.amount(_volAndPriNbDecimals.priNbDecimals);
+
+      assert(amountIntegral.has_value());
+      assert(priceIntegral.has_value());
+
+      _orders.emplace_back(*amountIntegral, *priceIntegral);
     }
 
     std::ranges::sort(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price < rhs.price; });

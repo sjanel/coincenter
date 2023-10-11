@@ -1075,7 +1075,7 @@ void QueryResultPrinter::printTable(const SimpleTable &simpleTable) const {
   os << simpleTable;
 
   if (_pOs != nullptr) {
-    *_pOs << std::endl;
+    *_pOs << '\n';
   } else {
     // logger library automatically adds a newline as suffix
     _outputLogger->info(ss.view());
@@ -1085,7 +1085,7 @@ void QueryResultPrinter::printTable(const SimpleTable &simpleTable) const {
 void QueryResultPrinter::printJson(const json &jsonData) const {
   string jsonStr = jsonData.dump();
   if (_pOs != nullptr) {
-    *_pOs << jsonStr << std::endl;
+    *_pOs << jsonStr << '\n';
   } else {
     _outputLogger->info(jsonStr);
   }

@@ -71,7 +71,7 @@ void SimpleTable::Row::print(std::ostream &os, std::span<const uint16_t> maxWidt
   for (const Cell &cell : _cells) {
     cell.print(os, maxWidthPerColumn[columnPos++]);
   }
-  os << std::endl;
+  os << '\n';
 }
 
 SimpleTable::MaxWidthPerColumnVector SimpleTable::computeMaxWidthPerColumn() const {
@@ -112,17 +112,17 @@ std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
   const auto maxWidthPerColumnVector = table.computeMaxWidthPerColumn();
   const auto lineSep = SimpleTable::ComputeLineSep(maxWidthPerColumnVector);
 
-  os << lineSep << std::endl;
+  os << lineSep << '\n';
 
   bool printHeader = table._rows.size() > 1U;
   for (const auto &row : table._rows) {
     if (row.isDivider()) {
-      os << lineSep << std::endl;
+      os << lineSep << '\n';
     } else {
       row.print(os, maxWidthPerColumnVector);
     }
     if (printHeader) {
-      os << lineSep << std::endl;
+      os << lineSep << '\n';
       printHeader = false;
     }
   }

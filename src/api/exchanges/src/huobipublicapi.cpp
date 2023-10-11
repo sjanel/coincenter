@@ -197,7 +197,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
     // value = vol * pri in quote currency
     MarketInfo marketInfo;
 
-    marketInfo.volAndPriNbDecimals = VolAndPriNbDecimals(volNbDec, priNbDec);
+    marketInfo.volAndPriNbDecimals = {volNbDec, priNbDec};
 
     marketInfo.minOrderValue = MonetaryAmount(marketDetails["min-order-value"].get<double>(), quote);
     auto maxOrderValueIt = marketDetails.find("max-order-value");
