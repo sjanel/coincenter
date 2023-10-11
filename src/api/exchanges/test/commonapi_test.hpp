@@ -81,7 +81,7 @@ class TestAPI {
     //   for (const auto &c : currencies) {
     //     d[string(c.standardStr())] = exchangePrivateOpt->queryWithdrawalFee(c.standardCode()).amountStr();
     //   }
-    //   std::cout << d.dump(2) << std::endl;
+    //   std::cout << d.dump(2) << '\n';
     // }
   }
 

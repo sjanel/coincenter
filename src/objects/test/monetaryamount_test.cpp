@@ -50,12 +50,12 @@ TEST(MonetaryAmountTest, TenDecimals) {
   mamount1 = MonetaryAmount("0.0620089", btcCode);
   EXPECT_NE(mamount1, 0);
   EXPECT_EQ(mamount1.nbDecimals(), 7);
-  EXPECT_EQ(*MonetaryAmount("-314.451436574563", btcCode).amount(nbDecimals), -3144514365745);
+  EXPECT_EQ(MonetaryAmount("-314.451436574563", btcCode).amount(nbDecimals).value_or(-1), -3144514365745);
   mamount1 = MonetaryAmount("-314.451436574563", btcCode);
   EXPECT_EQ(mamount1.nbDecimals(), 12);
 
   mamount1 = MonetaryAmount("2.0036500", btcCode);
-  EXPECT_EQ(*mamount1.amount(2), 200);
+  EXPECT_EQ(mamount1.amount(2).value_or(-1), 200);
   EXPECT_EQ(mamount1.integerPart(), 2);
   EXPECT_EQ(mamount1.nbDecimals(), 5);
 }
@@ -73,9 +73,10 @@ TEST(MonetaryAmountTest, NoDecimals) {
   MonetaryAmount mamount3(0, krwCode, nbDecimals);
   EXPECT_EQ(mamount3.str(), "0 KRW");
 
-  EXPECT_EQ(*MonetaryAmount("0.620089", krwCode).amount(nbDecimals), 0);
-  EXPECT_EQ(*MonetaryAmount("-31415.0", krwCode).amount(nbDecimals), -31415);
-  EXPECT_EQ(*MonetaryAmount(3, krwCode).amount(nbDecimals), 3);
+  EXPECT_EQ(MonetaryAmount("0.620089", krwCode).amount(nbDecimals).value_or(-1), 0);
+  EXPECT_EQ(MonetaryAmount("-31415.0", krwCode).amount(nbDecimals).value_or(-1), -31415);
+
+  EXPECT_EQ(MonetaryAmount(3, krwCode).amount(nbDecimals).value_or(-1), 3);
 
   EXPECT_EQ(MonetaryAmount("35.620089", krwCode).amount(18), std::nullopt);
 }

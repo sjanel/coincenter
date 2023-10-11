@@ -259,7 +259,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
         break;
       }
     }
-    if (ret->quote().size() < kMinimalCryptoAcronymLen) {
+    if (!ret || ret->quote().size() < kMinimalCryptoAcronymLen) {
       log::error("Cannot determine market for {}, skipping", marketStr);
       ret = std::nullopt;
     }

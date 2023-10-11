@@ -104,7 +104,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   tradeBaseExpectCalls();
 
   MonetaryAmount from(5000, market.quote());
-  MonetaryAmount pri(*marketOrderBook1.computeAvgPriceForTakerAmount(from));
+  MonetaryAmount pri(marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1}));
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
@@ -127,7 +127,7 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
   tradeBaseExpectCalls();
 
   MonetaryAmount from(5000, market.quote());
-  MonetaryAmount pri(*marketOrderBook1.computeAvgPriceForTakerAmount(from));
+  MonetaryAmount pri(marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1}));
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
@@ -350,7 +350,7 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseEmergencyTakerTrade) {
   // Place taker order
   tradeInfo.options.switchToTakerStrategy();
 
-  MonetaryAmount pri2 = *marketOrderBook1.computeAvgPriceForTakerAmount(from);
+  MonetaryAmount pri2 = marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1});
   MonetaryAmount vol2(from / pri2, market.base());
 
   PlaceOrderInfo matchedPlacedOrderInfo2(OrderInfo(TradedAmounts(from, vol2), true), OrderId("Order # 1"));
@@ -675,7 +675,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper2StepsSameMarket) {
 
   expectTakerSell(from, pri, 0);  // no selling possible
 
-  MonetaryAmount xrpDustThreshold = *dustThreshold(dustCur);
+  MonetaryAmount xrpDustThreshold = dustThreshold(dustCur).value_or(MonetaryAmount{-1});
   TradedAmounts tradedAmounts1 = expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket);
 
   TradedAmounts tradedAmounts2 = expectTakerSell(from + tradedAmounts1.tradedTo, pri);
@@ -728,7 +728,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   expectTakerSell(from, priBtc, 0);  // no selling possible
   expectTakerSell(from, priEur, 0);  // no selling possible
 
-  MonetaryAmount xrpDustThreshold = *dustThreshold(dustCur);
+  MonetaryAmount xrpDustThreshold = dustThreshold(dustCur).value_or(MonetaryAmount{-1});
   TradedAmounts tradedAmounts1 = expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket);
   from += tradedAmounts1.tradedTo;
 

@@ -82,22 +82,22 @@ class CommandLineOptionsParser {
   }
 
   void displayHelp(std::string_view programName, std::ostream& stream) const {
-    stream << "usage: " << programName << " <general options> <command(s)>" << std::endl;
+    stream << "usage: " << programName << " <general options> <command(s)>\n";
     if (_opts.empty()) {
       return;
     }
-    stream << "Options:" << std::endl;
+    stream << "Options:\n";
 
     const int lenTabRow = computeLenTabRow();
     std::string_view previousGroup;
     for (const auto& [opt, pm] : _opts) {
       std::string_view currentGroup = opt.commandHeader().groupName();
       if (currentGroup != previousGroup) {
-        stream << std::endl << ' ' << currentGroup << std::endl;
+        stream << '\n' << ' ' << currentGroup << '\n';
         previousGroup = currentGroup;
       }
       if (opt.fullName()[0] != '-') {
-        stream << std::endl;
+        stream << '\n';
       }
 
       RowPrefix(opt, lenTabRow, stream);
@@ -109,14 +109,14 @@ class CommandLineOptionsParser {
         auto breakPos = descr.find_first_of(kSpaceOrNewLine);
         if (breakPos == std::string_view::npos) {
           if (linePos + descr.size() > kMaxCharLine) {
-            stream << std::endl;
+            stream << '\n';
             Spaces(lenTabRow, stream);
           }
-          stream << descr << std::endl;
+          stream << descr << '\n';
           break;
         }
         if (linePos + breakPos > kMaxCharLine) {
-          stream << std::endl;
+          stream << '\n';
           Spaces(lenTabRow, stream);
           linePos = lenTabRow;
         }
