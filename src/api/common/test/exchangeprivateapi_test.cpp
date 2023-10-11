@@ -49,7 +49,7 @@ class ExchangePrivateTest : public ::testing::Test {
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
-  CommonAPI commonAPI{coincenterInfo, Duration::max(), true};
+  CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
 
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};

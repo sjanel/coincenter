@@ -21,9 +21,9 @@ File GetFiatCacheFile(std::string_view dataDir) {
 
 }  // namespace
 
-CommonAPI::CommonAPI(const CoincenterInfo& config, Duration fiatsUpdateFrequency, bool loadFromFileCacheAtInit)
+CommonAPI::CommonAPI(const CoincenterInfo& config, Duration fiatsUpdateFrequency, AtInit atInit)
     : _coincenterInfo(config), _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault)) {
-  if (loadFromFileCacheAtInit) {
+  if (atInit == AtInit::kLoadFromFileCache) {
     json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
     if (!data.empty()) {
       int64_t timeEpoch = data["timeepoch"].get<int64_t>();

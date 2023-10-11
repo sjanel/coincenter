@@ -18,8 +18,10 @@ class CommonAPI : public ExchangeBase {
  public:
   using Fiats = FlatSet<CurrencyCode>;
 
+  enum class AtInit : int8_t { kLoadFromFileCache, kNoLoadFromFileCache };
+
   CommonAPI(const CoincenterInfo &config, Duration fiatsUpdateFrequency = std::chrono::hours(96),
-            bool loadFromFileCacheAtInit = true);
+            AtInit atInit = AtInit::kLoadFromFileCache);
 
   /// Returns a new set of fiat currencies.
   Fiats queryFiats() {

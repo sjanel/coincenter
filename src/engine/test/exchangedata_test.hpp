@@ -23,7 +23,7 @@ class ExchangesBaseTest : public ::testing::Test {
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};
-  api::CommonAPI commonAPI{coincenterInfo, Duration::max(), true};
+  api::CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
   api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, commonAPI, coincenterInfo};
