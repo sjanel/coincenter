@@ -43,10 +43,6 @@ class HashTuple {
   struct Component {
     const T& value;
 
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit Component(const T& v) : value(v) {}
-#endif
-
     size_t operator,(size_t n) const { return HashCombine(std::hash<T>()(value), n); }
   };
 };

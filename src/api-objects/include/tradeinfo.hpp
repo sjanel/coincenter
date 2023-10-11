@@ -23,20 +23,11 @@ struct TradeContext {
 };
 
 struct TradeInfo {
-#ifndef CCT_AGGR_INIT_CXX20
-  TradeInfo(const TradeContext &tradeContext, const TradeOptions &opts) : tradeContext(tradeContext), options(opts) {}
-#endif
-
   TradeContext tradeContext;
   TradeOptions options;
 };
 
 struct OrderInfo {
-#ifndef CCT_AGGR_INIT_CXX20
-  explicit OrderInfo(const TradedAmounts &ta, bool closed = false) : tradedAmounts(ta), isClosed(closed) {}
-  explicit OrderInfo(TradedAmounts &&ta, bool closed = false) : tradedAmounts(std::move(ta)), isClosed(closed) {}
-#endif
-
   bool operator==(const OrderInfo &) const = default;
 
   TradedAmounts tradedAmounts;
@@ -44,11 +35,6 @@ struct OrderInfo {
 };
 
 struct PlaceOrderInfo {
-#ifndef CCT_AGGR_INIT_CXX20
-  PlaceOrderInfo(const OrderInfo &oInfo, const OrderId &orderId) : orderInfo(oInfo), orderId(orderId) {}
-  PlaceOrderInfo(OrderInfo &&oInfo, OrderId &&orderId) : orderInfo(std::move(oInfo)), orderId(std::move(orderId)) {}
-#endif
-
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.isClosed = true; }
 

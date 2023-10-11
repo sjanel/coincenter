@@ -56,11 +56,3 @@
 #else
 #error "Unknown compiler. Only clang, gcc and MSVC are supported."
 #endif
-
-#ifndef CCT_CLANG
-// Clang does not support 'Allow initializing aggregates from a parenthesized list of values' (nor CTAD) yet.
-// Although it's a C++20 project, it's nice to support clang so let's keep this switch for now, until clang finally
-// implements it. More information here:
-// https://stackoverflow.com/questions/70260994/automatic-template-deduction-c20-with-aggregate-type
-#define CCT_AGGR_INIT_CXX20
-#endif

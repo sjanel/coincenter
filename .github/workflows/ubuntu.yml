@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [g++-11, clang++-13]
+        compiler: [g++-11, clang++-17]
         buildmode: [Debug, Release]
 
     steps:
@@ -26,14 +26,14 @@ jobs:
       - name: Install gcc
         run: |
           sudo apt install ${{matrix.compiler}}
-        if: matrix.compiler == 'g++-11'
+        if: startsWith(matrix.compiler, 'g++')
 
       - name: Install clang
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 13
-        if: matrix.compiler == 'clang++-13'
+          sudo ./llvm.sh 17
+        if: startsWith(matrix.compiler, 'clang')
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build

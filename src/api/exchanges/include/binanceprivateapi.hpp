@@ -70,11 +70,6 @@ class BinancePrivate : public ExchangePrivate {
   bool checkMarketAppendSymbol(Market mk, CurlPostData& params);
 
   struct BinanceContext {
-#ifndef CCT_AGGR_INIT_CXX20
-    BinanceContext(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _exchangePublic(exchangePublic), _queryDelay(queryDelay) {}
-#endif
-
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
     BinancePublic& _exchangePublic;

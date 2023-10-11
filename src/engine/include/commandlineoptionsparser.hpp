@@ -37,9 +37,8 @@ overloaded(Ts...) -> overloaded<Ts...>;
 template <class OptValueType>
 class CommandLineOptionsParser : private OptValueType {
  public:
-  // TODO: Once clang implements P0634R3, remove 'typename' here
-  using CommandLineOptionType = typename AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionType;
-  using CommandLineOptionWithValue = typename AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
+  using CommandLineOptionType = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionType;
+  using CommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
 
   template <unsigned N>
   explicit CommandLineOptionsParser(const CommandLineOptionWithValue (&init)[N])

@@ -83,10 +83,6 @@ class BinancePublic : public ExchangePublic {
   struct ExchangeInfoFunc {
     using ExchangeInfoDataByMarket = std::unordered_map<Market, json>;
 
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit ExchangeInfoFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
-#endif
-
     ExchangeInfoDataByMarket operator()();
 
     CommonInfo& _commonInfo;
@@ -105,12 +101,6 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct MarketsFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    MarketsFunc(CachedResult<ExchangeInfoFunc>& exchangeInfoCache, CurlHandle& curlHandle,
-                const ExchangeInfo& exchangeInfo)
-        : _exchangeInfoCache(exchangeInfoCache), _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
-#endif
-
     MarketSet operator()();
 
     CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
@@ -119,12 +109,6 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    AllOrderBooksFunc(CachedResult<ExchangeInfoFunc>& exchangeInfoCache, CachedResult<MarketsFunc>& marketsCache,
-                      CommonInfo& commonInfo)
-        : _exchangeInfoCache(exchangeInfoCache), _marketsCache(marketsCache), _commonInfo(commonInfo) {}
-#endif
-
     MarketOrderBookMap operator()(int depth);
 
     CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
@@ -133,29 +117,18 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit OrderBookFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
-#endif
-
     MarketOrderBook operator()(Market mk, int depth = kDefaultDepth);
 
     CommonInfo& _commonInfo;
   };
 
   struct TradedVolumeFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit TradedVolumeFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
-#endif
     MonetaryAmount operator()(Market mk);
 
     CommonInfo& _commonInfo;
   };
 
   struct TickerFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit TickerFunc(CommonInfo& commonInfo) : _commonInfo(commonInfo) {}
-#endif
-
     MonetaryAmount operator()(Market mk);
 
     CommonInfo& _commonInfo;

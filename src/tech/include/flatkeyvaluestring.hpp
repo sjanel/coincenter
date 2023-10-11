@@ -25,12 +25,6 @@ namespace cct {
 struct KeyValuePair {
   using IntegralType = int64_t;
 
-#ifndef CCT_AGGR_INIT_CXX20
-  KeyValuePair(std::string_view k, std::string_view v) : key(k), val(v) {}
-
-  KeyValuePair(std::string_view k, IntegralType v) : key(k), val(v) {}
-#endif
-
   std::string_view key;
   std::variant<std::string_view, IntegralType> val;
 };

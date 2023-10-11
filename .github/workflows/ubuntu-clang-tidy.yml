@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        clang-version: [14]
+        clang-version: [17]
         buildmode: [Debug]
 
     steps:
@@ -28,6 +28,8 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh ${{matrix.clang-version}}
+          sudo apt install clang-tidy-${{matrix.clang-version}}
+          sudo ln -s /usr/bin/clang-tidy-${{matrix.clang-version}} /usr/local/bin/clang-tidy
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build

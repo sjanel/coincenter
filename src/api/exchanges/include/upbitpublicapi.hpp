@@ -65,11 +65,6 @@ class UpbitPublic : public ExchangePublic {
   static MonetaryAmount SanitizeVolume(MonetaryAmount vol, MonetaryAmount pri);
 
   struct MarketsFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    MarketsFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
-#endif
-
     MarketSet operator()();
 
     CurlHandle& _curlHandle;
@@ -77,11 +72,6 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct TradableCurrenciesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    TradableCurrenciesFunc(CurlHandle& curlHandle, CachedResult<MarketsFunc>& marketsCache)
-        : _curlHandle(curlHandle), _marketsCache(marketsCache) {}
-#endif
-
     CurrencyExchangeFlatSet operator()();
 
     CurlHandle& _curlHandle;
@@ -89,10 +79,6 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    WithdrawalFeesFunc(const string& name, std::string_view dataDir) : _name(name), _dataDir(dataDir) {}
-#endif
-
     WithdrawalFeeMap operator()();
 
     const string& _name;
@@ -100,11 +86,6 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct AllOrderBooksFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    AllOrderBooksFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo, CachedResult<MarketsFunc>& marketsCache)
-        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo), _marketsCache(marketsCache) {}
-#endif
-
     MarketOrderBookMap operator()(int depth);
 
     CurlHandle& _curlHandle;
@@ -113,11 +94,6 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct OrderBookFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    OrderBookFunc(CurlHandle& curlHandle, const ExchangeInfo& exchangeInfo)
-        : _curlHandle(curlHandle), _exchangeInfo(exchangeInfo) {}
-#endif
-
     MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
@@ -125,20 +101,12 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct TradedVolumeFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit TradedVolumeFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
-#endif
-
     MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;
   };
 
   struct TickerFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit TickerFunc(CurlHandle& curlHandle) : _curlHandle(curlHandle) {}
-#endif
-
     MonetaryAmount operator()(Market mk);
 
     CurlHandle& _curlHandle;

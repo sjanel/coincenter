@@ -219,8 +219,7 @@ struct CoincenterCmdLineOptions {
 
 template <class OptValueType>
 struct CoincenterAllowedOptions {
-  // TODO: Once clang implements P0634R3, remove 'typename' here
-  using CommandLineOptionWithValue = typename AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
+  using CommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
 
   static constexpr CommandLineOptionWithValue value[] = {
       {{{"General", 1}, "--help", 'h', "", "Display this information"}, &OptValueType::help},

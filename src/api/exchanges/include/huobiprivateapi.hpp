@@ -56,10 +56,6 @@ class HuobiPrivate : public ExchangePrivate {
   void cancelOrderProcess(OrderIdView orderId);
 
   struct AccountIdFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    AccountIdFunc(CurlHandle& curlHandle, const APIKey& apiKey) : _curlHandle(curlHandle), _apiKey(apiKey) {}
-#endif
-
     int operator()();
 
     CurlHandle& _curlHandle;
@@ -67,11 +63,6 @@ class HuobiPrivate : public ExchangePrivate {
   };
 
   struct DepositWalletFunc {
-#ifndef CCT_AGGR_INIT_CXX20
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, const HuobiPublic& huobiPublic)
-        : _curlHandle(curlHandle), _apiKey(apiKey), _huobiPublic(huobiPublic) {}
-#endif
-
     Wallet operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;

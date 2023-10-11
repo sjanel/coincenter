@@ -64,11 +64,6 @@ namespace {
 
 // Optimized struct containing a currency and a reverse bool to keep market directionality information
 struct CurrencyDir {
-#ifndef CCT_AGGR_INIT_CXX20
-  CurrencyDir(CurrencyCode cur, bool isLastRealMarketReversed)
-      : cur(cur), isLastRealMarketReversed(isLastRealMarketReversed) {}
-#endif
-
   CurrencyCode cur;
   bool isLastRealMarketReversed;
 };

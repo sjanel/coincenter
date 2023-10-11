@@ -39,10 +39,6 @@ class MarketOrderBook {
   using OrderBookLineSpan = std::span<const OrderBookLine>;
 
   struct AmountAtPrice {
-#ifndef CCT_AGGR_INIT_CXX20
-    AmountAtPrice(MonetaryAmount a, MonetaryAmount p) : amount(a), price(p) {}
-#endif
-
     MonetaryAmount amount;
     MonetaryAmount price;
   };
@@ -153,10 +149,6 @@ class MarketOrderBook {
 
   struct AmountPrice {
     using AmountType = MonetaryAmount::AmountType;
-
-#ifndef CCT_AGGR_INIT_CXX20
-    explicit AmountPrice(AmountType a = 0, AmountType p = 0) : amount(a), price(p) {}
-#endif
 
     bool operator==(const AmountPrice& o) const = default;
 
