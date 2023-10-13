@@ -1,7 +1,13 @@
 #include "balanceperexchangeportfolio.hpp"
 
+#include <utility>
+
+#include "balanceportfolio.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "currencycode.hpp"
 #include "exchange.hpp"
+#include "monetaryamount.hpp"
 #include "simpletable.hpp"
 
 namespace cct {

@@ -2,6 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
+#include <utility>
+
+#include "cct_string.hpp"
+
 namespace cct {
 TEST(SimpleTable, DefaultConstructor) {
   SimpleTable table;

@@ -2,10 +2,16 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+#include <chrono>
+#include <initializer_list>
+#include <optional>
 #include <sstream>
+#include <string_view>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_vector.hpp"
+#include "commandlineoption.hpp"
 #include "staticcommandlineoptioncheck.hpp"
 #include "timedef.hpp"
 

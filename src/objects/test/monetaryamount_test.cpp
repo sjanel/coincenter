@@ -2,8 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <optional>
+
 #include "cct_exception.hpp"
-#include "cct_invalid_argument_exception.hpp"
+#include "currencycode.hpp"
 
 namespace cct {
 

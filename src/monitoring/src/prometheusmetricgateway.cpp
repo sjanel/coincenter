@@ -6,10 +6,20 @@
 #include <prometheus/summary.h>
 
 #include <cassert>
+#include <chrono>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
+#include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "metric.hpp"
+#include "monitoringinfo.hpp"
 #include "timedef.hpp"
 
 #ifdef CCT_MSVC

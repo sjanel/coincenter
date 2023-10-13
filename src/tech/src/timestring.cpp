@@ -4,9 +4,13 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <string_view>
 
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

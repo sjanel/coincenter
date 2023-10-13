@@ -2,14 +2,25 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <limits>
 #include <numeric>
+#include <optional>
+#include <string_view>
+#include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
 #include "priceoptions.hpp"
-#include "stringhelpers.hpp"
+#include "priceoptionsdef.hpp"
+#include "simpletable.hpp"
 #include "unreachable.hpp"
+#include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
 

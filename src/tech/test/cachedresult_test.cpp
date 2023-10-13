@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 
+#include "cachedresultvault.hpp"
+
 namespace cct {
 namespace {
 class Incr {

@@ -1,8 +1,21 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <optional>
+#include <span>
+
 #include "cct_const.hpp"
+#include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchange.hpp"
 #include "exchangedata_test.hpp"
+#include "exchangename.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "exchangeretriever.hpp"
 #include "exchangesorchestrator.hpp"
+#include "market.hpp"
+#include "queryresulttypes.hpp"
 
 namespace cct {
 

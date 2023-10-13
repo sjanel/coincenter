@@ -1,10 +1,20 @@
 #include "exchangeinfo.hpp"
 
+#include <cstdint>
+#include <limits>
+#include <string_view>
+#include <utility>
+
+#include "apiquerytypeenum.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "currencycodevector.hpp"
 #include "durationstring.hpp"
-#include "stringhelpers.hpp"
+#include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

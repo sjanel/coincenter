@@ -1,20 +1,49 @@
 #include "queryresultprinter.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <ostream>
 #include <sstream>
+#include <string_view>
+#include <utility>
 
+#include "apioutputtype.hpp"
 #include "balanceperexchangeportfolio.hpp"
+#include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincentercommandtype.hpp"
+#include "currencycode.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
 #include "durationstring.hpp"
 #include "exchange.hpp"
+#include "file.hpp"
 #include "logginginfo.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
+#include "priceoptions.hpp"
+#include "publictrade.hpp"
+#include "queryresulttypes.hpp"
 #include "simpletable.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
+#include "tradedefinitions.hpp"
+#include "tradeside.hpp"
 #include "unreachable.hpp"
+#include "withdraw.hpp"
 #include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
+#include "withdrawsconstraints.hpp"
+#include "withdrawsordepositsconstraints.hpp"
+#include "writer.hpp"
 
 namespace cct {
 namespace {

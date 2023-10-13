@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <iterator>
+#include <string_view>
+
 namespace cct {
 namespace {
 constexpr std::string_view kSingleURL = "singleurl";

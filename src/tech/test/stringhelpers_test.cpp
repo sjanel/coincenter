@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
+
 #include "cct_string.hpp"
 
 namespace cct {

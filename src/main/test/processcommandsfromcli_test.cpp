@@ -2,6 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <string_view>
+
+#include "cct_invalid_argument_exception.hpp"
+#include "coincentercommands.hpp"
+#include "coincenteroptions.hpp"
+#include "runmodes.hpp"
+
 namespace cct {
 namespace {
 constexpr settings::RunMode kRunMode = settings::RunMode::kTestKeys;

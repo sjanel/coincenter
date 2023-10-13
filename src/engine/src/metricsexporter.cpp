@@ -3,8 +3,17 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
+#include "balanceportfolio.hpp"
+#include "cct_string.hpp"
 #include "curlmetrics.hpp"
+#include "currencycode.hpp"
 #include "exchange.hpp"
+#include "market.hpp"
+#include "metric.hpp"
+#include "monetaryamount.hpp"
+#include "publictrade.hpp"
+#include "queryresulttypes.hpp"
+#include "tradeside.hpp"
 
 #define RETURN_IF_NO_MONITORING \
   if (!_pMetricsGateway) return

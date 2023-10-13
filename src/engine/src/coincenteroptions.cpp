@@ -2,7 +2,9 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string_view>
 
+#include "cct_config.hpp"
 #include "cct_const.hpp"
 #include "curlhandle.hpp"
 #include "ssl_sha.hpp"

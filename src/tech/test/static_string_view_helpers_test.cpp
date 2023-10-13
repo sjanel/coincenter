@@ -1,5 +1,7 @@
 #include "static_string_view_helpers.hpp"
 
+#include <string_view>
+
 namespace cct {
 // JoinStringView
 namespace test1 {

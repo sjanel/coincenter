@@ -1,5 +1,9 @@
 #include "tradedamounts.hpp"
 
+#include <ostream>
+
+#include "cct_string.hpp"
+
 namespace cct {
 
 string TradedAmounts::str() const {

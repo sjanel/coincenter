@@ -205,9 +205,9 @@ class CurrencyCode {
   constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
 
   /// Note that this respects the lexicographical order - chars are encoded from the most significant bits first
-  constexpr auto operator<=>(const CurrencyCode &) const = default;
+  constexpr auto operator<=>(const CurrencyCode &) const noexcept = default;
 
-  constexpr bool operator==(const CurrencyCode &) const = default;
+  constexpr bool operator==(const CurrencyCode &) const noexcept = default;
 
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {

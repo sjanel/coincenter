@@ -1,9 +1,10 @@
 #include "priceoptions.hpp"
 
-#include <stdexcept>
+#include <string_view>
 
 #include "cct_invalid_argument_exception.hpp"
-#include "stringhelpers.hpp"
+#include "cct_string.hpp"
+#include "priceoptionsdef.hpp"
 #include "unreachable.hpp"
 
 namespace cct {

@@ -1,9 +1,14 @@
 #include "monitoringinfo.hpp"
 
+#include <cstdint>
+#include <limits>
+#include <string_view>
+
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
+
 MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std::string_view address, int port,
                                std::string_view username, std::string_view password)
     : _jobName(jobName),
@@ -20,4 +25,5 @@ MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std
     log::debug("Monitoring disabled");
   }
 }
+
 }  // namespace cct

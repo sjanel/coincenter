@@ -1,8 +1,24 @@
 #include "coincenterinfo_create.hpp"
 
+#include <string_view>
+#include <utility>
+
+#include "apioutputtype.hpp"
+#include "cct_json.hpp"
+#include "cct_string.hpp"
+#include "coincenterinfo.hpp"
+#include "coincenteroptions.hpp"
 #include "durationstring.hpp"
+#include "exchangesecretsinfo.hpp"
 #include "file.hpp"
+#include "generalconfig.hpp"
+#include "loadconfiguration.hpp"
+#include "logginginfo.hpp"
+#include "monitoringinfo.hpp"
+#include "requestsconfig.hpp"
+#include "runmodes.hpp"
 #include "stringoptionparser.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

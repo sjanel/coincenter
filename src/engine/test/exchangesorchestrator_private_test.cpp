@@ -1,8 +1,32 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "cct_const.hpp"
+#include <span>
+#include <string_view>
+#include <utility>
+
+#include "accountowner.hpp"
+#include "balanceoptions.hpp"
+#include "cct_exception.hpp"
+#include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchange.hpp"
 #include "exchangedata_test.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "exchangesorchestrator.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "ordersconstraints.hpp"
+#include "queryresulttypes.hpp"
+#include "timedef.hpp"
+#include "tradeside.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawoptions.hpp"
+#include "withdrawordeposit.hpp"
 
 namespace cct {
 

@@ -1,6 +1,13 @@
 #include "market.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <ostream>
+#include <string_view>
+
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
+#include "toupperlower.hpp"
 
 namespace cct {
 Market::Market(std::string_view marketStrRep, char currencyCodeSep) {

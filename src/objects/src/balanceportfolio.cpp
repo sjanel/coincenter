@@ -1,6 +1,11 @@
 #include "balanceportfolio.hpp"
 
 #include <algorithm>
+#include <span>
+#include <utility>
+
+#include "currencycode.hpp"
+#include "monetaryamount.hpp"
 
 namespace cct {
 namespace {

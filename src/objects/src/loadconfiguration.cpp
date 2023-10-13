@@ -1,5 +1,9 @@
 #include "loadconfiguration.hpp"
 
+#include <string_view>
+
+#include "cct_const.hpp"
+
 namespace cct {
 LoadConfiguration::LoadConfiguration() noexcept
     : _dataDir(kDefaultDataDir), _exchangeConfigFileType(ExchangeConfigFileType::kProd) {}

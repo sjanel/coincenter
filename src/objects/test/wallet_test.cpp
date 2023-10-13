@@ -2,13 +2,17 @@
 
 #include <gtest/gtest.h>
 
+#include <utility>
+
+#include "accountowner.hpp"
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+#include "exchangename.hpp"
+
 namespace cct {
 
 class WalletTest : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   WalletCheck walletCheck;
 };
 

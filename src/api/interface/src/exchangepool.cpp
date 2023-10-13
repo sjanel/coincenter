@@ -1,13 +1,18 @@
 #include "exchangepool.hpp"
 
-#include <memory>
+#include <string_view>
 
+#include "apikey.hpp"
 #include "apikeysprovider.hpp"
 #include "binanceprivateapi.hpp"
 #include "bithumbprivateapi.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_string.hpp"
+#include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangepublicapi.hpp"
 #include "huobiprivateapi.hpp"
 #include "krakenprivateapi.hpp"
 #include "kucoinprivateapi.hpp"

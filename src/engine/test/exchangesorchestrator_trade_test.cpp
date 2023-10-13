@@ -1,8 +1,32 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "cct_const.hpp"
+#include <cstdint>
+#include <limits>
+#include <span>
+#include <utility>
+
+#include "balanceoptions.hpp"
+#include "cct_exception.hpp"
+#include "currencycode.hpp"
+#include "exchange.hpp"
 #include "exchangedata_test.hpp"
+#include "exchangename.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "exchangesorchestrator.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "orderid.hpp"
+#include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
+#include "queryresulttypes.hpp"
+#include "timedef.hpp"
+#include "tradedamounts.hpp"
+#include "tradedefinitions.hpp"
+#include "tradeinfo.hpp"
+#include "tradeoptions.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 

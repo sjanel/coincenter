@@ -2,10 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <cstdint>
 #include <regex>
 #include <thread>
 
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

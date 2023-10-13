@@ -1,5 +1,7 @@
 #include "coincentercommandtype.hpp"
 
+#include <string_view>
+
 #include "cct_exception.hpp"
 
 namespace cct {

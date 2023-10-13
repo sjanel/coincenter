@@ -1,5 +1,10 @@
 #include "currencyexchange.hpp"
 
+#include <ostream>
+
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+
 namespace cct {
 
 CurrencyExchange::CurrencyExchange(CurrencyCode standardCode, Deposit deposit, Withdraw withdraw, Type type)

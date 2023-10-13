@@ -1,10 +1,15 @@
 #include "durationstring.hpp"
 
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 Duration ParseDuration(std::string_view durationStr) {

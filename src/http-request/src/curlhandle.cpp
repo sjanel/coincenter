@@ -2,22 +2,33 @@
 
 #include <curl/curl.h>
 
-#include <limits>
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <map>
 #include <memory>
+#include <new>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <utility>
 
 #include "abstractmetricgateway.hpp"
-#include "cct_const.hpp"
+#include "besturlpicker.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "curlmetrics.hpp"
 #include "curloptions.hpp"
 #include "flatkeyvaluestring.hpp"
+#include "httprequesttype.hpp"
+#include "metric.hpp"
+#include "permanentcurloptions.hpp"
 #include "proxy.hpp"
-#include "stringhelpers.hpp"
+#include "runmodes.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -33,7 +44,7 @@ size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *
   } catch (const std::bad_alloc &e) {
     // Do not throw exceptions in a function passed to a C library
     // This will cause CURL to raise an error
-    log::error("Bad alloc catched in curl write call back action, returning 0: {}", e.what());
+    log::error("Bad alloc caught in curl write call back action, returning 0: {}", e.what());
     return 0;
   }
   return size * nmemb;

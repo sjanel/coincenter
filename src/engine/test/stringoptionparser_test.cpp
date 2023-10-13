@@ -2,7 +2,16 @@
 
 #include <gtest/gtest.h>
 
+#include <tuple>
+#include <utility>
+
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
+#include "currencycode.hpp"
+#include "exchangename.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
 
 namespace cct {
 

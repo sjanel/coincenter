@@ -1,9 +1,13 @@
 #include "simpletable.hpp"
 
 #include <algorithm>
-#include <array>
+#include <cstdint>
 #include <iomanip>
+#include <ios>
 #include <numeric>
+#include <ostream>
+#include <span>
+#include <string_view>
 
 #include "mathhelpers.hpp"
 #include "unreachable.hpp"

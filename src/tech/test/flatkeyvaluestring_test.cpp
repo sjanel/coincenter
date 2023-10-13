@@ -2,7 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include "cct_exception.hpp"
+#include <cstdint>
+#include <string_view>
+
+#include "cct_json.hpp"
 
 namespace cct {
 namespace {

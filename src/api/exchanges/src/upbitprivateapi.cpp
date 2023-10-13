@@ -4,30 +4,66 @@
 
 #include <algorithm>
 #include <cassert>
-#include <execution>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 #include "apikey.hpp"
+#include "apiquerytypeenum.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "codec.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
 #include "monetaryamount.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
+#include "permanentcurloptions.hpp"
 #include "ssl_sha.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
+#include "tradedamounts.hpp"
+#include "tradeinfo.hpp"
+#include "tradeside.hpp"
 #include "upbitpublicapi.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawordeposit.hpp"
 
 namespace cct::api {
 
 namespace {
 
+enum class IfError : int8_t { kThrow, kNoThrow };
+
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
+                  CurlPostDataT&& curlPostData = CurlPostData(), IfError ifError = IfError::kThrow) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
 
   auto jsonWebToken = jwt::create()
@@ -50,7 +86,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   opts.appendHttpHeader("Authorization", authStr);
 
   json ret = json::parse(curlHandle.query(endpoint, opts));
-  if (throwIfError) {
+  if (ifError == IfError::kThrow) {
     auto errorIt = ret.find("error");
     if (errorIt != ret.end()) {
       log::error("Full Upbit json error: '{}'", ret.dump());
@@ -86,8 +122,8 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
-  constexpr bool throwIfError = false;
-  json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), throwIfError);
+  json ret =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), IfError::kNoThrow);
   auto errorIt = ret.find("error");
   return errorIt == ret.end() && !ret.empty();
 }
@@ -147,7 +183,8 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurlPostData postData{{"currency", currencyCode.str()}};
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData, false);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData,
+                             IfError::kNoThrow);
   bool generateDepositAddressNeeded = false;
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
@@ -166,17 +203,17 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     if (genCoinAddressResult.contains("success")) {
       log::info("Successfully generated address");
     }
-    std::chrono::seconds sleepingTime(1);
+    TimeInS sleepingTime(1);
     static constexpr int kNbMaxRetries = 15;
     int nbRetries = 0;
     do {
       if (nbRetries > 0) {
         log::info("Waiting {} s for address to be generated...",
-                  std::chrono::duration_cast<std::chrono::seconds>(sleepingTime).count());
+                  std::chrono::duration_cast<TimeInS>(sleepingTime).count());
       }
       std::this_thread::sleep_for(sleepingTime);
       result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData);
-      sleepingTime += std::chrono::seconds(1);
+      sleepingTime += TimeInS(1);
       ++nbRetries;
     } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
   }
@@ -419,8 +456,8 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
                       IsOrderClosed(orderJson));
 
   if (orderJson.contains("trades")) {
-    CurrencyCode feeCurrencyCode(
-        mk.quote());  // TODO: to be confirmed (this is true at least for markets involving KRW)
+    // TODO: to be confirmed (this is true at least for markets involving KRW)
+    CurrencyCode feeCurrencyCode(mk.quote());
     MonetaryAmount fee(orderJson["paid_fee"].get<std::string_view>(), feeCurrencyCode);
 
     for (const json& orderDetails : orderJson["trades"]) {

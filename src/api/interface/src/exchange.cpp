@@ -1,8 +1,12 @@
 #include "exchange.hpp"
 
-#include "cct_const.hpp"
-#include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include <memory>
+
+#include "currencycode.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangepublicapi.hpp"
 
 namespace cct {
 
@@ -21,7 +25,7 @@ bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlat
   }
   auto lb = currencyExchangeSet.find(currencyCode);
   if (lb == currencyExchangeSet.end()) {
-    log::trace("{} cannot be withdrawed from {}", currencyCode, name());
+    log::trace("{} cannot be withdrawn from {}", currencyCode, name());
     return false;
   }
   return lb->canWithdraw();

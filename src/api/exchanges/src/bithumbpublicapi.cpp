@@ -1,21 +1,38 @@
 #include "bithumbpublicapi.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <ctime>
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <utility>
 
+#include "apiquerytypeenum.hpp"
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
 #include "stringhelpers.hpp"
 #include "timestring.hpp"
+#include "tradeside.hpp"
 
 namespace cct::api {
 namespace {

@@ -26,7 +26,7 @@ struct TradedAmounts {
     return *this;
   }
 
-  bool operator==(const TradedAmounts &) const = default;
+  constexpr bool operator==(const TradedAmounts &) const = default;
 
   friend std::ostream &operator<<(std::ostream &os, const TradedAmounts &tradedAmounts);
 

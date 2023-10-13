@@ -1,16 +1,55 @@
 #include "kucoinprivateapi.hpp"
 
-#include <thread>
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <string_view>
+#include <utility>
 
 #include "apikey.hpp"
+#include "apiquerytypeenum.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "cachedresult.hpp"
+#include "cct_exception.hpp"
+#include "cct_json.hpp"
+#include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "httprequesttype.hpp"
 #include "kucoinpublicapi.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
+#include "permanentcurloptions.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
-#include "toupperlower.hpp"
+#include "tradedamounts.hpp"
+#include "tradeinfo.hpp"
+#include "tradeside.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawordeposit.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 
