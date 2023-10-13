@@ -3,13 +3,24 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <optional>
+
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "currencycode.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangepublicapi_mock.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "loadconfiguration.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "runmodes.hpp"
+#include "timedef.hpp"
+#include "volumeandpricenbdecimals.hpp"
 
 namespace cct::api {
 class ExchangePublicTest : public ::testing::Test {

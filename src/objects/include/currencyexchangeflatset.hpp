@@ -1,8 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <utility>
+
 #include "cct_exception.hpp"
 #include "cct_flatset.hpp"
 #include "cct_type_traits.hpp"
+#include "cct_vector.hpp"
+#include "currencycode.hpp"
 #include "currencyexchange.hpp"
 
 namespace cct {
@@ -14,12 +19,7 @@ using CurrencyExchangeVector = vector<CurrencyExchange>;
 /// CurrencyExchange.
 class CurrencyExchangeFlatSet {
  private:
-  struct CompareCurrencyExchangeByStandardCode {
-    bool operator()(const CurrencyExchange &lhs, const CurrencyExchange &rhs) const {
-      return lhs.standardCode() < rhs.standardCode();
-    }
-  };
-  using SetType = FlatSet<CurrencyExchange, CompareCurrencyExchangeByStandardCode>;
+  using SetType = FlatSet<CurrencyExchange>;
 
  public:
   using iterator = SetType::iterator;

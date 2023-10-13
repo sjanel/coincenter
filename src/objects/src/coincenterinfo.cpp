@@ -1,12 +1,24 @@
 #include "coincenterinfo.hpp"
 
-#include "cct_const.hpp"
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <string_view>
+#include <utility>
+
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "durationstring.hpp"
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangeinfomap.hpp"
 #include "exchangeinfoparser.hpp"
-#include "file.hpp"
+#include "generalconfig.hpp"
+#include "loadconfiguration.hpp"
+#include "monitoringinfo.hpp"
+#include "reader.hpp"
+#include "runmodes.hpp"
 #include "toupperlower.hpp"
 
 #ifdef CCT_ENABLE_PROMETHEUS
@@ -116,6 +128,21 @@ std::optional<CurrencyCode> CoincenterInfo::fiatCurrencyIfStableCoin(CurrencyCod
     return it->second;
   }
   return std::nullopt;
+}
+
+const ExchangeInfo& CoincenterInfo::exchangeInfo(std::string_view exchangeName) const {
+  auto it = _exchangeInfoMap.find(exchangeName);
+  if (it == _exchangeInfoMap.end()) {
+    throw exception("Unable to find this exchange in the configuration file");
+  }
+  return it->second;
+}
+
+AbstractMetricGateway& CoincenterInfo::metricGateway() const {
+  if (!useMonitoring()) {
+    throw exception("Unexpected monitoring setting");
+  }
+  return *_metricGatewayPtr;
 }
 
 }  // namespace cct

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
@@ -48,13 +49,7 @@ class CoincenterInfo {
   /// Otherwise, return 'std::nullopt'
   std::optional<CurrencyCode> fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const;
 
-  const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const {
-    auto it = _exchangeInfoMap.find(exchangeName);
-    if (it == _exchangeInfoMap.end()) {
-      throw exception("Unable to find this exchange in the configuration file");
-    }
-    return it->second;
-  }
+  const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const;
 
   settings::RunMode getRunMode() const { return _runMode; }
 
@@ -62,12 +57,7 @@ class CoincenterInfo {
 
   bool useMonitoring() const { return _monitoringInfo.useMonitoring(); }
 
-  AbstractMetricGateway &metricGateway() const {
-    if (!useMonitoring()) {
-      throw exception("Unexpected monitoring setting");
-    }
-    return *_metricGatewayPtr;
-  }
+  AbstractMetricGateway &metricGateway() const;
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 

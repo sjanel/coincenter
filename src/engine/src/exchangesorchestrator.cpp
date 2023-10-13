@@ -2,13 +2,46 @@
 
 #include <algorithm>
 #include <array>
-#include <execution>
 #include <iterator>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "cct_const.hpp"
+#include "cct_exception.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
+#include "cct_string.hpp"
+#include "commonapi.hpp"
+#include "currencycode.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "depositsconstraints.hpp"
+#include "exchange.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "exchangeretriever.hpp"
+#include "exchangeretrieverbase.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "ordersconstraints.hpp"
+#include "queryresulttypes.hpp"
 #include "requestsconfig.hpp"
+#include "threadpool.hpp"
+#include "tradeoptions.hpp"
+#include "wallet.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawoptions.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 
@@ -518,15 +551,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
     const int nbTrades = trades.size();
     int publicExchangePos = -1;
     api::ExchangePublic *pExchangePublic = nullptr;
-#ifdef CCT_CLANG
-    // Clang does not consider structured bindings symbols as variables yet...
-    // So they cannot be captured by lambdas
-    for (auto &pExchangeBalancePair : balancePerExchange) {
-      auto &pExchange = pExchangeBalancePair.first;
-      auto &balance = pExchangeBalancePair.second;
-#else
     for (auto &[pExchange, balance] : balancePerExchange) {
-#endif
       if (pExchangePublic != &pExchange->apiPublic()) {
         pExchangePublic = &pExchange->apiPublic();
         ++publicExchangePos;

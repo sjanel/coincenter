@@ -1,15 +1,51 @@
 #include "exchangeprivateapi.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cstdint>
+#include <limits>
 #include <map>
+#include <optional>
+#include <span>
+#include <string_view>
 #include <thread>
+#include <tuple>
+#include <utility>
 
+#include "apikey.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "cct_log.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
+#include "currencycode.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangebase.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
+#include "orderid.hpp"
+#include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
 #include "recentdeposit.hpp"
 #include "timedef.hpp"
+#include "tradedamounts.hpp"
+#include "tradedefinitions.hpp"
+#include "tradeinfo.hpp"
+#include "tradeside.hpp"
 #include "unreachable.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
+#include "withdrawordeposit.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 

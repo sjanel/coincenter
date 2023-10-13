@@ -1,8 +1,32 @@
 #include <gtest/gtest.h>
 
+#include <string_view>
+
+#include "accountowner.hpp"
+#include "apioutputtype.hpp"
+#include "balanceportfolio.hpp"
+#include "currencycode.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "ordersconstraints.hpp"
+#include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresultprinter_base_test.hpp"
+#include "queryresulttypes.hpp"
+#include "tradedamounts.hpp"
+#include "tradeoptions.hpp"
+#include "tradeside.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
+#include "withdrawordeposit.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <optional>
+#include <type_traits>
 #include <variant>
 
+#include "cct_type_traits.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
@@ -12,6 +15,7 @@
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"
+#include "withdrawsordepositsconstraints.hpp"
 
 namespace cct {
 class CoincenterCommand {

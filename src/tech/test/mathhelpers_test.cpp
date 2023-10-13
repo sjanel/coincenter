@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
+
 namespace cct {
 
 TEST(MathHelpers, Power) {

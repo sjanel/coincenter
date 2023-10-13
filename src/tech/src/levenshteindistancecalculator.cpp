@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <string_view>
 
 namespace cct {
 int LevenshteinDistanceCalculator::operator()(std::string_view word1, std::string_view word2) {

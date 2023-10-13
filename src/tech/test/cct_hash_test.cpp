@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <tuple>
+#include <utility>
+
 namespace cct {
 
 TEST(SSPHashTest, HashValue) {

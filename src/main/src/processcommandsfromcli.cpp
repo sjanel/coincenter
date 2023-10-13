@@ -1,8 +1,14 @@
 #include "processcommandsfromcli.hpp"
 
+#include <string_view>
+
+#include "cct_exception.hpp"
 #include "coincenter.hpp"
+#include "coincenterinfo.hpp"
 #include "coincenterinfo_create.hpp"
+#include "coincenteroptions.hpp"
 #include "curlhandle.hpp"
+#include "runmodes.hpp"
 
 namespace cct {
 

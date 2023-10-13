@@ -1,7 +1,17 @@
 #include <gtest/gtest.h>
 
+#include <string_view>
+
+#include "apioutputtype.hpp"
+#include "currencycode.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "publictrade.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresultprinter_base_test.hpp"
+#include "queryresulttypes.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 

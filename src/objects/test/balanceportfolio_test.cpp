@@ -3,13 +3,11 @@
 
 #include <gtest/gtest.h>
 
+#include "monetaryamount.hpp"
 namespace cct {
 
 class BalancePortfolioTest1 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   BalancePortfolio balancePortfolio;
 };
 
@@ -37,9 +35,6 @@ TEST_F(BalancePortfolioTest1, NoEquivalentCurrency2) {
 
 class BalancePortfolioTest2 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   BalancePortfolioTest2() {
     balancePortfolio.add(MonetaryAmount("11704.5678 XRP"));
     balancePortfolio.add(MonetaryAmount("10 EUR"));

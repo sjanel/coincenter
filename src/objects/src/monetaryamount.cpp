@@ -1,15 +1,25 @@
 #include "monetaryamount.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <compare>
+#include <cstdint>
 #include <cstdlib>
 #include <iomanip>
 #include <ios>
+#include <limits>
+#include <optional>
+#include <ostream>
 #include <sstream>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
-#include "cct_cctype.hpp"
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
+#include "currencycode.hpp"
+#include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {

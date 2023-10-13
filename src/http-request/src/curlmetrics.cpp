@@ -1,5 +1,8 @@
 #include "curlmetrics.hpp"
 
+#include "httprequesttype.hpp"
+#include "metric.hpp"
+
 namespace cct {
 namespace {
 

@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <utility>
+
+#include "cct_string.hpp"
+
 namespace cct {
 
 TEST(CctExceptionTest, InfoTakenFromConstCharStar) {

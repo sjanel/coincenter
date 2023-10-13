@@ -1,6 +1,6 @@
 #include "metric.hpp"
 
-#include "cct_string.hpp"
+#include <string_view>
 
 namespace cct {
 MetricKey CreateMetricKey(std::string_view name, std::string_view help) {

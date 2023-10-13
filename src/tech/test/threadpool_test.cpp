@@ -2,8 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <forward_list>
+#include <future>
 #include <numeric>
+#include <thread>
 
 #include "cct_vector.hpp"
 

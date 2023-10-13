@@ -1,10 +1,21 @@
 #include "stringoptionparser.hpp"
 
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
+#include "currencycode.hpp"
+#include "exchangename.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {

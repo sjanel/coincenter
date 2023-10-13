@@ -1,11 +1,12 @@
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
-#include <stdexcept>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 #include "coincentercommands.hpp"
 #include "processcommandsfromcli.hpp"
+#include "runmodes.hpp"
 
 int main(int argc, const char* argv[]) {
   try {
@@ -21,7 +22,8 @@ int main(int argc, const char* argv[]) {
   } catch (const cct::invalid_argument& e) {
     cct::log::critical("Invalid argument: {}", e.what());
     return EXIT_FAILURE;
-  } catch ([[maybe_unused]] const std::exception& e) {
+  } catch (const std::exception& e) {
+    cct::log::critical("{}", e.what());
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

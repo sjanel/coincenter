@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <span>
 #include <string_view>
 
 namespace cct {

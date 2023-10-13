@@ -1,6 +1,18 @@
 #include "coincentercommand.hpp"
 
+#include <utility>
+
 #include "cct_exception.hpp"
+#include "coincentercommandtype.hpp"
+#include "currencycode.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangename.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "ordersconstraints.hpp"
+#include "tradeoptions.hpp"
+#include "withdrawoptions.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 bool CoincenterCommand::isPublic() const {

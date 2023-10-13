@@ -1,6 +1,10 @@
 #include "exchangename.hpp"
 
+#include <cstddef>
+#include <string_view>
+
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {

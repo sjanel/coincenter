@@ -233,7 +233,7 @@ else()
 
     if(CLANG_TIDY)
       message(STATUS "Activate clang-tidy")
-      set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
+      set(CMAKE_CXX_CLANG_TIDY clang-tidy)
     else()
       message(FATAL_ERROR "clang-tidy executable cannot be found")
     endif()

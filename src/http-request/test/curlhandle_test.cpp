@@ -2,9 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include <string_view>
+
 #include "cct_exception.hpp"
 #include "curloptions.hpp"
+#include "httprequesttype.hpp"
+#include "permanentcurloptions.hpp"
 #include "proxy.hpp"
+#include "runmodes.hpp"
 
 /* URL available to test HTTPS, cf
  * https://support.nmi.com/hc/en-gb/articles/360021544791-How-to-Check-If-the-Correct-Certificates-Are-Installed-on-Linux

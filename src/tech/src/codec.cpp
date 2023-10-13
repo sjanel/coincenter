@@ -1,9 +1,12 @@
 #include "codec.hpp"
 
 #include <cstddef>
+#include <cstdio>
+#include <span>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
 
 namespace cct {
 

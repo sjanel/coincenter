@@ -1,11 +1,15 @@
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <limits>
 #include <sstream>
 #include <string_view>
 
+#include "apioutputtype.hpp"
 #include "cct_config.hpp"
+#include "cct_json.hpp"
 #include "exchangedata_test.hpp"
+#include "queryresultprinter.hpp"
 #include "timedef.hpp"
 
 namespace cct {
