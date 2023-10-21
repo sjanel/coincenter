@@ -4,12 +4,12 @@
 #include <filesystem>
 #include <iostream>
 #include <span>
+#include <string_view>
 #include <utility>
 
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_log.hpp"
-#include "cct_string.hpp"
 #include "cct_vector.hpp"
+#include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "commandlineoptionsparser.hpp"
@@ -19,6 +19,7 @@
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
 #include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
 #include "stringoptionparser.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"

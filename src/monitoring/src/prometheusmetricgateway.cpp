@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -18,39 +19,27 @@
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "gethostname.hpp"
 #include "metric.hpp"
 #include "monitoringinfo.hpp"
 #include "timedef.hpp"
 
-#ifdef CCT_MSVC
-#include <Winsock2.h>
-#else
-#include <unistd.h>
-#endif
-
 namespace cct {
 
 namespace {
-constexpr int kHTTPSuccessReturnCode = 200;
+constexpr auto kHTTPSuccessReturnCode = 200;
 
 // Constants to control frequency of flushes to Prometheus instance
-constexpr Duration kPrometheusAutoFlushPeriod = std::chrono::minutes(3);
-constexpr int kCheckFlushCounter = 20;
-
-std::string GetHostName() {
-  char hostname[1024];
-  if (::gethostname(hostname, sizeof(hostname)) != 0) {
-    hostname[0] = '\0';
-  }
-  return hostname;
-}
+constexpr auto kPrometheusAutoFlushPeriod = std::chrono::minutes(3);
+constexpr auto kCheckFlushCounter = 20;
 
 }  // namespace
 
 PrometheusMetricGateway::PrometheusMetricGateway(const MonitoringInfo& monitoringInfo)
     : AbstractMetricGateway(monitoringInfo),
       _gateway(std::string(monitoringInfo.address()), std::to_string(monitoringInfo.port()),
-               std::string(monitoringInfo.jobName()), prometheus::Gateway::GetInstanceLabel(GetHostName()),
+               std::string(monitoringInfo.jobName()),
+               prometheus::Gateway::GetInstanceLabel(HostNameGetter().getHostName().toStdString()),
                std::string(monitoringInfo.username()), std::string(monitoringInfo.password())),
       _registry(std::make_shared<Registry>()),
       _lastFlushedTime(Clock::now()),
@@ -63,7 +52,7 @@ PrometheusMetricGateway::~PrometheusMetricGateway() {
   // We should not throw in a destructor - catch any exception and do nothing, not even a log (it could throw)
   try {
     flush();
-  } catch (...) {
+  } catch (const std::exception&) {
   }
 }
 

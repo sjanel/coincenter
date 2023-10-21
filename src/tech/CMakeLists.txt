@@ -62,6 +62,29 @@ add_unit_test(
     nlohmann_json::nlohmann_json
 )
 
+
+
+if(WIN32)
+    add_unit_test(
+        gethostname_test
+        src/gethostname.cpp
+        test/gethostname_test.cpp
+        DEFINITIONS
+        CCT_DISABLE_SPDLOG
+        LIBRARIES
+        wsock32
+        ws2_32
+    )
+else()
+    add_unit_test(
+        gethostname_test
+        src/gethostname.cpp
+        test/gethostname_test.cpp
+        DEFINITIONS
+        CCT_DISABLE_SPDLOG
+    )
+endif()
+
 add_unit_test(
     mathhelpers_test
     test/mathhelpers_test.cpp
