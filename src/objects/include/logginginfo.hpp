@@ -16,7 +16,7 @@ namespace cct {
 /// @brief Encapsulates loggers lifetime and set-up.
 class LoggingInfo {
  public:
-  static constexpr int64_t kDefaultFileSizeInBytes = 5 * 1024 * 1024;
+  static constexpr int64_t kDefaultFileSizeInBytes = 5L * 1024 * 1024;
   static constexpr int32_t kDefaultNbMaxFiles = 10;
   static constexpr char const *const kOutputLoggerName = "output";
 
