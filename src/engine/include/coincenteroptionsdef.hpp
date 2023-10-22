@@ -11,6 +11,7 @@
 #include "exchangeconfigmap.hpp"
 #include "exchangepublicapi.hpp"
 #include "loadconfiguration.hpp"
+#include "logginginfo.hpp"
 #include "static_string_view_helpers.hpp"
 #include "staticcommandlineoptioncheck.hpp"
 #include "timedef.hpp"
@@ -29,6 +30,22 @@ class CoincenterCmdLineOptionsDefinitions {
       std::chrono::duration_cast<seconds>(kDefaultRepeatTime).count();
 
  protected:
+  static constexpr std::string_view kLogValue1 = "<levelName|0-";
+  static constexpr std::string_view kLogValue =
+      JoinStringView_v<kLogValue1, IntToStringView_v<LoggingInfo::kNbLogLevels - 1U>, CharToStringView_v<'>'>>;
+
+  static constexpr std::string_view kLoggingLevelsSep = "|";
+  static constexpr std::string_view kLoggingLevels =
+      make_joined_string_view<kLoggingLevelsSep, LoggingInfo::kLogLevelNames>::value;
+
+  static constexpr std::string_view kLog1 =
+      "Sets the log level in the console during all execution. "
+      "Possible values are: (";
+  static constexpr std::string_view kLog2 = ") or (0-";
+  static constexpr std::string_view kLog3 = ") (overrides .log.console in general config file)";
+  static constexpr std::string_view kLog =
+      JoinStringView_v<kLog1, kLoggingLevels, kLog2, IntToStringView_v<LoggingInfo::kNbLogLevels>, kLog3>;
+
   static constexpr std::string_view kOutput1 = "Output format. One of (";
   static constexpr std::string_view kOutput2 = ") (default configured in general config file)";
   static constexpr std::string_view kOutput =
@@ -145,18 +162,11 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
   static constexpr CommandLineOptionWithValue value[] = {
       {{{"General", 100}, "help", 'h', "", "Display this information"}, &OptValueType::help},
       {{{"General", 200}, "--data", "<path/to/data>", kData}, &OptValueType::dataDir},
-      {{{"General", 300},
-        "--log",
-        'v',
-        "<levelName|0-6>",
-        "Sets the log level in the console during all execution. "
-        "Possible values are: (off|critical|error|warning|info|debug|trace) or "
-        "(0-6) (overrides .log.console in general config file)"},
-       &OptValueType::logConsole},
-      {{{"General", 400}, "--log-console", "<levelName|0-6>", "Synonym of --log"}, &OptValueType::logConsole},
+      {{{"General", 300}, "--log", 'v', kLogValue, kLog}, &OptValueType::logConsole},
+      {{{"General", 400}, "--log-console", kLogValue, "Synonym of --log"}, &OptValueType::logConsole},
       {{{"General", 400},
         "--log-file",
-        "<levelName|0-6>",
+        kLogValue,
         "Sets the log level in files during all execution (overrides .log.file in general config file). "
         "Number of rotating files to keep and their size is configurable in the general config file"},
        &OptValueType::logFile},

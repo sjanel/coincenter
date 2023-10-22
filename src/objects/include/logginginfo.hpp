@@ -21,6 +21,9 @@ class LoggingInfo {
   static constexpr char const *const kOutputLoggerName = "output";
   static constexpr std::string_view kJsonFieldConsoleLevelName = "consoleLevel";
   static constexpr std::string_view kJsonFieldFileLevelName = "fileLevel";
+  static constexpr std::string_view kLogLevelNames[] = {"off",  "critical", "error", "warning",
+                                                        "info", "debug",    "trace"};
+  static constexpr auto kNbLogLevels = std::size(kLogLevelNames);
 
   enum class WithLoggersCreation : int8_t { kNo, kYes };
 

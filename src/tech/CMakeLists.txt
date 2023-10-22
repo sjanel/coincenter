@@ -91,14 +91,6 @@ add_unit_test(
 )
 
 add_unit_test(
-    parseloglevel_test
-    src/parseloglevel.cpp
-    test/parseloglevel_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
-)
-
-add_unit_test(
     simpletable_test
     src/simpletable.cpp
     test/simpletable_test.cpp
