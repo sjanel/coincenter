@@ -21,39 +21,41 @@
 namespace cct {
 class Exchange;
 
+template <class T>
+using ExchangeWith = std::pair<const Exchange *, T>;
+
 using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
 
 using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
 
-using MarketsPerExchange = FixedCapacityVector<std::pair<const Exchange *, MarketSet>, kNbSupportedExchanges>;
+using MarketsPerExchange = FixedCapacityVector<ExchangeWith<MarketSet>, kNbSupportedExchanges>;
 
-using MonetaryAmountPerExchange =
-    FixedCapacityVector<std::pair<const Exchange *, MonetaryAmount>, kNbSupportedExchanges>;
+using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmount>, kNbSupportedExchanges>;
 
-using LastTradesPerExchange = FixedCapacityVector<std::pair<const Exchange *, LastTradesVector>, kNbSupportedExchanges>;
+using LastTradesPerExchange = FixedCapacityVector<ExchangeWith<LastTradesVector>, kNbSupportedExchanges>;
 
-using TradedAmountsPerExchange = SmallVector<std::pair<const Exchange *, TradedAmounts>, kTypicalNbPrivateAccounts>;
+using TradedAmountsPerExchange = SmallVector<ExchangeWith<TradedAmounts>, kTypicalNbPrivateAccounts>;
 
 using TradedAmountsVectorWithFinalAmountPerExchange =
-    SmallVector<std::pair<const Exchange *, TradedAmountsVectorWithFinalAmount>, kTypicalNbPrivateAccounts>;
+    SmallVector<ExchangeWith<TradedAmountsVectorWithFinalAmount>, kTypicalNbPrivateAccounts>;
 
-using ExchangeHealthCheckStatus = FixedCapacityVector<std::pair<const Exchange *, bool>, kNbSupportedExchanges>;
+using ExchangeHealthCheckStatus = FixedCapacityVector<ExchangeWith<bool>, kNbSupportedExchanges>;
 
-using ExchangeTickerMaps = FixedCapacityVector<std::pair<const Exchange *, MarketOrderBookMap>, kNbSupportedExchanges>;
+using ExchangeTickerMaps = FixedCapacityVector<ExchangeWith<MarketOrderBookMap>, kNbSupportedExchanges>;
 
 using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 
-using WalletPerExchange = SmallVector<std::pair<const Exchange *, Wallet>, kTypicalNbPrivateAccounts>;
+using WalletPerExchange = SmallVector<ExchangeWith<Wallet>, kTypicalNbPrivateAccounts>;
 
-using OpenedOrdersPerExchange = SmallVector<std::pair<const Exchange *, OrdersSet>, kTypicalNbPrivateAccounts>;
+using OpenedOrdersPerExchange = SmallVector<ExchangeWith<OrdersSet>, kTypicalNbPrivateAccounts>;
 
-using DepositsPerExchange = SmallVector<std::pair<const Exchange *, DepositsSet>, kTypicalNbPrivateAccounts>;
+using DepositsPerExchange = SmallVector<ExchangeWith<DepositsSet>, kTypicalNbPrivateAccounts>;
 
-using WithdrawsPerExchange = SmallVector<std::pair<const Exchange *, WithdrawsSet>, kTypicalNbPrivateAccounts>;
+using WithdrawsPerExchange = SmallVector<ExchangeWith<WithdrawsSet>, kTypicalNbPrivateAccounts>;
 
 using DeliveredWithdrawInfoWithExchanges = std::pair<std::array<const Exchange *, 2>, DeliveredWithdrawInfo>;
 
-using NbCancelledOrdersPerExchange = SmallVector<std::pair<const Exchange *, int>, kTypicalNbPrivateAccounts>;
+using NbCancelledOrdersPerExchange = SmallVector<ExchangeWith<int>, kTypicalNbPrivateAccounts>;
 
-using ConversionPathPerExchange = FixedCapacityVector<std::pair<const Exchange *, MarketsPath>, kNbSupportedExchanges>;
+using ConversionPathPerExchange = FixedCapacityVector<ExchangeWith<MarketsPath>, kNbSupportedExchanges>;
 }  // namespace cct

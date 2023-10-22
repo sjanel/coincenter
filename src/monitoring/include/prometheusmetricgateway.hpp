@@ -28,7 +28,7 @@ class PrometheusMetricGateway : public AbstractMetricGateway {
   PrometheusMetricGateway &operator=(const PrometheusMetricGateway &) = delete;
   PrometheusMetricGateway &operator=(PrometheusMetricGateway &&) = delete;
 
-  ~PrometheusMetricGateway();
+  ~PrometheusMetricGateway() override;
 
   void add(MetricType metricType, MetricOperation op, const MetricKey &key, double val = 0) override;
 
@@ -45,6 +45,6 @@ class PrometheusMetricGateway : public AbstractMetricGateway {
   std::unordered_map<MetricKey, void *> _familiesMap;
   std::mutex _familiesMapMutex;
   TimePoint _lastFlushedTime;
-  int _checkFlushCounter;  // To decrease number of times flush check is done
+  int _checkFlushCounter{};  // To decrease number of times flush check is done
 };
 }  // namespace cct

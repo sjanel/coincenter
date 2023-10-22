@@ -120,6 +120,8 @@ TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
   EXPECT_EQ(StringOptionParser("4.106eth,kraken_user2-huobi_user3").getMonetaryAmountFromToPrivateExchange(),
             std::make_tuple(MonetaryAmount("4.106ETH"), false, ExchangeName("kraken", "user2"),
                             ExchangeName("huobi", "user3")));
+
+  EXPECT_THROW(StringOptionParser("test").getMonetaryAmountFromToPrivateExchange(), invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountPercentageFromToPrivateExchange) {
@@ -191,9 +193,9 @@ TEST(StringOptionParserTest, GetCurrenciesPrivateExchangesWithCurrencies) {
 }
 
 TEST(StringOptionParserTest, CSVValues) {
-  EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<std::string_view>());
-  EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<std::string_view>{{"val1"}});
-  EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<std::string_view>({{"val1"}, {"value"}}));
+  EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<string>());
+  EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<string>{{"val1"}});
+  EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<string>({{"val1"}, {"value"}}));
 }
 
 }  // namespace cct

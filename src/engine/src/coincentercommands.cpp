@@ -76,12 +76,7 @@ namespace {
 std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCmdLineOptions &cmdLineOptions,
                                                               std::string_view orderRequestStr) {
   auto currenciesPrivateExchangesTuple = StringOptionParser(orderRequestStr).getCurrenciesPrivateExchanges(false);
-  auto orderIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
-  vector<OrderId> orderIds;
-  orderIds.reserve(orderIdViewVector.size());
-  for (std::string_view orderIdView : orderIdViewVector) {
-    orderIds.emplace_back(orderIdView);
-  }
+  auto orderIds = StringOptionParser(cmdLineOptions.ids).getCSVValues();
   return std::make_pair(
       OrdersConstraints(std::get<0>(currenciesPrivateExchangesTuple), std::get<1>(currenciesPrivateExchangesTuple),
                         std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
@@ -306,12 +301,7 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (cmdLineOptions.recentDepositsInfo) {
     auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentDepositsInfo)
                                          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
-    auto depositIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
-    vector<string> depositIds;
-    depositIds.reserve(depositIdViewVector.size());
-    for (std::string_view depositIdView : depositIdViewVector) {
-      depositIds.emplace_back(depositIdView);
-    }
+    auto depositIds = StringOptionParser(cmdLineOptions.ids).getCSVValues();
     DepositsConstraints depositConstraints(currencyCode, std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
                                            std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                                            DepositsConstraints::IdSet(std::move(depositIds)));
@@ -323,12 +313,7 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (cmdLineOptions.recentWithdrawsInfo) {
     auto [currencyCode, exchanges] = StringOptionParser(*cmdLineOptions.recentWithdrawsInfo)
                                          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kOptional);
-    auto withdrawIdViewVector = StringOptionParser(cmdLineOptions.ids).getCSVValues();
-    vector<string> withdrawIds;
-    withdrawIds.reserve(withdrawIdViewVector.size());
-    for (std::string_view withdrawIdView : withdrawIdViewVector) {
-      withdrawIds.emplace_back(withdrawIdView);
-    }
+    auto withdrawIds = StringOptionParser(cmdLineOptions.ids).getCSVValues();
     WithdrawsConstraints withdrawConstraints(currencyCode, std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
                                              std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                                              WithdrawsConstraints::IdSet(std::move(withdrawIds)));
@@ -341,26 +326,20 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     StringOptionParser anyParser(cmdLineOptions.withdraw);
     auto [amountToWithdraw, isPercentageWithdraw, fromExchange, toExchange] =
         anyParser.getMonetaryAmountFromToPrivateExchange();
-    ExchangeNames exchanges;
-    exchanges.push_back(std::move(fromExchange));
-    exchanges.push_back(std::move(toExchange));
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(amountToWithdraw)
         .setPercentageAmount(isPercentageWithdraw)
-        .setExchangeNames(std::move(exchanges))
+        .setExchangeNames(ExchangeNames{std::move(fromExchange), std::move(toExchange)})
         .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 
   if (!cmdLineOptions.withdrawAll.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdrawAll);
     auto [curToWithdraw, fromExchange, toExchange] = anyParser.getCurrencyFromToPrivateExchange();
-    ExchangeNames exchanges;
-    exchanges.push_back(std::move(fromExchange));
-    exchanges.push_back(std::move(toExchange));
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(MonetaryAmount(100, curToWithdraw))
         .setPercentageAmount(true)
-        .setExchangeNames(std::move(exchanges))
+        .setExchangeNames(ExchangeNames{std::move(fromExchange), std::move(toExchange)})
         .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 

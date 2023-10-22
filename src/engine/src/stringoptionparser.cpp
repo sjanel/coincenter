@@ -64,7 +64,7 @@ std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::siz
 }
 
 auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPercentageAtLast, std::size_t &pos) {
-  std::string_view amountStr = GetNextStr(opt, sepWithPercentageAtLast, pos);
+  auto amountStr = GetNextStr(opt, sepWithPercentageAtLast, pos);
 
   if (amountStr.empty()) {
     if (pos == opt.size()) {
@@ -86,6 +86,16 @@ auto GetNextPercentageAmount(std::string_view opt, std::string_view sepWithPerce
   }
   return std::make_pair(std::move(startAmount), isPercentage);
 }
+
+template <class CharOrStringType>
+auto GetNextExchangeName(std::string_view opt, CharOrStringType sep, std::size_t &pos) {
+  auto nextStr = GetNextStr(opt, sep, pos);
+  if (nextStr.empty()) {
+    throw invalid_argument("Expected an exchange identifier in '{}'", opt);
+  }
+  return ExchangeName(nextStr);
+}
+
 }  // namespace
 
 ExchangeNames StringOptionParser::getExchanges() const { return GetExchanges(_opt); }
@@ -173,19 +183,18 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
 StringOptionParser::CurrencyFromToPrivateExchange StringOptionParser::getCurrencyFromToPrivateExchange() const {
   std::size_t pos = 0;
   CurrencyCode cur(GetNextStr(_opt, ',', pos));
-  ExchangeName from(GetNextStr(_opt, '-', pos));
+  ExchangeName from = GetNextExchangeName(_opt, '-', pos);
   // Warning: in C++, order of evaluation of parameters is unspecified. Because GetNextStr has side
   // effects (it modifies 'pos') we need temporary variables here
-  return std::make_tuple(std::move(cur), std::move(from), ExchangeName(GetNextStr(_opt, '-', pos)));
+  return std::make_tuple(std::move(cur), std::move(from), GetNextExchangeName(_opt, '-', pos));
 }
 
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()
     const {
   std::size_t pos = 0;
   auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, ",%", pos);
-  ExchangeName from(GetNextStr(_opt, '-', pos));
-  return std::make_tuple(std::move(startAmount), isPercentage, std::move(from),
-                         ExchangeName(GetNextStr(_opt, '-', pos)));
+  ExchangeName from = GetNextExchangeName(_opt, '-', pos);
+  return std::make_tuple(std::move(startAmount), isPercentage, std::move(from), GetNextExchangeName(_opt, '-', pos));
 }
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {
@@ -226,9 +235,9 @@ StringOptionParser::CurrenciesPublicExchanges StringOptionParser::getCurrenciesP
   return ret;
 }
 
-vector<std::string_view> StringOptionParser::getCSVValues() const {
+vector<string> StringOptionParser::getCSVValues() const {
   std::size_t pos = 0;
-  vector<std::string_view> ret;
+  vector<string> ret;
   if (!_opt.empty()) {
     do {
       std::size_t nextCommaPos = getNextCommaPos(pos, false);
