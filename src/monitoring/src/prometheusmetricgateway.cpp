@@ -53,8 +53,7 @@ PrometheusMetricGateway::PrometheusMetricGateway(const MonitoringInfo& monitorin
                std::string(monitoringInfo.jobName()), prometheus::Gateway::GetInstanceLabel(GetHostName()),
                std::string(monitoringInfo.username()), std::string(monitoringInfo.password())),
       _registry(std::make_shared<Registry>()),
-      _lastFlushedTime(Clock::now()),
-      _checkFlushCounter(0) {
+      _lastFlushedTime(Clock::now()) {
   // create a push gateway
   _gateway.RegisterCollectable(_registry);
 }
@@ -229,7 +228,7 @@ void PrometheusMetricGateway::flush() {
   int returnCode = _gateway.Push();
   if (returnCode == kHTTPSuccessReturnCode) {
     log::info("Flushed data to Prometheus in {} ms",
-              std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - nowTime).count());
+              std::chrono::duration_cast<TimeInMs>(Clock::now() - nowTime).count());
   } else {
     log::error("Unable to push metrics to Prometheus instance - Bad return code {}", returnCode);
   }

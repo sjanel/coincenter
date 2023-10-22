@@ -3,6 +3,7 @@
 #include <string_view>
 #include <utility>
 
+#include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
@@ -51,7 +52,7 @@ class StringOptionParser {
 
   CurrenciesPublicExchanges getCurrenciesPublicExchanges() const;
 
-  vector<std::string_view> getCSVValues() const;
+  vector<string> getCSVValues() const;
 
  protected:
   std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;

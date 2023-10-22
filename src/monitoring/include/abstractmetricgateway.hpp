@@ -11,7 +11,7 @@ class AbstractMetricGateway {
  public:
   using BucketBoundaries = std::span<const double>;
 
-  virtual ~AbstractMetricGateway() {}
+  virtual ~AbstractMetricGateway() = default;
 
   /// Register some numeric value
   virtual void add(MetricType metricType, MetricOperation op, const MetricKey& key, double v = 0) = 0;

@@ -1,16 +1,26 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
-#include <chrono>
-#include <iostream>
+#include <optional>
+#include <span>
 #include <thread>
 
-#include "abstractmetricgateway.hpp"
+#include "balanceoptions.hpp"
+#include "cct_exception.hpp"
 #include "coincentercommands.hpp"
 #include "coincentercommandtype.hpp"
-#include "coincenteroptions.hpp"
+#include "coincenterinfo.hpp"
+#include "currencycode.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangename.hpp"
+#include "exchangeretriever.hpp"
+#include "exchangesecretsinfo.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "ordersconstraints.hpp"
 #include "queryresultprinter.hpp"
-#include "stringoptionparser.hpp"
+#include "queryresulttypes.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
@@ -317,8 +327,7 @@ void Coincenter::updateFileCaches() const {
   log::debug("Store all cache files");
   _commonAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
-  auto exchanges = _exchangePool.exchanges();
-  std::for_each(exchanges.begin(), exchanges.end(), [](const Exchange &exchange) { exchange.updateCacheFile(); });
+  std::ranges::for_each(_exchangePool.exchanges(), [](const Exchange &exchange) { exchange.updateCacheFile(); });
 }
 
 }  // namespace cct

@@ -7,8 +7,7 @@
 namespace cct {
 
 string TradedAmounts::str() const {
-  string ret;
-  ret.append(tradedFrom.str());
+  string ret = tradedFrom.str();
   ret.append(" -> ");
   ret.append(tradedTo.str());
   return ret;

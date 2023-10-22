@@ -19,7 +19,7 @@ namespace cct::api {
 template <class PublicExchangeT, class PrivateExchangeT>
 class TestAPI {
  public:
-  TestAPI() { createPrivateExchangeIfKeyPresent(exchangePublic, coincenterInfo, apiKeysProvider); }
+  TestAPI() { createPrivateExchangeIfKeyPresent(); }
 
   static MarketSet ComputeMarketSetSample(const MarketSet &markets, const CurrencyExchangeFlatSet &currencies) {
     static constexpr int kNbSamples = 1;
@@ -287,8 +287,7 @@ class TestAPI {
   }
 
  private:
-  void createPrivateExchangeIfKeyPresent(PublicExchangeT &exchangePublic, const CoincenterInfo &coincenterInfo,
-                                         const APIKeysProvider &apiKeysProvider) {
+  void createPrivateExchangeIfKeyPresent() {
     std::string_view publicExchangeName = exchangePublic.name();
     if (!apiKeysProvider.contains(publicExchangeName)) {
       log::warn("Skip {} private API test as cannot find associated private key", publicExchangeName);
