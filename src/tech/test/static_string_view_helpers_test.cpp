@@ -3,7 +3,6 @@
 #include <string_view>
 
 namespace cct {
-// JoinStringView
 namespace test1 {
 static_assert(JoinStringView_v<>.empty());
 }  // namespace test1
@@ -40,9 +39,25 @@ static constexpr std::string_view kStr4 = "in my bag";
 static_assert(JoinStringView_v<kStr1, IntToStringView_v<70>, kStr2, IntToStringView_v<1894>, kStr3, kStr4> ==
               "I have 70 oranges and 1894 bananas in my bag");
 }  // namespace test5
+namespace test6 {
+static constexpr std::string_view kSep = "|";
+static constexpr std::string_view kStr1 = "apples";
+static constexpr std::string_view kStr2 = "bananas";
+static constexpr std::string_view kStr3 = "oranges";
+static constexpr std::string_view kStr4 = "blueberries";
+static constexpr std::string_view kStr5 = "strawberries";
+
+static_assert(JoinStringViewWithSep_v<kSep, kStr1, kStr2, kStr3, kStr4, kStr5> ==
+              "apples|bananas|oranges|blueberries|strawberries");
+
+static constexpr std::string_view kStrArr[] = {"apples", "bananas", "oranges", "blueberries", "strawberries"};
+
+static_assert(make_joined_string_view<kSep, kStrArr>::value == "apples|bananas|oranges|blueberries|strawberries");
+}  // namespace test6
 
 // IntToStringView
 static_assert(IntToStringView_v<0> == "0");
 static_assert(IntToStringView_v<37> == "37");
 static_assert(IntToStringView_v<-1273006> == "-1273006");
+
 }  // namespace cct

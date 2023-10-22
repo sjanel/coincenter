@@ -52,7 +52,7 @@ PrometheusMetricGateway::~PrometheusMetricGateway() {
   // We should not throw in a destructor - catch any exception and do nothing, not even a log (it could throw)
   try {
     flush();
-  } catch (const std::exception&) {
+  } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
   }
 }
 
