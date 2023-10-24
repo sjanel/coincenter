@@ -67,8 +67,10 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
     : _dataDir(dataDir),
       _maxFileSizeLogFileInBytes(ParseNumberOfBytes(generalConfigJsonLogPart["maxFileSize"].get<std::string_view>())),
       _maxNbLogFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
-      _logLevelConsolePos(LogPosFromLogStr(generalConfigJsonLogPart["consoleLevel"].get<std::string_view>())),
-      _logLevelFilePos(LogPosFromLogStr(generalConfigJsonLogPart["fileLevel"].get<std::string_view>())) {
+      _logLevelConsolePos(
+          LogPosFromLogStr(generalConfigJsonLogPart[LoggingInfo::kJsonFieldConsoleLevelName].get<std::string_view>())),
+      _logLevelFilePos(
+          LogPosFromLogStr(generalConfigJsonLogPart[LoggingInfo::kJsonFieldFileLevelName].get<std::string_view>())) {
   if (withLoggersCreation == WithLoggersCreation::kYes) {
     createLoggers();
   }
