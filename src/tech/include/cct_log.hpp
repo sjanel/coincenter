@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #ifdef CCT_DISABLE_SPDLOG
 #include <string_view>
 #else
@@ -9,29 +11,36 @@
 namespace cct {
 #ifdef CCT_DISABLE_SPDLOG
 namespace log {
-inline void critical(std::string_view, ...) {}
-inline void error(std::string_view, ...) {}
-inline void warn(std::string_view, ...) {}
-inline void info(std::string_view, ...) {}
-inline void debug(std::string_view, ...) {}
-inline void trace(std::string_view, ...) {}
-
-inline int get_level() { return 0; }
+constexpr void critical(std::string_view, ...) {}
+constexpr void error(std::string_view, ...) {}
+constexpr void warn(std::string_view, ...) {}
+constexpr void info(std::string_view, ...) {}
+constexpr void debug(std::string_view, ...) {}
+constexpr void trace(std::string_view, ...) {}
 
 struct level {
   using level_enum = int;
-  static constexpr int trace = 6;
-  static constexpr int debug = 5;
-  static constexpr int info = 4;
+  static constexpr int trace = 0;
+  static constexpr int debug = 1;
+  static constexpr int info = 2;
   static constexpr int warn = 3;
-  static constexpr int error = 2;
-  static constexpr int critical = 1;
-  static constexpr int off = 0;
+  static constexpr int error = 4;
+  static constexpr int critical = 5;
+  static constexpr int off = 6;
 };
+
+constexpr int get_level() { return static_cast<int>(level::off); }
 
 }  // namespace log
 #else
 namespace log = spdlog;
 
 #endif
+
+constexpr int8_t PosFromLevel(log::level::level_enum level) {
+  return static_cast<int8_t>(log::level::off) - static_cast<int8_t>(level);
+}
+constexpr log::level::level_enum LevelFromPos(int8_t levelPos) {
+  return static_cast<log::level::level_enum>(static_cast<int8_t>(log::level::off) - levelPos);
+}
 }  // namespace cct

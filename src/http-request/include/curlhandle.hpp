@@ -79,6 +79,8 @@ class CurlHandle {
   TimePoint _lastQueryTime{};
   BestURLPicker _bestUrlPicker;
   string _queryData;
+  log::level::level_enum _requestCallLogLevel;
+  log::level::level_enum _requestAnswerLogLevel;
 };
 
 // Simple RAII class managing global init and clean up of Curl library.

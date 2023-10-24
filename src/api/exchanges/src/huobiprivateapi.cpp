@@ -83,6 +83,8 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),

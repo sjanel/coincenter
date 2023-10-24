@@ -301,6 +301,8 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _currencyOrderInfoRefreshTime(exchangeInfo().getAPICallUpdateFrequency(kCurrencyInfoBithumb)),

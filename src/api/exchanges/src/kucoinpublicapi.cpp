@@ -41,6 +41,8 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(

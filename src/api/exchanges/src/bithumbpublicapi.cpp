@@ -73,6 +73,8 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(

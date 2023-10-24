@@ -77,6 +77,8 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
@@ -492,9 +494,9 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
 }
 
 KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market mk) {
-  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
-                      _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
-  json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
+  const Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
+                            _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
+  const json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
   for (const auto& [krakenAssetPair, details] : result.items()) {
     std::string_view last24hVol = details["v"][1].get<std::string_view>();
     std::string_view lastTickerPrice = details["c"][0].get<std::string_view>();

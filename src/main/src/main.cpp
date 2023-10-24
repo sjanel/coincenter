@@ -1,9 +1,9 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <iostream>
 
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_log.hpp"
 #include "coincentercommands.hpp"
 #include "processcommandsfromcli.hpp"
 #include "runmodes.hpp"
@@ -20,10 +20,10 @@ int main(int argc, const char* argv[]) {
                                   cct::settings::RunMode::kProd);
     }
   } catch (const cct::invalid_argument& e) {
-    cct::log::critical("Invalid argument: {}", e.what());
+    std::cerr << "Invalid argument: " << e.what() << std::endl;
     return EXIT_FAILURE;
   } catch (const std::exception& e) {
-    cct::log::critical("{}", e.what());
+    std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

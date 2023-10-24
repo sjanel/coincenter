@@ -161,6 +161,8 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic&
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
