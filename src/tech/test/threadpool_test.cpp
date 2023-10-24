@@ -6,6 +6,7 @@
 #include <forward_list>
 #include <future>
 #include <numeric>
+#include <stdexcept>
 #include <thread>
 
 #include "cct_vector.hpp"
@@ -15,12 +16,15 @@ namespace cct {
 namespace {
 using namespace std::chrono_literals;
 
-int SlowDouble(int val) {
+int SlowDouble(const int &val) {
+  if (val == 42) {
+    throw std::invalid_argument("42 is not the answer to the ultimate question of life");
+  }
   std::this_thread::sleep_for(10ms);
   return val * 2;
 }
 
-int SlowAdd(int lhs, int rhs) {
+int SlowAdd(const int &lhs, const int &rhs) {
   std::this_thread::sleep_for(10ms);
   return lhs + rhs;
 }
@@ -47,7 +51,7 @@ TEST(ThreadPoolTest, ParallelTransformRandomInputIt) {
   std::iota(data.begin(), data.end(), 0);
   vector<int> res(data.size());
 
-  threadPool.parallel_transform(data.begin(), data.end(), res.begin(), SlowDouble);
+  threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
 
   for (int elem = 0; elem < kNbElems; ++elem) {
     EXPECT_EQ(2 * data[elem], res[elem]);
@@ -61,11 +65,27 @@ TEST(ThreadPoolTest, ParallelTransformForwardInputIt) {
   std::iota(data.begin(), data.end(), 0);
 
   std::forward_list<int> res(kNbElems);
-  threadPool.parallel_transform(data.begin(), data.end(), res.begin(), SlowDouble);
+  threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
 
   for (auto dataIt = data.begin(), resIt = res.begin(); dataIt != data.end(); ++dataIt, ++resIt) {
     EXPECT_EQ(2 * *dataIt, *resIt);
   }
+}
+
+TEST(ThreadPoolTest, ParallelTransformException) {
+  ThreadPool threadPool(3);
+  constexpr int kNbElems = 5;
+  vector<int> data(kNbElems);
+  std::iota(data.begin(), data.end(), 40);
+  vector<int> res(data.size(), 40);
+
+  try {
+    threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
+    EXPECT_TRUE(false);  // should not arrive here
+  } catch (...) {
+  }
+
+  EXPECT_EQ(res, (vector<int>{80, 82, 0, 86, 88}));
 }
 
 TEST(ThreadPoolTest, ParallelTransformBinaryOperation) {
@@ -79,7 +99,7 @@ TEST(ThreadPoolTest, ParallelTransformBinaryOperation) {
   std::iota(data2.begin(), data2.end(), 3);
 
   vector<int> res(kNbElems);
-  threadPool.parallel_transform(data1.begin(), data1.end(), data2.begin(), res.begin(), SlowAdd);
+  threadPool.parallelTransform(data1.begin(), data1.end(), data2.begin(), res.begin(), SlowAdd);
 
   auto resIt = res.begin();
   auto data1It = data1.begin();

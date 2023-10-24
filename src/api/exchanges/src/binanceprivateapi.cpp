@@ -10,6 +10,7 @@
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradeinfo.hpp"
 
@@ -61,7 +62,7 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
 
 bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
                        Duration& queryDelay) {
-  static constexpr Duration kInitialDurationQueryDelay = std::chrono::milliseconds(200);
+  static constexpr Duration kInitialDurationQueryDelay = TimeInMs(200);
   switch (statusCode) {
     case kInvalidTimestamp: {
       auto msgIt = ret.find("msg");
@@ -80,7 +81,7 @@ bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDela
           }
           queryDelay -= sleepingTime;
           log::warn("Our local time is ahead of Binance server's time. Query delay modified to {} ms",
-                    std::chrono::duration_cast<std::chrono::milliseconds>(queryDelay).count());
+                    std::chrono::duration_cast<TimeInMs>(queryDelay).count());
           // Ensure Nonce is increasing while modifying the query delay
           std::this_thread::sleep_for(sleepingTime);
           return true;
@@ -96,7 +97,7 @@ bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDela
           }
           queryDelay += sleepingTime;
           log::warn("Our local time is behind of Binance server's time. Query delay modified to {} ms",
-                    std::chrono::duration_cast<std::chrono::milliseconds>(queryDelay).count());
+                    std::chrono::duration_cast<TimeInMs>(queryDelay).count());
           return true;
         }
       }
@@ -131,7 +132,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   json ret;
   for (int retryPos = 0; retryPos < kNbOrderRequestsRetries; ++retryPos) {
     if (retryPos != 0) {
-      log::trace("Wait {} ms...", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
+      log::trace("Wait {} ms...", std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }
@@ -153,7 +154,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     break;
   }
   if (throwIfError) {
-    log::error("Full Binance json error: '{}'", ret.dump());
+    log::error("Full Binance json error for {}: '{}'", apiKey.name(), ret.dump());
     throw exception("Error: {}, msg: {}", MonetaryAmount(statusCode), ret["msg"].get<std::string_view>());
   }
   return ret;
@@ -267,7 +268,7 @@ Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
     }
     int64_t millisecondsSinceEpoch = orderDetails["time"].get<int64_t>();
 
-    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint placedTime{TimeInMs(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -697,7 +698,7 @@ MonetaryAmount BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo
         MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
         int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
 
-        TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+        TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
 
         closestRecentDepositPicker.addDeposit(RecentDeposit(amountReceived, timestamp));
       }

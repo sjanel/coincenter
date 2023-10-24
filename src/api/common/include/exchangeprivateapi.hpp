@@ -117,8 +117,8 @@ class ExchangePrivate : public ExchangeBase {
   /// Returns the amounts actually traded with the final amount balance on this currency
   TradedAmountsVectorWithFinalAmount queryDustSweeper(CurrencyCode currencyCode);
 
-  /// Builds en ExchangeName wrapping the exchange and the key name
-  ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.name(), _apiKey.name()); }
+  /// Builds an ExchangeName wrapping the exchange and the key name
+  ExchangeName exchangeName() const { return {_exchangePublic.name(), _apiKey.name()}; }
 
   const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
 

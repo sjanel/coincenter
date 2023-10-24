@@ -1,16 +1,19 @@
 #pragma once
 
 #include <condition_variable>
+#include <exception>
 #include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <stdexcept>
 #include <thread>
 #include <type_traits>
 
 #include "cct_const.hpp"
+#include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
+#include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_vector.hpp"
 
@@ -19,40 +22,19 @@ namespace cct {
 /// @brief C++ ThreadPool implementation. Number of threads is to be specified at creation of the object.
 /// @note original code taken from https://github.com/progschj/ThreadPool/blob/master/ThreadPool.h, with modifications:
 ///         - Rule of 5: delete all special members.
-///         - Utility function parallel_transform added.
+///         - Utility function parallelTransform added.
 ///         - C++20 version with std::invoke_result instead of std::result_of and std::jthread that calls join
 ///         automatically
 class ThreadPool {
  public:
-  explicit ThreadPool(int nbThreads = 1) {
-    if (nbThreads < 1) {
-      throw std::invalid_argument("number of threads should be strictly positive");
-    }
-    _workers.reserve(static_cast<decltype(_workers)::size_type>(nbThreads));
-    for (decltype(nbThreads) threadPos = 0; threadPos < nbThreads; ++threadPos) {
-      _workers.emplace_back([this] {
-        while (true) {
-          TasksQueue::value_type task;
-
-          {
-            std::unique_lock<std::mutex> lock(this->_queueMutex);
-            this->_condition.wait(lock, [this] { return this->_stop || !this->_tasks.empty(); });
-            if (this->_stop && this->_tasks.empty()) {
-              break;
-            }
-            task = std::move(this->_tasks.front());
-            this->_tasks.pop();
-          }
-          task();
-        }
-      });
-    }
-  }
+  explicit ThreadPool(int nbThreads = 1);
 
   ThreadPool(const ThreadPool&) = delete;
   ThreadPool(ThreadPool&&) = delete;
   ThreadPool& operator=(const ThreadPool&) = delete;
   ThreadPool& operator=(ThreadPool&&) = delete;
+
+  ~ThreadPool();
 
   auto nbWorkers() const noexcept { return _workers.size(); }
 
@@ -64,25 +46,19 @@ class ThreadPool {
   // This function will first enqueue all the tasks at one, using waiting threads of the thread pool,
   // and then retrieves and moves the results to 'out', as for std::transform.
   template <class InputIt, class OutputIt, class UnaryOperation>
-  OutputIt parallel_transform(InputIt beg, InputIt end, OutputIt out, UnaryOperation op);
+  OutputIt parallelTransform(InputIt first, InputIt last, OutputIt out, UnaryOperation unary_op);
 
   // Parallel version of std::transform with binary operation.
   template <class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
-  OutputIt parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt d_first,
-                              BinaryOperation binary_op);
-
-  ~ThreadPool() {
-    stopRequested();
-    _condition.notify_all();
-  }
+  OutputIt parallelTransform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out, BinaryOperation binary_op);
 
  private:
   using TasksQueue = std::queue<std::function<void()>>;
 
-  void stopRequested() {
-    std::unique_lock<std::mutex> lock(_queueMutex);
-    _stop = true;
-  }
+  template <class Futures, class OutputIt>
+  OutputIt retrieveAllResults(Futures& futures, OutputIt out);
+
+  void stopRequested();
 
   // the task queue
   TasksQueue _tasks;
@@ -96,6 +72,36 @@ class ThreadPool {
   // '_workers' should be destroyed first at ThreadPool destruction so it must be placed as last member.
   vector<std::jthread> _workers;
 };
+
+inline ThreadPool::ThreadPool(int nbThreads) {
+  if (nbThreads < 1) {
+    throw invalid_argument("number of threads should be strictly positive");
+  }
+  _workers.reserve(static_cast<decltype(_workers)::size_type>(nbThreads));
+  for (decltype(nbThreads) threadPos = 0; threadPos < nbThreads; ++threadPos) {
+    _workers.emplace_back([this] {
+      while (true) {
+        TasksQueue::value_type task;
+
+        {
+          std::unique_lock<std::mutex> lock(this->_queueMutex);
+          this->_condition.wait(lock, [this] { return this->_stop || !this->_tasks.empty(); });
+          if (this->_stop && this->_tasks.empty()) {
+            break;
+          }
+          task = std::move(this->_tasks.front());
+          this->_tasks.pop();
+        }
+        task();
+      }
+    });
+  }
+}
+
+inline ThreadPool::~ThreadPool() {
+  stopRequested();
+  _condition.notify_all();
+}
 
 template <class Func, class... Args>
 inline std::future<typename std::invoke_result<Func, Args...>::type> ThreadPool::enqueue(Func&& f, Args&&... args) {
@@ -120,32 +126,55 @@ inline std::future<typename std::invoke_result<Func, Args...>::type> ThreadPool:
 }
 
 template <class InputIt, class OutputIt, class UnaryOperation>
-inline OutputIt ThreadPool::parallel_transform(InputIt beg, InputIt end, OutputIt out, UnaryOperation op) {
-  using FutureT = std::future<std::invoke_result_t<UnaryOperation, decltype(*beg)>>;
+inline OutputIt ThreadPool::parallelTransform(InputIt first, InputIt last, OutputIt out, UnaryOperation unary_op) {
+  using FutureT = std::future<std::invoke_result_t<UnaryOperation, decltype(*first)>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
-  for (; beg != end; ++beg) {
-    futures.emplace_back(enqueue(op, *beg));
+  for (; first != last; ++first) {
+    futures.emplace_back(enqueue(unary_op, *first));
   }
-  auto nbFutures = futures.size();
-  for (decltype(nbFutures) runPos = 0; runPos < nbFutures; ++runPos, ++out) {
-    *out = futures[runPos].get();
-  }
-  return out;
+  return retrieveAllResults(futures, out);
 }
 
 template <class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
-inline OutputIt ThreadPool::parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out,
-                                               BinaryOperation binary_op) {
+inline OutputIt ThreadPool::parallelTransform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out,
+                                              BinaryOperation binary_op) {
   using FutureT = std::future<std::invoke_result_t<BinaryOperation, decltype(*first1), decltype(*first2)>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
   for (; first1 != last1; ++first1, ++first2) {
     futures.emplace_back(enqueue(binary_op, *first1, *first2));
   }
+  return retrieveAllResults(futures, out);
+}
+
+template <class Futures, class OutputIt>
+inline OutputIt ThreadPool::retrieveAllResults(Futures& futures, OutputIt out) {
   auto nbFutures = futures.size();
+  int nbExceptionsThrown = 0;
   for (decltype(nbFutures) runPos = 0; runPos < nbFutures; ++runPos, ++out) {
-    *out = futures[runPos].get();
+    try {
+      *out = futures[runPos].get();
+    } catch (const std::exception& e) {
+      // When a future throws an exception, it will be rethrown at the get() method call.
+      // We need to catch it and finish getting all the results before we can rethrow it.
+      using OutputType = std::remove_cvref_t<decltype(*out)>;
+      // value initialize the result for this thread. Probably not needed, but safer.
+      *out = OutputType();
+      log::critical("exception caught in thread pool: {}", e.what());
+      ++nbExceptionsThrown;
+    }
   }
+  if (nbExceptionsThrown != 0) {
+    // In this command line implementation of coincenter, I choose to rethrow any exception thrown by threads.
+    // In a server implementation, we could maybe only log the error and not rethrow the exception
+    throw exception("{} exception(s) thrown in thread pool", nbExceptionsThrown);
+  }
+
   return out;
+}
+
+inline void ThreadPool::stopRequested() {
+  std::unique_lock<std::mutex> lock(_queueMutex);
+  _stop = true;
 }
 
 }  // namespace cct

@@ -113,6 +113,8 @@ add_unit_test(
 add_unit_test(
     threadpool_test
     test/threadpool_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
