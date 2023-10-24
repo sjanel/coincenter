@@ -33,7 +33,7 @@ std::string_view GetOpenSSLVersion() { return OPENSSL_VERSION_TEXT; }
 
 Md ShaBin(ShaType shaType, std::string_view data, std::string_view secret) {
   unsigned int len = ShaDigestLen(shaType);
-  Md binData(len, 0);
+  Md binData(static_cast<Md::size_type>(len), 0);
 
   HMAC(GetEVPMD(shaType), secret.data(), static_cast<int>(secret.size()),
        reinterpret_cast<const unsigned char*>(data.data()), data.size(),
