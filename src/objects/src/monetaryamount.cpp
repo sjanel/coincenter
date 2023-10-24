@@ -130,7 +130,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
     }
   }
 
-  ret.first = integerPart * ipow(10, ret.second) + decPart + roundingUpNinesDouble;
+  ret.first = integerPart * ipow10(ret.second) + decPart + roundingUpNinesDouble;
   return ret;
 }
 
@@ -200,7 +200,7 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
 }
 
 constexpr MonetaryAmount::AmountType MonetaryAmount::decimalPart() const {
-  auto div = ipow(10, static_cast<uint8_t>(nbDecimals()));
+  auto div = ipow10(static_cast<uint8_t>(nbDecimals()));
   return _amount - (_amount / div) * div;
 }
 
@@ -271,7 +271,7 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
     _amount *= 10;
   }
   if (nbDecimals < currentNbDecimals) {
-    const AmountType epsilon = ipow(10, currentNbDecimals - nbDecimals);
+    const AmountType epsilon = ipow10(currentNbDecimals - nbDecimals);
     if (_amount < 0) {
       if (roundType != RoundType::kUp) {
         const AmountType rem = epsilon + (_amount % epsilon);
@@ -360,22 +360,21 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount other) const {
 
 MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
   AmountType amount = _amount;
-  int8_t nbDecs = nbDecimals();
+  auto nbDecs = nbDecimals();
   if (mult < -1 || mult > 1) {  // for * -1, * 0 and * -1 result is trivial without overflow
     // Beware of overflows, they can come faster than we think with multiplications.
-    int nbDigitsMult = ndigits(mult);
-    int nbDigitsAmount = ndigits(_amount);
-    int nbDigitsToTruncate = nbDigitsAmount + nbDigitsMult - std::numeric_limits<AmountType>::digits10;
+    const auto nbDigitsMult = ndigits(mult);
+    const auto nbDigitsAmount = ndigits(_amount);
+    const auto nbDigitsToTruncate = nbDigitsAmount + nbDigitsMult - std::numeric_limits<AmountType>::digits10;
     if (nbDigitsToTruncate > 0) {
       log::trace("Reaching numeric limits of MonetaryAmount for {} * {}, truncate {} digits", _amount, mult,
                  nbDigitsToTruncate);
-      amount /= ipow(10, static_cast<uint8_t>(nbDigitsToTruncate));
-      if (nbDecs >= nbDigitsToTruncate) {
-        nbDecs -= nbDigitsToTruncate;
+      amount /= ipow10(static_cast<uint8_t>(nbDigitsToTruncate));
+      if (static_cast<decltype(nbDigitsToTruncate)>(nbDecs) >= nbDigitsToTruncate) {
+        nbDecs -= static_cast<decltype(nbDecs)>(nbDigitsToTruncate);
       } else {
         log::warn("Cannot truncate decimal part, I need to truncate integral part");
       }
-      nbDigitsToTruncate = 0;
     }
   }
   return {amount * mult, _curWithDecimals, nbDecs};
@@ -444,7 +443,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
   const int8_t lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
   UnsignedAmountType lhs =
-      static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow(10, static_cast<uint8_t>(lhsNbDigitsToAdd));
+      static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow10(static_cast<uint8_t>(lhsNbDigitsToAdd));
   UnsignedAmountType rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
 
   int8_t lhsNbDecimals = nbDecimals() + lhsNbDigitsToAdd;
@@ -464,7 +463,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     if (nbDigitsToAdd == 0) {
       break;
     }
-    const auto multPower = ipow(10, static_cast<uint8_t>(nbDigitsToAdd));
+    const auto multPower = ipow10(static_cast<uint8_t>(nbDigitsToAdd));
     totalIntPart *= multPower;
     lhs *= multPower;
     nbDecs += nbDigitsToAdd;
@@ -479,7 +478,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
     if (nbDecs < nbDigitsTruncate) {
       throw exception("Overflow during divide");
     }
-    totalIntPart /= ipow(10, static_cast<uint8_t>(nbDigitsTruncate));
+    totalIntPart /= ipow10(static_cast<uint8_t>(nbDigitsTruncate));
     nbDecs -= nbDigitsTruncate;
   }
 

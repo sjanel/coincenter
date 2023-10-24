@@ -546,12 +546,12 @@ TEST(MonetaryAmountTest, Truncate) {
 
   ma = MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max(), CurrencyCode(), 18);
   ma.round(MonetaryAmount(1, CurrencyCode(), 4), MonetaryAmount::RoundType::kNearest);
-  EXPECT_EQ(ma, MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max() / ipow(10, 14) + 1L,
-                               CurrencyCode(), 4));
+  EXPECT_EQ(
+      ma, MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max() / ipow10(14) + 1L, CurrencyCode(), 4));
   ma = MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::min(), CurrencyCode(), 18);
   ma.round(MonetaryAmount(1, CurrencyCode(), 4), MonetaryAmount::RoundType::kDown);
-  EXPECT_EQ(ma, MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::min() / ipow(10, 14) - 1L,
-                               CurrencyCode(), 4));
+  EXPECT_EQ(
+      ma, MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::min() / ipow10(14) - 1L, CurrencyCode(), 4));
 }
 
 TEST(MonetaryAmountTest, PositiveAmountStr) {

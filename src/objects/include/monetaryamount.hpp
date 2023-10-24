@@ -105,7 +105,7 @@ class MonetaryAmount {
 
   /// Get the integer part of the amount of this MonetaryAmount.
   [[nodiscard]] constexpr AmountType integerPart() const {
-    return _amount / ipow(10, static_cast<uint8_t>(nbDecimals()));
+    return _amount / ipow10(static_cast<uint8_t>(nbDecimals()));
   }
 
   /// Get the decimal part of the amount of this MonetaryAmount.
@@ -116,7 +116,7 @@ class MonetaryAmount {
 
   /// Get the amount of this MonetaryAmount in double format.
   [[nodiscard]] constexpr double toDouble() const {
-    return static_cast<double>(_amount) / ipow(10, static_cast<uint8_t>(nbDecimals()));
+    return static_cast<double>(_amount) / ipow10(static_cast<uint8_t>(nbDecimals()));
   }
 
   /// Check if given amount is close to this amount.
@@ -168,11 +168,11 @@ class MonetaryAmount {
   friend constexpr bool operator==(AmountType amount, MonetaryAmount rhs) { return rhs == amount; }
 
   [[nodiscard]] constexpr auto operator<=>(AmountType amount) const {
-    return _amount <=> amount * ipow(10, static_cast<uint8_t>(nbDecimals()));
+    return _amount <=> amount * ipow10(static_cast<uint8_t>(nbDecimals()));
   }
 
   [[nodiscard]] friend constexpr auto operator<=>(AmountType amount, MonetaryAmount other) {
-    return amount * ipow(10, static_cast<uint8_t>(other.nbDecimals())) <=> other._amount;
+    return amount * ipow10(static_cast<uint8_t>(other.nbDecimals())) <=> other._amount;
   }
 
   [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
@@ -337,7 +337,7 @@ class MonetaryAmount {
  private:
   using UnsignedAmountType = uint64_t;
 
-  static constexpr AmountType kMaxAmountFullNDigits = ipow(10, std::numeric_limits<AmountType>::digits10);
+  static constexpr AmountType kMaxAmountFullNDigits = ipow10(std::numeric_limits<AmountType>::digits10);
   static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
 
   void appendCurrencyStr(string &str) const {
@@ -354,7 +354,7 @@ class MonetaryAmount {
   constexpr void sanitizeDecimals(int8_t nowNbDecimals, int8_t maxNbDecimals) noexcept {
     const int8_t nbDecimalsToTruncate = nowNbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
-      _amount /= ipow(10, static_cast<uint8_t>(nbDecimalsToTruncate));
+      _amount /= ipow10(static_cast<uint8_t>(nbDecimalsToTruncate));
       nowNbDecimals -= nbDecimalsToTruncate;
     }
     simplifyDecimals(nowNbDecimals);

@@ -18,6 +18,14 @@ TEST(MathHelpers, Power) {
   static_assert(ipow(-7, 0) == 1);
 }
 
+TEST(MathHelpers, Power10) {
+  EXPECT_EQ(ipow10(0), 1);
+  EXPECT_EQ(ipow10(1), 10);
+  EXPECT_EQ(ipow10(2), 100);
+  EXPECT_EQ(ipow10(10), 10000000000);
+  static_assert(ipow10(3) == 1000);
+}
+
 TEST(MathHelpers, NDigitsS8) {
   EXPECT_EQ(ndigits(static_cast<int8_t>(0)), 1);
   EXPECT_EQ(ndigits(static_cast<int8_t>(3)), 1);

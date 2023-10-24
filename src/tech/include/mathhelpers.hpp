@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <concepts>
 #include <cstdint>
 #include <limits>
@@ -66,6 +67,30 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
     default:
       return result;
   }
+}
+
+/// Optimization of ipow10( exp)
+constexpr int64_t ipow10(uint8_t exp) noexcept {
+  constexpr const int64_t kPow10Table[] = {1LL,
+                                           10LL,
+                                           100LL,
+                                           1000LL,
+                                           10000LL,
+                                           100000LL,
+                                           1000000LL,
+                                           10000000LL,
+                                           100000000LL,
+                                           1000000000LL,
+                                           10000000000LL,
+                                           100000000000LL,
+                                           1000000000000LL,
+                                           10000000000000LL,
+                                           100000000000000LL,
+                                           1000000000000000LL,
+                                           10000000000000000LL,
+                                           100000000000000000LL,
+                                           1000000000000000000LL};
+  return exp < std::size(kPow10Table) ? kPow10Table[exp] : std::numeric_limits<int64_t>::max();
 }
 
 /// Return the number of digits of given integral.

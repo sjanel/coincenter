@@ -378,29 +378,28 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
                                                       const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector ret;
 
-  int nbExchanges = static_cast<int>(exchangeAmountPairVector.size());
   int publicExchangePos = -1;
   constexpr bool considerStableCoinsAsFiats = false;
   api::ExchangePublic *pExchangePublic = nullptr;
-  for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-    const auto &exchangeAmountPair = exchangeAmountPairVector[exchangePos];
-    if (pExchangePublic != &exchangeAmountPair.first->apiPublic()) {
-      pExchangePublic = &exchangeAmountPair.first->apiPublic();
+  for (const auto &[exchangePtr, exchangeAmount] : exchangeAmountPairVector) {
+    if (pExchangePublic != &exchangePtr->apiPublic()) {
+      pExchangePublic = &exchangePtr->apiPublic();
       ++publicExchangePos;
     }
+    api::ExchangePublic &exchangePublic = *pExchangePublic;
 
     MarketSet &markets = marketsPerPublicExchange[publicExchangePos];
     MarketsPath marketsPath =
-        pExchangePublic->findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
+        exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
     const int nbMarketsInPath = static_cast<int>(marketsPath.size());
     if (nbMarketsInPath == 1 ||
         (nbMarketsInPath > 1 &&
-         tradeOptions.isMultiTradeAllowed(pExchangePublic->exchangeInfo().multiTradeAllowedByDefault()))) {
-      ret.emplace_back(exchangeAmountPair.first, exchangeAmountPair.second, std::move(marketsPath));
+         tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeInfo().multiTradeAllowedByDefault()))) {
+      ret.emplace_back(exchangePtr, exchangeAmount, std::move(marketsPath));
     } else {
       log::warn("{} is not convertible{} to {} on {}", fromCurrency,
                 nbMarketsInPath == 0 ? "" : "directly (and multi trade is not allowed)", toCurrency,
-                pExchangePublic->name());
+                exchangePublic.name());
     }
   }
   return ret;
@@ -411,10 +410,10 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
   // Retrieve amount per start amount currency for each exchange
   ExchangeAmountPairVector exchangeAmountPairVector;
 
-  for (const auto &exchangeBalancePair : balancePerExchange) {
-    MonetaryAmount avAmount = exchangeBalancePair.second.get(fromCurrency);
+  for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
+    MonetaryAmount avAmount = balancePortfolio.get(fromCurrency);
     if (avAmount > 0) {
-      exchangeAmountPairVector.emplace_back(exchangeBalancePair.first, avAmount);
+      exchangeAmountPairVector.emplace_back(exchangePtr, avAmount);
     }
   }
 
@@ -547,7 +546,7 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
   constexpr bool considerStableCoinsAsFiats = false;
   for (int nbSteps = 1;; ++nbSteps) {
     bool continuingHigherStepsPossible = false;
-    const int nbTrades = trades.size();
+    const int nbTrades = static_cast<int>(trades.size());
     int publicExchangePos = -1;
     api::ExchangePublic *pExchangePublic = nullptr;
     for (auto &[pExchange, balance] : balancePerExchange) {
