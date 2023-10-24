@@ -23,18 +23,20 @@
 namespace cct {
 
 namespace {
+
 json LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &cmdLineOptions) {
   json generalConfigData = GeneralConfig::LoadFile(cmdLineOptions.dataDir);
 
   // Override general config options from CLI
+  // Use at method to make sure to throw if key is not already present (it should)
   if (!cmdLineOptions.apiOutputType.empty()) {
-    generalConfigData["apiOutputType"] = cmdLineOptions.apiOutputType;
+    generalConfigData.at("apiOutputType") = cmdLineOptions.apiOutputType;
   }
   if (!cmdLineOptions.logConsole.empty()) {
-    generalConfigData["log"]["console"] = string(cmdLineOptions.logConsole);
+    generalConfigData.at("log").at(LoggingInfo::kJsonFieldConsoleLevelName) = string(cmdLineOptions.logConsole);
   }
   if (!cmdLineOptions.logFile.empty()) {
-    generalConfigData["log"]["file"] = string(cmdLineOptions.logFile);
+    generalConfigData.at("log").at(LoggingInfo::kJsonFieldFileLevelName) = string(cmdLineOptions.logFile);
   }
 
   return generalConfigData;

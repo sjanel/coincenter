@@ -19,6 +19,8 @@ class LoggingInfo {
   static constexpr int64_t kDefaultFileSizeInBytes = 5L * 1024 * 1024;
   static constexpr int32_t kDefaultNbMaxFiles = 10;
   static constexpr char const *const kOutputLoggerName = "output";
+  static constexpr std::string_view kJsonFieldConsoleLevelName = "consoleLevel";
+  static constexpr std::string_view kJsonFieldFileLevelName = "fileLevel";
 
   enum class WithLoggersCreation : int8_t { kNo, kYes };
 
@@ -31,7 +33,7 @@ class LoggingInfo {
   LoggingInfo(const LoggingInfo &) = delete;
   LoggingInfo(LoggingInfo &&loggingInfo) noexcept;
   LoggingInfo &operator=(const LoggingInfo &) = delete;
-  LoggingInfo &operator=(LoggingInfo &&loggingInfo) = delete;
+  LoggingInfo &operator=(LoggingInfo &&) = delete;
 
   ~LoggingInfo();
 
