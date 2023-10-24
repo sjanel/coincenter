@@ -53,13 +53,6 @@ class LoggingInfo {
 
   static void CreateOutputLogger();
 
-  static constexpr int8_t PosFromLevel(log::level::level_enum level) {
-    return static_cast<int8_t>(log::level::off) - static_cast<int8_t>(level);
-  }
-  static constexpr log::level::level_enum LevelFromPos(int8_t levelPos) {
-    return static_cast<log::level::level_enum>(static_cast<int8_t>(log::level::off) - levelPos);
-  }
-
   using TrackedCommandTypes = FlatSet<CoincenterCommandType>;
 
   std::string_view _dataDir = kDefaultDataDir;

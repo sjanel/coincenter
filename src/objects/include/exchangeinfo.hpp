@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "apiquerytypeenum.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -24,7 +25,8 @@ class ExchangeInfo {
                CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
                CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
-               std::string_view acceptEncoding, int dustSweeperMaxNbTrades, bool multiTradeAllowedByDefault,
+               std::string_view acceptEncoding, int dustSweeperMaxNbTrades, log::level::level_enum requestsCallLogLevel,
+               log::level::level_enum requestsAnswerLogLevel, bool multiTradeAllowedByDefault,
                bool validateDepositAddressesInFile, bool placeSimulateRealOrder, bool validateApiKey);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
@@ -44,6 +46,12 @@ class ExchangeInfo {
   /// A high value may have a higher chance of successfully sell to 0 the wanted currency,
   /// at the cost of more fees paid to the exchange.
   int dustSweeperMaxNbTrades() const { return _dustSweeperMaxNbTrades; }
+
+  // Log level for request calls
+  log::level::level_enum requestsCallLogLevel() const { return LevelFromPos(_requestsCallLogLevel); }
+
+  // Log level for requests replies, should it be json, or any other type
+  log::level::level_enum requestsAnswerLogLevel() const { return LevelFromPos(_requestsAnswerLogLevel); }
 
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
@@ -99,6 +107,8 @@ class ExchangeInfo {
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
   int16_t _dustSweeperMaxNbTrades;  // max number of trades of a dust sweeper attempt per currency
+  int8_t _requestsCallLogLevel;
+  int8_t _requestsAnswerLogLevel;
   bool _multiTradeAllowedByDefault;
   bool _validateDepositAddressesInFile;
   bool _placeSimulateRealOrder;

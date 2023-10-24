@@ -8,6 +8,7 @@
 #include "apiquerytypeenum.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycodevector.hpp"
@@ -45,6 +46,16 @@ string BuildUpdateFrequenciesString(const ExchangeInfo::APIUpdateFrequencies &ap
   ret.push_back(']');
   return ret;
 }
+
+auto DustSweeperMaxNbTrades(int dustSweeperMaxNbTrades) {
+  if (dustSweeperMaxNbTrades > static_cast<int>(std::numeric_limits<int16_t>::max())) {
+    throw invalid_argument("{} is too large");
+  }
+  if (dustSweeperMaxNbTrades < 0) {
+    throw invalid_argument("{} should be positive");
+  }
+  return static_cast<int16_t>(dustSweeperMaxNbTrades);
+}
 }  // namespace
 
 ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
@@ -53,6 +64,7 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
                            MonetaryAmountByCurrencySet &&dustAmountsThreshold,
                            const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate,
                            Duration privateAPIRate, std::string_view acceptEncoding, int dustSweeperMaxNbTrades,
+                           log::level::level_enum requestsCallLogLevel, log::level::level_enum requestsAnswerLogLevel,
                            bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
                            bool placeSimulateRealOrder, bool validateApiKey)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
@@ -65,7 +77,9 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
       _acceptEncoding(acceptEncoding),
       _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
       _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
-      _dustSweeperMaxNbTrades(dustSweeperMaxNbTrades),
+      _dustSweeperMaxNbTrades(DustSweeperMaxNbTrades(dustSweeperMaxNbTrades)),
+      _requestsCallLogLevel(PosFromLevel(requestsCallLogLevel)),
+      _requestsAnswerLogLevel(PosFromLevel(requestsAnswerLogLevel)),
       _multiTradeAllowedByDefault(multiTradeAllowedByDefault),
       _validateDepositAddressesInFile(validateDepositAddressesInFile),
       _placeSimulateRealOrder(placeSimulateRealOrder),
@@ -82,6 +96,9 @@ ExchangeInfo::ExchangeInfo(std::string_view exchangeNameStr, std::string_view ma
     log::trace(" - Preferred payment currencies : {}", BuildConcatenatedString(_preferredPaymentCurrencies));
     log::trace(" - Dust amounts threshold       : {}", BuildConcatenatedString(_dustAmountsThreshold));
     log::trace(" - Dust sweeper nb max trades   : {}", _dustSweeperMaxNbTrades);
+    log::trace(" - Requests call log level      : {}", log::level::to_string_view(LevelFromPos(_requestsCallLogLevel)));
+    log::trace(" - Requests answer log level    : {}",
+               log::level::to_string_view(LevelFromPos(_requestsAnswerLogLevel)));
     log::trace(" - General update frequencies   : {} for public, {} for private", DurationToString(publicAPIRate),
                DurationToString(privateAPIRate));
     log::trace(" - Accept encoding              : {}", _acceptEncoding);

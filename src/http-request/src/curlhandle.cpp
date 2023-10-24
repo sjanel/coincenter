@@ -53,7 +53,7 @@ size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *
 template <class T>
 void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
   static_assert(std::is_integral_v<T> || std::is_pointer_v<T>);
-  CURLcode code = curl_easy_setopt(curl, curlOption, value);
+  const CURLcode code = curl_easy_setopt(curl, curlOption, value);
   if (code != CURLE_OK) {
     if constexpr (std::is_integral_v<T> || std::is_same_v<T, const char *>) {
       log::error("Curl error {} setting option {} to {}", static_cast<int>(code), static_cast<int>(curlOption), value);
@@ -77,7 +77,9 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
                        const PermanentCurlOptions &permanentCurlOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
-      _bestUrlPicker(bestURLPicker) {
+      _bestUrlPicker(bestURLPicker),
+      _requestCallLogLevel(permanentCurlOptions.requestCallLogLevel()),
+      _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()) {
   if (settings::AreQueryResponsesOverriden(runMode)) {
     _handle = nullptr;
   } else {
@@ -146,17 +148,17 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
 
   const int8_t baseUrlPos = _bestUrlPicker.nextBaseURLPos();
-  std::string_view baseUrl = _bestUrlPicker.getBaseURL(baseUrlPos);
-  std::string_view postDataStr = postData.str();
+  const std::string_view baseUrl = _bestUrlPicker.getBaseURL(baseUrlPos);
+  const std::string_view postDataStr = postData.str();
   string modifiedURL(baseUrl.size() + endpoint.size() + (appendParametersInQueryStr ? (1U + postDataStr.size()) : 0U),
                      '?');
 
-  auto it = std::ranges::copy(baseUrl, modifiedURL.begin()).out;
-  it = std::ranges::copy(endpoint, it).out;
+  auto modifiedUrlOutIt = std::ranges::copy(baseUrl, modifiedURL.begin()).out;
+  modifiedUrlOutIt = std::ranges::copy(endpoint, modifiedUrlOutIt).out;
   string jsonStr;  // Declared here as its scope should be valid until the actual curl call
   std::string_view optsStr;
   if (appendParametersInQueryStr) {
-    it = std::ranges::copy(postDataStr, it + 1).out;
+    modifiedUrlOutIt = std::ranges::copy(postDataStr, modifiedUrlOutIt + 1).out;
   } else if (opts.isPostDataInJsonFormat() && !postData.empty()) {
     jsonStr = postData.toJson().dump();
     optsStr = jsonStr;
@@ -166,8 +168,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   if (queryResponseOverrideMode) {
     // Query response override mode
-    std::string_view path(modifiedURL.begin() + baseUrl.size(), modifiedURL.end());
-    std::string_view response = FlatQueryResponseMap::Get(_queryData, path);
+    const std::string_view path(modifiedURL.begin() + baseUrl.size(), modifiedURL.end());
+    const std::string_view response = FlatQueryResponseMap::Get(_queryData, path);
     if (response.empty()) {
       throw exception("No response for path '{}'", path);
     }
@@ -230,17 +232,18 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
   }
 
-  log::info("{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?", optsStr);
+  log::log(_requestCallLogLevel, "{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?",
+           optsStr);
 
   // Actually make the query
-  TimePoint t1 = Clock::now();
+  const TimePoint t1 = Clock::now();
   const CURLcode res = curl_easy_perform(curl);  // Get reply
   if (res != CURLE_OK) {
     throw exception("Unexpected response from curl: Error {}", static_cast<int>(res));
   }
 
   // Store stats
-  uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
+  const uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
   _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
 
   static constexpr int kReleaseMemoryRequestsFrequency = 100;
@@ -258,17 +261,15 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
                          static_cast<double>(queryRTInMs));
   }
 
-  if (log::get_level() <= log::level::trace) {
-    // Avoid polluting the logs for large response which are more likely to be HTML
-    const bool isJsonAnswer = _queryData.starts_with('{') || _queryData.starts_with('[');
-    constexpr std::size_t kMaxLenResponse = 1000;
-    if (!isJsonAnswer && _queryData.size() > kMaxLenResponse) {
-      std::string_view outPrinted(_queryData.begin(),
-                                  _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
-      log::trace("Truncated non JSON response {}...", outPrinted);
-    } else {
-      log::trace("Full{}JSON response {}", isJsonAnswer ? " " : " non ", _queryData);
-    }
+  // Avoid polluting the logs for large response which are more likely to be HTML
+  const bool isJsonAnswer = _queryData.starts_with('{') || _queryData.starts_with('[');
+  static constexpr std::size_t kMaxLenResponse = 1000;
+  if (!isJsonAnswer && _queryData.size() > kMaxLenResponse) {
+    const std::string_view outPrinted(_queryData.begin(),
+                                      _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
+    log::log(_requestAnswerLogLevel, "Truncated non JSON response {}...", outPrinted);
+  } else {
+    log::log(_requestAnswerLogLevel, "Full{}JSON response {}", isJsonAnswer ? " " : " non ", _queryData);
   }
 
   return _queryData;

@@ -8,53 +8,12 @@
 #include <utility>
 
 #include "cct_const.hpp"
-#include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
+#include "parseloglevel.hpp"
 #include "timestring.hpp"
-#ifndef CCT_MSVC
-#include "static_string_view_helpers.hpp"
-#endif
 #include "unitsparser.hpp"
 
 namespace cct {
-
-namespace {
-constexpr int8_t kMaxLogLevel = 6;
-
-int8_t LogPosFromLogStr(std::string_view logStr) {
-  if (logStr.size() == 1) {
-    int8_t logLevelPos = logStr.front() - '0';
-    if (logLevelPos < 0 || logLevelPos > kMaxLogLevel) {
-      throw exception("Unrecognized log level {}. Possible values are 0-{}", logStr, '0' + kMaxLogLevel);
-    }
-    return logLevelPos;
-  }
-  if (logStr == "off") {
-    return 0;
-  }
-  if (logStr == "critical") {
-    return 1;
-  }
-  if (logStr == "error") {
-    return 2;
-  }
-  if (logStr == "warning") {
-    return 3;
-  }
-  if (logStr == "info") {
-    return 4;
-  }
-  if (logStr == "debug") {
-    return 5;
-  }
-  if (logStr == "trace") {
-    return 6;
-  }
-  throw exception("Unrecognized log level name {}. Possible values are off|critical|error|warning|info|debug|trace",
-                  logStr);
-}
-
-}  // namespace
 
 LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir) : _dataDir(dataDir) {
   if (withLoggersCreation == WithLoggersCreation::kYes) {

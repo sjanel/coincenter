@@ -42,6 +42,8 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate())
                       .setAcceptedEncoding(_exchangeInfo.acceptEncoding())
+                      .setRequestCallLogLevel(_exchangeInfo.requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(_exchangeInfo.requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _healthCheckCurlHandle(

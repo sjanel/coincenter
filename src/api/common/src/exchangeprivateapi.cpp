@@ -72,7 +72,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       } else {
-        log::warn("Cannot convert {} into {} on {}", amount.currencyStr(), equiCurrency, exchangeName);
+        log::warn("Cannot convert {} -> {} on {}", amount.currencyStr(), equiCurrency, exchangeName);
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
       log::debug("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);

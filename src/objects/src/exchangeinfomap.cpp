@@ -3,9 +3,11 @@
 #include <algorithm>
 
 #include "cct_const.hpp"
+#include "cct_log.hpp"
 #include "durationstring.hpp"
 #include "exchangeinfodefault.hpp"
 #include "exchangeinfoparser.hpp"
+#include "parseloglevel.hpp"
 
 namespace cct {
 
@@ -41,25 +43,30 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &js
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "depositWallet"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "currencyInfo")}};
 
-    bool multiTradeAllowedByDefault = queryTopLevelOption.getBool(exchangeName, "multiTradeAllowedByDefault");
-    bool validateDepositAddressesInFile =
+    const bool multiTradeAllowedByDefault = queryTopLevelOption.getBool(exchangeName, "multiTradeAllowedByDefault");
+    const bool validateDepositAddressesInFile =
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
-    bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
-    bool validateApiKey = queryTopLevelOption.getBool(exchangeName, "validateApiKey");
+    const bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
+    const bool validateApiKey = queryTopLevelOption.getBool(exchangeName, "validateApiKey");
 
     MonetaryAmountByCurrencySet dustAmountsThresholds(
         queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
-    int dustSweeperMaxNbTrades = queryTopLevelOption.getInt(exchangeName, "dustSweeperMaxNbTrades");
+    const int dustSweeperMaxNbTrades = queryTopLevelOption.getInt(exchangeName, "dustSweeperMaxNbTrades");
+
+    const log::level::level_enum requestsCallLogLevel =
+        LevelFromPos(LogPosFromLogStr(queryTopLevelOption.getStr(exchangeName, "logLevels", "requestsCall")));
+    const log::level::level_enum requestsAnswerLogLevel =
+        LevelFromPos(LogPosFromLogStr(queryTopLevelOption.getStr(exchangeName, "logLevels", "requestsAnswer")));
 
     map.insert_or_assign(
         exchangeName,
-        ExchangeInfo(exchangeName, makerStr, takerStr,
-                     assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
-                     assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
-                     assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
-                     std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
-                     acceptEncoding, dustSweeperMaxNbTrades, multiTradeAllowedByDefault, validateDepositAddressesInFile,
-                     placeSimulatedRealOrder, validateApiKey));
+        ExchangeInfo(
+            exchangeName, makerStr, takerStr, assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
+            assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
+            assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
+            std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
+            acceptEncoding, dustSweeperMaxNbTrades, requestsCallLogLevel, requestsAnswerLogLevel,
+            multiTradeAllowedByDefault, validateDepositAddressesInFile, placeSimulatedRealOrder, validateApiKey));
   }  // namespace cct
 
   // Print json unused values

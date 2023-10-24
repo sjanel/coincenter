@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "timedef.hpp"
 
@@ -18,6 +19,9 @@ class PermanentCurlOptions {
   Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
   bool followLocation() const { return _followLocation; }
+
+  log::level::level_enum requestCallLogLevel() const { return _requestCallLogLevel; }
+  log::level::level_enum requestAnswerLogLevel() const { return _requestAnswerLogLevel; }
 
   class Builder {
    public:
@@ -58,33 +62,51 @@ class PermanentCurlOptions {
       return *this;
     }
 
+    Builder &setRequestCallLogLevel(log::level::level_enum requestCallLogLevel) {
+      _requestCallLogLevel = requestCallLogLevel;
+      return *this;
+    }
+
+    Builder &setRequestAnswerLogLevel(log::level::level_enum requestAnswerLogLevel) {
+      _requestAnswerLogLevel = requestAnswerLogLevel;
+      return *this;
+    }
+
     Builder &setFollowLocation() {
       _followLocation = true;
       return *this;
     }
 
     PermanentCurlOptions build() {
-      return {std::move(_userAgent), std::move(_acceptedEncoding), _minDurationBetweenQueries, _followLocation};
+      return {std::move(_userAgent), std::move(_acceptedEncoding), _minDurationBetweenQueries,
+              _requestCallLogLevel,  _requestAnswerLogLevel,       _followLocation};
     }
 
    private:
     string _userAgent;
     string _acceptedEncoding;
     Duration _minDurationBetweenQueries{};
+    log::level::level_enum _requestCallLogLevel = log::level::level_enum::info;
+    log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::trace;
     bool _followLocation = false;
   };
 
  private:
   PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries,
+                       log::level::level_enum requestCallLogLevel, log::level::level_enum requestAnswerLogLevel,
                        bool followLocation)
       : _userAgent(std::move(userAgent)),
         _acceptedEncoding(std::move(acceptedEncoding)),
         _minDurationBetweenQueries(minDurationBetweenQueries),
+        _requestCallLogLevel(requestCallLogLevel),
+        _requestAnswerLogLevel(requestAnswerLogLevel),
         _followLocation(followLocation) {}
 
   string _userAgent;
   string _acceptedEncoding;
   Duration _minDurationBetweenQueries;
+  log::level::level_enum _requestCallLogLevel;
+  log::level::level_enum _requestAnswerLogLevel;
   bool _followLocation;
 };
 

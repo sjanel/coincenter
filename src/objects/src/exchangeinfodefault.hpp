@@ -52,6 +52,10 @@ struct ExchangeInfoDefault {
         "0.000001 BTC"
       ],
       "dustSweeperMaxNbTrades": 7,
+      "logLevels": {
+        "requestsCall": "info",
+        "requestsAnswer": "trace"
+      },
       "multiTradeAllowedByDefault": false,
       "placeSimulateRealOrder": false,
       "updateFrequency": {
@@ -166,6 +170,10 @@ struct ExchangeInfoDefault {
         "0.5 XRP"
       ],
       "dustSweeperMaxNbTrades": 5,
+      "logLevels": {
+        "requestsCall": "info",
+        "requestsAnswer": "trace"
+      },
       "multiTradeAllowedByDefault": true,
       "privateAPIRate": "1055ms",
       "publicAPIRate": "1236ms",

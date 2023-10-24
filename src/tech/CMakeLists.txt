@@ -64,7 +64,7 @@ add_unit_test(
 
 
 
-if(WIN32)
+if(MSVC)
     add_unit_test(
         gethostname_test
         src/gethostname.cpp
@@ -88,6 +88,14 @@ endif()
 add_unit_test(
     mathhelpers_test
     test/mathhelpers_test.cpp
+)
+
+add_unit_test(
+    parseloglevel_test
+    src/parseloglevel.cpp
+    test/parseloglevel_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(

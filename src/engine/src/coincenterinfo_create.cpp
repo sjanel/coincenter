@@ -52,30 +52,33 @@ MonitoringInfo MonitoringInfo_Create(std::string_view programName, const Coincen
 
 CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
                                      settings::RunMode runMode) {
-  auto dataDir = cmdLineOptions.dataDir;
+  const auto dataDir = cmdLineOptions.dataDir;
 
-  json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
+  const json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
 
-  Duration fiatConversionQueryRate = ParseDuration(generalConfigData["fiatConversion"]["rate"].get<std::string_view>());
-  ApiOutputType apiOutputType = ApiOutputTypeFromString(generalConfigData["apiOutputType"].get<std::string_view>());
+  const Duration fiatConversionQueryRate =
+      ParseDuration(generalConfigData.at("fiatConversion").at("rate").get<std::string_view>());
+  const ApiOutputType apiOutputType =
+      ApiOutputTypeFromString(generalConfigData.at("apiOutputType").get<std::string_view>());
 
   // Create LoggingInfo first as it is a RAII structure re-initializing spdlog loggers.
   // It will be held by GeneralConfig and then itself by CoincenterInfo though.
-  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir,
-                          static_cast<const json &>(generalConfigData["log"]));
+  const auto &logConfigJsonPart = static_cast<const json &>(generalConfigData.at("log"));
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir, logConfigJsonPart);
 
-  RequestsConfig requestsConfig(generalConfigData["requests"]["concurrency"]["nbMaxParallelRequests"].get<int>());
+  RequestsConfig requestsConfig(
+      generalConfigData.at("requests").at("concurrency").at("nbMaxParallelRequests").get<int>());
 
   GeneralConfig generalConfig(std::move(loggingInfo), std::move(requestsConfig), fiatConversionQueryRate,
                               apiOutputType);
 
-  LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
+  const LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 
-  File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
-                                      File::IfError::kThrow);
-  File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
-  File currencyPrefixesTranslatorFile(dataDir, File::Type::kStatic, "currency_prefix_translator.json",
-                                      File::IfError::kThrow);
+  const File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
+                                            File::IfError::kThrow);
+  const File stableCoinsFile(dataDir, File::Type::kStatic, "stablecoins.json", File::IfError::kThrow);
+  const File currencyPrefixesTranslatorFile(dataDir, File::Type::kStatic, "currency_prefix_translator.json",
+                                            File::IfError::kThrow);
 
   return CoincenterInfo(runMode, loadConfiguration, std::move(generalConfig),
                         MonitoringInfo_Create(programName, cmdLineOptions), currencyAcronymsTranslatorFile,
@@ -84,7 +87,7 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
 
 ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.noSecrets) {
-    StringOptionParser anyParser(*cmdLineOptions.noSecrets);
+    const StringOptionParser anyParser(*cmdLineOptions.noSecrets);
 
     return ExchangeSecretsInfo(anyParser.getExchanges());
   }

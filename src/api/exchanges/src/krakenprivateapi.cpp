@@ -134,6 +134,8 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
                       .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _depositWalletsCache(

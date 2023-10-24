@@ -99,6 +99,8 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate())
                       .setAcceptedEncoding(_exchangeInfo.acceptEncoding())
+                      .setRequestCallLogLevel(_exchangeInfo.requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(_exchangeInfo.requestsAnswerLogLevel())
                       .build(),
                   runMode) {}
 
