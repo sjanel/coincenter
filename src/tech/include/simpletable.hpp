@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <ios>
-#include <iostream>
+#include <ostream>
 #include <span>
 #include <string_view>
 #include <utility>

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+
 #include "cachedresultvault.hpp"
 
 namespace cct::api {

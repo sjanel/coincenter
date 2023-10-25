@@ -4,8 +4,10 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <span>
@@ -17,6 +19,7 @@
 #include "cct_cctype.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "unreachable.hpp"
 
@@ -67,8 +70,8 @@ class FlatKeyValueStringIterator {
   const value_type &operator*() const { return _kv; }
   const value_type *operator->() const { return &this->operator*(); }
 
-  bool operator==(const FlatKeyValueStringIterator &o) const { return _kv[0].data() == o._kv[0].data(); }
-  bool operator!=(const FlatKeyValueStringIterator &o) const { return !(*this == o); }
+  bool operator==(const FlatKeyValueStringIterator &rhs) const noexcept { return _kv[0].data() == rhs._kv[0].data(); }
+  bool operator!=(const FlatKeyValueStringIterator &rhs) const noexcept { return !(*this == rhs); }
 
  private:
   template <char, char>
@@ -87,7 +90,7 @@ class FlatKeyValueStringIterator {
 
   /// Create a new FlatKeyValueStringIterator representing end()
   /// bool as second parameter is only here to differentiate both constructors
-  FlatKeyValueStringIterator(std::string_view data, bool) : _data(data) {}
+  FlatKeyValueStringIterator(std::string_view data, [[maybe_unused]] bool dummy) : _data(data) {}
 
   std::string_view _data;
   value_type _kv;
@@ -326,7 +329,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(std::string_view
     while (last < ps && _data[last] != KeyValuePairSep) {
       ++last;
     }
-    _data.erase(_data.begin() + first, _data.begin() + last + (first == 0));
+    _data.erase(_data.begin() + first, _data.begin() + last + static_cast<std::size_t>(first == 0));
   }
 }
 
@@ -363,7 +366,7 @@ std::string_view FlatKeyValueString<KeyValuePairSep, AssignmentChar>::Get(std::s
       last = data.begin() + endPos;
     }
   }
-  return std::string_view(first, last);
+  return {first, last};
 }
 
 template <char KeyValuePairSep, char AssignmentChar>

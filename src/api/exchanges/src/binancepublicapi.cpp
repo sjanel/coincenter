@@ -3,21 +3,42 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <execution>
-#include <thread>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 
-#include "apikey.hpp"
+#include "apiquerytypeenum.hpp"
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "codec.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
-#include "ssl_sha.hpp"
+#include "permanentcurloptions.hpp"
+#include "runmodes.hpp"
+#include "timedef.hpp"
+#include "tradeside.hpp"
+#include "volumeandpricenbdecimals.hpp"
 
 namespace cct::api {
 namespace {

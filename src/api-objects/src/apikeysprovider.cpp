@@ -1,11 +1,20 @@
 #include "apikeysprovider.hpp"
 
+#include <algorithm>
 #include <iterator>
+#include <string_view>
+#include <utility>
 
+#include "accountowner.hpp"
+#include "apikey.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "exchangename.hpp"
+#include "exchangesecretsinfo.hpp"
 #include "file.hpp"
+#include "runmodes.hpp"
 
 namespace cct::api {
 namespace {

@@ -1,18 +1,40 @@
 #include "huobipublicapi.hpp"
 
 #include <algorithm>
-#include <execution>
-#include <thread>
+#include <cstdint>
+#include <memory>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 
+#include "apiquerytypeenum.hpp"
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
+#include "timedef.hpp"
 #include "toupperlower.hpp"
+#include "tradeside.hpp"
+#include "volumeandpricenbdecimals.hpp"
 
 namespace cct::api {
 namespace {
@@ -421,7 +443,7 @@ LastTradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
         TradeSide tradeSide =
             detail2["direction"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-        ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+        ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
       }
     }
   }

@@ -6,7 +6,6 @@ Checks: "-*,\
   google-readability-casting,\
   misc-*,\
   -misc-non-private-member-variables-in-classes,\
-  -misc-include-cleaner,\
   -misc-const-correctness,\
   modernize-*,\
   -modernize-avoid-c-arrays,\

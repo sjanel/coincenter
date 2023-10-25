@@ -1,10 +1,22 @@
 #include "fiatconverter.hpp"
 
+#include <cstdint>
+#include <mutex>
+#include <optional>
+#include <string_view>
+#include <utility>
+
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
 #include "file.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "permanentcurloptions.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 namespace {
@@ -49,8 +61,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
     double rate = rateAndTimeData["rate"];
     int64_t timeepoch = rateAndTimeData["timeepoch"];
     log::trace("Stored rate {} for market {} from {}", rate, marketStr, kRatesCacheFile);
-    _pricesMap.insert_or_assign(Market(marketStr, '-'),
-                                PriceTimedValue{rate, TimePoint(std::chrono::seconds(timeepoch))});
+    _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(TimeInS(timeepoch))});
   }
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }

@@ -1,18 +1,41 @@
 #include "krakenpublicapi.hpp"
 
-#include <fstream>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 
+#include "apiquerytypeenum.hpp"
+#include "cachedresult.hpp"
 #include "cct_cctype.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "fiatconverter.hpp"
 #include "file.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
+#include "tradeside.hpp"
 
 namespace cct::api {
 namespace {
@@ -101,7 +124,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
   json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
   if (!data.empty()) {
     Duration withdrawDataRefreshTime = exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees);
-    TimePoint lastUpdatedTime(std::chrono::seconds(data["timeepoch"].get<int64_t>()));
+    TimePoint lastUpdatedTime(TimeInS(data["timeepoch"].get<int64_t>()));
     if (Clock::now() < lastUpdatedTime + withdrawDataRefreshTime) {
       // we can reuse file data
       KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps withdrawalInfoMaps;
@@ -517,7 +540,7 @@ LastTradesVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
     TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;

@@ -25,6 +25,7 @@
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -54,6 +55,7 @@
 #include "withdraw.hpp"
 #include "withdrawinfo.hpp"
 #include "withdrawordeposit.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 

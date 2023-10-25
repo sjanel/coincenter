@@ -2,8 +2,18 @@
 
 #include <gmock/gmock.h>
 
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "currencycode.hpp"
+#include "depositsconstraints.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "monetaryamount.hpp"
+#include "ordersconstraints.hpp"
+#include "tradeinfo.hpp"
+#include "wallet.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 

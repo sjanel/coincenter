@@ -1,8 +1,18 @@
 #include "wallet.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <string_view>
+#include <utility>
+
+#include "accountowner.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+#include "exchangename.hpp"
 #include "file.hpp"
 
 namespace cct {

@@ -2,11 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 #include "cct_const.hpp"
-#include "durationstring.hpp"
+#include "currencycodeset.hpp"
 #include "exchangeinfomap.hpp"
 #include "exchangeinfoparser.hpp"
 #include "loadconfiguration.hpp"
+#include "monetaryamount.hpp"
 
 namespace cct {
 class ExchangeInfoTest : public ::testing::Test {

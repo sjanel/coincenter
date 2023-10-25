@@ -1,6 +1,12 @@
 #include "withdrawinfo.hpp"
 
+#include <string_view>
+#include <utility>
+
 #include "cct_exception.hpp"
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
+#include "wallet.hpp"
 
 namespace cct {
 namespace api {

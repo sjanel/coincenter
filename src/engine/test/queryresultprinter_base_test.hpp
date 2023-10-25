@@ -1,3 +1,5 @@
+#pragma once
+
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -6,7 +8,6 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
-#include "cct_config.hpp"
 #include "cct_json.hpp"
 #include "exchangedata_test.hpp"
 #include "queryresultprinter.hpp"

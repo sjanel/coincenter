@@ -2,7 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+#include <optional>
+#include <utility>
+
 #include "cct_exception.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
 
 namespace cct {
 namespace {

@@ -2,10 +2,16 @@
 
 #include <gtest/gtest.h>
 
+#include <string_view>
+
+#include "besturlpicker.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
+#include "permanentcurloptions.hpp"
+#include "runmodes.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -80,7 +86,7 @@ class FiatConverterTest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode};
-  FiatConverter converter{coincenterInfo, std::chrono::milliseconds(1)};
+  FiatConverter converter{coincenterInfo, TimeInMs(1)};
 };
 
 TEST_F(FiatConverterTest, DirectConversion) {

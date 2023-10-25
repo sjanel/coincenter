@@ -1,7 +1,14 @@
 #include "exchangeinfoparser.hpp"
 
+#include <memory>
+#include <string_view>
+#include <utility>
+
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "currencycodevector.hpp"
 #include "exchangeinfodefault.hpp"
 #include "file.hpp"
 #include "loadconfiguration.hpp"

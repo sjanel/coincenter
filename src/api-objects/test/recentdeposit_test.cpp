@@ -2,6 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
+
 namespace cct::api {
 
 inline bool operator==(const RecentDeposit &lhs, const RecentDeposit &rhs) {

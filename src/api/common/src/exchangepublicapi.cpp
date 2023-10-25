@@ -1,12 +1,28 @@
 #include "exchangepublicapi.hpp"
 
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <optional>
+#include <string_view>
 #include <unordered_set>
+#include <utility>
 
-#include "cct_allocator.hpp"
 #include "cct_exception.hpp"
+#include "cct_smallvector.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi.hpp"
+#include "currencycode.hpp"
+#include "exchangeinfo.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
-#include "unreachable.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
 
 namespace cct::api {
 ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,

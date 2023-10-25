@@ -6,6 +6,7 @@
 
 #include "cct_exception.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
 #include "httprequesttype.hpp"
 #include "permanentcurloptions.hpp"
 #include "proxy.hpp"

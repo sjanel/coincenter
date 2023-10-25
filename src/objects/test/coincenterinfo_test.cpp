@@ -1,7 +1,16 @@
 #include "coincenterinfo.hpp"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "cct_const.hpp"
+#include "cct_string.hpp"
+#include "currencycode.hpp"
+#include "generalconfig.hpp"
+#include "loadconfiguration.hpp"
+#include "monitoringinfo.hpp"
 #include "reader_mock.hpp"
-#include "writer_mock.hpp"
+#include "runmodes.hpp"
 
 namespace cct {
 namespace {

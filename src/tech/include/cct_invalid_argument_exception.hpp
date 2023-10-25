@@ -1,7 +1,11 @@
 #pragma once
 
+#include <utility>
+
+#include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_format.hpp"
+#include "cct_string.hpp"
 
 namespace cct {
 class invalid_argument : public exception {

@@ -35,10 +35,10 @@ template <class ClockT, class T, class... FuncTArgs>
 class CachedResultT : public CachedResultBase<typename ClockT::duration> {
  public:
   using ResultType = std::remove_cvref_t<decltype(std::declval<T>()(std::declval<FuncTArgs>()...))>;
-  using TimePoint = typename ClockT::time_point;
-  using Duration = typename ClockT::duration;
+  using TimePoint = ClockT::time_point;
+  using Duration = ClockT::duration;
   using ResPtrTimePair = std::pair<const ResultType *, TimePoint>;
-  using State = typename CachedResultBase<Duration>::State;
+  using State = CachedResultBase<Duration>::State;
 
  private:
   using TKey = std::tuple<std::remove_cvref_t<FuncTArgs>...>;

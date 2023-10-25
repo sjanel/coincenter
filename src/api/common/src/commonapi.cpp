@@ -1,14 +1,19 @@
 #include "commonapi.hpp"
 
-#include <cctype>
+#include <cstdint>
 #include <string_view>
+#include <utility>
 
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
 #include "file.hpp"
+#include "httprequesttype.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 
@@ -35,7 +40,7 @@ CommonAPI::CommonAPI(const CoincenterInfo& config, Duration fiatsUpdateFrequency
         fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
       }
       log::debug("Loaded {} fiats from cache file", fiats.size());
-      _fiatsCache.set(std::move(fiats), TimePoint(std::chrono::seconds(timeEpoch)));
+      _fiatsCache.set(std::move(fiats), TimePoint(TimeInS(timeEpoch)));
     }
   }
 }
@@ -70,13 +75,13 @@ CommonAPI::Fiats CommonAPI::FiatsFunc::operator()() {
 }
 
 void CommonAPI::updateCacheFile() const {
-  File fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
-  json data = fiatsCacheFile.readAllJson();
-  auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
-  auto timeEpochIt = data.find("timeepoch");
+  const auto fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
+  auto data = fiatsCacheFile.readAllJson();
+  const auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
+  const auto timeEpochIt = data.find("timeepoch");
   if (timeEpochIt != data.end()) {
-    int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
-    if (TimePoint(std::chrono::seconds(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
+    const int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
+    if (TimePoint(TimeInS(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
       return;  // No update
     }
   }

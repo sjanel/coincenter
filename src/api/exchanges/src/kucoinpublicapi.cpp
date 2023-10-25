@@ -2,18 +2,40 @@
 
 #include <algorithm>
 #include <cassert>
-#include <execution>
-#include <thread>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <string_view>
+#include <utility>
 
+#include "apiquerytypeenum.hpp"
+#include "cachedresult.hpp"
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
 #include "stringhelpers.hpp"
-#include "toupperlower.hpp"
+#include "timedef.hpp"
+#include "tradeside.hpp"
+#include "volumeandpricenbdecimals.hpp"
 
 namespace cct::api {
 namespace {
@@ -324,7 +346,7 @@ LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int n
     int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
     TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;

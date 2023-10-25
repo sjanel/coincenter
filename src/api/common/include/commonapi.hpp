@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <mutex>
 
 #include "cachedresult.hpp"

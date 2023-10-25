@@ -3,13 +3,45 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <optional>
+#include <string_view>
+#include <utility>
+
+#include "accountowner.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
 #include "cct_const.hpp"
+#include "cct_exception.hpp"
 #include "coincenterinfo.hpp"
+#include "commonapi.hpp"
+#include "currencycode.hpp"
+#include "exchangeinfo.hpp"
 #include "exchangeprivateapi_mock.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "fiatconverter.hpp"
+#include "loadconfiguration.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "orderid.hpp"
+#include "priceoptions.hpp"
+#include "priceoptionsdef.hpp"
+#include "runmodes.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
+#include "tradedamounts.hpp"
+#include "tradedefinitions.hpp"
+#include "tradeinfo.hpp"
+#include "tradeoptions.hpp"
+#include "tradeside.hpp"
+#include "volumeandpricenbdecimals.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
+#include "withdrawordeposit.hpp"
 
 namespace cct {
 inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {

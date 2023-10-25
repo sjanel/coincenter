@@ -1,10 +1,24 @@
 #include <gtest/gtest.h>
 
+#include <map>
+
+#include "apikey.hpp"
 #include "apikeysprovider.hpp"
 #include "bithumbprivateapi.hpp"
 #include "bithumbpublicapi.hpp"
+#include "cct_const.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
+#include "exchangename.hpp"
 #include "fiatconverter.hpp"
+#include "loadconfiguration.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "runmodes.hpp"
+#include "timedef.hpp"
+#include "tradeinfo.hpp"
+#include "tradeoptions.hpp"
+#include "tradeside.hpp"
 
 namespace cct::api {
 class BithumbPrivateAPIPlaceOrderTest : public ::testing::Test {

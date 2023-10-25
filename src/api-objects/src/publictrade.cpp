@@ -1,5 +1,6 @@
 #include "publictrade.hpp"
 
+#include "cct_string.hpp"
 #include "timestring.hpp"
 
 namespace cct {

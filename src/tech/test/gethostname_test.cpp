@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_string.hpp"
+
 namespace cct {
 TEST(GetHostNameTest, Default) {
   HostNameGetter hostNameGetter;

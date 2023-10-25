@@ -6,8 +6,6 @@
 #include <limits>
 #include <type_traits>
 
-#include "cct_config.hpp"
-
 namespace cct {
 /// constexpr and integral version of math.power.
 /// Taken from https://gist.github.com/orlp/3551590

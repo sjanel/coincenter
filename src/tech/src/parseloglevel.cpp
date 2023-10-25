@@ -1,5 +1,8 @@
 #include "parseloglevel.hpp"
 
+#include <cstdint>
+#include <string_view>
+
 #include "cct_exception.hpp"
 
 namespace cct {

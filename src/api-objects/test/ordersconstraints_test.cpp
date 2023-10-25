@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "market.hpp"
+
 namespace cct {
 TEST(OrderConstraintsBitmapTest, Empty) {
   OrderConstraintsBitmap bmp;

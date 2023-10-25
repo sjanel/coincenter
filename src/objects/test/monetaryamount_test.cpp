@@ -2,10 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <optional>
 
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "currencycode.hpp"
+#include "mathhelpers.hpp"
 
 namespace cct {
 
