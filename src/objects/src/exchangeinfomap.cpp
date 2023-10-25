@@ -1,13 +1,19 @@
 #include "exchangeinfomap.hpp"
 
 #include <algorithm>
+#include <string_view>
+#include <utility>
 
 #include "cct_const.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "durationstring.hpp"
+#include "cct_string.hpp"
+#include "exchangeinfo.hpp"
 #include "exchangeinfodefault.hpp"
 #include "exchangeinfoparser.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "parseloglevel.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -53,9 +59,9 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &js
         queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
     const int dustSweeperMaxNbTrades = queryTopLevelOption.getInt(exchangeName, "dustSweeperMaxNbTrades");
 
-    const log::level::level_enum requestsCallLogLevel =
+    const auto requestsCallLogLevel =
         LevelFromPos(LogPosFromLogStr(queryTopLevelOption.getStr(exchangeName, "logLevels", "requestsCall")));
-    const log::level::level_enum requestsAnswerLogLevel =
+    const auto requestsAnswerLogLevel =
         LevelFromPos(LogPosFromLogStr(queryTopLevelOption.getStr(exchangeName, "logLevels", "requestsAnswer")));
 
     map.insert_or_assign(

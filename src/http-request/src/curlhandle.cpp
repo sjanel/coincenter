@@ -22,6 +22,7 @@
 #include "cct_string.hpp"
 #include "curlmetrics.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
 #include "flatkeyvaluestring.hpp"
 #include "httprequesttype.hpp"
 #include "metric.hpp"

@@ -1,6 +1,8 @@
 #include "bithumbpublicapi.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <iterator>
 #include <memory>
@@ -22,7 +24,10 @@
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
@@ -31,6 +36,7 @@
 #include "monetaryamount.hpp"
 #include "permanentcurloptions.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradeside.hpp"
 

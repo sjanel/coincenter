@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "cct_log.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangeinfo.hpp"

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <string_view>
+#include <type_traits>
 
 #include "accountowner.hpp"
 #include "cct_config.hpp"
@@ -56,7 +58,7 @@ class Wallet {
 
   bool hasTag() const { return _tagPos != std::string_view::npos; }
 
-  bool operator==(const Wallet &) const = default;
+  bool operator==(const Wallet &) const noexcept = default;
 
   static bool ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchangeName, CurrencyCode currency,
                              std::string_view expectedAddress, std::string_view expectedTag);

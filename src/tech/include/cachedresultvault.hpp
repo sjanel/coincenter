@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "cct_vector.hpp"
 #include "timedef.hpp"
 

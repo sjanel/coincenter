@@ -1,14 +1,27 @@
 #pragma once
 
+#include <type_traits>
+
+#include "apikey.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
 #include "curlhandle.hpp"
-#include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "depositsconstraints.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httprequesttype.hpp"
+#include "monetaryamount.hpp"
+#include "ordersconstraints.hpp"
 #include "timedef.hpp"
 #include "tradeinfo.hpp"
+#include "wallet.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 

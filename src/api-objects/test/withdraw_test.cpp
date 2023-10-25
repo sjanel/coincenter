@@ -1,15 +1,22 @@
 #include "withdraw.hpp"
 
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+
 #include "cct_vector.hpp"
-#include "gtest/gtest.h"
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class WithdrawTest : public ::testing::Test {
  protected:
-  TimePoint tp1{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 9000000}};
-  TimePoint tp3{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
-  TimePoint tp4{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
+  TimePoint tp1{TimeInMs{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{TimeInMs{std::numeric_limits<int64_t>::max() / 9000000}};
+  TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 8000000}};
+  TimePoint tp4{TimeInMs{std::numeric_limits<int64_t>::max() / 7000000}};
 
   Withdraw withdraw1{"id1", tp2, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kSuccess,
                      MonetaryAmount("0.001", "BTC")};
@@ -26,6 +33,7 @@ class WithdrawTest : public ::testing::Test {
 
 TEST_F(WithdrawTest, SortByTimeFirst) {
   std::ranges::sort(withdraws);
+
   EXPECT_EQ(withdraws.front(), withdraw3);
   EXPECT_EQ(withdraws.back(), withdraw4);
 }

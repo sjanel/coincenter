@@ -370,7 +370,7 @@ MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
       log::trace("Reaching numeric limits of MonetaryAmount for {} * {}, truncate {} digits", _amount, mult,
                  nbDigitsToTruncate);
       amount /= ipow10(static_cast<uint8_t>(nbDigitsToTruncate));
-      if (static_cast<decltype(nbDigitsToTruncate)>(nbDecs) >= nbDigitsToTruncate) {
+      if (static_cast<std::remove_const_t<decltype(nbDigitsToTruncate)>>(nbDecs) >= nbDigitsToTruncate) {
         nbDecs -= static_cast<decltype(nbDecs)>(nbDigitsToTruncate);
       } else {
         log::warn("Cannot truncate decimal part, I need to truncate integral part");

@@ -20,10 +20,10 @@ int main(int argc, const char* argv[]) {
                                   cct::settings::RunMode::kProd);
     }
   } catch (const cct::invalid_argument& e) {
-    std::cerr << "Invalid argument: " << e.what() << std::endl;
+    std::cerr << "Invalid argument: " << e.what() << '\n';
     return EXIT_FAILURE;
   } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
+    std::cerr << e.what() << '\n';
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

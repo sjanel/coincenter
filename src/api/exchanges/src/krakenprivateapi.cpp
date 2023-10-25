@@ -4,8 +4,10 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 #include "apikey.hpp"
@@ -23,8 +25,10 @@
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "exchangeinfo.hpp"

@@ -1,5 +1,10 @@
 #include "ordersconstraints.hpp"
 
+#include <utility>
+
+#include "currencycode.hpp"
+#include "timedef.hpp"
+
 namespace cct {
 
 OrdersConstraints::OrdersConstraints(CurrencyCode cur1, CurrencyCode cur2, Duration minAge, Duration maxAge,

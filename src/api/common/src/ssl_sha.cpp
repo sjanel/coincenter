@@ -1,14 +1,17 @@
 ﻿#include "ssl_sha.hpp"
 
+#include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/opensslv.h>
 #include <openssl/sha.h>
 
 #include <algorithm>
-#include <cstring>
 #include <memory>
+#include <span>
+#include <string_view>
 
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "codec.hpp"
 
 namespace cct::ssl {

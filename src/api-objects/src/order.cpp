@@ -1,6 +1,13 @@
 #include "order.hpp"
 
+#include <string_view>
+#include <utility>
+
+#include "cct_string.hpp"
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 

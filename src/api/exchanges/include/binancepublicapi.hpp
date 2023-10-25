@@ -7,10 +7,15 @@
 #include "cct_json.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
+#include "runmodes.hpp"
 #include "timedef.hpp"
-#include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
 

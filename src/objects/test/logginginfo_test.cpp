@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <utility>
+
+#include "cct_const.hpp"
+#include "cct_log.hpp"
 #include "generalconfigdefault.hpp"
 
 namespace cct {

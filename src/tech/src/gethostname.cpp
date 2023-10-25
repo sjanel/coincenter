@@ -7,8 +7,9 @@
 #include <Winsock2.h>
 #include <winsock.h>
 #else
-#include <errno.h>
 #include <unistd.h>
+
+#include <cerrno>
 #endif
 
 namespace cct {
@@ -25,10 +26,12 @@ HostNameGetter::HostNameGetter() {
 HostNameGetter::~HostNameGetter() { WSACleanup(); }
 #endif
 
+// This method cannot be made static as it needs the RAII WSAStartup / WSACleanup wrapper in Windows.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 string HostNameGetter::getHostName() const {
   string hostname(16U, '\0');
-  static constexpr std::size_t kMaxHostNameSize = 1024;
-  std::size_t nullTerminatedCharPos = 0;
+  static constexpr string::size_type kMaxHostNameSize = 1024;
+  string::size_type nullTerminatedCharPos = 0;
   do {
     auto errorCode = ::gethostname(hostname.data(), hostname.size() - 1U);
     if (errorCode != 0) {

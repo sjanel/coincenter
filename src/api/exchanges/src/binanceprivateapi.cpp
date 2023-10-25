@@ -1,18 +1,57 @@
 #include "binanceprivateapi.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <optional>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 
 #include "apikey.hpp"
+#include "apiquerytypeenum.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
 #include "binancepublicapi.hpp"
+#include "cachedresult.hpp"
+#include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_smallvector.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
+#include "curlhandle.hpp"
+#include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "httprequesttype.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
+#include "permanentcurloptions.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
+#include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
+#include "tradeside.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 
@@ -620,7 +659,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
-  SetString(placeOrderInfo.orderId, result["orderId"].get<size_t>());
+  SetString(placeOrderInfo.orderId, result["orderId"].get<std::size_t>());
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {

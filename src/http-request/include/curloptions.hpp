@@ -1,14 +1,16 @@
 #pragma once
 
+#include <concepts>
+#include <cstdint>
 #include <string_view>
-#include <type_traits>
+#include <utility>
 
+#include "cct_type_traits.hpp"
+#include "curlpostdata.hpp"
 #include "flatkeyvaluestring.hpp"
 #include "httprequesttype.hpp"
 
 namespace cct {
-
-using CurlPostData = FlatKeyValueString<'&', '='>;
 
 class CurlOptions {
  public:

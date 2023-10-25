@@ -1,9 +1,13 @@
 #include "tradeoptions.hpp"
 
-#include <stdexcept>
+#include <chrono>
+#include <string_view>
 
-#include "cct_invalid_argument_exception.hpp"
+#include "cct_string.hpp"
+#include "priceoptions.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
+#include "tradedefinitions.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
@@ -75,9 +79,9 @@ string TradeOptions::str(bool placeRealOrderInSimulationMode) const {
   ret.append(", ");
   ret.append(tradeSyncPolicyStr());
   ret.append(" mode, timeout of ");
-  AppendString(ret, std::chrono::duration_cast<std::chrono::seconds>(_maxTradeTime).count());
+  AppendString(ret, std::chrono::duration_cast<TimeInS>(_maxTradeTime).count());
   ret.append("s, ").append(timeoutActionStr()).append(" at timeout, min time between two price updates of ");
-  AppendString(ret, std::chrono::duration_cast<std::chrono::seconds>(_minTimeBetweenPriceUpdates).count());
+  AppendString(ret, std::chrono::duration_cast<TimeInS>(_minTimeBetweenPriceUpdates).count());
   ret.push_back('s');
   return ret;
 }

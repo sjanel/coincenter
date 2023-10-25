@@ -1,5 +1,12 @@
 #include "withdrawsordepositsconstraints.hpp"
 
+#include <string_view>
+#include <utility>
+
+#include "baseconstraints.hpp"
+#include "currencycode.hpp"
+#include "timedef.hpp"
+
 namespace cct {
 WithdrawsOrDepositsConstraints::WithdrawsOrDepositsConstraints(CurrencyCode currencyCode, Duration minAge,
                                                                Duration maxAge, IdSet &&idSet)

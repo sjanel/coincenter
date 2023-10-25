@@ -22,6 +22,7 @@
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"

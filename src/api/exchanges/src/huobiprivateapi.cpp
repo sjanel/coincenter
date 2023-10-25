@@ -1,17 +1,54 @@
 #include "huobiprivateapi.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <iterator>
-#include <thread>
+#include <optional>
+#include <string_view>
+#include <utility>
 
 #include "apikey.hpp"
+#include "apiquerytypeenum.hpp"
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
+#include "cachedresult.hpp"
+#include "cct_exception.hpp"
+#include "cct_json.hpp"
+#include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
+#include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "curlpostdata.hpp"
+#include "currencycode.hpp"
+#include "deposit.hpp"
+#include "depositsconstraints.hpp"
+#include "exchangename.hpp"
+#include "exchangeprivateapi.hpp"
+#include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapitypes.hpp"
+#include "httprequesttype.hpp"
 #include "huobipublicapi.hpp"
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "order.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
+#include "permanentcurloptions.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
+#include "tradedamounts.hpp"
+#include "tradeinfo.hpp"
+#include "tradeside.hpp"
+#include "wallet.hpp"
+#include "withdraw.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct::api {
 

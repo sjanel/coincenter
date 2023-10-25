@@ -1,15 +1,22 @@
 #include "deposit.hpp"
 
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+
 #include "cct_vector.hpp"
-#include "gtest/gtest.h"
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class DepositTest : public ::testing::Test {
  protected:
-  TimePoint tp1{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 9000000}};
-  TimePoint tp3{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
-  TimePoint tp4{std::chrono::milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
+  TimePoint tp1{TimeInMs{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{TimeInMs{std::numeric_limits<int64_t>::max() / 9000000}};
+  TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 8000000}};
+  TimePoint tp4{TimeInMs{std::numeric_limits<int64_t>::max() / 7000000}};
 
   Deposit deposit1{"id1", tp2, MonetaryAmount("0.045", "BTC"), Deposit::Status::kSuccess};
   Deposit deposit2{"id2", tp4, MonetaryAmount(37, "XRP"), Deposit::Status::kSuccess};
@@ -22,6 +29,7 @@ class DepositTest : public ::testing::Test {
 
 TEST_F(DepositTest, SortByTimeFirst) {
   std::ranges::sort(deposits);
+
   EXPECT_EQ(deposits.front(), deposit3);
   EXPECT_EQ(deposits.back(), deposit4);
 }

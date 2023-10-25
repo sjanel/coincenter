@@ -1,7 +1,6 @@
-
-
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <tuple>
@@ -19,12 +18,12 @@ constexpr uint64_t HashValue64(uint64_t h1) {
   return h1;
 }
 
-constexpr size_t HashCombine(size_t h1, size_t h2) {
+constexpr std::size_t HashCombine(std::size_t h1, std::size_t h2) {
   // Taken from boost::hash_combine
-  static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "HashCombine not defined for this size_t");
-  if constexpr (sizeof(size_t) == 4) {
+  static_assert(sizeof(std::size_t) == 4 || sizeof(std::size_t) == 8, "HashCombine not defined for this std::size_t");
+  if constexpr (sizeof(std::size_t) == 4) {
     h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
-  } else if constexpr (sizeof(size_t) == 8) {
+  } else {
     // see https://github.com/HowardHinnant/hash_append/issues/7
     h1 ^= h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 4);
   }
@@ -34,8 +33,8 @@ constexpr size_t HashCombine(size_t h1, size_t h2) {
 class HashTuple {
  public:
   template <class Tuple>
-  size_t operator()(const Tuple& tuple) const {
-    return std::hash<size_t>()(std::apply([](const auto&... xs) { return (Component{xs}, ..., 0); }, tuple));
+  std::size_t operator()(const Tuple& tuple) const {
+    return std::hash<std::size_t>()(std::apply([](const auto&... xs) { return (Component{xs}, ..., 0); }, tuple));
   }
 
  private:
@@ -43,7 +42,7 @@ class HashTuple {
   struct Component {
     const T& value;
 
-    size_t operator,(size_t n) const { return HashCombine(std::hash<T>()(value), n); }
+    std::size_t operator,(std::size_t n) const { return HashCombine(std::hash<T>()(value), n); }
   };
 };
 

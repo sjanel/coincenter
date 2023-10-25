@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 
 namespace cct {
 /// Alias some types to make it easier to use
