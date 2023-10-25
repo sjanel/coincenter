@@ -185,15 +185,23 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   for (const json& tickerDetails : data["ticker"]) {
     Market mk(tickerDetails["symbol"].get<std::string_view>(), '-');
     if (!markets.contains(mk)) {
-      log::trace("Market {} is not present", mk);
+      log::debug("Market {} is not present", mk);
       continue;
     }
     MonetaryAmount askPri(tickerDetails["sell"].get<std::string_view>(), mk.quote());
+    if (askPri == 0) {
+      log::debug("Discarding {} because of invalid ask price {}", mk, askPri);
+      continue;
+    }
     MonetaryAmount bidPri(tickerDetails["buy"].get<std::string_view>(), mk.quote());
+    if (bidPri == 0) {
+      log::debug("Discarding {} because of invalid bid price {}", mk, bidPri);
+      continue;
+    }
     // There is no volume in the response, we need to emulate it, based on the 24h volume
     MonetaryAmount dayVolume(tickerDetails["vol"].get<std::string_view>(), mk.base());
     if (dayVolume == 0) {
-      log::trace("No volume for {}", mk);
+      log::debug("Discarding {} because of invalid volume {}", mk, dayVolume);
       continue;
     }
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
