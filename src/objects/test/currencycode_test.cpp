@@ -39,6 +39,16 @@ TEST(CurrencyCodeTest, String) {
   EXPECT_EQ("MAGIC4LIFE", CurrencyCode("Magic4Life").str());
 }
 
+TEST(CurrencyCodeTest, IsValid) {
+  EXPECT_TRUE(CurrencyCode::IsValid(""));
+  EXPECT_TRUE(CurrencyCode::IsValid("BTC"));
+  EXPECT_TRUE(CurrencyCode::IsValid("TESTCUR"));
+  EXPECT_TRUE(CurrencyCode::IsValid("lowCase"));
+
+  EXPECT_FALSE(CurrencyCode::IsValid("averylongcurrency"));
+  EXPECT_FALSE(CurrencyCode::IsValid("inv "));
+}
+
 TEST(CurrencyCodeTest, AppendString) {
   {
     string str("");
@@ -170,6 +180,9 @@ TEST(CurrencyCodeTest, Constexpr) {
 
   static_assert(!HasZ(CurrencyCode("LONGCUR")));
   static_assert(HasZ(CurrencyCode("GTZFD")));
+
+  static_assert(CurrencyCode::IsValid("btC"));
+  static_assert(!CurrencyCode::IsValid("muchtoolongcur"));
 }
 
 TEST(CurrencyCodeTest, Iterator) {

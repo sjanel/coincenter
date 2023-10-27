@@ -56,10 +56,12 @@ Main features:
 - [Usage](#usage)
   - [Input / output](#input--output)
     - [Format](#format)
-      - [Unique command](#unique-command)
+      - [Simple usage](#simple-usage)
       - [Multiple commands](#multiple-commands)
+      - [Piping commands](#piping-commands)
     - [Logging](#logging)
       - [Activity history](#activity-history)
+  - [Parallel requests](#parallel-requests)
   - [Public requests](#public-requests)
     - [Health check](#health-check)
     - [Markets](#markets)
@@ -71,15 +73,28 @@ Main features:
     - [Last trades](#last-trades)
     - [Conversion path](#conversion-path)
   - [Private requests](#private-requests)
-    - [How to target keys on exchanges](#how-to-target-keys-on-exchanges)
+    - [Selecting private keys on exchanges](#selecting-private-keys-on-exchanges)
     - [Balance](#balance)
-    - [Single Trade](#single-trade)
+    - [Trade](#trade)
+      - [Syntax](#syntax)
+        - [Standard - full information](#standard---full-information)
+        - [With information from previous 'piped' command](#with-information-from-previous-piped-command)
       - [Options](#options)
-      - [Single trade all](#single-trade-all)
+        - [Trade timeout](#trade-timeout)
+        - [Trade asynchronous mode](#trade-asynchronous-mode)
+        - [Trade Price Strategy](#trade-price-strategy)
+        - [Trade Price Picker](#trade-price-picker)
+          - [Absolute price](#absolute-price)
+          - [Relative price](#relative-price)
+      - [Trade all](#trade-all)
       - [Examples with explanation](#examples-with-explanation)
     - [Multi Trade](#multi-trade)
       - [Trade simulation](#trade-simulation)
     - [Buy / Sell](#buy--sell)
+      - [Syntax](#syntax-1)
+        - [Standard - full information](#standard---full-information-1)
+        - [Sell - with information from previous 'piped' command](#sell---with-information-from-previous-piped-command)
+      - [Behavior](#behavior)
       - [Examples with explanation](#examples-with-explanation-1)
     - [Deposit information](#deposit-information)
     - [Recent deposits](#recent-deposits)
@@ -93,6 +108,9 @@ Main features:
         - [Withdraw refresh time](#withdraw-refresh-time)
         - [Withdraw asynchronous mode](#withdraw-asynchronous-mode)
     - [Dust sweeper](#dust-sweeper)
+      - [Syntax](#syntax-2)
+        - [Standard - full information](#standard---full-information-2)
+        - [Sell - with information from previous 'piped' command](#sell---with-information-from-previous-piped-command-1)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
   - [Limitations](#limitations)
@@ -133,13 +151,13 @@ See [CONFIG.md](CONFIG.md)
 
 ### Format
 
-#### Unique command
+#### Simple usage
 
 `coincenter` is a command line tool with ergonomic and easy to remember option schema. You will usually provide this kind of input:
 
 - Command name, without hyphen (check what are the available ones with `help`)
 - Followed by either:
-  - Nothing, meaning that command will be applied globally
+  - Nothing, meaning that command will be applied globally, when applicable
   - Amount with currency or any currency, separated by dash to specify pairs, or source - destination
   - Comma separated list of exchanges (all are considered if not provided)
 
@@ -170,6 +188,26 @@ coincenter balance orderbook XRP-USDT,binance --cur EUR
                            2nd command
 ```
 
+#### Piping commands
+
+Some commands' input can be deduced from previous commands' output, a bit like piping commands in Linux works.
+Input commands accepting previous commands' output are:
+- Withdraw
+- Trade
+- Sell
+
+For example:
+
+```
+               1st command                  3rd command
+           /                 \                 /  \
+coincenter buy 1500XLM,binance withdraw kraken sell
+                               \             /
+                                 2nd command
+```
+
+The 1500XLM will be considered for withdraw from Binance if the buy is completed, and the XLM arrived on Kraken considered for selling when the withdraw completes.
+
 ### Logging
 
 `coincenter` uses [spdlog](https://github.com/gabime/spdlog) for logging.
@@ -191,6 +229,13 @@ This is useful for instance to keep track of all trades performed and can be lat
 By default, it stores all types of trades and withdraws results, but the list is configurable to follow your needs.
 
 **Important**: those files contain important information so `coincenter` does not clean them automatically. You can move the old activity history files if they take to much space after a while.
+
+## Parallel requests
+
+You may want to query several exchanges for a command at the same time. In this case, it's possible to ask `coincenter` to launch requests in parallel when it's possible.
+By default, the number of requests in parallel is `1`. To increase it, change the value of the field `nbMaxParallelRequests` in `generalconfig.json` file (more information [here](CONFIG.md#options-description)).
+
+You will have a nice boost of speed when you query the same thing from multiple exchanges / or accounts. However, the logs may not be ordered anymore.
 
 ## Public requests
 
@@ -298,7 +343,7 @@ coincenter conversion shib-sol
 These requests will require that you have your secret keys in `data/secret/secret.json` file, for each exchange used.
 You can check easily that it works correctly with the `balance` option.
 
-### How to target keys on exchanges
+### Selecting private keys on exchanges
 
 `coincenter` supports several keys per exchange. Here are both ways to target exchange(s) for `coincenter`:
 
@@ -382,25 +427,74 @@ coincenter balance eur,kraken,bithumb
 By default, the balance displayed is the available one, with opened orders remaining unmatched amounts deduced.
 To include balance in use as well, `--in-use` should be added.
 
-### Single Trade
+### Trade
 
-A single trade per market / exchange can be done in a simple way supporting 3 parameterized price chooser strategies.
-It is 'single' in the sense that trade is made in one step (see [Multi Trade](#multi-trade)), in an existing market of provided exchange(s) Similarly to other options, list of exchanges is optional. If empty, all exchanges having some balance for given start amount may be considered. Then, exchanges are sorted in decreasing order of available amounts, and are selected until total available reaches the desired one.
+A trade is a request to change a certain amount in a given currency into another currency on a list of considered exchanges (or all if none specified).
+It can be tailored with a range of options:
 
-Given start amount can be absolute, or relative with the `%` character. In the latter case, the total start amount will be computed from the total available amounts of the matching exchanges. Percentages should not be larger than `100` and may be decimal numbers.
+- Absolute start amount or percentage of available amount
+- [Single / multi trade](#multi-trade)
+- [Automatic price chooser strategy](#trade-price-strategy)
+- [Custom price](#trade-price-picker)
+- [Timeout](#trade-timeout)
+- [Asynchronous mode](#trade-asynchronous-mode)
+- Smart multi account behavior (see below)
+
+Similarly to other options, list of exchanges is optional.
+If empty, all exchanges having some balance for given start amount may be considered.
+When several accounts are involved, the trade are performed on the exchanges providing the most available starting amount to trade in priority, and are selected until total available reaches the desired one. This behavior ensures the minimum number of independent trades to reach the desired goal.
+Check the [examples](#examples-with-explanation) below for more precise information.
+
+Given start amount can be absolute, or relative with the `%` character. In the latter case, the total start amount will be computed from the total available amounts of the matching exchanges. This implies a call to `balance` on the considered exchanges before the actual trade. Percentages should not be larger than `100` and may be decimal numbers.
 
 If only one private exchange is given and start amount is absolute, `coincenter` will not query your funds prior to the trade to minimize response time, make sure that inputs are correct or program may throw an exception.
 
+#### Syntax
+
+A trade has two input flavors.
+
+##### Standard - full information
+
+This is the most common trade input. You will need to provide, in order:
+
+- decimal, positive amount, absolute (default) or relative (percentage suffixed with `%`)
+- first currency linked to this amount
+- a dash `-` to help parser split the two currencies
+- second currency destination of the wished trade
+- optional list of exchanges where to perform the trade (if several accounts are matched, the amount will be split among them, with a designated strategy)
+
+```
+coincenter trade 35.5%ETH-USDT,kucoin
+```
+
+##### With information from previous 'piped' command
+
+This second flavor can be useful for piped commands. The unique trade input argument will be the *destination currency*. The amount and considered exchanges will be deduced from the output of the previous command.
+
+Example:
+
+You withdraw a certain amount of ETH from exchange kraken to kucoin. You want to trade the received amount on kucoin to USDT:
+
+```
+coincenter withdraw-apply 1.45ETH,kraken-kucoin trade USDT
+```
+
+If the previous command is a withdraw, input exchange list is a single one.
+
+Note that trades themselves can be piped, as the output has an amount and list of exchanges.
+
+Trade 15 % of my all available BTC to USDT (whatever the exchanges), and trade all the resulted USDT to ETH:
+
+```
+coincenter trade 15%BTC-USDT trade ETH
+```
+
+**Important note**: the piped command will be possible only if the previous command is *complete*. For a trade (or buy / sell), a successful command implies that all the initial amount has been traded from, that no remaining unmatched amount is left. For a withdraw, it means that it successfully arrived to the destination exchange.
+
+
 #### Options
 
-**Parallel requests**
-
-You may want to query several exchanges for a command at the same time. In this case, it's possible to ask `coincenter` to launch requests in parallel when it's possible.
-By default, the number of requests in parallel is `1`. To increase it, change the value of the field `nbMaxParallelRequests` in `generalconfig.json` file (more information [here](CONFIG.md#options-description)).
-
-You will have a nice boost of speed when you query the same thing from multiple exchanges / or accounts. However, the logs may not be ordered anymore.
-
-**Trade timeout**
+##### Trade timeout
 
 A trade is **synchronous** by default with the created order of `coincenter` (it follows the lifetime of the order).
 The trade ends when one of the following events occur:
@@ -414,7 +508,7 @@ Value can contain several units, but do not support decimal values. For instance
 
 Another example: `--timeout 3min30s504ms`
 
-**Trade asynchronous mode**
+##### Trade asynchronous mode
 
 Above option allows to control the full life time of a trade until it is either fully matched or cancelled (at timeout).
 If you want to only **fire and forget** an order placement, you can use `--async` flag.
@@ -425,9 +519,9 @@ Note that it's not equivalent of choosing a **zero** trade timeout (above option
 - Order is not cancelled after the trade process in asynchronous mode, whereas it's either cancelled or matched directly in synchronous mode
 - Asynchronous trade is faster as it does not even query order information
 
-**Trade Price Strategy**
+##### Trade Price Strategy
 
-Possible order price strategies:
+Possible order price strategies, configurable with `--price-strategy`:
 
 - `maker`: order placed at limit price and regularly updated to limit price (default)
 - `taker`: order placed at market price, should be matched immediately
@@ -435,7 +529,7 @@ Possible order price strategies:
 
 Use command line option `trade` to make a trade from a departure amount.
 
-**Trade Price Picker**
+##### Trade Price Picker
 
 In order to control more precisely the price of the order, `coincenter` supports custom price as well thanks to `--price` option. Note that this is not compatible with above **trade price strategy** option.
 `--price` expects either an integer (!= 0) representing a **relative** price compared to the limit price, or a monetary amount representing an **absolute** fixed price (decimal amount with the price currency).
@@ -448,15 +542,16 @@ In fact, parser will recognize a relative price if the amount is without any dec
 | `34.6`                   | *absolute* price (engine will take the currency from the market of the trade)                                                     |
 | `25 XXX`                 | *absolute* price (engine will override the currency from the market of the trade and not consider `XXX`, no error will be raised) |
 
-*Absolute price*
+###### Absolute price
 
 When requesting an absolute price, the order will be placed exactly at this price. Depending on the order book and the limit prices, order may or may not be matched instantly. Double check the price before launching your trade command!
+
 **Notes**:
 
-- such an order will not be compatible with [multi trade](#multi-trade)) because an absolute price makes sense only for a specific market. However, if you ask a multi trade with a fixed price, no error will be raised, and `coincenter` will simply launch a single trade.
+- Such an order will not be compatible with [multi trade](#multi-trade)) because an absolute price makes sense only for a specific market. However, if you ask a multi trade with a fixed price, no error will be raised, and `coincenter` will simply launch a single trade.
 - Order price will not be continuously updated over time
 
-*Relative price*
+###### Relative price
 
 The **relative price** makes it possible to easily settle a price anywhere in the orderbook. The chosen price is **relative** to the order book limit price - it represents how far away the price is related to the 'center' prices. The higher (or lower) the value, the more difficult it will be for the order to be bought - or sold.
 
@@ -492,9 +587,15 @@ coincenter trade nB-A --price 3
 
 The chosen price will be `0.42`.
 
-#### Single trade all
+#### Trade all
 
-If you want to simply sell all available amount from a given currency, you can use `trade-all` flavor which takes a departure currency instead of an input amount. This command will ask to trade all available amount for all considered exchanges - use with care!
+Instead of providing a start amount to trade, specify a currency. So `trade-all XXX...` is equivalent to `trade 100%XXX`.
+
+Example: Trade all available EUR on all exchanges to BTC
+
+```
+coincenter trade-all EUR-BTC
+```
 
 #### Examples with explanation
 
@@ -550,7 +651,7 @@ In order to activate multi trades, there are two ways:
 - Default behavior is controlled by [multiTradeAllowedByDefault option](CONFIG.md#options-description) in the `exchangeconfig.json` file. If `true`, multi trade is allowed for the given exchange (or all exchanges if under `default` level).
 - It can be forced by adding command line flag `--multi-trade`.
 
-In the case it's activated in the config file, `--no-multi-trade` can force deactivation of the multi trade if needed.
+In the case it's activated in the config file, `--no-multi-trade` can force deactivation of the multi trade.
 
 #### Trade simulation
 
@@ -558,7 +659,7 @@ Some exchanges (**Kraken** and **Binance** for instance) allow to actually query
 
 ### Buy / Sell
 
-Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `buy` and `sell` options when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `buy` and `sell` commands when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
 
 Sell option also supports percentage as start amount. In this case, the desired percentage of total available amount of given currency on matching exchanges (the ones specified after the `,` or all if none given as usual) will be sold. To complement this, `sell-all` option with a start currency instead of an amount is supported as well, which is syntactic sugar of a sell of `100%` of available amount.
 
@@ -566,7 +667,54 @@ Buy a percentage is not available yet, simply because I am not sure about what s
 
 The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md#options-description) file to see how to set the preferred currencies.
 
-**Behavior**:
+#### Syntax
+
+A sell has two input flavors, whereas a buy only one.
+
+##### Standard - full information
+
+This is the most common buy/sell input. You will need to provide, in order:
+
+- decimal, positive amount, absolute (for buy and sell, default) or relative for a sell (percentage suffixed with `%`, incompatible with buy)
+- currency linked to this amount
+- optional list of exchanges where to perform the trade (if several accounts are matched, the amount will be split among them, with a designated strategy)
+
+Buy 500 SOL, considering all my accounts on Binance and Bithumb.
+```
+coincenter buy 500SOL,binance,bithumb
+```
+
+Sell 25 % of all my available ETH on all accounts
+```
+coincenter sell 25%ETH
+```
+
+##### Sell - with information from previous 'piped' command
+
+This second flavor can be useful for piped commands, for *sell* only.
+You do not need to provide any information to the `sell` command. The amount and considered exchanges will be deduced from the output of the previous command.
+
+Examples:
+
+You withdraw a certain amount of XRP from exchange upbit to bithumb. You want to sell the received amount of XRP on bithumb:
+
+```
+coincenter withdraw-apply 500XRP,upbit-bithumb sell
+```
+
+Note that trades themselves can be piped, as the output has an amount and list of exchanges.
+
+Following example would be foolish, but possible by coincenter.
+
+Buy 1 ETH on any exchange then sell it:
+
+```
+coincenter buy 1ETH sell
+```
+
+**Important note**: as for [trade](#with-information-from-previous-piped-command), the piped command will be possible only if the previous command is *complete*.
+
+#### Behavior
 
 - All currencies present in the **preferred currencies** of a given exchange may be used to validate and perform trades. For instance, if you decide to include non stable cryptos (for instance, `BTC` as it is often involves in many pairs), it can be used as a base for a *buy*, or target for a *sell*. Thus as a recommendation, if you do add such currencies as *preferred*, prefer placing them after the fiats and stable coins.
 - Several trades may be performed on the same account for a **buy**. For instance: you have both `EUR` and `USDT` and they are both present in the *preferred currencies*, and the desired amount of target currency is high enough such that it would *eat* all of your `EUR` or `USDT`.
@@ -696,7 +844,8 @@ cancels order Id OID1 only, on the exchange where it is found on (no error is ra
 
 ### Withdraw coin
 
-It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode. Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `withdraw-apply-all` is a convenient command wrapper of `withdraw-apply 100%`.
+It is possible to withdraw crypto currency with `coincenter` as well, in either a **synchronized** mode (withdraw will check that funds are well received at destination) or **asynchronous** mode, with command `withdraw-apply`. 
+Either an absolute amount can be specified, or a percentage (`10xrp` or `25%xrp` for instance). `withdraw-apply-all` is a convenient command wrapper of `withdraw-apply 100%`.
 
 Some exchanges require that external addresses are validated prior to their usage in the API (*Kraken* and *Huobi* for instance).
 
@@ -750,6 +899,35 @@ Example: Attempts to clean amount of BTG on bithumb and upbit
 ```
 coincenter dust-sweeper btg,bithumb,upbit
 ```
+
+#### Syntax
+
+Withdrawal input parameters can be provided in two flavors.
+
+##### Standard - full information
+
+This is the most common withdraw. You will need to provide, in order:
+
+- decimal, positive amount, absolute (default) or relative (percentage suffixed with `%`)
+- currency linked to this amount
+- Exactly two exchange accounts separated by a dash '-'
+
+##### Sell - with information from previous 'piped' command
+
+This second flavor can be useful for piped commands.
+If the previous command output implies only one exchange, then it will be considered the origin exchange for the withdraw.
+The amount to be withdrawn is also taken from the output of previous command.
+You will need to specify exactly one exchange which will be the destination of the withdrawal.
+
+Examples:
+
+You trade an amount of KRW on upbit into ADA, and the obtained ADA amount will be withdrawn to kraken:
+
+```
+coincenter trade 80%KRW-ADA,upbit withdraw-apply kraken
+```
+
+**Important note**: as for [trade](#with-information-from-previous-piped-command), the piped withdraw will be possible only if the previous trade is *complete*.
 
 ## Monitoring options
 

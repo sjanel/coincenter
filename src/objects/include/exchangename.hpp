@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <compare>
 #include <cstddef>
 #include <ostream>
 #include <span>
@@ -16,6 +17,8 @@ namespace cct {
 
 class ExchangeName {
  public:
+  static bool IsValid(std::string_view str);
+
   ExchangeName() noexcept = default;
 
   /// Constructs a ExchangeName with a unique identifier name.
@@ -30,7 +33,7 @@ class ExchangeName {
 
   std::string_view name() const {
     const std::size_t underscore = underscorePos();
-    return std::string_view(_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore);
+    return {_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore};
   }
 
   std::string_view keyName() const {
@@ -44,6 +47,7 @@ class ExchangeName {
   std::string_view str() const { return _nameWithKey; }
 
   bool operator==(const ExchangeName &) const noexcept = default;
+  std::strong_ordering operator<=>(const ExchangeName &) const noexcept = default;
 
   friend std::ostream &operator<<(std::ostream &os, const ExchangeName &rhs) { return os << rhs.str(); }
 

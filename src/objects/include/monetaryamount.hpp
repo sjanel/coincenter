@@ -43,6 +43,7 @@ class MonetaryAmount {
   using AmountType = int64_t;
 
   enum class RoundType : int8_t { kDown, kUp, kNearest };
+  enum class IfNoAmount : int8_t { kThrow, kNoThrow };
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0) {}
@@ -74,7 +75,7 @@ class MonetaryAmount {
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
   /// - If a currency is not present, assume default CurrencyCode
   /// - If the currency is too long to fit in a CurrencyCode, exception will be raised
-  /// - If only a currency is given, invalid_argument exception will be raised
+  /// - If only a currency is given, invalid_argument exception will be raised when ifNoAmount == IfNoAmount::kThrow
   /// - If given string is empty, it is equivalent to a default constructor
   ///
   /// A space can be present or not between the amount and the currency code.
@@ -86,7 +87,7 @@ class MonetaryAmount {
   ///           "-345.8909" -> -345.8909 units of no currency
   ///           "36.61INCH" -> 36.63 units of currency INCH
   ///           "36.6 1INCH" -> 36.6 units of currency 1INCH
-  explicit MonetaryAmount(std::string_view amountCurrencyStr);
+  explicit MonetaryAmount(std::string_view amountCurrencyStr, IfNoAmount ifNoAmount = IfNoAmount::kThrow);
 
   /// Constructs a new MonetaryAmount from a string representing the amount only and a currency code.
   /// Precision is calculated automatically.
@@ -163,7 +164,7 @@ class MonetaryAmount {
 
   [[nodiscard]] std::strong_ordering operator<=>(const MonetaryAmount &other) const;
 
-  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &other) const = default;
+  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &) const = default;
 
   [[nodiscard]] constexpr bool operator==(AmountType amount) const { return _amount == amount && nbDecimals() == 0; }
   friend constexpr bool operator==(AmountType amount, MonetaryAmount rhs) { return rhs == amount; }

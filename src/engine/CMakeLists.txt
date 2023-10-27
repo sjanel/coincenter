@@ -9,6 +9,13 @@ target_link_libraries(coincenter_engine PUBLIC coincenter_objects)
 target_include_directories(coincenter_engine PUBLIC include)
 
 add_unit_test(
+  coincentercommandfactory_test
+  test/coincentercommandfactory_test.cpp
+  LIBRARIES
+  coincenter_engine
+)
+
+add_unit_test(
   coincenteroptions_test
   test/coincenteroptions_test.cpp
   LIBRARIES
@@ -62,6 +69,13 @@ add_unit_test(
 add_unit_test(
   stringoptionparser_test
   test/stringoptionparser_test.cpp
+  LIBRARIES
+  coincenter_engine
+)
+
+add_unit_test(
+  transferablecommandresult_test
+  test/transferablecommandresult_test.cpp
   LIBRARIES
   coincenter_engine
 )

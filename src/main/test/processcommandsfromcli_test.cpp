@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <span>
 #include <string_view>
 
 #include "cct_invalid_argument_exception.hpp"
@@ -17,7 +18,7 @@ constexpr std::string_view kProgramName = "coincenter";
 
 TEST(ProcessCommandsFromCLI, TestNoArguments) {
   CoincenterCmdLineOptions cmdLineOptions;
-  CoincenterCommands coincenterCommands{cmdLineOptions};
+  CoincenterCommands coincenterCommands{std::span<const CoincenterCmdLineOptions>(&cmdLineOptions, 1U)};
 
   EXPECT_NO_THROW(ProcessCommandsFromCLI(kProgramName, coincenterCommands, cmdLineOptions, kRunMode));
 }
@@ -25,7 +26,7 @@ TEST(ProcessCommandsFromCLI, TestNoArguments) {
 TEST(ProcessCommandsFromCLI, TestIncorrectArgument) {
   CoincenterCmdLineOptions cmdLineOptions;
   cmdLineOptions.apiOutputType = "invalid";
-  CoincenterCommands coincenterCommands{cmdLineOptions};
+  CoincenterCommands coincenterCommands{std::span<const CoincenterCmdLineOptions>(&cmdLineOptions, 1U)};
 
   EXPECT_THROW(ProcessCommandsFromCLI(kProgramName, coincenterCommands, cmdLineOptions, kRunMode), invalid_argument);
 }

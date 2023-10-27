@@ -2,22 +2,19 @@
 
 #include <optional>
 #include <span>
-#include <string_view>
 
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "exchange.hpp"
 #include "exchangename.hpp"
 #include "exchangepool.hpp"
 #include "exchangesorchestrator.hpp"
 #include "fiatconverter.hpp"
 #include "metricsexporter.hpp"
-#include "monitoringinfo.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
-#include "tradedamounts.hpp"
+#include "transferablecommandresult.hpp"
 
 namespace cct {
 
@@ -132,7 +129,8 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  void processCommand(const CoincenterCommand &cmd);
+  TransferableCommandResultVector processCommand(
+      const CoincenterCommand &cmd, std::span<const TransferableCommandResult> previousTransferableResults);
 
   const CoincenterInfo &_coincenterInfo;
   api::CommonAPI _commonAPI;

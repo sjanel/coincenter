@@ -88,7 +88,7 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
 ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.noSecrets) {
     StringOptionParser anyParser(*cmdLineOptions.noSecrets);
-    return ExchangeSecretsInfo(anyParser.getExchanges());
+    return ExchangeSecretsInfo(anyParser.parseExchanges());
   }
   return {};
 }
