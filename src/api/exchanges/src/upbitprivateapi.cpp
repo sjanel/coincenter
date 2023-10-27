@@ -470,17 +470,17 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
       MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), mk.quote());
 
       if (fromCurrencyCode == mk.quote()) {
-        orderInfo.tradedAmounts.tradedFrom += tradedCost;
-        orderInfo.tradedAmounts.tradedTo += tradedVol;
+        orderInfo.tradedAmounts.from += tradedCost;
+        orderInfo.tradedAmounts.to += tradedVol;
       } else {
-        orderInfo.tradedAmounts.tradedFrom += tradedVol;
-        orderInfo.tradedAmounts.tradedTo += tradedCost;
+        orderInfo.tradedAmounts.from += tradedVol;
+        orderInfo.tradedAmounts.to += tradedCost;
       }
     }
     if (fromCurrencyCode == mk.quote()) {
-      orderInfo.tradedAmounts.tradedFrom += fee;
+      orderInfo.tradedAmounts.from += fee;
     } else {
-      orderInfo.tradedAmounts.tradedTo -= fee;
+      orderInfo.tradedAmounts.to -= fee;
     }
   }
 

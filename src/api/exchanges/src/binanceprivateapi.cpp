@@ -576,10 +576,10 @@ TradedAmounts ParseTrades(Market mk, CurrencyCode fromCurrencyCode, const json& 
   MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
                      fillDetail["commissionAsset"].get<std::string_view>());
   log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity, price, fee);
-  if (fee.currencyCode() == detailTradedInfo.tradedFrom.currencyCode()) {
-    detailTradedInfo.tradedFrom += fee;
-  } else if (fee.currencyCode() == detailTradedInfo.tradedTo.currencyCode()) {
-    detailTradedInfo.tradedTo -= fee;
+  if (fee.currencyCode() == detailTradedInfo.from.currencyCode()) {
+    detailTradedInfo.from += fee;
+  } else if (fee.currencyCode() == detailTradedInfo.to.currencyCode()) {
+    detailTradedInfo.to -= fee;
   } else {
     log::debug("Fee is deduced from {} which is outside {}, do not count it in this trade", fee.currencyStr(), mk);
   }

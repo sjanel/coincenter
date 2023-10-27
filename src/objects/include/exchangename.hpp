@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <ostream>
 #include <span>
 #include <string_view>
@@ -42,7 +43,7 @@ class ExchangeName {
 
   std::string_view str() const { return _nameWithKey; }
 
-  bool operator==(const ExchangeName &) const = default;
+  bool operator==(const ExchangeName &) const noexcept = default;
 
   friend std::ostream &operator<<(std::ostream &os, const ExchangeName &v) {
     os << v.str();

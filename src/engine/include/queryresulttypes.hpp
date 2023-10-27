@@ -14,7 +14,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
-#include "tradedamounts.hpp"
+#include "traderesult.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
 
@@ -34,7 +34,7 @@ using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmoun
 
 using LastTradesPerExchange = FixedCapacityVector<ExchangeWith<LastTradesVector>, kNbSupportedExchanges>;
 
-using TradedAmountsPerExchange = SmallVector<ExchangeWith<TradedAmounts>, kTypicalNbPrivateAccounts>;
+using TradeResultPerExchange = SmallVector<ExchangeWith<TradeResult>, kTypicalNbPrivateAccounts>;
 
 using TradedAmountsVectorWithFinalAmountPerExchange =
     SmallVector<ExchangeWith<TradedAmountsVectorWithFinalAmount>, kTypicalNbPrivateAccounts>;

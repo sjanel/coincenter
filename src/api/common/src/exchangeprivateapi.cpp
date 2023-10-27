@@ -107,15 +107,15 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
     Market mk = conversionPath[tradePos];
     log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount, mk.opposite(avAmount.currencyCode()));
     TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, mk);
-    avAmount = stepTradedAmounts.tradedTo;
+    avAmount = stepTradedAmounts.to;
     if (avAmount == 0) {
       break;
     }
     if (tradePos == 0) {
-      tradedAmounts.tradedFrom = stepTradedAmounts.tradedFrom;
+      tradedAmounts.from = stepTradedAmounts.from;
     }
     if (tradePos + 1 == nbTrades) {
-      tradedAmounts.tradedTo = stepTradedAmounts.tradedTo;
+      tradedAmounts.to = stepTradedAmounts.to;
     }
   }
   return tradedAmounts;
@@ -220,7 +220,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       log::debug("Cancel order {}", orderId);
       OrderInfo cancelledOrderInfo = cancelOrder(orderId, tradeContext);
       totalTradedAmounts += cancelledOrderInfo.tradedAmounts;
-      from -= cancelledOrderInfo.tradedAmounts.tradedFrom;
+      from -= cancelledOrderInfo.tradedAmounts.from;
       if (from == 0) {
         log::debug("Order {} matched with last traded amounts {} while cancelling", orderId,
                    cancelledOrderInfo.tradedAmounts);
@@ -380,7 +380,7 @@ std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSw
   for (Market mk : possibleMarkets) {
     log::info("Dust sweeper - attempt to sell in one shot on {}", mk);
     TradedAmounts tradedAmounts = marketTrade(amountBalance, tradeOptions, mk);
-    if (tradedAmounts.tradedTo != 0) {
+    if (tradedAmounts.to != 0) {
       return {tradedAmounts, mk};
     }
   }
@@ -432,7 +432,7 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
       log::info("Dust sweeper - attempt to buy some {} for future selling", currencyCode);
       TradedAmounts tradedAmounts = marketTrade(fromAmount, tradeOptions, mk);
 
-      if (tradedAmounts.tradedTo != 0) {
+      if (tradedAmounts.to != 0) {
         // Then we should have sufficient amount now on this market
         return tradedAmounts;
       }
@@ -500,7 +500,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
     TradedAmounts tradedAmounts;
     std::tie(tradedAmounts, tradedMarket) =
         isSellingPossibleOneShotDustSweeper(possibleMarkets, ret.finalAmount, tradeOptions);
-    if (tradedAmounts.tradedFrom != 0) {
+    if (tradedAmounts.from != 0) {
       IncrementPenalty(tradedMarket, penaltyPerMarketMap);
       ret.tradedAmountsVector.push_back(std::move(tradedAmounts));
       continue;
@@ -510,7 +510,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
     // Selling has not worked - so we need to buy some amount on the requested currency first
     tradedAmounts = buySomeAmountToMakeFutureSellPossible(possibleMarkets, marketPriceMap, dustThreshold, balance,
                                                           tradeOptions, dustThresholds);
-    if (tradedAmounts.tradedFrom == 0) {
+    if (tradedAmounts.from == 0) {
       break;
     }
     ret.tradedAmountsVector.push_back(std::move(tradedAmounts));
@@ -532,7 +532,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
       price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
     } else {
       PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
-      from -= placeOrderInfo.tradedAmounts().tradedFrom;
+      from -= placeOrderInfo.tradedAmounts().from;
       return placeOrderInfo;
     }
   }
@@ -544,7 +544,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
     // (and remove the need to implement the matching amount computation with fees for each exchange)
     placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
   }
-  from -= placeOrderInfo.tradedAmounts().tradedFrom;
+  from -= placeOrderInfo.tradedAmounts().from;
   return placeOrderInfo;
 }
 

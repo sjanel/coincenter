@@ -7,15 +7,14 @@
 namespace cct {
 
 string TradedAmounts::str() const {
-  string ret = tradedFrom.str();
+  string ret = from.str();
   ret.append(" -> ");
-  ret.append(tradedTo.str());
+  to.appendStrTo(ret);
   return ret;
 }
 
 std::ostream &operator<<(std::ostream &os, const TradedAmounts &tradedAmounts) {
-  os << tradedAmounts.tradedFrom << " -> " << tradedAmounts.tradedTo;
-  return os;
+  return os << tradedAmounts.from << " -> " << tradedAmounts.to;
 }
 
 }  // namespace cct

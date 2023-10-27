@@ -127,6 +127,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
     std::pop_heap(searchPaths.begin(), searchPaths.end(), comp);
     CurrencyDirPath path = std::move(searchPaths.back());
     searchPaths.pop_back();
+
     CurrencyCode lastCurrencyCode = path.back().cur;
     if (visitedCurrencies.contains(lastCurrencyCode)) {
       continue;
@@ -159,7 +160,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
         std::push_heap(searchPaths.begin(), searchPaths.end(), comp);
       }
     }
-    std::optional<CurrencyCode> optLastFiat =
+    const std::optional<CurrencyCode> optLastFiat =
         considerStableCoinsAsFiats ? _coincenterInfo.fiatCurrencyIfStableCoin(lastCurrencyCode) : std::nullopt;
     const bool isLastFiatLike = optLastFiat || fiats.contains(lastCurrencyCode);
     if (isToFiatLike && isLastFiatLike) {

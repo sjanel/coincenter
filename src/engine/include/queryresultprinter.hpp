@@ -44,20 +44,20 @@ class QueryResultPrinter {
 
   void printDepositInfo(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange) const;
 
-  void printTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount startAmount,
+  void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions) const {
-    printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions,
+    printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions,
                 CoincenterCommandType::kTrade);
   }
 
-  void printBuyTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount endAmount,
+  void printBuyTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount endAmount,
                       const TradeOptions &tradeOptions) const {
-    printTrades(tradedAmountsPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::kBuy);
+    printTrades(tradeResultPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::kBuy);
   }
 
-  void printSellTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount startAmount,
+  void printSellTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                        bool isPercentageTrade, const TradeOptions &tradeOptions) const {
-    printTrades(tradedAmountsPerExchange, startAmount, isPercentageTrade, CurrencyCode(), tradeOptions,
+    printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, CurrencyCode(), tradeOptions,
                 CoincenterCommandType::kSell);
   }
 
@@ -91,9 +91,8 @@ class QueryResultPrinter {
       CurrencyCode currencyCode) const;
 
  private:
-  void printTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount amount,
-                   bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
-                   CoincenterCommandType commandType) const;
+  void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount, bool isPercentageTrade,
+                   CurrencyCode toCurrency, const TradeOptions &tradeOptions, CoincenterCommandType commandType) const;
 
   void printTable(const SimpleTable &simpleTable) const;
 

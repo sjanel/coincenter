@@ -900,11 +900,11 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
       MonetaryAmount fee(contractDetail["fee"].get<std::string_view>(), feeCurrency);
 
       if (fromCurrencyCode == mk.quote()) {
-        orderInfo.tradedAmounts.tradedFrom += tradedCost + fee;
-        orderInfo.tradedAmounts.tradedTo += tradedVol;
+        orderInfo.tradedAmounts.from += tradedCost + fee;
+        orderInfo.tradedAmounts.to += tradedVol;
       } else {
-        orderInfo.tradedAmounts.tradedFrom += tradedVol;
-        orderInfo.tradedAmounts.tradedTo += tradedCost - fee;
+        orderInfo.tradedAmounts.from += tradedVol;
+        orderInfo.tradedAmounts.to += tradedCost - fee;
       }
     }
   }

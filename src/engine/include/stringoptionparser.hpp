@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "cct_string.hpp"
@@ -17,8 +20,8 @@ class StringOptionParser {
   using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
   using CurrencyPrivateExchanges = std::pair<CurrencyCode, ExchangeNames>;
   using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, ExchangeNames>;
-  using CurrencyFromToPrivateExchange = std::tuple<CurrencyCode, ExchangeName, ExchangeName>;
-  using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, bool, ExchangeName, ExchangeName>;
+  using CurrencyFromToPrivateExchange = std::pair<CurrencyCode, ExchangeNames>;
+  using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, bool, ExchangeNames>;
   using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, ExchangeNames, CurrencyCode>;
   using CurrencyPublicExchanges = std::pair<CurrencyCode, ExchangeNames>;
   using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;

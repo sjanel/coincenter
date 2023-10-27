@@ -285,15 +285,9 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
   orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
-  for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
-    const bool isAsk = asksOrBids == std::addressof(asks);
-    if (isAsk) {
-      FillOrderBook(mk, depth, isAsk, asksOrBids->begin(), asksOrBids->end(), orderBookLines);
-    } else {
-      // Reverse iterate as they are received in descending order
-      FillOrderBook(mk, depth, isAsk, asksOrBids->rbegin(), asksOrBids->rend(), orderBookLines);
-    }
-  }
+  // Reverse iterate as bids are received in descending order
+  FillOrderBook(mk, depth, false, bids.rbegin(), bids.rend(), orderBookLines);
+  FillOrderBook(mk, depth, true, asks.begin(), asks.end(), orderBookLines);
   return MarketOrderBook(mk, orderBookLines);
 }
 
