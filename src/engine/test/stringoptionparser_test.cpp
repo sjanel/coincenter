@@ -104,36 +104,41 @@ TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchangesValidi
 
 TEST(StringOptionParserTest, GetCurrencyFromToPrivateExchange) {
   EXPECT_EQ(StringOptionParser("btc,huobi-kraken").getCurrencyFromToPrivateExchange(),
-            std::make_tuple(CurrencyCode("BTC"), ExchangeName("huobi"), ExchangeName("kraken")));
-  EXPECT_EQ(StringOptionParser("XLM,bithumb_user1-binance").getCurrencyFromToPrivateExchange(),
-            std::make_tuple(CurrencyCode("XLM"), ExchangeName("bithumb", "user1"), ExchangeName("binance")));
+            std::make_pair(CurrencyCode("BTC"), ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
+  EXPECT_EQ(
+      StringOptionParser("XLM,bithumb_user1-binance").getCurrencyFromToPrivateExchange(),
+      std::make_pair(CurrencyCode("XLM"), ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
   EXPECT_EQ(StringOptionParser("eth,kraken_user2-huobi_user3").getCurrencyFromToPrivateExchange(),
-            std::make_tuple(CurrencyCode("ETH"), ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")));
+            std::make_pair(CurrencyCode("ETH"),
+                           ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
-  EXPECT_EQ(StringOptionParser("0.102btc,huobi-kraken").getMonetaryAmountFromToPrivateExchange(),
-            std::make_tuple(MonetaryAmount("0.102BTC"), false, ExchangeName("huobi"), ExchangeName("kraken")));
+  EXPECT_EQ(
+      StringOptionParser("0.102btc,huobi-kraken").getMonetaryAmountFromToPrivateExchange(),
+      std::make_tuple(MonetaryAmount("0.102BTC"), false, ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
   EXPECT_EQ(StringOptionParser("3795541.90XLM,bithumb_user1-binance").getMonetaryAmountFromToPrivateExchange(),
-            std::make_tuple(MonetaryAmount("3795541.90XLM"), false, ExchangeName("bithumb", "user1"),
-                            ExchangeName("binance")));
+            std::make_tuple(MonetaryAmount("3795541.90XLM"), false,
+                            ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
   EXPECT_EQ(StringOptionParser("4.106eth,kraken_user2-huobi_user3").getMonetaryAmountFromToPrivateExchange(),
-            std::make_tuple(MonetaryAmount("4.106ETH"), false, ExchangeName("kraken", "user2"),
-                            ExchangeName("huobi", "user3")));
+            std::make_tuple(MonetaryAmount("4.106ETH"), false,
+                            ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
 
   EXPECT_THROW(StringOptionParser("test").getMonetaryAmountFromToPrivateExchange(), invalid_argument);
 }
 
 TEST(StringOptionParserTest, GetMonetaryAmountPercentageFromToPrivateExchange) {
   EXPECT_EQ(StringOptionParser("1%btc,huobi-kraken").getMonetaryAmountFromToPrivateExchange(),
-            StringOptionParser::MonetaryAmountFromToPrivateExchange(MonetaryAmount("1BTC"), true, ExchangeName("huobi"),
-                                                                    ExchangeName("kraken")));
-  EXPECT_EQ(StringOptionParser("90.05%XLM,bithumb_user1-binance").getMonetaryAmountFromToPrivateExchange(),
             StringOptionParser::MonetaryAmountFromToPrivateExchange(
-                MonetaryAmount("90.05XLM"), true, ExchangeName("bithumb", "user1"), ExchangeName("binance")));
+                MonetaryAmount("1BTC"), true, ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
+  EXPECT_EQ(
+      StringOptionParser("90.05%XLM,bithumb_user1-binance").getMonetaryAmountFromToPrivateExchange(),
+      StringOptionParser::MonetaryAmountFromToPrivateExchange(
+          MonetaryAmount("90.05XLM"), true, ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
   EXPECT_EQ(StringOptionParser("-50.758%eth,kraken_user2-huobi_user3").getMonetaryAmountFromToPrivateExchange(),
             StringOptionParser::MonetaryAmountFromToPrivateExchange(
-                MonetaryAmount("-50.758ETH"), true, ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")));
+                MonetaryAmount("-50.758ETH"), true,
+                ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
 }
 
 TEST(StringOptionParserTest, GetCurrencyPublicExchanges) {

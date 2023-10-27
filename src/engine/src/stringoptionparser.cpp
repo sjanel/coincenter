@@ -183,18 +183,20 @@ StringOptionParser::getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency)
 StringOptionParser::CurrencyFromToPrivateExchange StringOptionParser::getCurrencyFromToPrivateExchange() const {
   std::size_t pos = 0;
   CurrencyCode cur(GetNextStr(_opt, ',', pos));
-  ExchangeName from = GetNextExchangeName(_opt, '-', pos);
-  // Warning: in C++, order of evaluation of parameters is unspecified. Because GetNextStr has side
-  // effects (it modifies 'pos') we need temporary variables here
-  return std::make_tuple(std::move(cur), std::move(from), GetNextExchangeName(_opt, '-', pos));
+  // Warning: in C++, order of evaluation of parameters is unspecified, so parsing of exchanges (with
+  // GetNextExchangeName) should be done at different lines
+  ExchangeNames exchangePair(1U, GetNextExchangeName(_opt, '-', pos));
+  exchangePair.push_back(GetNextExchangeName(_opt, '-', pos));
+  return std::make_pair(std::move(cur), std::move(exchangePair));
 }
 
 StringOptionParser::MonetaryAmountFromToPrivateExchange StringOptionParser::getMonetaryAmountFromToPrivateExchange()
     const {
   std::size_t pos = 0;
   auto [startAmount, isPercentage] = GetNextPercentageAmount(_opt, ",%", pos);
-  ExchangeName from = GetNextExchangeName(_opt, '-', pos);
-  return std::make_tuple(std::move(startAmount), isPercentage, std::move(from), GetNextExchangeName(_opt, '-', pos));
+  ExchangeNames exchangePair(1U, GetNextExchangeName(_opt, '-', pos));
+  exchangePair.push_back(GetNextExchangeName(_opt, '-', pos));
+  return std::make_tuple(std::move(startAmount), isPercentage, std::move(exchangePair));
 }
 
 std::size_t StringOptionParser::getNextCommaPos(std::size_t startPos, bool throwIfNone) const {

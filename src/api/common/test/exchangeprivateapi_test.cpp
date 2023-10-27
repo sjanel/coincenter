@@ -50,8 +50,8 @@ inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdraw
 
 inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
   BalancePortfolio ret = balancePortfolio;
-  ret.add(tradedAmounts.tradedTo);
-  ret.add(-tradedAmounts.tradedFrom);
+  ret.add(tradedAmounts.to);
+  ret.add(-tradedAmounts.from);
   return ret;
 }
 
@@ -684,7 +684,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeperDirectSellingPossible) {
   MonetaryAmount avBtcAmount{75, "BTC", 4};
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(BalancePortfolio{from, avBtcAmount}))
-      .WillOnce(testing::Return(BalancePortfolio{avBtcAmount + tradedAmounts.tradedTo}));
+      .WillOnce(testing::Return(BalancePortfolio{avBtcAmount + tradedAmounts.to}));
 
   TradedAmountsVector tradedAmountsVector{tradedAmounts};
   TradedAmountsVectorWithFinalAmount res{tradedAmountsVector, MonetaryAmount{0, dustCur}};
@@ -710,14 +710,13 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper2StepsSameMarket) {
   MonetaryAmount xrpDustThreshold = dustThreshold(dustCur).value_or(MonetaryAmount{-1});
   TradedAmounts tradedAmounts1 = expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket);
 
-  TradedAmounts tradedAmounts2 = expectTakerSell(from + tradedAmounts1.tradedTo, pri);
+  TradedAmounts tradedAmounts2 = expectTakerSell(from + tradedAmounts1.to, pri);
 
   MonetaryAmount avBtcAmount{75, "BTC", 4};
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(BalancePortfolio{from, avBtcAmount}))
-      .WillOnce(
-          testing::Return(BalancePortfolio{from + tradedAmounts1.tradedTo, avBtcAmount - tradedAmounts1.tradedFrom}))
-      .WillOnce(testing::Return(BalancePortfolio{avBtcAmount - tradedAmounts1.tradedFrom}));
+      .WillOnce(testing::Return(BalancePortfolio{from + tradedAmounts1.to, avBtcAmount - tradedAmounts1.from}))
+      .WillOnce(testing::Return(BalancePortfolio{avBtcAmount - tradedAmounts1.from}));
 
   TradedAmountsVector tradedAmountsVector{tradedAmounts1, tradedAmounts2};
   TradedAmountsVectorWithFinalAmount res{tradedAmountsVector, MonetaryAmount{0, dustCur}};
@@ -762,7 +761,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
 
   MonetaryAmount xrpDustThreshold = dustThreshold(dustCur).value_or(MonetaryAmount{-1});
   TradedAmounts tradedAmounts1 = expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket);
-  from += tradedAmounts1.tradedTo;
+  from += tradedAmounts1.to;
 
   BalancePortfolio balance2 = balance1 + tradedAmounts1;
 
@@ -770,7 +769,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
 
   int percentXRPSoldSecondStep = 80;
   TradedAmounts tradedAmounts2 = expectTakerSell(from, priBtc, percentXRPSoldSecondStep);
-  from -= tradedAmounts2.tradedFrom;
+  from -= tradedAmounts2.from;
 
   BalancePortfolio balance3 = balance2 + tradedAmounts2;
 
@@ -784,7 +783,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket, false);
 
   TradedAmounts tradedAmounts3 = expectTakerBuy((3 * xrpDustThreshold) / 2, xrpeurAskPri, xrpeurBidPri, xrpeurMarket);
-  from += tradedAmounts3.tradedTo;
+  from += tradedAmounts3.to;
 
   BalancePortfolio balance4 = balance3 + tradedAmounts3;
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance4));

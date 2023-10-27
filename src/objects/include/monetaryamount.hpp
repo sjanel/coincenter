@@ -176,12 +176,10 @@ class MonetaryAmount {
   }
 
   [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
-    return MonetaryAmount(true, _amount < 0 ? -_amount : _amount, _curWithDecimals);
+    return {true, _amount < 0 ? -_amount : _amount, _curWithDecimals};
   }
 
-  [[nodiscard]] constexpr MonetaryAmount operator-() const noexcept {
-    return MonetaryAmount(true, -_amount, _curWithDecimals);
-  }
+  [[nodiscard]] constexpr MonetaryAmount operator-() const noexcept { return {true, -_amount, _curWithDecimals}; }
 
   /// @brief  Addition of two MonetaryAmounts.
   ///         They should have same currency for addition to be possible.
@@ -191,14 +189,8 @@ class MonetaryAmount {
 
   [[nodiscard]] MonetaryAmount operator-(MonetaryAmount other) const { return *this + (-other); }
 
-  MonetaryAmount &operator+=(MonetaryAmount other) {
-    *this = *this + other;
-    return *this;
-  }
-  MonetaryAmount &operator-=(MonetaryAmount other) {
-    *this = *this + (-other);
-    return *this;
-  }
+  MonetaryAmount &operator+=(MonetaryAmount other) { return *this = *this + other; }
+  MonetaryAmount &operator-=(MonetaryAmount other) { return *this = *this + (-other); }
 
   [[nodiscard]] MonetaryAmount operator*(AmountType mult) const;
 
@@ -212,30 +204,18 @@ class MonetaryAmount {
   ///  - XXXXXXX * YYYYYYY -> ??????? (exception will be thrown in this case)
   [[nodiscard]] MonetaryAmount operator*(MonetaryAmount mult) const;
 
-  MonetaryAmount &operator*=(AmountType mult) {
-    *this = *this * mult;
-    return *this;
-  }
-  MonetaryAmount &operator*=(MonetaryAmount mult) {
-    *this = *this * mult;
-    return *this;
-  }
+  MonetaryAmount &operator*=(AmountType mult) { return *this = *this * mult; }
+  MonetaryAmount &operator*=(MonetaryAmount mult) { return *this = *this * mult; }
 
   [[nodiscard]] MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div); }
 
   [[nodiscard]] MonetaryAmount operator/(MonetaryAmount div) const;
 
-  MonetaryAmount &operator/=(AmountType div) {
-    *this = *this / div;
-    return *this;
-  }
-  MonetaryAmount &operator/=(MonetaryAmount div) {
-    *this = *this / div;
-    return *this;
-  }
+  MonetaryAmount &operator/=(AmountType div) { return *this = *this / div; }
+  MonetaryAmount &operator/=(MonetaryAmount div) { return *this = *this / div; }
 
   [[nodiscard]] constexpr MonetaryAmount toNeutral() const noexcept {
-    return MonetaryAmount(true, _amount, _curWithDecimals.toNeutral());
+    return {true, _amount, _curWithDecimals.toNeutral()};
   }
 
   [[nodiscard]] constexpr bool isDefault() const noexcept { return _amount == 0 && hasNeutralCurrency(); }
@@ -261,8 +241,8 @@ class MonetaryAmount {
       *it = '-';
       ++it;
     }
-    const int nbDigits = ndigits(_amount);
-    const int nbDecs = nbDecimals();
+    const auto nbDigits = ndigits(_amount);
+    const auto nbDecs = nbDecimals();
     int remNbZerosToPrint = std::max(0, nbDecs + 1 - nbDigits);
 
     // no terminating null char, +1 is for the biggest decimal exponent part that is not fully covered by 64 bits
@@ -328,7 +308,7 @@ class MonetaryAmount {
     appendCurrencyStr(str);
   }
 
-  uint64_t code() const noexcept {
+  [[nodiscard]] uint64_t code() const noexcept {
     return HashCombine(static_cast<size_t>(_amount), static_cast<size_t>(_curWithDecimals.code()));
   }
 
@@ -380,7 +360,7 @@ class MonetaryAmount {
     }
   }
 
-  constexpr inline void setNbDecimals(int8_t nbDecs) { _curWithDecimals.setNbDecimals(nbDecs); }
+  constexpr void setNbDecimals(int8_t nbDecs) { _curWithDecimals.setNbDecimals(nbDecs); }
 
   AmountType _amount;
   CurrencyCode _curWithDecimals;
@@ -395,7 +375,8 @@ static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount shou
 template <>
 struct fmt::formatter<cct::MonetaryAmount> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    const auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it != end && *it != '}') {
       throw format_error("invalid format");
     }

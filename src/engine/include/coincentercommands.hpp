@@ -14,7 +14,7 @@ namespace cct {
 class CoincenterCommands {
  public:
   // Builds a CoincenterCommands without any commands.
-  CoincenterCommands() noexcept(std::is_nothrow_default_constructible_v<Commands>) = default;
+  CoincenterCommands() noexcept = default;
 
   // Builds a CoincenterCommands and add commands from given command line options.
   explicit CoincenterCommands(const CoincenterCmdLineOptions &cmdLineOptions)

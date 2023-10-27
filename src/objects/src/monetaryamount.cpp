@@ -11,6 +11,7 @@
 #include <limits>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <sstream>
 #include <string_view>
 #include <tuple>
@@ -29,14 +30,17 @@ namespace {
 /// Theorem 15
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
+constexpr bool IsNotSpace(char ch) { return ch != ' '; }
+constexpr bool IsNotZero(char ch) { return ch != '0'; }
+
 constexpr void RemovePrefixSpaces(std::string_view &str) {
-  str.remove_prefix(std::find_if(str.begin(), str.end(), [](char ch) { return ch != ' '; }) - str.begin());
+  str.remove_prefix(std::ranges::find_if(str, IsNotSpace) - str.begin());
 }
 constexpr void RemoveTrailingSpaces(std::string_view &str) {
-  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char ch) { return ch != ' '; }) - str.rbegin());
+  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), IsNotSpace) - std::ranges::rbegin(str));
 }
 constexpr void RemoveTrailingZeros(std::string_view &str) {
-  str.remove_suffix(std::find_if(str.rbegin(), str.rend(), [](char ch) { return ch != '0'; }) - str.rbegin());
+  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), IsNotZero) - std::ranges::rbegin(str));
 }
 
 inline int ParseNegativeChar(std::string_view &amountStr) {
@@ -64,8 +68,7 @@ inline int ParseNegativeChar(std::string_view &amountStr) {
 /// Converts a string into a fixed precision integral containing both the integer and decimal part.
 /// @param amountStr the string to convert
 /// @param heuristicRoundingFromDouble if true, more than 5 consecutive zeros or 9 in the decimals part will be rounded
-inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::string_view amountStr,
-                                                                           bool heuristicRoundingFromDouble = false) {
+inline auto AmountIntegralFromStr(std::string_view amountStr, bool heuristicRoundingFromDouble = false) {
   std::pair<MonetaryAmount::AmountType, int8_t> ret;
   ret.second = 0;
 
@@ -140,12 +143,12 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   const int negMult = ParseNegativeChar(amountCurrencyStr);
 
   auto last = amountCurrencyStr.begin();
-  auto endIt = amountCurrencyStr.end();
+  const auto endIt = amountCurrencyStr.end();
   static_assert(' ' < '+' && '+' < '-' && '+' < '.');  // Trick: all '.', '+', '-' are before digits in the ASCII code
   while (last != endIt && *last >= '+' && *last <= '9') {
     ++last;
   }
-  std::string_view amountStr(amountCurrencyStr.begin(), last);
+  const std::string_view amountStr(amountCurrencyStr.begin(), last);
   int8_t nbDecimals;
   std::tie(_amount, nbDecimals) = AmountIntegralFromStr(amountStr);
   _amount *= negMult;
@@ -200,14 +203,14 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
 }
 
 constexpr MonetaryAmount::AmountType MonetaryAmount::decimalPart() const {
-  auto div = ipow10(static_cast<uint8_t>(nbDecimals()));
+  const auto div = ipow10(static_cast<uint8_t>(nbDecimals()));
   return _amount - (_amount / div) * div;
 }
 
 namespace {
 
-constexpr int8_t SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,
-                                         int8_t lhsNbDecimals, int8_t rhsNbDecimals) {
+constexpr auto SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,
+                                       int8_t lhsNbDecimals, int8_t rhsNbDecimals) {
   int lhsNbDigits = ndigits(lhsAmount);
   int rhsNbDigits = ndigits(rhsAmount);
   while (lhsNbDecimals != rhsNbDecimals) {
@@ -295,14 +298,14 @@ void MonetaryAmount::round(int8_t nbDecimals, RoundType roundType) {
 }
 
 bool MonetaryAmount::isCloseTo(MonetaryAmount otherAmount, double relativeDifference) const {
-  double ourAmount = std::abs(toDouble());
-  double boundMin = ourAmount * (1.0 - relativeDifference);
-  double boundMax = ourAmount * (1.0 + relativeDifference);
+  const double ourAmount = std::abs(toDouble());
+  const double boundMin = ourAmount * (1.0 - relativeDifference);
+  const double boundMax = ourAmount * (1.0 + relativeDifference);
 
   if (boundMin < 0 || boundMax < 0) {
     throw exception("Unexpected bounds [{}-{}]", boundMin, boundMax);
   }
-  double closestAmount = std::abs(otherAmount.toDouble());
+  const double closestAmount = std::abs(otherAmount.toDouble());
   return closestAmount > boundMin && closestAmount < boundMax;
 }
 
@@ -310,18 +313,18 @@ std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &other) co
   if (currencyCode() != other.currencyCode()) {
     throw exception("Cannot compare amounts with different currency");
   }
-  int8_t lhsNbDecimals = nbDecimals();
-  int8_t rhsNbDecimals = other.nbDecimals();
+  const auto lhsNbDecimals = nbDecimals();
+  const auto rhsNbDecimals = other.nbDecimals();
   if (lhsNbDecimals == rhsNbDecimals) {
     return _amount <=> other._amount;
   }
-  AmountType lhsIntAmount = integerPart();
-  AmountType rhsIntAmount = other.integerPart();
+  const auto lhsIntAmount = integerPart();
+  const auto rhsIntAmount = other.integerPart();
   if (lhsIntAmount != rhsIntAmount) {
     return lhsIntAmount <=> rhsIntAmount;
   }
   // Same integral part, so expanding one's number of decimals towards the other one is safe
-  auto adjustDecimals = [](AmountType lhsAmount, AmountType rhsAmount, int8_t lhsNbD, int8_t rhsNbD) {
+  const auto adjustDecimals = [](AmountType lhsAmount, AmountType rhsAmount, int8_t lhsNbD, int8_t rhsNbD) {
     for (int8_t nbD = lhsNbD; nbD < rhsNbD; ++nbD) {
       assert(lhsAmount <= (std::numeric_limits<AmountType>::max() / 10) &&
              (lhsAmount >= (std::numeric_limits<AmountType>::min() / 10)));
@@ -347,8 +350,8 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount other) const {
   if (currencyCode() != other.currencyCode()) {
     throw exception("Addition is only possible on amounts with same currency");
   }
-  AmountType lhsAmount = _amount;
-  AmountType rhsAmount = other._amount;
+  auto lhsAmount = _amount;
+  auto rhsAmount = other._amount;
   int8_t resNbDecimals = SafeConvertSameDecimals(lhsAmount, rhsAmount, nbDecimals(), other.nbDecimals());
   AmountType resAmount = lhsAmount + rhsAmount;
   if (resAmount >= kMaxAmountFullNDigits || resAmount <= -kMaxAmountFullNDigits) {
@@ -485,9 +488,6 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   return {static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs};
 }
 
-std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma) {
-  os << ma.str();
-  return os;
-}
+std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma) { return os << ma.str(); }
 
 }  // namespace cct

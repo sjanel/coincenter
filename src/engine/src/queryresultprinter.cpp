@@ -222,7 +222,7 @@ json TradeOptionsToJson(const TradeOptions &tradeOptions) {
   return ret;
 }
 
-json TradesJson(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount amount, bool isPercentageTrade,
+json TradesJson(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount, bool isPercentageTrade,
                 CurrencyCode toCurrency, const TradeOptions &tradeOptions, CoincenterCommandType commandType) {
   json in;
   json fromJson;
@@ -254,10 +254,12 @@ json TradesJson(const TradedAmountsPerExchange &tradedAmountsPerExchange, Moneta
   in.emplace("opt", std::move(inOpt));
 
   json out = json::object();
-  for (const auto &[exchangePtr, tradedAmount] : tradedAmountsPerExchange) {
+  for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
     json tradedAmountPerExchangeJson;
-    tradedAmountPerExchangeJson.emplace("from", tradedAmount.tradedFrom.amountStr());
-    tradedAmountPerExchangeJson.emplace("to", tradedAmount.tradedTo.amountStr());
+    tradedAmountPerExchangeJson.emplace("from", tradeResult.from().amountStr());
+    tradedAmountPerExchangeJson.emplace("status", tradeResult.stateStr());
+    tradedAmountPerExchangeJson.emplace("tradedFrom", tradeResult.tradedAmounts().from.amountStr());
+    tradedAmountPerExchangeJson.emplace("tradedTo", tradeResult.tradedAmounts().to.amountStr());
 
     auto it = out.find(exchangePtr->name());
     if (it == out.end()) {
@@ -584,8 +586,8 @@ json DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &traded
     json tradedAmountsArray = json::array_t();
     for (const auto &tradedAmounts : tradedAmountsVectorWithFinalAmount.tradedAmountsVector) {
       json tradedAmountsData;
-      tradedAmountsData.emplace("from", tradedAmounts.tradedFrom.str());
-      tradedAmountsData.emplace("to", tradedAmounts.tradedTo.str());
+      tradedAmountsData.emplace("from", tradedAmounts.from.str());
+      tradedAmountsData.emplace("to", tradedAmounts.to.str());
       tradedAmountsArray.push_back(std::move(tradedAmountsData));
     }
 
@@ -753,11 +755,10 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
   logActivity(CoincenterCommandType::kDepositInfo, jsonData);
 }
 
-void QueryResultPrinter::printTrades(const TradedAmountsPerExchange &tradedAmountsPerExchange, MonetaryAmount amount,
+void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount,
                                      bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
                                      CoincenterCommandType commandType) const {
-  json jsonData =
-      TradesJson(tradedAmountsPerExchange, amount, isPercentageTrade, toCurrency, tradeOptions, commandType);
+  json jsonData = TradesJson(tradeResultPerExchange, amount, isPercentageTrade, toCurrency, tradeOptions, commandType);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       string tradedFromStr("Traded from amount (");
@@ -766,10 +767,12 @@ void QueryResultPrinter::printTrades(const TradedAmountsPerExchange &tradedAmoun
       string tradedToStr("Traded to amount (");
       tradedToStr.append(TradeModeToStr(tradeOptions.tradeMode()));
       tradedToStr.push_back(')');
-      SimpleTable simpleTable("Exchange", "Account", std::move(tradedFromStr), std::move(tradedToStr));
-      for (const auto &[exchangePtr, tradedAmount] : tradedAmountsPerExchange) {
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradedAmount.tradedFrom.str(),
-                                 tradedAmount.tradedTo.str());
+      SimpleTable simpleTable("Exchange", "Account", "From", std::move(tradedFromStr), std::move(tradedToStr),
+                              "Status");
+      for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
+        const TradedAmounts &tradedAmounts = tradeResult.tradedAmounts();
+        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradeResult.from().str(),
+                                 tradedAmounts.from.str(), tradedAmounts.to.str(), tradeResult.stateStr());
       }
       printTable(simpleTable);
       break;

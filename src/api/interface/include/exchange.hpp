@@ -27,14 +27,14 @@ class Exchange {
   const api::ExchangePublic &apiPublic() const { return _exchangePublic; }
 
   api::ExchangePrivate &apiPrivate() {
-    if (_pExchangePrivate) {
+    if (hasPrivateAPI()) {
       return *_pExchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
   const api::ExchangePrivate &apiPrivate() const {
-    if (_pExchangePrivate) {
+    if (hasPrivateAPI()) {
       return *_pExchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
@@ -42,7 +42,7 @@ class Exchange {
 
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
-  bool hasPrivateAPI() const { return _pExchangePrivate; }
+  bool hasPrivateAPI() const { return _pExchangePrivate != nullptr; }
 
   bool healthCheck() { return _exchangePublic.healthCheck(); }
 

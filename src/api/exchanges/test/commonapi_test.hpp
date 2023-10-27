@@ -280,8 +280,8 @@ class TestAPI {
         TradeOptions tradeOptions(TradeMode::kSimulation);
         MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
         MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
-        EXPECT_GT(exchangePrivateOpt->trade(smallFrom, mk.quote(), tradeOptions).tradedTo, 0);
-        EXPECT_NE(exchangePrivateOpt->trade(bigFrom, mk.base(), tradeOptions).tradedFrom, 0);
+        EXPECT_GT(exchangePrivateOpt->trade(smallFrom, mk.quote(), tradeOptions).to, 0);
+        EXPECT_NE(exchangePrivateOpt->trade(bigFrom, mk.base(), tradeOptions).from, 0);
       }
     }
   }

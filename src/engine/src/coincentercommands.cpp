@@ -325,22 +325,21 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.withdraw.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdraw);
-    auto [amountToWithdraw, isPercentageWithdraw, fromExchange, toExchange] =
-        anyParser.getMonetaryAmountFromToPrivateExchange();
+    auto [amountToWithdraw, isPercentageWithdraw, exchanges] = anyParser.getMonetaryAmountFromToPrivateExchange();
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(amountToWithdraw)
         .setPercentageAmount(isPercentageWithdraw)
-        .setExchangeNames(ExchangeNames{std::move(fromExchange), std::move(toExchange)})
+        .setExchangeNames(std::move(exchanges))
         .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 
   if (!cmdLineOptions.withdrawAll.empty()) {
     StringOptionParser anyParser(cmdLineOptions.withdrawAll);
-    auto [curToWithdraw, fromExchange, toExchange] = anyParser.getCurrencyFromToPrivateExchange();
+    auto [curToWithdraw, exchanges] = anyParser.getCurrencyFromToPrivateExchange();
     _commands.emplace_back(CoincenterCommandType::kWithdraw)
         .setAmount(MonetaryAmount(100, curToWithdraw))
         .setPercentageAmount(true)
-        .setExchangeNames(ExchangeNames{std::move(fromExchange), std::move(toExchange)})
+        .setExchangeNames(std::move(exchanges))
         .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
   }
 

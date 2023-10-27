@@ -566,11 +566,11 @@ OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
 
     if (fromCurrencyCode == mk.quote()) {
       MonetaryAmount price(orderJson["price"].get<std::string_view>(), mk.base());
-      orderInfo.tradedAmounts.tradedFrom += tradedCost;
-      orderInfo.tradedAmounts.tradedTo += (tradedCost - fee).toNeutral() / price;
+      orderInfo.tradedAmounts.from += tradedCost;
+      orderInfo.tradedAmounts.to += (tradedCost - fee).toNeutral() / price;
     } else {
-      orderInfo.tradedAmounts.tradedFrom += tradedVol;
-      orderInfo.tradedAmounts.tradedTo += tradedCost - fee;
+      orderInfo.tradedAmounts.from += tradedVol;
+      orderInfo.tradedAmounts.to += tradedCost - fee;
     }
   }
 

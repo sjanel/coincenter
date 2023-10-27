@@ -52,15 +52,15 @@ class ExchangesOrchestrator {
 
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames);
 
-  TradedAmountsPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                                 std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+  TradeResultPerExchange trade(MonetaryAmount from, bool isPercentageTrade, CurrencyCode toCurrency,
+                               std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
-                                    const TradeOptions &tradeOptions);
+  TradeResultPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
+                                  const TradeOptions &tradeOptions);
 
-  TradedAmountsPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                     std::span<const ExchangeName> privateExchangeNames,
-                                     const TradeOptions &tradeOptions);
+  TradeResultPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                   std::span<const ExchangeName> privateExchangeNames,
+                                   const TradeOptions &tradeOptions);
 
   TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
                                                             CurrencyCode currencyCode);

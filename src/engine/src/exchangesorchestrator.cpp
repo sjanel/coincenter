@@ -37,7 +37,9 @@
 #include "queryresulttypes.hpp"
 #include "requestsconfig.hpp"
 #include "threadpool.hpp"
+#include "tradedamounts.hpp"
 #include "tradeoptions.hpp"
+#include "traderesult.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
@@ -420,28 +422,31 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
   return exchangeAmountPairVector;
 }
 
-TradedAmountsPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAmountMarketsPathVector::iterator first,
-                                                ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
-                                                const TradeOptions &tradeOptions) {
-  TradedAmountsPerExchange tradeAmountsPerExchange(std::distance(first, last));
-  threadPool.parallelTransform(first, last, tradeAmountsPerExchange.begin(), [toCurrency, &tradeOptions](auto &tuple) {
+TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAmountMarketsPathVector::iterator first,
+                                              ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
+                                              const TradeOptions &tradeOptions) {
+  TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
+  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(), [toCurrency, &tradeOptions](auto &tuple) {
     Exchange *exchange = std::get<0>(tuple);
-    return std::make_pair(
-        exchange, exchange->apiPrivate().trade(std::get<1>(tuple), toCurrency, tradeOptions, std::get<2>(tuple)));
+    const MonetaryAmount from = std::get<1>(tuple);
+    TradedAmounts tradedAmounts = exchange->apiPrivate().trade(from, toCurrency, tradeOptions, std::get<2>(tuple));
+    return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
   });
-  return tradeAmountsPerExchange;
+  return tradeResultPerExchange;
 }
 
 template <class Iterator>
-TradedAmountsPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, Iterator first, Iterator last,
-                                                const TradeOptions &tradeOptions) {
-  TradedAmountsPerExchange tradeAmountsPerExchange(std::distance(first, last));
-  threadPool.parallelTransform(first, last, tradeAmountsPerExchange.begin(), [&tradeOptions](auto &tuple) {
+TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, Iterator first, Iterator last,
+                                              const TradeOptions &tradeOptions) {
+  TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
+  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(), [&tradeOptions](auto &tuple) {
     Exchange *exchange = std::get<0>(tuple);
-    return std::make_pair(exchange, exchange->apiPrivate().trade(std::get<1>(tuple), std::get<2>(tuple), tradeOptions,
-                                                                 std::get<3>(tuple)));
+    const MonetaryAmount from = std::get<1>(tuple);
+    const CurrencyCode toCurrency = std::get<2>(tuple);
+    TradedAmounts tradedAmounts = exchange->apiPrivate().trade(from, toCurrency, tradeOptions, std::get<3>(tuple));
+    return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
   });
-  return tradeAmountsPerExchange;
+  return tradeResultPerExchange;
 }
 
 ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRetriever exchangeRetriever,
@@ -465,18 +470,18 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
 
 }  // namespace
 
-TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                      CurrencyCode toCurrency,
-                                                      std::span<const ExchangeName> privateExchangeNames,
-                                                      const TradeOptions &tradeOptions) {
+TradeResultPerExchange ExchangesOrchestrator::trade(MonetaryAmount from, bool isPercentageTrade,
+                                                    CurrencyCode toCurrency,
+                                                    std::span<const ExchangeName> privateExchangeNames,
+                                                    const TradeOptions &tradeOptions) {
   if (privateExchangeNames.size() == 1 && !isPercentageTrade) {
     // In this special case we don't need to call the balance - call trade directly
     Exchange &exchange = _exchangeRetriever.retrieveUniqueCandidate(privateExchangeNames.front());
-    return {1, std::make_pair(std::addressof(exchange),
-                              exchange.apiPrivate().trade(startAmount, toCurrency, tradeOptions))};
+    TradedAmounts tradedAmounts = exchange.apiPrivate().trade(from, toCurrency, tradeOptions);
+    return {1, std::make_pair(&exchange, TradeResult(std::move(tradedAmounts), from))};
   }
 
-  const CurrencyCode fromCurrency = startAmount.currencyCode();
+  const CurrencyCode fromCurrency = from.currencyCode();
 
   ExchangeAmountMarketsPathVector exchangeAmountMarketsPathVector = CreateExchangeAmountMarketsPathVector(
       _exchangeRetriever, getBalance(privateExchangeNames), fromCurrency, toCurrency, tradeOptions);
@@ -494,13 +499,13 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
       MonetaryAmount totalAvailableAmount = std::accumulate(
           exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(), currentTotalAmount,
           [](MonetaryAmount tot, const auto &tuple) { return tot + std::get<1>(tuple); });
-      startAmount = (totalAvailableAmount * startAmount.toNeutral()) / 100;
+      from = (totalAvailableAmount * from.toNeutral()) / 100;
     }
-    for (auto endIt = exchangeAmountMarketsPathVector.end(); it != endIt && currentTotalAmount < startAmount; ++it) {
+    for (auto endIt = exchangeAmountMarketsPathVector.end(); it != endIt && currentTotalAmount < from; ++it) {
       MonetaryAmount &amount = std::get<1>(*it);
-      if (currentTotalAmount + amount > startAmount) {
+      if (currentTotalAmount + amount > from) {
         // Cap last amount such that total start trade on all exchanges reaches exactly 'startAmount'
-        amount = startAmount - currentTotalAmount;
+        amount = from - currentTotalAmount;
       }
       currentTotalAmount += amount;
     }
@@ -508,17 +513,17 @@ TradedAmountsPerExchange ExchangesOrchestrator::trade(MonetaryAmount startAmount
 
   if (currentTotalAmount == 0) {
     log::warn("No available {} to trade", fromCurrency);
-  } else if (currentTotalAmount < startAmount) {
-    log::warn("Will trade {} < {} amount", currentTotalAmount, startAmount);
+  } else if (currentTotalAmount < from) {
+    log::warn("Will trade {} < {} amount", currentTotalAmount, from);
   }
 
   /// We have enough total available amount. Launch all trades in parallel
   return LaunchAndCollectTrades(_threadPool, exchangeAmountMarketsPathVector.begin(), it, toCurrency, tradeOptions);
 }
 
-TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
-                                                         std::span<const ExchangeName> privateExchangeNames,
-                                                         const TradeOptions &tradeOptions) {
+TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
+                                                       std::span<const ExchangeName> privateExchangeNames,
+                                                       const TradeOptions &tradeOptions) {
   const CurrencyCode toCurrency = endAmount.currencyCode();
   BalancePerExchange balancePerExchange = getBalance(privateExchangeNames);
 
@@ -619,9 +624,9 @@ TradedAmountsPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmoun
   return LaunchAndCollectTrades(_threadPool, trades.begin(), trades.end(), tradeOptions);
 }
 
-TradedAmountsPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                                          std::span<const ExchangeName> privateExchangeNames,
-                                                          const TradeOptions &tradeOptions) {
+TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
+                                                        std::span<const ExchangeName> privateExchangeNames,
+                                                        const TradeOptions &tradeOptions) {
   const CurrencyCode fromCurrency = startAmount.currencyCode();
   // Retrieve amount per start amount currency for each exchange
   ExchangeAmountPairVector exchangeAmountPairVector =
