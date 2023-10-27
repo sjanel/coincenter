@@ -141,7 +141,7 @@ inline auto AmountIntegralFromStr(std::string_view amountStr, bool heuristicRoun
 
 }  // namespace
 
-MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
+MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr, IfNoAmount ifNoAmount) {
   const int negMult = ParseNegativeChar(amountCurrencyStr);
 
   auto last = amountCurrencyStr.begin();
@@ -157,7 +157,7 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   std::string_view currencyStr(last, endIt);
   RemoveTrailingSpaces(currencyStr);
   RemovePrefixSpaces(currencyStr);
-  if (!currencyStr.empty() && amountStr.empty()) {
+  if (ifNoAmount == IfNoAmount::kThrow && !currencyStr.empty() && amountStr.empty()) {
     throw invalid_argument("Cannot construct MonetaryAmount with a currency without any amount");
   }
   _curWithDecimals = CurrencyCode(currencyStr);

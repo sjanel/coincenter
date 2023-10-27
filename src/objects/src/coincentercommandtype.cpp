@@ -117,4 +117,17 @@ CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str) {
   }
   throw exception("Unknown command type {}", str);
 }
+
+bool IsAnyTrade(CoincenterCommandType type) {
+  switch (type) {
+    case CoincenterCommandType::kTrade:
+      [[fallthrough]];
+    case CoincenterCommandType::kBuy:
+      [[fallthrough]];
+    case CoincenterCommandType::kSell:
+      return true;
+    default:
+      return false;
+  }
+}
 }  // namespace cct

@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
-#include <tuple>
 #include <utility>
 
 #include "cct_string.hpp"
@@ -16,52 +15,36 @@
 namespace cct {
 class StringOptionParser {
  public:
-  using MarketExchanges = std::pair<Market, ExchangeNames>;
-  using CurrenciesPrivateExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
-  using CurrencyPrivateExchanges = std::pair<CurrencyCode, ExchangeNames>;
-  using MonetaryAmountCurrencyPrivateExchanges = std::tuple<MonetaryAmount, bool, CurrencyCode, ExchangeNames>;
-  using CurrencyFromToPrivateExchange = std::pair<CurrencyCode, ExchangeNames>;
-  using MonetaryAmountFromToPrivateExchange = std::tuple<MonetaryAmount, bool, ExchangeNames>;
-  using MonetaryAmountFromToPublicExchangeToCurrency = std::tuple<MonetaryAmount, ExchangeNames, CurrencyCode>;
-  using CurrencyPublicExchanges = std::pair<CurrencyCode, ExchangeNames>;
-  using CurrenciesPublicExchanges = std::tuple<CurrencyCode, CurrencyCode, ExchangeNames>;
+  enum class AmountType : int8_t { kAbsolute, kPercentage, kNotPresent };
+  enum class FieldIs : int8_t { kMandatory, kOptional };
 
-  enum class CurrencyIs : int8_t { kMandatory, kOptional };
+  StringOptionParser() noexcept = default;
 
   explicit StringOptionParser(std::string_view optFullStr) : _opt(optFullStr) {}
 
-  ExchangeNames getExchanges() const;
+  /// If FieldIs is kOptional and there is no currency, default currency code will be returned.
+  /// otherwise exception invalid_argument will be raised
+  CurrencyCode parseCurrency(FieldIs fieldIs = FieldIs::kMandatory);
 
-  MarketExchanges getMarketExchanges() const;
+  /// If FieldIs is kOptional and there is no market, default market will be returned.
+  /// otherwise exception invalid_argument will be raised
+  Market parseMarket(FieldIs fieldIs = FieldIs::kMandatory);
 
-  CurrencyPrivateExchanges getCurrencyPrivateExchanges(CurrencyIs currencyIs) const;
+  /// If FieldIs is kOptional and there is no amount, AmountType kNotPresent will be returned
+  /// otherwise exception invalid_argument will be raised
+  std::pair<MonetaryAmount, AmountType> parseNonZeroAmount(FieldIs fieldIs = FieldIs::kMandatory);
 
-  auto getMonetaryAmountPrivateExchanges() const {
-    auto ret = getMonetaryAmountCurrencyPrivateExchanges(false);
-    return std::make_tuple(std::move(std::get<0>(ret)), std::move(std::get<1>(ret)), std::move(std::get<3>(ret)));
-  }
+  /// Parse the remaining option string with CSV string values.
+  vector<string> getCSVValues();
 
-  CurrenciesPrivateExchanges getCurrenciesPrivateExchanges(bool currenciesShouldBeSet = true) const;
+  /// Parse exchanges.
+  /// Exception will be raised for any invalid exchange name - but an empty list of exchanges is accepted.
+  ExchangeNames parseExchanges(char sep = ',');
 
-  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges() const {
-    return getMonetaryAmountCurrencyPrivateExchanges(true);
-  }
+  void checkEndParsing() const;
 
-  CurrencyFromToPrivateExchange getCurrencyFromToPrivateExchange() const;
-
-  MonetaryAmountFromToPrivateExchange getMonetaryAmountFromToPrivateExchange() const;
-
-  CurrencyPublicExchanges getCurrencyPublicExchanges() const;
-
-  CurrenciesPublicExchanges getCurrenciesPublicExchanges() const;
-
-  vector<string> getCSVValues() const;
-
- protected:
-  std::size_t getNextCommaPos(std::size_t startPos = 0, bool throwIfNone = true) const;
-
-  MonetaryAmountCurrencyPrivateExchanges getMonetaryAmountCurrencyPrivateExchanges(bool withCurrency) const;
-
+ private:
   std::string_view _opt;
+  std::size_t _pos{};
 };
 }  // namespace cct

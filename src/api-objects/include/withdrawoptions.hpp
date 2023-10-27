@@ -24,6 +24,8 @@ class WithdrawOptions {
 
   std::string_view withdrawSyncPolicyStr() const;
 
+  bool operator==(const WithdrawOptions &) const noexcept = default;
+
  private:
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes or hours

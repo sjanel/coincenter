@@ -7,7 +7,6 @@
 #include "exchange.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
-#include "exchangepublicapitypes.hpp"
 
 namespace cct {
 

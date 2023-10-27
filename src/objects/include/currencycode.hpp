@@ -123,6 +123,15 @@ class CurrencyCode {
 
   static constexpr auto kMaxLen = CurrencyCodeBase::kMaxLen;
 
+  /// Returns true if and only if a CurrencyCode can be constructed from 'curStr'.
+  /// Note that an empty string is a valid representation of a CurrencyCode.
+  static constexpr bool IsValid(std::string_view curStr) noexcept {
+    return curStr.size() <= kMaxLen && std::ranges::all_of(curStr, [](char ch) {
+             return ch > CurrencyCodeBase::kFirstAuthorizedLetter &&
+                    (ch <= CurrencyCodeBase::kLastAuthorizedLetter || (ch >= 'a' && ch <= 'z'));
+           });
+  }
+
   /// Constructs a neutral currency code.
   constexpr CurrencyCode() noexcept : _data() {}
 

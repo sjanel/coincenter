@@ -86,6 +86,8 @@ class CoincenterCommand {
   bool isPercentageAmount() const { return _isPercentageAmount; }
   bool withBalanceInUse() const { return _withBalanceInUse; }
 
+  bool operator==(const CoincenterCommand&) const noexcept = default;
+
   using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<ExchangeNames> &&
                                                                  is_trivially_relocatable_v<OrdersConstraints>>::type;
 

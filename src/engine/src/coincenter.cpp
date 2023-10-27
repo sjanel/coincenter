@@ -4,9 +4,11 @@
 #include <optional>
 #include <span>
 #include <thread>
+#include <utility>
 
 #include "balanceoptions.hpp"
 #include "cct_exception.hpp"
+#include "cct_log.hpp"
 #include "coincentercommands.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenterinfo.hpp"
@@ -20,9 +22,21 @@
 #include "ordersconstraints.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
+#include "transferablecommandresult.hpp"
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
+namespace {
+void FillTransferableCommandResults(const TradeResultPerExchange &tradeResultPerExchange,
+                                    TransferableCommandResultVector &transferableResults) {
+  for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
+    if (tradeResult.isComplete()) {
+      transferableResults.emplace_back(exchangePtr->createExchangeName(), tradeResult.tradedAmounts().to);
+    }
+  }
+}
+
+}  // namespace
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
@@ -50,15 +64,18 @@ int Coincenter::process(const CoincenterCommands &coincenterCommands) {
         log::info("Processing request {}/{}", repeatPos + 1, nbRepeats);
       }
     }
+    TransferableCommandResultVector transferableResults;
     for (const auto &cmd : commands) {
-      processCommand(cmd);
+      transferableResults = processCommand(cmd, transferableResults);
       ++nbCommandsProcessed;
     }
   }
   return nbCommandsProcessed;
 }
 
-void Coincenter::processCommand(const CoincenterCommand &cmd) {
+TransferableCommandResultVector Coincenter::processCommand(
+    const CoincenterCommand &cmd, std::span<const TransferableCommandResult> previousTransferableResults) {
+  TransferableCommandResultVector transferableResults;
   switch (cmd.type()) {
     case CoincenterCommandType::kHealthCheck: {
       const auto healthCheckStatus = healthCheck(cmd.exchangeNames());
@@ -110,10 +127,9 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
     }
 
     case CoincenterCommandType::kBalance: {
-      const BalanceOptions balanceOptions(cmd.withBalanceInUse()
-                                              ? BalanceOptions::AmountIncludePolicy::kWithBalanceInUse
-                                              : BalanceOptions::AmountIncludePolicy::kOnlyAvailable,
-                                          cmd.cur1());
+      const auto amountIncludePolicy = cmd.withBalanceInUse() ? BalanceOptions::AmountIncludePolicy::kWithBalanceInUse
+                                                              : BalanceOptions::AmountIncludePolicy::kOnlyAvailable;
+      const BalanceOptions balanceOptions(amountIncludePolicy, cmd.cur1());
       const auto balancePerExchange = getBalance(cmd.exchangeNames(), balanceOptions);
       _queryResultPrinter.printBalance(balancePerExchange, cmd.cur1());
       break;
@@ -144,31 +160,50 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
       break;
     }
     case CoincenterCommandType::kTrade: {
+      // 2 input styles are possible:
+      //  - standard full information with an amount to trade, a destination currency and an optional list of exchanges
+      //  where to trade
+      //  - a currency - the destination one, and start amount and exchange(s) should come from previous command result
+      auto [startAmount, exchangeNames] = ComputeTradeAmountAndExchanges(cmd, previousTransferableResults);
+      if (startAmount.isDefault()) {
+        break;
+      }
       const auto tradeResultPerExchange =
-          trade(cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(), cmd.exchangeNames(), cmd.tradeOptions());
-      _queryResultPrinter.printTrades(tradeResultPerExchange, cmd.amount(), cmd.isPercentageAmount(), cmd.cur1(),
+          trade(startAmount, cmd.isPercentageAmount(), cmd.cur1(), exchangeNames, cmd.tradeOptions());
+      _queryResultPrinter.printTrades(tradeResultPerExchange, startAmount, cmd.isPercentageAmount(), cmd.cur1(),
                                       cmd.tradeOptions());
+      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kBuy: {
       const auto tradeResultPerExchange = smartBuy(cmd.amount(), cmd.exchangeNames(), cmd.tradeOptions());
       _queryResultPrinter.printBuyTrades(tradeResultPerExchange, cmd.amount(), cmd.tradeOptions());
+      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kSell: {
+      auto [startAmount, exchangeNames] = ComputeTradeAmountAndExchanges(cmd, previousTransferableResults);
+      if (startAmount.isDefault()) {
+        break;
+      }
       const auto tradeResultPerExchange =
-          smartSell(cmd.amount(), cmd.isPercentageAmount(), cmd.exchangeNames(), cmd.tradeOptions());
+          smartSell(startAmount, cmd.isPercentageAmount(), exchangeNames, cmd.tradeOptions());
       _queryResultPrinter.printSellTrades(tradeResultPerExchange, cmd.amount(), cmd.isPercentageAmount(),
                                           cmd.tradeOptions());
+      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kWithdrawApply: {
-      const auto &fromExchangeName = cmd.exchangeNames().front();
-      const auto &toExchangeName = cmd.exchangeNames().back();
-      const auto deliveredWithdrawInfoWithExchanges =
-          withdraw(cmd.amount(), cmd.isPercentageAmount(), fromExchangeName, toExchangeName, cmd.withdrawOptions());
+      const auto [grossAmount, exchangeName] = ComputeWithdrawAmount(cmd, previousTransferableResults);
+      if (grossAmount.isDefault()) {
+        break;
+      }
+      const auto deliveredWithdrawInfoWithExchanges = withdraw(grossAmount, cmd.isPercentageAmount(), exchangeName,
+                                                               cmd.exchangeNames().back(), cmd.withdrawOptions());
       _queryResultPrinter.printWithdraw(deliveredWithdrawInfoWithExchanges, cmd.isPercentageAmount(),
                                         cmd.withdrawOptions());
+      transferableResults.emplace_back(deliveredWithdrawInfoWithExchanges.first[1]->createExchangeName(),
+                                       deliveredWithdrawInfoWithExchanges.second.receivedAmount());
       break;
     }
     case CoincenterCommandType::kDustSweeper: {
@@ -178,10 +213,11 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
     default:
       throw exception("Unknown command type");
   }
+  return transferableResults;
 }
 
 ExchangeHealthCheckStatus Coincenter::healthCheck(ExchangeNameSpan exchangeNames) {
-  ExchangeHealthCheckStatus ret = _exchangesOrchestrator.healthCheck(exchangeNames);
+  const auto ret = _exchangesOrchestrator.healthCheck(exchangeNames);
 
   _metricsExporter.exportHealthCheckMetrics(ret);
 
@@ -189,7 +225,7 @@ ExchangeHealthCheckStatus Coincenter::healthCheck(ExchangeNameSpan exchangeNames
 }
 
 ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNames) {
-  ExchangeTickerMaps ret = _exchangesOrchestrator.getTickerInformation(exchangeNames);
+  const auto ret = _exchangesOrchestrator.getTickerInformation(exchangeNames);
 
   _metricsExporter.exportTickerMetrics(ret);
 
@@ -199,8 +235,7 @@ ExchangeTickerMaps Coincenter::getTickerInformation(ExchangeNameSpan exchangeNam
 MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                                CurrencyCode equiCurrencyCode,
                                                                std::optional<int> depth) {
-  MarketOrderBookConversionRates ret =
-      _exchangesOrchestrator.getMarketOrderBooks(mk, exchangeNames, equiCurrencyCode, depth);
+  const auto ret = _exchangesOrchestrator.getMarketOrderBooks(mk, exchangeNames, equiCurrencyCode, depth);
 
   _metricsExporter.exportOrderbookMetrics(mk, ret);
 
@@ -308,7 +343,7 @@ MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m
 
 LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
                                                            int nbLastTrades) {
-  LastTradesPerExchange ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
+  const auto ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
 
   _metricsExporter.exportLastTradesMetrics(mk, ret);
 

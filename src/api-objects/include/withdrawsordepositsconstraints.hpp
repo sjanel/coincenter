@@ -48,6 +48,8 @@ class WithdrawsOrDepositsConstraints {
   }
   bool isIdOnlyDependent() const { return _currencyIdTimeConstraintsBmp.isDepositIdOnlyDependent(); }
 
+  bool operator==(const WithdrawsOrDepositsConstraints &) const noexcept = default;
+
   using trivially_relocatable = is_trivially_relocatable<IdSet>::type;
 
  private:

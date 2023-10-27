@@ -2,7 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <tuple>
 #include <utility>
 
 #include "cct_invalid_argument_exception.hpp"
@@ -14,193 +13,184 @@
 #include "monetaryamount.hpp"
 
 namespace cct {
+namespace {
+constexpr auto optional = StringOptionParser::FieldIs::kOptional;
+constexpr auto mandatory = StringOptionParser::FieldIs::kMandatory;
+}  // namespace
 
-TEST(StringOptionParserTest, GetExchanges) {
-  EXPECT_TRUE(StringOptionParser("").getExchanges().empty());
-  EXPECT_EQ(StringOptionParser("kraken,upbit").getExchanges(),
+TEST(StringOptionParserTest, ParseExchangesDefaultSeparator) {
+  EXPECT_TRUE(StringOptionParser("").parseExchanges().empty());
+  EXPECT_EQ(StringOptionParser("kraken,upbit").parseExchanges(),
             ExchangeNames({ExchangeName("kraken"), ExchangeName("upbit")}));
-  EXPECT_EQ(StringOptionParser("huobi_user1").getExchanges(), ExchangeNames({ExchangeName("huobi_user1")}));
+  EXPECT_EQ(StringOptionParser("huobi_user1").parseExchanges(), ExchangeNames({ExchangeName("huobi_user1")}));
 }
 
-TEST(StringOptionParserTest, GetCurrencyPrivateExchanges) {
-  auto optionalCur = StringOptionParser::CurrencyIs::kOptional;
-  EXPECT_EQ(StringOptionParser("").getCurrencyPrivateExchanges(optionalCur),
-            std::make_pair(CurrencyCode(), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur").getCurrencyPrivateExchanges(optionalCur),
-            std::make_pair(CurrencyCode("EUR"), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("kraken1").getCurrencyPrivateExchanges(optionalCur),
-            std::make_pair(CurrencyCode("kraken1"), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
-            std::make_pair(CurrencyCode(), ExchangeNames({ExchangeName("bithumb"), ExchangeName("binance", "user1")})));
-  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
-            std::make_pair(CurrencyCode(), ExchangeNames({ExchangeName("binance", "user2"), ExchangeName("bithumb"),
-                                                          ExchangeName("binance", "user1")})));
-  EXPECT_EQ(
-      StringOptionParser("krw,Bithumb,binance_user1")
-          .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
-      std::make_pair(CurrencyCode("KRW"), ExchangeNames({ExchangeName("bithumb"), ExchangeName("binance", "user1")})));
-
-  EXPECT_THROW(StringOptionParser("toolongcurrency,Bithumb,binance_user1").getCurrencyPrivateExchanges(optionalCur),
-               invalid_argument);
-  EXPECT_THROW(StringOptionParser("binance_user1,bithumb")
-                   .getCurrencyPrivateExchanges(StringOptionParser::CurrencyIs::kMandatory),
-               invalid_argument);
+TEST(StringOptionParserTest, ParseExchangesCustomSeparator) {
+  EXPECT_TRUE(StringOptionParser("").parseExchanges('-').empty());
+  EXPECT_EQ(StringOptionParser("kucoin-huobi_user1").parseExchanges('-'),
+            ExchangeNames({ExchangeName("kucoin"), ExchangeName("huobi", "user1")}));
+  EXPECT_EQ(StringOptionParser("kraken_user2").parseExchanges('-'), ExchangeNames({ExchangeName("kraken", "user2")}));
 }
 
-TEST(StringOptionParserTest, GetMarketExchanges) {
-  EXPECT_EQ(StringOptionParser("eth-eur").getMarketExchanges(),
-            StringOptionParser::MarketExchanges(Market("ETH", "EUR"), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("dash-krw,bithumb,upbit").getMarketExchanges(),
-            StringOptionParser::MarketExchanges(Market("DASH", "KRW"),
-                                                ExchangeNames({ExchangeName("bithumb"), ExchangeName("upbit")})));
+TEST(StringOptionParserTest, ParseMarketMandatory) {
+  EXPECT_EQ(StringOptionParser("eth-eur").parseMarket(mandatory), Market("ETH", "EUR"));
+  EXPECT_EQ(StringOptionParser("dash-krw,bithumb,upbit").parseMarket(mandatory), Market("DASH", "KRW"));
 
-  EXPECT_THROW(StringOptionParser("dash-toolongcurrency,bithumb,upbit").getMarketExchanges(), invalid_argument);
+  EXPECT_THROW(StringOptionParser("dash").parseMarket(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("dash-toolongcurrency,bithumb,upbit").parseMarket(mandatory), invalid_argument);
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountPrivateExchanges) {
-  EXPECT_EQ(StringOptionParser("45.09ADA").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("45.09ADA"), false, ExchangeNames{}));
-  EXPECT_EQ(StringOptionParser("15%ADA").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("15ADA"), true, ExchangeNames{}));
-  EXPECT_EQ(StringOptionParser("-0.6509btc,kraken").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("-0.6509BTC"), false, ExchangeNames({ExchangeName("kraken")})));
-  EXPECT_EQ(StringOptionParser("49%luna,bithumb_my_user").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(MonetaryAmount(49, "LUNA"), true, ExchangeNames({ExchangeName("bithumb", "my_user")})));
-  EXPECT_EQ(StringOptionParser("10985.4006xlm,huobi,binance_user1").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("10985.4006xlm"), false,
-                            ExchangeNames({ExchangeName("huobi"), ExchangeName("binance", "user1")})));
-  EXPECT_EQ(StringOptionParser("-7.009%fil,upbit,kucoin_MyUsername,binance").getMonetaryAmountPrivateExchanges(),
-            std::make_tuple(
-                MonetaryAmount("-7.009fil"), true,
-                ExchangeNames({ExchangeName("upbit"), ExchangeName("kucoin", "MyUsername"), ExchangeName("binance")})));
+TEST(StringOptionParserTest, ParseMarketOptional) {
+  EXPECT_EQ(StringOptionParser("").parseMarket(optional), Market());
+  EXPECT_EQ(StringOptionParser("eth").parseMarket(optional), Market());
+  EXPECT_EQ(StringOptionParser("eth,kucoin").parseMarket(optional), Market());
+  EXPECT_EQ(StringOptionParser("eth-eur").parseMarket(optional), Market("ETH", "EUR"));
+  EXPECT_EQ(StringOptionParser("BTC-USDT,bithumb,upbit").parseMarket(optional), Market("BTC", "USDT"));
+  EXPECT_EQ(StringOptionParser("kraken,upbit").parseMarket(optional), Market());
+  EXPECT_EQ(StringOptionParser("dash-toolongcurrency,bithumb,upbit").parseMarket(optional), Market());
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchanges) {
-  EXPECT_EQ(StringOptionParser("45.09ADA-eur,bithumb").getMonetaryAmountCurrencyPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("45.09ADA"), false, CurrencyCode("EUR"),
-                            ExchangeNames(1, ExchangeName("bithumb"))));
-  EXPECT_EQ(StringOptionParser("0.02 btc-xlm,upbit_user1,binance").getMonetaryAmountCurrencyPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("0.02BTC"), false, CurrencyCode("XLM"),
-                            ExchangeNames({ExchangeName("upbit", "user1"), ExchangeName("binance")})));
-  EXPECT_EQ(StringOptionParser("2500.5 eur-sol").getMonetaryAmountCurrencyPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("2500.5 EUR"), false, CurrencyCode("SOL"), ExchangeNames()));
-  EXPECT_EQ(
-      StringOptionParser("17%eur-sol,kraken").getMonetaryAmountCurrencyPrivateExchanges(),
-      std::make_tuple(MonetaryAmount("17EUR"), true, CurrencyCode("sol"), ExchangeNames(1, ExchangeName("kraken"))));
-  EXPECT_EQ(StringOptionParser("50.035%btc-KRW,upbit,bithumb_user2").getMonetaryAmountCurrencyPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("50.035 BTC"), true, CurrencyCode("KRW"),
-                            ExchangeNames({ExchangeName("upbit"), ExchangeName("bithumb", "user2")})));
-  EXPECT_EQ(StringOptionParser("-056.04%sol-jpy").getMonetaryAmountCurrencyPrivateExchanges(),
-            std::make_tuple(MonetaryAmount("-56.04sol"), true, CurrencyCode("JPY"), ExchangeNames{}));
+TEST(StringOptionParserTest, ParseCurrencyMandatory) {
+  EXPECT_EQ(StringOptionParser("krw,kucoin,binance_user1").parseCurrency(mandatory), CurrencyCode("KRW"));
+
+  EXPECT_THROW(StringOptionParser("").parseCurrency(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("binance_user1,bithumb").parseCurrency(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("toolongcurrency").parseCurrency(mandatory), invalid_argument);
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountCurrencyCodePrivateExchangesValidity) {
-  EXPECT_NO_THROW(StringOptionParser("100 % eur-sol").getMonetaryAmountCurrencyPrivateExchanges());
-  EXPECT_NO_THROW(StringOptionParser("-15.709%eur-sol").getMonetaryAmountCurrencyPrivateExchanges());
-  EXPECT_THROW(StringOptionParser("").getMonetaryAmountCurrencyPrivateExchanges(), invalid_argument);
-  EXPECT_THROW(StringOptionParser("100.2% eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), invalid_argument);
-  EXPECT_THROW(StringOptionParser("-150 %eur-sol").getMonetaryAmountCurrencyPrivateExchanges(), invalid_argument);
+TEST(StringOptionParserTest, ParseCurrencyOptional) {
+  EXPECT_EQ(StringOptionParser("").parseCurrency(optional), CurrencyCode());
+  EXPECT_EQ(StringOptionParser("eur").parseCurrency(optional), CurrencyCode("EUR"));
+  EXPECT_EQ(StringOptionParser("kraken1").parseCurrency(optional), CurrencyCode("kraken1"));
+  EXPECT_EQ(StringOptionParser("bithumb,binance_user1").parseCurrency(optional), CurrencyCode());
+  EXPECT_EQ(StringOptionParser("binance_user2,bithumb,binance_user1").parseCurrency(optional), CurrencyCode());
+  EXPECT_EQ(StringOptionParser("toolongcurrency,Bithumb,binance_user1").parseCurrency(optional), CurrencyCode());
 }
 
-TEST(StringOptionParserTest, GetCurrencyFromToPrivateExchange) {
-  EXPECT_EQ(StringOptionParser("btc,huobi-kraken").getCurrencyFromToPrivateExchange(),
-            std::make_pair(CurrencyCode("BTC"), ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
-  EXPECT_EQ(
-      StringOptionParser("XLM,bithumb_user1-binance").getCurrencyFromToPrivateExchange(),
-      std::make_pair(CurrencyCode("XLM"), ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
-  EXPECT_EQ(StringOptionParser("eth,kraken_user2-huobi_user3").getCurrencyFromToPrivateExchange(),
-            std::make_pair(CurrencyCode("ETH"),
-                           ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
+TEST(StringOptionParserTest, ParseAmountMandatoryAbsolute) {
+  EXPECT_EQ(StringOptionParser("45.09ADA").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("45.09ADA"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(StringOptionParser("0.6509btc,kraken").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("0.6509BTC"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(StringOptionParser("10985.4006xlm,huobi,binance_user1").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("10985.4006xlm"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(StringOptionParser("-0.6509btc,kraken").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("-0.6509btc"), StringOptionParser::AmountType::kAbsolute));
+
+  EXPECT_THROW(StringOptionParser("").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("0BTC").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("eur").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("kraken").parseNonZeroAmount(mandatory), invalid_argument);
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountFromToPrivateExchange) {
-  EXPECT_EQ(
-      StringOptionParser("0.102btc,huobi-kraken").getMonetaryAmountFromToPrivateExchange(),
-      std::make_tuple(MonetaryAmount("0.102BTC"), false, ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
-  EXPECT_EQ(StringOptionParser("3795541.90XLM,bithumb_user1-binance").getMonetaryAmountFromToPrivateExchange(),
-            std::make_tuple(MonetaryAmount("3795541.90XLM"), false,
-                            ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
-  EXPECT_EQ(StringOptionParser("4.106eth,kraken_user2-huobi_user3").getMonetaryAmountFromToPrivateExchange(),
-            std::make_tuple(MonetaryAmount("4.106ETH"), false,
-                            ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
+TEST(StringOptionParserTest, ParseAmountMandatoryPercentage) {
+  EXPECT_EQ(StringOptionParser("15%ADA").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("15ADA"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(StringOptionParser("49%luna,bithumb_my_user").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount(49, "LUNA"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(StringOptionParser("7.009%fil,upbit,kucoin_MyUsername,binance").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("7.009fil"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(StringOptionParser("-0.009%fil,upbit,kucoin_MyUsername,binance").parseNonZeroAmount(mandatory),
+            std::make_pair(MonetaryAmount("-0.009fil"), StringOptionParser::AmountType::kPercentage));
 
-  EXPECT_THROW(StringOptionParser("test").getMonetaryAmountFromToPrivateExchange(), invalid_argument);
+  EXPECT_THROW(StringOptionParser("").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("0%USDT").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("btc").parseNonZeroAmount(mandatory), invalid_argument);
+  EXPECT_THROW(StringOptionParser("230.009%fil,upbit,kucoin_MyUsername,binance").parseNonZeroAmount(mandatory),
+               invalid_argument);  // > 100 %
 }
 
-TEST(StringOptionParserTest, GetMonetaryAmountPercentageFromToPrivateExchange) {
-  EXPECT_EQ(StringOptionParser("1%btc,huobi-kraken").getMonetaryAmountFromToPrivateExchange(),
-            StringOptionParser::MonetaryAmountFromToPrivateExchange(
-                MonetaryAmount("1BTC"), true, ExchangeNames{ExchangeName("huobi"), ExchangeName("kraken")}));
-  EXPECT_EQ(
-      StringOptionParser("90.05%XLM,bithumb_user1-binance").getMonetaryAmountFromToPrivateExchange(),
-      StringOptionParser::MonetaryAmountFromToPrivateExchange(
-          MonetaryAmount("90.05XLM"), true, ExchangeNames{ExchangeName("bithumb", "user1"), ExchangeName("binance")}));
-  EXPECT_EQ(StringOptionParser("-50.758%eth,kraken_user2-huobi_user3").getMonetaryAmountFromToPrivateExchange(),
-            StringOptionParser::MonetaryAmountFromToPrivateExchange(
-                MonetaryAmount("-50.758ETH"), true,
-                ExchangeNames{ExchangeName("kraken", "user2"), ExchangeName("huobi", "user3")}));
+TEST(StringOptionParserTest, ParseAmountOptionalAbsolute) {
+  EXPECT_EQ(StringOptionParser("").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(StringOptionParser("XRP").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(StringOptionParser("15ADA").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount("15ADA"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(StringOptionParser("bithumb_my_user").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(StringOptionParser("7.009fil,upbit,kucoin_MyUsername,binance").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount("7.009fil"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(StringOptionParser("-7.009shib,upbit,kucoin_MyUsername,binance").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount("-7.009shib"), StringOptionParser::AmountType::kAbsolute));
 }
 
-TEST(StringOptionParserTest, GetCurrencyPublicExchanges) {
-  using CurrencyPublicExchanges = StringOptionParser::CurrencyPublicExchanges;
-  EXPECT_EQ(StringOptionParser("btc").getCurrencyPublicExchanges(), CurrencyPublicExchanges("BTC", ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrencyPublicExchanges(),
-            CurrencyPublicExchanges("EUR", ExchangeNames({ExchangeName("kraken_user1")})));
-  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrencyPublicExchanges(),
-            CurrencyPublicExchanges("EUR", ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
-}
-
-TEST(StringOptionParserTest, GetCurrencyCodesPublicExchanges) {
-  using CurrencyCodesPublicExchanges = StringOptionParser::CurrenciesPublicExchanges;
-  EXPECT_EQ(StringOptionParser("btc").getCurrenciesPublicExchanges(),
-            CurrencyCodesPublicExchanges("BTC", CurrencyCode(), ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrenciesPublicExchanges(),
-            CurrencyCodesPublicExchanges("EUR", CurrencyCode(), ExchangeNames({ExchangeName("kraken_user1")})));
-  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrenciesPublicExchanges(),
-            CurrencyCodesPublicExchanges("EUR", CurrencyCode(),
-                                         ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
-
-  EXPECT_EQ(StringOptionParser("avax-btc").getCurrenciesPublicExchanges(),
-            CurrencyCodesPublicExchanges("AVAX", "BTC", ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrenciesPublicExchanges(),
-            CurrencyCodesPublicExchanges("BTC", "EUR", ExchangeNames({ExchangeName("kraken_user1")})));
-  EXPECT_EQ(
-      StringOptionParser("xlm-eur,binance,huobi").getCurrenciesPublicExchanges(),
-      CurrencyCodesPublicExchanges("XLM", "EUR", ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
-}
-
-TEST(StringOptionParserTest, GetCurrenciesPrivateExchanges) {
-  using CurrenciesPrivateExchanges = StringOptionParser::CurrenciesPrivateExchanges;
-  EXPECT_EQ(StringOptionParser("").getCurrenciesPrivateExchanges(false),
-            CurrenciesPrivateExchanges("", "", ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("eur,kraken_user1").getCurrenciesPrivateExchanges(false),
-            CurrenciesPrivateExchanges("EUR", CurrencyCode(), ExchangeNames({ExchangeName("kraken_user1")})));
-  EXPECT_EQ(StringOptionParser("eur,binance,huobi").getCurrenciesPrivateExchanges(false),
-            CurrenciesPrivateExchanges("EUR", CurrencyCode(),
-                                       ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
-  EXPECT_EQ(
-      StringOptionParser("kucoin-toto,binance,huobi").getCurrenciesPrivateExchanges(false),
-      CurrenciesPrivateExchanges("KUCOIN", "TOTO", ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
-  EXPECT_EQ(StringOptionParser("kucoin,kraken,huobi").getCurrenciesPrivateExchanges(false),
-            CurrenciesPrivateExchanges(
-                CurrencyCode(), CurrencyCode(),
-                ExchangeNames({ExchangeName("kucoin"), ExchangeName("kraken"), ExchangeName("huobi")})));
-}
-
-TEST(StringOptionParserTest, GetCurrenciesPrivateExchangesWithCurrencies) {
-  using CurrenciesPrivateExchanges = StringOptionParser::CurrenciesPrivateExchanges;
-  EXPECT_EQ(StringOptionParser("avax-btc").getCurrenciesPrivateExchanges(),
-            CurrenciesPrivateExchanges("AVAX", "BTC", ExchangeNames()));
-  EXPECT_EQ(StringOptionParser("btc-eur,kraken_user1").getCurrenciesPrivateExchanges(),
-            CurrenciesPrivateExchanges("BTC", "EUR", ExchangeNames({ExchangeName("kraken_user1")})));
-  EXPECT_EQ(StringOptionParser("xlm-eur,binance,huobi").getCurrenciesPrivateExchanges(),
-            CurrenciesPrivateExchanges("XLM", "EUR", ExchangeNames({ExchangeName("binance"), ExchangeName("huobi")})));
+TEST(StringOptionParserTest, ParseAmountOptionalPercentage) {
+  EXPECT_EQ(StringOptionParser("0%ADA").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(StringOptionParser("45.09%ADA").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount("45.09ADA"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(StringOptionParser("0.6509%btc,kraken").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount("0.6509BTC"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(StringOptionParser("huobi,binance_user1").parseNonZeroAmount(optional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(StringOptionParser("-78%btc,kraken").parseNonZeroAmount(),
+            std::make_pair(MonetaryAmount(-78, "BTC"), StringOptionParser::AmountType::kPercentage));
 }
 
 TEST(StringOptionParserTest, CSVValues) {
   EXPECT_EQ(StringOptionParser("").getCSVValues(), vector<string>());
   EXPECT_EQ(StringOptionParser("val1,").getCSVValues(), vector<string>{{"val1"}});
   EXPECT_EQ(StringOptionParser("val1,value").getCSVValues(), vector<string>({{"val1"}, {"value"}}));
+}
+
+TEST(StringOptionParserTest, AmountExchangesFlow) {
+  StringOptionParser parser("34.8XRP,kraken,huobi_long_user1");
+
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount("34.8XRP"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+
+  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName("kraken"), ExchangeName("huobi", "long_user1")}));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
+TEST(StringOptionParserTest, AmountCurrencyNoExchangesFlow) {
+  StringOptionParser parser("0.56%BTC-krw");
+
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount("0.56BTC"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("KRW"));
+
+  EXPECT_EQ(parser.parseExchanges('-'), ExchangeNames());
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
+TEST(StringOptionParserTest, AmountCurrencyWithExchangesFlow) {
+  StringOptionParser parser("15.9DOGE-USDT,binance_long_user2,kucoin");
+
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount("15.9DOGE"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("USDT"));
+
+  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName("binance", "long_user2"), ExchangeName("kucoin")}));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
+TEST(StringOptionParserTest, SeveralAmountCurrencyExchangesFlow) {
+  StringOptionParser parser("98.05%JST--67.4BTC-hydrA,binance-kraken");
+
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kMandatory),
+            std::make_pair(MonetaryAmount("98.05JST"), StringOptionParser::AmountType::kPercentage));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount("-67.4BTC"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode("HYDRA"));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
+
+  EXPECT_EQ(parser.parseExchanges('-'), ExchangeNames({ExchangeName("binance"), ExchangeName("kraken")}));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
 }
 
 }  // namespace cct
