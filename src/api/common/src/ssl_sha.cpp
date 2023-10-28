@@ -68,7 +68,7 @@ inline EVPMDCTXUniquePtr InitEVPMDCTXUniquePtr(ShaType shaType) {
 }
 
 inline string EVPBinToHex(const EVPMDCTXUniquePtr& mdctx) {
-  unsigned int len;
+  unsigned int len = 0;
   unsigned char binData[EVP_MAX_MD_SIZE];
   EVP_DigestFinal_ex(mdctx.get(), binData, &len);
   return BinToHex(std::span<const unsigned char>(binData, len));

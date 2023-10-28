@@ -1,8 +1,8 @@
 #pragma once
 
+#include <compare>
 #include <cstdint>
 #include <ostream>
-#include <string_view>
 
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -50,7 +50,7 @@ class CurrencyExchange {
   bool isFiat() const { return _isFiat; }
 
   // Compare by standard code first.
-  constexpr auto operator<=>(const CurrencyExchange &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyExchange &) const noexcept = default;
 
   constexpr bool operator==(const CurrencyExchange &) const noexcept = default;
 

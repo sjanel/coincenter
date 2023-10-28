@@ -5,7 +5,6 @@
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptionsdef.hpp"
-#include "timedef.hpp"
 
 namespace cct {
 class PriceOptions {

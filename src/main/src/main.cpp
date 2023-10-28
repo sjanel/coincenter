@@ -10,11 +10,11 @@
 
 int main(int argc, const char* argv[]) {
   try {
-    auto cmdLineOptionsVector = cct::CoincenterCommands::ParseOptions(argc, argv);
+    const auto cmdLineOptionsVector = cct::CoincenterCommands::ParseOptions(argc, argv);
 
     if (!cmdLineOptionsVector.empty()) {
-      cct::CoincenterCommands coincenterCommands(cmdLineOptionsVector);
-      auto programName = std::filesystem::path(argv[0]).filename().string();
+      const cct::CoincenterCommands coincenterCommands(cmdLineOptionsVector);
+      const auto programName = std::filesystem::path(argv[0]).filename().string();
 
       cct::ProcessCommandsFromCLI(programName, coincenterCommands, cmdLineOptionsVector.front(),
                                   cct::settings::RunMode::kProd);

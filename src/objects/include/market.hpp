@@ -2,7 +2,6 @@
 
 #include <array>
 #include <ostream>
-#include <utility>
 
 #include "cct_format.hpp"
 #include "cct_string.hpp"
@@ -70,7 +69,8 @@ class Market {
 template <>
 struct fmt::formatter<cct::Market> {
   constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it != end && *it != '}') {
       throw format_error("invalid format");
     }

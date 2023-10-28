@@ -74,6 +74,7 @@ class MonetaryAmount {
   /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
   /// - If a currency is not present, assume default CurrencyCode
   /// - If the currency is too long to fit in a CurrencyCode, exception will be raised
+  /// - If only a currency is given, invalid_argument exception will be raised
   /// - If given string is empty, it is equivalent to a default constructor
   ///
   /// A space can be present or not between the amount and the currency code.
