@@ -19,6 +19,7 @@
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "currencycode.hpp"
 #include "mathhelpers.hpp"
 #include "stringhelpers.hpp"
@@ -155,6 +156,9 @@ MonetaryAmount::MonetaryAmount(std::string_view amountCurrencyStr) {
   std::string_view currencyStr(last, endIt);
   RemoveTrailingSpaces(currencyStr);
   RemovePrefixSpaces(currencyStr);
+  if (!currencyStr.empty() && amountStr.empty()) {
+    throw invalid_argument("Cannot construct MonetaryAmount with a currency without any amount");
+  }
   _curWithDecimals = CurrencyCode(currencyStr);
   sanitizeDecimals(nbDecimals, maxNbDecimals());
 }

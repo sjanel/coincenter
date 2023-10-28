@@ -1,8 +1,7 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
-
-#include "cct_const.hpp"
 
 namespace cct {
 class LoadConfiguration {

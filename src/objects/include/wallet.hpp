@@ -88,7 +88,8 @@ class Wallet {
 template <>
 struct fmt::formatter<cct::Wallet> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it != end && *it != '}') {
       throw format_error("invalid format");
     }

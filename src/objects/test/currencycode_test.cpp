@@ -156,9 +156,23 @@ TEST(CurrencyCodeTest, UpperConversion) {
   EXPECT_EQ(CurrencyCode("etc").str(), "ETC");
 }
 
+namespace {
+constexpr bool HasZ(CurrencyCode cur) {
+  for (char ch : cur) {
+    if (ch == 'Z') {
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
+
 TEST(CurrencyCodeTest, Constexpr) {
   static_assert(CurrencyCode("doge") == CurrencyCode("DOGE"));
   static_assert(CurrencyCode("XRP").code() != 0);
+
+  static_assert(!HasZ(CurrencyCode("LONGCUR")));
+  static_assert(HasZ(CurrencyCode("GTZFD")));
 }
 
 TEST(CurrencyCodeTest, Iterator) {

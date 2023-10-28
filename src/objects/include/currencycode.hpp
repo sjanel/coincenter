@@ -69,39 +69,40 @@ class CurrencyCodeIterator {
   using pointer = const char *;
   using reference = const char &;
 
-  constexpr auto operator<=>(const CurrencyCodeIterator &) const noexcept = default;
-  bool operator==(const CurrencyCodeIterator &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyCodeIterator &) const noexcept = default;
 
-  CurrencyCodeIterator &operator++() noexcept {  // Prefix increment
+  constexpr bool operator==(const CurrencyCodeIterator &) const noexcept = default;
+
+  constexpr CurrencyCodeIterator &operator++() noexcept {  // Prefix increment
     ++_pos;
     return *this;
   }
 
-  CurrencyCodeIterator &operator--() noexcept {  // Prefix decrement
+  constexpr CurrencyCodeIterator &operator--() noexcept {  // Prefix decrement
     --_pos;
     return *this;
   }
 
-  CurrencyCodeIterator operator++(int) noexcept {  // Postfix increment
+  constexpr CurrencyCodeIterator operator++(int) noexcept {  // Postfix increment
     CurrencyCodeIterator oldSelf = *this;
     ++*this;
     return oldSelf;
   }
 
-  CurrencyCodeIterator operator--(int) noexcept {  // Postfix decrement
+  constexpr CurrencyCodeIterator operator--(int) noexcept {  // Postfix decrement
     CurrencyCodeIterator oldSelf = *this;
     --*this;
     return oldSelf;
   }
 
-  char operator*() const noexcept { return CurrencyCodeBase::CharAt(_data, static_cast<int>(_pos)); }
+  constexpr char operator*() const noexcept { return CurrencyCodeBase::CharAt(_data, static_cast<int>(_pos)); }
   // operator-> cannot be implemented here - we would need a const char * but it's not possible.
 
  private:
   friend class CurrencyCode;
 
   // Default constructor needed for an iterator in C++20
-  explicit CurrencyCodeIterator(uint64_t data = 0, uint64_t pos = 0) noexcept : _data(data), _pos(pos) {}
+  constexpr explicit CurrencyCodeIterator(uint64_t data = 0, uint64_t pos = 0) noexcept : _data(data), _pos(pos) {}
 
   uint64_t _data;
   uint64_t _pos;
@@ -137,8 +138,8 @@ class CurrencyCode {
     _data = CurrencyCodeBase::StrToBmp(acronym);
   }
 
-  const_iterator begin() const { return const_iterator(_data); }
-  const_iterator end() const { return const_iterator(_data, size()); }
+  constexpr const_iterator begin() const { return const_iterator(_data); }
+  constexpr const_iterator end() const { return const_iterator(_data, size()); }
 
   constexpr uint64_t size() const {
     uint64_t sz = 0;
@@ -165,7 +166,7 @@ class CurrencyCode {
       return false;
     }
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char ch = (*this)[charPos];
+      const char ch = (*this)[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         return curStr.size() == charPos;
       }
@@ -178,16 +179,16 @@ class CurrencyCode {
 
   /// Append currency string representation to given string.
   void appendStrTo(string &str) const {
-    auto len = size();
+    const auto len = size();
     str.append(len, '\0');
     append(str.end() - len);
   }
 
   /// Append currency string representation to given output iterator
   template <class OutputIt>
-  OutputIt append(OutputIt it) const {
+  constexpr OutputIt append(OutputIt it) const {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char ch = (*this)[charPos];
+      const char ch = (*this)[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
@@ -205,13 +206,13 @@ class CurrencyCode {
   constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
 
   /// Note that this respects the lexicographical order - chars are encoded from the most significant bits first
-  constexpr auto operator<=>(const CurrencyCode &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyCode &) const noexcept = default;
 
   constexpr bool operator==(const CurrencyCode &) const noexcept = default;
 
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
     for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
-      char ch = cur[charPos];
+      const char ch = cur[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
       }
@@ -257,7 +258,7 @@ class CurrencyCode {
 
   /// Append currency string representation to given string, with a space before (used by MonetaryAmount)
   void appendStrWithSpaceTo(string &str) const {
-    auto len = size();
+    const auto len = size();
     str.append(len + 1UL, ' ');
     append(str.end() - len);
   }
@@ -269,7 +270,8 @@ class CurrencyCode {
 template <>
 struct fmt::formatter<cct::CurrencyCode> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    const auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it != end && *it != '}') {
       throw format_error("invalid format");
     }

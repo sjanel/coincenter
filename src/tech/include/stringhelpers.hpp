@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstring>
 #include <string_view>
+#include <system_error>
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
@@ -30,9 +31,12 @@ inline string ToString(std::integral auto i) {
 
 template <std::integral Integral>
 Integral FromString(std::string_view str) {
-  Integral ret;
+  Integral ret{};
   if (auto [ptr, errc] = std::from_chars(str.data(), str.data() + str.size(), ret); CCT_UNLIKELY(errc != std::errc())) {
-    throw exception("Unable to decode string into integral");
+    if (errc == std::errc::result_out_of_range) {
+      throw exception("'{}' would produce an out of range integral", str);
+    }
+    throw exception("Unable to decode '{}' into integral", str);
   }
   return ret;
 }

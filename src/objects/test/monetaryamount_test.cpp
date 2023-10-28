@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "mathhelpers.hpp"
@@ -180,6 +181,8 @@ TEST(MonetaryAmountTest, OverflowProtectionMultiplication) {
               MonetaryAmount("0.00426622338114037", cur));
     EXPECT_EQ(MonetaryAmount("38.0566894350664") * MonetaryAmount("0.00008795", cur),
               MonetaryAmount("0.00334708583581405", cur));
+    EXPECT_EQ((-1) * MonetaryAmount("-9223372036854775807", cur), MonetaryAmount("922337203685477580", cur));
+    EXPECT_EQ((-1) * MonetaryAmount("-922337203685477580", cur), MonetaryAmount("922337203685477580", cur));
   }
 }
 
@@ -238,10 +241,13 @@ TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("-210.50 CAKE"), MonetaryAmount("-210.50", "CAKE"));
   EXPECT_EQ(MonetaryAmount("05AUD"), MonetaryAmount(5, "AUD"));
   EXPECT_EQ(MonetaryAmount("746REPV2"), MonetaryAmount("746", "REPV2"));
+
+  EXPECT_THROW(MonetaryAmount("usdt"), invalid_argument);
 }
 
 TEST(MonetaryAmountTest, StringConstructorAmbiguity) {
   EXPECT_EQ(MonetaryAmount("804.621INCH"), MonetaryAmount("804.621", "INCH"));
+  EXPECT_EQ(MonetaryAmount("804.62 1INCH"), MonetaryAmount("804.62", "1INCH"));
   EXPECT_EQ(MonetaryAmount("804.62", "1INCH"), MonetaryAmount("804.62", "1INCH"));
 }
 

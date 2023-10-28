@@ -29,14 +29,14 @@ class ExchangeName {
   ExchangeName(std::string_view exchangeName, std::string_view keyName);
 
   std::string_view name() const {
-    std::size_t underscore = underscorePos();
+    const std::size_t underscore = underscorePos();
     return std::string_view(_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore);
   }
 
   std::string_view keyName() const {
-    std::size_t underscore = underscorePos();
-    return std::string_view(_nameWithKey.begin() + (underscore == string::npos ? _nameWithKey.size() : underscore + 1U),
-                            _nameWithKey.end());
+    const std::size_t underscore = underscorePos();
+    return {_nameWithKey.begin() + (underscore == string::npos ? _nameWithKey.size() : underscore + 1U),
+            _nameWithKey.end()};
   }
 
   bool isKeyNameDefined() const { return underscorePos() != string::npos; }
@@ -45,10 +45,7 @@ class ExchangeName {
 
   bool operator==(const ExchangeName &) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &v) {
-    os << v.str();
-    return os;
-  }
+  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &rhs) { return os << rhs.str(); }
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
@@ -64,7 +61,7 @@ class ExchangeName {
 };
 
 using ExchangeNameSpan = std::span<const ExchangeName>;
-using ExchangeNames = SmallVector<ExchangeName, kTypicalNbPrivateAccounts>;
+using ExchangeNames = SmallVector<ExchangeName, 1>;
 
 inline std::string_view ToString(std::string_view exchangeName) { return exchangeName; }
 inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName.str(); }
@@ -95,7 +92,8 @@ struct fmt::formatter<cct::ExchangeName> {
   bool printKeyName = false;
 
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it == end || *it == '}') {
       printExchangeName = true;
       printKeyName = true;
