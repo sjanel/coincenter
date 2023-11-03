@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include <memory>
 #include <optional>
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 
 #include "cct_cctype.hpp"
@@ -82,7 +82,7 @@ class CommandLineOptionsParser {
   }
 
   void displayHelp(std::string_view programName, std::ostream& stream) const {
-    stream << "usage: " << programName << " <general options> <command(s)>\n";
+    stream << "usage: " << programName << " <general options> [command(s)]\n";
     if (_opts.empty()) {
       return;
     }
@@ -150,11 +150,11 @@ class CommandLineOptionsParser {
     return std::ranges::none_of(_opts, [opt](const auto& cmdLineOpt) { return cmdLineOpt.first.matches(opt); });
   }
 
-  static bool IsOptionPositiveInt(std::string_view opt) { return std::ranges::all_of(opt, isdigit); }
+  static bool AreAllDigits(std::string_view opt) { return std::ranges::all_of(opt, isdigit); }
 
   static bool IsOptionInt(std::string_view opt) {
     return ((opt[0] == '-' || opt[0] == '+') && std::all_of(std::next(opt.begin()), opt.end(), isdigit)) ||
-           IsOptionPositiveInt(opt);
+           AreAllDigits(opt);
   }
 
   CallbackType registerCallback(const CommandLineOption& commandLineOption, CommandLineOptionType prop,
@@ -162,20 +162,22 @@ class CommandLineOptionsParser {
     return [this, &commandLineOption, prop, &data](int& idx, std::span<const char*> argv) {
       if (commandLineOption.matches(argv[idx])) {
         std::visit(overloaded{
-                       // bool value matcher
-                       [&data](bool OptValueType::*arg) { data.*arg = true; },
-
-                       // int value matcher
-                       [&data, &idx, argv, &commandLineOption](int OptValueType::*arg) {
-                         if (idx + 1U < argv.size()) {
-                           std::string_view nextOpt(argv[idx + 1]);
-                           if (IsOptionInt(nextOpt)) {
-                             data.*arg = FromString<int>(nextOpt);
-                             ++idx;
-                             return;
+                       // integral value matcher including bool
+                       [&data, &idx, argv, &commandLineOption](std::integral auto OptValueType::*arg) {
+                         using IntType = std::remove_reference_t<decltype(data.*arg)>;
+                         if constexpr (std::is_same_v<IntType, bool>) {
+                           data.*arg = true;
+                         } else {
+                           if (idx + 1U < argv.size()) {
+                             std::string_view nextOpt(argv[idx + 1]);
+                             if (IsOptionInt(nextOpt)) {
+                               data.*arg = FromString<IntType>(nextOpt);
+                               ++idx;
+                               return;
+                             }
                            }
+                           ThrowExpectingValueException(commandLineOption);
                          }
-                         ThrowExpectingValueException(commandLineOption);
                        },
 
                        // CommandLineOptionalInt value matcher
@@ -262,7 +264,7 @@ class CommandLineOptionsParser {
     LevenshteinDistanceCalculator calc;
     std::ranges::transform(_opts, minDistancesToFullNameOptions.begin(),
                            [argStr, &calc](const auto opt) { return calc(opt.first.fullName(), argStr); });
-    auto optIt = std::ranges::min_element(minDistancesToFullNameOptions);
+    const auto optIt = std::ranges::min_element(minDistancesToFullNameOptions);
     return {optIt - minDistancesToFullNameOptions.begin(), *optIt};
   }
 

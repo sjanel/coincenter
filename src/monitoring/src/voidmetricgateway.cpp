@@ -1,6 +1,10 @@
 #include "voidmetricgateway.hpp"
 
+#include <string_view>
+
+#include "abstractmetricgateway.hpp"
 #include "cct_log.hpp"
+#include "metric.hpp"
 
 namespace cct {
 namespace {

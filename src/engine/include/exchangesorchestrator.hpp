@@ -7,7 +7,6 @@
 #include "market.hpp"
 #include "queryresulttypes.hpp"
 #include "threadpool.hpp"
-#include "tradedamounts.hpp"
 #include "withdrawoptions.hpp"
 
 namespace cct {

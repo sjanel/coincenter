@@ -25,7 +25,7 @@ namespace cct {
 namespace {
 
 json LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &cmdLineOptions) {
-  json generalConfigData = GeneralConfig::LoadFile(cmdLineOptions.dataDir);
+  json generalConfigData = GeneralConfig::LoadFile(cmdLineOptions.getDataDir());
 
   // Override general config options from CLI
   // Use at method to make sure to throw if key is not already present (it should)
@@ -52,7 +52,7 @@ MonitoringInfo MonitoringInfo_Create(std::string_view programName, const Coincen
 
 CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
                                      settings::RunMode runMode) {
-  const auto dataDir = cmdLineOptions.dataDir;
+  const auto dataDir = cmdLineOptions.getDataDir();
 
   const json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
 
@@ -87,8 +87,7 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
 
 ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions &cmdLineOptions) {
   if (cmdLineOptions.noSecrets) {
-    const StringOptionParser anyParser(*cmdLineOptions.noSecrets);
-
+    StringOptionParser anyParser(*cmdLineOptions.noSecrets);
     return ExchangeSecretsInfo(anyParser.getExchanges());
   }
   return {};

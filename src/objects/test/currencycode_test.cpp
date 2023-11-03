@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
 
@@ -158,12 +160,7 @@ TEST(CurrencyCodeTest, UpperConversion) {
 
 namespace {
 constexpr bool HasZ(CurrencyCode cur) {
-  for (char ch : cur) {
-    if (ch == 'Z') {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(cur.begin(), cur.end(), [](char ch) { return ch == 'Z'; });
 }
 }  // namespace
 

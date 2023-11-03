@@ -24,7 +24,7 @@ enum class CoincenterCommandType : int8_t {
   kTrade,
   kBuy,
   kSell,
-  kWithdraw,
+  kWithdrawApply,
   kDustSweeper,
 };
 

@@ -12,19 +12,15 @@
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
+#include "coincenteroptionsdef.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "commandlineoptionsparseriterator.hpp"
 #include "depositsconstraints.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
-#include "priceoptions.hpp"
-#include "priceoptionsdef.hpp"
 #include "stringoptionparser.hpp"
 #include "timedef.hpp"
-#include "tradedefinitions.hpp"
-#include "tradeoptions.hpp"
-#include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
@@ -58,7 +54,7 @@ vector<CoincenterCmdLineOptions> CoincenterCommands::ParseOptions(int argc, cons
     if (groupParsedOptions.help) {
       parser.displayHelp(programName, std::cout);
     } else if (groupParsedOptions.version) {
-      CoincenterCmdLineOptions::PrintVersion(programName);
+      CoincenterCmdLineOptions::PrintVersion(programName, std::cout);
     } else {
       // Only store commands if they are not 'help' nor 'version'
       parsedOptions.push_back(std::move(groupParsedOptions));
@@ -84,60 +80,6 @@ std::pair<OrdersConstraints, ExchangeNames> ParseOrderRequest(const CoincenterCm
                         std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
                         OrdersConstraints::OrderIdSet(std::move(orderIds))),
       std::get<2>(currenciesPrivateExchangesTuple));
-}
-
-TradeTypePolicy ComputeTradeTypePolicy(const CoincenterCmdLineOptions &cmdLineOptions) {
-  TradeTypePolicy tradeType = TradeTypePolicy::kDefault;
-  if (cmdLineOptions.forceMultiTrade) {
-    if (cmdLineOptions.forceSingleTrade) {
-      throw invalid_argument("Multi & Single trade cannot be forced at the same time");
-    }
-    if (cmdLineOptions.tradeAsync) {
-      throw invalid_argument("Cannot use force multi trade and asynchronous mode at the same time");
-    }
-    tradeType = TradeTypePolicy::kForceMultiTrade;
-  } else if (cmdLineOptions.forceSingleTrade || cmdLineOptions.tradeAsync) {
-    tradeType = TradeTypePolicy::kForceSingleTrade;
-  }
-
-  return tradeType;
-}
-
-TradeOptions ComputeTradeOptions(const CoincenterCmdLineOptions &cmdLineOptions, TradeTypePolicy tradeTypePolicy) {
-  TradeTimeoutAction timeoutAction =
-      cmdLineOptions.tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
-  TradeMode tradeMode = cmdLineOptions.tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
-  TradeSyncPolicy tradeSyncPolicy =
-      cmdLineOptions.tradeAsync ? TradeSyncPolicy::kAsynchronous : TradeSyncPolicy::kSynchronous;
-  if (!cmdLineOptions.tradeStrategy.empty()) {
-    PriceOptions priceOptions(cmdLineOptions.tradeStrategy);
-    return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
-            tradeTypePolicy, tradeSyncPolicy};
-  }
-  if (!cmdLineOptions.tradePrice.empty()) {
-    MonetaryAmount tradePrice(cmdLineOptions.tradePrice);
-    if (tradePrice.isAmountInteger() && tradePrice.hasNeutralCurrency()) {
-      // Then it must be a relative price
-      RelativePrice relativePrice = static_cast<RelativePrice>(tradePrice.integerPart());
-      PriceOptions priceOptions(relativePrice);
-      return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
-              tradeTypePolicy, tradeSyncPolicy};
-    }
-    if (cmdLineOptions.isSmartTrade()) {
-      throw invalid_argument("Absolute price is not compatible with smart buy / sell");
-    }
-    PriceOptions priceOptions(tradePrice);
-    return {priceOptions,    timeoutAction,  tradeMode, cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
-            tradeTypePolicy, tradeSyncPolicy};
-  }
-  return {timeoutAction,   tradeMode,      cmdLineOptions.tradeTimeout, cmdLineOptions.tradeUpdatePrice,
-          tradeTypePolicy, tradeSyncPolicy};
-}
-
-WithdrawOptions ComputeWithdrawOptions(const CoincenterCmdLineOptions &cmdLineOptions) {
-  WithdrawSyncPolicy withdrawSyncPolicy =
-      cmdLineOptions.withdrawAsync ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
-  return {cmdLineOptions.withdrawRefreshTime, withdrawSyncPolicy};
 }
 
 }  // namespace
@@ -215,32 +157,11 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
       1) {
     throw invalid_argument("Only one trade can be done at a time");
   }
-  std::string_view tradeArgs;
-  bool isTradeAll = !cmdLineOptions.tradeAll.empty();
-  CoincenterCommandType commandType;
-  if (!cmdLineOptions.buy.empty()) {
-    tradeArgs = cmdLineOptions.buy;
-    commandType = CoincenterCommandType::kBuy;
-  } else if (!cmdLineOptions.sellAll.empty()) {
-    tradeArgs = cmdLineOptions.sellAll;
-    commandType = CoincenterCommandType::kSell;
-  } else if (!cmdLineOptions.sell.empty()) {
-    tradeArgs = cmdLineOptions.sell;
-    commandType = CoincenterCommandType::kSell;
-  } else {
-    tradeArgs = isTradeAll ? cmdLineOptions.tradeAll : cmdLineOptions.trade;
-    commandType = CoincenterCommandType::kTrade;
-  }
+  auto [tradeArgs, cmdType] = cmdLineOptions.getTradeArgStr();
   if (!tradeArgs.empty()) {
-    if (!cmdLineOptions.tradeStrategy.empty() && !cmdLineOptions.tradePrice.empty()) {
-      throw invalid_argument("Trade price and trade strategy cannot be set together");
-    }
+    CoincenterCommand &coincenterCommand = _commands.emplace_back(cmdType);
 
-    TradeTypePolicy tradeTypePolicy = ComputeTradeTypePolicy(cmdLineOptions);
-
-    CoincenterCommand &coincenterCommand = _commands.emplace_back(commandType);
-
-    coincenterCommand.setTradeOptions(ComputeTradeOptions(cmdLineOptions, tradeTypePolicy));
+    coincenterCommand.setTradeOptions(cmdLineOptions.computeTradeOptions());
 
     StringOptionParser optParser(tradeArgs);
     if (cmdLineOptions.isSmartTrade()) {
@@ -257,7 +178,7 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
         }
         coincenterCommand.setAmount(amount).setPercentageAmount(isPercentage).setExchangeNames(std::move(exchanges));
       }
-    } else if (isTradeAll) {
+    } else if (!cmdLineOptions.tradeAll.empty()) {
       auto [fromTradeCurrency, toTradeCurrency, exchanges] = optParser.getCurrenciesPrivateExchanges();
       coincenterCommand.setAmount(MonetaryAmount(100, fromTradeCurrency))
           .setPercentageAmount(true)
@@ -323,24 +244,24 @@ bool CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
         .setExchangeNames(std::move(exchanges));
   }
 
-  if (!cmdLineOptions.withdraw.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.withdraw);
+  if (!cmdLineOptions.withdrawApply.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.withdrawApply);
     auto [amountToWithdraw, isPercentageWithdraw, exchanges] = anyParser.getMonetaryAmountFromToPrivateExchange();
-    _commands.emplace_back(CoincenterCommandType::kWithdraw)
+    _commands.emplace_back(CoincenterCommandType::kWithdrawApply)
         .setAmount(amountToWithdraw)
         .setPercentageAmount(isPercentageWithdraw)
         .setExchangeNames(std::move(exchanges))
-        .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
+        .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions());
   }
 
-  if (!cmdLineOptions.withdrawAll.empty()) {
-    StringOptionParser anyParser(cmdLineOptions.withdrawAll);
+  if (!cmdLineOptions.withdrawApplyAll.empty()) {
+    StringOptionParser anyParser(cmdLineOptions.withdrawApplyAll);
     auto [curToWithdraw, exchanges] = anyParser.getCurrencyFromToPrivateExchange();
-    _commands.emplace_back(CoincenterCommandType::kWithdraw)
+    _commands.emplace_back(CoincenterCommandType::kWithdrawApply)
         .setAmount(MonetaryAmount(100, curToWithdraw))
         .setPercentageAmount(true)
         .setExchangeNames(std::move(exchanges))
-        .setWithdrawOptions(ComputeWithdrawOptions(cmdLineOptions));
+        .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions());
   }
 
   if (!cmdLineOptions.dustSweeper.empty()) {

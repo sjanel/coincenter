@@ -162,7 +162,7 @@ void Coincenter::processCommand(const CoincenterCommand &cmd) {
                                           cmd.tradeOptions());
       break;
     }
-    case CoincenterCommandType::kWithdraw: {
+    case CoincenterCommandType::kWithdrawApply: {
       const auto &fromExchangeName = cmd.exchangeNames().front();
       const auto &toExchangeName = cmd.exchangeNames().back();
       const auto deliveredWithdrawInfoWithExchanges =

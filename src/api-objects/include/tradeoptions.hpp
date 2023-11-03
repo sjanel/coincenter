@@ -68,7 +68,7 @@ class TradeOptions {
 
   string str(bool placeRealOrderInSimulationMode) const;
 
-  bool operator==(const TradeOptions &) const = default;
+  bool operator==(const TradeOptions &) const noexcept = default;
 
  private:
   Duration _maxTradeTime = kDefaultTradeDuration;

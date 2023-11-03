@@ -571,7 +571,7 @@ json WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAm
   out.emplace("receivedTime", ToString(deliveredWithdrawInfo.receivedTime()));
   out.emplace("netReceivedAmount", deliveredWithdrawInfo.receivedAmount().amountStr());
 
-  return ToJson(CoincenterCommandType::kWithdraw, std::move(in), std::move(out));
+  return ToJson(CoincenterCommandType::kWithdrawApply, std::move(in), std::move(out));
 }
 
 json DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
@@ -1066,7 +1066,7 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
     case ApiOutputType::kNoPrint:
       break;
   }
-  logActivity(CoincenterCommandType::kWithdraw, jsonData);
+  logActivity(CoincenterCommandType::kWithdrawApply, jsonData);
 }
 
 void QueryResultPrinter::printDustSweeper(

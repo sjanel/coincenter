@@ -9,6 +9,13 @@ target_link_libraries(coincenter_engine PUBLIC coincenter_objects)
 target_include_directories(coincenter_engine PUBLIC include)
 
 add_unit_test(
+  coincenteroptions_test
+  test/coincenteroptions_test.cpp
+  LIBRARIES
+  coincenter_engine
+)
+
+add_unit_test(
   commandlineoptionsparser_test
   test/commandlineoptionsparser_test.cpp
   DEFINITIONS

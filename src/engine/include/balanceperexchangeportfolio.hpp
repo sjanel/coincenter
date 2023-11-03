@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"

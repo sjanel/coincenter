@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compare>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <ostream>
@@ -64,6 +65,7 @@ struct CurrencyCodeBase {
 
 class CurrencyCodeIterator {
  public:
+  using difference_type = std::ptrdiff_t;
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = char;
   using pointer = const char *;
