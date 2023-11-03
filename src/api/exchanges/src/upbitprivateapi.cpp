@@ -186,7 +186,7 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 }
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  CurlPostData postData{{"currency", currencyCode.str()}};
+  CurlPostData postData{{"currency", currencyCode.str()}, {"net_type", currencyCode.str()}};
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData,
                              IfError::kNoThrow);
   bool generateDepositAddressNeeded = false;
