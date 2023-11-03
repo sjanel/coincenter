@@ -136,7 +136,7 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOption
 }
 
 CoincenterCommand& CoincenterCommand::setWithdrawOptions(const WithdrawOptions& withdrawOptions) {
-  if (_type != CoincenterCommandType::kWithdraw) {
+  if (_type != CoincenterCommandType::kWithdrawApply) {
     throw exception("Withdraw options can only be used for withdraws");
   }
   _specialOptions = withdrawOptions;
@@ -144,7 +144,7 @@ CoincenterCommand& CoincenterCommand::setWithdrawOptions(const WithdrawOptions& 
 }
 
 CoincenterCommand& CoincenterCommand::setWithdrawOptions(WithdrawOptions&& withdrawOptions) {
-  if (_type != CoincenterCommandType::kWithdraw) {
+  if (_type != CoincenterCommandType::kWithdrawApply) {
     throw exception("Withdraw options can only be used for withdraws");
   }
   _specialOptions = std::move(withdrawOptions);
@@ -181,7 +181,7 @@ CoincenterCommand& CoincenterCommand::setCur2(CurrencyCode cur2) {
 
 CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
   if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
-      _type != CoincenterCommandType::kTrade && _type != CoincenterCommandType::kWithdraw) {
+      _type != CoincenterCommandType::kTrade && _type != CoincenterCommandType::kWithdrawApply) {
     throw exception("Percentage trade can only be set for trade / buy / sell or withdraw command");
   }
   _isPercentageAmount = value;

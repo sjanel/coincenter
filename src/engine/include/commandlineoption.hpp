@@ -20,9 +20,10 @@ class CommandHeader {
 
   constexpr int prio() const { return _prio; }
 
-  constexpr auto operator<=>(const CommandHeader& other) const = default;
+  constexpr std::strong_ordering operator<=>(const CommandHeader&) const = default;
 
  private:
+  // Order of members is important because of the default spaceship operator. _prio should be first
   int _prio = 0;
   std::string_view _groupName;
 };
@@ -55,7 +56,7 @@ class CommandLineOption {
 
   constexpr bool hasShortName() const { return _shortName != '\0'; }
 
-  constexpr auto operator<=>(const CommandLineOption& other) const = default;
+  constexpr std::strong_ordering operator<=>(const CommandLineOption&) const = default;
 
  private:
   static constexpr std::string_view kLegacyFullNamePrefixOption = "--";
@@ -84,6 +85,8 @@ class CommandLineOptionalInt {
 
   constexpr bool isPresent() const { return _state == State::kOptionPresent || _state == State::kValueIsSet; }
   constexpr bool isSet() const { return _state == State::kValueIsSet; }
+
+  bool operator==(const CommandLineOptionalInt&) const noexcept = default;
 
  private:
   int _value = 0;

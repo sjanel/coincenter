@@ -185,7 +185,7 @@ TEST_F(CommandLineOptionsParserTest, DurationOptionThrowInvalidTimeUnit1) {
 TEST_F(CommandLineOptionsParserTest, DisplayHelp) {
   std::ostringstream ostream;
   _parser.displayHelp("programName", ostream);
-  constexpr std::string_view expected = R"(usage: programName <general options> <command(s)>
+  constexpr std::string_view expected = R"(usage: programName <general options> [command(s)]
 Options:
 
  General

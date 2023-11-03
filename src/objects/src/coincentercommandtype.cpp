@@ -44,7 +44,7 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
       return "Buy";
     case CoincenterCommandType::kSell:
       return "Sell";
-    case CoincenterCommandType::kWithdraw:
+    case CoincenterCommandType::kWithdrawApply:
       return "Withdraw";
     case CoincenterCommandType::kDustSweeper:
       return "DustSweeper";
@@ -110,7 +110,7 @@ CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str) {
     return CoincenterCommandType::kSell;
   }
   if (str == "Withdraw") {
-    return CoincenterCommandType::kWithdraw;
+    return CoincenterCommandType::kWithdrawApply;
   }
   if (str == "DustSweeper") {
     return CoincenterCommandType::kDustSweeper;

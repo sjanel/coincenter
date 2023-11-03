@@ -14,6 +14,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "coincentercommandtype.hpp"
 #include "file.hpp"
 #include "parseloglevel.hpp"
 #include "timedef.hpp"
