@@ -95,6 +95,7 @@ Main features:
     - [Dust sweeper](#dust-sweeper)
   - [Monitoring options](#monitoring-options)
     - [Repeat](#repeat)
+  - [Limitations](#limitations)
   - [Examples of use cases](#examples-of-use-cases)
     - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
     - [Trade 1000 euros to XRP on kraken with a maker strategy](#trade-1000-euros-to-xrp-on-kraken-with-a-maker-strategy)
@@ -766,6 +767,19 @@ Without a following numeric value, the command will repeat endlessly. You can fi
 
 Between each repeat you can set a waiting time with `--repeat-time` option which expects a time duration.
 
+## Limitations
+
+Be aware of the following limitations of `coincenter`:
+
+- When several networks exist for a given currency, only the **main one** is considered.
+  This is to ensure safety between withdrawals performed between exchanges.
+- Only absolute withdraw fees are currently supported.
+  In some cases (seen in Huobi), withdraw fee can be a percentage. They will be considered as 0.
+- Not really a limitation, but some **sensitive actions are not possible** by the exchanges API.
+  For instance, withdrawal for Kraken is only possible for a stored destination made from the website first.
+
+And probably more that I did not thought of, or never encountered. Feel free to open an issue and I will check it out if it's feasible!
+ 
 ## Examples of use cases
 
 ### Get an overview of your portfolio in Korean Won
