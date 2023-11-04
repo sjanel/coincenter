@@ -136,9 +136,13 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
   CurrencyExchangeVector currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
-  currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() - excludedCurrencies.size()));
   for (const json& curDetails : result) {
     CurrencyCode cur(curDetails["currency"].get<std::string_view>());
+    CurrencyCode networkName(curDetails["net_type"].get<std::string_view>());
+    if (cur != networkName) {
+      log::debug("Forgive about {}-{} as net type is not the main one", cur, networkName);
+      continue;
+    }
     if (UpbitPublic::CheckCurrencyCode(cur, excludedCurrencies)) {
       std::string_view walletState = curDetails["wallet_state"].get<std::string_view>();
       CurrencyExchange::Withdraw withdrawStatus = CurrencyExchange::Withdraw::kUnavailable;

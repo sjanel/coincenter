@@ -15,7 +15,6 @@
 #include "monetaryamount.hpp"
 #include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
-#include "timedef.hpp"
 
 namespace cct {
 

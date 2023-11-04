@@ -190,7 +190,7 @@ class TestAPI {
           });
       if (!depositableCryptos.empty()) {
         CurrencyExchangeFlatSet sample;
-        int nbSamples = exchangePrivateOpt->canGenerateDepositAddress() ? 1 : 5;
+        const int nbSamples = exchangePrivateOpt->canGenerateDepositAddress() ? 1 : 5;
         std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), nbSamples,
                             std::mt19937{std::random_device{}()});
 
