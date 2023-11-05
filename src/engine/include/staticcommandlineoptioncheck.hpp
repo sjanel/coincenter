@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <numeric>
-#include <string_view>
 
 #include "commandlineoption.hpp"
 
@@ -12,7 +12,7 @@ namespace cct {
 /// Compile time checker of arguments. Currently, the following checks are made:
 ///  - Uniqueness of short hand flags
 ///  - Uniqueness of long names
-template <class T, size_t... N>
+template <class T, std::size_t... N>
 consteval bool StaticCommandLineOptionsDuplicatesCheck(std::array<T, N>... ar) {
   auto all = ComputeAllCommandLineOptions(ar...);
 
@@ -42,7 +42,7 @@ consteval bool StaticCommandLineOptionsDuplicatesCheck(std::array<T, N>... ar) {
 /// Compile time checker of descriptions. Following checks are made:
 ///  - Should not start nor end with a '\n'
 ///  - Should not start no end with a space
-template <class T, size_t... N>
+template <class T, std::size_t... N>
 consteval bool StaticCommandLineOptionsDescriptionCheck(std::array<T, N>... ar) {
   const auto all = ComputeAllCommandLineOptions(ar...);
   const auto isSpaceOrNewLine = [](char ch) { return ch == '\n' || ch == ' '; };
@@ -60,20 +60,20 @@ consteval bool StaticCommandLineOptionsDescriptionCheck(std::array<T, N>... ar) 
   return true;
 }
 
-template <class T, size_t... N>
+template <class T, std::size_t... N>
 consteval auto ComputeAllCommandLineOptions(std::array<T, N>... ar) {
-  constexpr size_t kNbArrays = sizeof...(ar);
+  constexpr std::size_t kNbArrays = sizeof...(ar);
 
   const T* arr[kNbArrays] = {&ar[0]...};
-  constexpr size_t lengths[kNbArrays] = {ar.size()...};
+  constexpr std::size_t lengths[kNbArrays] = {ar.size()...};
 
-  constexpr size_t kSumLen = std::accumulate(lengths, lengths + kNbArrays, 0);
+  constexpr std::size_t kSumLen = std::accumulate(lengths, lengths + kNbArrays, 0);
 
   std::array<CommandLineOption, kSumLen> all;
 
-  size_t allIdx = 0;
-  for (size_t dataIdx = 0; dataIdx < kNbArrays; ++dataIdx) {
-    for (size_t lenIdx = 0; lenIdx < lengths[dataIdx]; ++lenIdx) {
+  std::size_t allIdx = 0;
+  for (std::size_t dataIdx = 0; dataIdx < kNbArrays; ++dataIdx) {
+    for (std::size_t lenIdx = 0; lenIdx < lengths[dataIdx]; ++lenIdx) {
       all[allIdx] = std::get<0>(arr[dataIdx][lenIdx]);
       ++allIdx;
     }

@@ -9,6 +9,7 @@
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
+#include "curloptions.hpp"
 #include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
@@ -17,7 +18,7 @@ namespace cct {
 
 namespace {
 void AreDoubleEqual(double lhs, double rhs) {
-  static constexpr double kEpsilon = 0.000001;
+  static constexpr double kEpsilon = 0.00000001;
   if (lhs < rhs) {
     EXPECT_LT(rhs - lhs, kEpsilon);
   } else {
@@ -39,43 +40,40 @@ CurlHandle::CurlHandle([[maybe_unused]] const BestURLPicker &bestURLPicker,
     : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-std::string_view CurlHandle::query(std::string_view endpoint, [[maybe_unused]] const CurlOptions &opts) {
+std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, const CurlOptions &opts) {
   json jsonData;
-  if (endpoint.find("currencies") != std::string_view::npos) {
-    // Currencies
-    jsonData["results"] = {"EUR", "USD", "GBP", "KRW"};
-  } else {
-    // Rates
-    std::string_view marketStr(endpoint.begin() + endpoint.find("q=") + 2, endpoint.begin() + endpoint.find("q=") + 9);
-    std::string_view fromCurrency = marketStr.substr(0, 3);
-    std::string_view targetCurrency = marketStr.substr(4);
-    double rate = 0;
-    if (fromCurrency == "EUR") {
-      if (targetCurrency == "KRW") {
-        rate = kKRW;
-      } else if (targetCurrency == "USD") {
-        rate = kUSD;
-      } else if (targetCurrency == "GBP") {
-        rate = kGBP;
-      }
-    } else if (fromCurrency == "KRW") {
-      if (targetCurrency == "EUR") {
-        rate = 1 / kKRW;
-      } else if (targetCurrency == "USD") {
-        rate = kUSD / kKRW;
-      } else if (targetCurrency == "GBP") {
-        rate = kGBP / kKRW;
-      }
-    } else if (fromCurrency == "GBP") {
-      if (targetCurrency == "USD") {
-        rate = kUSD / kGBP;
-      }
-    }
 
-    if (rate != 0) {
-      jsonData["results"][marketStr]["val"] = rate;
+  // Rates
+  std::string_view marketStr = opts.getPostData().get("q");
+  std::string_view fromCurrency = marketStr.substr(0, 3);
+  std::string_view targetCurrency = marketStr.substr(4);
+  double rate = 0;
+  if (fromCurrency == "EUR") {
+    if (targetCurrency == "KRW") {
+      rate = kKRW;
+    } else if (targetCurrency == "USD") {
+      rate = kUSD;
+    } else if (targetCurrency == "GBP") {
+      rate = kGBP;
+    }
+  } else if (fromCurrency == "KRW") {
+    if (targetCurrency == "EUR") {
+      rate = 1 / kKRW;
+    } else if (targetCurrency == "USD") {
+      rate = kUSD / kKRW;
+    } else if (targetCurrency == "GBP") {
+      rate = kGBP / kKRW;
+    }
+  } else if (fromCurrency == "GBP") {
+    if (targetCurrency == "USD") {
+      rate = kUSD / kGBP;
     }
   }
+
+  if (rate != 0) {
+    jsonData["results"][marketStr]["val"] = rate;
+  }
+
   _queryData = jsonData.dump();
   return _queryData;
 }

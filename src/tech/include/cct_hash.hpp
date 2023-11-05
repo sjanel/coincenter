@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <functional>
 #include <tuple>
-#include <utility>
 
 namespace cct {
 constexpr uint64_t HashValue64(uint64_t h1) {

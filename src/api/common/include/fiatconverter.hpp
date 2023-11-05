@@ -3,7 +3,6 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "cachedresult.hpp"
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
