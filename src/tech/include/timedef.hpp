@@ -16,22 +16,22 @@ using TimeInMs = std::chrono::milliseconds;
 using TimeInUs = std::chrono::microseconds;
 
 template <class T>
-T GetTimeDiff(TimePoint t1, TimePoint t2) {
-  return std::chrono::duration_cast<T>(t2 - t1);
+constexpr T GetTimeDiff(TimePoint tp1, TimePoint tp2) {
+  return std::chrono::duration_cast<T>(tp2 - tp1);
 }
 
 template <class T>
-T GetTimeFrom(TimePoint t) {
-  return GetTimeDiff<T>(t, Clock::now());
+constexpr T GetTimeFrom(TimePoint tp) {
+  return GetTimeDiff<T>(tp, Clock::now());
 }
 
-constexpr int64_t TimestampToS(TimePoint t) {
-  return std::chrono::duration_cast<TimeInS>(t.time_since_epoch()).count();
+constexpr int64_t TimestampToS(TimePoint tp) {
+  return std::chrono::duration_cast<TimeInS>(tp.time_since_epoch()).count();
 }
-constexpr int64_t TimestampToMs(TimePoint t) {
-  return std::chrono::duration_cast<TimeInMs>(t.time_since_epoch()).count();
+constexpr int64_t TimestampToMs(TimePoint tp) {
+  return std::chrono::duration_cast<TimeInMs>(tp.time_since_epoch()).count();
 }
-constexpr int64_t TimestampToUs(TimePoint t) {
-  return std::chrono::duration_cast<TimeInUs>(t.time_since_epoch()).count();
+constexpr int64_t TimestampToUs(TimePoint tp) {
+  return std::chrono::duration_cast<TimeInUs>(tp.time_since_epoch()).count();
 }
 }  // namespace cct

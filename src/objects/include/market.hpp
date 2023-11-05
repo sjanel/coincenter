@@ -87,7 +87,7 @@ struct fmt::formatter<cct::Market> {
 namespace std {
 template <>
 struct hash<cct::Market> {
-  size_t operator()(const cct::Market& mk) const {
+  auto operator()(const cct::Market& mk) const {
     return cct::HashCombine(hash<cct::CurrencyCode>()(mk.base()), hash<cct::CurrencyCode>()(mk.quote()));
   }
 };

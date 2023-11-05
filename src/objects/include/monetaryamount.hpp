@@ -310,7 +310,7 @@ class MonetaryAmount {
   }
 
   [[nodiscard]] uint64_t code() const noexcept {
-    return HashCombine(static_cast<size_t>(_amount), static_cast<size_t>(_curWithDecimals.code()));
+    return HashCombine(static_cast<std::size_t>(_amount), static_cast<std::size_t>(_curWithDecimals.code()));
   }
 
   friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma);

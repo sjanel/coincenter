@@ -27,7 +27,8 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
   File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
   json data = thirdPartySecret.readAllJson();
-  if (data.empty() || data["freecurrencyconverter"].get<std::string_view>() == kDefaultCommunityKey) {
+  auto freeConverterIt = data.find("freecurrencyconverter");
+  if (freeConverterIt == data.end() || freeConverterIt->get<std::string_view>() == kDefaultCommunityKey) {
     log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecretFileName);
     log::warn("If you want to use extensively coincenter, please create your own key by going to");
     log::warn("https://free.currencyconverterapi.com/free-api-key and place it in");
@@ -36,7 +37,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
     log::warn("Using default key provided as a demo to the community");
     return string(kDefaultCommunityKey);
   }
-  return data["freecurrencyconverter"];
+  return std::move(freeConverterIt->get_ref<string&>());
 }
 
 constexpr std::string_view kRatesCacheFile = "ratescache.json";
@@ -45,7 +46,7 @@ File GetRatesCacheFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
 }
 
-constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com/api";
+constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com";
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
@@ -79,17 +80,12 @@ void FiatConverter::updateCacheFile() const {
 std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
   string qStr(mk.assetsPairStrUpper('_'));
   CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
-
-  string method = "/v7/convert?";
-  method.append(opts.getPostData().str());
-  opts.getPostData().clear();
-
-  std::string_view dataStr = _curlHandle.query(method, opts);
+  std::string_view dataStr = _curlHandle.query("/api/v7/convert", opts);
   static constexpr bool kAllowExceptions = false;
   json data = json::parse(dataStr, nullptr, kAllowExceptions);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
-    log::error("No JSON data received from fiat currency converter service");
+    log::error("No JSON data received from fiat currency converter service for pair '{}'", mk);
     auto it = _pricesMap.find(mk);
     if (it != _pricesMap.end()) {
       // Update cache time anyway to avoid querying too much the service
