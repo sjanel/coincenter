@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -128,8 +127,8 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;
   const CurrencyCodeSet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
-  for (const json& el : data) {
-    std::string_view coin = el["coin"].get<std::string_view>();
+  for (const json& coinJson : data) {
+    std::string_view coin = coinJson["coin"].get<std::string_view>();
     if (coin.size() > CurrencyCode::kMaxLen) {
       continue;
     }
@@ -138,8 +137,8 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
       log::trace("Discard {} excluded by config", cur.str());
       continue;
     }
-    bool isFiat = el["isLegalMoney"];
-    const auto& networkList = el["networkList"];
+    bool isFiat = coinJson["isLegalMoney"];
+    const auto& networkList = coinJson["networkList"];
     if (networkList.size() > 1) {
       log::debug("Several networks found for {}, considering only default network", cur.str());
     }
@@ -210,46 +209,17 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
   return ret;
 }
 
+namespace {
+constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com";
+}
+
+BinancePublic::GlobalInfosFunc::GlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
+                                                const PermanentCurlOptions& permanentCurlOptions,
+                                                settings::RunMode runMode)
+    : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
+
 json BinancePublic::GlobalInfosFunc::operator()() {
-  string dataStr = _curlHandle.queryRelease("", CurlOptions(HttpRequestType::kGet));
-  // This json is HUGE and contains numerous amounts of information
-  static constexpr std::string_view appBegJson = "application/json\">";
-  std::size_t beg = dataStr.find(appBegJson);
-  if (beg == string::npos) {
-    throw exception("Unexpected answer from {}", _curlHandle.getNextBaseUrl());
-  }
-  string::const_iterator first = dataStr.begin() + beg + appBegJson.size();
-  std::string_view sv(first, dataStr.end());
-  std::size_t reduxPos = sv.find("redux\":");
-  std::size_t ssrStorePos = sv.find("ssrStore\":", reduxPos);
-  static constexpr std::string_view kCryptoFeeStart = "cryptoFee\":";
-  std::size_t cryptoFeePos = sv.find(kCryptoFeeStart, ssrStorePos);
-
-  std::size_t startPos = cryptoFeePos + kCryptoFeeStart.size();
-
-  sv = std::string_view(sv.begin() + startPos, sv.end());
-
-  const std::size_t svSize = sv.size();
-
-  std::size_t endPos = 1;
-  int squareBracketCount = 1;
-  for (; endPos < svSize && squareBracketCount != 0; ++endPos) {
-    switch (sv[endPos]) {
-      case '[':
-        ++squareBracketCount;
-        break;
-      case ']':
-        --squareBracketCount;
-        break;
-      default:
-        break;
-    }
-  }
-  if (squareBracketCount != 0) {
-    throw exception("JSON parsing error from Binance cryptoFee scraper");
-  }
-
-  return json::parse(std::string_view(sv.data(), endPos));
+  return PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll").at("data");
 }
 
 namespace {
@@ -270,13 +240,13 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json
 
 WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
   WithdrawalFeeMap ret;
-  for (const json& el : _globalInfosCache.get()) {
-    std::string_view coinStr = el["coin"].get<std::string_view>();
+  for (const json& coinJson : _globalInfosCache.get()) {
+    std::string_view coinStr = coinJson["coin"].get<std::string_view>();
     if (coinStr.size() > CurrencyCode::kMaxLen) {
       continue;
     }
     CurrencyCode cur(coinStr);
-    MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
+    MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, coinJson["networkList"]);
     log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
     ret.insert_or_assign(cur, withdrawFee);
   }

@@ -93,11 +93,8 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct GlobalInfosFunc {
-    static constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com/en/fee/cryptoFee";
-
     GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
-                    settings::RunMode runMode)
-        : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
+                    settings::RunMode runMode);
 
     json operator()();
 
