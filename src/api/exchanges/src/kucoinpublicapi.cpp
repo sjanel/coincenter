@@ -1,10 +1,10 @@
 #include "kucoinpublicapi.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <memory>
 #include <string_view>
 #include <utility>
 
@@ -269,10 +269,10 @@ void FillOrderBook(Market mk, int depth, bool isAsk, InputIt beg, InputIt end, v
 
 MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Kucoin has a fixed range of authorized values for depth
-  static constexpr int kAuthorizedDepths[] = {20, 100};
+  static constexpr std::array kAuthorizedDepths = {20, 100};
   auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
-  if (lb == std::end(kAuthorizedDepths)) {
-    lb = std::next(std::end(kAuthorizedDepths), -1);
+  if (lb == kAuthorizedDepths.end()) {
+    lb = std::next(kAuthorizedDepths.end(), -1);
     log::warn("Invalid depth {}, default to {}", depth, *lb);
   }
 

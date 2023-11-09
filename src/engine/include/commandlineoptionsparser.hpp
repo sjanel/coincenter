@@ -5,6 +5,7 @@
 #include <iterator>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <type_traits>
@@ -44,9 +45,8 @@ class CommandLineOptionsParser {
     append(init);
   }
 
-  template <unsigned N>
-  CommandLineOptionsParser& append(const CommandLineOptionWithValue (&opts)[N]) {
-    const auto insertedIt = _opts.insert(_opts.end(), std::begin(opts), std::end(opts));
+  CommandLineOptionsParser& append(std::ranges::input_range auto&& opts) {
+    const auto insertedIt = _opts.insert(_opts.end(), std::ranges::begin(opts), std::ranges::end(opts));
     const auto sortByFirst = [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; };
     std::sort(insertedIt, _opts.end(), sortByFirst);
     std::inplace_merge(_opts.begin(), insertedIt, _opts.end(), sortByFirst);
