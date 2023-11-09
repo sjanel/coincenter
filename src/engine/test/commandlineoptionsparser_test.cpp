@@ -245,9 +245,9 @@ using ExtParserType = CommandLineOptionsParser<OptsExt>;
 using ExtCommandLineOptionType = AllowedCommandLineOptionsBase<OptsExt>::CommandLineOptionType;
 using ExtCommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptsExt>::CommandLineOptionWithValue;
 
-static constexpr ExtCommandLineOptionWithValue kAdditionalOpts[] = {
-    {{{"Monitoring", 3}, "--optExt", "", "extension value string"}, &OptsExt::sv2},
-    {{{"Monitoring", 3}, "--intExt", "", "extension value int"}, &OptsExt::int3Opt},
+static constexpr std::array kAdditionalOpts = {
+    ExtCommandLineOptionWithValue{{{"Monitoring", 3}, "--optExt", "", "extension value string"}, &OptsExt::sv2},
+    ExtCommandLineOptionWithValue{{{"Monitoring", 3}, "--intExt", "", "extension value int"}, &OptsExt::int3Opt},
 };
 
 class CommandLineOptionsParserExtTest : public ::testing::Test {
@@ -264,8 +264,7 @@ class CommandLineOptionsParserExtTest : public ::testing::Test {
 };
 
 TEST_F(CommandLineOptionsParserExtTest, AppendOtherOptions) {
-  static_assert(StaticCommandLineOptionsDuplicatesCheck(std::to_array(MainOptions<OptsExt>::value),
-                                                        std::to_array(kAdditionalOpts)),
+  static_assert(StaticCommandLineOptionsDuplicatesCheck(std::to_array(MainOptions<OptsExt>::value), kAdditionalOpts),
                 "It should detect no duplicated option names");
   EXPECT_EQ(createOptions({"--optSV1", "Hey Listen!"}).sv, std::string_view("Hey Listen!"));
   EXPECT_EQ(createOptions({"--optExt", "I am your father"}).sv2, std::string_view("I am your father"));

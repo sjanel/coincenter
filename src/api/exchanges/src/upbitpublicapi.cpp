@@ -280,8 +280,8 @@ MonetaryAmount UpbitPublic::SanitizeVolume(MonetaryAmount vol, MonetaryAmount pr
     /// Value found in this page:
     /// https://cryptoexchangenews.net/2021/02/upbit-notes-information-on-changing-the-minimum-order-amount-at-krw-market-to-stabilize-the/
     /// confirmed with some tests. However, it could change in the future.
-    static constexpr std::array<MonetaryAmount, 2> kMinOrderAmounts{
-        {MonetaryAmount(5000, "KRW"), MonetaryAmount(5, "BTC", 4)}};  // 5000 KRW or 0.0005 BTC is min
+    static constexpr std::array kMinOrderAmounts = {MonetaryAmount(5000, "KRW"),
+                                                    MonetaryAmount(5, "BTC", 4)};  // 5000 KRW or 0.0005 BTC is min
     for (MonetaryAmount minOrderAmount : kMinOrderAmounts) {
       if (vol.currencyCode() == minOrderAmount.currencyCode()) {
         if (vol < minOrderAmount) {

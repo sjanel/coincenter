@@ -152,7 +152,7 @@ void MetricsExporter::exportLastTradesMetrics(Market mk, const LastTradesPerExch
 
 void MetricsExporter::createSummariesAndHistograms() {
   for (const auto &[k, v] : CurlMetrics::kRequestDurationKeys) {
-    static constexpr double kRequestDurationBoundariesMs[] = {5, 10, 20, 50, 100, 200, 500, 1000};
+    static constexpr std::array kRequestDurationBoundariesMs = {5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0};
     _pMetricsGateway->createHistogram(v, kRequestDurationBoundariesMs);
   }
 }

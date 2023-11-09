@@ -1,6 +1,7 @@
 #include "binancepublicapi.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -464,10 +465,10 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
 
 MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Binance has a fixed range of authorized values for depth
-  static constexpr int kAuthorizedDepths[] = {5, 10, 20, 50, 100, 500, 1000, 5000};
+  static constexpr std::array kAuthorizedDepths = {5, 10, 20, 50, 100, 500, 1000, 5000};
   auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
-  if (lb == std::end(kAuthorizedDepths)) {
-    lb = std::next(std::end(kAuthorizedDepths), -1);
+  if (lb == kAuthorizedDepths.end()) {
+    lb = std::next(kAuthorizedDepths.end(), -1);
     log::error("Invalid depth {}, default to {}", depth, *lb);
   }
   CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};

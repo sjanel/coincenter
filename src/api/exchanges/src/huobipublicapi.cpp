@@ -1,6 +1,7 @@
 #include "huobipublicapi.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string_view>
@@ -345,9 +346,9 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Huobi has a fixed range of authorized values for depth
   CurlPostData postData{{"symbol", mk.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
-    static constexpr int kAuthorizedDepths[] = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
+    static constexpr std::array kAuthorizedDepths = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
     auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
-    if (lb == std::end(kAuthorizedDepths)) {
+    if (lb == kAuthorizedDepths.end()) {
       log::warn("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else if (*lb != kHuobiStandardOrderBookDefaultDepth) {
       postData.append("depth", *lb);
