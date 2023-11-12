@@ -12,6 +12,9 @@
 namespace cct {
 
 bool ExchangeName::IsValid(std::string_view str) {
+  if (str.size() < kMinExchangeNameLength) {
+    return false;
+  }
   return std::ranges::any_of(kSupportedExchanges, [lowerStr = ToLower(str)](std::string_view ex) {
     return lowerStr.starts_with(ex) && (lowerStr.size() == ex.size() || lowerStr[ex.size()] == '_');
   });

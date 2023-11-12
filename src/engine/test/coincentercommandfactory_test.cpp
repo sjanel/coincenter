@@ -33,6 +33,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandInvalidInputTest) {
 TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandMarketTest) {
   EXPECT_EQ(CoincenterCommandFactory::CreateMarketCommand(inputStr("eth-usdt")),
             CoincenterCommand(CoincenterCommandType::kMarkets).setCur1("ETH").setCur2("USDT"));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandSingleCurTest) {
@@ -40,17 +41,20 @@ TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandSingleCurTest) {
             CoincenterCommand(CoincenterCommandType::kMarkets)
                 .setCur1("XLM")
                 .setExchangeNames(ExchangeNames({ExchangeName("kraken"), ExchangeName("binance", "user1")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateOrderCommandAll) {
   CoincenterCommandType type = CoincenterCommandType::kOrdersOpened;
   EXPECT_EQ(commandFactory.createOrderCommand(type, inputStr("")), CoincenterCommand(type));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateOrderCommandSingleCur) {
   CoincenterCommandType type = CoincenterCommandType::kOrdersOpened;
   EXPECT_EQ(commandFactory.createOrderCommand(type, inputStr("AVAX")),
             CoincenterCommand(type).setOrdersConstraints(OrdersConstraints("AVAX")));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateOrderCommandMarketWithExchange) {
@@ -59,6 +63,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateOrderCommandMarketWithExchange) {
             CoincenterCommand(type)
                 .setOrdersConstraints(OrdersConstraints("AVAX", "BTC"))
                 .setExchangeNames(ExchangeNames({ExchangeName("huobi")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateTradeInvalidNegativeAmount) {
@@ -68,8 +73,10 @@ TEST_F(CoincenterCommandFactoryTest, CreateTradeInvalidNegativeAmount) {
 
 TEST_F(CoincenterCommandFactoryTest, CreateTradeInvalidSeveralTrades) {
   CoincenterCommandType type = CoincenterCommandType::kTrade;
-  cmdLineOptions.buy = "100%USDT";
-  EXPECT_THROW(commandFactory.createTradeCommand(type, inputStr("13XRP-BTC,binance_user2")), invalid_argument);
+  cmdLineOptions.buy = "100%USDT";  // to set isSmartTrade to true, such that currency will not be parsed
+  commandFactory.createTradeCommand(type, inputStr("13XRP-BTC,binance_user2"));
+
+  EXPECT_THROW(optionParser.checkEndParsing(), invalid_argument);
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateTradeAbsolute) {
@@ -81,6 +88,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateTradeAbsolute) {
                 .setPercentageAmount(false)
                 .setCur1("BTC")
                 .setExchangeNames(ExchangeNames({ExchangeName("binance", "user2")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateTradePercentage) {
@@ -92,6 +100,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateTradePercentage) {
                 .setPercentageAmount(true)
                 .setCur1("USDT")
                 .setExchangeNames(ExchangeNames({ExchangeName("huobi"), ExchangeName("upbit", "user1")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateBuyCommand) {
@@ -101,6 +110,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateBuyCommand) {
             CoincenterCommand(type)
                 .setTradeOptions(cmdLineOptions.computeTradeOptions())
                 .setAmount(MonetaryAmount("804XLM")));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateSellCommand) {
@@ -111,6 +121,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateSellCommand) {
                 .setTradeOptions(cmdLineOptions.computeTradeOptions())
                 .setAmount(MonetaryAmount("0.76BTC"))
                 .setExchangeNames(ExchangeNames({ExchangeName("bithumb")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateSellWithPreviousInvalidCommand) {
@@ -127,6 +138,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateSellAllCommand) {
                 .setTradeOptions(cmdLineOptions.computeTradeOptions())
                 .setPercentageAmount(true)
                 .setAmount(MonetaryAmount(100, "DOGE")));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateWithdrawInvalidNoPrevious) {
@@ -147,6 +159,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateWithdrawAbsoluteValid) {
                 .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions())
                 .setAmount(MonetaryAmount("5000XRP"))
                 .setExchangeNames(ExchangeNames({ExchangeName("binance", "user1"), ExchangeName("kucoin", "user2")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateWithdrawPercentageValid) {
@@ -156,6 +169,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateWithdrawPercentageValid) {
                 .setAmount(MonetaryAmount("43.25LTC"))
                 .setPercentageAmount(true)
                 .setExchangeNames(ExchangeNames({ExchangeName("bithumb"), ExchangeName("kraken")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateWithdrawAllNoCurrencyInvalid) {
@@ -177,6 +191,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateWithdrawAllValid) {
                 .setAmount(MonetaryAmount(100, "SOL"))
                 .setPercentageAmount(true)
                 .setExchangeNames(ExchangeNames({ExchangeName("upbit"), ExchangeName("kraken")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 class CoincenterCommandFactoryWithPreviousTest : public ::testing::Test {
@@ -197,6 +212,7 @@ TEST_F(CoincenterCommandFactoryWithPreviousTest, CreateSellWithPreviousCommand) 
   cmdLineOptions.sell = "whatever";
   EXPECT_EQ(commandFactory.createTradeCommand(type, inputStr("")),
             CoincenterCommand(type).setTradeOptions(cmdLineOptions.computeTradeOptions()));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryWithPreviousTest, CreateWithdrawInvalidNoExchange) {
@@ -212,6 +228,7 @@ TEST_F(CoincenterCommandFactoryWithPreviousTest, CreateWithdrawWithPreviousValid
             CoincenterCommand(CoincenterCommandType::kWithdrawApply)
                 .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions())
                 .setExchangeNames(ExchangeNames({ExchangeName("kraken", "user1")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 }  // namespace cct

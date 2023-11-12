@@ -39,6 +39,7 @@ class CommandLineOptionsParser {
  public:
   using CommandLineOptionType = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionType;
   using CommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptValueType>::CommandLineOptionWithValue;
+  using value_type = OptValueType;
 
   template <unsigned N>
   explicit CommandLineOptionsParser(const CommandLineOptionWithValue (&init)[N]) {

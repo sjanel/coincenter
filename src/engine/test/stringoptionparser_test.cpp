@@ -193,4 +193,21 @@ TEST(StringOptionParserTest, SeveralAmountCurrencyExchangesFlow) {
   EXPECT_NO_THROW(parser.checkEndParsing());
 }
 
+TEST(StringOptionParserTest, ExchangesNotLast) {
+  StringOptionParser parser("jst,34.78966544ETH,kucoin_user1-binance-kraken,krw");
+
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode("JST"));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kMandatory),
+            std::make_pair(MonetaryAmount("34.78966544ETH"), StringOptionParser::AmountType::kAbsolute));
+  EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
+            std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
+
+  EXPECT_EQ(parser.parseExchanges('-', ','),
+            ExchangeNames({ExchangeName("kucoin", "user1"), ExchangeName("binance"), ExchangeName("kraken")}));
+  EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("KRW"));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
 }  // namespace cct
