@@ -148,7 +148,7 @@ std::pair<MonetaryAmount, StringOptionParser::AmountType> StringOptionParser::pa
 vector<string> StringOptionParser::getCSVValues() {
   vector<string> ret;
   if (!_opt.empty()) {
-    do {
+    while (true) {
       auto nextCommaPos = _opt.find(',', _pos);
       if (nextCommaPos == std::string_view::npos) {
         nextCommaPos = _opt.size();
@@ -160,27 +160,43 @@ vector<string> StringOptionParser::getCSVValues() {
         break;
       }
       _pos = nextCommaPos + 1;
-    } while (true);
+    }
   }
   return ret;
 }
 
-ExchangeNames StringOptionParser::parseExchanges(char sep) {
-  std::string_view str(_opt.begin() + _pos, _opt.end());
+ExchangeNames StringOptionParser::parseExchanges(char exchangesSep, char endExchangesSep) {
+  if (exchangesSep == endExchangesSep) {
+    throw invalid_argument("Exchanges separator cannot be the same as end exchanges separator");
+  }
+  auto endPos = _opt.find(endExchangesSep, _pos);
+  if (endPos == std::string_view::npos) {
+    endPos = _opt.size();
+  }
+  std::string_view str(_opt.begin() + _pos, _opt.begin() + endPos);
   ExchangeNames exchanges;
   if (!str.empty()) {
-    std::size_t first;
-    std::size_t last;
-    for (first = 0, last = str.find(sep); last != std::string_view::npos; last = str.find(sep, last + 1)) {
+    std::size_t first = 0;
+    std::size_t last = str.find(exchangesSep);
+    for (; last != std::string_view::npos; last = str.find(exchangesSep, last + 1)) {
       std::string_view exchangeNameStr(str.begin() + first, str.begin() + last);
+      if (!ExchangeName::IsValid(exchangeNameStr)) {
+        return exchanges;
+      }
       exchanges.emplace_back(exchangeNameStr);
       first = last + 1;
       _pos += exchangeNameStr.size() + 1U;
     }
-    // Add the last one as well
+    // Add the last one as well, if it is an exchange name
     std::string_view exchangeNameStr(str.begin() + first, str.end());
+    if (!ExchangeName::IsValid(exchangeNameStr)) {
+      return exchanges;
+    }
     exchanges.emplace_back(exchangeNameStr);
     _pos += exchangeNameStr.size();
+    if (_pos < _opt.size() && _opt[_pos] == endExchangesSep) {
+      ++_pos;
+    }
   }
   return exchanges;
 }

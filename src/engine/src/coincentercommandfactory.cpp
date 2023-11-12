@@ -43,10 +43,6 @@ CoincenterCommand CoincenterCommandFactory::createOrderCommand(CoincenterCommand
 
 CoincenterCommand CoincenterCommandFactory::createTradeCommand(CoincenterCommandType type,
                                                                StringOptionParser &optionParser) {
-  if (!_cmdLineOptions.tradeStrategy.empty() && !_cmdLineOptions.tradePrice.empty()) {
-    throw invalid_argument("Trade price and trade strategy cannot be set together");
-  }
-
   CoincenterCommand command(type);
   command.setTradeOptions(_cmdLineOptions.computeTradeOptions());
 

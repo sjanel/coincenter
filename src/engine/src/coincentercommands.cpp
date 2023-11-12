@@ -1,20 +1,14 @@
 #include "coincentercommands.hpp"
 
 #include <chrono>
-#include <filesystem>
-#include <iostream>
 #include <span>
 #include <string_view>
 #include <utility>
 
-#include "cct_vector.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandfactory.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
-#include "coincenteroptionsdef.hpp"
-#include "commandlineoptionsparser.hpp"
-#include "commandlineoptionsparseriterator.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
 #include "stringoptionparser.hpp"
@@ -22,50 +16,6 @@
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
-
-vector<CoincenterCmdLineOptions> CoincenterCommands::ParseOptions(int argc, const char *argv[]) {
-  using OptValueType = CoincenterCmdLineOptions;
-
-  auto parser = CommandLineOptionsParser<OptValueType>(CoincenterAllowedOptions<OptValueType>::value);
-
-  auto programName = std::filesystem::path(argv[0]).filename().string();
-
-  vector<CoincenterCmdLineOptions> parsedOptions;
-
-  std::span<const char *> allArguments(argv, argc);
-  allArguments = allArguments.last(allArguments.size() - 1U);  // skip first argument which is program name
-
-  CommandLineOptionsParserIterator parserIt(parser, allArguments);
-
-  CoincenterCmdLineOptions globalOptions;
-
-  // Support for command line multiple commands. Only full name flags are supported for multi command line commands.
-  while (parserIt.hasNext()) {
-    std::span<const char *> groupedArguments = parserIt.next();
-
-    CoincenterCmdLineOptions groupParsedOptions = parser.parse(groupedArguments);
-    globalOptions.mergeGlobalWith(groupParsedOptions);
-
-    if (groupedArguments.empty()) {
-      groupParsedOptions.help = true;
-    }
-    if (groupParsedOptions.help) {
-      parser.displayHelp(programName, std::cout);
-    } else if (groupParsedOptions.version) {
-      CoincenterCmdLineOptions::PrintVersion(programName, std::cout);
-    } else {
-      // Only store commands if they are not 'help' nor 'version'
-      parsedOptions.push_back(std::move(groupParsedOptions));
-    }
-  }
-
-  // Apply global options to all parsed options containing commands
-  for (CoincenterCmdLineOptions &groupParsedOptions : parsedOptions) {
-    groupParsedOptions.mergeGlobalWith(globalOptions);
-  }
-
-  return parsedOptions;
-}
 
 CoincenterCommands::CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan) {
   _commands.reserve(cmdLineOptionsSpan.size());

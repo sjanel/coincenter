@@ -17,8 +17,6 @@ class CoincenterCommands {
   // Builds a CoincenterCommands and add commands from given command line options span.
   explicit CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan);
 
-  static vector<CoincenterCmdLineOptions> ParseOptions(int argc, const char *argv[]);
-
   /// @brief Set this CoincenterCommands from given command line options.
   void addOption(const CoincenterCmdLineOptions &cmdLineOptions, const CoincenterCommand *pPreviousCommand);
 
