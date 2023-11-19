@@ -6,6 +6,7 @@
 
 #include "cct_exception.hpp"
 #include "coincentercommand.hpp"
+#include "coincentercommandtype.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"
 

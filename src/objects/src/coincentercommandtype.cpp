@@ -9,6 +9,8 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
   switch (type) {
     case CoincenterCommandType::kHealthCheck:
       return "HealthCheck";
+    case CoincenterCommandType::kCurrencies:
+      return "Currencies";
     case CoincenterCommandType::kMarkets:
       return "Markets";
     case CoincenterCommandType::kConversionPath:
@@ -56,6 +58,9 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
 CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str) {
   if (str == "HealthCheck") {
     return CoincenterCommandType::kHealthCheck;
+  }
+  if (str == "Currencies") {
+    return CoincenterCommandType::kCurrencies;
   }
   if (str == "Markets") {
     return CoincenterCommandType::kMarkets;

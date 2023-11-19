@@ -2,9 +2,12 @@
 
 #include <gtest/gtest.h>
 
+#include <string_view>
+
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
+#include "coincenteroptions.hpp"
 #include "currencycode.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"

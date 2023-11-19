@@ -1,5 +1,7 @@
 #pragma once
 
+#include <compare>
+#include <concepts>
 #include <cstdint>
 #include <ios>
 #include <ostream>
@@ -21,13 +23,13 @@ namespace cct {
 /// Simple, lightweight and fast table with dynamic number of columns.
 /// No checks are made about the number of columns for each Row, it's up to client's responsibility to make sure they
 /// match.
+/// Multi line rows are *not* supported.
 class SimpleTable {
  public:
   class Row;
 
   /// Cell in a SimpleTable.
-  /// Can currently hold only 3 types of values: a string, a string_view or an integral type.
-  /// TODO: add support of 'double' if needed
+  /// Can currently hold only 4 types of values: a string, a string_view, a int64_t and a bool.
   class Cell {
    public:
     using IntegralType = int64_t;
@@ -39,7 +41,7 @@ class SimpleTable {
 #else
     using string_type = string;
 #endif
-    using value_type = std::variant<string_type, std::string_view, IntegralType>;
+    using value_type = std::variant<string_type, std::string_view, IntegralType, bool>;
     using size_type = uint32_t;
 
     explicit Cell(std::string_view v) : _data(v) {}
@@ -54,7 +56,7 @@ class SimpleTable {
     explicit Cell(string_type &&v) : _data(std::move(v)) {}
 #endif
 
-    explicit Cell(IntegralType v) : _data(v) {}
+    explicit Cell(std::integral auto v) : _data(v) {}
 
     size_type size() const noexcept;
 
@@ -62,9 +64,9 @@ class SimpleTable {
 
     using trivially_relocatable = is_trivially_relocatable<string_type>::type;
 
-    bool operator==(const Cell &) const = default;
+    bool operator==(const Cell &) const noexcept = default;
 
-    auto operator<=>(const Cell &) const = default;
+    std::strong_ordering operator<=>(const Cell &) const noexcept = default;
 
    private:
     friend class Row;
@@ -119,9 +121,9 @@ class SimpleTable {
 
     using trivially_relocatable = is_trivially_relocatable<vector<value_type>>::type;
 
-    bool operator==(const Row &) const = default;
+    bool operator==(const Row &) const noexcept = default;
 
-    auto operator<=>(const Row &) const = default;
+    std::strong_ordering operator<=>(const Row &) const noexcept = default;
 
    private:
     friend class SimpleTable;

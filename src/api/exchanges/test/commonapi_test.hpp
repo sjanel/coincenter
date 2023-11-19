@@ -72,8 +72,7 @@ class TestAPI {
     currencies =
         exchangePrivateOpt ? exchangePrivateOpt->queryTradableCurrencies() : exchangePublic.queryTradableCurrencies();
     ASSERT_FALSE(currencies.empty());
-    EXPECT_TRUE(
-        std::ranges::none_of(currencies, [](const CurrencyExchange &c) { return c.standardCode().str().empty(); }));
+    EXPECT_TRUE(std::ranges::none_of(currencies, [](const auto &c) { return c.standardCode().str().empty(); }));
 
     // Uncomment below code to print updated Upbit withdrawal fees for static data of withdrawal fees of public API
     // if (exchangePrivateOpt) {
@@ -159,9 +158,8 @@ class TestAPI {
           ASSERT_NE(withdrawalFeeIt, withdrawalFees.end());
           EXPECT_GE(withdrawalFeeIt->second, MonetaryAmount(0, withdrawalFeeIt->second.currencyCode()));
           break;
-        } else {
-          log::warn("{} withdrawal fee is not known (unreliable source), trying another one", cur);
         }
+        log::warn("{} withdrawal fee is not known (unreliable source), trying another one", cur);
       }
     }
   }
@@ -204,9 +202,8 @@ class TestAPI {
           } catch (const exception &) {
             if (exchangePrivateOpt->canGenerateDepositAddress()) {
               throw;
-            } else {
-              log::info("Wallet for {} is not generated, taking next one", cur);
             }
+            log::info("Wallet for {} is not generated, taking next one", cur);
           }
         }
       }

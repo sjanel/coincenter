@@ -17,7 +17,8 @@ Main features:
 
 **Market Data**
 
-- Market
+- Currencies
+- Markets
 - Ticker
 - Orderbook
 - Traded volume
@@ -64,8 +65,10 @@ Main features:
   - [Parallel requests](#parallel-requests)
   - [Public requests](#public-requests)
     - [Health check](#health-check)
-    - [Markets](#markets)
+    - [Currencies](#currencies)
       - [Examples](#examples)
+    - [Markets](#markets)
+      - [Examples](#examples-1)
     - [Ticker information](#ticker-information)
     - [Order books](#order-books)
     - [Last 24h traded volume](#last-24h-traded-volume)
@@ -98,9 +101,9 @@ Main features:
       - [Examples with explanation](#examples-with-explanation-1)
     - [Deposit information](#deposit-information)
     - [Recent deposits](#recent-deposits)
-      - [Examples](#examples-1)
-    - [Recent withdraws](#recent-withdraws)
       - [Examples](#examples-2)
+    - [Recent withdraws](#recent-withdraws)
+      - [Examples](#examples-3)
     - [Opened orders](#opened-orders)
     - [Cancel opened orders](#cancel-opened-orders)
     - [Withdraw coin](#withdraw-coin)
@@ -243,6 +246,24 @@ You will have a nice boost of speed when you query the same thing from multiple 
 
 `health-check` pings the exchanges and checks if there are up and running.
 It is the first thing that is checked in exchanges unit tests, hence if the health check fails for an exchange, the tests are skipped for the exchange.
+
+### Currencies
+
+`currencies` command aggregates currency codes for given list of exchanges. It also tells for which exchanges it can be deposited to, withdrawn from, and if it is a fiat money.
+
+#### Examples
+
+List all currencies for all supported exchanges
+
+```
+coincenter currencies
+```
+
+List all currencies for kucoin and upbit
+
+```
+coincenter currencies kucoin,upbit
+```
 
 ### Markets
 

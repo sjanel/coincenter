@@ -33,6 +33,9 @@ class Coincenter {
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
+  /// Retrieve all tradable currencies for given selected public exchanges, or all if empty.
+  CurrenciesPerExchange getCurrenciesPerExchange(ExchangeNameSpan exchangeNames);
+
   /// Retrieve the markets for given selected public exchanges, or all if empty.
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 

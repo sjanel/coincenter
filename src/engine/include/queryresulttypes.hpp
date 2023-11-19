@@ -10,6 +10,7 @@
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "marketorderbook.hpp"
@@ -42,6 +43,8 @@ using TradedAmountsVectorWithFinalAmountPerExchange =
 using ExchangeHealthCheckStatus = FixedCapacityVector<ExchangeWith<bool>, kNbSupportedExchanges>;
 
 using ExchangeTickerMaps = FixedCapacityVector<ExchangeWith<MarketOrderBookMap>, kNbSupportedExchanges>;
+
+using CurrenciesPerExchange = FixedCapacityVector<ExchangeWith<CurrencyExchangeFlatSet>, kNbSupportedExchanges>;
 
 using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 

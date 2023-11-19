@@ -51,6 +51,11 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     _commands.emplace_back(CoincenterCommandType::kHealthCheck).setExchangeNames(optionParser.parseExchanges());
   }
 
+  if (cmdLineOptions.currencies) {
+    optionParser = StringOptionParser(*cmdLineOptions.currencies);
+    _commands.emplace_back(CoincenterCommandType::kCurrencies).setExchangeNames(optionParser.parseExchanges());
+  }
+
   if (!cmdLineOptions.markets.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.markets);
     _commands.push_back(CoincenterCommandFactory::CreateMarketCommand(optionParser));

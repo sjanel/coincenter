@@ -53,9 +53,8 @@ class CurrencyExchangeFlatSet {
 
   const_iterator find(CurrencyCode standardCode) const {
     // This is possible as CurrencyExchanges are ordered by standard code
-    const_iterator lbIt =
-        std::lower_bound(_set.begin(), _set.end(), standardCode,
-                         [](const CurrencyExchange &lhs, CurrencyCode c) { return lhs.standardCode() < c; });
+    const_iterator lbIt = std::ranges::lower_bound(
+        _set, standardCode, [](const CurrencyExchange &lhs, CurrencyCode c) { return lhs.standardCode() < c; });
     return lbIt == end() || standardCode < lbIt->standardCode() ? end() : lbIt;
   }
 

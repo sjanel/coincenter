@@ -6,6 +6,7 @@
 namespace cct {
 enum class CoincenterCommandType : int8_t {
   kHealthCheck,
+  kCurrencies,
   kMarkets,
   kConversionPath,
   kLastPrice,

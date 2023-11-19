@@ -82,6 +82,11 @@ TransferableCommandResultVector Coincenter::processCommand(
       _queryResultPrinter.printHealthCheck(healthCheckStatus);
       break;
     }
+    case CoincenterCommandType::kCurrencies: {
+      const auto currenciesPerExchange = getCurrenciesPerExchange(cmd.exchangeNames());
+      _queryResultPrinter.printCurrencies(currenciesPerExchange);
+      break;
+    }
     case CoincenterCommandType::kMarkets: {
       const auto marketsPerExchange = getMarketsPerExchange(cmd.cur1(), cmd.cur2(), cmd.exchangeNames());
       _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
@@ -290,6 +295,10 @@ TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {
   return _exchangesOrchestrator.getConversionPaths(mk, exchangeNames);
+}
+
+CurrenciesPerExchange Coincenter::getCurrenciesPerExchange(ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getCurrenciesPerExchange(exchangeNames);
 }
 
 MarketsPerExchange Coincenter::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,

@@ -5,6 +5,8 @@
 
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommands.hpp"
+#include "coincenteroptions.hpp"
+#include "coincenteroptionsdef.hpp"
 #include "commandlineoptionsparser.hpp"
 #include "parseoptions.hpp"
 #include "processcommandsfromcli.hpp"

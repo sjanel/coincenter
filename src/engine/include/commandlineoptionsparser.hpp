@@ -66,10 +66,12 @@ class CommandLineOptionsParser {
       std::string_view argStr(groupedArguments[argPos]);
       if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
         const auto [possibleOptionIdx, minDistance] = minLevenshteinDistanceOpt(argStr);
+        auto existingOptionStr = _opts[possibleOptionIdx].first.fullName();
 
-        if (minDistance <= 2) {
+        if (minDistance <= 2 ||
+            minDistance < static_cast<decltype(minDistance)>(std::min(argStr.size(), existingOptionStr.size()) / 2)) {
           throw invalid_argument("Unrecognized command-line option '{}' - did you mean '{}'?", argStr,
-                                 _opts[possibleOptionIdx].first.fullName());
+                                 existingOptionStr);
         }
         throw invalid_argument("Unrecognized command-line option '{}'", argStr);
       }
