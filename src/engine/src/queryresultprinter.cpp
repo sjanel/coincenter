@@ -16,6 +16,8 @@
 #include "cct_string.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
+#include "currencycodevector.hpp"
+#include "currencyexchange.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
@@ -66,6 +68,34 @@ json HealthCheckJson(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
   }
 
   return ToJson(CoincenterCommandType::kHealthCheck, std::move(in), std::move(out));
+}
+
+json CurrenciesJson(const CurrenciesPerExchange &currenciesPerExchange) {
+  json in;
+  json inOpt;
+  in.emplace("opt", std::move(inOpt));
+
+  json out = json::object();
+  for (const auto &[e, currencies] : currenciesPerExchange) {
+    json currenciesForExchange;
+    for (const CurrencyExchange &cur : currencies) {
+      json curExchangeJson;
+
+      curExchangeJson.emplace("code", cur.standardCode().str());
+      curExchangeJson.emplace("exchangeCode", cur.exchangeCode().str());
+      curExchangeJson.emplace("altCode", cur.altCode().str());
+
+      curExchangeJson.emplace("canDeposit", cur.canDeposit());
+      curExchangeJson.emplace("canWithdraw", cur.canWithdraw());
+
+      curExchangeJson.emplace("isFiat", cur.isFiat());
+
+      currenciesForExchange.emplace_back(std::move(curExchangeJson));
+    }
+    out.emplace(e->name(), std::move(currenciesForExchange));
+  }
+
+  return ToJson(CoincenterCommandType::kCurrencies, std::move(in), std::move(out));
 }
 
 json MarketsJson(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) {
@@ -638,6 +668,93 @@ void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healt
       break;
   }
   logActivity(CoincenterCommandType::kHealthCheck, jsonData);
+}
+
+namespace {
+void AppendWithExchangeName(string &str, std::string_view value, std::string_view exchangeName) {
+  if (!str.empty()) {
+    str.push_back(',');
+  }
+  str.append(value);
+  str.push_back('[');
+  str.append(exchangeName);
+  str.push_back(']');
+}
+
+void Append(string &str, std::string_view exchangeName) {
+  if (!str.empty()) {
+    str.push_back(',');
+  }
+  str.append(exchangeName);
+}
+}  // namespace
+
+void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currenciesPerExchange) const {
+  json jsonData = CurrenciesJson(currenciesPerExchange);
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable simpleTable("Currency", "Supported exchanges", "Exchange code(s)", "Alt code(s)", "Can deposit to",
+                              "Can withdraw from", "Is fiat");
+      // Compute all currencies for all exchanges
+      CurrencyCodeVector allCurrencyCodes;
+
+      for (const auto &[_, currencies] : currenciesPerExchange) {
+        allCurrencyCodes.insert(allCurrencyCodes.end(), currencies.begin(), currencies.end());
+      }
+      std::ranges::sort(allCurrencyCodes);
+      const auto [eraseIt1, eraseIt2] = std::ranges::unique(allCurrencyCodes);
+      allCurrencyCodes.erase(eraseIt1, eraseIt2);
+
+      simpleTable.reserve(1U + allCurrencyCodes.size());
+
+      for (CurrencyCode cur : allCurrencyCodes) {
+        string supportedExchanges;
+        string exchangeCodes;
+        string altCodes;
+        string canDeposit;
+        string canWithdraw;
+        std::optional<bool> isFiat;
+        for (const auto &[exchange, currencies] : currenciesPerExchange) {
+          auto it = currencies.find(cur);
+          if (it != currencies.end()) {
+            // This exchange has this currency
+            Append(supportedExchanges, exchange->name());
+            if (cur != it->exchangeCode()) {
+              AppendWithExchangeName(exchangeCodes, it->exchangeCode().str(), exchange->name());
+            }
+            if (cur != it->altCode()) {
+              AppendWithExchangeName(altCodes, it->altCode().str(), exchange->name());
+            }
+            if (it->canDeposit()) {
+              Append(canDeposit, exchange->name());
+            }
+            if (it->canWithdraw()) {
+              Append(canWithdraw, exchange->name());
+            }
+            if (!isFiat) {
+              isFiat = it->isFiat();
+            } else if (*isFiat != it->isFiat()) {
+              log::error("Currency {} is fiat for an exchange and not fiat for another ('{}'), consider not fiat", cur,
+                         exchange->name());
+              isFiat = false;
+            }
+          }
+        }
+
+        simpleTable.emplace_back(cur.str(), std::move(supportedExchanges), std::move(exchangeCodes),
+                                 std::move(altCodes), std::move(canDeposit), std::move(canWithdraw), isFiat.value());
+      }
+
+      printTable(simpleTable);
+      break;
+    }
+    case ApiOutputType::kJson:
+      printJson(jsonData);
+      break;
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+  logActivity(CoincenterCommandType::kCurrencies, jsonData);
 }
 
 void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,

@@ -44,6 +44,8 @@ class ExchangesOrchestrator {
 
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
+  CurrenciesPerExchange getCurrenciesPerExchange(ExchangeNameSpan exchangeNames);
+
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 
   UniquePublicSelectedExchanges getExchangesTradingCurrency(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames,

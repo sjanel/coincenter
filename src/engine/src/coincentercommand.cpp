@@ -19,6 +19,8 @@ bool CoincenterCommand::isPublic() const {
   switch (_type) {
     case CoincenterCommandType::kHealthCheck:  // NOLINT(bugprone-branch-clone)
       [[fallthrough]];
+    case CoincenterCommandType::kCurrencies:
+      [[fallthrough]];
     case CoincenterCommandType::kMarkets:
       [[fallthrough]];
     case CoincenterCommandType::kConversionPath:

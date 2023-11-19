@@ -8,6 +8,7 @@
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <variant>
 
 #include "mathhelpers.hpp"
 #include "unreachable.hpp"
@@ -20,6 +21,9 @@ const SimpleTable::Row SimpleTable::Row::kDivider;
 
 namespace {
 constexpr char kColumnSep = '|';
+
+constexpr std::string_view kBoolValueTrue = "yes";
+constexpr std::string_view kBoolValueFalse = "no";
 
 enum class AlignTo : int8_t { kLeft, kRight };
 
@@ -39,33 +43,39 @@ class Align {
 }  // namespace
 
 SimpleTable::size_type SimpleTable::Cell::size() const noexcept {
-  switch (_data.index()) {
-    case 0:
-      return static_cast<size_type>(std::get<string_type>(_data).size());
-    case 1:
-      return static_cast<size_type>(std::get<std::string_view>(_data).size());
-    case 2:
-      return static_cast<size_type>(nchars(std::get<IntegralType>(_data)));
-    default:
-      unreachable();
-  }
+  return std::visit(
+      [](auto &&v) -> size_type {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view>) {
+          return v.size();
+        } else if constexpr (std::is_same_v<T, bool>) {
+          return v ? kBoolValueTrue.size() : kBoolValueFalse.size();
+        } else if constexpr (std::is_integral_v<T>) {
+          return nchars(v);
+        } else {
+          unreachable();
+        }
+      },
+      _data);
 }
 
 void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
   os << ' ' << Align(AlignTo::kLeft) << std::setw(maxCellWidth);
-  switch (_data.index()) {
-    case 0:
-      os << std::get<string_type>(_data);
-      break;
-    case 1:
-      os << std::get<std::string_view>(_data);
-      break;
-    case 2:
-      os << std::get<IntegralType>(_data);
-      break;
-    default:
-      unreachable();
-  }
+
+  std::visit(
+      [&os](auto &&v) {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, bool>) {
+          os << (v ? kBoolValueTrue : kBoolValueFalse);
+        } else if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view> ||
+                             std::is_integral_v<T>) {
+          os << v;
+        } else {
+          unreachable();
+        }
+      },
+      _data);
+
   os << ' ' << kColumnSep;
 }
 

@@ -4,6 +4,8 @@
 
 #include "apioutputtype.hpp"
 #include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
@@ -64,6 +66,154 @@ TEST_F(QueryResultPrinterHealthCheckTest, Json) {
 TEST_F(QueryResultPrinterHealthCheckTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint).printHealthCheck(healthCheckPerExchange);
   expectNoStr();
+}
+
+class QueryResultPrinterCurrenciesTest : public QueryResultPrinterTest {
+ protected:
+  CurrencyExchange cur00{"AAVE", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kUnavailable,
+                         CurrencyExchange::Type::kCrypto};
+  CurrencyExchange cur01{"AAVE", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                         CurrencyExchange::Type::kCrypto};
+  CurrencyExchange cur02{"AAVE", CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
+                         CurrencyExchange::Type::kCrypto};
+
+  CurrencyExchange cur10{"BTC",
+                         "XBT",
+                         "BTC",
+                         CurrencyExchange::Deposit::kAvailable,
+                         CurrencyExchange::Withdraw::kAvailable,
+                         CurrencyExchange::Type::kCrypto};
+  CurrencyExchange cur11{"BTC",
+                         "XBTC",
+                         CurrencyCode{"BIT"},
+                         CurrencyExchange::Deposit::kAvailable,
+                         CurrencyExchange::Withdraw::kUnavailable,
+                         CurrencyExchange::Type::kCrypto};
+
+  CurrencyExchange cur20{"EUR", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
+                         CurrencyExchange::Type::kFiat};
+  CurrencyExchange cur21{"EUR", CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
+                         CurrencyExchange::Type::kFiat};
+
+  CurrenciesPerExchange currenciesPerExchange{
+      {&exchange1, CurrencyExchangeFlatSet{{cur00, cur10}}},
+      {&exchange2, CurrencyExchangeFlatSet{{cur01, cur10, cur21}}},
+      {&exchange3, CurrencyExchangeFlatSet{{cur02, cur11, cur20}}},
+  };
+};
+
+TEST_F(QueryResultPrinterCurrenciesTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printCurrencies(currenciesPerExchange);
+  static constexpr std::string_view kExpected = R"(
++----------+-----------------------+---------------------------------------+-------------+-----------------------+-------------------+---------+
+| Currency | Supported exchanges   | Exchange code(s)                      | Alt code(s) | Can deposit to        | Can withdraw from | Is fiat |
++----------+-----------------------+---------------------------------------+-------------+-----------------------+-------------------+---------+
+| AAVE     | binance,bithumb,huobi |                                       |             | binance,bithumb       | bithumb           | no      |
+| BTC      | binance,bithumb,huobi | XBT[binance],XBT[bithumb],XBTC[huobi] | BIT[huobi]  | binance,bithumb,huobi | binance,bithumb   | no      |
+| EUR      | bithumb,huobi         |                                       |             | huobi                 | huobi             | yes     |
++----------+-----------------------+---------------------------------------+-------------+-----------------------+-------------------+---------+
+)";
+
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterCurrenciesTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printCurrencies(CurrenciesPerExchange{});
+
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": null,
+    "req": "Currencies"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterCurrenciesTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printCurrencies(currenciesPerExchange);
+
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": null,
+    "req": "Currencies"
+  },
+  "out": {
+    "binance": [
+      {
+        "altCode": "AAVE",
+        "canDeposit": true,
+        "canWithdraw": false,
+        "code": "AAVE",
+        "exchangeCode": "AAVE",
+        "isFiat": false
+      },
+      {
+        "altCode": "BTC",
+        "canDeposit": true,
+        "canWithdraw": true,
+        "code": "BTC",
+        "exchangeCode": "XBT",
+        "isFiat": false
+      }
+    ],
+    "bithumb": [
+      {
+        "altCode": "AAVE",
+        "canDeposit": true,
+        "canWithdraw": true,
+        "code": "AAVE",
+        "exchangeCode": "AAVE",
+        "isFiat": false
+      },
+      {
+        "altCode": "BTC",
+        "canDeposit": true,
+        "canWithdraw": true,
+        "code": "BTC",
+        "exchangeCode": "XBT",
+        "isFiat": false
+      },
+      {
+        "altCode": "EUR",
+        "canDeposit": false,
+        "canWithdraw": false,
+        "code": "EUR",
+        "exchangeCode": "EUR",
+        "isFiat": true
+      }
+    ],
+    "huobi": [
+      {
+        "altCode": "AAVE",
+        "canDeposit": false,
+        "canWithdraw": false,
+        "code": "AAVE",
+        "exchangeCode": "AAVE",
+        "isFiat": false
+      },
+      {
+        "altCode": "BIT",
+        "canDeposit": true,
+        "canWithdraw": false,
+        "code": "BTC",
+        "exchangeCode": "XBTC",
+        "isFiat": false
+      },
+      {
+        "altCode": "EUR",
+        "canDeposit": true,
+        "canWithdraw": true,
+        "code": "EUR",
+        "exchangeCode": "EUR",
+        "isFiat": true
+      }
+    ]
+  }
+})";
+  expectJson(kExpected);
 }
 
 class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {

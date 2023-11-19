@@ -174,6 +174,12 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
         "Simple health check for all exchanges or specified ones"},
        &OptValueType::healthCheck},
       {{{"Public queries", 2100},
+        "currencies",
+        "<[exch1,...]>",
+        "Print tradable currencies for all exchanges, "
+        "or only the specified ones."},
+       &OptValueType::currencies},
+      {{{"Public queries", 2100},
         "markets",
         "<cur1[-cur2][,exch1,...]>",
         "Print markets involving given currencies for all exchanges, "

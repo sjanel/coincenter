@@ -33,6 +33,8 @@ class QueryResultPrinter {
 
   void printHealthCheck(const ExchangeHealthCheckStatus &healthCheckPerExchange) const;
 
+  void printCurrencies(const CurrenciesPerExchange &currenciesPerExchange) const;
+
   void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
 
   void printMarketOrderBooks(Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,

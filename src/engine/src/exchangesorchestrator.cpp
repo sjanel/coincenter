@@ -290,6 +290,19 @@ ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market mk, E
   return conversionPathPerExchange;
 }
 
+CurrenciesPerExchange ExchangesOrchestrator::getCurrenciesPerExchange(ExchangeNameSpan exchangeNames) {
+  log::info("Get all tradable currencies for {}", ConstructAccumulatedExchangeNames(exchangeNames));
+
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  CurrenciesPerExchange ret(selectedExchanges.size());
+  _threadPool.parallelTransform(
+      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+      [](Exchange *exchange) { return std::make_pair(exchange, exchange->queryTradableCurrencies()); });
+
+  return ret;
+}
+
 MarketsPerExchange ExchangesOrchestrator::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
                                                                 ExchangeNameSpan exchangeNames) {
   string curStr = cur1.str();
