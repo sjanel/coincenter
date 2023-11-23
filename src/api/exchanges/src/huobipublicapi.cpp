@@ -247,8 +247,8 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
-  WithdrawalFeeMap ret;
+WithdrawalFeesSet HuobiPublic::queryWithdrawalFees() {
+  vector<MonetaryAmount> fees;
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
@@ -264,13 +264,13 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
           std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
           MonetaryAmount withdrawFee(withdrawFeeStr, cur);
           log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
-          ret.insert_or_assign(cur, withdrawFee);
+          fees.push_back(withdrawFee);
         } else if (withdrawFeeTypeStr == "rate") {
           log::debug("Unsupported rate withdraw fee for {}", _name);
-          ret.insert_or_assign(cur, MonetaryAmount(0, cur));
+          fees.emplace_back(0, cur);
         } else if (withdrawFeeTypeStr == "circulated") {
           log::debug("Unsupported circulated withdraw fee for {}", _name);
-          ret.insert_or_assign(cur, MonetaryAmount(0, cur));
+          fees.emplace_back(0, cur);
         }
       }
 
@@ -282,8 +282,8 @@ WithdrawalFeeMap HuobiPublic::queryWithdrawalFees() {
     }
   }
 
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
-  return ret;
+  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {

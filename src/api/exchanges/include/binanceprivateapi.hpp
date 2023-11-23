@@ -54,7 +54,7 @@ class BinancePrivate : public ExchangePrivate {
 
   WithdrawsSet queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
 
-  WithdrawalFeeMap queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
+  WithdrawalFeesSet queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
 
@@ -111,7 +111,7 @@ class BinancePrivate : public ExchangePrivate {
                         Duration& queryDelay)
         : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
-    WithdrawalFeeMap operator()();
+    WithdrawalFeesSet operator()();
   };
 
   struct WithdrawFeesFunc : public BinanceContext {

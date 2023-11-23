@@ -35,7 +35,7 @@ class KrakenPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
+  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
@@ -76,7 +76,7 @@ class KrakenPublic : public ExchangePublic {
   class WithdrawalFeesFunc {
    public:
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
-    using WithdrawalInfoMaps = std::pair<WithdrawalFeeMap, WithdrawalMinMap>;
+    using WithdrawalInfoMaps = std::pair<WithdrawalFeesSet, WithdrawalMinMap>;
 
     WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries);
 

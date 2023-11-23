@@ -179,16 +179,18 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-WithdrawalFeeMap KucoinPublic::queryWithdrawalFees() {
-  WithdrawalFeeMap ret;
-  for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : _tradableCurrenciesCache.get()) {
-    ret.insert_or_assign(curDetail.currencyExchange.standardCode(), curDetail.withdrawalMinFee);
+WithdrawalFeesSet KucoinPublic::queryWithdrawalFees() {
+  vector<MonetaryAmount> fees;
+  const auto& tradableCurrencies = _tradableCurrenciesCache.get();
+  fees.reserve(tradableCurrencies.size());
+  for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : tradableCurrencies) {
+    fees.push_back(curDetail.withdrawalMinFee);
     log::trace("Retrieved {} withdrawal fee {}", _name, curDetail.withdrawalMinFee);
   }
 
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
-  assert(!ret.empty());
-  return ret;
+  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
+  assert(!fees.empty());
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {

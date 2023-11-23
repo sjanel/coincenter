@@ -147,7 +147,7 @@ class TestAPI {
         sample = std::move(withdrawableCryptos);
       }
 
-      WithdrawalFeeMap withdrawalFees =
+      WithdrawalFeesSet withdrawalFees =
           exchangePrivateOpt ? exchangePrivateOpt->queryWithdrawalFees() : exchangePublic.queryWithdrawalFees();
 
       for (const CurrencyExchange &curExchange : sample) {
@@ -156,7 +156,7 @@ class TestAPI {
         auto withdrawalFeeIt = withdrawalFees.find(cur);
         if (exchangePublic.isWithdrawalFeesSourceReliable() || withdrawalFeeIt != withdrawalFees.end()) {
           ASSERT_NE(withdrawalFeeIt, withdrawalFees.end());
-          EXPECT_GE(withdrawalFeeIt->second, MonetaryAmount(0, withdrawalFeeIt->second.currencyCode()));
+          EXPECT_GE(*withdrawalFeeIt, MonetaryAmount(0, withdrawalFeeIt->currencyCode()));
           break;
         }
         log::warn("{} withdrawal fee is not known (unreliable source), trying another one", cur);

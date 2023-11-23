@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <utility>
 
 #include "cct_exception.hpp"
@@ -29,7 +28,7 @@ class CurrencyExchangeFlatSet {
 
   CurrencyExchangeFlatSet() noexcept = default;
 
-  explicit CurrencyExchangeFlatSet(CurrencyExchangeVector &&vec) : _set(std::move(vec)) {}
+  explicit CurrencyExchangeFlatSet(CurrencyExchangeVector &&vec) noexcept : _set(std::move(vec)) {}
 
   const CurrencyExchange &front() const { return _set.front(); }
   const CurrencyExchange &back() const { return _set.back(); }

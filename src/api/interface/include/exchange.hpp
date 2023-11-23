@@ -65,7 +65,7 @@ class Exchange {
 
   MarketPriceMap queryAllPrices() { return _exchangePublic.queryAllPrices(); }
 
-  WithdrawalFeeMap queryWithdrawalFees() {
+  WithdrawalFeesSet queryWithdrawalFees() {
     return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFees() : _exchangePublic.queryWithdrawalFees();
   }
 

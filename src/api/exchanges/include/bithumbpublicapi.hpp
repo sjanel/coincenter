@@ -34,7 +34,7 @@ class BithumbPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get()); }
 
-  WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
@@ -74,7 +74,7 @@ class BithumbPublic : public ExchangePublic {
                        settings::RunMode runMode)
         : _curlHandle(kFeeUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
-    WithdrawalFeeMap operator()();
+    WithdrawalFeesSet operator()();
 
     CurlHandle _curlHandle;
   };

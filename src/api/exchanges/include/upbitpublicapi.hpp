@@ -33,7 +33,7 @@ class UpbitPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeeMap queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
   MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
 
@@ -79,7 +79,7 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    WithdrawalFeeMap operator()();
+    WithdrawalFeesSet operator()();
 
     const string& _name;
     std::string_view _dataDir;
