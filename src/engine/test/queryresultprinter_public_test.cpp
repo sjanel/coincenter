@@ -219,19 +219,40 @@ TEST_F(QueryResultPrinterCurrenciesTest, Json) {
 class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
  protected:
   CurrencyCode cur1{"XRP"};
-  CurrencyCode cur2;
-  MarketsPerExchange marketsPerExchange{{&exchange1, MarketSet{Market{cur1, "KRW"}, Market{cur1, "BTC"}}},
+  CurrencyCode cur2{"BTC"};
+  MarketsPerExchange marketsPerExchange{{&exchange1, MarketSet{Market{cur1, "KRW"}, Market{cur1, cur2}}},
+                                        {&exchange2, MarketSet{Market{"SOL", "ETH"}}},
                                         {&exchange3, MarketSet{Market{cur1, "EUR"}}}};
 };
 
-TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
-  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
+TEST_F(QueryResultPrinterMarketsTest, FormattedTableNoCurrency) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange);
+  static constexpr std::string_view kExpected = R"(
++----------+---------+
+| Exchange | Markets |
++----------+---------+
+| binance  | XRP-BTC |
+| binance  | XRP-KRW |
+| bithumb  | SOL-ETH |
+| huobi    | XRP-EUR |
++----------+---------+
+)";
+
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterMarketsTest, FormattedTableOneCurrency) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
+  // We only test the title line here, it's normal that all markets are printed (they come from marketsPerExchange and
+  // are not filtered again inside the print function)
   static constexpr std::string_view kExpected = R"(
 +----------+------------------+
 | Exchange | Markets with XRP |
 +----------+------------------+
 | binance  | XRP-BTC          |
 | binance  | XRP-KRW          |
+| bithumb  | SOL-ETH          |
 | huobi    | XRP-EUR          |
 +----------+------------------+
 )";
@@ -239,8 +260,24 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTable) {
   expectStr(kExpected);
 }
 
+TEST_F(QueryResultPrinterMarketsTest, FormattedTableTwoCurrencies) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
+  static constexpr std::string_view kExpected = R"(
++----------+----------------------+
+| Exchange | Markets with XRP-BTC |
++----------+----------------------+
+| binance  | XRP-BTC              |
+| binance  | XRP-KRW              |
+| bithumb  | SOL-ETH              |
+| huobi    | XRP-EUR              |
++----------+----------------------+
+)";
+
+  expectStr(kExpected);
+}
+
 TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, MarketsPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, CurrencyCode(), MarketsPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -254,8 +291,33 @@ TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
   expectJson(kExpected);
 }
 
-TEST_F(QueryResultPrinterMarketsTest, Json) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
+TEST_F(QueryResultPrinterMarketsTest, JsonNoCurrency) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+    },
+    "req": "Markets"
+  },
+  "out": {
+    "binance": [
+      "XRP-BTC",
+      "XRP-KRW"
+    ],
+    "bithumb": [
+      "SOL-ETH"
+    ],
+    "huobi": [
+      "XRP-EUR"
+    ]
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterMarketsTest, JsonOneCurrency) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -269,6 +331,36 @@ TEST_F(QueryResultPrinterMarketsTest, Json) {
       "XRP-BTC",
       "XRP-KRW"
     ],
+    "bithumb": [
+      "SOL-ETH"
+    ],
+    "huobi": [
+      "XRP-EUR"
+    ]
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterMarketsTest, JsonTwoCurrencies) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "cur1": "XRP",
+      "cur2": "BTC"
+    },
+    "req": "Markets"
+  },
+  "out": {
+    "binance": [
+      "XRP-BTC",
+      "XRP-KRW"
+    ],
+    "bithumb": [
+      "SOL-ETH"
+    ],
     "huobi": [
       "XRP-EUR"
     ]
@@ -278,7 +370,7 @@ TEST_F(QueryResultPrinterMarketsTest, Json) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, NoPrint) {
-  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
   expectNoStr();
 }
 

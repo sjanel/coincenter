@@ -174,7 +174,7 @@ CoincenterCommand& CoincenterCommand::setCur1(CurrencyCode cur1) {
 }
 
 CoincenterCommand& CoincenterCommand::setCur2(CurrencyCode cur2) {
-  if (_cur1.isNeutral()) {
+  if (_cur1.isNeutral() && !cur2.isNeutral()) {
     throw exception("First currency should be set before second one");
   }
   _cur2 = cur2;

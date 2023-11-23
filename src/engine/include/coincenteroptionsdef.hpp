@@ -181,10 +181,10 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
        &OptValueType::currencies},
       {{{"Public queries", 2100},
         "markets",
-        "<cur1[-cur2][,exch1,...]>",
+        "<[cur1-cur2][,exch1,...]>",
         "Print markets involving given currencies for all exchanges, "
         "or only the specified ones. "
-        "Either a single currency or a full market can be specified."},
+        "Currencies are optional, all markets will be returned if none given."},
        &OptValueType::markets},
 
       {{{"Public queries", 2200},
