@@ -21,6 +21,7 @@
 #include "cct_json.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -541,16 +542,16 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
   return withdrawsSet;
 }
 
-WithdrawalFeeMap BinancePrivate::AllWithdrawFeesFunc::operator()() {
+WithdrawalFeesSet BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay);
-  WithdrawalFeeMap ret;
+  vector<MonetaryAmount> fees;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
     if (withdrawFeeDetails["withdrawStatus"].get<bool>()) {
       CurrencyCode cur(curCodeStr);
-      ret.insert_or_assign(cur, MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), cur));
+      fees.emplace_back(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), cur);
     }
   }
-  return ret;
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {

@@ -19,7 +19,7 @@ class MockExchangePublic : public ExchangePublic {
   MOCK_METHOD(CurrencyExchange, convertStdCurrencyToCurrencyExchange, (CurrencyCode currencyCode), (override));
   MOCK_METHOD(MarketSet, queryTradableMarkets, (), (override));
   MOCK_METHOD(MarketPriceMap, queryAllPrices, (), (override));
-  MOCK_METHOD(WithdrawalFeeMap, queryWithdrawalFees, (), (override));
+  MOCK_METHOD(WithdrawalFeesSet, queryWithdrawalFees, (), (override));
   MOCK_METHOD(MonetaryAmount, queryWithdrawalFee, (CurrencyCode currencyCode), (override));
   MOCK_METHOD(bool, isWithdrawalFeesSourceReliable, (), (const override));
   MOCK_METHOD(MarketOrderBookMap, queryAllApproximatedOrderBooks, (int depth), (override));

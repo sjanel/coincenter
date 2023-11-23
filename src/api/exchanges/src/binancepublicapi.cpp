@@ -239,8 +239,8 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json
 }
 }  // namespace
 
-WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
-  WithdrawalFeeMap ret;
+WithdrawalFeesSet BinancePublic::queryWithdrawalFees() {
+  vector<MonetaryAmount> fees;
   for (const json& coinJson : _globalInfosCache.get()) {
     std::string_view coinStr = coinJson["coin"].get<std::string_view>();
     if (coinStr.size() > CurrencyCode::kMaxLen) {
@@ -249,12 +249,12 @@ WithdrawalFeeMap BinancePublic::queryWithdrawalFees() {
     CurrencyCode cur(coinStr);
     MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, coinJson["networkList"]);
     log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
-    ret.insert_or_assign(cur, withdrawFee);
+    fees.push_back(std::move(withdrawFee));
   }
 
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, ret.size());
-  assert(!ret.empty());
-  return ret;
+  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
+  assert(!fees.empty());
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {

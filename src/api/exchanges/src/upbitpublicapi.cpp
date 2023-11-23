@@ -99,7 +99,7 @@ MonetaryAmount UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   if (it == map.end()) {
     throw exception("Unable to find currency code in withdrawal fees");
   }
-  return it->second;
+  return *it;
 }
 
 CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
@@ -158,18 +158,18 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
   return ret;
 }
 
-WithdrawalFeeMap UpbitPublic::WithdrawalFeesFunc::operator()() {
-  WithdrawalFeeMap ret;
+WithdrawalFeesSet UpbitPublic::WithdrawalFeesFunc::operator()() {
+  vector<MonetaryAmount> fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
   json jsonData = withdrawFeesFile.readAllJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);
     log::debug("Updated Upbit withdrawal fees {}", ma);
-    ret.insert_or_assign(coinAcro, ma);
+    fees.push_back(ma);
   }
-  log::info("Updated Upbit withdrawal fees for {} coins", ret.size());
-  return ret;
+  log::info("Updated Upbit withdrawal fees for {} coins", fees.size());
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 namespace {

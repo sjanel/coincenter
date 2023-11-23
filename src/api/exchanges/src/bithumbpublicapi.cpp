@@ -134,7 +134,7 @@ MonetaryAmount BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   if (it == map.end()) {
     throw exception("Unable to find {} in withdrawal fees", currencyCode);
   }
-  return it->second;
+  return *it;
 }
 
 MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
@@ -147,8 +147,8 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
   return *avgPrice;
 }
 
-WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
-  WithdrawalFeeMap ret;
+WithdrawalFeesSet BithumbPublic::WithdrawalFeesFunc::operator()() {
+  vector<MonetaryAmount> fees;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
   std::string_view dataStr = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
@@ -170,7 +170,7 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
     std::size_t nextCoinSep = dataStr.find(kCoinSep, endP);
     if (nextRightOutFee > nextCoinSep) {
       // This means no withdraw fee data, probably 0 ?
-      ret.insert_or_assign(coinAcro, MonetaryAmount(0, coinAcro));
+      fees.emplace_back(0, coinAcro);
       continue;
     }
     charPos = dataStr.find(kFeeSep, endP);
@@ -181,15 +181,15 @@ WithdrawalFeeMap BithumbPublic::WithdrawalFeesFunc::operator()() {
     endP = dataStr.find('<', charPos);
     std::string_view withdrawFee(dataStr.begin() + charPos, dataStr.begin() + endP);
     MonetaryAmount ma(withdrawFee, coinAcro);
-    log::debug("Updated Bithumb withdrawal fees {}", ma);
-    ret.insert_or_assign(std::move(coinAcro), std::move(ma));
+    log::debug("Updated Bithumb withdrawal fee {}", ma);
+    fees.push_back(std::move(ma));
   }
-  if (ret.empty()) {
+  if (fees.empty()) {
     log::error("Unable to parse Bithumb withdrawal fees, syntax might have changed");
   } else {
-    log::info("Updated Bithumb withdrawal fees for {} coins", ret.size());
+    log::info("Updated Bithumb withdrawal fees for {} coins", fees.size());
   }
-  return ret;
+  return WithdrawalFeesSet(std::move(fees));
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {

@@ -11,6 +11,7 @@
 #include "currencycodevector.hpp"
 #include "durationstring.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 
 namespace cct {
 class LoadConfiguration;
@@ -25,8 +26,6 @@ class TopLevelOption {
   static constexpr std::string_view kQueryOptionStr = "query";
   static constexpr std::string_view kTradeFeesOptionStr = "tradefees";
   static constexpr std::string_view kWithdrawOptionStr = "withdraw";
-
-  using MonetaryAmountVector = vector<MonetaryAmount>;
 
   /// @brief Create a TopLevelOption from given json data.
   /// @param optionName top level option name

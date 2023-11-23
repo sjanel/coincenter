@@ -70,7 +70,7 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
   /// or, if not possible, should be retrieved from a static source updated regularly.
-  virtual WithdrawalFeeMap queryWithdrawalFees() = 0;
+  virtual WithdrawalFeesSet queryWithdrawalFees() = 0;
 
   /// Retrieve the withdrawal fee of a Currency only
   virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) = 0;

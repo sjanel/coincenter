@@ -137,7 +137,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
         log::trace("Updated {} withdrawal fee {} from cache", _name, withdrawFee);
         log::trace("Updated {} min withdraw {} from cache", _name, withdrawMin);
 
-        withdrawalInfoMaps.first.insert_or_assign(cur, withdrawFee);
+        withdrawalInfoMaps.first.insert(withdrawFee);
         withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
       }
 
@@ -169,13 +169,14 @@ bool KrakenPublic::healthCheck() {
 }
 
 MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  const WithdrawalFeeMap& withdrawalFeeMaps = _withdrawalFeesCache.get().first;
-  auto foundIt = withdrawalFeeMaps.find(currencyCode);
-  if (foundIt == withdrawalFeeMaps.end()) {
+  const WithdrawalFeesSet& withdrawalFees = _withdrawalFeesCache.get().first;
+  MonetaryAmount emptyAmount(0, currencyCode);
+  auto foundIt = withdrawalFees.find(emptyAmount);
+  if (foundIt == withdrawalFees.end()) {
     log::warn("Unable to find {} withdrawal fee for {}, consider 0 instead", name(), currencyCode);
-    return MonetaryAmount(0, currencyCode);
+    return emptyAmount;
   }
-  return foundIt->second;
+  return *foundIt;
 }
 
 namespace {
@@ -245,7 +246,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
     }
 
     log::trace("Updated Kraken withdrawal fee {} from first source", withdrawalFee);
-    ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
+    ret.first.insert(withdrawalFee);
 
     // Locate min withdrawal
     searchPos = withdrawalFeesCsv.find(kBeginMinWithdrawalHtmlTag, searchPos) + kBeginMinWithdrawalHtmlTag.size();
@@ -321,7 +322,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
         MonetaryAmount withdrawalFee = parseNextFee(searchPos);
 
         log::trace("Updated Kraken withdrawal fee {} from source 2, simulate min withdrawal amount", withdrawalFee);
-        ret.first.insert_or_assign(withdrawalFee.currencyCode(), withdrawalFee);
+        ret.first.insert(withdrawalFee);
 
         ret.second.insert_or_assign(withdrawalFee.currencyCode(), 3 * withdrawalFee);
       }
@@ -337,16 +338,16 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 }
 
 KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFeesFunc::operator()() {
-  auto [withdrawFeeMap1, withdrawMinMap1] = updateFromSource1();
-  auto [withdrawFeeMap2, withdrawMinMap2] = updateFromSource2();
+  auto [withdrawFees1, withdrawMinMap1] = updateFromSource1();
+  auto [withdrawFees2, withdrawMinMap2] = updateFromSource2();
 
-  withdrawFeeMap1.merge(std::move(withdrawFeeMap2));
+  withdrawFees1.insert(withdrawFees2.begin(), withdrawFees2.end());
   withdrawMinMap1.merge(std::move(withdrawMinMap2));
 
-  if (withdrawFeeMap1.empty() || withdrawMinMap1.empty()) {
+  if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
     throw exception("Unable to parse Kraken withdrawal fees");
   }
-  return std::make_pair(std::move(withdrawFeeMap1), std::move(withdrawMinMap1));
+  return std::make_pair(std::move(withdrawFees1), std::move(withdrawMinMap1));
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
@@ -555,9 +556,10 @@ void KrakenPublic::updateCacheFile() const {
 
     json data;
     data["timeepoch"] = TimestampToS(latestUpdate);
-    for (const auto& [curCode, withdrawFee] : withdrawalInfoMaps.first) {
-      string curCodeStr = curCode.str();
-      data["assets"][curCodeStr]["min"] = withdrawalInfoMaps.second.find(curCode)->second.amountStr();
+    for (const auto withdrawFee : withdrawalInfoMaps.first) {
+      string curCodeStr = withdrawFee.currencyCode().str();
+      data["assets"][curCodeStr]["min"] =
+          withdrawalInfoMaps.second.find(withdrawFee.currencyCode())->second.amountStr();
       data["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
     }
     GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).write(data);

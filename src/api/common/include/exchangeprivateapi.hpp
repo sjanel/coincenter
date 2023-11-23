@@ -105,7 +105,7 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
-  virtual WithdrawalFeeMap queryWithdrawalFees() { return _exchangePublic.queryWithdrawalFees(); }
+  virtual WithdrawalFeesSet queryWithdrawalFees() { return _exchangePublic.queryWithdrawalFees(); }
 
   /// Retrieve the withdrawal fee of a Currency only
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
