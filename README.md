@@ -267,24 +267,34 @@ coincenter currencies kucoin,upbit
 
 ### Markets
 
-Use the `markets` command to list all markets trading a given currencies. This is useful to check how you can trade your coin.
-At least one currency is mandatory, but the list of exchanges is not. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currencies if they exist.
+Use the `markets` command to list markets. This is useful to check how you can trade your coins.
+It takes an optional combination of a maximum of two currencies:
 
-One or two (in this case, querying existence of a market) currencies can be given, separated by a `-`.
+- if none is specified, all markets are returned
+- if only one is specified, all markets trading the currency will be returned
+- if two currencies are specified (should be separated with `-`), only exchanges listing given market will be returned
+
+Also, result can be narrowed to list of exchanges given after the optional currencies. If no exchanges are provided, `coincenter` will simply query all supported exchanges and list the markets involving the given currencies if they exist.
 
 **Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `trade` option of `coincenter`)
 
 #### Examples
 
+Lists all markets for all exchanges
+
+```bash
+coincenter markets
+```
+
 List all markets involving Ethereum in Huobi
 
-```
+```bash
 coincenter markets eth,huobi
 ```
 
 List exchanges where the pair AVAX-USDT is supported
 
-```
+```bash
 coincenter markets avax-usdt
 ```
 
@@ -295,7 +305,7 @@ List of exchanges should be given as lower case, comma separated. But it is opti
 
 Example: Print ticker information for kraken and huobi exchanges
 
-```
+```bash
 coincenter ticker kraken,huobi
 ```
 

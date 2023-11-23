@@ -19,7 +19,7 @@ namespace cct {
 CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionParser &optionParser) {
   auto market = optionParser.parseMarket(StringOptionParser::FieldIs::kOptional);
   if (market.isNeutral()) {
-    market = Market(optionParser.parseCurrency(), CurrencyCode());
+    market = Market(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
   }
   CoincenterCommand ret(CoincenterCommandType::kMarkets);
   ret.setCur1(market.base()).setCur2(market.quote()).setExchangeNames(optionParser.parseExchanges());

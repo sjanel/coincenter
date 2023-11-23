@@ -45,7 +45,7 @@ class CoincenterCmdLineOptions {
   std::string_view monitoringPassword;
 
   std::optional<std::string_view> currencies;
-  std::string_view markets;
+  std::optional<std::string_view> markets;
 
   std::string_view orderbook;
   std::string_view orderbookCur;

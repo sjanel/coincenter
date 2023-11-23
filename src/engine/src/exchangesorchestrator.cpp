@@ -305,19 +305,25 @@ CurrenciesPerExchange ExchangesOrchestrator::getCurrenciesPerExchange(ExchangeNa
 
 MarketsPerExchange ExchangesOrchestrator::getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2,
                                                                 ExchangeNameSpan exchangeNames) {
-  string curStr = cur1.str();
-  if (!cur2.isNeutral()) {
-    curStr.push_back('-');
-    cur2.appendStrTo(curStr);
+  string curStr;
+  if (!cur1.isNeutral()) {
+    curStr.append(" matching ");
+    cur1.appendStrTo(curStr);
+    if (!cur2.isNeutral()) {
+      curStr.push_back('-');
+      cur2.appendStrTo(curStr);
+    }
   }
-  log::info("Query markets with {} from {}", curStr, ConstructAccumulatedExchangeNames(exchangeNames));
+
+  log::info("Query markets{} from {}", curStr, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MarketsPerExchange marketsPerExchange(selectedExchanges.size());
   auto marketsWithCur = [cur1, cur2](Exchange *exchange) {
     MarketSet markets = exchange->queryTradableMarkets();
     MarketSet ret;
-    std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()),
-                 [cur1, cur2](Market mk) { return mk.canTrade(cur1) && (cur2.isNeutral() || mk.canTrade(cur2)); });
+    std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()), [cur1, cur2](Market mk) {
+      return (cur1.isNeutral() || mk.canTrade(cur1)) && (cur2.isNeutral() || mk.canTrade(cur2));
+    });
     return std::make_pair(exchange, std::move(ret));
   };
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), marketsPerExchange.begin(),

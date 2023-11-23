@@ -100,8 +100,10 @@ json CurrenciesJson(const CurrenciesPerExchange &currenciesPerExchange) {
 
 json MarketsJson(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) {
   json in;
-  json inOpt;
-  inOpt.emplace("cur1", cur1.str());
+  json inOpt = json::object();
+  if (!cur1.isNeutral()) {
+    inOpt.emplace("cur1", cur1.str());
+  }
   if (!cur2.isNeutral()) {
     inOpt.emplace("cur2", cur2.str());
   }
@@ -762,8 +764,11 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
   json jsonData = MarketsJson(cur1, cur2, marketsPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      string marketsCol("Markets with ");
-      cur1.appendStrTo(marketsCol);
+      string marketsCol("Markets");
+      if (!cur1.isNeutral()) {
+        marketsCol.append(" with ");
+        cur1.appendStrTo(marketsCol);
+      }
       if (!cur2.isNeutral()) {
         marketsCol.push_back('-');
         cur2.appendStrTo(marketsCol);

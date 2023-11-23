@@ -36,7 +36,8 @@ class Coincenter {
   /// Retrieve all tradable currencies for given selected public exchanges, or all if empty.
   CurrenciesPerExchange getCurrenciesPerExchange(ExchangeNameSpan exchangeNames);
 
-  /// Retrieve the markets for given selected public exchanges, or all if empty.
+  /// Retrieve the markets for given selected public exchanges (or all if empty span) matching given currencies.
+  /// Currencies are both optional and may be neutral. A market matches any neutral currency.
   MarketsPerExchange getMarketsPerExchange(CurrencyCode cur1, CurrencyCode cur2, ExchangeNameSpan exchangeNames);
 
   /// Retrieve ticker information for given selected public exchanges, or all if empty.

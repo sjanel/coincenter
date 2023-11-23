@@ -111,6 +111,28 @@ TEST_F(ExchangeOrchestratorEmptyMarketOrderbookTest, MarketDoesNotExist) {
             marketOrderBookConversionRates);
 }
 
+TEST_F(ExchangeOrchestratorTest, GetMarketsPerExchangeNoCurrency) {
+  CurrencyCode cur1{};
+  CurrencyCode cur2{};
+  ExchangeNameSpan exchangeNameSpan{};
+
+  Market m4{"LUNA", "BTC"};
+  Market m5{"SHIB", "LUNA"};
+  Market m6{"DOGE", "EUR"};
+
+  MarketSet markets1{m1, m2, m4, m6};
+  EXPECT_CALL(exchangePublic1, queryTradableMarkets()).WillOnce(testing::Return(markets1));
+  MarketSet markets2{m1, m2, m3, m4, m5, m6};
+  EXPECT_CALL(exchangePublic2, queryTradableMarkets()).WillOnce(testing::Return(markets2));
+  MarketSet markets3{m1, m2, m6};
+  EXPECT_CALL(exchangePublic3, queryTradableMarkets()).WillOnce(testing::Return(markets3));
+
+  MarketsPerExchange ret{{&exchange1, MarketSet{m1, m2, m4, m6}},
+                         {&exchange2, MarketSet{m1, m2, m3, m4, m5, m6}},
+                         {&exchange3, MarketSet{m1, m2, m6}}};
+  EXPECT_EQ(exchangesOrchestrator.getMarketsPerExchange(cur1, cur2, exchangeNameSpan), ret);
+}
+
 TEST_F(ExchangeOrchestratorTest, GetMarketsPerExchangeOneCurrency) {
   CurrencyCode cur1{"LUNA"};
   CurrencyCode cur2{};

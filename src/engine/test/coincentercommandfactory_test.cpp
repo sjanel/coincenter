@@ -29,8 +29,27 @@ class CoincenterCommandFactoryTest : public ::testing::Test {
   CoincenterCommandFactory commandFactory{cmdLineOptions, pPreviousCommand};
 };
 
-TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandInvalidInputTest) {
-  EXPECT_THROW(CoincenterCommandFactory::CreateMarketCommand(inputStr("kucoin")), invalid_argument);
+TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandEmpty) {
+  EXPECT_EQ(CoincenterCommandFactory::CreateMarketCommand(inputStr("")),
+            CoincenterCommand(CoincenterCommandType::kMarkets));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
+}
+
+TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandInvalidWrongOrder) {
+  CoincenterCommandFactory::CreateMarketCommand(inputStr("huobi_user2,eth"));
+  EXPECT_THROW(optionParser.checkEndParsing(), invalid_argument);
+}
+
+TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandInvalidWrongCurrencySeparator) {
+  CoincenterCommandFactory::CreateMarketCommand(inputStr("eth,btc"));
+  EXPECT_THROW(optionParser.checkEndParsing(), invalid_argument);
+}
+
+TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandSingleExchange) {
+  EXPECT_EQ(CoincenterCommandFactory::CreateMarketCommand(inputStr("huobi_user2")),
+            CoincenterCommand(CoincenterCommandType::kMarkets)
+                .setExchangeNames(ExchangeNames({ExchangeName("huobi_user2")})));
+  EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandMarketTest) {
