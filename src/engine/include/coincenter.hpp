@@ -96,7 +96,7 @@ class Coincenter {
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Get withdraw fees for all exchanges from given list (or all exchanges if list is empty)
-  MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
+  MonetaryAmountByCurrencySetPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
   /// Trade a specified amount of a given currency into another one, using the market defined in the given exchanges.
   /// If no exchange name is given, it will attempt to trade given amount on all exchanges with the sufficient balance.

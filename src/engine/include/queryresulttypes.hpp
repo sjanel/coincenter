@@ -15,6 +15,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "traderesult.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
@@ -32,6 +33,9 @@ using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConver
 using MarketsPerExchange = FixedCapacityVector<ExchangeWith<MarketSet>, kNbSupportedExchanges>;
 
 using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmount>, kNbSupportedExchanges>;
+
+using MonetaryAmountByCurrencySetPerExchange =
+    FixedCapacityVector<ExchangeWith<MonetaryAmountByCurrencySet>, kNbSupportedExchanges>;
 
 using LastTradesPerExchange = FixedCapacityVector<ExchangeWith<LastTradesVector>, kNbSupportedExchanges>;
 

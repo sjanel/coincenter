@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -93,11 +94,11 @@ bool UpbitPublic::healthCheck() {
   return !result.empty() && result.is_array() && result.front().find("timestamp") != result.front().end();
 }
 
-MonetaryAmount UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> UpbitPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& map = _withdrawalFeesCache.get();
   auto it = map.find(currencyCode);
   if (it == map.end()) {
-    throw exception("Unable to find currency code in withdrawal fees");
+    return {};
   }
   return *it;
 }
@@ -158,7 +159,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
   return ret;
 }
 
-WithdrawalFeesSet UpbitPublic::WithdrawalFeesFunc::operator()() {
+MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
   vector<MonetaryAmount> fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
   json jsonData = withdrawFeesFile.readAllJson();
@@ -169,7 +170,7 @@ WithdrawalFeesSet UpbitPublic::WithdrawalFeesFunc::operator()() {
     fees.push_back(ma);
   }
   log::info("Updated Upbit withdrawal fees for {} coins", fees.size());
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
 namespace {

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <limits>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
-#include "cct_json.hpp"
-#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "curlpostdata.hpp"
 #include "currencycode.hpp"
@@ -44,9 +42,9 @@ class KucoinPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeesSet queryWithdrawalFees() override;
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override;
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   bool isWithdrawalFeesSourceReliable() const override { return true; }
 

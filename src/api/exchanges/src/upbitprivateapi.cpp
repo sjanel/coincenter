@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -583,16 +584,17 @@ OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
   return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.mk);
 }
 
-MonetaryAmount UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+  auto curStr = currencyCode.str();
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
-                             {{"currency", currencyCode.str()}});
+                             {{"currency", std::string_view(curStr)}, {"net_type", std::string_view(curStr)}});
   std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
-  return {amountStr, currencyCode};
+  return MonetaryAmount(amountStr, currencyCode);
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{{"currency", currencyCode.str()},
                                 {"amount", netEmittedAmount.amountStr()},

@@ -339,6 +339,9 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingCurrency
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), isCurrencyTradablePerExchange.begin(),
       [currencyCode, shouldBeWithdrawable](Exchange *exchange) {
+        if (currencyCode.isNeutral()) {
+          return true;
+        }
         CurrencyExchangeFlatSet currencies = exchange->queryTradableCurrencies();
         auto foundIt = currencies.find(currencyCode);
         return foundIt != currencies.end() && (!shouldBeWithdrawable || foundIt->canWithdraw());
@@ -799,17 +802,32 @@ DeliveredWithdrawInfoWithExchanges ExchangesOrchestrator::withdraw(MonetaryAmoun
   return ret;
 }
 
-MonetaryAmountPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
-                                                                 ExchangeNameSpan exchangeNames) {
-  log::info("{} withdraw fees for {}", currencyCode, ConstructAccumulatedExchangeNames(exchangeNames));
+MonetaryAmountByCurrencySetPerExchange ExchangesOrchestrator::getWithdrawFees(CurrencyCode currencyCode,
+                                                                              ExchangeNameSpan exchangeNames) {
+  if (currencyCode.isNeutral()) {
+    log::info("Withdraw fees for {}", ConstructAccumulatedExchangeNames(exchangeNames));
+  } else {
+    log::info("{} withdraw fees for {}", currencyCode, ConstructAccumulatedExchangeNames(exchangeNames));
+  }
+
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames, true);
 
-  MonetaryAmountPerExchange withdrawFeePerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), withdrawFeePerExchange.begin(),
+  MonetaryAmountByCurrencySetPerExchange withdrawFeesPerExchange(selectedExchanges.size());
+  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), withdrawFeesPerExchange.begin(),
                                 [currencyCode](Exchange *exchange) {
-                                  return std::make_pair(exchange, exchange->queryWithdrawalFee(currencyCode));
+                                  MonetaryAmountByCurrencySet withdrawFees;
+                                  if (currencyCode.isNeutral()) {
+                                    withdrawFees = exchange->queryWithdrawalFees();
+                                  } else {
+                                    std::optional<MonetaryAmount> optWithdrawFee =
+                                        exchange->queryWithdrawalFee(currencyCode);
+                                    if (optWithdrawFee) {
+                                      withdrawFees.insert(*optWithdrawFee);
+                                    }
+                                  }
+                                  return std::make_pair(exchange, std::move(withdrawFees));
                                 });
-  return withdrawFeePerExchange;
+  return withdrawFeesPerExchange;
 }
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchange(Market mk,

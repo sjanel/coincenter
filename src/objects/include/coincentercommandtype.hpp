@@ -14,7 +14,7 @@ enum class CoincenterCommandType : int8_t {
   kOrderbook,
   kLastTrades,
   kLast24hTradedVolume,
-  kWithdrawFee,
+  kWithdrawFees,
 
   kBalance,
   kDepositInfo,

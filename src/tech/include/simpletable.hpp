@@ -44,7 +44,7 @@ class SimpleTable {
     using value_type = std::variant<string_type, std::string_view, IntegralType, bool>;
     using size_type = uint32_t;
 
-    explicit Cell(std::string_view v) : _data(v) {}
+    explicit Cell(std::string_view v = std::string_view()) : _data(v) {}
 
     explicit Cell(const char *v) : _data(std::string_view(v)) {}
 

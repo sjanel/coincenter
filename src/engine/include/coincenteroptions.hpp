@@ -84,7 +84,7 @@ class CoincenterCmdLineOptions {
 
   std::string_view withdrawApply;
   std::string_view withdrawApplyAll;
-  std::string_view withdrawFee;
+  std::optional<std::string_view> withdrawFees;
   Duration withdrawRefreshTime{WithdrawOptions().withdrawRefreshTime()};
 
   std::string_view dustSweeper;

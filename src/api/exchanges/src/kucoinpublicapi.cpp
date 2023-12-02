@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -179,7 +179,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-WithdrawalFeesSet KucoinPublic::queryWithdrawalFees() {
+MonetaryAmountByCurrencySet KucoinPublic::queryWithdrawalFees() {
   vector<MonetaryAmount> fees;
   const auto& tradableCurrencies = _tradableCurrenciesCache.get();
   fees.reserve(tradableCurrencies.size());
@@ -189,17 +189,16 @@ WithdrawalFeesSet KucoinPublic::queryWithdrawalFees() {
   }
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
-  assert(!fees.empty());
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
-MonetaryAmount KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> KucoinPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& currencyInfoSet = _tradableCurrenciesCache.get();
-  auto it = currencyInfoSet.find(TradableCurrenciesFunc::CurrencyInfo(currencyCode));
+  auto it = currencyInfoSet.lower_bound(TradableCurrenciesFunc::CurrencyInfo(currencyCode));
   if (it == currencyInfoSet.end()) {
-    throw exception("Unable to find withdrawal fee for {}", currencyCode);
+    return {};
   }
-  return {it->withdrawalMinFee, it->currencyExchange.standardCode()};
+  return MonetaryAmount(it->withdrawalMinFee, it->currencyExchange.standardCode());
 }
 
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {

@@ -152,10 +152,10 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
         .setExchangeNames(optionParser.parseExchanges());
   }
 
-  if (!cmdLineOptions.withdrawFee.empty()) {
-    optionParser = StringOptionParser(cmdLineOptions.withdrawFee);
-    _commands.emplace_back(CoincenterCommandType::kWithdrawFee)
-        .setCur1(optionParser.parseCurrency())
+  if (cmdLineOptions.withdrawFees) {
+    optionParser = StringOptionParser(*cmdLineOptions.withdrawFees);
+    _commands.emplace_back(CoincenterCommandType::kWithdrawFees)
+        .setCur1(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional))
         .setExchangeNames(optionParser.parseExchanges());
   }
 

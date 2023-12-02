@@ -1,7 +1,8 @@
 #pragma once
 
+#include <optional>
+
 #include "cachedresult.hpp"
-#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -35,9 +36,9 @@ class KrakenPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   bool isWithdrawalFeesSourceReliable() const override { return false; }
 
@@ -76,7 +77,7 @@ class KrakenPublic : public ExchangePublic {
   class WithdrawalFeesFunc {
    public:
     using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
-    using WithdrawalInfoMaps = std::pair<WithdrawalFeesSet, WithdrawalMinMap>;
+    using WithdrawalInfoMaps = std::pair<MonetaryAmountByCurrencySet, WithdrawalMinMap>;
 
     WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries);
 

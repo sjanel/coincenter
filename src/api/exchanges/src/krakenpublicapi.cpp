@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -168,13 +169,11 @@ bool KrakenPublic::healthCheck() {
   return statusStr == "online";
 }
 
-MonetaryAmount KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  const WithdrawalFeesSet& withdrawalFees = _withdrawalFeesCache.get().first;
-  MonetaryAmount emptyAmount(0, currencyCode);
-  auto foundIt = withdrawalFees.find(emptyAmount);
+std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+  const MonetaryAmountByCurrencySet& withdrawalFees = _withdrawalFeesCache.get().first;
+  auto foundIt = withdrawalFees.find(currencyCode);
   if (foundIt == withdrawalFees.end()) {
-    log::warn("Unable to find {} withdrawal fee for {}, consider 0 instead", name(), currencyCode);
-    return emptyAmount;
+    return {};
   }
   return *foundIt;
 }

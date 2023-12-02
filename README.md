@@ -24,6 +24,7 @@ Main features:
 - Traded volume
 - Last price
 - Last trades
+- Withdraw fees
 
 **Private requests**
 
@@ -75,6 +76,9 @@ Main features:
     - [Last price](#last-price)
     - [Last trades](#last-trades)
     - [Conversion path](#conversion-path)
+    - [Withdraw fees](#withdraw-fees)
+      - [Example 1: query all withdraw fees](#example-1-query-all-withdraw-fees)
+      - [Example 2: query ETH withdraw fees on Kraken and Kucoin](#example-2-query-eth-withdraw-fees-on-kraken-and-kucoin)
   - [Private requests](#private-requests)
     - [Selecting private keys on exchanges](#selecting-private-keys-on-exchanges)
     - [Balance](#balance)
@@ -195,13 +199,14 @@ coincenter balance orderbook XRP-USDT,binance --cur EUR
 
 Some commands' input can be deduced from previous commands' output, a bit like piping commands in Linux works.
 Input commands accepting previous commands' output are:
+
 - Withdraw
 - Trade
 - Sell
 
 For example:
 
-```
+```bash
                1st command                  3rd command
            /                 \                 /  \
 coincenter buy 1500XLM,binance withdraw kraken sell
@@ -255,13 +260,13 @@ It is the first thing that is checked in exchanges unit tests, hence if the heal
 
 List all currencies for all supported exchanges
 
-```
+```bash
 coincenter currencies
 ```
 
 List all currencies for kucoin and upbit
 
-```
+```bash
 coincenter currencies kucoin,upbit
 ```
 
@@ -318,7 +323,7 @@ In addition, for convenience, you can also specify a currency in which to conver
 
 Example: Print ADA (Cardano) - USDT market order book with a depth of 20 on Kraken and Binance
 
-```
+```bash
 coincenter orderbook ada-usdt,kraken,binance --depth 20
 ```
 
@@ -328,7 +333,7 @@ Fast query last 24h traded volume with `volume-day` option on one market on one,
 
 Example: Print last 24h traded volume on market XLM-BTC for all exchanges supporting it
 
-```
+```bash
 coincenter volume-day xlm-btc
 ```
 
@@ -338,7 +343,7 @@ Fast query last traded price with `price` option on one market on one, several o
 
 Example: Print last price on market SOL-BTC for all exchanges supporting it
 
-```
+```bash
 coincenter price sol-btc
 ```
 
@@ -349,7 +354,7 @@ You can specify the number of last trades to query (for exchanges supporting thi
 
 Example: Print the last 15 trades on DOT-USDT on Binance and Huobi
 
-```
+```bash
 coincenter last-trades dot-usdt,binance,huobi --n 15
 ```
 
@@ -363,11 +368,30 @@ Option `conversion` is used internally for [multi trade](#multi-trade) but is pr
 
 Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible
 
-```
+```bash
 coincenter conversion shib-sol
 ```
 
 **Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
+
+### Withdraw fees
+
+Some exchanges provide a withdraw fees endpoint. Some propose it without an API Key, other require an API Key. `coincenter` uses other sources of data (although less reliable) for exchanges which do not propose withdraw fees.
+
+You can query all withdraw fees at once, for all exchanges or provided ones. You can also specify a currency to filter fees only for this currency.
+
+#### Example 1: query all withdraw fees
+
+```bash
+coincenter withdraw-fees
+```
+
+#### Example 2: query ETH withdraw fees on Kraken and Kucoin
+
+```bash
+coincenter withdraw-fees eth,kraken,kucoin
+```
+
 
 ## Private requests
 

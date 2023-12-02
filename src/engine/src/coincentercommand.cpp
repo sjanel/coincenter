@@ -35,7 +35,7 @@ bool CoincenterCommand::isPublic() const {
       [[fallthrough]];
     case CoincenterCommandType::kLast24hTradedVolume:
       [[fallthrough]];
-    case CoincenterCommandType::kWithdrawFee:
+    case CoincenterCommandType::kWithdrawFees:
       return true;
     default:
       return false;

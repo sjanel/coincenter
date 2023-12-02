@@ -15,7 +15,7 @@ namespace cct {
 class CoincenterInfo;
 
 namespace api {
-
+class APIKey;
 class BithumbPublic;
 
 class BithumbPrivate : public ExchangePrivate {

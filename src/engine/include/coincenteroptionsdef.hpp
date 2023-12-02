@@ -394,11 +394,11 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
         "Withdraw all available amount instead of a specified amount."},
        &OptValueType::withdrawApplyAll},
       {{{"Withdraw and deposit", 8000},
-        "withdraw-fee",
-        "<cur[,exch1,...]>",
-        "Prints withdraw fees of given currency on all supported exchanges,"
-        " or only for the list of specified ones if provided (comma separated)."},
-       &OptValueType::withdrawFee},
+        "withdraw-fees",
+        "<[cur][,exch1,...]>",
+        "Prints withdraw fees for matching currency and exchanges."
+        "Currency and exchanges are optional, if specified, output will be filtered to match them."},
+       &OptValueType::withdrawFees},
       {{{"Monitoring", 9000},
         "--monitoring",
         "",

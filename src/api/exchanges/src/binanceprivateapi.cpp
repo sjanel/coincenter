@@ -542,7 +542,7 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
   return withdrawsSet;
 }
 
-WithdrawalFeesSet BinancePrivate::AllWithdrawFeesFunc::operator()() {
+MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay);
   vector<MonetaryAmount> fees;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
@@ -551,20 +551,20 @@ WithdrawalFeesSet BinancePrivate::AllWithdrawFeesFunc::operator()() {
       fees.emplace_back(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), cur);
     }
   }
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
-MonetaryAmount BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay,
                              {{"asset", currencyCode.str()}});
   if (!result.contains(currencyCode.str())) {
-    throw exception("Unable to find asset information in assetDetail query to Binance");
+    return {};
   }
   const json& withdrawFeeDetails = result[currencyCode.str()];
   if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
     log::error("{} is currently unavailable for withdraw from {}", currencyCode, _exchangePublic.name());
   }
-  return {withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode};
+  return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
 }
 
 namespace {

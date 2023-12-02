@@ -25,8 +25,8 @@ std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
       return "LastTrades";
     case CoincenterCommandType::kLast24hTradedVolume:
       return "Last24hTradedVolume";
-    case CoincenterCommandType::kWithdrawFee:
-      return "WithdrawFee";
+    case CoincenterCommandType::kWithdrawFees:
+      return "WithdrawFees";
 
     case CoincenterCommandType::kBalance:
       return "Balance";
@@ -83,8 +83,8 @@ CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str) {
   if (str == "Last24hTradedVolume") {
     return CoincenterCommandType::kLast24hTradedVolume;
   }
-  if (str == "WithdrawFee") {
-    return CoincenterCommandType::kWithdrawFee;
+  if (str == "WithdrawFees") {
+    return CoincenterCommandType::kWithdrawFees;
   }
 
   if (str == "Balance") {

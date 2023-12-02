@@ -668,33 +668,33 @@ TEST_F(QueryResultPrinterConversionPathTest, NoPrint) {
 
 class QueryResultPrinterWithdrawFeeTest : public QueryResultPrinterTest {
  protected:
-  CurrencyCode curWithdrawFee{"ETH"};
-  MonetaryAmountPerExchange withdrawFeePerExchange{{&exchange2, MonetaryAmount{"0.15", "ETH"}},
-                                                   {&exchange4, MonetaryAmount{"0.05", "ETH"}}};
+  CurrencyCode curWithdrawFee;
+  MonetaryAmountByCurrencySetPerExchange withdrawFeesPerExchange{
+      {&exchange2, MonetaryAmountByCurrencySet{MonetaryAmount{"0.15", "ETH"}}},
+      {&exchange4, MonetaryAmountByCurrencySet{MonetaryAmount{"0.05", "ETH"}, MonetaryAmount{"0.001", "BTC"}}}};
 };
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, FormattedTable) {
-  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printWithdrawFees(withdrawFeesPerExchange, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
-+----------+--------------+
-| Exchange | Withdraw fee |
-+----------+--------------+
-| bithumb  | 0.15 ETH     |
-| huobi    | 0.05 ETH     |
-+----------+--------------+
++-----------------------+----------+-----------+
+| Withdraw fee currency | bithumb  | huobi     |
++-----------------------+----------+-----------+
+| BTC                   |          | 0.001 BTC |
+| ETH                   | 0.15 ETH | 0.05 ETH  |
++-----------------------+----------+-----------+
 )";
   expectStr(kExpected);
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printWithdrawFees(MonetaryAmountPerExchange{}, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printWithdrawFees(MonetaryAmountByCurrencySetPerExchange{}, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": {
-      "cur": "ETH"
-    },
-    "req": "WithdrawFee"
+    "opt": {},
+    "req": "WithdrawFees"
   },
   "out": {}
 })";
@@ -702,25 +702,28 @@ TEST_F(QueryResultPrinterWithdrawFeeTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, Json) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kJson).printWithdrawFees(withdrawFeesPerExchange, curWithdrawFee);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": {
-      "cur": "ETH"
-    },
-    "req": "WithdrawFee"
+    "opt": {},
+    "req": "WithdrawFees"
   },
   "out": {
-    "bithumb": "0.15",
-    "huobi": "0.05"
+    "bithumb": [
+      "0.15 ETH"
+    ],
+    "huobi": [
+      "0.001 BTC",
+      "0.05 ETH"
+    ]
   }
 })";
   expectJson(kExpected);
 }
 
 TEST_F(QueryResultPrinterWithdrawFeeTest, NoPrint) {
-  basicQueryResultPrinter(ApiOutputType::kNoPrint).printWithdrawFees(withdrawFeePerExchange, curWithdrawFee);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printWithdrawFees(withdrawFeesPerExchange, curWithdrawFee);
   expectNoStr();
 }
 
