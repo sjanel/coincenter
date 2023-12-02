@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 
@@ -46,9 +47,9 @@ class BinancePublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeesSet queryWithdrawalFees() override;
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override;
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   bool isWithdrawalFeesSourceReliable() const override { return true; }
 

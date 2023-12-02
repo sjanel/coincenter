@@ -949,7 +949,7 @@ CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, 
 
 InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFee(currencyCode);
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
 
   // Unfortunately, Bithumb does not return any withdraw Id,

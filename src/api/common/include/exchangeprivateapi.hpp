@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <span>
 #include <utility>
 
@@ -8,7 +7,6 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresultvault.hpp"
-#include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
@@ -19,7 +17,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "tradedamounts.hpp"
@@ -105,11 +103,11 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
-  virtual WithdrawalFeesSet queryWithdrawalFees() { return _exchangePublic.queryWithdrawalFees(); }
+  virtual MonetaryAmountByCurrencySet queryWithdrawalFees() { return _exchangePublic.queryWithdrawalFees(); }
 
   /// Retrieve the withdrawal fee of a Currency only
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
-  virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) {
+  virtual std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) {
     return _exchangePublic.queryWithdrawalFee(currencyCode);
   }
 

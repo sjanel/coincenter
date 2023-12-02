@@ -1,8 +1,8 @@
 #pragma once
 
+#include <optional>
 #include <type_traits>
 
-#include "apikey.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
@@ -13,7 +13,6 @@
 #include "depositsconstraints.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
-#include "exchangepublicapitypes.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
@@ -30,6 +29,7 @@ class ExchangeInfo;
 class FiatConverter;
 
 namespace api {
+class APIKey;
 class BinancePublic;
 
 class BinancePrivate : public ExchangePrivate {
@@ -54,9 +54,11 @@ class BinancePrivate : public ExchangePrivate {
 
   WithdrawsSet queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
 
-  WithdrawalFeesSet queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _allWithdrawFeesCache.get(); }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override { return _withdrawFeesCache.get(currencyCode); }
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override {
+    return _withdrawFeesCache.get(currencyCode);
+  }
 
  protected:
   bool isSimulatedOrderSupported() const override { return true; }
@@ -111,14 +113,14 @@ class BinancePrivate : public ExchangePrivate {
                         Duration& queryDelay)
         : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
-    WithdrawalFeesSet operator()();
+    MonetaryAmountByCurrencySet operator()();
   };
 
   struct WithdrawFeesFunc : public BinanceContext {
     WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
         : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
 
-    MonetaryAmount operator()(CurrencyCode currencyCode);
+    std::optional<MonetaryAmount> operator()(CurrencyCode currencyCode);
   };
 
   CurlHandle _curlHandle;

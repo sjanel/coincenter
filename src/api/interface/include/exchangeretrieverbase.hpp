@@ -116,7 +116,7 @@ class ExchangeRetrieverBase {
     return select(order, exchangeNames, Matcher<NameType<Names>>());
   }
 
-  /// Among all 'Exchange's, retrieve at most one 'Exchange' per public echange matching public exchange names.
+  /// Among all 'Exchange's, retrieve at most one 'Exchange' per public exchange matching public exchange names.
   /// Order of 'Exchange's will respect the same order as the 'exchangeNames' given in input.
   /// Examples
   ///   {"kraken_user1", "kucoin_user1"}                 -> {"kraken_user1", "kucoin_user1"}

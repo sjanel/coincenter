@@ -71,7 +71,7 @@ class ExchangesOrchestrator {
                                               const ExchangeName &toPrivateExchangeName,
                                               const WithdrawOptions &withdrawOptions);
 
-  MonetaryAmountPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
+  MonetaryAmountByCurrencySetPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <initializer_list>
+
 #include "cct_flatset.hpp"
 #include "cct_vector.hpp"
 #include "monetaryamount.hpp"
@@ -24,6 +26,8 @@ class MonetaryAmountByCurrencySet {
   using value_type = SetType::value_type;
 
   MonetaryAmountByCurrencySet() noexcept = default;
+
+  MonetaryAmountByCurrencySet(std::initializer_list<MonetaryAmount> init) : _set(init.begin(), init.end()) {}
 
   explicit MonetaryAmountByCurrencySet(MonetaryAmountVector &&vec) noexcept : _set(std::move(vec)) {}
 

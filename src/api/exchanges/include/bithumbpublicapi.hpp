@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string_view>
 
 #include "cachedresult.hpp"
@@ -34,9 +35,9 @@ class BithumbPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get()); }
 
-  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   bool isWithdrawalFeesSourceReliable() const override { return true; }
 
@@ -74,7 +75,7 @@ class BithumbPublic : public ExchangePublic {
                        settings::RunMode runMode)
         : _curlHandle(kFeeUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
-    WithdrawalFeesSet operator()();
+    MonetaryAmountByCurrencySet operator()();
 
     CurlHandle _curlHandle;
   };

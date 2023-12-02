@@ -1,10 +1,12 @@
 #pragma once
 
-#include "cct_string.hpp"
+#include <cstdint>
+
+#include "cct_type_traits.hpp"
 #include "market.hpp"
-#include "monetaryamount.hpp"
 #include "orderid.hpp"
 #include "tradedamounts.hpp"
+#include "tradedefinitions.hpp"
 #include "tradeoptions.hpp"
 
 namespace cct::api {
@@ -28,7 +30,7 @@ struct TradeInfo {
 };
 
 struct OrderInfo {
-  bool operator==(const OrderInfo &) const = default;
+  bool operator==(const OrderInfo &) const noexcept = default;
 
   TradedAmounts tradedAmounts;
   bool isClosed = false;
@@ -41,7 +43,7 @@ struct PlaceOrderInfo {
   TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
   const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
 
-  bool operator==(const PlaceOrderInfo &) const = default;
+  bool operator==(const PlaceOrderInfo &) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 

@@ -535,8 +535,9 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   }
   const CurrencyCode currencyCode = grossAmount.currencyCode();
 
-  MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(grossAmount.currencyCode()));
-  MonetaryAmount netEmittedAmount = grossAmount - fee;
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
+
+  MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
 
   CurlPostData opts{{"currency", currencyCode.str()},
                     {"address", destinationWallet.address()},

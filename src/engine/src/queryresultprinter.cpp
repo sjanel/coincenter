@@ -11,6 +11,7 @@
 
 #include "apioutputtype.hpp"
 #include "balanceperexchangeportfolio.hpp"
+#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -508,18 +509,24 @@ json ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPa
   return ToJson(CoincenterCommandType::kConversionPath, std::move(in), std::move(out));
 }
 
-json WithdrawFeesJson(const MonetaryAmountPerExchange &withdrawFeePerExchange, CurrencyCode cur) {
+json WithdrawFeesJson(const MonetaryAmountByCurrencySetPerExchange &withdrawFeePerExchange, CurrencyCode cur) {
   json in;
-  json inOpt;
-  inOpt.emplace("cur", cur.str());
+  json inOpt = json::object();
+  if (!cur.isNeutral()) {
+    inOpt.emplace("cur", cur.str());
+  }
   in.emplace("opt", std::move(inOpt));
 
   json out = json::object();
-  for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
-    out.emplace(e->name(), withdrawFee.amountStr());
+  for (const auto &[e, withdrawFees] : withdrawFeePerExchange) {
+    json amountsPerExchange = json::array();
+    for (MonetaryAmount ma : withdrawFees) {
+      amountsPerExchange.emplace_back(ma.str());
+    }
+    out.emplace(e->name(), std::move(amountsPerExchange));
   }
 
-  return ToJson(CoincenterCommandType::kWithdrawFee, std::move(in), std::move(out));
+  return ToJson(CoincenterCommandType::kWithdrawFees, std::move(in), std::move(out));
 }
 
 json Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) {
@@ -640,6 +647,13 @@ json DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &traded
   return ToJson(CoincenterCommandType::kDustSweeper, std::move(in), std::move(out));
 }
 
+template <class VecType>
+void RemoveDuplicates(VecType &vec) {
+  std::ranges::sort(vec);
+  const auto [eraseIt1, eraseIt2] = std::ranges::unique(vec);
+  vec.erase(eraseIt1, eraseIt2);
+}
+
 }  // namespace
 QueryResultPrinter::QueryResultPrinter(ApiOutputType apiOutputType, const LoggingInfo &loggingInfo)
     : _loggingInfo(loggingInfo),
@@ -703,9 +717,8 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
       for (const auto &[_, currencies] : currenciesPerExchange) {
         allCurrencyCodes.insert(allCurrencyCodes.end(), currencies.begin(), currencies.end());
       }
-      std::ranges::sort(allCurrencyCodes);
-      const auto [eraseIt1, eraseIt2] = std::ranges::unique(allCurrencyCodes);
-      allCurrencyCodes.erase(eraseIt1, eraseIt2);
+
+      RemoveDuplicates(allCurrencyCodes);
 
       simpleTable.reserve(1U + allCurrencyCodes.size());
 
@@ -1035,14 +1048,33 @@ void QueryResultPrinter::printConversionPath(Market mk,
   logActivity(CoincenterCommandType::kConversionPath, jsonData);
 }
 
-void QueryResultPrinter::printWithdrawFees(const MonetaryAmountPerExchange &withdrawFeePerExchange,
+void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange,
                                            CurrencyCode cur) const {
-  json jsonData = WithdrawFeesJson(withdrawFeePerExchange, cur);
+  json jsonData = WithdrawFeesJson(withdrawFeesPerExchange, cur);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Withdraw fee");
-      for (const auto &[e, withdrawFee] : withdrawFeePerExchange) {
-        simpleTable.emplace_back(e->name(), withdrawFee.str());
+      SimpleTable::Row header("Withdraw fee currency");
+      CurrencyCodeVector allCurrencyCodes;
+      for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
+        header.emplace_back(e->name());
+        for (MonetaryAmount ma : withdrawFees) {
+          allCurrencyCodes.push_back(ma.currencyCode());
+        }
+      }
+
+      RemoveDuplicates(allCurrencyCodes);
+
+      SimpleTable simpleTable(std::move(header));
+      for (CurrencyCode cur : allCurrencyCodes) {
+        auto &row = simpleTable.emplace_back(cur.str());
+        for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
+          auto it = withdrawFees.find(cur);
+          if (it == withdrawFees.end()) {
+            row.emplace_back();
+          } else {
+            row.emplace_back(it->str());
+          }
+        }
       }
       printTable(simpleTable);
       break;
@@ -1053,7 +1085,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountPerExchange &with
     case ApiOutputType::kNoPrint:
       break;
   }
-  logActivity(CoincenterCommandType::kWithdrawFee, jsonData);
+  logActivity(CoincenterCommandType::kWithdrawFees, jsonData);
 }
 
 void QueryResultPrinter::printLast24hTradedVolume(Market mk,

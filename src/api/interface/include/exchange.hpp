@@ -1,12 +1,20 @@
 #pragma once
 
+#include <optional>
 #include <string_view>
 
+#include "cct_exception.hpp"
+#include "currencycode.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 
 namespace cct {
 class Exchange {
@@ -65,11 +73,11 @@ class Exchange {
 
   MarketPriceMap queryAllPrices() { return _exchangePublic.queryAllPrices(); }
 
-  WithdrawalFeesSet queryWithdrawalFees() {
+  MonetaryAmountByCurrencySet queryWithdrawalFees() {
     return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFees() : _exchangePublic.queryWithdrawalFees();
   }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) {
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) {
     return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFee(currencyCode)
                            : _exchangePublic.queryWithdrawalFee(currencyCode);
   }

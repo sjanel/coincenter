@@ -125,7 +125,7 @@ TransferableCommandResultVector Coincenter::processCommand(
       _queryResultPrinter.printLast24hTradedVolume(cmd.market(), tradedVolumePerExchange);
       break;
     }
-    case CoincenterCommandType::kWithdrawFee: {
+    case CoincenterCommandType::kWithdrawFees: {
       const auto withdrawFeesPerExchange = getWithdrawFees(cmd.cur1(), cmd.exchangeNames());
       _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange, cmd.cur1());
       break;
@@ -342,7 +342,8 @@ DeliveredWithdrawInfoWithExchanges Coincenter::withdraw(MonetaryAmount grossAmou
                                          toPrivateExchangeName, withdrawOptions);
 }
 
-MonetaryAmountPerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames) {
+MonetaryAmountByCurrencySetPerExchange Coincenter::getWithdrawFees(CurrencyCode currencyCode,
+                                                                   ExchangeNameSpan exchangeNames) {
   return _exchangesOrchestrator.getWithdrawFees(currencyCode, exchangeNames);
 }
 

@@ -3,12 +3,11 @@
 #include <string_view>
 
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_string.hpp"
-#include "toupperlower.hpp"
+#include "toupperlower-string.hpp"
 
 namespace cct {
 ApiOutputType ApiOutputTypeFromString(std::string_view str) {
-  string lowerStr = ToLower(str);
+  auto lowerStr = ToLower(str);
   if (lowerStr == kApiOutputTypeNoPrintStr) {
     return ApiOutputType::kNoPrint;
   }

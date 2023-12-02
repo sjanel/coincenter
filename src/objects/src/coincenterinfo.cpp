@@ -19,8 +19,8 @@
 #include "monitoringinfo.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
+#include "toupperlower-string.hpp"
 #include "toupperlower.hpp"
-
 #ifdef CCT_ENABLE_PROMETHEUS
 #include "prometheusmetricgateway.hpp"
 #else
@@ -34,6 +34,7 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
     const Reader& currencyAcronymsTranslatorReader) {
   json jsonData = currencyAcronymsTranslatorReader.readAllJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
+  map.reserve(jsonData.size());
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
     map.insert_or_assign(CurrencyCode(key), value.get<std::string_view>());

@@ -1,14 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <string_view>
-
-#include "cct_string.hpp"
-
 namespace cct {
 /// constexpr version of std::toupper with chars, as unfortunately for now (May 2021) std::toupper is not constexpr
-constexpr char toupper(char c) noexcept {
-  switch (c) {
+constexpr char toupper(char ch) noexcept {
+  switch (ch) {
     // clang-format off
     case 'a': return 'A';
     case 'b': return 'B';
@@ -37,14 +32,14 @@ constexpr char toupper(char c) noexcept {
     case 'y': return 'Y';
     case 'z': return 'Z';
 
-    default: return c;
+    default: return ch;
       // clang-format on
   }
 }
 
 /// constexpr version of std::tolower with chars, as unfortunately for now (May 2021) std::tolower is not constexpr
-constexpr char tolower(char c) noexcept {
-  switch (c) {
+constexpr char tolower(char ch) noexcept {
+  switch (ch) {
     // clang-format off
     case 'A': return 'a';
     case 'B': return 'b';
@@ -73,20 +68,9 @@ constexpr char tolower(char c) noexcept {
     case 'Y': return 'y';
     case 'Z': return 'z';
 
-    default: return c;
+    default: return ch;
       // clang-format on
   }
 }
 
-inline string ToUpper(std::string_view str) {
-  string ret(str);
-  std::ranges::transform(ret, ret.begin(), toupper);
-  return ret;
-}
-
-inline string ToLower(std::string_view str) {
-  string ret(str);
-  std::ranges::transform(ret, ret.begin(), tolower);
-  return ret;
-}
 }  // namespace cct

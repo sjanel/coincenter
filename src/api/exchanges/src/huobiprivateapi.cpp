@@ -41,7 +41,7 @@
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
-#include "toupperlower.hpp"
+#include "toupperlower-string.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "tradeside.hpp"
@@ -587,9 +587,9 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   }
   withdrawPostData.append("address", destinationWallet.address());
 
-  MonetaryAmount fee(_exchangePublic.queryWithdrawalFee(currencyCode));
+  MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
-  MonetaryAmount netEmittedAmount = grossAmount - fee;
+  MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
   if (!withdrawParams.minWithdrawAmt.isDefault() && netEmittedAmount < withdrawParams.minWithdrawAmt) {
     throw exception("Minimum withdraw amount for {} on Huobi is {}, cannot withdraw {}", currencyCode,
                     withdrawParams.minWithdrawAmt, netEmittedAmount);
@@ -608,7 +608,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   withdrawPostData.append("amount", netEmittedAmount.amountStr());
   withdrawPostData.append("currency", lowerCaseCur);
   // Strange to have the fee as input parameter of a withdraw...
-  withdrawPostData.append("fee", fee.amountStr());
+  withdrawPostData.append("fee", withdrawFee.amountStr());
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
                              std::move(withdrawPostData));

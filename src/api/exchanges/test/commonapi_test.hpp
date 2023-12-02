@@ -78,7 +78,7 @@ class TestAPI {
     // if (exchangePrivateOpt) {
     //   json d;
     //   for (const auto &c : currencies) {
-    //     d[string(c.standardStr())] = exchangePrivateOpt->queryWithdrawalFee(c.standardCode()).amountStr();
+    //     d[string(c.standardStr())] = *exchangePrivateOpt->queryWithdrawalFee(c.standardCode()).amountStr();
     //   }
     //   std::cout << d.dump(2) << '\n';
     // }
@@ -147,7 +147,7 @@ class TestAPI {
         sample = std::move(withdrawableCryptos);
       }
 
-      WithdrawalFeesSet withdrawalFees =
+      MonetaryAmountByCurrencySet withdrawalFees =
           exchangePrivateOpt ? exchangePrivateOpt->queryWithdrawalFees() : exchangePublic.queryWithdrawalFees();
 
       for (const CurrencyExchange &curExchange : sample) {

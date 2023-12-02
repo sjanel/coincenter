@@ -1,16 +1,31 @@
 #pragma once
 
+#include <optional>
+
+#include "balanceoptions.hpp"
+#include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
+#include "currencycode.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "depositsconstraints.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "monetaryamount.hpp"
+#include "orderid.hpp"
+#include "ordersconstraints.hpp"
 #include "tradeinfo.hpp"
+#include "wallet.hpp"
+#include "withdrawinfo.hpp"
+#include "withdrawsconstraints.hpp"
 
 namespace cct {
 
 class CoincenterInfo;
 
 namespace api {
+class APIKey;
+class CommonAPI;
 class UpbitPublic;
 
 class UpbitPrivate : public ExchangePrivate {
@@ -35,7 +50,7 @@ class UpbitPrivate : public ExchangePrivate {
 
   WithdrawsSet queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) override;
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override {
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override {
     return _withdrawalFeesCache.get(currencyCode);
   }
 
@@ -70,7 +85,7 @@ class UpbitPrivate : public ExchangePrivate {
   };
 
   struct WithdrawFeesFunc {
-    MonetaryAmount operator()(CurrencyCode currencyCode);
+    std::optional<MonetaryAmount> operator()(CurrencyCode currencyCode);
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;

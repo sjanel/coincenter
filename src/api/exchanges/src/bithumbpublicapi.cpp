@@ -128,11 +128,11 @@ MarketSet BithumbPublic::queryTradableMarkets() {
   return markets;
 }
 
-MonetaryAmount BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   const auto& map = _withdrawalFeesCache.get();
   auto it = map.find(currencyCode);
   if (it == map.end()) {
-    throw exception("Unable to find {} in withdrawal fees", currencyCode);
+    return {};
   }
   return *it;
 }
@@ -147,7 +147,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
   return *avgPrice;
 }
 
-WithdrawalFeesSet BithumbPublic::WithdrawalFeesFunc::operator()() {
+MonetaryAmountByCurrencySet BithumbPublic::WithdrawalFeesFunc::operator()() {
   vector<MonetaryAmount> fees;
   // This is not a published API and only a "standard" html page. We will capture the text information in it.
   // Warning, it's not in json format so we will need manual parsing.
@@ -189,7 +189,7 @@ WithdrawalFeesSet BithumbPublic::WithdrawalFeesFunc::operator()() {
   } else {
     log::info("Updated Bithumb withdrawal fees for {} coins", fees.size());
   }
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {

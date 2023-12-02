@@ -1,9 +1,11 @@
+
 #include "huobipublicapi.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -33,7 +35,7 @@
 #include "monetaryamount.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
-#include "toupperlower.hpp"
+#include "toupperlower-string.hpp"
 #include "tradeside.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
@@ -247,7 +249,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
   return {std::move(markets), std::move(marketInfoMap)};
 }
 
-WithdrawalFeesSet HuobiPublic::queryWithdrawalFees() {
+MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
   vector<MonetaryAmount> fees;
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
@@ -283,10 +285,10 @@ WithdrawalFeesSet HuobiPublic::queryWithdrawalFees() {
   }
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
-MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
@@ -296,11 +298,11 @@ MonetaryAmount HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
     for (const json& chainDetail : curDetail["chains"]) {
       std::string_view chainName = chainDetail["chain"].get<std::string_view>();
       if (chainName == cur) {
-        return {chainDetail["transactFeeWithdraw"].get<std::string_view>(), cur};
+        return MonetaryAmount(chainDetail["transactFeeWithdraw"].get<std::string_view>(), cur);
       }
     }
   }
-  throw exception("Unable to find withdrawal fee for {}", currencyCode);
+  return {};
 }
 
 MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {

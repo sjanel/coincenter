@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -239,7 +240,7 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json
 }
 }  // namespace
 
-WithdrawalFeesSet BinancePublic::queryWithdrawalFees() {
+MonetaryAmountByCurrencySet BinancePublic::queryWithdrawalFees() {
   vector<MonetaryAmount> fees;
   for (const json& coinJson : _globalInfosCache.get()) {
     std::string_view coinStr = coinJson["coin"].get<std::string_view>();
@@ -254,17 +255,17 @@ WithdrawalFeesSet BinancePublic::queryWithdrawalFees() {
 
   log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
   assert(!fees.empty());
-  return WithdrawalFeesSet(std::move(fees));
+  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
-MonetaryAmount BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const json& el : _globalInfosCache.get()) {
     CurrencyCode cur(el["coin"].get<std::string_view>());
     if (cur == currencyCode) {
       return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
     }
   }
-  throw exception("Unable to find withdrawal fee for {}", currencyCode);
+  return {};
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {

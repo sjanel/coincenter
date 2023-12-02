@@ -325,4 +325,16 @@ Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, C
   return ret;
 }
 
+MonetaryAmount ExchangePublic::queryWithdrawalFeeOrZero(CurrencyCode currencyCode) {
+  std::optional<MonetaryAmount> optWithdrawFee = queryWithdrawalFee(currencyCode);
+  MonetaryAmount withdrawFee;
+  if (optWithdrawFee) {
+    withdrawFee = *optWithdrawFee;
+  } else {
+    log::error("Unable to retrieve withdraw fee for {} on {}, consider 0", currencyCode, name());
+    withdrawFee = MonetaryAmount(0, currencyCode);
+  }
+  return withdrawFee;
+}
+
 }  // namespace cct::api

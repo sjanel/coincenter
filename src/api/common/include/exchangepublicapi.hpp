@@ -12,8 +12,8 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "priceoptions.hpp"
-#include "tradedefinitions.hpp"
 
 namespace cct {
 
@@ -70,10 +70,10 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
   /// or, if not possible, should be retrieved from a static source updated regularly.
-  virtual WithdrawalFeesSet queryWithdrawalFees() = 0;
+  virtual MonetaryAmountByCurrencySet queryWithdrawalFees() = 0;
 
   /// Retrieve the withdrawal fee of a Currency only
-  virtual MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) = 0;
+  virtual std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) = 0;
 
   /// Return true if exchange supports official REST API has an endpoint to get withdrawal fees
   /// For instance, Kraken does not offer such endpoint, we nee to query external sources which may provide inaccurate
@@ -161,6 +161,10 @@ class ExchangePublic : public ExchangeBase {
   const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
 
   CommonAPI &commonAPI() { return _commonApi; }
+
+  /// Query withdrawal fee for given currency code.
+  /// If no data found, return a 0 MonetaryAmount on given currency.
+  MonetaryAmount queryWithdrawalFeeOrZero(CurrencyCode currencyCode);
 
  protected:
   friend class ExchangePrivate;

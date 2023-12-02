@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string_view>
 
 #include "cachedresult.hpp"
@@ -33,9 +34,9 @@ class UpbitPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  WithdrawalFeesSet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
 
-  MonetaryAmount queryWithdrawalFee(CurrencyCode currencyCode) override;
+  std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
   bool isWithdrawalFeesSourceReliable() const override { return true; }
 
@@ -79,7 +80,7 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    WithdrawalFeesSet operator()();
+    MonetaryAmountByCurrencySet operator()();
 
     const string& _name;
     std::string_view _dataDir;
