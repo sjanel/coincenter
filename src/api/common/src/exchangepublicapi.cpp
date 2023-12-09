@@ -33,12 +33,12 @@ ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConvert
       _coincenterInfo(coincenterInfo),
       _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
 
-std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, CurrencyCode toCurrency,
+std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
                                                       MarketOrderBookMap &marketOrderBookMap,
                                                       const PriceOptions &priceOptions) {
-  if (amount.currencyCode() == toCurrency) {
-    return amount;
+  if (from.currencyCode() == toCurrency) {
+    return from;
   }
   if (conversionPath.empty()) {
     return std::nullopt;
@@ -46,9 +46,9 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, Cur
   const ExchangeInfo::FeeType feeType =
       priceOptions.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
   for (Market mk : conversionPath) {
-    CurrencyCode mFromCurrencyCode = amount.currencyCode();
+    CurrencyCode mFromCurrencyCode = from.currencyCode();
     assert(mk.canTrade(mFromCurrencyCode));
-    CurrencyCode mToCurrencyCode = mk.base() == amount.currencyCode() ? mk.quote() : mk.base();
+    CurrencyCode mToCurrencyCode = mk.base() == from.currencyCode() ? mk.quote() : mk.base();
     std::optional<CurrencyCode> optFiatLikeFrom = _coincenterInfo.fiatCurrencyIfStableCoin(mFromCurrencyCode);
     CurrencyCode fiatFromLikeCurCode = (optFiatLikeFrom ? *optFiatLikeFrom : mFromCurrencyCode);
     std::optional<CurrencyCode> optFiatLikeTo = _coincenterInfo.fiatCurrencyIfStableCoin(mToCurrencyCode);
@@ -56,9 +56,10 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, Cur
     bool isFromFiatLike = optFiatLikeFrom || fiats.contains(mFromCurrencyCode);
     bool isToFiatLike = optFiatLikeTo || fiats.contains(mToCurrencyCode);
     if (isFromFiatLike && isToFiatLike) {
-      amount = _fiatConverter.convert(MonetaryAmount(amount, fiatFromLikeCurCode), fiatToLikeCurCode);
+      from = _fiatConverter.convert(MonetaryAmount(from, fiatFromLikeCurCode), fiatToLikeCurCode);
     } else {
       if (marketOrderBookMap.empty()) {
+        std::lock_guard<std::mutex> guard(_allOrderBooksMutex);
         marketOrderBookMap = queryAllApproximatedOrderBooks(1);
       }
       auto it = marketOrderBookMap.find(mk);
@@ -66,14 +67,14 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount amount, Cur
         return std::nullopt;
       }
       const MarketOrderBook &marketOrderbook = it->second;
-      std::optional<MonetaryAmount> optA = marketOrderbook.convert(amount, priceOptions);
+      std::optional<MonetaryAmount> optA = marketOrderbook.convert(from, priceOptions);
       if (!optA) {
         return std::nullopt;
       }
-      amount = _exchangeInfo.applyFee(*optA, feeType);
+      from = _exchangeInfo.applyFee(*optA, feeType);
     }
   }
-  return amount;
+  return from;
 }
 
 namespace {
@@ -145,6 +146,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
       return ret;
     }
     if (markets.empty()) {
+      std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
       markets = queryTradableMarkets();
       if (markets.empty()) {
         log::error("No markets retrieved for {}", _name);
