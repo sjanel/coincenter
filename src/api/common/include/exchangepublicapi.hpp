@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <optional>
 #include <string_view>
 
@@ -51,19 +52,19 @@ class ExchangePublic : public ExchangeBase {
 
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
-  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrency,
+  std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency,
                                         const PriceOptions &priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
     Fiats fiats = queryFiats();
     MarketSet markets;
-    MarketsPath conversionPath = findMarketsPath(a.currencyCode(), toCurrency, markets, fiats, true);
-    return convert(a, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+    MarketsPath conversionPath = findMarketsPath(from.currencyCode(), toCurrency, markets, fiats, true);
+    return convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   }
 
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
   /// No external calls is made with this version, it has all what it needs
-  std::optional<MonetaryAmount> convert(MonetaryAmount a, CurrencyCode toCurrency, const MarketsPath &conversionPath,
+  std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency, const MarketsPath &conversionPath,
                                         const Fiats &fiats, MarketOrderBookMap &marketOrderBookMap,
                                         const PriceOptions &priceOptions = PriceOptions());
 
@@ -178,6 +179,8 @@ class ExchangePublic : public ExchangeBase {
   CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
   const ExchangeInfo &_exchangeInfo;
+  std::mutex _tradableMarketsMutex;
+  std::mutex _allOrderBooksMutex;
 };
 }  // namespace api
 }  // namespace cct
