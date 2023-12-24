@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package proto;
+
+message MarketOrderBook {
+  optional int64 unixTimestampInMs = 1;
+  optional int32 volumeNbDecimals = 2;
+  optional int32 priceNbDecimals = 3;
+
+  message PricedVolume {
+    optional int64 price = 1;
+    optional int64 volume = 2;
+  }
+
+  message OrderBook {
+    repeated PricedVolume asks = 1;
+    repeated PricedVolume bids = 2;
+  }
+
+  optional OrderBook orderBook = 4;
+}

@@ -23,6 +23,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install cmake libssl-dev libcurl4-openssl-dev ninja-build -y --no-install-recommends
+          echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
 
       - name: Install gcc
         run: |
@@ -30,7 +31,7 @@ jobs:
 
           # Temporary workaround for libasan bug stated here: https://github.com/google/sanitizers/issues/1716
           sudo sysctl vm.mmap_rnd_bits=28
-        if: startsWith(matrix.compiler, 'g++')
+        if: startsWith(matrix.compiler, 'g')
 
       - name: Install clang
         run: |
@@ -38,7 +39,7 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh ${CLANG_VERSION}
-        if: startsWith(matrix.compiler, 'clang++')
+        if: startsWith(matrix.compiler, 'clang')
 
       - name: Configure CMake
         run: cmake -S . -B build -GNinja

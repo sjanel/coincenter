@@ -7,6 +7,7 @@
 #include "logginginfo.hpp"
 #include "requestsconfig.hpp"
 #include "timedef.hpp"
+#include "trading-config.hpp"
 
 namespace cct {
 
@@ -18,12 +19,14 @@ class GeneralConfig {
 
   GeneralConfig() = default;
 
-  GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig, Duration fiatConversionQueryRate,
-                ApiOutputType apiOutputType);
+  GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig, TradingConfig &&tradingConfig,
+                Duration fiatConversionQueryRate, ApiOutputType apiOutputType);
 
   const LoggingInfo &loggingInfo() const { return _loggingInfo; }
 
   const RequestsConfig &requestsConfig() const { return _requestsConfig; }
+
+  const TradingConfig &tradingConfig() const { return _tradingConfig; }
 
   ApiOutputType apiOutputType() const { return _apiOutputType; }
 
@@ -32,6 +35,7 @@ class GeneralConfig {
  private:
   LoggingInfo _loggingInfo{LoggingInfo::WithLoggersCreation::kYes};
   RequestsConfig _requestsConfig;
+  TradingConfig _tradingConfig;
   Duration _fiatConversionQueryRate = std::chrono::hours(8);
   ApiOutputType _apiOutputType = ApiOutputType::kFormattedTable;
 };

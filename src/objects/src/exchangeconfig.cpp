@@ -67,7 +67,8 @@ ExchangeConfig::ExchangeConfig(
     const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
     std::string_view acceptEncoding, int dustSweeperMaxNbTrades, log::level::level_enum requestsCallLogLevel,
     log::level::level_enum requestsAnswerLogLevel, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
-    bool placeSimulateRealOrder, bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig)
+    bool placeSimulateRealOrder, bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig,
+    MarketDataSerialization marketDataSerialization)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
@@ -86,7 +87,8 @@ ExchangeConfig::ExchangeConfig(
       _multiTradeAllowedByDefault(multiTradeAllowedByDefault),
       _validateDepositAddressesInFile(validateDepositAddressesInFile),
       _placeSimulateRealOrder(placeSimulateRealOrder),
-      _validateApiKey(validateApiKey) {
+      _validateApiKey(validateApiKey),
+      _withMarketSerialization(marketDataSerialization == MarketDataSerialization::kYes) {
   if (dustSweeperMaxNbTrades > std::numeric_limits<int16_t>::max() || dustSweeperMaxNbTrades < 0) {
     throw exception("Invalid number of dust sweeper max trades '{}', should be in [0, {}]", dustSweeperMaxNbTrades,
                     std::numeric_limits<int16_t>::max());
@@ -113,6 +115,7 @@ ExchangeConfig::ExchangeConfig(
                _validateDepositAddressesInFile ? kDepositAddressesFileName : "");
     log::trace(" - Order placing in simulation  : {}", _placeSimulateRealOrder ? "real, unmatchable" : "none");
     log::trace(" - Validate API Key             : {}", _validateApiKey ? "yes" : "no");
+    log::trace(" - Market data serialization    : {}", _withMarketSerialization ? "yes" : "no");
   }
   if (_preferredPaymentCurrencies.empty()) {
     log::warn("{} list of preferred currencies is empty, buy and sell commands cannot perform trades", exchangeNameStr);

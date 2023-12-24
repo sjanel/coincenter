@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -25,21 +26,44 @@
 #include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "market-timestamp-set.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
+#include "time-window.hpp"
+#include "timedef.hpp"
 #include "unreachable.hpp"
 
+#ifdef CCT_ENABLE_PROTO
+#include "proto-market-data-deserializer.hpp"
+#include "proto-market-data-serializer.hpp"
+#else
+#include "dummy-market-data-deserializer.hpp"
+#include "dummy-market-data-serializer.hpp"
+#endif
+
 namespace cct::api {
+
+#ifdef CCT_ENABLE_PROTO
+using MarketDataDeserializer = ProtoMarketDataDeserializer;
+using MarketDataSerializer = ProtoMarketDataSerializer;
+#else
+using MarketDataDeserializer = DummyMarketDataDeserializer;
+using MarketDataSerializer = DummyMarketDataSerializer;
+#endif
+
 ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                                const CoincenterInfo &coincenterInfo)
     : _name(name),
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
-      _exchangeConfig(coincenterInfo.exchangeConfig(name)) {}
+      _exchangeConfig(coincenterInfo.exchangeConfig(name)),
+      _marketDataDeserializerPtr(new MarketDataDeserializer(coincenterInfo.dataDir(), name)) {}
+
+ExchangePublic::~ExchangePublic() = default;
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const CurrencyCodeSet &fiats,
@@ -279,7 +303,7 @@ ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode f
 std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
                                                                      const PriceOptions &priceOptions) {
   const int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
-  return queryOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
+  return getOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
 }
 
 std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, MonetaryAmount from,
@@ -293,7 +317,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, Mo
   } else if (priceOptions.priceStrategy() == PriceStrategy::kTaker) {
     depth = kDefaultDepth;
   }
-  return queryOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
+  return getOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
 }
 
 std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
@@ -432,6 +456,64 @@ MonetaryAmount ExchangePublic::queryWithdrawalFeeOrZero(CurrencyCode currencyCod
     withdrawFee = MonetaryAmount(0, currencyCode);
   }
   return withdrawFee;
+}
+
+MarketOrderBook ExchangePublic::getOrderBook(Market mk, int depth) {
+  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  const auto marketOrderBook = queryOrderBook(mk, depth);
+
+  if (_exchangeConfig.withMarketDataSerialization()) {
+    getMarketDataSerializer().push(marketOrderBook);
+  }
+  return marketOrderBook;
+}
+
+/// Retrieve an ordered vector of recent last trades
+PublicTradeVector ExchangePublic::getLastTrades(Market mk, int nbTrades) {
+  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  const auto lastTrades = queryLastTrades(mk, nbTrades);
+
+  if (_exchangeConfig.withMarketDataSerialization()) {
+    getMarketDataSerializer().push(mk, lastTrades);
+  }
+  return lastTrades;
+}
+
+MarketTimestampSet ExchangePublic::pullMarketOrderBooksMarkets(TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullMarketOrderBooksMarkets(timeWindow);
+}
+
+MarketTimestampSet ExchangePublic::pullTradeMarkets(TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullTradeMarkets(timeWindow);
+}
+
+PublicTradeVector ExchangePublic::pullTradesForReplay(Market market, TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullTrades(market, timeWindow);
+}
+
+MarketOrderBookVector ExchangePublic::pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullMarketOrderBooks(market, timeWindow);
+}
+
+AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
+  if (_marketDataSerializerPtr) {
+    return *_marketDataSerializerPtr;
+  }
+
+  const auto nowTime = Clock::now();
+
+  // Heuristic: load up to 1 week of data to retrieve the youngest written timestamp.
+  // This will be used in order not to write duplicate objects at the start of a new program after that a previous
+  // program run was stopped.
+  const TimeWindow largeTimeWindow{nowTime - std::chrono::weeks{1}, nowTime};
+
+  const MarketTimestampSets marketTimestampSets{pullMarketOrderBooksMarkets(largeTimeWindow),
+                                                pullTradeMarkets(largeTimeWindow)};
+
+  _marketDataSerializerPtr =
+      std::make_unique<MarketDataSerializer>(_coincenterInfo.dataDir(), marketTimestampSets, name());
+
+  return *_marketDataSerializerPtr;
 }
 
 }  // namespace cct::api

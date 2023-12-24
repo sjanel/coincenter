@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "apioutputtype.hpp"
+#include "automation-config.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -19,6 +20,7 @@
 #include "runmodes.hpp"
 #include "stringoptionparser.hpp"
 #include "timedef.hpp"
+#include "trading-config.hpp"
 
 namespace cct {
 
@@ -70,8 +72,21 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
   RequestsConfig requestsConfig(
       generalConfigData.at("requests").at("concurrency").at("nbMaxParallelRequests").get<int>());
 
-  GeneralConfig generalConfig(std::move(loggingInfo), std::move(requestsConfig), fiatConversionQueryRate,
-                              apiOutputType);
+  const auto &automationJsonPart = generalConfigData.at("trading").at("automation");
+  const auto &deserializationJsonPart = automationJsonPart.at("deserialization");
+  const auto &startingContextJsonPart = automationJsonPart.at("startingContext");
+
+  Duration loadChunkDuration = ParseDuration(deserializationJsonPart.at("loadChunkDuration").get<std::string_view>());
+  MonetaryAmount startBaseAmountEquivalent{
+      startingContextJsonPart.at("startBaseAmountEquivalent").get<std::string_view>()};
+  MonetaryAmount startQuoteAmountEquivalent{
+      startingContextJsonPart.at("startQuoteAmountEquivalent").get<std::string_view>()};
+
+  AutomationConfig automationConfig(loadChunkDuration, startBaseAmountEquivalent, startQuoteAmountEquivalent);
+  TradingConfig tradingConfig(std::move(automationConfig));
+
+  GeneralConfig generalConfig(std::move(loggingInfo), std::move(requestsConfig), std::move(tradingConfig),
+                              fiatConversionQueryRate, apiOutputType);
 
   const LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
 

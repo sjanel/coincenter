@@ -94,12 +94,12 @@ class Exchange {
     return apiPublic().queryAllApproximatedOrderBooks(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth);
+  MarketOrderBook getOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth);
 
   MonetaryAmount queryLast24hVolume(Market mk) { return apiPublic().queryLast24hVolume(mk); }
 
   /// Retrieve an ordered vector of recent last trades
-  PublicTradeVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault);
+  PublicTradeVector getLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault);
 
   /// Retrieve the last price of given market.
   MonetaryAmount queryLastPrice(Market mk) { return apiPublic().queryLastPrice(mk); }

@@ -9,6 +9,20 @@
 
 namespace cct {
 
+TEST(DurationLen, Basic) { EXPECT_EQ(DurationLen("99min"), 5); }
+
+TEST(DurationLen, BasicComplex) { EXPECT_EQ(DurationLen("34d45min"), 8); }
+
+TEST(DurationLen, BasicWithComma) { EXPECT_EQ(DurationLen("23s,bithumb"), 3); }
+
+TEST(DurationLen, ComplexWithSpaces) { EXPECT_EQ(DurationLen(" 1 d 52 h,kraken"), 9); }
+
+TEST(DurationLen, NegativeValue) { EXPECT_EQ(DurationLen("-3sec"), 0); }
+
+TEST(DurationLen, InvalidTimeUnit) { EXPECT_EQ(DurationLen("63po"), 0); }
+
+TEST(DurationLen, DoesNotStartWithNumber) { EXPECT_EQ(DurationLen("us"), 0); }
+
 TEST(ParseDuration, EmptyDurationNotAllowed) { EXPECT_THROW(ParseDuration(""), invalid_argument); }
 
 TEST(ParseDuration, DurationDays) { EXPECT_EQ(ParseDuration("37d"), std::chrono::days(37)); }

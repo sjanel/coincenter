@@ -5,9 +5,10 @@ ARG BUILD_MODE=Release
 ARG BUILD_TEST=0
 ARG BUILD_ASAN=0
 ARG BUILD_WITH_PROMETHEUS=1
+ARG BUILD_WITH_PROTOBUF=1
 
 # Install base & build dependencies, needed certificates for curl to work with https
-RUN apk add --update --upgrade --no-cache g++ libc-dev openssl-dev zlib-dev curl-dev cmake ninja ca-certificates
+RUN apk add --update --upgrade --no-cache linux-headers g++ zlib-dev openssl-dev curl-dev cmake ninja git ca-certificates
 
 # Copy source files
 WORKDIR /app/src
@@ -39,6 +40,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
     -DCCT_ENABLE_TESTS=${BUILD_TEST} \
     -DCCT_ENABLE_ASAN=${BUILD_ASAN} \
     -DCCT_BUILD_PROMETHEUS_FROM_SRC=${BUILD_WITH_PROMETHEUS} \
+    -DCCT_ENABLE_PROTO=${BUILD_WITH_PROTOBUF} \
     -GNinja ..
 
 # Build

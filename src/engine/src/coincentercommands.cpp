@@ -11,7 +11,10 @@
 #include "coincenteroptions.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
+#include "market.hpp"
+#include "replay-options.hpp"
 #include "stringoptionparser.hpp"
+#include "time-window.hpp"
 #include "timedef.hpp"
 #include "withdrawsconstraints.hpp"
 
@@ -196,6 +199,46 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     optionParser = StringOptionParser(cmdLineOptions.lastPrice);
     _commands.emplace_back(CoincenterCommandType::kLastPrice)
         .setMarket(optionParser.parseMarket())
+        .setExchangeNames(optionParser.parseExchanges());
+  }
+
+  if (!cmdLineOptions.marketData.empty()) {
+    optionParser = StringOptionParser(cmdLineOptions.marketData);
+
+    _commands.emplace_back(CoincenterCommandType::kMarketData)
+        .setMarket(optionParser.parseMarket())
+        .setExchangeNames(optionParser.parseExchanges());
+  }
+
+  if (cmdLineOptions.replay) {
+    optionParser = StringOptionParser(*cmdLineOptions.replay);
+
+    auto dur = optionParser.parseDuration(StringOptionParser::FieldIs::kOptional);
+
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::kReplay)
+                    .setReplayOptions(cmdLineOptions.computeReplayOptions(dur))
+                    .setExchangeNames(optionParser.parseExchanges());
+
+    if (!cmdLineOptions.market.empty()) {
+      cmd.setMarket(Market(cmdLineOptions.market));
+    }
+  }
+
+  if (cmdLineOptions.replayMarkets) {
+    optionParser = StringOptionParser(*cmdLineOptions.replayMarkets);
+
+    TimeWindow timeWindow;
+    auto dur = optionParser.parseDuration(StringOptionParser::FieldIs::kOptional);
+    auto nowTime = Clock::now();
+    if (dur == kUndefinedDuration) {
+      timeWindow = TimeWindow(TimePoint{}, nowTime);
+    } else {
+      timeWindow = TimeWindow(nowTime - dur, nowTime);
+    }
+
+    _commands.emplace_back(CoincenterCommandType::kReplayMarkets)
+        .setReplayOptions(
+            ReplayOptions(timeWindow, cmdLineOptions.algorithmNames, ReplayOptions::ReplayMode::kValidateOnly))
         .setExchangeNames(optionParser.parseExchanges());
   }
 

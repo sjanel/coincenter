@@ -15,6 +15,7 @@
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
+#include "time-window.hpp"
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
@@ -66,7 +67,7 @@ class QueryResultPrinter {
   }
 
   void printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
-                         const OrdersConstraints &ordersConstraints) const;
+                         const OrdersConstraints &ordersConstraints = OrdersConstraints{}) const;
 
   void printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange,
                          const OrdersConstraints &ordersConstraints) const;
@@ -103,6 +104,13 @@ class QueryResultPrinter {
   void printDustSweeper(
       const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
       CurrencyCode currencyCode) const;
+
+  void printMarketsForReplay(TimeWindow timeWindow,
+                             const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange);
+
+  void printMarketTradingResults(TimeWindow timeWindow,
+                                 const MarketTradingGlobalResultPerExchange &marketTradingResultPerExchange,
+                                 CoincenterCommandType commandType) const;
 
  private:
   void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount, bool isPercentageTrade,

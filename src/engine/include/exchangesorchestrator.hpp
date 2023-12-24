@@ -6,14 +6,18 @@
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangeretriever.hpp"
+#include "market-trader-engine.hpp"
 #include "market.hpp"
 #include "queryresulttypes.hpp"
 #include "threadpool.hpp"
+#include "time-window.hpp"
 #include "withdrawoptions.hpp"
 
 namespace cct {
 
+class ReplayOptions;
 class RequestsConfig;
+
 class ExchangesOrchestrator {
  public:
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
@@ -88,6 +92,19 @@ class ExchangesOrchestrator {
   TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, std::optional<int> depth);
 
   MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
+
+  MarketDataPerExchange getMarketDataPerExchange(std::span<const Market> marketPerPublicExchange,
+                                                 ExchangeNameSpan exchangeNames);
+
+  MarketTimestampSetsPerExchange pullAvailableMarketsForReplay(TimeWindow timeWindow, ExchangeNameSpan exchangeNames);
+
+  MarketTradeRangeStatsPerExchange traderConsumeRange(const ReplayOptions &replayOptions, TimeWindow subTimeWindow,
+                                                      std::span<MarketTraderEngine> marketTraderEngines,
+                                                      ExchangeNameSpan exchangeNames);
+
+  MarketTradingGlobalResultPerExchange getMarketTraderResultPerExchange(
+      std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange &&tradeRangeStatsPerExchange,
+      ExchangeNameSpan exchangeNames);
 
  private:
   ExchangeRetriever _exchangeRetriever;

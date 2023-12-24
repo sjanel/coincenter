@@ -9,10 +9,12 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
+#include "durationstring.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -36,6 +38,23 @@ CurrencyCode StringOptionParser::parseCurrency(FieldIs fieldIs, char delimiter) 
   }
 
   return {};
+}
+
+Duration StringOptionParser::parseDuration(FieldIs fieldIs) {
+  auto dur = kUndefinedDuration;
+  const std::string_view currentToken(_opt.begin() + _pos, _opt.end());
+  const auto durationLen = DurationLen(currentToken);
+  if (durationLen > 0) {
+    const std::string_view durationStr(_opt.data() + _pos, static_cast<std::string_view::size_type>(durationLen));
+
+    dur = ParseDuration(durationStr);
+  } else if (fieldIs == FieldIs::kMandatory) {
+    throw invalid_argument("Expected a valid duration in '{}'", currentToken);
+  }
+
+  _pos += durationLen;
+
+  return dur;
 }
 
 // At the end of the market, either the end of the string or a comma is expected.

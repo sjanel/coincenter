@@ -58,6 +58,10 @@ ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json
         withdrawTopLevelOption.getBool(exchangeName, "validateDepositAddressesInFile");
     const bool placeSimulatedRealOrder = queryTopLevelOption.getBool(exchangeName, "placeSimulateRealOrder");
     const bool validateApiKey = queryTopLevelOption.getBool(exchangeName, "validateApiKey");
+    const ExchangeConfig::MarketDataSerialization marketDataSerialization =
+        queryTopLevelOption.getBool(exchangeName, "marketDataSerialization")
+            ? ExchangeConfig::MarketDataSerialization::kYes
+            : ExchangeConfig::MarketDataSerialization::kNo;
 
     MonetaryAmountByCurrencySet dustAmountsThresholds(
         queryTopLevelOption.getMonetaryAmountsArray(exchangeName, "dustAmountsThreshold"));
@@ -90,7 +94,7 @@ ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json
                        std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
                        acceptEncoding, dustSweeperMaxNbTrades, requestsCallLogLevel, requestsAnswerLogLevel,
                        multiTradeAllowedByDefault, validateDepositAddressesInFile, placeSimulatedRealOrder,
-                       validateApiKey, std::move(tradeConfig), std::move(httpConfig)));
+                       validateApiKey, std::move(tradeConfig), std::move(httpConfig), marketDataSerialization));
   }  // namespace cct
 
   // Print json unused values

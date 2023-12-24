@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package proto;
+
+enum TradeSide {
+  TRADE_UNSPECIFIED = 0;
+  TRADE_BUY = 1;
+  TRADE_SELL = 2;
+}
+
+message PublicTrade {
+  optional int64 unixTimestampInMs = 1;
+
+  optional int64 priceAmount = 2;
+  optional int64 volumeAmount = 3;
+
+  optional int32 priceNbDecimals = 4;
+  optional int32 volumeNbDecimals = 5;
+
+  TradeSide tradeSide = 6;
+}

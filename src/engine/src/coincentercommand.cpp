@@ -11,6 +11,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
+#include "timedef.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"
@@ -124,4 +125,10 @@ CoincenterCommand& CoincenterCommand::withBalanceInUse(bool value) {
   _withBalanceInUse = value;
   return *this;
 }
+
+CoincenterCommand& CoincenterCommand::setReplayOptions(ReplayOptions replayOptions) {
+  _specialOptions = std::move(replayOptions);
+  return *this;
+}
+
 }  // namespace cct

@@ -31,13 +31,16 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "exchangeretriever.hpp"
+#include "market-trader-engine.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
+#include "replay-options.hpp"
 #include "requestsconfig.hpp"
 #include "threadpool.hpp"
+#include "trade-range-stats.hpp"
 #include "tradedamounts.hpp"
 #include "tradeoptions.hpp"
 #include "traderesult.hpp"
@@ -170,7 +173,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
       log::warn("Unable to convert {} into {} on {}", mk.quote(), equiCurrencyCode, exchange->name());
     }
-    return std::make_tuple(exchange->name(), exchange->queryOrderBook(mk, actualDepth), optConversionRate);
+    return std::make_tuple(exchange->name(), exchange->getOrderBook(mk, actualDepth), optConversionRate);
   };
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), marketOrderBooksFunc);
   return ret;
@@ -941,7 +944,7 @@ TradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market mk, Exc
   TradesPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [mk, nbLastTrades](Exchange *exchange) {
-        return std::make_pair(static_cast<const Exchange *>(exchange), exchange->queryLastTrades(mk, nbLastTrades));
+        return std::make_pair(static_cast<const Exchange *>(exchange), exchange->getLastTrades(mk, nbLastTrades));
       });
 
   return ret;
@@ -956,6 +959,118 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLastPricePerExchange(Market 
       selectedExchanges.begin(), selectedExchanges.end(), lastPricePerExchange.begin(),
       [mk](Exchange *exchange) { return std::make_pair(exchange, exchange->queryLastPrice(mk)); });
   return lastPricePerExchange;
+}
+
+MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<const Market> marketPerPublicExchange,
+                                                                      ExchangeNameSpan exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  std::array<bool, kNbSupportedExchanges> isMarketTradable;
+
+  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
+                                [&marketPerPublicExchange](Exchange *exchange) {
+                                  Market market = marketPerPublicExchange[exchange->publicExchangePos()];
+                                  return market.isDefined() && exchange->queryTradableMarkets().contains(market);
+                                });
+
+  FilterVector(selectedExchanges, isMarketTradable);
+
+  MarketDataPerExchange ret(selectedExchanges.size());
+  _threadPool.parallelTransform(
+      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&marketPerPublicExchange](Exchange *exchange) {
+        if (!exchange->exchangeConfig().withMarketDataSerialization()) {
+          log::warn("Calling market-data on {} with data serialization disabled", exchange->name());
+        }
+        // Call order book and last trades sequentially for this exchange
+        Market market = marketPerPublicExchange[exchange->publicExchangePos()];
+        return std::make_pair(exchange,
+                              std::make_pair(exchange->getOrderBook(market), exchange->getLastTrades(market)));
+      });
+  return ret;
+}
+
+MarketTimestampSetsPerExchange ExchangesOrchestrator::pullAvailableMarketsForReplay(TimeWindow timeWindow,
+                                                                                    ExchangeNameSpan exchangeNames) {
+  log::info("Query available markets for replay from {} within {}", ConstructAccumulatedExchangeNames(exchangeNames),
+            timeWindow);
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+  MarketTimestampSetsPerExchange marketTimestampSetsPerExchange(selectedExchanges.size());
+  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(),
+                                marketTimestampSetsPerExchange.begin(), [timeWindow](Exchange *exchange) {
+                                  return std::make_pair(
+                                      exchange,
+                                      MarketTimestampSets{exchange->apiPublic().pullMarketOrderBooksMarkets(timeWindow),
+                                                          exchange->apiPublic().pullTradeMarkets(timeWindow)});
+                                });
+  return marketTimestampSetsPerExchange;
+}
+
+MarketTradeRangeStatsPerExchange ExchangesOrchestrator::traderConsumeRange(
+    const ReplayOptions &replayOptions, TimeWindow subTimeWindow, std::span<MarketTraderEngine> marketTraderEngines,
+    ExchangeNameSpan exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  MarketTradeRangeStatsPerExchange tradeRangeResultsPerExchange(selectedExchanges.size());
+
+  _threadPool.parallelTransform(
+      selectedExchanges.begin(), selectedExchanges.end(), marketTraderEngines.begin(),
+      tradeRangeResultsPerExchange.begin(),
+      [subTimeWindow, &replayOptions](Exchange *exchange, MarketTraderEngine &marketTraderEngine) {
+        Market market = marketTraderEngine.market();
+        auto &apiPublic = exchange->apiPublic();
+        auto marketOrderBooks = apiPublic.pullMarketOrderBooksForReplay(market, subTimeWindow);
+        auto publicTrades = apiPublic.pullTradesForReplay(market, subTimeWindow);
+
+        TradeRangeStats tradeRangeStats;
+
+        switch (replayOptions.replayMode()) {
+          case ReplayOptions::ReplayMode::kValidateOnly:
+            tradeRangeStats = marketTraderEngine.validateRange(std::move(marketOrderBooks), std::move(publicTrades));
+            break;
+          case ReplayOptions::ReplayMode::kCheckedLaunchAlgorithm:
+            tradeRangeStats = marketTraderEngine.validateRange(marketOrderBooks, publicTrades);
+            marketTraderEngine.tradeRange(std::move(marketOrderBooks), std::move(publicTrades));
+            break;
+          case ReplayOptions::ReplayMode::kUncheckedLaunchAlgorithm:
+            tradeRangeStats = marketTraderEngine.tradeRange(std::move(marketOrderBooks), std::move(publicTrades));
+            break;
+          default:
+            break;
+        }
+
+        return std::make_pair(exchange, std::move(tradeRangeStats));
+      });
+
+  return tradeRangeResultsPerExchange;
+}
+
+MarketTradingGlobalResultPerExchange ExchangesOrchestrator::getMarketTraderResultPerExchange(
+    std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange &&tradeRangeStatsPerExchange,
+    ExchangeNameSpan exchangeNames) {
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+
+  if (selectedExchanges.size() != tradeRangeStatsPerExchange.size()) {
+    throw exception("Inconsistent selected exchange sizes");
+  }
+
+  MarketTradingResultPerExchange marketTradingResultPerExchange(selectedExchanges.size());
+
+  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), marketTraderEngines.begin(),
+                                marketTradingResultPerExchange.begin(),
+                                [](const Exchange *exchange, MarketTraderEngine &marketTraderEngine) {
+                                  return std::make_pair(exchange, marketTraderEngine.finalizeAndComputeResult());
+                                });
+
+  MarketTradingGlobalResultPerExchange marketTradingGlobalResultPerExchange(selectedExchanges.size());
+  std::transform(marketTradingResultPerExchange.begin(), marketTradingResultPerExchange.end(),
+                 tradeRangeStatsPerExchange.begin(), marketTradingGlobalResultPerExchange.begin(),
+                 [](auto &exchangeMarketTradingResult, auto &exchangeTradeRangeStats) {
+                   return std::make_pair(exchangeMarketTradingResult.first,
+                                         MarketTradingGlobalResult{std::move(exchangeMarketTradingResult.second),
+                                                                   std::move(exchangeTradeRangeStats.second)});
+                 });
+
+  return marketTradingGlobalResultPerExchange;
 }
 
 }  // namespace cct

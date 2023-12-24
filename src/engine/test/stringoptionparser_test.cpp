@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <utility>
 
 #include "cct_invalid_argument_exception.hpp"
@@ -12,6 +13,7 @@
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 namespace {
@@ -207,6 +209,28 @@ TEST(StringOptionParserTest, ExchangesNotLast) {
   EXPECT_EQ(parser.parseExchanges('-', ','),
             ExchangeNames({ExchangeName("kucoin", "user1"), ExchangeName("binance"), ExchangeName("kraken")}));
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("KRW"));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
+TEST(StringOptionParserTest, ParseDurationMandatory) {
+  StringOptionParser parser(" 45min83s,kraken,upbit");
+
+  EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kMandatory),
+            std::chrono::minutes{45} + std::chrono::seconds{83});
+  EXPECT_EQ(parser.parseExchanges(',', '\0'), ExchangeNames({ExchangeName("kraken"), ExchangeName("upbit")}));
+
+  EXPECT_NO_THROW(parser.checkEndParsing());
+}
+
+TEST(StringOptionParserTest, ParseDurationOptional) {
+  StringOptionParser parser("binance,huobi_user1,34h 4500ms");
+
+  EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kOptional), kUndefinedDuration);
+  EXPECT_EQ(parser.parseExchanges(',', '\0'), ExchangeNames({ExchangeName("binance"), ExchangeName("huobi", "user1")}));
+
+  EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kOptional),
+            std::chrono::hours{34} + std::chrono::milliseconds{4500});
 
   EXPECT_NO_THROW(parser.checkEndParsing());
 }

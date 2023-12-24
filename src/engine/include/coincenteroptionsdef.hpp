@@ -432,6 +432,50 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
         "Prints withdraw fees for matching currency and exchanges.\n"
         "Currency and exchanges are optional, if specified, output will be filtered to match them."},
        &OptValueType::withdrawFees},
+      {{{"Automation", 8000},
+        "market-data",
+        "<cur1-cur2[,exch1,...]>",
+        "Query last trades and order books of given market without printing the result on screen, for given exchanges "
+        "if specified.\n"
+        "This is the equivalent of calling last-trades and order-book but is useful combined with the repeat "
+        "command to store market data on disk."},
+       &OptValueType::marketData},
+      {{{"Automation", 8000},
+        "replay-markets",
+        "<duration[,exch1,...]>",
+        "Print markets available for replay, that is, markets that have some data within the time "
+        "window {now - duration, now}."},
+       &OptValueType::replayMarkets},
+      {{{"Automation", 8001},
+        "replay",
+        "<duration[,exch1,...]>",
+        "Replay algorithms on serialized, historical data."
+        "\nAll known algorithms will be replayed one by one, on all stored markets that have some data within the time "
+        "window {now - duration, now}. Use below flags to filter more precisely on which data to replay from."},
+       &OptValueType::replay},
+      {{{"Automation", 8002},
+        "--algorithms",
+        "<algo1,algo2,...>",
+        "Pick specific algorithm names to replay with. Default will replay with all known ones."},
+       &OptValueType::algorithmNames},
+      {{{"Automation", 8003},
+        "--market",
+        "<cur1-cur2>",
+        "Only replay for specific market. Default will replay all stored markets."},
+       &OptValueType::market},
+      {{{"Automation", 8003},
+        "--validate",
+        "",
+        "Filter invalid data during replay.\nThis is disabled by default, use this option when you suspect that "
+        "invalid data may be present in the replayed time window."},
+       &OptValueType::validate},
+      {{{"Automation", 8003},
+        "--validate-only",
+        "",
+        "Instead of launching replay algorithm, only validates serialized data."
+        "\nNominal replay will not validate input data to optimize performance, use this option to validate data once "
+        "and for all."},
+       &OptValueType::validateOnly},
       {{{"Monitoring", 9000},
         "--monitoring",
         "",

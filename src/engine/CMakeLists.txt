@@ -6,6 +6,8 @@ target_link_libraries(coincenter_engine PUBLIC coincenter_api-common)
 target_link_libraries(coincenter_engine PUBLIC coincenter_api-exchange)
 target_link_libraries(coincenter_engine PUBLIC coincenter_api-interface)
 target_link_libraries(coincenter_engine PUBLIC coincenter_objects)
+target_link_libraries(coincenter_engine PUBLIC coincenter_trading-algorithms)
+target_link_libraries(coincenter_engine PUBLIC coincenter_trading-common)
 target_include_directories(coincenter_engine PUBLIC include)
 
 add_unit_test(
@@ -79,6 +81,13 @@ add_unit_test(
   coincenter_engine
   DIRECTORIES
   ../api/common/test/include
+)
+
+add_unit_test(
+  replay-algorithm-name-iterator_test
+  test/replay-algorithm-name-iterator_test.cpp
+  LIBRARIES
+  coincenter_engine
 )
 
 add_unit_test(
