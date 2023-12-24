@@ -236,6 +236,16 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
   }
 }
 
+MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, AmountPriceVector&& orders,
+                                 int32_t highestBidPricePos, int32_t lowestAskPricePos,
+                                 VolAndPriNbDecimals volAndPriNbDecimals)
+    : _time(timeStamp),
+      _market(market),
+      _orders(std::move(orders)),
+      _highestBidPricePos(highestBidPricePos),
+      _lowestAskPricePos(lowestAskPricePos),
+      _volAndPriNbDecimals(volAndPriNbDecimals) {}
+
 bool MarketOrderBook::isValid() const {
   if (_orders.size() < 2U) {
     log::error("Market order book is invalid as size is {}", _orders.size());

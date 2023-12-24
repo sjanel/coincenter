@@ -9,7 +9,7 @@
 #include "coincentercommandtype.hpp"
 #include "coincenteroptionsdef.hpp"
 #include "commandlineoption.hpp"
-#include "exchangepublicapi.hpp"
+#include "replay-options.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"
 #include "tradeoptions.hpp"
@@ -29,6 +29,8 @@ class CoincenterCmdLineOptions {
 
   TradeOptions computeTradeOptions() const;
   WithdrawOptions computeWithdrawOptions() const;
+
+  ReplayOptions computeReplayOptions(Duration dur) const;
 
   std::string_view getDataDir() const { return dataDir.empty() ? SelectDefaultDataDir() : dataDir; }
 
@@ -100,6 +102,13 @@ class CoincenterCmdLineOptions {
 
   std::string_view lastTrades;
 
+  std::string_view marketData;
+
+  std::optional<std::string_view> replay;
+  std::string_view algorithmNames;
+  std::string_view market;
+  std::optional<std::string_view> replayMarkets;
+
   CommandLineOptionalInt32 repeats;
   int32_t monitoringPort = CoincenterCmdLineOptionsDefinitions::kDefaultMonitoringPort;
   int32_t depth = kUndefinedDepth;
@@ -114,6 +123,8 @@ class CoincenterCmdLineOptions {
   bool version = false;
   bool useMonitoring = false;
   bool withBalanceInUse = false;
+  bool validate = false;
+  bool validateOnly = false;
 
   bool operator==(const CoincenterCmdLineOptions&) const noexcept = default;
 

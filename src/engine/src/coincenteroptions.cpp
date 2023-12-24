@@ -13,7 +13,10 @@
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
+#include "replay-options.hpp"
 #include "ssl_sha.hpp"
+#include "time-window.hpp"
+#include "timedef.hpp"
 #include "tradedefinitions.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
@@ -37,6 +40,9 @@ std::ostream& CoincenterCmdLineOptions::PrintVersion(std::string_view programNam
   os << "compiled with " << CCT_COMPILER_VERSION << " on " << __DATE__ << " at " << __TIME__ << '\n';
   os << "              " << GetCurlVersionInfo() << '\n';
   os << "              " << ssl::GetOpenSSLVersion() << '\n';
+#ifdef CCT_PROTOBUF_VERSION
+  os << "              " << "protobuf " << CCT_PROTOBUF_VERSION << '\n';
+#endif
   return os;
 }
 
@@ -130,6 +136,31 @@ WithdrawOptions CoincenterCmdLineOptions::computeWithdrawOptions() const {
   const auto withdrawSyncPolicy = async ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
   const auto mode = isSimulation ? WithdrawOptions::Mode::kSimulation : WithdrawOptions::Mode::kReal;
   return {withdrawRefreshTime, withdrawSyncPolicy, mode};
+}
+
+ReplayOptions CoincenterCmdLineOptions::computeReplayOptions(Duration dur) const {
+  if (validate && validateOnly) {
+    throw invalid_argument("--validate and --validate-only cannot be specified simultaneously");
+  }
+
+  ReplayOptions::ReplayMode replayMode;
+  if (validateOnly) {
+    replayMode = ReplayOptions::ReplayMode::kValidateOnly;
+  } else if (validate) {
+    replayMode = ReplayOptions::ReplayMode::kCheckedLaunchAlgorithm;
+  } else {
+    replayMode = ReplayOptions::ReplayMode::kUncheckedLaunchAlgorithm;
+  }
+
+  TimeWindow timeWindow;
+  const auto nowTime = Clock::now();
+  if (dur == kUndefinedDuration) {
+    timeWindow = TimeWindow(TimePoint{}, nowTime);
+  } else {
+    timeWindow = TimeWindow(nowTime - dur, nowTime);
+  }
+
+  return ReplayOptions(timeWindow, algorithmNames, replayMode);
 }
 
 std::pair<std::string_view, CoincenterCommandType> CoincenterCmdLineOptions::getTradeArgStr() const {

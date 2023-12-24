@@ -37,6 +37,7 @@ jobs:
           clang-tidy --dump-config
           cmake -S . -B build -DCCT_ENABLE_CLANG_TIDY=ON -DCCT_ENABLE_ASAN=OFF -GNinja
         env:
+          CC: clang-${{matrix.clang-version}}
           CXX: clang++-${{matrix.clang-version}}
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 

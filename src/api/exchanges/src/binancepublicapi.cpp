@@ -238,7 +238,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
 MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMins) {
   if (avgPriceMins == 0) {
     // price should be the last matched price
-    PublicTradeVector lastTrades = queryLastTrades(mk, 1);
+    PublicTradeVector lastTrades = getLastTrades(mk, 1);
     if (!lastTrades.empty()) {
       return lastTrades.front().price();
     }

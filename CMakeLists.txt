@@ -38,6 +38,7 @@ option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 option(CCT_ENABLE_CLANG_TIDY "Compile with clang-tidy checks" OFF)
+option(CCT_ENABLE_PROTO "Compile with protobuf support (to export data to the outside world)" ON)
 option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
 
 set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter. Can also be overridden at runtime with this environment variable")
@@ -162,14 +163,68 @@ set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 list(APPEND fetchContentPackagesToMakeAvailable jwt-cpp) 
 
+# protobuf - serialization / deserialization library
+set(PROTOBUF_FETCHED_CONTENT OFF)
+if(CCT_ENABLE_PROTO)
+  find_package(Protobuf CONFIG)
+  if(Protobuf_FOUND)
+    message(STATUS "Linking with protobuf ${protobuf_VERSION}")
+  else()
+    # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
+    if (NOT PROTOBUF_VERSION)
+      set(PROTOBUF_VERSION v5.26.1)
+    endif()
+
+    message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")
+    
+    # Using git here to simplify cmake code instead of archive download as 
+    # it depends on Abseil behind the scene whose code is not included in the release archives.
+    FetchContent_Declare(
+      protobuf
+      GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+      GIT_TAG ${PROTOBUF_VERSION}
+      GIT_SHALLOW true
+    )
+
+    set(protobuf_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(protobuf_BUILD_LIBUPB OFF CACHE BOOL "" FORCE)
+ 
+    # Abseil options
+    set(ABSL_CXX_STANDARD ${CMAKE_CXX_STANDARD} CACHE STRING "" FORCE)
+    set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+    set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+
+    if(CCACHE_PROGRAM)
+      set(protobuf_ALLOW_CCACHE ON CACHE BOOL "" FORCE)
+    endif()
+
+    set(protobuf_INSTALL OFF CACHE BOOL "" FORCE)
+    set(protobuf_BUILD_LIBUPB OFF CACHE BOOL "" FORCE)
+    set(protobuf_WITH_ZLIB ON CACHE BOOL "" FORCE)
+    set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE INTERNAL "")
+
+    list(APPEND fetchContentPackagesToMakeAvailable protobuf)
+
+    set(PROTOBUF_FETCHED_CONTENT ON)
+    set(Protobuf_LIBRARIES "protobuf::libprotobuf")
+  endif()
+endif()
+
 # Make fetch content available
 if(fetchContentPackagesToMakeAvailable)
   message(STATUS "Configuring packages ${fetchContentPackagesToMakeAvailable}")
+
   FetchContent_MakeAvailable("${fetchContentPackagesToMakeAvailable}")
+
+  if(PROTOBUF_FETCHED_CONTENT)
+    include(${protobuf_SOURCE_DIR}/cmake/protobuf-generate.cmake)
+  endif()
 endif()
 
 # Unit Tests
-include(cmake/AddUnitTest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/AddUnitTest.cmake)
 
 # Compiler warnings (only in Debug mode)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -215,13 +270,20 @@ if(CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
 endif()
 
+if(CCT_ENABLE_PROTO)
+  add_compile_definitions(CCT_ENABLE_PROTO)
+  add_compile_definitions("CCT_PROTOBUF_VERSION=\"${PROTOBUF_VERSION}\"")
+endif()
+
 # Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation
 # (beware of cyclic dependencies)
 add_subdirectory(src/tech)
 add_subdirectory(src/monitoring)
 add_subdirectory(src/http-request)
 add_subdirectory(src/objects)
+add_subdirectory(src/serialization)
 add_subdirectory(src/api-objects)
+add_subdirectory(src/trading)
 add_subdirectory(src/api)
 add_subdirectory(src/engine)
 add_subdirectory(src/main)

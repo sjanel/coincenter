@@ -158,6 +158,7 @@ The minimum tested version is cmake `3.15`, but it's recommended that you use th
 | `CCT_BUILD_EXEC`        | `ON` if main project                                   | Build an executable instead of a static library |
 | `CCT_ENABLE_ASAN`       | `ON` if Debug mode                                     | Compile with AddressSanitizer                   |
 | `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
+| `CCT_ENABLE_PROTO`      | `ON`                                                   | Compile with protobuf support                   |
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 

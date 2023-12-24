@@ -1,0 +1,62 @@
+#include "trader-command.hpp"
+
+#include <cstdint>
+
+#include "cct_exception.hpp"
+#include "priceoptionsdef.hpp"
+#include "stringhelpers.hpp"
+#include "tradeside.hpp"
+
+namespace cct {
+TraderCommand::TraderCommand(Type type, int32_t orderId, int8_t amountIntensityPercentage, PriceStrategy priceStrategy)
+    : _orderId(orderId),
+      _type(type),
+      _amountIntensityPercentage(amountIntensityPercentage),
+      _priceStrategy(priceStrategy) {}
+
+TraderCommand TraderCommand::Wait() { return TraderCommand(Type::kWait, kAllOrdersId, 0, PriceStrategy::kMaker); }
+
+TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPercentage, PriceStrategy priceStrategy) {
+  if (amountIntensityPercentage > 100 || amountIntensityPercentage <= 0) {
+    throw exception("Invalid amountIntensityPercentage {}", amountIntensityPercentage);
+  }
+  Type type;
+  switch (tradeSide) {
+    case TradeSide::kBuy:
+      type = Type::kBuy;
+      break;
+    case TradeSide::kSell:
+      type = Type::kSell;
+      break;
+    default:
+      throw exception("Unexpected trade side");
+  }
+  return TraderCommand(type, kAllOrdersId, amountIntensityPercentage, priceStrategy);
+}
+
+TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
+  int32_t orderIdInt;
+  if (!orderId.empty()) {
+    orderIdInt = FromString<int32_t>(orderId);
+  } else {
+    orderIdInt = kAllOrdersId;
+  }
+  return TraderCommand(Type::kCancel, orderIdInt, 0, PriceStrategy::kMaker);
+}
+
+TraderCommand TraderCommand::UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy) {
+  return TraderCommand(Type::kUpdatePrice, FromString<int32_t>(orderId), 100, priceStrategy);
+}
+
+TradeSide TraderCommand::tradeSide() const {
+  switch (_type) {
+    case Type::kBuy:
+      return TradeSide::kBuy;
+    case Type::kSell:
+      return TradeSide::kSell;
+    default:
+      throw exception("Unexpected trade command type for trade side");
+  }
+}
+
+}  // namespace cct

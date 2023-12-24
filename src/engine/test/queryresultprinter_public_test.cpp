@@ -9,15 +9,21 @@
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market-trading-global-result.hpp"
+#include "market-trading-result.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "public-trade-vector.hpp"
 #include "publictrade.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresultprinter_base_test.hpp"
 #include "queryresulttypes.hpp"
+#include "time-window.hpp"
+#include "trade-range-stats.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
@@ -243,7 +249,6 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableNoCurrency) {
 | huobi    | XRP-EUR |
 +----------+---------+
 )";
-
   expectStr(kExpected);
 }
 
@@ -262,7 +267,6 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableOneCurrency) {
 | huobi    | XRP-EUR          |
 +----------+------------------+
 )";
-
   expectStr(kExpected);
 }
 
@@ -279,7 +283,6 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableTwoCurrencies) {
 | huobi    | XRP-EUR              |
 +----------+----------------------+
 )";
-
   expectStr(kExpected);
 }
 
@@ -1173,6 +1176,305 @@ TEST_F(QueryResultPrinterLastPriceTest, Json) {
 
 TEST_F(QueryResultPrinterLastPriceTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint).printLastPrice(marketLastPrice, monetaryAmountPerExchange);
+  expectNoStr();
+}
+
+class QueryResultPrinterReplayBaseTest : public QueryResultPrinterTest {
+ protected:
+  Market market1{"ETH", "KRW"};
+  Market market2{"BTC", "USD"};
+  Market market3{"SHIB", "USDT"};
+  Market market4{"SOL", "BTC"};
+  Market market5{"SOL", "ETH"};
+  Market market6{"ETH", "BTC"};
+  Market market7{"DOGE", "CAD"};
+
+  TimePoint tp1{milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{milliseconds{std::numeric_limits<int64_t>::max() / 9900000}};
+  TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 9800000}};
+  TimePoint tp4{milliseconds{std::numeric_limits<int64_t>::max() / 9600000}};
+  TimePoint tp5{milliseconds{std::numeric_limits<int64_t>::max() / 9500000}};
+
+  TimeWindow timeWindow{tp1, tp5};
+};
+
+class QueryResultPrinterReplayMarketsTest : public QueryResultPrinterReplayBaseTest {
+ protected:
+  MarketTimestampSetsPerExchange marketTimestampSetsPerExchange{
+      {&exchange1,
+       MarketTimestampSets{MarketTimestampSet{MarketTimestamp{market1, tp1}, MarketTimestamp{market2, tp2},
+                                              MarketTimestamp{market3, tp3}},
+                           MarketTimestampSet{MarketTimestamp{market1, tp1}, MarketTimestamp{market2, tp1}}}},
+      {&exchange2, MarketTimestampSets{MarketTimestampSet{MarketTimestamp{market2, tp4}, MarketTimestamp{market4, tp5}},
+                                       MarketTimestampSet{MarketTimestamp{market6, tp1}}}},
+      {&exchange3, MarketTimestampSets{MarketTimestampSet{}, MarketTimestampSet{MarketTimestamp{market1, tp1},
+                                                                                MarketTimestamp{market7, tp4}}}}};
+};
+
+TEST_F(QueryResultPrinterReplayMarketsTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printMarketsForReplay(timeWindow, marketTimestampSetsPerExchange);
+  static constexpr std::string_view kExpected = R"(
++-----------+--------------------------------+--------------------------------+
+| Markets   | Last order books timestamp     | Last trades timestamp          |
++-----------+--------------------------------+--------------------------------+
+| BTC-USD   | 1999-07-11T00:42:21Z @ binance | 1999-03-25T04:46:43Z @ binance |
+|           | 2000-06-11T23:58:40Z @ bithumb |                                |
+|~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| DOGE-CAD  |                                | 2000-06-11T23:58:40Z @ huobi   |
+| ETH-BTC   |                                | 1999-03-25T04:46:43Z @ bithumb |
+|~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| ETH-KRW   | 1999-03-25T04:46:43Z @ binance | 1999-03-25T04:46:43Z @ binance |
+|           |                                | 1999-03-25T04:46:43Z @ huobi   |
+|~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| SHIB-USDT | 1999-10-29T01:26:51Z @ binance |                                |
+| SOL-BTC   | 2000-10-07T01:14:27Z @ bithumb |                                |
++-----------+--------------------------------+--------------------------------+
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayMarketsTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarketsForReplay(timeWindow, MarketTimestampSetsPerExchange{});
+  static constexpr std::string_view kExpected = R"json(
+{
+  "in": {
+    "opt": {
+      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+    },
+    "req": "ReplayMarkets"
+  },
+  "out": {}
+})json";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayMarketsTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarketsForReplay(timeWindow, marketTimestampSetsPerExchange);
+  static constexpr std::string_view kExpected = R"json(
+{
+  "in": {
+    "opt": {
+      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+    },
+    "req": "ReplayMarkets"
+  },
+  "out": {
+    "binance": {
+      "orderBooks": [
+        {
+          "lastTimestamp": "1999-07-11T00:42:21Z",
+          "market": "BTC-USD"
+        },
+        {
+          "lastTimestamp": "1999-03-25T04:46:43Z",
+          "market": "ETH-KRW"
+        },
+        {
+          "lastTimestamp": "1999-10-29T01:26:51Z",
+          "market": "SHIB-USDT"
+        }
+      ],
+      "trades": [
+        {
+          "lastTimestamp": "1999-03-25T04:46:43Z",
+          "market": "BTC-USD"
+        },
+        {
+          "lastTimestamp": "1999-03-25T04:46:43Z",
+          "market": "ETH-KRW"
+        }
+      ]
+    },
+    "bithumb": {
+      "orderBooks": [
+        {
+          "lastTimestamp": "2000-06-11T23:58:40Z",
+          "market": "BTC-USD"
+        },
+        {
+          "lastTimestamp": "2000-10-07T01:14:27Z",
+          "market": "SOL-BTC"
+        }
+      ],
+      "trades": [
+        {
+          "lastTimestamp": "1999-03-25T04:46:43Z",
+          "market": "ETH-BTC"
+        }
+      ]
+    },
+    "huobi": {
+      "orderBooks": null,
+      "trades": [
+        {
+          "lastTimestamp": "2000-06-11T23:58:40Z",
+          "market": "DOGE-CAD"
+        },
+        {
+          "lastTimestamp": "1999-03-25T04:46:43Z",
+          "market": "ETH-KRW"
+        }
+      ]
+    }
+  }
+})json";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayMarketsTest, NoPrint) {
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarketsForReplay(timeWindow, marketTimestampSetsPerExchange);
+  expectNoStr();
+}
+
+class QueryResultPrinterReplayTest : public QueryResultPrinterReplayBaseTest {
+ protected:
+  ClosedOrder closedOrder1{"1", MonetaryAmount(15, "BTC", 1), MonetaryAmount(35000, "USDT"), tp1, tp1, TradeSide::kBuy};
+  ClosedOrder closedOrder2{"2", MonetaryAmount(25, "BTC", 1), MonetaryAmount(45000, "USDT"), tp2, tp2, TradeSide::kBuy};
+  ClosedOrder closedOrder3{"3", MonetaryAmount(5, "BTC", 2), MonetaryAmount(35000, "USDT"), tp3, tp4, TradeSide::kSell};
+  ClosedOrder closedOrder4{
+      "4", MonetaryAmount(17, "BTC", 1), MonetaryAmount(50000, "USDT"), tp3, tp4, TradeSide::kSell};
+  ClosedOrder closedOrder5{
+      "5", MonetaryAmount(36, "BTC", 3), MonetaryAmount(47899, "USDT"), tp4, tp5, TradeSide::kSell};
+
+  std::string_view algorithmName = "test-algo";
+  MonetaryAmount startBaseAmount{1, "BTC"};
+  MonetaryAmount startQuoteAmount{1000, "EUR"};
+
+  MarketTradingResult marketTradingResult1{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{0, "EUR"},
+                                           ClosedOrderVector{}};
+  MarketTradingResult marketTradingResult3{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{500, "EUR"},
+                                           ClosedOrderVector{closedOrder1, closedOrder5}};
+  MarketTradingResult marketTradingResult4{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{780, "EUR"},
+                                           ClosedOrderVector{closedOrder2, closedOrder3, closedOrder4}};
+
+  TradeRangeStats tradeRangeStats1{TradeRangeResultsStats{42, 0}, TradeRangeResultsStats{3, 10}};
+  TradeRangeStats tradeRangeStats3{TradeRangeResultsStats{500000, 2}, TradeRangeResultsStats{0, 0}};
+  TradeRangeStats tradeRangeStats4{TradeRangeResultsStats{79009, 0}, TradeRangeResultsStats{1555555555, 45}};
+
+  MarketTradingGlobalResultPerExchange marketTradingResultPerExchange{
+      {&exchange1, MarketTradingGlobalResult{marketTradingResult1, tradeRangeStats1}},
+      {&exchange3, MarketTradingGlobalResult{marketTradingResult3, tradeRangeStats3}},
+      {&exchange4, MarketTradingGlobalResult{marketTradingResult4, tradeRangeStats4}}};
+  CoincenterCommandType commandType{CoincenterCommandType::kReplay};
+};
+
+TEST_F(QueryResultPrinterReplayTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
+  static constexpr std::string_view kExpected = R"(
++----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
+| Exchange | Time window          | Market  | Algorithm | Start amounts | Profit / Loss | Matched orders                                       | Stats                        |
++----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
+| binance  | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 0 EUR         |                                                      | order books: 42 OK           |
+|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               |                                                      | trades: 3 OK, 10 KO          |
+|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~|~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| huobi    | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 500 EUR       | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
+|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
+|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~|~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| huobi    | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 780 EUR       | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
+|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
+|          |                      |         |           |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
++----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarketTradingResults(timeWindow, MarketTradingGlobalResultPerExchange{}, commandType);
+  static constexpr std::string_view kExpected = R"json(
+{
+  "in": {
+    "opt": {
+      "time-window": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+    },
+    "req": "Replay"
+  },
+  "out": {}
+})json";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
+  static constexpr std::string_view kExpected = R"json(
+{
+  "in": {
+    "opt": {
+      "time-window": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+    },
+    "req": "Replay"
+  },
+  "out": {
+    "binance": {
+      "algorithm": "test-algo",
+      "market": "BTC-EUR",
+      "matched-orders": [],
+      "profit-and-loss": "0 EUR",
+      "start-amounts": {
+        "base": "1 BTC",
+        "quote": "1000 EUR"
+      },
+      "stats": {
+        "order-books": {
+          "nb-error": 0,
+          "nb-successful": 42
+        },
+        "trades": {
+          "nb-error": 10,
+          "nb-successful": 3
+        }
+      }
+    },
+    "huobi": {
+      "algorithm": "test-algo",
+      "market": "BTC-EUR",
+      "matched-orders": [
+        {
+          "id": "1",
+          "matched": "1.5",
+          "matchedTime": "1999-03-25T04:46:43Z",
+          "pair": "BTC-USDT",
+          "placedTime": "1999-03-25T04:46:43Z",
+          "price": "35000",
+          "side": "Buy"
+        },
+        {
+          "id": "5",
+          "matched": "0.036",
+          "matchedTime": "2000-10-07T01:14:27Z",
+          "pair": "BTC-USDT",
+          "placedTime": "2000-06-11T23:58:40Z",
+          "price": "47899",
+          "side": "Sell"
+        }
+      ],
+      "profit-and-loss": "500 EUR",
+      "start-amounts": {
+        "base": "1 BTC",
+        "quote": "1000 EUR"
+      },
+      "stats": {
+        "order-books": {
+          "nb-error": 2,
+          "nb-successful": 500000
+        },
+        "trades": {
+          "nb-error": 0,
+          "nb-successful": 0
+        }
+      }
+    }
+  }
+})json";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterReplayTest, NoPrint) {
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
   expectNoStr();
 }
 

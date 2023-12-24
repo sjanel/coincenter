@@ -11,13 +11,15 @@
 #include "logginginfo.hpp"
 #include "requestsconfig.hpp"
 #include "timedef.hpp"
+#include "trading-config.hpp"
 
 namespace cct {
 
-GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig,
+GeneralConfig::GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig, TradingConfig &&tradingConfig,
                              Duration fiatConversionQueryRate, ApiOutputType apiOutputType)
     : _loggingInfo(std::move(loggingInfo)),
       _requestsConfig(std::move(requestsConfig)),
+      _tradingConfig(std::move(tradingConfig)),
       _fiatConversionQueryRate(fiatConversionQueryRate),
       _apiOutputType(apiOutputType) {}
 

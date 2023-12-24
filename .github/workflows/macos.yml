@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        compiler: [g++-11]
+        compiler: [g++-13]
         buildmode: [Debug]
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +22,10 @@ jobs:
           xcode-version: latest-stable
 
       - name: Install dependencies
-        run: brew install ninja
+        run: |
+          brew update && brew upgrade
+          brew install ninja
+          echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
 
       - name: Configure
         run: cmake -DCCT_ENABLE_ASAN=OFF -S . -B build -GNinja

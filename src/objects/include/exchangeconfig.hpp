@@ -19,7 +19,8 @@
 namespace cct {
 class ExchangeConfig {
  public:
-  enum struct FeeType { kMaker, kTaker };
+  enum class FeeType : int8_t { kMaker, kTaker };
+  enum class MarketDataSerialization : int8_t { kYes, kNo };
 
   struct APIUpdateFrequencies {
     Duration freq[api::kQueryTypeMax];
@@ -32,7 +33,8 @@ class ExchangeConfig {
                  std::string_view acceptEncoding, int dustSweeperMaxNbTrades,
                  log::level::level_enum requestsCallLogLevel, log::level::level_enum requestsAnswerLogLevel,
                  bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile, bool placeSimulateRealOrder,
-                 bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig);
+                 bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig,
+                 MarketDataSerialization marketDataSerialization);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -107,6 +109,8 @@ class ExchangeConfig {
 
   PermanentCurlOptions::Builder curlOptionsBuilderBase(Api api) const;
 
+  bool withMarketDataSerialization() const { return _withMarketSerialization; }
+
  private:
   CurrencyCodeSet _excludedCurrenciesAll;             // Currencies will be completely ignored by the exchange
   CurrencyCodeSet _excludedCurrenciesWithdrawal;      // Currencies unavailable for withdrawals
@@ -128,5 +132,6 @@ class ExchangeConfig {
   bool _validateDepositAddressesInFile;
   bool _placeSimulateRealOrder;
   bool _validateApiKey;
+  bool _withMarketSerialization;
 };
 }  // namespace cct

@@ -136,7 +136,7 @@ std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode cur
 
 MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
   // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
-  std::optional<MonetaryAmount> avgPrice = queryOrderBook(mk).averagePrice();
+  std::optional<MonetaryAmount> avgPrice = getOrderBook(mk).averagePrice();
   if (!avgPrice) {
     log::error("Empty order book for {} on {} cannot compute average price", mk, _name);
     return MonetaryAmount(0, mk.quote());

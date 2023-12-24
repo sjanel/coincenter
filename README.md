@@ -38,7 +38,16 @@ Main features:
 - Cancel opened orders
 - Withdraw (with check at destination that funds are well received)
 - Dust sweeper
-  
+
+## Market data storage & replay
+
+`coincenter` is able to store the following market data in serialized [binary protobuf](https://protobuf.dev/) format for offline trading algorithm replay:
+
+- Market order book
+- Public trades
+
+Refer to the dedicated [documentation page](TRADING.md) for more information.
+
 ## Supported exchanges
 
 | Exchange |                                      Link                                       |
@@ -56,6 +65,7 @@ Main features:
 - [coincenter](#coincenter)
   - [Market Data](#market-data)
   - [Account requests](#account-requests)
+  - [Market data storage \& replay](#market-data-storage--replay)
   - [Supported exchanges](#supported-exchanges)
   - [About](#about)
   - [Installation](#installation)

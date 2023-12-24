@@ -16,8 +16,7 @@ constexpr std::string_view kCommandTypeNames[] = {
 
     "Balance",        "DepositInfo",     "OrdersClosed", "OrdersOpened", "OrdersCancel",
     "RecentDeposits", "RecentWithdraws", "Trade",        "Buy",          "Sell",
-    "Withdraw",       "DustSweeper",
-};
+    "Withdraw",       "DustSweeper",     "MarketData",   "Replay",       "ReplayMarkets"};
 
 static_assert(std::size(kCommandTypeNames) == static_cast<std::size_t>(CoincenterCommandType::kLast));
 }  // namespace

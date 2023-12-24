@@ -13,10 +13,14 @@
 #include "currencyexchangeflatset.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market-timestamp-set.hpp"
+#include "market-trading-global-result.hpp"
+#include "market-trading-result.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "public-trade-vector.hpp"
+#include "trade-range-stats.hpp"
 #include "traderesult.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
@@ -31,6 +35,8 @@ using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBo
 
 using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
 
+using MarketPerExchange = FixedCapacityVector<ExchangeWith<Market>, kNbSupportedExchanges>;
+
 using MarketsPerExchange = FixedCapacityVector<ExchangeWith<MarketSet>, kNbSupportedExchanges>;
 
 using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmount>, kNbSupportedExchanges>;
@@ -39,6 +45,9 @@ using MonetaryAmountByCurrencySetPerExchange =
     FixedCapacityVector<ExchangeWith<MonetaryAmountByCurrencySet>, kNbSupportedExchanges>;
 
 using TradesPerExchange = FixedCapacityVector<ExchangeWith<PublicTradeVector>, kNbSupportedExchanges>;
+
+using MarketDataPerExchange =
+    FixedCapacityVector<ExchangeWith<std::pair<MarketOrderBook, PublicTradeVector>>, kNbSupportedExchanges>;
 
 using TradeResultPerExchange = SmallVector<ExchangeWith<TradeResult>, kTypicalNbPrivateAccounts>;
 
@@ -68,4 +77,14 @@ using DeliveredWithdrawInfoWithExchanges = std::pair<std::array<const Exchange *
 using NbCancelledOrdersPerExchange = SmallVector<ExchangeWith<int>, kTypicalNbPrivateAccounts>;
 
 using ConversionPathPerExchange = FixedCapacityVector<ExchangeWith<MarketsPath>, kNbSupportedExchanges>;
+
+using MarketTimestampSetsPerExchange = FixedCapacityVector<ExchangeWith<MarketTimestampSets>, kNbSupportedExchanges>;
+
+using MarketTradeRangeStatsPerExchange = FixedCapacityVector<ExchangeWith<TradeRangeStats>, kNbSupportedExchanges>;
+
+using MarketTradingResultPerExchange = FixedCapacityVector<ExchangeWith<MarketTradingResult>, kNbSupportedExchanges>;
+
+using MarketTradingGlobalResultPerExchange =
+    FixedCapacityVector<ExchangeWith<MarketTradingGlobalResult>, kNbSupportedExchanges>;
+
 }  // namespace cct

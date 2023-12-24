@@ -10,6 +10,7 @@
 #include "exchange-names.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class StringOptionParser {
@@ -28,6 +29,10 @@ class StringOptionParser {
   /// @param delimiter defines the expected character (could be not present, which means end of parsing)
   ///                  after the currency
   CurrencyCode parseCurrency(FieldIs fieldIs = FieldIs::kMandatory, char delimiter = ',');
+
+  /// If FieldIs is kOptional and there is no duration, kUndefinedDuration duration will be returned.
+  /// otherwise exception invalid_argument will be raised
+  Duration parseDuration(FieldIs fieldIs = FieldIs::kMandatory);
 
   /// If FieldIs is kOptional and there is no market, default market will be returned.
   /// otherwise exception invalid_argument will be raised.

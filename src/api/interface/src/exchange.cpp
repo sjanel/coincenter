@@ -48,12 +48,10 @@ bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatS
   return lb->canDeposit();
 }
 
-MarketOrderBook Exchange::queryOrderBook(Market mk, int depth) { return apiPublic().queryOrderBook(mk, depth); }
+MarketOrderBook Exchange::getOrderBook(Market mk, int depth) { return apiPublic().getOrderBook(mk, depth); }
 
 /// Retrieve an ordered vector of recent last trades
-PublicTradeVector Exchange::queryLastTrades(Market mk, int nbTrades) {
-  return apiPublic().queryLastTrades(mk, nbTrades);
-}
+PublicTradeVector Exchange::getLastTrades(Market mk, int nbTrades) { return apiPublic().getLastTrades(mk, nbTrades); }
 
 void Exchange::updateCacheFile() const {
   apiPublic().updateCacheFile();

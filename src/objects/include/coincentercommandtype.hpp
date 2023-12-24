@@ -31,6 +31,10 @@ enum class CoincenterCommandType : int8_t {
   kWithdrawApply,
   kDustSweeper,
 
+  kMarketData,
+  kReplay,
+  kReplayMarkets,
+
   kLast
 };
 

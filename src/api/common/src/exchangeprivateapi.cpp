@@ -557,7 +557,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
     if (exchangeConfig().placeSimulateRealOrder()) {
       log::debug("Place simulate real order - price {} will be overriden", price);
-      MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(mk);
+      MarketOrderBook marketOrderbook = _exchangePublic.getOrderBook(mk);
       price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
     } else {
       PlaceOrderInfo placeOrderInfo = computeSimulatedMatchedPlacedOrderInfo(volume, price, tradeInfo);
