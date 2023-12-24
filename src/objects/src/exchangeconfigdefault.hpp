@@ -56,6 +56,7 @@ struct ExchangeConfigDefault {
         "requestsCall": "info",
         "requestsAnswer": "trace"
       },
+      "marketDataSerialization": true,
       "multiTradeAllowedByDefault": false,
       "placeSimulateRealOrder": false,
       "trade": {
@@ -180,6 +181,7 @@ struct ExchangeConfigDefault {
         "requestsCall": "info",
         "requestsAnswer": "trace"
       },
+      "marketDataSerialization": false,
       "multiTradeAllowedByDefault": true,
       "privateAPIRate": "1055ms",
       "publicAPIRate": "1236ms",

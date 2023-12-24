@@ -1,4 +1,4 @@
-name: Monitoring
+name: Special
 
 on:
   push:
@@ -7,14 +7,14 @@ on:
   pull_request:
 
 jobs:
-  ubuntu-monitoring-build:
-    name: Build on Ubuntu with monitoring support
+  ubuntu-special-build:
+    name: Build on Ubuntu with monitoring / protobuf support
     runs-on: ubuntu-latest
     strategy:
       matrix:
         compiler: [g++-11]
         buildmode: [Debug]
-        build-prometheus-from-source: [0, 1]
+        build-special-from-source: [0, 1]
 
     steps:
       - name: Checkout repository code
@@ -40,7 +40,7 @@ jobs:
           ninja
 
           sudo cmake --install .
-        if: matrix.build-prometheus-from-source == 0
+        if: matrix.build-special-from-source == 0
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -48,7 +48,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-special-from-source}} -DCCT_ENABLE_PROTO=${{matrix.build-special-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
 
       - name: Build
         working-directory: ${{github.workspace}}/build

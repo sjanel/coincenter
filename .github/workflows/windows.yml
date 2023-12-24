@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          vcpkg install curl
+          vcpkg install curl protobuf
 
       - name: End vcpkg install
         run: |

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 #include "cct_cctype.hpp"
@@ -20,6 +21,41 @@ constexpr std::pair<std::string_view, Duration> kDurationUnits[] = {
     {"d", std::chrono::days(1)},    {"h", std::chrono::hours(1)},         {"min", std::chrono::minutes(1)},
     {"s", std::chrono::seconds(1)}, {"ms", std::chrono::milliseconds(1)}, {"us", std::chrono::microseconds(1)},
 };
+}
+
+int DurationLen(std::string_view str) {
+  const std::size_t sz = str.size();
+  if (sz == 0) {
+    return 0;
+  }
+  std::size_t charPos = 0;
+  while (charPos < sz && isspace(str[charPos])) {
+    ++charPos;
+  }
+  int value{};
+  const auto [ptr, err] = std::from_chars(str.data() + charPos, str.data() + str.size(), value);
+  if (err != std::errc() || value <= 0) {
+    return 0;
+  }
+  charPos = ptr - str.data();
+
+  while (charPos < sz && isspace(str[charPos])) {
+    ++charPos;
+  }
+  const std::size_t first = charPos;
+  while (charPos < sz && islower(str[charPos])) {
+    ++charPos;
+  }
+  const std::string_view timeUnitStr(str.begin() + first, str.begin() + charPos);
+
+  const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
+    return durationUnitWithDuration.first == timeUnitStr;
+  });
+  if (it == std::end(kDurationUnits)) {
+    return 0;
+  }
+  // There is a substring with size 'charPos' that represents a duration
+  return charPos + DurationLen(str.substr(charPos));
 }
 
 Duration ParseDuration(std::string_view durationStr) {

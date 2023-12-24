@@ -36,6 +36,7 @@ option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
 option(CCT_ENABLE_CLANG_TIDY "Compile with clang-tidy checks" OFF)
+option(CCT_ENABLE_PROTO "Compile with protobuf support (to export data to the outside world)" ON)
 option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
 
 set(CCT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "Needed data directory for coincenter. Can also be overriden at runtime with this environment variable")
@@ -141,6 +142,31 @@ if(NOT spdlog_FOUND)
   FetchContent_MakeAvailable(spdlog)
 endif()
 
+# protobuf - serialization / deserialization library
+if(CCT_ENABLE_PROTO)
+  find_package(Protobuf CONFIG)
+  if(Protobuf_FOUND)
+    message(STATUS "Linking with protobuf ${protobuf_VERSION}")
+  else()
+    set(PROTOBUF_VERSION v26.0)
+
+    message(STATUS "Compiling protobuf ${PROTOBUF_VERSION} from sources")
+    
+    set(protobuf_BUILD_TESTS OFF)
+    set(ABSL_PROPAGATE_CXX_STD ON)
+    
+    FetchContent_Declare(
+      protobuf
+      GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+      GIT_TAG ${PROTOBUF_VERSION}
+    )
+    FetchContent_MakeAvailable(protobuf)
+
+    include(${protobuf_SOURCE_DIR}/cmake/protobuf-generate.cmake)
+  
+  endif()
+endif()
+
 # Unit Tests
 include(cmake/AddUnitTest.cmake)
 
@@ -179,13 +205,20 @@ if(CCT_ENABLE_PROMETHEUS)
   add_compile_definitions(CCT_ENABLE_PROMETHEUS)
 endif()
 
+if(CCT_ENABLE_PROTO)
+  add_compile_definitions(CCT_ENABLE_PROTO)
+  add_compile_definitions("CCT_PROTOBUF_VERSION=\"${PROTOBUF_VERSION}\"")
+endif()
+
 # Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation
 # (beware of cyclic dependencies)
 add_subdirectory(src/tech)
 add_subdirectory(src/monitoring)
 add_subdirectory(src/http-request)
 add_subdirectory(src/objects)
+add_subdirectory(src/serialization)
 add_subdirectory(src/api-objects)
+add_subdirectory(src/trading)
 add_subdirectory(src/api)
 add_subdirectory(src/engine)
 add_subdirectory(src/main)

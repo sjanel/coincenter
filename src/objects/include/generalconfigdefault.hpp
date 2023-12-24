@@ -34,6 +34,17 @@ struct GeneralConfigDefault {
     "concurrency": {
       "nbMaxParallelRequests": 1
     }
+  },
+  "trading": {
+    "automation": {
+      "deserialization": {
+        "loadChunkDuration": "1w"
+      },
+      "startingContext": {
+        "startBaseAmountEquivalent": "1000 EUR",
+        "startQuoteAmountEquivalent": "1000 EUR"
+      }
+    }
   }
 }
 )"_json;

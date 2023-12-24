@@ -13,6 +13,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
+#include "replay-options.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"
@@ -44,6 +45,8 @@ class CoincenterCommand {
   CoincenterCommand& setCur1(CurrencyCode cur1);
   CoincenterCommand& setCur2(CurrencyCode cur2);
 
+  CoincenterCommand& setReplayOptions(ReplayOptions replayOptions);
+
   CoincenterCommand& setPercentageAmount(bool value = true);
   CoincenterCommand& withBalanceInUse(bool value = true);
 
@@ -74,16 +77,19 @@ class CoincenterCommand {
   bool isPercentageAmount() const { return _isPercentageAmount; }
   bool withBalanceInUse() const { return _withBalanceInUse; }
 
+  const ReplayOptions& replayOptions() const { return std::get<ReplayOptions>(_specialOptions); }
+
   bool operator==(const CoincenterCommand&) const noexcept = default;
 
   using trivially_relocatable =
       std::bool_constant<is_trivially_relocatable_v<ExchangeNames> && is_trivially_relocatable_v<OrdersConstraints> &&
                          is_trivially_relocatable_v<WithdrawsOrDepositsConstraints> &&
-                         is_trivially_relocatable_v<TradeOptions> && is_trivially_relocatable_v<WithdrawOptions>>::type;
+                         is_trivially_relocatable_v<TradeOptions> && is_trivially_relocatable_v<WithdrawOptions> &&
+                         is_trivially_relocatable_v<ReplayOptions>>::type;
 
  private:
-  using SpecialOptions =
-      std::variant<std::monostate, OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions, WithdrawOptions>;
+  using SpecialOptions = std::variant<std::monostate, OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions,
+                                      WithdrawOptions, ReplayOptions>;
 
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;

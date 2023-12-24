@@ -24,6 +24,10 @@ endif()
 
 target_link_libraries(coincenter PUBLIC coincenter_engine)
 
+if(CCT_ENABLE_PROTO)
+  target_link_libraries(coincenter PUBLIC protobuf::libprotobuf)
+endif()
+
 set_target_properties(coincenter PROPERTIES
   VERSION ${PROJECT_VERSION}
   COMPILE_DEFINITIONS_DEBUG "JSON_DEBUG;JSON_SAFE;JSON_ISO_STRICT"

@@ -4,6 +4,8 @@
 #include <span>
 
 #include "apikeysprovider.hpp"
+#include "cct_const.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "exchange-names.hpp"
@@ -11,10 +13,14 @@
 #include "exchangepool.hpp"
 #include "exchangesorchestrator.hpp"
 #include "fiatconverter.hpp"
+#include "market-trader-engine.hpp"
+#include "market-trader-factory.hpp"
+#include "market.hpp"
 #include "metricsexporter.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
+#include "replay-options.hpp"
 #include "transferablecommandresult.hpp"
 
 namespace cct {
@@ -30,6 +36,7 @@ class Coincenter {
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
 
+  /// Launch given commands and return the number of processed commands.
   int process(const CoincenterCommands &coincenterCommands);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
@@ -49,6 +56,10 @@ class Coincenter {
   MarketOrderBookConversionRates getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
+
+  /// Query market data without returning it.
+  /// This method is especially useful for serialization and metric exports.
+  void queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchange);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
@@ -128,6 +139,14 @@ class Coincenter {
                                               const ExchangeName &toPrivateExchangeName,
                                               const WithdrawOptions &withdrawOptions);
 
+  /// Retrieves the markets available for replay for exchanges selection that has some data during the last
+  /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
+  MarketsPerExchange getMarketsAvailableForReplay(const ReplayOptions &replayOptions, ExchangeNameSpan exchangeNames);
+
+  /// Replay all markets for exchanges selection that has some data during the last
+  /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
+  void replay(const ReplayOptions &replayOptions, Market market, ExchangeNameSpan exchangeNames);
+
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
 
@@ -143,8 +162,23 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  TransferableCommandResultVector processCommand(
-      const CoincenterCommand &cmd, std::span<const TransferableCommandResult> previousTransferableResults);
+  TransferableCommandResultVector processGroupedCommands(
+      std::span<const CoincenterCommand> groupedCommands,
+      std::span<const TransferableCommandResult> previousTransferableResults);
+
+  using MarketTraderEngineVector = FixedCapacityVector<MarketTraderEngine, kNbSupportedExchanges>;
+
+  void replayAlgorithm(const MarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions,
+                       std::span<MarketTraderEngine> marketTraderEngines,
+                       const PublicExchangeNameVector &exchangesWithThisMarketData);
+
+  // TODO: may be moved somewhere else?
+  MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions &replayOptions, Market market,
+                                                     PublicExchangeNameVector &exchangesWithThisMarketData);
+
+  MarketTradeRangeStatsPerExchange tradingProcess(const ReplayOptions &replayOptions,
+                                                  std::span<MarketTraderEngine> marketTraderEngines,
+                                                  ExchangeNameSpan exchangesWithThisMarketData);
 
   const CoincenterInfo &_coincenterInfo;
   api::CommonAPI _commonAPI;

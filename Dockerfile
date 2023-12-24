@@ -5,6 +5,7 @@ ARG BUILD_MODE=Release
 ARG BUILD_TEST=0
 ARG BUILD_ASAN=0
 ARG BUILD_WITH_PROMETHEUS=1
+ARG BUILD_WITH_PROTOBUF=1
 
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apt update && \
@@ -41,6 +42,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
     -DCCT_ENABLE_TESTS=${BUILD_TEST} \
     -DCCT_ENABLE_ASAN=${BUILD_ASAN} \
     -DCCT_BUILD_PROMETHEUS_FROM_SRC=${BUILD_WITH_PROMETHEUS} \
+    -DCCT_ENABLE_PROTO=${BUILD_WITH_PROTOBUF} \
     -GNinja .. && \
     ninja && \
     if [ "$BUILD_TEST" = "1" -o "$BUILD_TEST" = "ON" ]; then \

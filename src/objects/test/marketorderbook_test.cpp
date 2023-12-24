@@ -37,6 +37,12 @@ constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;
 }
 
+TEST(MarketOrderBookTest, DefaultConstructor) {
+  MarketOrderBook marketOrderBook;
+
+  EXPECT_FALSE(marketOrderBook.isValid());
+}
+
 TEST(MarketOrderBookTest, Basic) { EXPECT_TRUE(MarketOrderBook(Clock::now(), Market("ETH", "EUR"), {}).empty()); }
 
 class MarketOrderBookTestCase1 : public ::testing::Test {
@@ -52,6 +58,8 @@ class MarketOrderBookTestCase1 : public ::testing::Test {
            OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"),
                          OrderBookLine::Type::kAsk)})};
 };
+
+TEST_F(MarketOrderBookTestCase1, IsValid) { EXPECT_TRUE(marketOrderBook.isValid()); }
 
 TEST_F(MarketOrderBookTestCase1, NumberOfElements) {
   EXPECT_EQ(marketOrderBook.size(), 5);
@@ -176,6 +184,8 @@ class MarketOrderBookTestDuplicatedLines : public ::testing::Test {
                          OrderBookLine::Type::kAsk)})};
 };
 
+TEST_F(MarketOrderBookTestDuplicatedLines, IsValid) { EXPECT_TRUE(marketOrderBook.isValid()); }
+
 TEST_F(MarketOrderBookTestDuplicatedLines, NumberOfElements) {
   EXPECT_EQ(marketOrderBook.size(), 5);
   EXPECT_EQ(marketOrderBook.nbAskPrices(), 3);
@@ -210,6 +220,8 @@ class MarketOrderBookTestCase2 : public ::testing::Test {
            OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"),
                          OrderBookLine::Type::kBid)})};
 };
+
+TEST_F(MarketOrderBookTestCase2, IsValid) { EXPECT_TRUE(marketOrderBook.isValid()); }
 
 TEST_F(MarketOrderBookTestCase2, NbDecimals) {
   const auto [volNbDecimals, priNbDecimals] = marketOrderBook.volAndPriNbDecimals();
@@ -288,6 +300,8 @@ class MarketOrderBookTestCase3 : public ::testing::Test {
                                                 MonetaryAmount("0.000007080", "BTC"), OrderBookLine::Type::kBid)})};
 };
 
+TEST_F(MarketOrderBookTestCase3, IsValid) { EXPECT_TRUE(marketOrderBook.isValid()); }
+
 TEST_F(MarketOrderBookTestCase3, Convert) {
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("600000", "XLM")), std::nullopt);
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount(3, "BTC")), std::nullopt);
@@ -324,6 +338,8 @@ class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
                                   50};
 };
 
+TEST_F(MarketOrderBookTestCaseExtended1, IsValid) { EXPECT_TRUE(marketOrderBook.isValid()); }
+
 TEST_F(MarketOrderBookTestCaseExtended1, LimitPrice) {
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("2300.4 EUR"));
   EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("2300.45 EUR"));
@@ -338,6 +354,8 @@ TEST(MarketOrderBookExtendedTest, ComputeVolAndPriNbDecimalsFromTickerInfo) {
   MarketOrderBook marketOrderBook(Clock::now(), MonetaryAmount("12355.00002487 XLM"),
                                   MonetaryAmount("193.0900000000078 ADA"), MonetaryAmount("12355.00002486 XLM"),
                                   MonetaryAmount("504787104.7801 ADA"), {4, 8}, 10);
+
+  ASSERT_TRUE(marketOrderBook.isValid());
 
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("12355.00002486 XLM"));
   EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("12355.00002487 XLM"));
