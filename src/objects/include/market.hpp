@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <ostream>
 
 #include "cct_format.hpp"
@@ -14,23 +15,25 @@ namespace cct {
 /// Important note: BTC/ETH != ETH/BTC. Use reverse() to reverse it.
 class Market {
  public:
-  using TradableAssets = std::array<CurrencyCode, 2>;
+  enum class Type : int8_t { kRegularExchangeMarket, kFiatConversionMarket };
 
   Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
-  Market(CurrencyCode first, CurrencyCode second) : _assets({first, second}) {}
+  Market(CurrencyCode first, CurrencyCode second, Type type = Type::kRegularExchangeMarket) : _assets({first, second}) {
+    setType(type);
+  }
 
   /// Create a Market from its string representation.
   /// The two currency codes must be separated by given char separator.
-  Market(std::string_view marketStrRep, char currencyCodeSep);
+  explicit Market(std::string_view marketStrRep, char currencyCodeSep = '-', Type type = Type::kRegularExchangeMarket);
 
-  bool isDefined() const { return !base().isNeutral() && !quote().isNeutral(); }
+  bool isDefined() const { return base().isDefined() && quote().isDefined(); }
 
   bool isNeutral() const { return base().isNeutral() && quote().isNeutral(); }
 
   /// Computes the reverse market.
   /// Example: return XRP/BTC for a market BTC/XRP
-  Market reverse() const { return Market(_assets[1], _assets[0]); }
+  [[nodiscard]] Market reverse() const { return {_assets[1], _assets[0]}; }
 
   /// Get the base CurrencyCode of this Market.
   CurrencyCode base() const { return _assets[0]; }
@@ -40,14 +43,19 @@ class Market {
 
   /// Given 'c' a currency traded in this Market, return the other currency it is paired with.
   /// If 'c' is not traded by this market, return the second currency.
-  CurrencyCode opposite(CurrencyCode c) const { return _assets[1] == c ? _assets[0] : _assets[1]; }
+  [[nodiscard]] CurrencyCode opposite(CurrencyCode cur) const { return _assets[1] == cur ? _assets[0] : _assets[1]; }
 
-  bool canTrade(MonetaryAmount a) const { return canTrade(a.currencyCode()); }
-  bool canTrade(CurrencyCode c) const { return base() == c || quote() == c; }
+  /// Tells whether this market trades given monetary amount based on its currency.
+  bool canTrade(MonetaryAmount ma) const { return canTrade(ma.currencyCode()); }
 
-  auto operator<=>(const Market&) const = default;
+  /// Tells whether this market trades given currency code.
+  bool canTrade(CurrencyCode cur) const { return std::ranges::find(_assets, cur) != _assets.end(); }
+
+  constexpr auto operator<=>(const Market&) const noexcept = default;
 
   string str() const { return assetsPairStrUpper('-'); }
+
+  Type type() const { return static_cast<Type>(_assets[0].getAdditionalBits()); }
 
   friend std::ostream& operator<<(std::ostream& os, const Market& mk);
 
@@ -60,7 +68,9 @@ class Market {
  private:
   string assetsPairStr(char sep, bool lowerCase) const;
 
-  TradableAssets _assets;
+  void setType(Type type) { _assets[0].uncheckedSetAdditionalBits(static_cast<int8_t>(type)); }
+
+  std::array<CurrencyCode, 2> _assets;
 };
 
 }  // namespace cct

@@ -67,7 +67,8 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       log::debug("{} Balance {}", exchangeName, amount);
       balancePortfolio.add(amount);
     } else {
-      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency = _exchangePublic.convert(amount, equiCurrency);
+      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
+          _exchangePublic.estimatedConvert(amount, equiCurrency);
       MonetaryAmount equivalentInMainCurrency;
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;

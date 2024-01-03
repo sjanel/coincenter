@@ -212,7 +212,9 @@ class CurrencyCode {
   /// Returns a 64 bits code
   constexpr uint64_t code() const noexcept { return _data; }
 
-  constexpr bool isNeutral() const noexcept { return !(_data & CurrencyCodeBase::kFirstCharMask); }
+  constexpr bool isDefined() const noexcept { return static_cast<bool>(_data & CurrencyCodeBase::kFirstCharMask); }
+
+  constexpr bool isNeutral() const noexcept { return !isDefined(); }
 
   constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
 
@@ -233,6 +235,7 @@ class CurrencyCode {
   }
 
  private:
+  friend class Market;
   friend class MonetaryAmount;
 
   // bitmap with 10 words of 6 bits (from ascii [33, 95]) + 4 extra bits that will be used by
@@ -245,15 +248,15 @@ class CurrencyCode {
 
   explicit constexpr CurrencyCode(uint64_t data) : _data(data) {}
 
-  constexpr bool isLongCurrencyCode() const { return _data & CurrencyCodeBase::kBeforeLastCharMask; }
+  constexpr bool isLongCurrencyCode() const { return static_cast<bool>(_data & CurrencyCodeBase::kBeforeLastCharMask); }
 
-  constexpr void setNbDecimals(int8_t nbDecimals) {
+  constexpr void uncheckedSetAdditionalBits(int8_t data) {
     // For currency codes whose length is > 8, only 15 digits are supported
     // max 64 decimals for currency codes whose length is maximum 8 (most cases)
-    _data = static_cast<uint64_t>(nbDecimals) + (_data & (~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode())));
+    _data = static_cast<uint64_t>(data) + (_data & (~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode())));
   }
 
-  constexpr int8_t nbDecimals() const {
+  constexpr int8_t getAdditionalBits() const {
     return static_cast<int8_t>(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 

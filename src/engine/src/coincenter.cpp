@@ -250,10 +250,10 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, Exchan
 BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateExchangeNames,
                                           const BalanceOptions &balanceOptions) {
   CurrencyCode equiCurrency = balanceOptions.equiCurrency();
-  const auto optEquiCur = _coincenterInfo.fiatCurrencyIfStableCoin(equiCurrency);
-  if (optEquiCur) {
-    log::warn("Consider {} instead of stable coin {} as equivalent currency", *optEquiCur, equiCurrency);
-    equiCurrency = *optEquiCur;
+  const auto equiCur = _coincenterInfo.tryConvertStableCoinToFiat(equiCurrency);
+  if (equiCur.isDefined()) {
+    log::warn("Consider {} instead of stable coin {} as equivalent currency", equiCur, equiCurrency);
+    equiCurrency = equiCur;
   }
 
   BalancePerExchange ret = _exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions);

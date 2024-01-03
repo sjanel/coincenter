@@ -18,8 +18,7 @@ static constexpr std::string_view kDepositAddressesFileName = "depositaddresses.
 
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};
 
-static constexpr int kNbSupportedExchanges =
-    static_cast<int>(std::distance(std::begin(kSupportedExchanges), std::end(kSupportedExchanges)));
+static constexpr int kNbSupportedExchanges = static_cast<int>(std::size(kSupportedExchanges));
 
 static constexpr int kTypicalNbPrivateAccounts = kNbSupportedExchanges;
 

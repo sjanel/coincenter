@@ -130,7 +130,7 @@ class MonetaryAmount {
     return _curWithDecimals.withNoDecimalsPart();
   }
 
-  [[nodiscard]] constexpr int8_t nbDecimals() const { return _curWithDecimals.nbDecimals(); }
+  [[nodiscard]] constexpr int8_t nbDecimals() const { return _curWithDecimals.getAdditionalBits(); }
 
   [[nodiscard]] constexpr int8_t maxNbDecimals() const {
     return _curWithDecimals.isLongCurrencyCode()
@@ -362,7 +362,7 @@ class MonetaryAmount {
     }
   }
 
-  constexpr void setNbDecimals(int8_t nbDecs) { _curWithDecimals.setNbDecimals(nbDecs); }
+  constexpr void setNbDecimals(int8_t nbDecs) { _curWithDecimals.uncheckedSetAdditionalBits(nbDecs); }
 
   AmountType _amount;
   CurrencyCode _curWithDecimals;

@@ -123,12 +123,12 @@ CurrencyCode CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCo
   return standardizeCurrencyCode(CurrencyCode(currencyCode));
 }
 
-std::optional<CurrencyCode> CoincenterInfo::fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const {
-  auto it = _stableCoinsMap.find(stableCoinCandidate);
+CurrencyCode CoincenterInfo::tryConvertStableCoinToFiat(CurrencyCode maybeStableCoin) const {
+  const auto it = _stableCoinsMap.find(maybeStableCoin);
   if (it != _stableCoinsMap.end()) {
     return it->second;
   }
-  return std::nullopt;
+  return {};
 }
 
 const ExchangeInfo& CoincenterInfo::exchangeInfo(std::string_view exchangeName) const {
