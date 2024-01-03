@@ -29,6 +29,8 @@ class ExchangePublic : public ExchangeBase {
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
   static constexpr int kNbLastTradesDefault = 100;
 
+  enum class MarketPathMode : int8_t { kStrict, kWithLastFiatConversion };
+
   using Fiats = CommonAPI::Fiats;
 
   virtual ~ExchangePublic() = default;
@@ -52,13 +54,14 @@ class ExchangePublic : public ExchangeBase {
 
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
-  std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency,
-                                        const PriceOptions &priceOptions = PriceOptions()) {
+  std::optional<MonetaryAmount> estimatedConvert(MonetaryAmount from, CurrencyCode equiCurrency,
+                                                 const PriceOptions &priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
     Fiats fiats = queryFiats();
     MarketSet markets;
-    MarketsPath conversionPath = findMarketsPath(from.currencyCode(), toCurrency, markets, fiats, true);
-    return convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+    MarketsPath conversionPath =
+        findMarketsPath(from.currencyCode(), equiCurrency, markets, fiats, MarketPathMode::kWithLastFiatConversion);
+    return convert(from, equiCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   }
 
   /// Attempts to convert amount into a target currency.
@@ -105,19 +108,18 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
   /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.
-  /// Important: fiats are considered equivalent and can always be convertible with their rate.
   /// @return array of Market (in the order in which they are defined in the exchange),
   ///         or empty array if conversion is not possible
   /// For instance, findMarketsPath("XLM", "XRP") can return:
   ///   - XLM-USDT
   ///   - XRP-USDT (and not USDT-XRP, as the pair defined on the exchange is XRP-USDT)
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet &markets,
-                              const Fiats &fiats, bool considerStableCoinsAsFiats = false);
+                              const Fiats &fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
-                              bool considerStableCoinsAsFiats = false) {
+                              MarketPathMode marketsPathMode = MarketPathMode::kStrict) {
     MarketSet markets;
-    return findMarketsPath(fromCurrencyCode, toCurrencyCode, markets, queryFiats(), considerStableCoinsAsFiats);
+    return findMarketsPath(fromCurrencyCode, toCurrencyCode, markets, queryFiats(), marketsPathMode);
   }
 
   using CurrenciesPath = SmallVector<CurrencyCode, 4>;
@@ -127,7 +129,7 @@ class ExchangePublic : public ExchangeBase {
   /// gives only the currencies in order.
   /// For instance, findCurrenciesPath("XLM", "XRP") can return ["XLM", "USDT", "XRP"]
   CurrenciesPath findCurrenciesPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
-                                    bool considerStableCoinsAsFiats = false);
+                                    MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 
   std::optional<MonetaryAmount> computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
                                                        const PriceOptions &priceOptions);

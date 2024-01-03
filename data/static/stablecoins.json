@@ -4,5 +4,7 @@
     "DAI": "USD",
     "TUSD": "USD",
     "HUSD": "USD",
-    "LUSD": "USD"
+    "LUSD": "USD",
+    "FDUSD": "USD",
+    "BUSD": "USD"
 }

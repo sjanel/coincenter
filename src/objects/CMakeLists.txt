@@ -58,6 +58,15 @@ add_unit_test(
 )
 
 add_unit_test(
+    market_test
+    test/market_test.cpp
+    LIBRARIES
+    coincenter_objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
     marketorderbook_test
     test/marketorderbook_test.cpp
     LIBRARIES

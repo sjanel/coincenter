@@ -149,7 +149,7 @@ class MarketOrderBook {
   struct AmountPrice {
     using AmountType = MonetaryAmount::AmountType;
 
-    bool operator==(const AmountPrice& o) const = default;
+    bool operator==(const AmountPrice& o) const noexcept = default;
 
     AmountType amount = 0;
     AmountType price = 0;

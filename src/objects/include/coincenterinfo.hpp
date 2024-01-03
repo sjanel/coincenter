@@ -4,7 +4,6 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string_view>
 #include <unordered_map>
 
@@ -46,8 +45,8 @@ class CoincenterInfo {
   }
 
   /// If 'stableCoinCandidate' is a stable crypto currency, return its associated fiat currency code.
-  /// Otherwise, return 'std::nullopt'
-  std::optional<CurrencyCode> fiatCurrencyIfStableCoin(CurrencyCode stableCoinCandidate) const;
+  /// Otherwise, return a default currency code
+  CurrencyCode tryConvertStableCoinToFiat(CurrencyCode maybeStableCoin) const;
 
   const ExchangeInfo &exchangeInfo(std::string_view exchangeName) const;
 

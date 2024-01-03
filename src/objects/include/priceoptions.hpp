@@ -48,7 +48,7 @@ class PriceOptions {
 
   string str(bool placeRealOrderInSimulationMode) const;
 
-  bool operator==(const PriceOptions &) const = default;
+  bool operator==(const PriceOptions &) const noexcept = default;
 
  private:
   MonetaryAmount _fixedPrice;

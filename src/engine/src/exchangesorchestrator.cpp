@@ -134,8 +134,9 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
   MarketOrderBookConversionRates ret(selectedExchanges.size());
   auto marketOrderBooksFunc = [mk, equiCurrencyCode, depth](Exchange *exchange) {
     std::optional<MonetaryAmount> optConversionRate =
-        equiCurrencyCode.isNeutral() ? std::nullopt
-                                     : exchange->apiPublic().convert(MonetaryAmount(1, mk.quote()), equiCurrencyCode);
+        equiCurrencyCode.isNeutral()
+            ? std::nullopt
+            : exchange->apiPublic().estimatedConvert(MonetaryAmount(1, mk.quote()), equiCurrencyCode);
     MarketOrderBook marketOrderBook(depth ? exchange->queryOrderBook(mk, *depth) : exchange->queryOrderBook(mk));
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
       log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote(), equiCurrencyCode,
@@ -403,7 +404,6 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
   ExchangeAmountMarketsPathVector ret;
 
   int publicExchangePos = -1;
-  constexpr bool considerStableCoinsAsFiats = false;
   api::ExchangePublic *pExchangePublic = nullptr;
   for (const auto &[exchangePtr, exchangeAmount] : exchangeAmountPairVector) {
     if (pExchangePublic != &exchangePtr->apiPublic()) {
@@ -413,8 +413,8 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
     api::ExchangePublic &exchangePublic = *pExchangePublic;
 
     MarketSet &markets = marketsPerPublicExchange[publicExchangePos];
-    MarketsPath marketsPath =
-        exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
+    MarketsPath marketsPath = exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats,
+                                                             api::ExchangePublic::MarketPathMode::kStrict);
     const int nbMarketsInPath = static_cast<int>(marketsPath.size());
     if (nbMarketsInPath == 1 ||
         (nbMarketsInPath > 1 &&
@@ -563,14 +563,13 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
 
   MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
-  FixedCapacityVector<MarketOrderBookMap, kNbSupportedExchanges> marketOrderbooksPerPublicExchange(
+  FixedCapacityVector<MarketOrderBookMap, kNbSupportedExchanges> marketOrderBooksPerPublicExchange(
       publicExchanges.size());
 
   api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
 
   ExchangeAmountToCurrencyToAmountVector trades;
   MonetaryAmount remEndAmount = endAmount;
-  constexpr bool considerStableCoinsAsFiats = false;
   for (int nbSteps = 1;; ++nbSteps) {
     bool continuingHigherStepsPossible = false;
     const int nbTrades = static_cast<int>(trades.size());
@@ -587,7 +586,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
         continue;
       }
       auto &markets = marketsPerPublicExchange[publicExchangePos];
-      auto &marketOrderBookMap = marketOrderbooksPerPublicExchange[publicExchangePos];
+      auto &marketOrderBookMap = marketOrderBooksPerPublicExchange[publicExchangePos];
       for (CurrencyCode fromCurrency : pExchange->exchangeInfo().preferredPaymentCurrencies()) {
         if (fromCurrency == toCurrency) {
           continue;
@@ -597,8 +596,8 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
             std::none_of(trades.begin(), trades.begin() + nbTrades, [pExchange, fromCurrency](const auto &tuple) {
               return std::get<0>(tuple) == pExchange && std::get<1>(tuple).currencyCode() == fromCurrency;
             })) {
-          auto conversionPath =
-              exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats, considerStableCoinsAsFiats);
+          auto conversionPath = exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats,
+                                                               api::ExchangePublic::MarketPathMode::kStrict);
           const int nbConversions = static_cast<int>(conversionPath.size());
           if (nbConversions > nbSteps) {
             continuingHigherStepsPossible = true;
@@ -682,7 +681,6 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
     }
 
     // check from which exchanges we can start trades, minimizing number of steps per trade
-    constexpr bool considerStableCoinsAsFiats = false;
     for (int nbSteps = 1;; ++nbSteps) {
       bool continuingHigherStepsPossible = false;
       int exchangePos = 0;
@@ -699,7 +697,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
             continue;
           }
           MarketsPath path = pExchange->apiPublic().findMarketsPath(fromCurrency, toCurrency, markets, fiats,
-                                                                    considerStableCoinsAsFiats);
+                                                                    api::ExchangePublic::MarketPathMode::kStrict);
           if (static_cast<int>(path.size()) > nbSteps) {
             continuingHigherStepsPossible = true;
           } else if (static_cast<int>(path.size()) == nbSteps) {

@@ -14,23 +14,35 @@
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "generalconfig.hpp"
 #include "loadconfiguration.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monitoringinfo.hpp"
+#include "reader.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct::api {
+namespace {
+class StableCoinReader : public Reader {
+  string readAll() const override { return R"({"USDT": "USD"})"; }
+};
+}  // namespace
 class ExchangePublicTest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{runMode, loadConfiguration};
+  CoincenterInfo coincenterInfo{runMode,          loadConfiguration, GeneralConfig(),
+                                MonitoringInfo(), Reader(),          StableCoinReader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
+
+  MarketSet markets{{"BTC", "EUR"}, {"XLM", "EUR"},  {"ETH", "EUR"},  {"ETH", "BTC"},  {"BTC", "KRW"},
+                    {"USD", "EOS"}, {"SHIB", "ICP"}, {"AVAX", "ICP"}, {"AVAX", "USDT"}};
 };
 
 namespace {
@@ -38,24 +50,31 @@ using CurrenciesPath = ExchangePublic::CurrenciesPath;
 using Fiats = ExchangePublic::Fiats;
 }  // namespace
 
-TEST_F(ExchangePublicTest, FindFastestConversionPath) {
-  MarketSet markets{{"BTC", "EUR"}, {"XLM", "EUR"}, {"ETH", "EUR"}, {"ETH", "BTC"}};
+TEST_F(ExchangePublicTest, FindConversionPath) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillRepeatedly(::testing::Return(markets));
   EXPECT_EQ(exchangePublic.findMarketsPath("BTC", "XLM"), MarketsPath({Market{"BTC", "EUR"}, Market{"XLM", "EUR"}}));
   EXPECT_EQ(exchangePublic.findMarketsPath("XLM", "ETH"), MarketsPath({Market{"XLM", "EUR"}, Market{"ETH", "EUR"}}));
-  EXPECT_EQ(exchangePublic.findMarketsPath("ETH", "KRW"), MarketsPath({Market{"ETH", "EUR"}, Market{"EUR", "KRW"}}));
+  EXPECT_EQ(exchangePublic.findMarketsPath("ETH", "KRW"), MarketsPath({Market{"ETH", "BTC"}, Market{"BTC", "KRW"}}));
   EXPECT_EQ(exchangePublic.findMarketsPath("EUR", "BTC"), MarketsPath({Market{"BTC", "EUR"}}));
-  EXPECT_EQ(exchangePublic.findMarketsPath("EOS", "KRW"), MarketsPath());
+  EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "USDT"),
+            MarketsPath({Market{"SHIB", "ICP"}, Market{"AVAX", "ICP"}, Market{"AVAX", "USDT"}}));
+  EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "KRW"), MarketsPath());
 
+  EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "KRW", ExchangePublic::MarketPathMode::kWithLastFiatConversion),
+            MarketsPath({Market{"SHIB", "ICP"}, Market{"AVAX", "ICP"}, Market{"AVAX", "USDT"},
+                         Market{"USDT", "KRW", Market::Type::kFiatConversionMarket}}));
+}
+
+TEST_F(ExchangePublicTest, FindCurrenciesPath) {
+  EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillRepeatedly(::testing::Return(markets));
   EXPECT_EQ(exchangePublic.findCurrenciesPath("BTC", "XLM"), CurrenciesPath({"BTC", "EUR", "XLM"}));
   EXPECT_EQ(exchangePublic.findCurrenciesPath("XLM", "ETH"), CurrenciesPath({"XLM", "EUR", "ETH"}));
-  EXPECT_EQ(exchangePublic.findCurrenciesPath("ETH", "KRW"), CurrenciesPath({"ETH", "EUR", "KRW"}));
+  EXPECT_EQ(exchangePublic.findCurrenciesPath("ETH", "KRW"), CurrenciesPath({"ETH", "BTC", "KRW"}));
   EXPECT_EQ(exchangePublic.findCurrenciesPath("EUR", "BTC"), CurrenciesPath({"EUR", "BTC"}));
-  EXPECT_EQ(exchangePublic.findCurrenciesPath("EOS", "KRW"), CurrenciesPath());
+  EXPECT_EQ(exchangePublic.findCurrenciesPath("SHIB", "KRW"), CurrenciesPath());
 }
 
 TEST_F(ExchangePublicTest, RetrieveMarket) {
-  MarketSet markets{{"BTC", "KRW"}, {"XLM", "KRW"}, {"USD", "EOS"}};
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(::testing::Return(markets));
 
   EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW"), Market("BTC", "KRW"));
