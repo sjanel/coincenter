@@ -34,10 +34,9 @@ jobs:
           mkdir _build
           cd _build
 
-          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
+          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
           ninja
 
-          ctest
           sudo cmake --install .
         if: matrix.build-prometheus-from-source == 0
 
