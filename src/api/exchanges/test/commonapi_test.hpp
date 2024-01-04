@@ -78,7 +78,10 @@ class TestAPI {
     // if (exchangePrivateOpt) {
     //   json d;
     //   for (const auto &c : currencies) {
-    //     d[string(c.standardStr())] = *exchangePrivateOpt->queryWithdrawalFee(c.standardCode()).amountStr();
+    //     const auto optFeeAmount = exchangePrivateOpt->queryWithdrawalFee(c.standardCode());
+    //     if (optFeeAmount) {
+    //       d[c.standardStr()] = optFeeAmount->amountStr();
+    //     }
     //   }
     //   std::cout << d.dump(2) << '\n';
     // }
