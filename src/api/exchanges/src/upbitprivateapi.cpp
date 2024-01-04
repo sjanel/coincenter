@@ -129,8 +129,7 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
 bool UpbitPrivate::validateApiKey() {
   json ret =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), IfError::kNoThrow);
-  auto errorIt = ret.find("error");
-  return errorIt == ret.end() && !ret.empty();
+  return !ret.empty() && ret.find("error") == ret.end();
 }
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
@@ -173,17 +172,20 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
 }
 
 BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  BalancePortfolio ret;
-  bool withBalanceInUse =
+  const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+  const CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+
+  BalancePortfolio ret;
   for (const json& accountDetail : PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts")) {
-    CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
-    MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
+    const CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
+    const MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
+
     this->addBalance(ret, availableAmount, equiCurrency);
 
     if (withBalanceInUse) {
-      MonetaryAmount amountInUse(accountDetail["locked"].get<std::string_view>(), currencyCode);
+      const MonetaryAmount amountInUse(accountDetail["locked"].get<std::string_view>(), currencyCode);
+
       this->addBalance(ret, amountInUse, equiCurrency);
     }
   }
@@ -597,6 +599,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
   CurlPostData withdrawPostData{{"currency", currencyCode.str()},
+                                {"net_type", currencyCode.str()},
                                 {"amount", netEmittedAmount.amountStr()},
                                 {"address", destinationWallet.address()}};
   if (destinationWallet.hasTag()) {
