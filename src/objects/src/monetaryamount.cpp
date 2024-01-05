@@ -32,21 +32,23 @@ namespace {
 /// Theorem 15
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
-constexpr bool IsNotSpace(char ch) { return ch != ' '; }
-constexpr bool IsNotZero(char ch) { return ch != '0'; }
-
 constexpr void RemovePrefixSpaces(std::string_view &str) {
-  str.remove_prefix(std::ranges::find_if(str, IsNotSpace) - str.begin());
+  str.remove_prefix(std::ranges::find_if(str, [](char ch) { return ch != ' '; }) - str.begin());
 }
 constexpr void RemoveTrailingSpaces(std::string_view &str) {
-  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), IsNotSpace) - std::ranges::rbegin(str));
+  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), [](char ch) { return ch != ' '; }) -
+                    std::ranges::rbegin(str));
 }
 constexpr void RemoveTrailingZeros(std::string_view &str) {
-  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), IsNotZero) - std::ranges::rbegin(str));
+  str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), [](char ch) { return ch != '0'; }) -
+                    std::ranges::rbegin(str));
 }
 
 inline int ParseNegativeChar(std::string_view &amountStr) {
   int negMult = 1;
+  if (amountStr.empty()) {
+    return negMult;
+  }
   RemovePrefixSpaces(amountStr);
   if (amountStr.front() < '0') {
     static_assert('-' < '0' && '+' < '0' && '.' < '0' && ' ' < '0');

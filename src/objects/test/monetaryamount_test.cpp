@@ -242,6 +242,8 @@ TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("05AUD"), MonetaryAmount(5, "AUD"));
   EXPECT_EQ(MonetaryAmount("746REPV2"), MonetaryAmount("746", "REPV2"));
 
+  EXPECT_EQ(MonetaryAmount("", "EUR"), MonetaryAmount(0, "EUR"));
+
   EXPECT_THROW(MonetaryAmount("usdt"), invalid_argument);
   EXPECT_NO_THROW(MonetaryAmount("usdt", MonetaryAmount::IfNoAmount::kNoThrow));
 }

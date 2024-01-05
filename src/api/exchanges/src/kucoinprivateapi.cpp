@@ -90,7 +90,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   auto errCodeIt = ret.find("code");
   if (errCodeIt != ret.end() && errCodeIt->get<std::string_view>() != kStatusCodeOK) {
     auto msgIt = ret.find("msg");
-    std::string_view msg = msgIt == ret.end() ? "" : msgIt->get<std::string_view>();
+    std::string_view msg = msgIt == ret.end() ? std::string_view() : msgIt->get<std::string_view>();
     if (requestType == HttpRequestType::kDelete) {
       log::warn("Kucoin error {}:'{}' bypassed, object probably disappeared correctly",
                 errCodeIt->get<std::string_view>(), msg);

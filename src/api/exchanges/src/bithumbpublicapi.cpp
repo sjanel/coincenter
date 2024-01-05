@@ -31,6 +31,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -46,7 +47,6 @@ namespace {
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
                  CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   string methodUrl(endpoint);
-  methodUrl.push_back('/');
   base.appendStrTo(methodUrl);
   if (!quote.isNeutral()) {
     methodUrl.push_back('_');
@@ -57,18 +57,26 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     methodUrl.append(urlOpts);
   }
 
-  json ret = json::parse(curlHandle.query(methodUrl, CurlOptions(HttpRequestType::kGet)));
-  auto errorIt = ret.find("status");
-  if (errorIt != ret.end()) {
-    std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
-    if (statusCode != BithumbPublic::kStatusOKStr) {                 // "0000" stands for: request OK
-      log::error("Full Bithumb json error: '{}'", ret.dump());
-      auto msgIt = ret.find("message");
-      throw exception("Bithumb error: {}, msg: {}", statusCode,
-                      msgIt != ret.end() ? msgIt->get<std::string_view>() : "null");
+  InvariantRequestRetry requestRetry(curlHandle, methodUrl, CurlOptions(HttpRequestType::kGet));
+
+  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+    const auto errorIt = jsonResponse.find("status");
+    if (errorIt != jsonResponse.end()) {
+      const std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
+      if (statusCode != BithumbPublic::kStatusOKStr) {                       // "0000" stands for: request OK
+        log::warn("Full Bithumb json error ({}): '{}'", statusCode, jsonResponse.dump());
+        return InvariantRequestRetry::Status::kResponseError;
+      }
     }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
+
+  const auto dataIt = jsonResponse.find("data");
+  json ret;
+  if (dataIt != jsonResponse.end()) {
+    ret.swap(*dataIt);
   }
-  return ret["data"];
+  return ret;
 }
 
 }  // namespace
@@ -193,7 +201,7 @@ MonetaryAmountByCurrencySet BithumbPublic::WithdrawalFeesFunc::operator()() {
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "/public/assetsstatus", "all");
+  json result = PublicQuery(_curlHandle, "/public/assetsstatus/", "all");
   CurrencyExchangeVector currencies;
   currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
@@ -236,61 +244,62 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
     AppendString(urlOpts, *optDepth);
   }
 
-  json result = PublicQuery(curlHandle, "/public/orderbook", base, quote, urlOpts);
-
-  // Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
-  // anymore
-  std::string_view quoteCurrency = result["payment_currency"].get<std::string_view>();
-  if (quoteCurrency != "KRW") {
-    log::error("Unexpected Bithumb reply for orderbook. May require code api update");
-  }
-  CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
-  const CurrencyCodeSet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
-  for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
-    if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
-      const json* asksBids[2];
-      CurrencyCode baseCurrencyCode;
-      if (singleMarketQuote && baseOrSpecial == "order_currency") {
-        // single market quote
-        baseCurrencyCode = base;
-        asksBids[0] = std::addressof(result["asks"]);
-        asksBids[1] = std::addressof(result["bids"]);
-      } else if (!singleMarketQuote) {
-        // then it's a base currency
-        baseCurrencyCode = config.standardizeCurrencyCode(baseOrSpecial);
-        if (excludedCurrencies.contains(baseCurrencyCode)) {
-          // Forbidden currency, do not consider its market
-          log::trace("Discard {} excluded by config", baseCurrencyCode);
+  json result = PublicQuery(curlHandle, "/public/orderbook/", base, quote, urlOpts);
+  if (!result.empty()) {
+    //  Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
+    //  anymore
+    std::string_view quoteCurrency = result["payment_currency"].get<std::string_view>();
+    if (quoteCurrency != "KRW") {
+      log::error("Unexpected Bithumb reply for orderbook. May require code api update");
+    }
+    CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
+    const CurrencyCodeSet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
+    for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
+      if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
+        const json* asksBids[2];
+        CurrencyCode baseCurrencyCode;
+        if (singleMarketQuote && baseOrSpecial == "order_currency") {
+          // single market quote
+          baseCurrencyCode = base;
+          asksBids[0] = std::addressof(result["asks"]);
+          asksBids[1] = std::addressof(result["bids"]);
+        } else if (!singleMarketQuote) {
+          // then it's a base currency
+          baseCurrencyCode = config.standardizeCurrencyCode(baseOrSpecial);
+          if (excludedCurrencies.contains(baseCurrencyCode)) {
+            // Forbidden currency, do not consider its market
+            log::trace("Discard {} excluded by config", baseCurrencyCode);
+            continue;
+          }
+          asksBids[0] = std::addressof(asksAndBids["asks"]);
+          asksBids[1] = std::addressof(asksAndBids["bids"]);
+        } else {
           continue;
         }
-        asksBids[0] = std::addressof(asksAndBids["asks"]);
-        asksBids[1] = std::addressof(asksAndBids["bids"]);
-      } else {
-        continue;
-      }
 
-      /*
-        "bids": [{"quantity" : "6.1189306","price" : "504000"},
-                 {"quantity" : "10.35117828","price" : "503000"}],
-        "asks": [{"quantity" : "2.67575", "price" : "506000"},
-                 {"quantity" : "3.54343","price" : "507000"}]
-      */
-      using OrderBookVec = vector<OrderBookLine>;
-      OrderBookVec orderBookLines;
-      orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
-      for (const json* asksOrBids : asksBids) {
-        const bool isAsk = asksOrBids == asksBids[0];
-        for (const json& priceQuantityPair : *asksOrBids) {
-          MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
-          MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
+        /*
+          "bids": [{"quantity" : "6.1189306","price" : "504000"},
+                   {"quantity" : "10.35117828","price" : "503000"}],
+          "asks": [{"quantity" : "2.67575", "price" : "506000"},
+                   {"quantity" : "3.54343","price" : "507000"}]
+        */
+        using OrderBookVec = vector<OrderBookLine>;
+        OrderBookVec orderBookLines;
+        orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
+        for (const json* asksOrBids : asksBids) {
+          const bool isAsk = asksOrBids == asksBids[0];
+          for (const json& priceQuantityPair : *asksOrBids) {
+            MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
+            MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
 
-          orderBookLines.emplace_back(amount, price, isAsk);
+            orderBookLines.emplace_back(amount, price, isAsk);
+          }
         }
-      }
-      Market market(baseCurrencyCode, quoteCurrencyCode);
-      ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
-      if (singleMarketQuote) {
-        break;
+        Market market(baseCurrencyCode, quoteCurrencyCode);
+        ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
+        if (singleMarketQuote) {
+          break;
+        }
       }
     }
   }
@@ -314,16 +323,21 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
   TimePoint t1 = Clock::now();
-  json result = PublicQuery(_curlHandle, "/public/ticker", mk.base(), mk.quote());
-  std::string_view last24hVol = result["units_traded_24H"].get<std::string_view>();
-  std::string_view bithumbTimestamp = result["date"].get<std::string_view>();
-  int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
-  int64_t t1Ms = TimestampToMs(t1);
-  int64_t t2Ms = TimestampToMs(Clock::now());
-  if (t1Ms < bithumbTimeMs && bithumbTimeMs < t2Ms) {
-    log::debug("Bithumb time is synchronized with us");
-  } else {
-    log::error("Bithumb time is not synchronized with us (Bithumb: {}, us: [{} - {}])", bithumbTimestamp, t1Ms, t2Ms);
+  json result = PublicQuery(_curlHandle, "/public/ticker/", mk.base(), mk.quote());
+  std::string_view last24hVol;
+  const auto dateIt = result.find("date");
+  if (dateIt != result.end()) {
+    std::string_view bithumbTimestamp = dateIt->get<std::string_view>();
+
+    last24hVol = result["units_traded_24H"].get<std::string_view>();
+    int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
+    int64_t t1Ms = TimestampToMs(t1);
+    int64_t t2Ms = TimestampToMs(Clock::now());
+    if (t1Ms < bithumbTimeMs && bithumbTimeMs < t2Ms) {
+      log::debug("Bithumb time is synchronized with us");
+    } else {
+      log::error("Bithumb time is not synchronized with us (Bithumb: {}, us: [{} - {}])", bithumbTimestamp, t1Ms, t2Ms);
+    }
   }
 
   return {last24hVol, mk.base()};
@@ -340,8 +354,9 @@ TimePoint EpochTime(std::string&& dateStr) {
 }  // namespace
 
 LastTradesVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
-  json result = PublicQuery(_curlHandle, "/public/transaction_history", mk.base(), mk.quote());
+  json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote());
   LastTradesVector ret;
+  ret.reserve(result.size());
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());

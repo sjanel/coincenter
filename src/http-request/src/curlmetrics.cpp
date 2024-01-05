@@ -8,7 +8,7 @@ namespace {
 
 MetricKeyPerRequestType DefineTypes(MetricKey &requestCountKey) {
   MetricKeyPerRequestType ret;
-  for (HttpRequestType requestType : kAllHttpRequestsTypes) {
+  for (HttpRequestType requestType : kHttpRequestTypes) {
     requestCountKey.set("type", ToString(requestType));
     ret.insert_or_assign(requestType, requestCountKey);
   }
@@ -25,8 +25,14 @@ MetricKeyPerRequestType CreateRequestDurationMetricKeys() {
   return DefineTypes(requestCountKey);
 }
 
+MetricKeyPerRequestType CreateNbRequestErrorsMetricKeys() {
+  MetricKey requestCountKey = CreateMetricKey("http_request_error_count", "Counter of http request errors");
+  return DefineTypes(requestCountKey);
+}
+
 }  // namespace
 
 const MetricKeyPerRequestType CurlMetrics::kNbRequestsKeys = CreateNbRequestsMetricKeys();
 const MetricKeyPerRequestType CurlMetrics::kRequestDurationKeys = CreateRequestDurationMetricKeys();
+const MetricKeyPerRequestType CurlMetrics::kNbRequestErrorKeys = CreateNbRequestErrorsMetricKeys();
 }  // namespace cct

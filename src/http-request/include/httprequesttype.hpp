@@ -6,10 +6,10 @@
 #include "unreachable.hpp"
 
 namespace cct {
-enum class HttpRequestType : int8_t { kGet, kPost, kDelete };
+enum class HttpRequestType : int8_t { kGet, kPut, kPost, kDelete };
 
-static constexpr HttpRequestType kAllHttpRequestsTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
-                                                            HttpRequestType::kDelete};
+static constexpr HttpRequestType kHttpRequestTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
+                                                        HttpRequestType::kPut, HttpRequestType::kDelete};
 
 constexpr std::string_view ToString(HttpRequestType requestType) {
   switch (requestType) {
@@ -17,6 +17,8 @@ constexpr std::string_view ToString(HttpRequestType requestType) {
       return "GET";
     case HttpRequestType::kPost:
       return "POST";
+    case HttpRequestType::kPut:
+      return "PUT";
     case HttpRequestType::kDelete:
       return "DELETE";
     default:

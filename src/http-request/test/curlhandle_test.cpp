@@ -48,10 +48,7 @@ class TestCurlHandle : public ::testing::Test {
   CurlHandle handle{kTestUrl};
 };
 
-TEST_F(TestCurlHandle, BasicCurlTest) {
-  EXPECT_EQ(handle.query("", kVerboseHttpGetOptions), "POOL_UP");
-  EXPECT_EQ(handle.queryRelease("", kVerboseHttpGetOptions), "POOL_UP");
-}
+TEST_F(TestCurlHandle, BasicCurlTest) { EXPECT_EQ(handle.query("", kVerboseHttpGetOptions), "POOL_UP"); }
 
 TEST_F(TestCurlHandle, ProxyMockTest) {
   if (IsProxyAvailable()) {

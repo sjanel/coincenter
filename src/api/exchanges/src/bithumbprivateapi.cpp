@@ -102,7 +102,7 @@ void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, std::string_view si
 }
 
 json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint, CurlOptions& opts) {
-  auto strDataAndNoncePair = GetStrData(endpoint, opts.getPostData().str());
+  auto strDataAndNoncePair = GetStrData(endpoint, opts.postData().str());
 
   string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
 

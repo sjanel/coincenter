@@ -14,7 +14,7 @@ namespace cct {
 
 class CurlOptions {
  public:
-  // Trick: may get a null-terminated const char * for each kv pair.
+  // Optimization: may get a null-terminated const char * for each kv pair.
   // See usage in CurlHandle for more information.
   using HttpHeaders = FlatKeyValueString<'\0', ':'>;
 
@@ -24,15 +24,7 @@ class CurlOptions {
   explicit CurlOptions(HttpRequestType requestType, Verbose verbose = Verbose::kOff)
       : _verbose(verbose == Verbose::kOn), _requestType(requestType) {}
 
-  CurlOptions(HttpRequestType requestType, const CurlPostData &postData,
-              PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
-      : _postdata(postData), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
-    if (postDataFormat == PostDataFormat::kJson) {
-      setPostDataInJsonFormat();
-    }
-  }
-
-  CurlOptions(HttpRequestType requestType, CurlPostData &&postData,
+  CurlOptions(HttpRequestType requestType, CurlPostData postData,
               PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
       : _postdata(std::move(postData)), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
     if (postDataFormat == PostDataFormat::kJson) {
@@ -40,17 +32,17 @@ class CurlOptions {
     }
   }
 
-  const HttpHeaders &getHttpHeaders() const { return _httpHeaders; }
+  const HttpHeaders &httpHeaders() const { return _httpHeaders; }
 
-  const char *getProxyUrl() const { return _proxyUrl; }
+  const char *proxyUrl() const { return _proxyUrl; }
 
   void setProxyUrl(const char *proxyUrl, bool reset = false) {
     _proxyUrl = proxyUrl;
     _proxyReset = reset;
   }
 
-  CurlPostData &getPostData() { return _postdata; }
-  const CurlPostData &getPostData() const { return _postdata; }
+  CurlPostData &mutablePostData() { return _postdata; }
+  const CurlPostData &postData() const { return _postdata; }
 
   bool isProxyReset() const { return _proxyReset; }
 
@@ -68,7 +60,8 @@ class CurlOptions {
   void setHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.set(key, value); }
   void setHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.set(key, value); }
 
-  using trivially_relocatable = is_trivially_relocatable<HttpHeaders>::type;
+  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<HttpHeaders> &&
+                                                                 is_trivially_relocatable_v<CurlPostData>>::type;
 
  private:
   void setPostDataInJsonFormat() {

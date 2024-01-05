@@ -27,6 +27,7 @@
 #include "fiatconverter.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -38,18 +39,20 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData))));
-  //{"error":{"name":400,"message":"Type mismatch error. Check the parameters type!"}}
-  auto errorIt = ret.find("error");
-  if (errorIt != ret.end()) {
-    log::error("Full Upbit json error: '{}'", ret.dump());
-    auto statusCodeIt = ret.find("name");
-    const long statusCode = statusCodeIt == ret.end() ? -1 : statusCodeIt->get<long>();
-    auto msgIt = ret.find("message");
-    std::string_view msg = msgIt == ret.end() ? "Unknown" : msgIt->get<std::string_view>();
-    throw exception("Upbit error: {}, code = {}", msg, statusCode);
-  }
-  return ret;
+  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+
+  return requestRetry.queryJson([](const json& jsonResponse) {
+    const auto foundErrorIt = jsonResponse.find("error");
+    if (foundErrorIt != jsonResponse.end()) {
+      const auto statusCodeIt = jsonResponse.find("name");
+      const long statusCode = statusCodeIt == jsonResponse.end() ? -1 : statusCodeIt->get<long>();
+      const auto msgIt = jsonResponse.find("message");
+      const std::string_view msg = msgIt == jsonResponse.end() ? "Unknown" : msgIt->get<std::string_view>();
+      log::warn("Upbit error ({}, '{}'), full json: '{}'", statusCode, msg, jsonResponse.dump());
+      return InvariantRequestRetry::Status::kResponseError;
+    }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
 }
 
 }  // namespace
@@ -210,7 +213,7 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
     }
     ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
   }
-  log::info("Retrieved {} orderbooks from Upbit", ret.size());
+  log::info("Retrieved {} order books from Upbit", ret.size());
   return ret;
 }
 }  // namespace
@@ -240,7 +243,7 @@ MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
-  double last24hVol = result.front()["candle_acc_trade_volume"].get<double>();
+  double last24hVol = result.empty() ? 0 : result.front()["candle_acc_trade_volume"].get<double>();
   return MonetaryAmount(last24hVol, mk.base());
 }
 
@@ -262,7 +265,7 @@ LastTradesVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
 
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
-  double lastPrice = result.front()["trade_price"].get<double>();
+  double lastPrice = result.empty() ? 0 : result.front()["trade_price"].get<double>();
   return MonetaryAmount(lastPrice, mk.quote());
 }
 

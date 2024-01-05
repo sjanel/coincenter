@@ -80,11 +80,12 @@ void FiatConverter::updateCacheFile() const {
 std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
   string qStr(mk.assetsPairStrUpper('_'));
   CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
-  std::string_view dataStr = _curlHandle.query("/api/v7/convert", opts);
+  auto dataStr = _curlHandle.query("/api/v7/convert", opts);
   static constexpr bool kAllowExceptions = false;
-  json data = json::parse(dataStr, nullptr, kAllowExceptions);
+  auto data = json::parse(dataStr, nullptr, kAllowExceptions);
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
-  if (data == json::value_t::discarded || !data.contains("results") || !data["results"].contains(qStr)) {
+  auto resultsIt = data.find("results");
+  if (data == json::value_t::discarded || resultsIt == data.end() || !resultsIt->contains(qStr)) {
     log::error("No JSON data received from fiat currency converter service for pair '{}'", mk);
     auto it = _pricesMap.find(mk);
     if (it != _pricesMap.end()) {
@@ -95,8 +96,7 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
     }
     return std::nullopt;
   }
-  const json& res = data["results"];
-  const json& rates = res[qStr];
+  const auto& rates = (*resultsIt)[qStr];
   double rate = rates["val"];
   log::debug("Stored rate {} for market {}", rate, qStr);
   TimePoint nowTime = Clock::now();

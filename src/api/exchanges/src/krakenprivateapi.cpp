@@ -84,9 +84,9 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
 
   Nonce nonce = Nonce_TimeSinceEpochInMs();
-  opts.getPostData().append("nonce", nonce);
+  opts.mutablePostData().append("nonce", nonce);
   opts.appendHttpHeader("API-Key", apiKey.key());
-  opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
+  opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.postData().str()));
 
   json response = json::parse(curlHandle.query(method, opts));
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
@@ -104,8 +104,8 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
 
     // We need to update the nonce
     nonce = Nonce_TimeSinceEpochInMs();
-    opts.getPostData().set("nonce", nonce);
-    opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.getPostData().str()));
+    opts.mutablePostData().set("nonce", nonce);
+    opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.postData().str()));
     response = json::parse(curlHandle.query(method, opts));
   }
   KrakenErrorEnum err = KrakenErrorEnum::kNoError;
