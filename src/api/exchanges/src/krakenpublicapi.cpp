@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -31,6 +30,7 @@
 #include "fiatconverter.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -42,13 +42,23 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet, std::move(postData))));
-  auto errorIt = ret.find("error");
-  if (errorIt != ret.end() && !errorIt->empty()) {
-    log::error("Full Kraken json error: '{}'", ret.dump());
-    throw exception("Kraken error: {}", errorIt->front().get<std::string_view>());
+  InvariantRequestRetry requestRetry(curlHandle, method, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+
+  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+    const auto errorIt = jsonResponse.find("error");
+    if (errorIt != jsonResponse.end() && !errorIt->empty()) {
+      log::warn("Full Kraken json error: '{}'", jsonResponse.dump());
+      return InvariantRequestRetry::Status::kResponseError;
+    }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
+
+  const auto resultIt = jsonResponse.find("result");
+  json ret;
+  if (resultIt != jsonResponse.end()) {
+    ret.swap(*resultIt);
   }
-  return ret["result"];
+  return ret;
 }
 
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,
@@ -426,16 +436,16 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   ret.reserve(markets.size());
   for (Market mk : markets) {
-    auto lb = krakenCurrencies.find(mk.base());
-    if (lb == krakenCurrencies.end()) {
+    auto it = krakenCurrencies.find(mk.base());
+    if (it == krakenCurrencies.end()) {
       throw exception("Cannot find {} in Kraken currencies", mk.base());
     }
-    CurrencyExchange krakenCurrencyExchangeBase = *lb;
-    lb = krakenCurrencies.find(mk.quote());
-    if (lb == krakenCurrencies.end()) {
+    CurrencyExchange krakenCurrencyExchangeBase = *it;
+    it = krakenCurrencies.find(mk.quote());
+    if (it == krakenCurrencies.end()) {
       throw exception("Cannot find {} in Kraken currencies", mk.quote());
     }
-    CurrencyExchange krakenCurrencyExchangeQuote = *lb;
+    CurrencyExchange krakenCurrencyExchangeQuote = *it;
     Market krakenMarket(krakenCurrencyExchangeBase.altCode(), krakenCurrencyExchangeQuote.altCode());
     string assetPairStr = krakenMarket.assetsPairStrUpper();
     if (!allAssetPairs.empty()) {
@@ -492,27 +502,32 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
   CurrencyExchange krakenCurrencyExchangeQuote = *lb;
   string krakenAssetPair = krakenCurrencyExchangeBase.altStr();
   krakenAssetPair.append(krakenCurrencyExchangeQuote.altStr());
-  json result = PublicQuery(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
-  const json& entry = result.front();
-  const json& asks = entry["asks"];
-  const json& bids = entry["bids"];
 
-  auto volAndPriNbDecimals = _marketsCache.get().second.find(mk)->second.volAndPriNbDecimals;
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
-  for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
-    const bool isAsk = asksOrBids == std::addressof(asks);
-    for (const auto& priceQuantityTuple : *asksOrBids) {
-      std::string_view priceStr = priceQuantityTuple[0].get<std::string_view>();
-      std::string_view amountStr = priceQuantityTuple[1].get<std::string_view>();
 
-      MonetaryAmount amount(amountStr, mk.base());
-      MonetaryAmount price(priceStr, mk.quote());
+  json result = PublicQuery(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
+  if (!result.empty()) {
+    const json& entry = result.front();
+    const auto asksIt = entry.find("asks");
+    const auto bidsIt = entry.find("bids");
 
-      orderBookLines.emplace_back(amount, price, isAsk);
+    orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
+    for (const auto& asksOrBids : {asksIt, bidsIt}) {
+      const bool isAsk = asksOrBids == asksIt;
+      for (const auto& priceQuantityTuple : *asksOrBids) {
+        std::string_view priceStr = priceQuantityTuple[0].get<std::string_view>();
+        std::string_view amountStr = priceQuantityTuple[1].get<std::string_view>();
+
+        MonetaryAmount amount(amountStr, mk.base());
+        MonetaryAmount price(priceStr, mk.quote());
+
+        orderBookLines.emplace_back(amount, price, isAsk);
+      }
     }
   }
+
+  const auto volAndPriNbDecimals = _marketsCache.get().second.find(mk)->second.volAndPriNbDecimals;
   return MarketOrderBook(mk, orderBookLines, volAndPriNbDecimals);
 }
 
@@ -531,18 +546,22 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 LastTradesVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
                       _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
+  LastTradesVector ret;
   json result = PublicQuery(_curlHandle, "/public/Trades",
                             {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
-  LastTradesVector ret;
-  for (const json& det : result.front()) {
-    MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
-    MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
-    int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
-    TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
+  if (!result.empty()) {
+    ret.reserve(result.front().size());
+    for (const json& det : result.front()) {
+      MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
+      MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
+      int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
+      TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
+      ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
+    }
+    std::ranges::sort(ret);
   }
-  std::ranges::sort(ret);
+
   return ret;
 }
 

@@ -32,6 +32,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -52,15 +53,18 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
     endpoint.push_back('?');
     endpoint.append(curlPostData.str());
   }
-  json ret = json::parse(curlHandle.query(endpoint, CurlOptions(HttpRequestType::kGet)));
-  auto foundErrorIt = ret.find("code");
-  auto foundMsgIt = ret.find("msg");
-  if (foundErrorIt != ret.end() && foundMsgIt != ret.end()) {
-    const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
-    log::error("Full Binance json error: '{}'", ret.dump());
-    throw exception("Error: {}, msg: ", MonetaryAmount(statusCode), foundMsgIt->get<std::string_view>());
-  }
-  return ret;
+  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet));
+
+  return requestRetry.queryJson([](const json& jsonResponse) {
+    const auto foundErrorIt = jsonResponse.find("code");
+    const auto foundMsgIt = jsonResponse.find("msg");
+    if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
+      const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
+      log::warn("Binance error ({}), full json: '{}'", statusCode, jsonResponse.dump());
+      return InvariantRequestRetry::Status::kResponseError;
+    }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
 }
 
 template <class ExchangeInfoDataByMarket>
@@ -186,9 +190,12 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
   json exchangeInfoData = PublicQuery(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
-  json& symbols = exchangeInfoData["symbols"];
-  for (auto it = std::make_move_iterator(symbols.begin()), endIt = std::make_move_iterator(symbols.end()); it != endIt;
-       ++it) {
+  auto symbolsIt = exchangeInfoData.find("symbols");
+  if (symbolsIt == exchangeInfoData.end()) {
+    return ret;
+  }
+  for (auto it = std::make_move_iterator(symbolsIt->begin()), endIt = std::make_move_iterator(symbolsIt->end());
+       it != endIt; ++it) {
     std::string_view baseAsset = (*it)["baseAsset"].get<std::string_view>();
     std::string_view quoteAsset = (*it)["quoteAsset"].get<std::string_view>();
     if ((*it)["status"].get<std::string_view>() != "TRADING") {
@@ -318,8 +325,11 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
     log::error("Unable to retrieve last trades from {}, use average price instead for notional", mk);
   }
 
-  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
-  return {result["price"].get<std::string_view>(), mk.quote()};
+  const json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
+  const auto priceIt = result.find("price");
+  const std::string_view priceStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
+
+  return {priceStr, mk.quote()};
 }
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,
@@ -472,28 +482,36 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
     lb = std::next(kAuthorizedDepths.end(), -1);
     log::error("Invalid depth {}, default to {}", depth, *lb);
   }
-  CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
-  json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
-  const json& asks = asksAndBids["asks"];
-  const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asks.size() + bids.size()));
-  for (auto asksOrBids : {std::addressof(asks), std::addressof(bids)}) {
-    const bool isAsk = asksOrBids == std::addressof(asks);
-    for (const auto& priceQuantityPair : *asksOrBids) {
-      MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
-      MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
 
-      orderBookLines.emplace_back(amount, price, isAsk);
+  CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
+  json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
+  const auto asksIt = asksAndBids.find("asks");
+  const auto bidsIt = asksAndBids.find("bids");
+
+  if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
+    orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
+    for (const auto& asksOrBids : {asksIt, bidsIt}) {
+      const bool isAsk = asksOrBids == asksIt;
+      for (const auto& priceQuantityPair : *asksOrBids) {
+        MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
+        MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
+
+        orderBookLines.emplace_back(amount, price, isAsk);
+      }
     }
   }
+
   return MarketOrderBook(mk, orderBookLines);
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
-  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", mk.assetsPairStrUpper()}});
-  std::string_view last24hVol = result["volume"].get<std::string_view>();
+  const json result =
+      PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", mk.assetsPairStrUpper()}});
+  const auto volumeIt = result.find("volume");
+  const std::string_view last24hVol = volumeIt == result.end() ? std::string_view() : volumeIt->get<std::string_view>();
+
   return {last24hVol, mk.base()};
 }
 
@@ -520,8 +538,9 @@ LastTradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market mk) {
-  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
-  std::string_view lastPrice = result["price"].get<std::string_view>();
+  const json data = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
+  const auto priceIt = data.find("price");
+  const std::string_view lastPrice = priceIt == data.end() ? std::string_view() : priceIt->get<std::string_view>();
   return {lastPrice, mk.quote()};
 }
 

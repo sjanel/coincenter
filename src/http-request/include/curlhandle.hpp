@@ -3,7 +3,6 @@
 #include <map>
 #include <string_view>
 #include <type_traits>
-#include <utility>
 
 #include "besturlpicker.hpp"
 #include "cct_string.hpp"
@@ -51,22 +50,18 @@ class CurlHandle {
   /// The pointed memory is valid until a next call to 'query'.
   std::string_view query(std::string_view endpoint, const CurlOptions &opts);
 
-  /// Same as 'query' except that internal memory buffer is immediately freed after the query.
-  /// This can be useful for rare queries with very large responses for instance.
-  string queryRelease(std::string_view endpoint, const CurlOptions &opts);
-
   std::string_view getNextBaseUrl() const { return _bestUrlPicker.getNextBaseURL(); }
 
   Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
   /// Instead of actually performing real calls, instructs this CurlHandle to
   /// return hardcoded responses (in values of given map) based on query endpoints with appended options (in key of
-  /// given map) This should be used only for tests purposes, as the search for the matching query is of linear
+  /// given map).
+  /// This should be used only for tests purposes, as the search for the matching query is of linear
   /// complexity in a flat key value string.
   void setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap);
 
-  // CurlHandle is trivially relocatable
-  using trivially_relocatable = std::true_type;
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
   void setUpProxy(const char *proxyUrl, bool reset);

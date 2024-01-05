@@ -24,9 +24,6 @@ TEST(MarketOrderBookTest, Basic) { EXPECT_TRUE(MarketOrderBook(Market("ETH", "EU
 
 class MarketOrderBookTestCase1 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   MarketOrderBook marketOrderBook{
       Market("ETH", "EUR"),
       std::array<OrderBookLine, 6>{

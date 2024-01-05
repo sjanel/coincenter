@@ -176,7 +176,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }
-    SetNonceAndSignature(apiKey, opts.getPostData(), queryDelay);
+    SetNonceAndSignature(apiKey, opts.mutablePostData(), queryDelay);
     ret = json::parse(curlHandle.query(endpoint, opts));
 
     auto codeIt = ret.find("code");

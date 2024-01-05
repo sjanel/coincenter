@@ -11,6 +11,7 @@ using MetricKeyPerRequestType = std::map<HttpRequestType, MetricKey>;
 struct CurlMetrics {
   static const MetricKeyPerRequestType kNbRequestsKeys;
   static const MetricKeyPerRequestType kRequestDurationKeys;
+  static const MetricKeyPerRequestType kNbRequestErrorKeys;
 };
 
 }  // namespace cct

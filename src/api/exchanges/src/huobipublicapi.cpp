@@ -30,6 +30,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -50,12 +51,31 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.push_back('?');
     method.append(curlPostData.str());
   }
-  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet)));
-  bool returnData = ret.contains("data");
-  if (!returnData && !ret.contains("tick")) {
-    throw exception("No data for Huobi public endpoint");
+
+  InvariantRequestRetry requestRetry(curlHandle, method, CurlOptions(HttpRequestType::kGet));
+
+  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+    const auto dataIt = jsonResponse.find("data");
+    if (dataIt == jsonResponse.end()) {
+      const auto tickIt = jsonResponse.find("tick");
+      if (tickIt == jsonResponse.end()) {
+        log::warn("Full Huobi json error: '{}'", jsonResponse.dump());
+        return InvariantRequestRetry::Status::kResponseError;
+      }
+    }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
+  json ret;
+  const auto dataIt = jsonResponse.find("data");
+  if (dataIt != jsonResponse.end()) {
+    ret.swap(*dataIt);
+  } else {
+    const auto tickIt = jsonResponse.find("tick");
+    if (tickIt != jsonResponse.end()) {
+      ret.swap(*tickIt);
+    }
   }
-  return returnData ? ret["data"] : ret["tick"];
+  return ret;
 }
 
 }  // namespace
@@ -356,25 +376,28 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
       postData.append("depth", *lb);
     }
   }
-  json asksAndBids = PublicQuery(_curlHandle, "/market/depth", postData);
-  const json& asks = asksAndBids["asks"];
-  const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
-  for (auto asksOrBids : {std::addressof(bids), std::addressof(asks)}) {
-    const bool isAsk = asksOrBids == std::addressof(asks);
-    int currentDepth = 0;
-    for (const auto& priceQuantityPair : *asksOrBids) {
-      MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
-      MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
 
-      orderBookLines.emplace_back(amount, price, isAsk);
-      if (++currentDepth == depth) {
-        if (depth < static_cast<int>(asksOrBids->size())) {
-          log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
+  const json asksAndBids = PublicQuery(_curlHandle, "/market/depth", postData);
+  const auto asksIt = asksAndBids.find("asks");
+  const auto bidsIt = asksAndBids.find("bids");
+  if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
+    orderBookLines.reserve(bidsIt->size() + asksIt->size());
+    for (const auto& asksOrBids : {bidsIt, asksIt}) {
+      int currentDepth = 0;
+      bool isBid = asksOrBids == bidsIt;
+      for (const auto& priceQuantityPair : *asksOrBids) {
+        MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
+        MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
+
+        orderBookLines.emplace_back(amount, price, !isBid);
+        if (++currentDepth == depth) {
+          if (depth < static_cast<int>(asksOrBids->size())) {
+            log::debug("Truncate number of {} prices in order book to {}", isBid ? "bid" : "ask", depth);
+          }
+          break;
         }
-        break;
       }
     }
   }
@@ -426,7 +449,8 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market mk, CurrencyCode fromCurrencyC
 
 MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/market/detail/merged", {{"symbol", mk.assetsPairStrLower()}});
-  double last24hVol = result["amount"].get<double>();
+  const auto amountIt = result.find("amountIt");
+  double last24hVol = amountIt == result.end() ? 0 : amountIt->get<double>();
   return MonetaryAmount(last24hVol, mk.base());
 }
 
@@ -456,7 +480,8 @@ LastTradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
 
 MonetaryAmount HuobiPublic::TickerFunc::operator()(Market mk) {
   json result = PublicQuery(_curlHandle, "/market/trade", {{"symbol", mk.assetsPairStrLower()}});
-  double lastPrice = result["data"].front()["price"].get<double>();
+  const auto dataIt = result.find("data");
+  double lastPrice = dataIt == result.end() ? 0 : dataIt->front()["price"].get<double>();
   return MonetaryAmount(lastPrice, mk.quote());
 }
 }  // namespace cct::api

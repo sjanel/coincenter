@@ -74,8 +74,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
                           .set_payload_claim("access_key", jwt::claim(std::string(apiKey.key())))
                           .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpochInMs())));
 
-  if (!opts.getPostData().empty()) {
-    string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.getPostData().str());
+  if (!opts.postData().empty()) {
+    string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.postData().str());
 
     jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash)))
         .set_payload_claim("query_hash_alg", jwt::claim(std::string("SHA512")));
@@ -605,6 +605,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   if (destinationWallet.hasTag()) {
     withdrawPostData.append("secondary_address", destinationWallet.tag());
   }
+
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
   return {std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount};

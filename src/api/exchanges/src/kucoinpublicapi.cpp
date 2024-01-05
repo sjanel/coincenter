@@ -28,6 +28,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -41,18 +42,22 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  string method(endpoint);
-  if (!curlPostData.empty()) {
-    method.push_back('?');
-    method.append(curlPostData.str());
+  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet, curlPostData));
+
+  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+    const auto errorIt = jsonResponse.find("code");
+    if (errorIt != jsonResponse.end() && errorIt->get<std::string_view>() != "200000") {
+      log::warn("Full Kucoin json error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
+      return InvariantRequestRetry::Status::kResponseError;
+    }
+    return InvariantRequestRetry::Status::kResponseOK;
+  });
+  json ret;
+  const auto dataIt = jsonResponse.find("data");
+  if (dataIt != jsonResponse.end()) {
+    ret.swap(*dataIt);
   }
-  json ret = json::parse(curlHandle.query(method, CurlOptions(HttpRequestType::kGet)));
-  auto errorIt = ret.find("code");
-  if (errorIt != ret.end() && errorIt->get<std::string_view>() != "200000") {
-    log::error("Full Kucoin json error: '{}'", ret.dump());
-    throw exception("Kucoin error: {}", errorIt->get<std::string_view>());
-  }
-  return ret["data"];
+  return ret;
 }
 
 }  // namespace
@@ -205,7 +210,11 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
   json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
-  for (const json& tickerDetails : data["ticker"]) {
+  const auto tickerIt = data.find("ticker");
+  if (tickerIt == data.end()) {
+    return ret;
+  }
+  for (const json& tickerDetails : *tickerIt) {
     Market mk(tickerDetails["symbol"].get<std::string_view>(), '-');
     if (!markets.contains(mk)) {
       log::debug("Market {} is not present", mk);
@@ -280,15 +289,19 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   string endpoint("/api/v1/market/orderbook/level2_");
   AppendString(endpoint, *lb);
 
-  json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
-  const json& asks = asksAndBids["asks"];
-  const json& bids = asksAndBids["bids"];
   using OrderBookVec = vector<OrderBookLine>;
   OrderBookVec orderBookLines;
-  orderBookLines.reserve(static_cast<OrderBookVec::size_type>(depth) * 2);
-  // Reverse iterate as bids are received in descending order
-  FillOrderBook(mk, depth, false, bids.rbegin(), bids.rend(), orderBookLines);
-  FillOrderBook(mk, depth, true, asks.begin(), asks.end(), orderBookLines);
+
+  json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const auto asksIt = asksAndBids.find("asks");
+  const auto bidsIt = asksAndBids.find("bids");
+  if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
+    orderBookLines.reserve(asksIt->size() + bidsIt->size());
+    // Reverse iterate as bids are received in descending order
+    FillOrderBook(mk, depth, false, bidsIt->rbegin(), bidsIt->rend(), orderBookLines);
+    FillOrderBook(mk, depth, true, asksIt->begin(), asksIt->end(), orderBookLines);
+  }
+
   return MarketOrderBook(mk, orderBookLines);
 }
 
@@ -326,8 +339,10 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
 }
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
-  json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
-  return {result["vol"].get<std::string_view>(), mk.base()};
+  const json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
+  const auto volIt = result.find("vol");
+  const std::string_view amountStr = volIt == result.end() ? std::string_view() : volIt->get<std::string_view>();
+  return {amountStr, mk.base()};
 }
 
 LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
@@ -348,7 +363,9 @@ LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int n
 }
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
-  json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
-  return {result["price"].get<std::string_view>(), mk.quote()};
+  const json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
+  const auto priceIt = result.find("price");
+  const std::string_view amountStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
+  return {amountStr, mk.quote()};
 }
 }  // namespace cct::api

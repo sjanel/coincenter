@@ -44,7 +44,7 @@ size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *
     reinterpret_cast<string *>(userp)->append(contents, size * nmemb);
   } catch (const std::bad_alloc &e) {
     // Do not throw exceptions in a function passed to a C library
-    // This will cause CURL to raise an error
+    // Returning 0 is a magic number that will cause CURL to raise an error
     log::error("Bad alloc caught in curl write call back action, returning 0: {}", e.what());
     return 0;
   }
@@ -143,7 +143,7 @@ void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
 }
 
 std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
-  const CurlPostData &postData = opts.getPostData();
+  const CurlPostData &postData = opts.postData();
   const bool queryResponseOverrideMode = _handle == nullptr;
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
@@ -195,7 +195,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
   curl_slist *curlListPtr = nullptr;
   curl_slist *oldCurlListPtr = nullptr;
-  for (const auto &[httpHeaderKey, httpHeaderValue] : opts.getHttpHeaders()) {
+  for (const auto &[httpHeaderKey, httpHeaderValue] : opts.httpHeaders()) {
     // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
     // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
     // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
@@ -214,7 +214,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   CurlSetLogIfError(curl, CURLOPT_HTTPHEADER, curlListPtr);
 
-  setUpProxy(opts.getProxyUrl(), opts.isProxyReset());
+  setUpProxy(opts.proxyUrl(), opts.isProxyReset());
 
   _queryData.clear();
 
@@ -236,51 +236,62 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   log::log(_requestCallLogLevel, "{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?",
            optsStr);
 
-  // Actually make the query
-  const TimePoint t1 = Clock::now();
-  const CURLcode res = curl_easy_perform(curl);  // Get reply
-  if (res != CURLE_OK) {
-    throw exception("Unexpected response from curl: Error {}", static_cast<int>(res));
-  }
+  // Actually make the query, with a fast retry mechanism
+  static constexpr int kNbMaxRetries = 5;
+  Duration sleepingTime = std::chrono::milliseconds(100);
+  int retryPos = 0;
+  CURLcode res;
+  do {
+    if (retryPos != 0) {
+      if (_pMetricGateway != nullptr) {
+        _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
+                             CurlMetrics::kNbRequestErrorKeys.find(opts.requestType())->second);
+      }
+      log::error("Got curl error ({}), retry {}/{} after {} ms", static_cast<int>(res), retryPos, kNbMaxRetries,
+                 std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
+      std::this_thread::sleep_for(sleepingTime);
+      sleepingTime *= 2;
+    }
+    auto t1 = Clock::now();
 
-  // Store stats
-  const uint32_t queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
-  _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
+    // Call
+    res = curl_easy_perform(curl);
 
-  static constexpr int kReleaseMemoryRequestsFrequency = 100;
+    // Store stats
+    const auto queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
+    _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
 
-  // Periodic memory release to avoid memory leak for a very large number of requests
-  if ((_bestUrlPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
-    _queryData.shrink_to_fit();
-  }
+    if (_pMetricGateway != nullptr) {
+      _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
+                           CurlMetrics::kNbRequestsKeys.find(opts.requestType())->second);
+      _pMetricGateway->add(MetricType::kHistogram, MetricOperation::kObserve,
+                           CurlMetrics::kRequestDurationKeys.find(opts.requestType())->second,
+                           static_cast<double>(queryRTInMs));
+    }
 
-  if (_pMetricGateway != nullptr) {
-    _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
-                         CurlMetrics::kNbRequestsKeys.find(opts.requestType())->second);
-    _pMetricGateway->add(MetricType::kHistogram, MetricOperation::kObserve,
-                         CurlMetrics::kRequestDurationKeys.find(opts.requestType())->second,
-                         static_cast<double>(queryRTInMs));
+    // Periodic memory release to avoid memory leak for a very large number of requests
+    static constexpr int kReleaseMemoryRequestsFrequency = 100;
+    if ((_bestUrlPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
+      _queryData.shrink_to_fit();
+    }
+
+  } while (res != CURLE_OK && ++retryPos <= kNbMaxRetries);
+  if (retryPos > kNbMaxRetries) {
+    throw exception("Too many errors from curl, last ({})", static_cast<int>(res));
   }
 
   // Avoid polluting the logs for large response which are more likely to be HTML
-  const bool isJsonAnswer = _queryData.starts_with('{') || _queryData.starts_with('[');
+  const bool mayBeJsonResponse = _queryData.starts_with('{') || _queryData.starts_with('[');
   static constexpr std::size_t kMaxLenResponse = 1000;
-  if (!isJsonAnswer && _queryData.size() > kMaxLenResponse) {
+  if (!mayBeJsonResponse && _queryData.size() > kMaxLenResponse) {
     const std::string_view outPrinted(_queryData.begin(),
                                       _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
     log::log(_requestAnswerLogLevel, "Truncated non JSON response {}...", outPrinted);
   } else {
-    log::log(_requestAnswerLogLevel, "Full{}JSON response {}", isJsonAnswer ? " " : " non ", _queryData);
+    log::log(_requestAnswerLogLevel, "Full{}JSON response {}", mayBeJsonResponse ? " " : " non ", _queryData);
   }
 
   return _queryData;
-}
-
-string CurlHandle::queryRelease(std::string_view endpoint, const CurlOptions &opts) {
-  query(endpoint, opts);
-  string queryData;
-  queryData.swap(_queryData);
-  return queryData;
 }
 
 void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap) {

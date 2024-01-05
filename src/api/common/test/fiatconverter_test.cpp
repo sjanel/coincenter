@@ -44,7 +44,7 @@ std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, c
   json jsonData;
 
   // Rates
-  std::string_view marketStr = opts.getPostData().get("q");
+  std::string_view marketStr = opts.postData().get("q");
   std::string_view fromCurrency = marketStr.substr(0, 3);
   std::string_view targetCurrency = marketStr.substr(4);
   double rate = 0;
