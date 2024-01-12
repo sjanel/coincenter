@@ -88,7 +88,7 @@ if(NOT nlohmann_json_FOUND)
   FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.2
+    GIT_TAG v3.11.3
   )
 
   FetchContent_MakeAvailable(nlohmann_json)
@@ -99,7 +99,7 @@ if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.12.0
+    GIT_TAG v1.13.0
   )
 
   FetchContent_MakeAvailable(spdlog)
@@ -115,7 +115,7 @@ if(CCT_BUILD_PROMETHEUS_FROM_SRC)
   FetchContent_Declare(
     prometheus-cpp
     GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
-    GIT_TAG v1.1.0
+    GIT_TAG v1.2.0
   )
 
   FetchContent_MakeAvailable(prometheus-cpp)
