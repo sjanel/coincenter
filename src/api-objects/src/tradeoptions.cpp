@@ -1,11 +1,10 @@
 #include "tradeoptions.hpp"
 
-#include <chrono>
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "durationstring.hpp"
 #include "priceoptions.hpp"
-#include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"
 #include "unreachable.hpp"
@@ -79,10 +78,9 @@ string TradeOptions::str(bool placeRealOrderInSimulationMode) const {
   ret.append(", ");
   ret.append(tradeSyncPolicyStr());
   ret.append(" mode, timeout of ");
-  AppendString(ret, std::chrono::duration_cast<TimeInS>(_maxTradeTime).count());
-  ret.append("s, ").append(timeoutActionStr()).append(" at timeout, min time between two price updates of ");
-  AppendString(ret, std::chrono::duration_cast<TimeInS>(_minTimeBetweenPriceUpdates).count());
-  ret.push_back('s');
+  ret.append(DurationToString(_maxTradeTime));
+  ret.append(", ").append(timeoutActionStr()).append(" at timeout, min time between two price updates of ");
+  ret.append(DurationToString(_minTimeBetweenPriceUpdates));
   return ret;
 }
 }  // namespace cct

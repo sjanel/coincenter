@@ -31,6 +31,7 @@
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
@@ -975,8 +976,8 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   static constexpr int kNbRetriesCatchWindow = 15;
   for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTrx.empty(); ++retryPos) {
     if (retryPos != 0) {
-      log::warn("Cannot retrieve just launched withdraw, retry {}/{} in {} s...", retryPos, kNbRetriesCatchWindow,
-                std::chrono::duration_cast<TimeInS>(sleepingTime).count());
+      log::warn("Cannot retrieve just launched withdraw, retry {}/{} in {}...", retryPos, kNbRetriesCatchWindow,
+                DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }

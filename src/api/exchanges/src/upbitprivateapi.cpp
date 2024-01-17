@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -33,6 +32,7 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
@@ -219,8 +219,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     int nbRetries = 0;
     do {
       if (nbRetries > 0) {
-        log::info("Waiting {} s for address to be generated...",
-                  std::chrono::duration_cast<TimeInS>(sleepingTime).count());
+        log::info("Waiting {} for address to be generated...", DurationToString(sleepingTime));
       }
       std::this_thread::sleep_for(sleepingTime);
       result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData);

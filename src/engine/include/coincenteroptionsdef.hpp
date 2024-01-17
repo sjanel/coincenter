@@ -25,9 +25,9 @@ class CoincenterCmdLineOptionsDefinitions {
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = TimeInS(1);
 
-  static constexpr int64_t kDefaultTradeTimeout =
+  static constexpr int64_t kDefaultTradeTimeoutSeconds =
       std::chrono::duration_cast<TimeInS>(TradeOptions().maxTradeTime()).count();
-  static constexpr int64_t kMinUpdatePriceTime =
+  static constexpr int64_t kMinUpdatePriceTimeSeconds =
       std::chrono::duration_cast<TimeInS>(TradeOptions().minTimeBetweenPriceUpdates()).count();
   static constexpr int64_t kDefaultRepeatDurationSeconds =
       std::chrono::duration_cast<TimeInS>(kDefaultRepeatTime).count();
@@ -76,7 +76,7 @@ class CoincenterCmdLineOptionsDefinitions {
   static constexpr std::string_view kTradeTimeout1 = "Adjust trade timeout (default: ";
   static constexpr std::string_view kTradeTimeout2 = "s). Remaining orders will be cancelled after the timeout.";
   static constexpr std::string_view kTradeTimeout =
-      JoinStringView_v<kTradeTimeout1, IntToStringView_v<kDefaultTradeTimeout>, kTradeTimeout2>;
+      JoinStringView_v<kTradeTimeout1, IntToStringView_v<kDefaultTradeTimeoutSeconds>, kTradeTimeout2>;
 
   static constexpr std::string_view kTradeUpdatePrice1 =
       "Set the min time allowed between two limit price updates (default: ";
@@ -84,7 +84,7 @@ class CoincenterCmdLineOptionsDefinitions {
       "s). Avoids cancelling / placing new orders too often with high volumes which can be counter productive "
       "sometimes.";
   static constexpr std::string_view kTradeUpdatePrice =
-      JoinStringView_v<kTradeUpdatePrice1, IntToStringView_v<kMinUpdatePriceTime>, kTradeUpdatePrice2>;
+      JoinStringView_v<kTradeUpdatePrice1, IntToStringView_v<kMinUpdatePriceTimeSeconds>, kTradeUpdatePrice2>;
 
   static constexpr std::string_view kSimulationMode1 = "Activates simulation mode only (default: ";
   static constexpr std::string_view kSimulationMode2 = TradeOptions().isSimulation() ? "true" : "false";

@@ -31,6 +31,7 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
@@ -99,7 +100,7 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
        errorIt = response.find(kErrorKey)) {
     log::error("Kraken private API rate limit exceeded");
     sleepingTime *= 2;
-    log::debug("Wait {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count());
+    log::debug("Wait {}", DurationToString(sleepingTime));
     std::this_thread::sleep_for(sleepingTime);
 
     // We need to update the nonce

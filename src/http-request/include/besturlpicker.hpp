@@ -55,13 +55,13 @@ class BestURLPicker {
       : _pBaseUrls(baseUrls.data()), _responseTimeStatsPerBaseUrl(baseUrls.size()) {}
 
   struct ResponseTimeStats {
-    uint16_t nbRequestsDone;   // when reaching max, all stats are reset to give equal chances to all base URLs
-    uint16_t avgResponseTime;  // approximation of moving average
-    uint16_t avgDeviation;     // approximation of moving standard deviation
+    uint16_t nbRequestsDone;       // when reaching max, all stats are reset to give equal chances to all base URLs
+    uint16_t avgResponseTimeInMs;  // approximation of moving average
+    uint16_t avgDeviationInMs;     // approximation of moving standard deviation
 
     bool operator==(const ResponseTimeStats &) const noexcept = default;
 
-    uint32_t score() const { return static_cast<uint32_t>(avgResponseTime) + avgDeviation; }
+    uint32_t score() const { return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs; }
   };
 
   using ResponseTimeStatsPerBaseUrl = FixedCapacityVector<ResponseTimeStats, kNbMaxBaseUrl>;

@@ -30,6 +30,7 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -120,8 +121,8 @@ bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDela
             sleepingTime = kInitialDurationQueryDelay;
           }
           queryDelay -= sleepingTime;
-          log::warn("Our local time is ahead of Binance server's time. Query delay modified to {} ms",
-                    std::chrono::duration_cast<TimeInMs>(queryDelay).count());
+          log::warn("Our local time is ahead of Binance server's time. Query delay modified to {}",
+                    DurationToString(queryDelay));
           // Ensure Nonce is increasing while modifying the query delay
           std::this_thread::sleep_for(sleepingTime);
           return true;
@@ -136,8 +137,8 @@ bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDela
             sleepingTime = kInitialDurationQueryDelay;
           }
           queryDelay += sleepingTime;
-          log::warn("Our local time is behind of Binance server's time. Query delay modified to {} ms",
-                    std::chrono::duration_cast<TimeInMs>(queryDelay).count());
+          log::warn("Our local time is behind of Binance server's time. Query delay modified to {}",
+                    DurationToString(queryDelay));
           return true;
         }
       }
@@ -172,7 +173,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   json ret;
   for (int retryPos = 0; retryPos < kNbOrderRequestsRetries; ++retryPos) {
     if (retryPos != 0) {
-      log::trace("Wait {} ms...", std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
+      log::trace("Wait {}...", DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }
