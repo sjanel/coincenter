@@ -1395,6 +1395,11 @@ class basic_fbstring {
     return *this;
   }
 
+  /// \sjanel - Add operator+= string_view
+  template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
+                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
+  basic_fbstring& operator+=(const SV& sv) { return append(sv); }
+
   basic_fbstring& append(const basic_fbstring& str);
 
   basic_fbstring& append(
