@@ -75,61 +75,28 @@ Duration ParseDuration(std::string_view durationStr) {
   return ret;
 }
 
+template <class TimeUnitT>
+void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
+  if (dur >= TimeUnitT(1)) {
+    auto nU = std::chrono::duration_cast<TimeUnitT>(dur).count();
+    AppendString(ret, nU);
+    ret += unitStr;
+    dur -= TimeUnitT(nU);
+  }
+}
+
 string DurationToString(Duration dur) {
   string ret;
-  if (dur >= std::chrono::years(1)) {
-    int64_t nbY = std::chrono::duration_cast<std::chrono::years>(dur).count();
-    AppendString(ret, nbY);
-    ret.push_back('y');
-    dur -= std::chrono::years(nbY);
-  }
-  if (dur >= std::chrono::months(1)) {
-    int64_t nM = std::chrono::duration_cast<std::chrono::months>(dur).count();
-    AppendString(ret, nM);
-    ret.append("mon");
-    dur -= std::chrono::months(nM);
-  }
-  if (dur >= std::chrono::weeks(1)) {
-    int64_t nbW = std::chrono::duration_cast<std::chrono::weeks>(dur).count();
-    AppendString(ret, nbW);
-    ret.push_back('w');
-    dur -= std::chrono::weeks(nbW);
-  }
-  if (dur >= std::chrono::days(1)) {
-    int64_t nbD = std::chrono::duration_cast<std::chrono::days>(dur).count();
-    AppendString(ret, nbD);
-    ret.push_back('d');
-    dur -= std::chrono::days(nbD);
-  }
-  if (dur >= std::chrono::hours(1)) {
-    int64_t nbH = std::chrono::duration_cast<std::chrono::hours>(dur).count();
-    AppendString(ret, nbH);
-    ret.push_back('h');
-    dur -= std::chrono::hours(nbH);
-  }
-  if (dur >= std::chrono::minutes(1)) {
-    int64_t nbMin = std::chrono::duration_cast<std::chrono::minutes>(dur).count();
-    AppendString(ret, nbMin);
-    ret.append("min");
-    dur -= std::chrono::minutes(nbMin);
-  }
-  if (dur >= std::chrono::seconds(1)) {
-    int64_t nbS = std::chrono::duration_cast<std::chrono::seconds>(dur).count();
-    AppendString(ret, nbS);
-    ret.push_back('s');
-    dur -= std::chrono::seconds(nbS);
-  }
-  if (dur >= std::chrono::milliseconds(1)) {
-    int64_t nbMs = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-    AppendString(ret, nbMs);
-    ret.append("ms");
-    dur -= std::chrono::milliseconds(nbMs);
-  }
-  if (dur >= std::chrono::microseconds(1)) {
-    int64_t nbUs = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
-    AppendString(ret, nbUs);
-    ret.append("us");
-  }
+
+  AdjustWithUnit<std::chrono::years>("y", dur, ret);
+  AdjustWithUnit<std::chrono::months>("mon", dur, ret);
+  AdjustWithUnit<std::chrono::weeks>("w", dur, ret);
+  AdjustWithUnit<std::chrono::days>("d", dur, ret);
+  AdjustWithUnit<std::chrono::hours>("h", dur, ret);
+  AdjustWithUnit<std::chrono::minutes>("min", dur, ret);
+  AdjustWithUnit<std::chrono::seconds>("s", dur, ret);
+  AdjustWithUnit<std::chrono::milliseconds>("ms", dur, ret);
+  AdjustWithUnit<std::chrono::microseconds>("us", dur, ret);
 
   return ret;
 }

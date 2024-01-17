@@ -1,6 +1,5 @@
 #include "coincentercommands.hpp"
 
-#include <chrono>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -116,22 +115,18 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (cmdLineOptions.recentDepositsInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.recentDepositsInfo);
     _commands.emplace_back(CoincenterCommandType::kRecentDeposits)
-        .setDepositsConstraints(
-            DepositsConstraints(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional),
-                                std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
-                                std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
-                                DepositsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
+        .setDepositsConstraints(DepositsConstraints(
+            optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), cmdLineOptions.minAge,
+            cmdLineOptions.maxAge, DepositsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.recentWithdrawsInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.recentWithdrawsInfo);
     _commands.emplace_back(CoincenterCommandType::kRecentWithdraws)
-        .setWithdrawsConstraints(
-            WithdrawsConstraints(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional),
-                                 std::chrono::duration_cast<Duration>(cmdLineOptions.minAge),
-                                 std::chrono::duration_cast<Duration>(cmdLineOptions.maxAge),
-                                 WithdrawsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
+        .setWithdrawsConstraints(WithdrawsConstraints(
+            optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), cmdLineOptions.minAge,
+            cmdLineOptions.maxAge, WithdrawsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
         .setExchangeNames(optionParser.parseExchanges());
   }
 

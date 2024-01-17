@@ -21,6 +21,7 @@
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchangebase.hpp"
 #include "exchangeinfo.hpp"
 #include "exchangename.hpp"
@@ -253,9 +254,9 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
   Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
-  log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {} s",
+  log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {}",
             initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
-            targetExchange.exchangeName(), std::chrono::duration_cast<TimeInS>(withdrawRefreshTime).count());
+            targetExchange.exchangeName(), DurationToString(withdrawRefreshTime));
   SentWithdrawInfo sentWithdrawInfo(currencyCode);
   MonetaryAmount netDeliveredAmount;
 

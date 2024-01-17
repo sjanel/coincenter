@@ -11,6 +11,7 @@
 #include "cct_type_traits.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
+#include "durationstring.hpp"
 #include "timedef.hpp"
 #include "unreachable.hpp"
 
@@ -50,8 +51,8 @@ class InvariantRequestRetry {
 
     do {
       if (nbRetries != 0) {
-        log::warn("Got query error: '{}', retry {}/{} after {} ms", ret.dump(), nbRetries,
-                  _queryRetryPolicy.nbMaxRetries, std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
+        log::warn("Got query error: '{}', retry {}/{} after {}", ret.dump(), nbRetries, _queryRetryPolicy.nbMaxRetries,
+                  DurationToString(sleepingTime));
         std::this_thread::sleep_for(sleepingTime);
         sleepingTime *= _queryRetryPolicy.exponentialBackoff;
       }

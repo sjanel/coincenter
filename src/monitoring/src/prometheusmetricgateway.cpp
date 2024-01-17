@@ -19,6 +19,7 @@
 #include "abstractmetricgateway.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "durationstring.hpp"
 #include "gethostname.hpp"
 #include "metric.hpp"
 #include "monitoringinfo.hpp"
@@ -216,8 +217,7 @@ void PrometheusMetricGateway::flush() {
   auto nowTime = Clock::now();
   int returnCode = _gateway.Push();
   if (returnCode == kHTTPSuccessReturnCode) {
-    log::info("Flushed data to Prometheus in {} ms",
-              std::chrono::duration_cast<TimeInMs>(Clock::now() - nowTime).count());
+    log::info("Flushed data to Prometheus in {}", DurationToString(Clock::now() - nowTime));
   } else {
     log::error("Unable to push metrics to Prometheus instance - Bad return code {}", returnCode);
   }

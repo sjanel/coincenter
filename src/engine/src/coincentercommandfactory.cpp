@@ -1,6 +1,5 @@
 #include "coincentercommandfactory.hpp"
 
-#include <chrono>
 #include <string_view>
 #include <utility>
 
@@ -34,8 +33,7 @@ CoincenterCommand CoincenterCommandFactory::createOrderCommand(CoincenterCommand
   }
   CoincenterCommand ret(type);
   ret.setOrdersConstraints(
-         OrdersConstraints(market.base(), market.quote(), std::chrono::duration_cast<Duration>(_cmdLineOptions.minAge),
-                           std::chrono::duration_cast<Duration>(_cmdLineOptions.maxAge),
+         OrdersConstraints(market.base(), market.quote(), _cmdLineOptions.minAge, _cmdLineOptions.maxAge,
                            OrdersConstraints::OrderIdSet(StringOptionParser(_cmdLineOptions.ids).getCSVValues())))
       .setExchangeNames(optionParser.parseExchanges());
   return ret;

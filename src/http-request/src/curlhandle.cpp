@@ -23,6 +23,7 @@
 #include "curlmetrics.hpp"
 #include "curloptions.hpp"
 #include "curlpostdata.hpp"
+#include "durationstring.hpp"
 #include "flatkeyvaluestring.hpp"
 #include "httprequesttype.hpp"
 #include "metric.hpp"
@@ -115,9 +116,8 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
     CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 #endif
 
-    log::debug("Initialize CurlHandle for {} with {} ms as minimum duration between queries",
-               bestURLPicker.getNextBaseURL(),
-               std::chrono::duration_cast<TimeInMs>(_minDurationBetweenQueries).count());
+    log::debug("Initialize CurlHandle for {} with {} as minimum duration between queries",
+               bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
 
     if (settings::IsProxyRequested(runMode)) {
       if (IsProxyAvailable()) {
@@ -224,7 +224,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     if (nowTime < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
       const Duration sleepingTime = _minDurationBetweenQueries - (nowTime - _lastQueryTime);
-      log::debug("Wait {} ms before performing query", std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
+      log::debug("Wait {} before performing query", DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       _lastQueryTime = nowTime + sleepingTime;
     } else {
@@ -247,8 +247,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
         _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                              CurlMetrics::kNbRequestErrorKeys.find(opts.requestType())->second);
       }
-      log::error("Got curl error ({}), retry {}/{} after {} ms", static_cast<int>(res), retryPos, kNbMaxRetries,
-                 std::chrono::duration_cast<TimeInMs>(sleepingTime).count());
+      log::error("Got curl error ({}), retry {}/{} after {}", static_cast<int>(res), retryPos, kNbMaxRetries,
+                 DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime *= 2;
     }
