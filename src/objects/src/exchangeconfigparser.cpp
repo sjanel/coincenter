@@ -1,4 +1,4 @@
-#include "exchangeinfoparser.hpp"
+#include "exchangeconfigparser.hpp"
 
 #include <memory>
 #include <string_view>
@@ -9,7 +9,7 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycodevector.hpp"
-#include "exchangeinfodefault.hpp"
+#include "exchangeconfigdefault.hpp"
 #include "file.hpp"
 #include "loadconfiguration.hpp"
 #include "unreachable.hpp"
@@ -26,7 +26,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
     case LoadConfiguration::ExchangeConfigFileType::kProd: {
       std::string_view filename = loadConfiguration.exchangeConfigFileName();
       File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfError::kNoThrow);
-      json jsonData = ExchangeInfoDefault::Prod();
+      json jsonData = ExchangeConfigDefault::Prod();
       json exchangeConfigJsonData = exchangeConfigFile.readAllJson();
       if (exchangeConfigJsonData.empty()) {
         // Create a file with default values. User can then update them as he wishes.
@@ -45,7 +45,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
       return exchangeConfigJsonData;
     }
     case LoadConfiguration::ExchangeConfigFileType::kTest:
-      return ExchangeInfoDefault::Test();
+      return ExchangeConfigDefault::Test();
     default:
       unreachable();
   }

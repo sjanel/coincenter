@@ -32,7 +32,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -137,14 +137,14 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
     : ExchangePrivate(config, krakenPublic, apiKey),
       _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
 bool KrakenPrivate::validateApiKey() {
@@ -231,7 +231,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   string address;
   string tag;
@@ -460,7 +460,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool isTakerStrategy =
-      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
   const bool isSimulation = tradeInfo.options.isSimulation();
   const Market mk = tradeInfo.tradeContext.mk;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);

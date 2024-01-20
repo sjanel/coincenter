@@ -11,6 +11,8 @@ using Clock = std::chrono::system_clock;
 using TimePoint = Clock::time_point;
 using Duration = Clock::duration;
 
+static constexpr auto kUndefinedDuration = Duration::min();
+
 using TimeInS = std::chrono::seconds;
 using TimeInMs = std::chrono::milliseconds;
 using TimeInUs = std::chrono::microseconds;

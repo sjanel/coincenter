@@ -76,11 +76,11 @@ string GetCurlVersionInfo() {
   return curlVersionInfoStr;
 }
 
-CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway,
+CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetricGateway,
                        const PermanentCurlOptions &permanentCurlOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
-      _bestUrlPicker(bestURLPicker),
+      _bestUrlPicker(std::move(bestURLPicker)),
       _requestCallLogLevel(permanentCurlOptions.requestCallLogLevel()),
       _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()),
       _nbMaxRetries(permanentCurlOptions.nbMaxRetries()),
@@ -219,8 +219,6 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   setUpProxy(opts.proxyUrl(), opts.isProxyReset());
 
-  _queryData.clear();
-
   if (_minDurationBetweenQueries != Duration::zero()) {
     // Check last request time
     const TimePoint nowTime = Clock::now();
@@ -243,6 +241,9 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   Duration sleepingTime = std::chrono::milliseconds(100);
   int retryPos = 0;
   CURLcode res;
+
+  _queryData.clear();
+
   do {
     if (retryPos != 0) {
       if (_pMetricGateway != nullptr) {
@@ -317,6 +318,13 @@ void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &quer
   _queryData = string(flatQueryResponses.str());
 }
 
+void CurlHandle::setWriteData() {
+  if (_handle != nullptr) {
+    CURL *curl = reinterpret_cast<CURL *>(_handle);
+    CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &_queryData);
+  }
+}
+
 void CurlHandle::swap(CurlHandle &rhs) noexcept {
   using std::swap;
 
@@ -328,7 +336,11 @@ void CurlHandle::swap(CurlHandle &rhs) noexcept {
   _queryData.swap(rhs._queryData);
   swap(_requestCallLogLevel, rhs._requestCallLogLevel);
   swap(_requestAnswerLogLevel, rhs._requestAnswerLogLevel);
+  swap(_nbMaxRetries, rhs._nbMaxRetries);
   swap(_tooManyErrorsPolicy, rhs._tooManyErrorsPolicy);
+
+  setWriteData();
+  rhs.setWriteData();
 }
 
 CurlHandle::CurlHandle(CurlHandle &&rhs) noexcept { swap(rhs); }

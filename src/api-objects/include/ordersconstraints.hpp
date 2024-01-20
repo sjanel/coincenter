@@ -52,7 +52,7 @@ class OrdersConstraints {
 
   /// Build OrdersConstraints based on given filtering information
   explicit OrdersConstraints(CurrencyCode cur1 = CurrencyCode(), CurrencyCode cur2 = CurrencyCode(),
-                             Duration minAge = Duration(), Duration maxAge = Duration(),
+                             Duration minAge = kUndefinedDuration, Duration maxAge = kUndefinedDuration,
                              OrderIdSet &&ordersIdSet = OrderIdSet());
 
   TimePoint placedBefore() const { return _placedBefore; }

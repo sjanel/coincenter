@@ -17,12 +17,12 @@ OrdersConstraints::OrdersConstraints(CurrencyCode cur1, CurrencyCode cur2, Durat
   if (!_ordersIdSet.empty()) {
     _orderConstraintsBitmap.set(OrderConstraintsBitmap::ConstraintType::kId);
   }
-  auto now = Clock::now();
-  if (minAge != Duration()) {
+  const auto now = Clock::now();
+  if (minAge != kUndefinedDuration) {
     _placedBefore = now - minAge;
     _orderConstraintsBitmap.set(OrderConstraintsBitmap::ConstraintType::kPlacedBefore);
   }
-  if (maxAge != Duration()) {
+  if (maxAge != kUndefinedDuration) {
     _placedAfter = now - maxAge;
     _orderConstraintsBitmap.set(OrderConstraintsBitmap::ConstraintType::kPlacedAfter);
   }

@@ -3,7 +3,7 @@
 #include "cct_json.hpp"
 
 namespace cct {
-struct ExchangeInfoDefault {
+struct ExchangeConfigDefault {
   static json Prod() {
     // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
     // fiasco' problem.
@@ -58,6 +58,12 @@ struct ExchangeInfoDefault {
       },
       "multiTradeAllowedByDefault": false,
       "placeSimulateRealOrder": false,
+      "trade": {
+        "minPriceUpdateDuration": "5s",
+        "strategy": "maker",
+        "timeout": "30s",
+        "timeoutMatch": false
+      },
       "updateFrequency": {
         "currencies": "8h",
         "markets": "8h",
@@ -178,6 +184,12 @@ struct ExchangeInfoDefault {
       "privateAPIRate": "1055ms",
       "publicAPIRate": "1236ms",
       "placeSimulateRealOrder": false,
+      "trade": {
+        "minPriceUpdateDuration": "5s",
+        "strategy": "maker",
+        "timeout": "30s",
+        "timeoutMatch": false
+      },
       "updateFrequency": {
         "currencies": "8h",
         "markets": "8h",

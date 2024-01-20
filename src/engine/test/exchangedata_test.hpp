@@ -40,14 +40,14 @@ class ExchangesBaseTest : public ::testing::Test {
   api::MockExchangePrivate exchangePrivate6{exchangePublic3, coincenterInfo, key4};
   api::MockExchangePrivate exchangePrivate7{exchangePublic3, coincenterInfo, key5};
   api::MockExchangePrivate exchangePrivate8{exchangePublic1, coincenterInfo, key2};
-  Exchange exchange1{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
-  Exchange exchange2{coincenterInfo.exchangeInfo(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
-  Exchange exchange3{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
-  Exchange exchange4{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
-  Exchange exchange5{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
-  Exchange exchange6{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
-  Exchange exchange7{coincenterInfo.exchangeInfo(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
-  Exchange exchange8{coincenterInfo.exchangeInfo(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
+  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
+  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
+  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
+  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
+  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
+  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
+  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
+  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
 
   Market m1{"ETH", "EUR"};
   Market m2{"BTC", "EUR"};

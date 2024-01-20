@@ -72,7 +72,7 @@ class UpbitPrivate : public ExchangePrivate {
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
     CommonAPI& _commonApi;
   };
 

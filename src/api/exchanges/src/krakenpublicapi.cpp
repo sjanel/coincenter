@@ -109,32 +109,32 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
     : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
-          commonAPI, _curlHandle, exchangeInfo()),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
+          commonAPI, _curlHandle, exchangeConfig()),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), config,
-          exchangeInfo().publicAPIRate()),
-      _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _tradableCurrenciesCache, config, _curlHandle, exchangeInfo()),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), config,
+          exchangeConfig().publicAPIRate()),
+      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _tradableCurrenciesCache, config, _curlHandle, exchangeConfig()),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
-      _orderBookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+      _orderBookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
                       _tradableCurrenciesCache, _marketsCache, _curlHandle),
-      _tickerCache(CachedResultOptions(std::min(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume),
-                                                exchangeInfo().getAPICallUpdateFrequency(kLastPrice)),
+      _tickerCache(CachedResultOptions(std::min(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume),
+                                                exchangeConfig().getAPICallUpdateFrequency(kLastPrice)),
                                        _cachedResultVault),
                    _tradableCurrenciesCache, _curlHandle) {
   json data = GetKrakenWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
   if (!data.empty()) {
-    Duration withdrawDataRefreshTime = exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees);
+    Duration withdrawDataRefreshTime = exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees);
     TimePoint lastUpdatedTime(TimeInS(data["timeepoch"].get<int64_t>()));
     if (Clock::now() < lastUpdatedTime + withdrawDataRefreshTime) {
       // we can reuse file data
@@ -198,13 +198,13 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coinc
     : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(),
                    PermanentCurlOptions::Builder()
                        .setMinDurationBetweenQueries(minDurationBetweenQueries)
-                       .setAcceptedEncoding(coincenterInfo.exchangeInfo(kExchangeName).acceptEncoding())
+                       .setAcceptedEncoding(coincenterInfo.exchangeConfig(kExchangeName).acceptEncoding())
                        .build(),
                    coincenterInfo.getRunMode()),
       _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(),
                    PermanentCurlOptions::Builder()
                        .setMinDurationBetweenQueries(minDurationBetweenQueries)
-                       .setAcceptedEncoding(coincenterInfo.exchangeInfo(kExchangeName).acceptEncoding())
+                       .setAcceptedEncoding(coincenterInfo.exchangeConfig(kExchangeName).acceptEncoding())
                        .build(),
                    coincenterInfo.getRunMode()) {}
 
@@ -362,7 +362,7 @@ KrakenPublic::WithdrawalFeesFunc::WithdrawalInfoMaps KrakenPublic::WithdrawalFee
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json result = PublicQuery(_curlHandle, "/public/Assets");
   CurrencyExchangeVector currencies;
-  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
     if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _coincenterInfo)) {
@@ -387,7 +387,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
   ret.second.reserve(result.size());
-  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
   for (const auto& [key, value] : result.items()) {
     if (!value.contains("ordermin")) {

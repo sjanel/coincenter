@@ -14,12 +14,12 @@ WithdrawsOrDepositsConstraints::WithdrawsOrDepositsConstraints(CurrencyCode curr
   if (!_idSet.empty()) {
     _currencyIdTimeConstraintsBmp.set(CurrencyIdTimeConstraintsBmp::ConstraintType::kId);
   }
-  auto now = Clock::now();
-  if (minAge != Duration()) {
+  const auto now = Clock::now();
+  if (minAge != kUndefinedDuration) {
     _timeBefore = now - minAge;
     _currencyIdTimeConstraintsBmp.set(CurrencyIdTimeConstraintsBmp::ConstraintType::kReceivedBefore);
   }
-  if (maxAge != Duration()) {
+  if (maxAge != kUndefinedDuration) {
     _timeAfter = now - maxAge;
     _currencyIdTimeConstraintsBmp.set(CurrencyIdTimeConstraintsBmp::ConstraintType::kReceivedAfter);
   }

@@ -14,8 +14,9 @@ class WithdrawsOrDepositsConstraints {
  public:
   using IdSet = FlatSet<string, std::less<>>;
 
-  explicit WithdrawsOrDepositsConstraints(CurrencyCode currencyCode = CurrencyCode(), Duration minAge = Duration(),
-                                          Duration maxAge = Duration(), IdSet &&idSet = IdSet());
+  explicit WithdrawsOrDepositsConstraints(CurrencyCode currencyCode = CurrencyCode(),
+                                          Duration minAge = kUndefinedDuration, Duration maxAge = kUndefinedDuration,
+                                          IdSet &&idSet = IdSet());
 
   // Creates a WithdrawsOrDepositsConstraints based on a single transaction id and currency code.
   // Useful for retrieval of a specific Deposit / Withdraw.
@@ -33,7 +34,7 @@ class WithdrawsOrDepositsConstraints {
 
   bool validateCur(CurrencyCode cur) const { return _currencyCode.isNeutral() || cur == _currencyCode; }
 
-  bool validateTime(TimePoint t) const { return t >= _timeAfter && t <= _timeBefore; }
+  bool validateTime(TimePoint tp) const { return tp >= _timeAfter && tp <= _timeBefore; }
 
   bool validateId(std::string_view id) const { return !isIdDefined() || _idSet.contains(id); }
 

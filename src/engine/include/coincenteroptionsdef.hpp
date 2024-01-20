@@ -8,7 +8,7 @@
 #include "apioutputtype.hpp"
 #include "cct_const.hpp"
 #include "commandlineoption.hpp"
-#include "exchangeinfomap.hpp"
+#include "exchangeconfigmap.hpp"
 #include "exchangepublicapi.hpp"
 #include "loadconfiguration.hpp"
 #include "static_string_view_helpers.hpp"
@@ -25,10 +25,6 @@ class CoincenterCmdLineOptionsDefinitions {
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = TimeInS(1);
 
-  static constexpr int64_t kDefaultTradeTimeoutSeconds =
-      std::chrono::duration_cast<TimeInS>(TradeOptions().maxTradeTime()).count();
-  static constexpr int64_t kMinUpdatePriceTimeSeconds =
-      std::chrono::duration_cast<TimeInS>(TradeOptions().minTimeBetweenPriceUpdates()).count();
   static constexpr int64_t kDefaultRepeatDurationSeconds =
       std::chrono::duration_cast<TimeInS>(kDefaultRepeatTime).count();
 
@@ -73,18 +69,31 @@ class CoincenterCmdLineOptionsDefinitions {
       JoinStringView_v<kSmartSell1, LoadConfiguration::kProdDefaultExchangeConfigFile, kSmartBuy2,
                        kPreferredPaymentCurrenciesOptName, kSmartBuy3>;
 
-  static constexpr std::string_view kTradeTimeout1 = "Adjust trade timeout (default: ";
-  static constexpr std::string_view kTradeTimeout2 = "s). Remaining orders will be cancelled after the timeout.";
+  static constexpr std::string_view kTradeStrategy1 =
+      "Customize the order price strategy of the trade\n"
+      "  'maker' : order price set at limit price\n"
+      "  'nibble': order price set at limit price +(buy)/-(sell) 1\n"
+      "  'taker' : order price will be at market price and matched immediately\n"
+      "Default strategy can be configured in ";
+  static constexpr std::string_view kTradeStrategy2 =
+      ".\nOrder price will be continuously updated and recomputed every '--update-price' step time.\n"
+      "This option is not compatible with '--price'";
+  static constexpr std::string_view kTradeStrategy =
+      JoinStringView_v<kTradeStrategy1, LoadConfiguration::kProdDefaultExchangeConfigFile, kTradeStrategy2>;
+
+  static constexpr std::string_view kTradeTimeout1 = "Adjust trade timeout (default defined in ";
+  static constexpr std::string_view kTradeTimeout2 =
+      "). Remaining orders will follow trade timeout action mode which is cancel by default";
   static constexpr std::string_view kTradeTimeout =
-      JoinStringView_v<kTradeTimeout1, IntToStringView_v<kDefaultTradeTimeoutSeconds>, kTradeTimeout2>;
+      JoinStringView_v<kTradeTimeout1, LoadConfiguration::kProdDefaultExchangeConfigFile, kTradeTimeout2>;
 
   static constexpr std::string_view kTradeUpdatePrice1 =
-      "Set the min time allowed between two limit price updates (default: ";
+      "Set the min time allowed between two limit price updates (default defined in ";
   static constexpr std::string_view kTradeUpdatePrice2 =
-      "s). Avoids cancelling / placing new orders too often with high volumes which can be counter productive "
+      "). Avoids cancelling / placing new orders too often with high volumes which can be counter productive "
       "sometimes.";
   static constexpr std::string_view kTradeUpdatePrice =
-      JoinStringView_v<kTradeUpdatePrice1, IntToStringView_v<kMinUpdatePriceTimeSeconds>, kTradeUpdatePrice2>;
+      JoinStringView_v<kTradeUpdatePrice1, LoadConfiguration::kProdDefaultExchangeConfigFile, kTradeUpdatePrice2>;
 
   static constexpr std::string_view kSimulationMode1 = "Activates simulation mode only (default: ";
   static constexpr std::string_view kSimulationMode2 = TradeOptions().isSimulation() ? "true" : "false";
@@ -310,7 +319,7 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
       {{{"Trade", 4000},
         "trade",
         "<amt[%]cur1-cur2[,exch1,...]>",
-        "Single trade from given start amount on a list of exchanges, "
+        "Trade from given start amount on a list of exchanges, "
         "or all that have sufficient balance on cur1 if none provided.\n"
         "Amount can be given as a percentage - in this case the desired percentage "
         "of available amount on matching exchanges will be traded.\n"
@@ -319,7 +328,7 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
       {{{"Trade", 4000},
         "trade-all",
         "<cur1-cur2[,exch1,...]>",
-        "Single trade from available amount from given currency on a list of exchanges,"
+        "Trade from available amount from given currency on a list of exchanges,"
         " or all that have some balance on cur1 if none provided\n"
         "Order will be placed at limit price by default"},
        &OptValueType::tradeAll},
@@ -332,7 +341,7 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
       {{{"Trade", 4010},
         "--multi-trade",
         "",
-        "Force activation of multi trade mode for all exchanges, overriding default configuration of config file.\n"
+        "Allow multi step trades for this command, overriding default configuration of config file.\n"
         "It makes trade in multiple steps possible if exchange does not provide a direct currency market pair.\n"
         "The conversion path used is always one of the fastest(s). All other trade options apply to one unique trade "
         "step (for instance, the trade timeout is related to a single trade, not the series of all trades of a multi "
@@ -353,17 +362,14 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
         "             Order price will not be continuously updated.\n"
         "This option is not compatible with '--strategy'"},
        &OptValueType::tradePrice},
-      {{{"Trade", 4030},
-        "--strategy",
-        "<maker|nibble|taker>",
-        "Customize the order price strategy of the trade\n"
-        "  'maker' : order price set at limit price (default)\n"
-        "  'nibble': order price set at limit price +(buy)/-(sell) 1\n"
-        "  'taker' : order price will be at market price and matched immediately\n"
-        "Order price will be continuously updated and recomputed every '--update-price' step time.\n"
-        "This option is not compatible with '--price'"},
-       &OptValueType::tradeStrategy},
+      {{{"Trade", 4030}, "--strategy", "<maker|nibble|taker>", kTradeStrategy}, &OptValueType::tradeStrategy},
       {{{"Trade", 4030}, "--timeout", "<time>", kTradeTimeout}, &OptValueType::tradeTimeout},
+      {{{"Trade", 4030},
+        "--timeout-cancel",
+        "",
+        "If after the timeout some amount is still not traded,\n"
+        "force cancel the remaining order"},
+       &OptValueType::tradeTimeoutCancel},
       {{{"Trade", 4030},
         "--timeout-match",
         "",

@@ -86,28 +86,29 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                              api::CommonAPI& commonAPI)
     : ExchangePublic("binance", fiatConverter, commonAPI, coincenterInfo),
-      _commonInfo(coincenterInfo, exchangeInfo(), coincenterInfo.getRunMode()),
-      _exchangeInfoCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
-                         _commonInfo),
+      _commonInfo(coincenterInfo, exchangeConfig(), coincenterInfo.getRunMode()),
+      _exchangeConfigCache(
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
+          _commonInfo),
       _globalInfosCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           coincenterInfo.metricGatewayPtr(),
           PermanentCurlOptions::Builder()
-              .setMinDurationBetweenQueries(_commonInfo._exchangeInfo.publicAPIRate())
-              .setAcceptedEncoding(_commonInfo._exchangeInfo.acceptEncoding())
+              .setMinDurationBetweenQueries(_commonInfo._exchangeConfig.publicAPIRate())
+              .setAcceptedEncoding(_commonInfo._exchangeConfig.acceptEncoding())
               .build(),
           coincenterInfo.getRunMode()),
-      _marketsCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _exchangeInfoCache, _commonInfo._curlHandle, _commonInfo._exchangeInfo),
+      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._exchangeConfig),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
-          _exchangeInfoCache, _marketsCache, _commonInfo),
-      _orderbookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          _exchangeConfigCache, _marketsCache, _commonInfo),
+      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
                       _commonInfo),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _commonInfo),
-      _tickerCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
@@ -118,21 +119,21 @@ bool BinancePublic::healthCheck() {
   return result.empty();
 }
 
-BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo,
+BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeConfig& exchangeConfig,
                                       settings::RunMode runMode)
-    : _exchangeInfo(exchangeInfo),
+    : _exchangeConfig(exchangeConfig),
       _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(_exchangeInfo.publicAPIRate())
-                      .setAcceptedEncoding(_exchangeInfo.acceptEncoding())
-                      .setRequestCallLogLevel(_exchangeInfo.requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(_exchangeInfo.requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(_exchangeConfig.publicAPIRate())
+                      .setAcceptedEncoding(_exchangeConfig.acceptEncoding())
+                      .setRequestCallLogLevel(_exchangeConfig.requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(_exchangeConfig.requestsAnswerLogLevel())
                       .build(),
                   runMode) {}
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;
-  const CurrencyCodeSet& excludedCurrencies = _commonInfo._exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _commonInfo._exchangeConfig.excludedCurrenciesAll();
   for (const json& coinJson : data) {
     std::string_view coin = coinJson["coin"].get<std::string_view>();
     if (coin.size() > CurrencyCode::kMaxLen) {
@@ -168,8 +169,8 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
 }
 
 MarketSet BinancePublic::MarketsFunc::operator()() {
-  BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeInfoCache.get();
-  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeConfigCache.get();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
   for (const auto& marketJsonPair : exchangeInfoData) {
@@ -276,7 +277,7 @@ std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode cur
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
-  const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), mk);
+  const json& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
 
   const json* pPriceFilter = nullptr;
   MonetaryAmount ret(pri);
@@ -307,7 +308,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
     }
   }
 
-  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), mk);
+  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk);
   ret.truncate(volAndPriNbDecimals.priNbDecimals);
   if (pri != ret) {
     log::warn("Sanitize price {} -> {}", pri, ret);
@@ -334,7 +335,7 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,
                                              bool isTakerOrder) {
-  const json& marketData = RetrieveMarketData(_exchangeInfoCache.get(), mk);
+  const json& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
   MonetaryAmount ret(vol);
 
   const json* pMinNotionalFilter = nullptr;
@@ -436,7 +437,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
     }
   }
 
-  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), mk);
+  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk);
   ret.truncate(volAndPriNbDecimals.volNbDecimals);
   if (ret != vol) {
     log::warn("Sanitize volume {} -> {}", vol, ret);
@@ -467,7 +468,7 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
     MonetaryAmount bidVol(tickerDetails["bidQty"].get<std::string_view>(), mk.base());
 
     ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol,
-                                             QueryVolAndPriNbDecimals(_exchangeInfoCache.get(), mk), depth));
+                                             QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk), depth));
   }
 
   log::info("Retrieved ticker information from {} markets", ret.size());

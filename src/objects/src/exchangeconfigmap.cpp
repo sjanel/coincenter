@@ -1,4 +1,4 @@
-#include "exchangeinfomap.hpp"
+#include "exchangeconfigmap.hpp"
 
 #include <algorithm>
 #include <string_view>
@@ -8,19 +8,20 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "exchangeinfo.hpp"
-#include "exchangeinfodefault.hpp"
-#include "exchangeinfoparser.hpp"
+#include "exchangeconfig.hpp"
+#include "exchangeconfigdefault.hpp"
+#include "exchangeconfigparser.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "parseloglevel.hpp"
+#include "priceoptionsdef.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 
-ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &jsonData) {
-  ExchangeInfoMap map;
+ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json &jsonData) {
+  ExchangeConfigMap map;
 
-  const json &prodDefault = ExchangeInfoDefault::Prod();
+  const json &prodDefault = ExchangeConfigDefault::Prod();
 
   TopLevelOption assetTopLevelOption(TopLevelOption::kAssetsOptionStr, prodDefault, jsonData);
   TopLevelOption queryTopLevelOption(TopLevelOption::kQueryOptionStr, prodDefault, jsonData);
@@ -38,7 +39,7 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &js
 
     static constexpr std::string_view kUpdFreqOptStr = "updateFrequency";
 
-    ExchangeInfo::APIUpdateFrequencies apiUpdateFrequencies{
+    ExchangeConfig::APIUpdateFrequencies apiUpdateFrequencies{
         {queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "currencies"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "markets"),
          queryTopLevelOption.getDuration(exchangeName, kUpdFreqOptStr, "withdrawalFees"),
@@ -64,15 +65,24 @@ ExchangeInfoMap ComputeExchangeInfoMap(std::string_view fileName, const json &js
     const auto requestsAnswerLogLevel =
         LevelFromPos(LogPosFromLogStr(queryTopLevelOption.getStr(exchangeName, "logLevels", "requestsAnswer")));
 
+    static constexpr std::string_view kTradeConfigPart = "trade";
+
+    bool tradeTimeoutMatch = queryTopLevelOption.getBool(exchangeName, kTradeConfigPart, "timeoutMatch");
+    TradeConfig tradeConfig(queryTopLevelOption.getDuration(exchangeName, kTradeConfigPart, "minPriceUpdateDuration"),
+                            queryTopLevelOption.getDuration(exchangeName, kTradeConfigPart, "timeout"),
+                            StrategyFromStr(queryTopLevelOption.getStr(exchangeName, kTradeConfigPart, "strategy")),
+                            tradeTimeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel);
+
     map.insert_or_assign(
         exchangeName,
-        ExchangeInfo(
-            exchangeName, makerStr, takerStr, assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
-            assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
-            assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
-            std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
-            acceptEncoding, dustSweeperMaxNbTrades, requestsCallLogLevel, requestsAnswerLogLevel,
-            multiTradeAllowedByDefault, validateDepositAddressesInFile, placeSimulatedRealOrder, validateApiKey));
+        ExchangeConfig(exchangeName, makerStr, takerStr,
+                       assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "allExclude"),
+                       assetTopLevelOption.getUnorderedCurrencyUnion(exchangeName, "withdrawExclude"),
+                       assetTopLevelOption.getCurrenciesArray(exchangeName, kPreferredPaymentCurrenciesOptName),
+                       std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
+                       acceptEncoding, dustSweeperMaxNbTrades, requestsCallLogLevel, requestsAnswerLogLevel,
+                       multiTradeAllowedByDefault, validateDepositAddressesInFile, placeSimulatedRealOrder,
+                       validateApiKey, std::move(tradeConfig)));
   }  // namespace cct
 
   // Print json unused values

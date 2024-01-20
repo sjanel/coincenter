@@ -3,6 +3,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -15,7 +16,7 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi_mock.hpp"
@@ -79,6 +80,11 @@ class ExchangePrivateTest : public ::testing::Test {
     EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(MarketSet{market}));
   }
 
+  TradeInfo computeTradeInfo(const TradeContext &tradeContext, const TradeOptions &tradeOptions) const {
+    TradeOptions resultingTradeOptions(tradeOptions, exchangePublic.exchangeConfig());
+    return {tradeContext, resultingTradeOptions};
+  }
+
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
@@ -119,7 +125,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   PriceOptions priceOptions(PriceStrategy::kTaker);
   TradeOptions tradeOptions(priceOptions);
   TradeContext tradeContext(market, TradeSide::kSell);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo("23004 EUR");
 
@@ -142,7 +148,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   PriceOptions priceOptions(PriceStrategy::kTaker);
   TradeOptions tradeOptions(priceOptions);
   TradeContext tradeContext(market, TradeSide::kBuy);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
 
@@ -163,11 +169,10 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal,
-                            TradeOptions::kDefaultTradeDuration, TradeOptions::kDefaultMinTimeBetweenPriceUpdates,
-                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, std::chrono::seconds(10),
+                            std::chrono::seconds(5), TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
   TradeContext tradeContext(market, TradeSide::kBuy);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
 
@@ -191,10 +196,9 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyMaker) {
   TradeContext tradeContext(market, side);
 
   PriceOptions priceOptions(PriceStrategy::kMaker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal,
-                            TradeOptions::kDefaultTradeDuration, TradeOptions::kDefaultMinTimeBetweenPriceUpdates,
-                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, std::chrono::seconds(10),
+                            std::chrono::seconds(5), TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
@@ -219,7 +223,7 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
 
   PriceOptions priceOptions(PriceStrategy::kMaker);
   TradeOptions tradeOptions(priceOptions);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
@@ -253,9 +257,9 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   MonetaryAmount vol1(from / pri1, market.base());
   MonetaryAmount vol2(from / pri2, market.base());
 
-  TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(), Duration::zero(),
-                            TradeTypePolicy::kForceMultiTrade);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
+                            Duration::zero(), TradeTypePolicy::kForceMultiTrade);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   {
     testing::InSequence seq;
@@ -329,10 +333,10 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
   MonetaryAmount pri(askPrice1);
 
   TradeSide side = TradeSide::kSell;
-  TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kSimulation, Duration::max(), Duration::zero(),
-                            TradeTypePolicy::kForceMultiTrade);
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kSimulation, Duration::max(),
+                            Duration::zero(), TradeTypePolicy::kForceMultiTrade);
   TradeContext tradeContext(market, side);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
@@ -340,7 +344,7 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
 
   // In simulation mode, fee is applied
   MonetaryAmount toAmount =
-      exchangePublic.exchangeInfo().applyFee(from.toNeutral() * askPrice1, ExchangeInfo::FeeType::kMaker);
+      exchangePublic.exchangeConfig().applyFee(from.toNeutral() * askPrice1, ExchangeConfig::FeeType::kMaker);
 
   EXPECT_EQ(exchangePrivate.trade(from, market.quote(), tradeOptions), TradedAmounts(from, toAmount));
 }
@@ -355,9 +359,9 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseEmergencyTakerTrade) {
 
   MonetaryAmount vol1(from / pri1, market.base());
 
-  TradeOptions tradeOptions(TradeTimeoutAction::kForceMatch, TradeMode::kReal, Duration::zero(), Duration::zero(),
-                            TradeTypePolicy::kForceMultiTrade);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kMatch, TradeMode::kReal, Duration::zero(),
+                            Duration::zero(), TradeTypePolicy::kForceMultiTrade);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_))
       .Times(2)
@@ -402,9 +406,9 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
 
   MonetaryAmount vol1(from / pri1, market.base());
 
-  TradeOptions tradeOptions(TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::zero(), Duration::zero(),
-                            TradeTypePolicy::kForceMultiTrade);
-  TradeInfo tradeInfo(tradeContext, tradeOptions);
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::zero(),
+                            Duration::zero(), TradeTypePolicy::kForceMultiTrade);
+  TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
 
@@ -569,7 +573,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
 
     Market mk{from.currencyCode(), pri.currencyCode()};
     TradeContext tradeContext(mk, TradeSide::kSell);
-    TradeInfo tradeInfo(tradeContext, tradeOptions);
+    TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
     MonetaryAmount tradedTo = vol.toNeutral() * pri;
 
@@ -595,7 +599,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     MonetaryAmount vol(from / askPri, mk.base());
 
     TradeContext tradeContext(mk, TradeSide::kBuy);
-    TradeInfo tradeInfo(tradeContext, tradeOptions);
+    TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
     TradedAmounts tradedAmounts(MonetaryAmount{success ? from : MonetaryAmount(0), askPri.currencyCode()},
                                 success ? vol : MonetaryAmount{0, vol.currencyCode()});
@@ -614,7 +618,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   }
 
   std::optional<MonetaryAmount> dustThreshold(CurrencyCode cur) {
-    const auto &dustThresholds = exchangePublic.exchangeInfo().dustAmountsThreshold();
+    const auto &dustThresholds = exchangePublic.exchangeConfig().dustAmountsThreshold();
     auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, cur));
     if (dustThresholdLb == dustThresholds.end()) {
       return std::nullopt;

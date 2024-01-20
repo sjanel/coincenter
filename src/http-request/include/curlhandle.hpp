@@ -33,7 +33,7 @@ class CurlHandle {
   /// @param pMetricGateway if not null, queries will export some metrics
   /// @param permanentCurlOptions curl options applied once and for all requests of this CurlHandle
   /// @param runMode run mode
-  explicit CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway *pMetricGateway = nullptr,
+  explicit CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetricGateway = nullptr,
                       const PermanentCurlOptions &permanentCurlOptions = PermanentCurlOptions(),
                       settings::RunMode runMode = settings::RunMode::kProd);
 
@@ -64,10 +64,13 @@ class CurlHandle {
 
   void swap(CurlHandle &rhs) noexcept;
 
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
+  /// CurlHandle is not trivially relocatable
+  /// curl handle stores the address of the _queryData string (CURLOPT_WRITEDATA)
+  using trivially_relocatable = std::false_type;
 
  private:
   void setUpProxy(const char *proxyUrl, bool reset);
+  void setWriteData();
 
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header

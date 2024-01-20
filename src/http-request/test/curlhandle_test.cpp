@@ -21,24 +21,30 @@ namespace {
 const CurlOptions kVerboseHttpGetOptions(HttpRequestType::kGet, CurlOptions::Verbose::kOn);
 }  // namespace
 
-class KrakenBaseCurlHandle : public ::testing::Test {
+class ExampleBaseCurlHandle : public ::testing::Test {
  protected:
-  static constexpr std::string_view kKrakenUrlBase = "https://api.kraken.com/0";
+  static constexpr std::string_view kHttpBinBase = "https://httpbin.org";
 
-  CurlHandle handle{kKrakenUrlBase};
+  CurlHandle handle{kHttpBinBase};
 };
 
-TEST_F(KrakenBaseCurlHandle, QueryKrakenTime) {
+TEST_F(ExampleBaseCurlHandle, QueryJsonAndMoveConstruct) {
   CurlOptions opts = kVerboseHttpGetOptions;
   opts.appendHttpHeader("MyHeaderIsVeryLongToAvoidSSO", "Val1");
 
-  EXPECT_TRUE(handle.query("/public/Time", opts).find("unixtime") != std::string_view::npos);
+  EXPECT_NE(handle.query("/json", opts).find("slideshow"), std::string_view::npos);
+
+  CurlHandle newCurlHandle = std::move(handle);
+  EXPECT_NE(newCurlHandle.query("/json", opts).find("slideshow"), std::string_view::npos);
 }
 
-TEST_F(KrakenBaseCurlHandle, QueryKrakenSystemStatus) {
-  std::string_view str = handle.query("/public/SystemStatus", kVerboseHttpGetOptions);
-  EXPECT_TRUE(str.find("online") != std::string_view::npos || str.find("maintenance") != std::string_view::npos ||
-              str.find("cancel_only") != std::string_view::npos || str.find("post_only") != std::string_view::npos);
+TEST_F(ExampleBaseCurlHandle, QueryXmlAndMoveAssign) {
+  EXPECT_NE(handle.query("/xml", kVerboseHttpGetOptions).find("<?xml"), std::string_view::npos);
+
+  CurlHandle newCurlHandle;
+  newCurlHandle = std::move(handle);
+
+  EXPECT_NE(newCurlHandle.query("/xml", kVerboseHttpGetOptions).find("<?xml"), std::string_view::npos);
 }
 
 class TestCurlHandle : public ::testing::Test {

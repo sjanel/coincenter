@@ -13,7 +13,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 
 namespace api {
 class CommonAPI;
@@ -71,7 +71,7 @@ class KrakenPublic : public ExchangePublic {
     const CoincenterInfo& _coincenterInfo;
     CommonAPI& _commonApi;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   class WithdrawalFeesFunc {
@@ -106,7 +106,7 @@ class KrakenPublic : public ExchangePublic {
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct AllOrderBooksFunc {

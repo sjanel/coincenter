@@ -11,7 +11,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -85,7 +85,7 @@ class BithumbPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct OrderBookFunc {
@@ -93,7 +93,7 @@ class BithumbPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradedVolumeFunc {

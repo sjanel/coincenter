@@ -4,8 +4,9 @@
 
 namespace cct {
 enum class TradeTimeoutAction : int8_t {
-  kCancel,     // When timeout of trade is reached, cancel remaining order
-  kForceMatch  // When timeout of trade is reached, update remaining order at market price to force match
+  kDefault,  // Use exchange config file default settings
+  kCancel,   // When timeout of trade is reached, cancel remaining order
+  kMatch     // When timeout of trade is reached, update remaining order at market price to force match
 };
 
 enum class TradeMode : int8_t {
@@ -22,7 +23,7 @@ enum class TradeMode : int8_t {
 // Example:
 //  - Convert XRP to XLM on an exchange only proposing XRP-BTC and BTC-XLM markets.
 enum class TradeTypePolicy : int8_t {
-  kDefault,          // Use exchange config file default settings for multi trade
+  kDefault,          // Use exchange config file default settings
   kForceMultiTrade,  // Force multi trade possibility
   kForceSingleTrade  // Force single trade only
 };

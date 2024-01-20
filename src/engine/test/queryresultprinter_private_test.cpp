@@ -510,7 +510,6 @@ class QueryResultPrinterTradesAmountTest : public QueryResultPrinterTest {
   MonetaryAmount startAmount{"0.5BTC"};
   bool isPercentageTrade{false};
   CurrencyCode toCurrency{"XRP"};
-  TradeOptions tradeOptions;
   TradedAmounts tradedAmounts1{MonetaryAmount("0.1BTC"), MonetaryAmount("1050XRP")};
   TradedAmounts tradedAmounts3{MonetaryAmount("0.3BTC"), MonetaryAmount("3500.6XRP")};
   TradedAmounts tradedAmounts4{MonetaryAmount(0, "BTC"), MonetaryAmount(0, "XRP")};
@@ -522,7 +521,7 @@ class QueryResultPrinterTradesAmountTest : public QueryResultPrinterTest {
 
 TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
+      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 +----------+-----------+---------+---------------------------+-------------------------+-----------+
 | Exchange | Account   | From    | Traded from amount (real) | Traded to amount (real) | Status    |
@@ -538,7 +537,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
 
 TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
   basicQueryResultPrinter(ApiOutputType::kJson)
-      .printTrades(TradeResultPerExchange{}, startAmount, isPercentageTrade, toCurrency, tradeOptions);
+      .printTrades(TradeResultPerExchange{}, startAmount, isPercentageTrade, toCurrency, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -571,7 +570,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, EmptyJson) {
 
 TEST_F(QueryResultPrinterTradesAmountTest, Json) {
   basicQueryResultPrinter(ApiOutputType::kJson)
-      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
+      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -627,7 +626,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
 
 TEST_F(QueryResultPrinterTradesAmountTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint)
-      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
+      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, defaultTradeOptions);
   expectNoStr();
 }
 
@@ -636,14 +635,15 @@ class QueryResultPrinterTradesPercentageTest : public QueryResultPrinterTest {
   MonetaryAmount startAmount{"25.6EUR"};
   bool isPercentageTrade{true};
   CurrencyCode toCurrency{"SHIB"};
-  TradeOptions tradeOptions{PriceOptions{PriceStrategy::kTaker}};
+  TradeOptions tradeOptions{TradeOptions{PriceOptions{PriceStrategy::kTaker}},
+                            coincenterInfo.exchangeConfig(exchangePublic1.name())};
   TradedAmounts tradedAmounts{MonetaryAmount("15000.56EUR"), MonetaryAmount("885475102SHIB")};
   TradeResultPerExchange tradeResultPerExchange{{&exchange2, TradeResult{tradedAmounts, tradedAmounts.from * 2}}};
 };
 
 TEST_F(QueryResultPrinterTradesPercentageTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions);
+      .printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 +----------+-----------+--------------+---------------------------+-------------------------+---------+
 | Exchange | Account   | From         | Traded from amount (real) | Traded to amount (real) | Status  |
@@ -738,14 +738,13 @@ TEST_F(QueryResultPrinterTradesPercentageTest, NoPrint) {
 class QueryResultPrinterSmartBuyTest : public QueryResultPrinterTest {
  protected:
   MonetaryAmount endAmount{"3ETH"};
-  TradeOptions tradeOptions;
   TradedAmounts tradedAmounts{MonetaryAmount("4500.67EUR"), MonetaryAmount("3ETH")};
   TradeResultPerExchange tradeResultPerExchange{{&exchange1, TradeResult{tradedAmounts, tradedAmounts.from}}};
 };
 
 TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printBuyTrades(tradeResultPerExchange, endAmount, tradeOptions);
+      .printBuyTrades(tradeResultPerExchange, endAmount, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 +----------+-----------+-------------+---------------------------+-------------------------+----------+
 | Exchange | Account   | From        | Traded from amount (real) | Traded to amount (real) | Status   |
@@ -757,7 +756,8 @@ TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printBuyTrades(TradeResultPerExchange{}, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printBuyTrades(TradeResultPerExchange{}, endAmount, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -786,7 +786,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, Json) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printBuyTrades(tradeResultPerExchange, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kJson).printBuyTrades(tradeResultPerExchange, endAmount, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -824,14 +824,14 @@ TEST_F(QueryResultPrinterSmartBuyTest, Json) {
 }
 
 TEST_F(QueryResultPrinterSmartBuyTest, NoPrint) {
-  basicQueryResultPrinter(ApiOutputType::kNoPrint).printBuyTrades(tradeResultPerExchange, endAmount, tradeOptions);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printBuyTrades(tradeResultPerExchange, endAmount, defaultTradeOptions);
   expectNoStr();
 }
 
 class QueryResultPrinterSmartSellTest : public QueryResultPrinterTest {
  protected:
   MonetaryAmount startAmount{"0.15BTC"};
-  TradeOptions tradeOptions;
   bool isPercentageTrade{false};
   TradedAmounts tradedAmounts1{MonetaryAmount("0.01BTC"), MonetaryAmount("1500USDT")};
   TradedAmounts tradedAmounts3{MonetaryAmount("0.004BTC"), MonetaryAmount("350EUR")};
@@ -843,7 +843,7 @@ class QueryResultPrinterSmartSellTest : public QueryResultPrinterTest {
 
 TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, tradeOptions);
+      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 +----------+-----------+----------+---------------------------+-------------------------+----------+
 | Exchange | Account   | From     | Traded from amount (real) | Traded to amount (real) | Status   |
@@ -859,7 +859,7 @@ TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
 
 TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
   basicQueryResultPrinter(ApiOutputType::kJson)
-      .printSellTrades(TradeResultPerExchange{}, startAmount, isPercentageTrade, tradeOptions);
+      .printSellTrades(TradeResultPerExchange{}, startAmount, isPercentageTrade, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -889,7 +889,7 @@ TEST_F(QueryResultPrinterSmartSellTest, EmptyJson) {
 
 TEST_F(QueryResultPrinterSmartSellTest, Json) {
   basicQueryResultPrinter(ApiOutputType::kJson)
-      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, tradeOptions);
+      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, defaultTradeOptions);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -942,7 +942,7 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
 
 TEST_F(QueryResultPrinterSmartSellTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint)
-      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, tradeOptions);
+      .printSellTrades(tradeResultPerExchange, startAmount, isPercentageTrade, defaultTradeOptions);
   expectNoStr();
 }
 

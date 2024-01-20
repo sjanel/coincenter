@@ -85,30 +85,30 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
     : ExchangePublic("bithumb", fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           commonAPI, _curlHandle),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           config.metricGatewayPtr(),
           PermanentCurlOptions::Builder()
-              .setMinDurationBetweenQueries(exchangeInfo().publicAPIRate())
-              .setAcceptedEncoding(exchangeInfo().acceptEncoding())
+              .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
+              .setAcceptedEncoding(exchangeConfig().acceptEncoding())
               .build(),
           config.getRunMode()),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
-          _curlHandle, exchangeInfo()),
-      _orderbookCache(CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      config, _curlHandle, exchangeInfo()),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
+          _curlHandle, exchangeConfig()),
+      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      config, _curlHandle, exchangeConfig()),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
 
 bool BithumbPublic::healthCheck() {
@@ -126,7 +126,7 @@ bool BithumbPublic::healthCheck() {
 MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
   if (pMarketOrderbookMap == nullptr ||
-      lastUpdatedTime + exchangeInfo().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
+      lastUpdatedTime + exchangeConfig().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
     pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
   }
   MarketSet markets;
@@ -226,8 +226,8 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 }
 
 namespace {
-MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config, const ExchangeInfo& exchangeInfo,
-                                 std::optional<Market> optM = std::nullopt,
+MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config,
+                                 const ExchangeConfig& exchangeConfig, std::optional<Market> optM = std::nullopt,
                                  std::optional<int> optDepth = std::nullopt) {
   MarketOrderBookMap ret;
   // 'all' seems to work as default for all public methods
@@ -253,7 +253,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
       log::error("Unexpected Bithumb reply for orderbook. May require code api update");
     }
     CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
-    const CurrencyCodeSet& excludedCurrencies = exchangeInfo.excludedCurrenciesAll();
+    const CurrencyCodeSet& excludedCurrencies = exchangeConfig.excludedCurrenciesAll();
     for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
       if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
         const json* asksBids[2];
@@ -309,11 +309,11 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
 }  // namespace
 
 MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
-  return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo);
+  return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeConfig);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
-  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeInfo, mk, depth);
+  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
   auto it = marketOrderBookMap.find(mk);
   if (it == marketOrderBookMap.end()) {
     throw exception("Cannot find {} in market order book map", mk);

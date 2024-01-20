@@ -207,23 +207,23 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePubl
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
       _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _apiKey, binancePublic, _queryDelay),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay),
       _allWithdrawFeesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay),
       _withdrawFeesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
@@ -265,7 +265,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
                              _queryDelay, {{"coin", currencyCode.str()}});
   std::string_view tag(result["tag"].get<std::string_view>());
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
                 std::move(result["address"].get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
@@ -609,7 +609,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const Market mk = tradeInfo.tradeContext.mk;
   const std::string_view buyOrSell = fromCurrencyCode == mk.base() ? "SELL" : "BUY";
-  const bool placeSimulatedRealOrder = binancePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = binancePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const std::string_view orderType = isTakerStrategy ? "MARKET" : "LIMIT";
   const bool isSimulation = tradeInfo.options.isSimulation();
