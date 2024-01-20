@@ -23,7 +23,7 @@
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
 #include "exchangebase.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
@@ -40,6 +40,7 @@
 #include "tradedamounts.hpp"
 #include "tradedefinitions.hpp"
 #include "tradeinfo.hpp"
+#include "tradeoptions.hpp"
 #include "tradeside.hpp"
 #include "unreachable.hpp"
 #include "withdraw.hpp"
@@ -85,14 +86,17 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
 
 TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
                                      const MarketsPath &conversionPath) {
-  const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeInfo().placeSimulateRealOrder();
+  // Use exchange config settings for un-overriden trade options
+  const auto &exchangeConfig = this->exchangeConfig();
+  const TradeOptions actualOptions(options, exchangeConfig);
+  const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeConfig.placeSimulateRealOrder();
   const int nbTrades = static_cast<int>(conversionPath.size());
-  const bool isMultiTradeAllowed = options.isMultiTradeAllowed(exchangeInfo().multiTradeAllowedByDefault());
+  const bool isMultiTradeAllowed = actualOptions.isMultiTradeAllowed(exchangeConfig.multiTradeAllowedByDefault());
 
   ExchangeName exchangeName = this->exchangeName();
   log::info("{}rade {} -> {} on {} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from, toCurrency,
             exchangeName);
-  log::debug(options.str(realOrderPlacedInSimulationMode));
+  log::debug(actualOptions.str(realOrderPlacedInSimulationMode));
 
   TradedAmounts tradedAmounts(from.currencyCode(), toCurrency);
   if (conversionPath.empty()) {
@@ -108,7 +112,7 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   for (int tradePos = 0; tradePos < nbTrades; ++tradePos) {
     Market mk = conversionPath[tradePos];
     log::info("Step {}/{} - trade {} into {}", tradePos + 1, nbTrades, avAmount, mk.opposite(avAmount.currencyCode()));
-    TradedAmounts stepTradedAmounts = marketTrade(avAmount, options, mk);
+    TradedAmounts stepTradedAmounts = marketTrade(avAmount, actualOptions, mk);
     avAmount = stepTradedAmounts.to;
     if (avAmount == 0) {
       break;
@@ -135,7 +139,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   TradeContext tradeContext(mk, side, userRef);
   TradeInfo tradeInfo(tradeContext, tradeOptions);
   TradeOptions &options = tradeInfo.options;
-  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = exchangeConfig().placeSimulateRealOrder();
 
   enum class NextAction : int8_t { kPlaceInitialOrder, kPlaceLimitOrder, kPlaceMarketOrder, kWait };
 
@@ -447,8 +451,9 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 }
 
 TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
-  const MonetaryAmountByCurrencySet &dustThresholds = exchangeInfo().dustAmountsThreshold();
-  const int dustSweeperMaxNbTrades = exchangeInfo().dustSweeperMaxNbTrades();
+  const auto &exchangeConfig = this->exchangeConfig();
+  const MonetaryAmountByCurrencySet &dustThresholds = exchangeConfig.dustAmountsThreshold();
+  const int dustSweeperMaxNbTrades = exchangeConfig.dustSweeperMaxNbTrades();
   const auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
   const auto eName = exchangeName();
 
@@ -460,7 +465,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
   const MonetaryAmount dustThreshold = *dustThresholdLb;
 
   PriceOptions priceOptions(PriceStrategy::kTaker);
-  TradeOptions tradeOptions(priceOptions);
+  TradeOptions tradeOptions(TradeOptions{priceOptions}, exchangeConfig);
   MarketSet markets = _exchangePublic.queryTradableMarkets();
   MarketPriceMap marketPriceMap;
   bool checkAmountBalanceAgainstDustThreshold = true;
@@ -528,7 +533,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
   const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
-    if (exchangeInfo().placeSimulateRealOrder()) {
+    if (exchangeConfig().placeSimulateRealOrder()) {
       log::debug("Place simulate real order - price {} will be overriden", price);
       MarketOrderBook marketOrderbook = _exchangePublic.queryOrderBook(mk);
       price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
@@ -552,13 +557,13 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
 
 PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
                                                                        const TradeInfo &tradeInfo) const {
-  const bool placeSimulatedRealOrder = exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
 
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
-  ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-  toAmount = _coincenterInfo.exchangeInfo(_exchangePublic.name()).applyFee(toAmount, feeType);
+  ExchangeConfig::FeeType feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+  toAmount = _coincenterInfo.exchangeConfig(_exchangePublic.name()).applyFee(toAmount, feeType);
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)),
                                 OrderId("SimulatedOrderId"));
   placeOrderInfo.setClosed();

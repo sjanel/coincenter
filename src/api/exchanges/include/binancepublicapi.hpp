@@ -20,7 +20,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -79,9 +79,9 @@ class BinancePublic : public ExchangePublic {
   MonetaryAmount computePriceForNotional(Market mk, int avgPriceMins);
 
   struct CommonInfo {
-    CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeInfo& exchangeInfo, settings::RunMode runMode);
+    CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeConfig& exchangeConfig, settings::RunMode runMode);
 
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
     CurlHandle _curlHandle;
   };
 
@@ -105,15 +105,15 @@ class BinancePublic : public ExchangePublic {
   struct MarketsFunc {
     MarketSet operator()();
 
-    CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
+    CachedResult<ExchangeInfoFunc>& _exchangeConfigCache;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct AllOrderBooksFunc {
     MarketOrderBookMap operator()(int depth);
 
-    CachedResult<ExchangeInfoFunc>& _exchangeInfoCache;
+    CachedResult<ExchangeInfoFunc>& _exchangeConfigCache;
     CachedResult<MarketsFunc>& _marketsCache;
     CommonInfo& _commonInfo;
   };
@@ -137,7 +137,7 @@ class BinancePublic : public ExchangePublic {
   };
 
   CommonInfo _commonInfo;
-  CachedResult<ExchangeInfoFunc> _exchangeInfoCache;
+  CachedResult<ExchangeInfoFunc> _exchangeConfigCache;
   CachedResult<GlobalInfosFunc> _globalInfosCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;

@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "cct_invalid_argument_exception.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -36,6 +37,8 @@ TEST(ParseDuration, DurationThrowInvalidTimeUnit1) { EXPECT_THROW(ParseDuration(
 TEST(ParseDuration, DurationThrowInvalidTimeUnit2) { EXPECT_THROW(ParseDuration("42"), invalid_argument); }
 
 TEST(ParseDuration, DurationThrowOnlyIntegral) { EXPECT_THROW(ParseDuration("2.5min"), invalid_argument); }
+
+TEST(DurationString, DurationToStringUndefined) { EXPECT_EQ(DurationToString(kUndefinedDuration), "<undef>"); }
 
 TEST(DurationString, DurationToStringYears) { EXPECT_EQ(DurationToString(std::chrono::years(23)), "23y"); }
 TEST(DurationString, DurationToStringMonths) { EXPECT_EQ(DurationToString(std::chrono::months(4)), "4mon"); }

@@ -83,11 +83,17 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeTypePolicyInvalid) {
   EXPECT_THROW(opts.computeTradeOptions(), invalid_argument);
 }
 
+TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeTimeoutActionInvalid) {
+  opts.tradeTimeoutCancel = true;
+  opts.tradeTimeoutMatch = true;
+  EXPECT_THROW(opts.computeTradeOptions(), invalid_argument);
+}
+
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradeStrategy) {
   opts.tradeStrategy = "nibble";
   opts.tradeTimeoutMatch = true;
   opts.tradeSim = true;
-  EXPECT_EQ(opts.computeTradeOptions(), TradeOptions(PriceOptions(opts.tradeStrategy), TradeTimeoutAction::kForceMatch,
+  EXPECT_EQ(opts.computeTradeOptions(), TradeOptions(PriceOptions(opts.tradeStrategy), TradeTimeoutAction::kMatch,
                                                      TradeMode::kSimulation, opts.tradeTimeout, opts.tradeUpdatePrice,
                                                      TradeTypePolicy::kDefault, TradeSyncPolicy::kSynchronous));
 }
@@ -108,7 +114,7 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradePrice) {
   opts.tradeTimeout = std::chrono::seconds(100);
   opts.async = true;
   EXPECT_EQ(opts.computeTradeOptions(),
-            TradeOptions(PriceOptions(MonetaryAmount(4, "XRP")), TradeTimeoutAction::kCancel, TradeMode::kReal,
+            TradeOptions(PriceOptions(MonetaryAmount(4, "XRP")), TradeTimeoutAction::kDefault, TradeMode::kReal,
                          std::chrono::seconds(100), opts.tradeUpdatePrice, TradeTypePolicy::kForceSingleTrade,
                          TradeSyncPolicy::kAsynchronous));
 }

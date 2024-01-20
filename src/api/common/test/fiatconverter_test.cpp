@@ -33,7 +33,7 @@ constexpr double kGBP = 0.88;
 constexpr std::string_view kSomeFakeURL = "some/fake/url";
 }  // namespace
 
-CurlHandle::CurlHandle([[maybe_unused]] const BestURLPicker &bestURLPicker,
+CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
                        [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
                        [[maybe_unused]] const PermanentCurlOptions &permanentCurlOptions,
                        [[maybe_unused]] settings::RunMode runMode)

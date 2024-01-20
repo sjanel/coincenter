@@ -22,6 +22,8 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
   TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 8000000}};
   TimePoint tp4{TimeInMs{std::numeric_limits<int64_t>::max() / 7000000}};
 
+  TradeOptions defaultTradeOptions{TradeOptions{}, coincenterInfo.exchangeConfig(exchangePublic1.name())};
+
   void SetUp() override { ss.clear(); }
 
   void expectNoStr() const { EXPECT_TRUE(ss.view().empty()); }
@@ -39,7 +41,7 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
   }
 
   QueryResultPrinter basicQueryResultPrinter(ApiOutputType apiOutputType) {
-    return QueryResultPrinter(ss, apiOutputType, coincenterInfo.loggingInfo());
+    return {ss, apiOutputType, coincenterInfo.loggingInfo()};
   }
 
   std::ostringstream ss;

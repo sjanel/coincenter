@@ -32,7 +32,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -309,15 +309,15 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
     : ExchangePrivate(config, bithumbPublic, apiKey),
       _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
-      _currencyOrderInfoRefreshTime(exchangeInfo().getAPICallUpdateFrequency(kCurrencyInfoBithumb)),
+      _currencyOrderInfoRefreshTime(exchangeConfig().getAPICallUpdateFrequency(kCurrencyInfoBithumb)),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, bithumbPublic) {
   if (config.getRunMode() != settings::RunMode::kQueryResponseOverriden) {
     json data = GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAllJson();
@@ -385,7 +385,7 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
           : addressAndTag.end(),
       addressAndTag.end());
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode, string(address), tag, walletCheck,
                 _apiKey.accountOwner());
@@ -692,7 +692,7 @@ WithdrawsSet BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
 
 PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmount volume, MonetaryAmount price,
                                           const TradeInfo& tradeInfo) {
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
@@ -715,9 +715,10 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   // Volume is gross amount if from amount is in quote currency, we should remove the fees
   if (fromCurrencyCode == mk.quote()) {
-    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
-    volume = exchangeInfo.applyFee(volume, feeType);
+    ExchangeConfig::FeeType feeType =
+        isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+    const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.name());
+    volume = exchangeConfig.applyFee(volume, feeType);
   }
 
   const bool isSimulationWithRealOrder = tradeInfo.options.isSimulation() && placeSimulatedRealOrder;

@@ -10,7 +10,7 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -131,8 +131,8 @@ TEST_F(ExchangePublicConvertTest, ConvertSimple) {
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
-  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(
-      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeInfo::FeeType::kMaker);
+  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
   EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
 }
 
@@ -143,10 +143,10 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
-  MonetaryAmount res = exchangePublic.exchangeInfo().applyFee(
-      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeInfo::FeeType::kMaker);
-  res = exchangePublic.exchangeInfo().applyFee(marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}),
-                                               ExchangeInfo::FeeType::kMaker);
+  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
   EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
 }
 

@@ -11,9 +11,10 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
+#include "tradeconfig.hpp"
 
 namespace cct {
-class ExchangeInfo {
+class ExchangeConfig {
  public:
   enum struct FeeType { kMaker, kTaker };
 
@@ -21,13 +22,14 @@ class ExchangeInfo {
     Duration freq[api::kQueryTypeMax];
   };
 
-  ExchangeInfo(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
-               CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
-               CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
-               const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
-               std::string_view acceptEncoding, int dustSweeperMaxNbTrades, log::level::level_enum requestsCallLogLevel,
-               log::level::level_enum requestsAnswerLogLevel, bool multiTradeAllowedByDefault,
-               bool validateDepositAddressesInFile, bool placeSimulateRealOrder, bool validateApiKey);
+  ExchangeConfig(std::string_view exchangeNameStr, std::string_view makerStr, std::string_view takerStr,
+                 CurrencyCodeVector &&excludedAllCurrencies, CurrencyCodeVector &&excludedCurrenciesWithdraw,
+                 CurrencyCodeVector &&preferredPaymentCurrencies, MonetaryAmountByCurrencySet &&dustAmountsThreshold,
+                 const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
+                 std::string_view acceptEncoding, int dustSweeperMaxNbTrades,
+                 log::level::level_enum requestsCallLogLevel, log::level::level_enum requestsAnswerLogLevel,
+                 bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile, bool placeSimulateRealOrder,
+                 bool validateApiKey, TradeConfig tradeConfig);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -94,6 +96,8 @@ class ExchangeInfo {
 
   bool multiTradeAllowedByDefault() const { return _multiTradeAllowedByDefault; }
 
+  const TradeConfig &tradeConfig() const { return _tradeConfig; }
+
  private:
   CurrencyCodeSet _excludedCurrenciesAll;             // Currencies will be completely ignored by the exchange
   CurrencyCodeSet _excludedCurrenciesWithdrawal;      // Currencies unavailable for withdrawals
@@ -106,6 +110,7 @@ class ExchangeInfo {
   string _acceptEncoding;
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
+  TradeConfig _tradeConfig;
   int16_t _dustSweeperMaxNbTrades;  // max number of trades of a dust sweeper attempt per currency
   int8_t _requestsCallLogLevel;
   int8_t _requestsAnswerLogLevel;

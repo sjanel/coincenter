@@ -7,7 +7,7 @@
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
@@ -22,10 +22,10 @@ class Exchange {
   using ExchangePublic = api::ExchangePublic;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
-  Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic);
+  Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic);
 
   /// Build a Exchange with both private and public exchanges
-  Exchange(const ExchangeInfo &exchangeInfo, api::ExchangePublic &exchangePublic,
+  Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic,
            api::ExchangePrivate &exchangePrivate);
 
   std::string_view name() const { return _exchangePublic.name(); }
@@ -55,7 +55,7 @@ class Exchange {
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
+  const ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
 
   bool hasPrivateAPI() const { return _pExchangePrivate != nullptr; }
 
@@ -113,6 +113,6 @@ class Exchange {
  private:
   api::ExchangePublic &_exchangePublic;
   api::ExchangePrivate *_pExchangePrivate = nullptr;
-  const ExchangeInfo &_exchangeInfo;
+  const ExchangeConfig &_exchangeConfig;
 };
 }  // namespace cct

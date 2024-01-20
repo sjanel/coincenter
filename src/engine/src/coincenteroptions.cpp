@@ -82,8 +82,7 @@ void CoincenterCmdLineOptions::mergeGlobalWith(const CoincenterCmdLineOptions& r
 
 TradeOptions CoincenterCmdLineOptions::computeTradeOptions() const {
   const TradeTypePolicy tradeTypePolicy = computeTradeTypePolicy();
-  const TradeTimeoutAction timeoutAction =
-      tradeTimeoutMatch ? TradeTimeoutAction::kForceMatch : TradeTimeoutAction::kCancel;
+  const TradeTimeoutAction timeoutAction = computeTradeTimeoutAction();
   const TradeMode tradeMode = tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
   const TradeSyncPolicy tradeSyncPolicy = async ? TradeSyncPolicy::kAsynchronous : TradeSyncPolicy::kSynchronous;
 
@@ -106,7 +105,8 @@ TradeOptions CoincenterCmdLineOptions::computeTradeOptions() const {
     PriceOptions priceOptions(tradePriceAmount);
     return {priceOptions, timeoutAction, tradeMode, tradeTimeout, tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy};
   }
-  return {timeoutAction, tradeMode, tradeTimeout, tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy};
+  // Default - use exchange config file values
+  return {PriceOptions{}, timeoutAction, tradeMode, tradeTimeout, tradeUpdatePrice, tradeTypePolicy, tradeSyncPolicy};
 }
 
 TradeTypePolicy CoincenterCmdLineOptions::computeTradeTypePolicy() const {
@@ -124,6 +124,19 @@ TradeTypePolicy CoincenterCmdLineOptions::computeTradeTypePolicy() const {
   }
 
   return TradeTypePolicy::kDefault;
+}
+
+TradeTimeoutAction CoincenterCmdLineOptions::computeTradeTimeoutAction() const {
+  if (tradeTimeoutCancel) {
+    if (tradeTimeoutMatch) {
+      throw invalid_argument("Only one trade timeout action may be chosen");
+    }
+    return TradeTimeoutAction::kCancel;
+  }
+  if (tradeTimeoutMatch) {
+    return TradeTimeoutAction::kMatch;
+  }
+  return TradeTimeoutAction::kDefault;
 }
 
 WithdrawOptions CoincenterCmdLineOptions::computeWithdrawOptions() const {

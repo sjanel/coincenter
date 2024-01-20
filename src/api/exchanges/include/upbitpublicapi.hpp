@@ -12,7 +12,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -69,7 +69,7 @@ class UpbitPublic : public ExchangePublic {
     MarketSet operator()();
 
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradableCurrenciesFunc {
@@ -90,7 +90,7 @@ class UpbitPublic : public ExchangePublic {
     MarketOrderBookMap operator()(int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
     CachedResult<MarketsFunc>& _marketsCache;
   };
 
@@ -98,7 +98,7 @@ class UpbitPublic : public ExchangePublic {
     MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradedVolumeFunc {

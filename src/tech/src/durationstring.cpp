@@ -88,15 +88,19 @@ void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
 string DurationToString(Duration dur) {
   string ret;
 
-  AdjustWithUnit<std::chrono::years>("y", dur, ret);
-  AdjustWithUnit<std::chrono::months>("mon", dur, ret);
-  AdjustWithUnit<std::chrono::weeks>("w", dur, ret);
-  AdjustWithUnit<std::chrono::days>("d", dur, ret);
-  AdjustWithUnit<std::chrono::hours>("h", dur, ret);
-  AdjustWithUnit<std::chrono::minutes>("min", dur, ret);
-  AdjustWithUnit<std::chrono::seconds>("s", dur, ret);
-  AdjustWithUnit<std::chrono::milliseconds>("ms", dur, ret);
-  AdjustWithUnit<std::chrono::microseconds>("us", dur, ret);
+  if (dur == kUndefinedDuration) {
+    ret.append("<undef>");
+  } else {
+    AdjustWithUnit<std::chrono::years>("y", dur, ret);
+    AdjustWithUnit<std::chrono::months>("mon", dur, ret);
+    AdjustWithUnit<std::chrono::weeks>("w", dur, ret);
+    AdjustWithUnit<std::chrono::days>("d", dur, ret);
+    AdjustWithUnit<std::chrono::hours>("h", dur, ret);
+    AdjustWithUnit<std::chrono::minutes>("min", dur, ret);
+    AdjustWithUnit<std::chrono::seconds>("s", dur, ret);
+    AdjustWithUnit<std::chrono::milliseconds>("ms", dur, ret);
+    AdjustWithUnit<std::chrono::microseconds>("us", dur, ret);
+  }
 
   return ret;
 }

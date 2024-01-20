@@ -118,15 +118,15 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
     : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
       _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {
@@ -168,7 +168,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view tag;
   ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_huobiPublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_huobiPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   for (json& depositDetail : data) {
     tag = depositDetail["addressTag"].get<std::string_view>();
@@ -469,7 +469,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const Market mk = tradeInfo.tradeContext.mk;
   string lowerCaseMarket = mk.assetsPairStrLower();
 
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   std::string_view type;
   if (isTakerStrategy) {

@@ -47,6 +47,14 @@ add_unit_test(
 )
 
 add_unit_test(
+    tradeoptions_test
+    src/tradeoptions.cpp
+    test/tradeoptions_test.cpp
+    LIBRARIES
+    coincenter_objects
+)
+
+add_unit_test(
     withdraw_test
     test/withdraw_test.cpp
     LIBRARIES

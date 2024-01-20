@@ -11,7 +11,7 @@
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
 #include "exchangebase.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -118,7 +118,7 @@ class ExchangePrivate : public ExchangeBase {
   /// Builds an ExchangeName wrapping the exchange and the key name
   ExchangeName exchangeName() const { return {_exchangePublic.name(), _apiKey.name()}; }
 
-  const ExchangeInfo &exchangeInfo() const { return _exchangePublic.exchangeInfo(); }
+  const ExchangeConfig &exchangeConfig() const { return _exchangePublic.exchangeConfig(); }
 
  protected:
   ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic, const APIKey &apiKey);

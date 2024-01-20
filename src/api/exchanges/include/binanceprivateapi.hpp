@@ -25,7 +25,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {

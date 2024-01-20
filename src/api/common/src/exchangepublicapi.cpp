@@ -17,7 +17,7 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "market.hpp"
@@ -34,7 +34,7 @@ ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConvert
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
-      _exchangeInfo(coincenterInfo.exchangeInfo(name)) {}
+      _exchangeConfig(coincenterInfo.exchangeConfig(name)) {}
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
@@ -46,8 +46,8 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
   if (conversionPath.empty()) {
     return std::nullopt;
   }
-  const ExchangeInfo::FeeType feeType =
-      priceOptions.isTakerStrategy() ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
+  const ExchangeConfig::FeeType feeType =
+      priceOptions.isTakerStrategy() ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
 
   if (marketOrderBookMap.empty()) {
     std::lock_guard<std::mutex> guard(_allOrderBooksMutex);
@@ -89,7 +89,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
         if (!optA) {
           return std::nullopt;
         }
-        from = _exchangeInfo.applyFee(*optA, feeType);
+        from = _exchangeConfig.applyFee(*optA, feeType);
         break;
       }
       default:

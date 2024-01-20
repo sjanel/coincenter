@@ -19,7 +19,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -161,7 +161,7 @@ class ExchangePublic : public ExchangeBase {
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
-  const ExchangeInfo &exchangeInfo() const { return _exchangeInfo; }
+  const ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
 
   CommonAPI &commonAPI() { return _commonApi; }
 
@@ -180,7 +180,7 @@ class ExchangePublic : public ExchangeBase {
   FiatConverter &_fiatConverter;
   CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
-  const ExchangeInfo &_exchangeInfo;
+  const ExchangeConfig &_exchangeConfig;
   std::mutex _tradableMarketsMutex;
   std::mutex _allOrderBooksMutex;
 };

@@ -50,7 +50,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
     }
 
     const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeStr);
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(exchangePublic->name());
+    const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(exchangePublic->name());
     if (canUsePrivateExchange) {
       for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeStr)) {
         api::ExchangePrivate* exchangePrivate;
@@ -72,7 +72,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
           throw exception("Unsupported platform {}", exchangeStr);
         }
 
-        if (exchangeInfo.shouldValidateApiKey()) {
+        if (exchangeConfig.shouldValidateApiKey()) {
           if (exchangePrivate->validateApiKey()) {
             log::info("{} api key is valid", exchangeName);
           } else {
@@ -81,10 +81,10 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
           }
         }
 
-        _exchanges.emplace_back(exchangeInfo, *exchangePublic, *exchangePrivate);
+        _exchanges.emplace_back(exchangeConfig, *exchangePublic, *exchangePrivate);
       }
     } else {
-      _exchanges.emplace_back(exchangeInfo, *exchangePublic);
+      _exchanges.emplace_back(exchangeConfig, *exchangePublic);
     }
   }
   _exchanges.shrink_to_fit();

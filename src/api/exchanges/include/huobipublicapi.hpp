@@ -16,7 +16,7 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeInfo;
+class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -99,7 +99,7 @@ class HuobiPublic : public ExchangePublic {
     std::pair<MarketSet, MarketInfoMap> operator()();
 
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct AllOrderBooksFunc {
@@ -107,14 +107,14 @@ class HuobiPublic : public ExchangePublic {
 
     CachedResult<MarketsFunc>& _marketsCache;
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct OrderBookFunc {
     MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeInfo& _exchangeInfo;
+    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradedVolumeFunc {
@@ -139,7 +139,7 @@ class HuobiPublic : public ExchangePublic {
 
   static bool ShouldDiscardChain(CurrencyCode cur, const json& chainDetail);
 
-  const ExchangeInfo& _exchangeInfo;
+  const ExchangeConfig& _exchangeConfig;
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

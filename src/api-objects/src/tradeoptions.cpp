@@ -4,22 +4,13 @@
 
 #include "cct_string.hpp"
 #include "durationstring.hpp"
+#include "exchangeconfig.hpp"
 #include "priceoptions.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
-
-TradeOptions::TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
-                           Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
-                           TradeSyncPolicy tradeSyncPolicy)
-    : _maxTradeTime(dur),
-      _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
-      _timeoutAction(timeoutAction),
-      _mode(tradeMode),
-      _tradeTypePolicy(tradeTypePolicy),
-      _tradeSyncPolicy(tradeSyncPolicy) {}
 
 TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                            Duration dur, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
@@ -28,9 +19,23 @@ TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction 
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _priceOptions(priceOptions),
       _timeoutAction(timeoutAction),
-      _mode(tradeMode),
+      _tradeMode(tradeMode),
       _tradeTypePolicy(tradeTypePolicy),
       _tradeSyncPolicy(tradeSyncPolicy) {}
+
+TradeOptions::TradeOptions(const TradeOptions &rhs, const ExchangeConfig &exchangeConfig)
+    : _maxTradeTime(rhs._maxTradeTime == kUndefinedDuration ? exchangeConfig.tradeConfig().timeout()
+                                                            : rhs._maxTradeTime),
+      _minTimeBetweenPriceUpdates(rhs._minTimeBetweenPriceUpdates == kUndefinedDuration
+                                      ? exchangeConfig.tradeConfig().minPriceUpdateDuration()
+                                      : rhs._minTimeBetweenPriceUpdates),
+      _priceOptions(rhs._priceOptions.isDefault() ? PriceOptions(exchangeConfig.tradeConfig()) : rhs._priceOptions),
+      _timeoutAction(rhs._timeoutAction == TradeTimeoutAction::kDefault
+                         ? exchangeConfig.tradeConfig().tradeTimeoutAction()
+                         : rhs._timeoutAction),
+      _tradeMode(rhs._tradeMode),
+      _tradeTypePolicy(rhs._tradeTypePolicy),
+      _tradeSyncPolicy(rhs._tradeSyncPolicy) {}
 
 bool TradeOptions::isMultiTradeAllowed(bool multiTradeAllowedByDefault) const {
   switch (_tradeTypePolicy) {
@@ -47,10 +52,13 @@ bool TradeOptions::isMultiTradeAllowed(bool multiTradeAllowedByDefault) const {
 
 std::string_view TradeOptions::timeoutActionStr() const {
   switch (_timeoutAction) {
+    case TradeTimeoutAction::kDefault:
+      // Default will behave the same as cancel - this field is not publicly exposed
+      [[fallthrough]];
     case TradeTimeoutAction::kCancel:
       return "cancel";
-    case TradeTimeoutAction::kForceMatch:
-      return "force-match";
+    case TradeTimeoutAction::kMatch:
+      return "match";
     default:
       unreachable();
   }

@@ -33,7 +33,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -110,20 +110,20 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
     : ExchangePrivate(config, upbitPublic, apiKey),
       _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
-          _apiKey, exchangeInfo(), upbitPublic._commonApi),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
+          _apiKey, exchangeConfig(), upbitPublic._commonApi),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
@@ -133,7 +133,7 @@ bool UpbitPrivate::validateApiKey() {
 }
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
-  const CurrencyCodeSet& excludedCurrencies = _exchangeInfo.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   CurrencyExchangeVector currencies;
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
   for (const json& curDetails : result) {
@@ -238,7 +238,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
                 std::move(addressIt->get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
@@ -499,12 +499,13 @@ void UpbitPrivate::applyFee(Market mk, CurrencyCode fromCurrencyCode, bool isTak
                             MonetaryAmount& volume) {
   if (fromCurrencyCode == mk.quote()) {
     // For 'buy', from amount is fee excluded
-    ExchangeInfo::FeeType feeType = isTakerStrategy ? ExchangeInfo::FeeType::kTaker : ExchangeInfo::FeeType::kMaker;
-    const ExchangeInfo& exchangeInfo = _coincenterInfo.exchangeInfo(_exchangePublic.name());
+    ExchangeConfig::FeeType feeType =
+        isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+    const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.name());
     if (isTakerStrategy) {
-      from = exchangeInfo.applyFee(from, feeType);
+      from = exchangeConfig.applyFee(from, feeType);
     } else {
-      volume = exchangeInfo.applyFee(volume, feeType);
+      volume = exchangeConfig.applyFee(volume, feeType);
     }
   }
 }
@@ -513,7 +514,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeInfo().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const Market mk = tradeInfo.tradeContext.mk;
 

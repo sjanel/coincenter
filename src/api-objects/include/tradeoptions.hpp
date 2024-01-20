@@ -9,26 +9,26 @@
 #include "tradedefinitions.hpp"
 
 namespace cct {
+class ExchangeConfig;
 class TradeOptions {
  public:
-  static constexpr Duration kDefaultTradeDuration = std::chrono::seconds(30);
   static constexpr Duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
 
   constexpr TradeOptions() noexcept = default;
 
   constexpr explicit TradeOptions(const PriceOptions &priceOptions) : _priceOptions(priceOptions) {}
 
-  constexpr explicit TradeOptions(TradeMode tradeMode) : _mode(tradeMode) {}
-
-  TradeOptions(TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur, Duration minTimeBetweenPriceUpdates,
-               TradeTypePolicy tradeTypePolicy, TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
+  constexpr explicit TradeOptions(TradeMode tradeMode) : _tradeMode(tradeMode) {}
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
   TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
-               Duration minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates,
+               Duration minTimeBetweenPriceUpdates = kUndefinedDuration,
                TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault,
                TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
+
+  /// Constructs a new TradeOptions based on 'rhs' with unspecified options overriden from exchange config values
+  TradeOptions(const TradeOptions &rhs, const ExchangeConfig &exchangeConfig);
 
   constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 
@@ -42,7 +42,7 @@ class TradeOptions {
 
   constexpr int relativePrice() const { return _priceOptions.relativePrice(); }
 
-  constexpr TradeMode tradeMode() const { return _mode; }
+  constexpr TradeMode tradeMode() const { return _tradeMode; }
 
   constexpr TradeSyncPolicy tradeSyncPolicy() const { return _tradeSyncPolicy; }
 
@@ -52,13 +52,13 @@ class TradeOptions {
     return _priceOptions.isTakerStrategy() && (!isSimulation() || !placeRealOrderInSimulationMode);
   }
 
-  constexpr bool isSimulation() const { return _mode == TradeMode::kSimulation; }
+  constexpr bool isSimulation() const { return _tradeMode == TradeMode::kSimulation; }
 
   constexpr bool isFixedPrice() const { return _priceOptions.isFixedPrice(); }
 
   constexpr bool isRelativePrice() const { return _priceOptions.isRelativePrice(); }
 
-  constexpr bool placeMarketOrderAtTimeout() const { return _timeoutAction == TradeTimeoutAction::kForceMatch; }
+  constexpr bool placeMarketOrderAtTimeout() const { return _timeoutAction == TradeTimeoutAction::kMatch; }
 
   constexpr void switchToTakerStrategy() { _priceOptions.switchToTakerStrategy(); }
 
@@ -71,11 +71,11 @@ class TradeOptions {
   bool operator==(const TradeOptions &) const noexcept = default;
 
  private:
-  Duration _maxTradeTime = kDefaultTradeDuration;
-  Duration _minTimeBetweenPriceUpdates = kDefaultMinTimeBetweenPriceUpdates;
+  Duration _maxTradeTime = kUndefinedDuration;
+  Duration _minTimeBetweenPriceUpdates = kUndefinedDuration;
   PriceOptions _priceOptions;
-  TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kCancel;
-  TradeMode _mode = TradeMode::kReal;
+  TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kDefault;
+  TradeMode _tradeMode = TradeMode::kReal;
   TradeTypePolicy _tradeTypePolicy = TradeTypePolicy::kDefault;
   TradeSyncPolicy _tradeSyncPolicy = TradeSyncPolicy::kSynchronous;
 };

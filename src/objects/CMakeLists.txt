@@ -34,8 +34,8 @@ add_unit_test(
 )
 
 add_unit_test(
-    exchangeinfo_test
-    test/exchangeinfo_test.cpp
+    exchangeconfig_test
+    test/exchangeconfig_test.cpp
     LIBRARIES
     coincenter_objects
     DEFINITIONS

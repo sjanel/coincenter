@@ -238,7 +238,7 @@ inline const char *TradeModeToStr(TradeMode tradeMode) { return tradeMode == Tra
 json TradeOptionsToJson(const TradeOptions &tradeOptions) {
   json priceOptionsJson;
   const PriceOptions &priceOptions = tradeOptions.priceOptions();
-  priceOptionsJson.emplace("strategy", priceOptions.priceStrategyStr(false));
+  priceOptionsJson.emplace("strategy", PriceStrategyStr(priceOptions.priceStrategy(), false));
   if (priceOptions.isFixedPrice()) {
     priceOptionsJson.emplace("fixedPrice", priceOptions.fixedPrice().str());
   }

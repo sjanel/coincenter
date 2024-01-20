@@ -26,7 +26,7 @@
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "exchangeinfo.hpp"
+#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -160,14 +160,14 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic&
     : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
       _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeInfo().privateAPIRate())
-                      .setAcceptedEncoding(exchangeInfo().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeInfo().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeInfo().requestsAnswerLogLevel())
+                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
+                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
+                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
+                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeInfo().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}
 
 bool KucoinPrivate::validateApiKey() {
@@ -212,7 +212,7 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view tag = (memoIt != result.end() && !memoIt->is_null()) ? memoIt->get<std::string_view>() : "";
 
   const CoincenterInfo& coincenterInfo = _kucoinPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeInfo(_kucoinPublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet = coincenterInfo.exchangeConfig(_kucoinPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
   Wallet wallet(std::move(exchangeName), currencyCode, std::move(result["address"].get_ref<string&>()), tag,
@@ -452,7 +452,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   const Market mk = tradeInfo.tradeContext.mk;
 
-  bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeInfo().placeSimulateRealOrder());
+  bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
 
   KucoinPublic& kucoinPublic = dynamic_cast<KucoinPublic&>(_exchangePublic);
 

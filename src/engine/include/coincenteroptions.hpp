@@ -10,6 +10,7 @@
 #include "commandlineoption.hpp"
 #include "exchangepublicapi.hpp"
 #include "timedef.hpp"
+#include "tradedefinitions.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
 
@@ -62,8 +63,8 @@ class CoincenterCmdLineOptions {
   std::string_view tradeAll;
   std::string_view tradePrice;
   std::string_view tradeStrategy;
-  Duration tradeTimeout{TradeOptions().maxTradeTime()};
-  Duration tradeUpdatePrice{TradeOptions().minTimeBetweenPriceUpdates()};
+  Duration tradeTimeout = kUndefinedDuration;
+  Duration tradeUpdatePrice = kUndefinedDuration;
 
   std::string_view buy;
   std::string_view sell;
@@ -79,8 +80,8 @@ class CoincenterCmdLineOptions {
   std::optional<std::string_view> recentWithdrawsInfo;
 
   std::string_view ids;
-  Duration minAge{};
-  Duration maxAge{};
+  Duration minAge = kUndefinedDuration;
+  Duration maxAge = kUndefinedDuration;
 
   std::string_view withdrawApply;
   std::string_view withdrawApplyAll;
@@ -102,6 +103,7 @@ class CoincenterCmdLineOptions {
   bool forceMultiTrade = false;
   bool forceSingleTrade = false;
   bool tradeTimeoutMatch = false;
+  bool tradeTimeoutCancel = false;
   bool tradeSim{TradeOptions().isSimulation()};
   bool async = false;
   bool help = false;
@@ -115,6 +117,7 @@ class CoincenterCmdLineOptions {
   static std::string_view SelectDefaultDataDir() noexcept;
 
   TradeTypePolicy computeTradeTypePolicy() const;
+  TradeTimeoutAction computeTradeTimeoutAction() const;
 };
 
 }  // namespace cct

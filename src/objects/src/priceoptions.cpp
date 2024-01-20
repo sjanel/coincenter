@@ -5,58 +5,27 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
 #include "priceoptionsdef.hpp"
-#include "unreachable.hpp"
+#include "tradeconfig.hpp"
 
 namespace cct {
-namespace {
 
-constexpr std::string_view kMakerStr = "maker";
-constexpr std::string_view kNibbleStr = "nibble";
-constexpr std::string_view kTakerStr = "taker";
+PriceOptions::PriceOptions(std::string_view priceStrategyStr)
+    : _priceStrategy(StrategyFromStr(priceStrategyStr)), _isDefault(false) {}
 
-constexpr PriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
-  if (priceStrategyStr == kMakerStr) {
-    return PriceStrategy::kMaker;
-  }
-  if (priceStrategyStr == kNibbleStr) {
-    return PriceStrategy::kNibble;
-  }
-  if (priceStrategyStr == kTakerStr) {
-    return PriceStrategy::kTaker;
-  }
-
-  throw invalid_argument("Unrecognized price strategy, possible values are '{}', '{}' and '{}'", kMakerStr, kNibbleStr,
-                         kTakerStr);
-}
-}  // namespace
-
-PriceOptions::PriceOptions(std::string_view priceStrategyStr) : _priceStrategy(StrategyFromStr(priceStrategyStr)) {}
-
-PriceOptions::PriceOptions(RelativePrice relativePrice) : _relativePrice(relativePrice) {
+PriceOptions::PriceOptions(RelativePrice relativePrice) : _relativePrice(relativePrice), _isDefault(false) {
   if (relativePrice == 0 || relativePrice == kNoRelativePrice) {
     throw invalid_argument("Invalid relative price, should be non zero");
   }
 }
 
-std::string_view PriceOptions::priceStrategyStr(bool placeRealOrderInSimulationMode) const {
-  if (placeRealOrderInSimulationMode) {
-    return kMakerStr;
-  }
-  switch (_priceStrategy) {
-    case PriceStrategy::kMaker:
-      return kMakerStr;
-    case PriceStrategy::kNibble:
-      return kNibbleStr;
-    case PriceStrategy::kTaker:
-      return kTakerStr;
-    default:
-      unreachable();
-  }
-}
+PriceOptions::PriceOptions(const TradeConfig &tradeConfig)
+    : _priceStrategy(tradeConfig.tradeStrategy()), _isDefault(false) {}
+
+PriceOptions::PriceOptions(MonetaryAmount fixedPrice) : _fixedPrice(fixedPrice), _isDefault(false) {}
 
 string PriceOptions::str(bool placeRealOrderInSimulationMode) const {
   string ret;
-  ret.append(priceStrategyStr(placeRealOrderInSimulationMode));
+  ret.append(PriceStrategyStr(_priceStrategy, placeRealOrderInSimulationMode));
   ret.append(" strategy");
   return ret;
 }

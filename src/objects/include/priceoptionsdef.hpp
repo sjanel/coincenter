@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string_view>
 
 namespace cct {
 enum class PriceStrategy : int8_t {
@@ -11,6 +12,10 @@ enum class PriceStrategy : int8_t {
             // (compared to kMaker)
   kTaker    // Place order at market price for an expecting direct match
 };
+
+PriceStrategy StrategyFromStr(std::string_view priceStrategyStr);
+
+std::string_view PriceStrategyStr(PriceStrategy priceStrategy, bool placeRealOrderInSimulationMode);
 
 /// Extension of above price strategies, to have a more precise control of the pricing behavior.
 /// It allows picking a price at a <n> relative step price compared to the ask and bid prices of the orderbook.
