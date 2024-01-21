@@ -21,6 +21,8 @@ class BestURLPicker {
   static constexpr int kNbMaxBaseUrl = 4;
 
  public:
+  BestURLPicker() noexcept = default;
+
   /// Builds a BestURLPicker that will work with several base URLs.
   /// Warning: given base URL should come from static storage
   template <unsigned N, std::enable_if_t<(N > 0) && N <= kNbMaxBaseUrl, bool> = true>
@@ -67,7 +69,7 @@ class BestURLPicker {
   using ResponseTimeStatsPerBaseUrl = FixedCapacityVector<ResponseTimeStats, kNbMaxBaseUrl>;
 
   // Non-owning pointer, should come from static storage (default special operations are fine)
-  const std::string_view *_pBaseUrls;
+  const std::string_view *_pBaseUrls{};
   ResponseTimeStatsPerBaseUrl _responseTimeStatsPerBaseUrl;
 };
 }  // namespace cct

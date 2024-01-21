@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 
 #include "cct_log.hpp"
@@ -10,18 +11,26 @@ namespace cct {
 
 class PermanentCurlOptions {
  public:
+  static constexpr auto kDefaultNbMaxRetries = 5;
+
+  enum class TooManyErrorsPolicy : int8_t { kThrow, kReturnEmptyResponse };
+
   PermanentCurlOptions() noexcept = default;
 
-  const string &getUserAgent() const { return _userAgent; }
+  const auto &getUserAgent() const { return _userAgent; }
 
-  const string &getAcceptedEncoding() const { return _acceptedEncoding; }
+  const auto &getAcceptedEncoding() const { return _acceptedEncoding; }
 
-  Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
+  auto minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
-  bool followLocation() const { return _followLocation; }
+  auto followLocation() const { return _followLocation; }
 
-  log::level::level_enum requestCallLogLevel() const { return _requestCallLogLevel; }
-  log::level::level_enum requestAnswerLogLevel() const { return _requestAnswerLogLevel; }
+  auto requestCallLogLevel() const { return _requestCallLogLevel; }
+  auto requestAnswerLogLevel() const { return _requestAnswerLogLevel; }
+
+  auto tooManyErrorsPolicy() const { return _tooManyErrorsPolicy; }
+
+  auto nbMaxRetries() const { return _nbMaxRetries; }
 
   class Builder {
    public:
@@ -72,14 +81,25 @@ class PermanentCurlOptions {
       return *this;
     }
 
+    Builder &setNbMaxRetries(int nbMaxRetries) {
+      _nbMaxRetries = nbMaxRetries;
+      return *this;
+    }
+
     Builder &setFollowLocation() {
       _followLocation = true;
       return *this;
     }
 
+    Builder &setTooManyErrorsPolicy(TooManyErrorsPolicy tooManyErrorsPolicy) {
+      _tooManyErrorsPolicy = tooManyErrorsPolicy;
+      return *this;
+    }
+
     PermanentCurlOptions build() {
       return {std::move(_userAgent), std::move(_acceptedEncoding), _minDurationBetweenQueries,
-              _requestCallLogLevel,  _requestAnswerLogLevel,       _followLocation};
+              _requestCallLogLevel,  _requestAnswerLogLevel,       _nbMaxRetries,
+              _followLocation,       _tooManyErrorsPolicy};
     }
 
    private:
@@ -88,26 +108,32 @@ class PermanentCurlOptions {
     Duration _minDurationBetweenQueries{};
     log::level::level_enum _requestCallLogLevel = log::level::level_enum::info;
     log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::trace;
+    int _nbMaxRetries = kDefaultNbMaxRetries;
     bool _followLocation = false;
+    TooManyErrorsPolicy _tooManyErrorsPolicy = TooManyErrorsPolicy::kThrow;
   };
 
  private:
   PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries,
                        log::level::level_enum requestCallLogLevel, log::level::level_enum requestAnswerLogLevel,
-                       bool followLocation)
+                       int nbMaxRetries, bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
       : _userAgent(std::move(userAgent)),
         _acceptedEncoding(std::move(acceptedEncoding)),
         _minDurationBetweenQueries(minDurationBetweenQueries),
         _requestCallLogLevel(requestCallLogLevel),
         _requestAnswerLogLevel(requestAnswerLogLevel),
-        _followLocation(followLocation) {}
+        _nbMaxRetries(nbMaxRetries),
+        _followLocation(followLocation),
+        _tooManyErrorsPolicy(tooManyErrorsPolicy) {}
 
   string _userAgent;
   string _acceptedEncoding;
   Duration _minDurationBetweenQueries;
   log::level::level_enum _requestCallLogLevel;
   log::level::level_enum _requestAnswerLogLevel;
+  int _nbMaxRetries;
   bool _followLocation;
+  TooManyErrorsPolicy _tooManyErrorsPolicy;
 };
 
 }  // namespace cct

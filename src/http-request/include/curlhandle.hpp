@@ -26,6 +26,8 @@ string GetCurlVersionInfo();
 /// CurlHandle for faster similar queries.
 class CurlHandle {
  public:
+  CurlHandle() noexcept = default;
+
   /// Constructs a new CurlHandle.
   /// @param bestURLPicker object managing which URL to pick at each query based on response time stats
   /// @param pMetricGateway if not null, queries will export some metrics
@@ -38,9 +40,8 @@ class CurlHandle {
   CurlHandle(const CurlHandle &) = delete;
   CurlHandle &operator=(const CurlHandle &) = delete;
 
-  // Move operations are deleted but could be implemented if needed. It's just to avoid useless code.
-  CurlHandle(CurlHandle &&) = delete;
-  CurlHandle &operator=(CurlHandle &&) = delete;
+  CurlHandle(CurlHandle &&rhs) noexcept;
+  CurlHandle &operator=(CurlHandle &&rhs) noexcept;
 
   ~CurlHandle();
 
@@ -61,6 +62,8 @@ class CurlHandle {
   /// complexity in a flat key value string.
   void setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap);
 
+  void swap(CurlHandle &rhs) noexcept;
+
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
@@ -68,14 +71,16 @@ class CurlHandle {
 
   // void pointer instead of CURL to avoid having to forward declare (we don't know about the underlying definition)
   // and to avoid clients to pull unnecessary curl dependencies by just including the header
-  void *_handle;
-  AbstractMetricGateway *_pMetricGateway;  // non-owning pointer
-  Duration _minDurationBetweenQueries;
+  void *_handle = nullptr;
+  AbstractMetricGateway *_pMetricGateway = nullptr;  // non-owning pointer
+  Duration _minDurationBetweenQueries{};
   TimePoint _lastQueryTime{};
   BestURLPicker _bestUrlPicker;
   string _queryData;
-  log::level::level_enum _requestCallLogLevel;
-  log::level::level_enum _requestAnswerLogLevel;
+  log::level::level_enum _requestCallLogLevel = log::level::level_enum::off;
+  log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::off;
+  int _nbMaxRetries = PermanentCurlOptions::kDefaultNbMaxRetries;
+  PermanentCurlOptions::TooManyErrorsPolicy _tooManyErrorsPolicy = PermanentCurlOptions::TooManyErrorsPolicy::kThrow;
 };
 
 // Simple RAII class managing global init and clean up of Curl library.

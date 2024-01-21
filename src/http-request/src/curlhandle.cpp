@@ -31,6 +31,7 @@
 #include "proxy.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
+#include "unreachable.hpp"
 
 namespace cct {
 
@@ -81,7 +82,9 @@ CurlHandle::CurlHandle(const BestURLPicker &bestURLPicker, AbstractMetricGateway
       _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
       _bestUrlPicker(bestURLPicker),
       _requestCallLogLevel(permanentCurlOptions.requestCallLogLevel()),
-      _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()) {
+      _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()),
+      _nbMaxRetries(permanentCurlOptions.nbMaxRetries()),
+      _tooManyErrorsPolicy(permanentCurlOptions.tooManyErrorsPolicy()) {
   if (settings::AreQueryResponsesOverriden(runMode)) {
     _handle = nullptr;
   } else {
@@ -237,7 +240,6 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
            optsStr);
 
   // Actually make the query, with a fast retry mechanism
-  static constexpr int kNbMaxRetries = 5;
   Duration sleepingTime = std::chrono::milliseconds(100);
   int retryPos = 0;
   CURLcode res;
@@ -247,7 +249,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
         _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                              CurlMetrics::kNbRequestErrorKeys.find(opts.requestType())->second);
       }
-      log::error("Got curl error ({}), retry {}/{} after {}", static_cast<int>(res), retryPos, kNbMaxRetries,
+      log::error("Got curl error ({}), retry {}/{} after {}", static_cast<int>(res), retryPos, _nbMaxRetries,
                  DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime *= 2;
@@ -275,9 +277,18 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
       _queryData.shrink_to_fit();
     }
 
-  } while (res != CURLE_OK && ++retryPos <= kNbMaxRetries);
-  if (retryPos > kNbMaxRetries) {
-    throw exception("Too many errors from curl, last ({})", static_cast<int>(res));
+  } while (res != CURLE_OK && ++retryPos <= _nbMaxRetries);
+  if (retryPos > _nbMaxRetries) {
+    switch (_tooManyErrorsPolicy) {
+      case PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse:
+        log::error("Too many errors from curl, return empty response");
+        _queryData.clear();
+        break;
+      case PermanentCurlOptions::TooManyErrorsPolicy::kThrow:
+        throw exception("Too many errors from curl, last ({})", static_cast<int>(res));
+      default:
+        unreachable();
+    }
   }
 
   // Avoid polluting the logs for large response which are more likely to be HTML
@@ -304,6 +315,27 @@ void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &quer
     flatQueryResponses.append(query, response);
   }
   _queryData = string(flatQueryResponses.str());
+}
+
+void CurlHandle::swap(CurlHandle &rhs) noexcept {
+  using std::swap;
+
+  swap(_handle, rhs._handle);
+  swap(_pMetricGateway, rhs._pMetricGateway);
+  swap(_minDurationBetweenQueries, rhs._minDurationBetweenQueries);
+  swap(_lastQueryTime, rhs._lastQueryTime);
+  swap(_bestUrlPicker, rhs._bestUrlPicker);
+  _queryData.swap(rhs._queryData);
+  swap(_requestCallLogLevel, rhs._requestCallLogLevel);
+  swap(_requestAnswerLogLevel, rhs._requestAnswerLogLevel);
+  swap(_tooManyErrorsPolicy, rhs._tooManyErrorsPolicy);
+}
+
+CurlHandle::CurlHandle(CurlHandle &&rhs) noexcept { swap(rhs); }
+
+CurlHandle &CurlHandle::operator=(CurlHandle &&rhs) noexcept {
+  swap(rhs);
+  return *this;
 }
 
 CurlHandle::~CurlHandle() {
