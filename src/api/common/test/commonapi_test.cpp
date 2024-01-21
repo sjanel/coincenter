@@ -12,7 +12,7 @@ class CommonAPITest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo config{runMode};
-  CommonAPI commonAPI{config};
+  CommonAPI commonAPI{config, Duration::max(), CommonAPI::AtInit::kNoLoadFromFileCache};
 };
 
 TEST_F(CommonAPITest, IsFiatService) {

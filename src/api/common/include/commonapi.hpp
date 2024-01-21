@@ -6,6 +6,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
+#include "cct_vector.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangebase.hpp"
@@ -41,12 +42,18 @@ class CommonAPI : public ExchangeBase {
   void updateCacheFile() const override;
 
  private:
-  struct FiatsFunc {
+  class FiatsFunc {
+   public:
     FiatsFunc();
 
     Fiats operator()();
 
-    CurlHandle _curlHandle;
+    vector<CurrencyCode> retrieveFiatsSource1();
+    vector<CurrencyCode> retrieveFiatsSource2();
+
+   private:
+    CurlHandle _curlHandle1;
+    CurlHandle _curlHandle2;
   };
 
   CachedResultVault _cachedResultVault;
