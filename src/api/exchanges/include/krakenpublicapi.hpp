@@ -20,6 +20,8 @@ class CommonAPI;
 
 class KrakenPublic : public ExchangePublic {
  public:
+  static constexpr std::string_view kExchangeName = "kraken";
+
   KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
@@ -36,7 +38,9 @@ class KrakenPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
-  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _withdrawalFeesCache.get().first; }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override {
+    return _commonApi.queryWithdrawalFees(kExchangeName).first;
+  }
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
@@ -56,8 +60,6 @@ class KrakenPublic : public ExchangePublic {
 
   MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk).second; }
 
-  void updateCacheFile() const override;
-
   static constexpr std::string_view kUrlPrefix = "https://api.kraken.com";
   static constexpr std::string_view kVersion = "/0";
   static constexpr std::string_view kUrlBase = JoinStringView_v<kUrlPrefix, kVersion>;
@@ -72,25 +74,6 @@ class KrakenPublic : public ExchangePublic {
     CommonAPI& _commonApi;
     CurlHandle& _curlHandle;
     const ExchangeConfig& _exchangeConfig;
-  };
-
-  class WithdrawalFeesFunc {
-   public:
-    using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
-    using WithdrawalInfoMaps = std::pair<MonetaryAmountByCurrencySet, WithdrawalMinMap>;
-
-    WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries);
-
-    WithdrawalInfoMaps operator()();
-
-   private:
-    WithdrawalInfoMaps updateFromSource1();
-    WithdrawalInfoMaps updateFromSource2();
-
-    // Use different curl handles as it is not from Kraken official REST API.
-    // There are two of them such that second one may be used in case of failure of the first one
-    CurlHandle _curlHandle1;
-    CurlHandle _curlHandle2;
   };
 
   struct MarketsFunc {
@@ -137,7 +120,6 @@ class KrakenPublic : public ExchangePublic {
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
-  CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderBookCache;
