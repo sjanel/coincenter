@@ -7,6 +7,7 @@
 #include "exchange.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -59,9 +60,13 @@ class ExchangesBaseTest : public ::testing::Test {
 
   MonetaryAmount askPrice1{"2300.45EUR"};
   MonetaryAmount bidPrice1{"2300.4EUR"};
+
+  TimePoint time{};
+
   MarketOrderBook marketOrderBook10{
-      askPrice1, MonetaryAmount("1.09ETH"), bidPrice1, MonetaryAmount("41ETH"), volAndPriDec1, depth};
-  MarketOrderBook marketOrderBook11{MonetaryAmount{"2301.15EUR"},
+      time, askPrice1, MonetaryAmount("1.09ETH"), bidPrice1, MonetaryAmount("41ETH"), volAndPriDec1, depth};
+  MarketOrderBook marketOrderBook11{time,
+                                    MonetaryAmount{"2301.15EUR"},
                                     MonetaryAmount("0.4ETH"),
                                     MonetaryAmount{"2301.05EUR"},
                                     MonetaryAmount("17ETH"),
@@ -72,8 +77,9 @@ class ExchangesBaseTest : public ::testing::Test {
   MonetaryAmount askPrice2{"31056.67 EUR"};
   MonetaryAmount bidPrice2{"31056.66 EUR"};
   MarketOrderBook marketOrderBook20{
-      askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec2, depth};
-  MarketOrderBook marketOrderBook21{MonetaryAmount{"31051.02 EUR"},
+      time, askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec2, depth};
+  MarketOrderBook marketOrderBook21{time,
+                                    MonetaryAmount{"31051.02 EUR"},
                                     MonetaryAmount("0.409BTC"),
                                     MonetaryAmount{"31051.01 EUR"},
                                     MonetaryAmount("1.9087 BTC"),
@@ -84,7 +90,7 @@ class ExchangesBaseTest : public ::testing::Test {
   MonetaryAmount askPrice3{"0.37 BTC"};
   MonetaryAmount bidPrice3{"0.36 BTC"};
   MarketOrderBook marketOrderBook3{
-      askPrice3, MonetaryAmount("916.4XRP"), bidPrice3, MonetaryAmount("3494XRP"), volAndPriDec3, depth};
+      time, askPrice3, MonetaryAmount("916.4XRP"), bidPrice3, MonetaryAmount("3494XRP"), volAndPriDec3, depth};
 
   const MonetaryAmount amounts1[4] = {MonetaryAmount("1500XRP"), MonetaryAmount("15BTC"), MonetaryAmount("1.5ETH"),
                                       MonetaryAmount("5000USDT")};

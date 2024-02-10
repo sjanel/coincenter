@@ -164,7 +164,8 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount deltaPri(1, pri.currencyCode(), volAndPriDec1.priNbDecimals);
     MonetaryAmount askPrice = side == TradeSide::kBuy ? pri : pri + deltaPri;
     MonetaryAmount bidPrice = side == TradeSide::kSell ? pri : pri - deltaPri;
-    MarketOrderBook marketOrderbook{askPrice, maxVol, bidPrice, maxVol, volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook{
+        time, askPrice, maxVol, bidPrice, maxVol, volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
     TradedAmounts tradedAmounts(from, tradedTo);
     OrderId orderId("OrderId # 0");
@@ -243,8 +244,11 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount askPri2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
     MonetaryAmount bidPri1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
     MonetaryAmount bidPri2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
-    MarketOrderBook marketOrderbook1{askPri1, maxVol1, bidPri1, maxVol1, volAndPriDec1, MarketOrderBook::kDefaultDepth};
-    MarketOrderBook marketOrderbook2{askPri2, maxVol2, bidPri2, maxVol2, volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    TimePoint time{};
+    MarketOrderBook marketOrderbook1{
+        time, askPri1, maxVol1, bidPri1, maxVol1, volAndPriDec1, MarketOrderBook::kDefaultDepth};
+    MarketOrderBook marketOrderbook2{
+        time, askPri2, maxVol2, bidPri2, maxVol2, volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
     TradedAmounts tradedAmounts1(from, vol2);
     TradedAmounts tradedAmounts2(MonetaryAmount(from, interCur), tradedTo2);

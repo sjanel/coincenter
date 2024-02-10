@@ -455,6 +455,7 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   for (Market mk : markets) {
     binanceAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
+  const auto time = Clock::now();
   for (const json& tickerDetails : result) {
     string assetsPairStr = tickerDetails["symbol"];
     auto it = binanceAssetPairToStdMarketMap.find(assetsPairStr);
@@ -467,7 +468,7 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
     MonetaryAmount askVol(tickerDetails["askQty"].get<std::string_view>(), mk.base());
     MonetaryAmount bidVol(tickerDetails["bidQty"].get<std::string_view>(), mk.base());
 
-    ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol,
+    ret.insert_or_assign(mk, MarketOrderBook(time, askPri, askVol, bidPri, bidVol,
                                              QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk), depth));
   }
 
@@ -504,7 +505,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
     }
   }
 
-  return MarketOrderBook(mk, orderBookLines);
+  return MarketOrderBook(Clock::now(), mk, orderBookLines);
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {

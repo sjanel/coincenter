@@ -179,6 +179,7 @@ MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
 namespace {
 MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
   MarketOrderBookMap ret;
+  const auto time = Clock::now();
   for (const json& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
@@ -211,7 +212,7 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
     if (static_cast<int>(orderBookLines.size() / 2) < depth) {
       log::warn("Upbit does not support orderbook depth larger than {}", orderBookLines.size() / 2);
     }
-    ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
+    ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
   }
   log::info("Retrieved {} order books from Upbit", ret.size());
   return ret;

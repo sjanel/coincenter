@@ -199,6 +199,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
     if (quoteCurrency != "KRW") {
       log::error("Unexpected Bithumb reply for orderbook. May require code api update");
     }
+    const auto time = Clock::now();
     CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
     const CurrencyCodeSet& excludedCurrencies = exchangeConfig.excludedCurrenciesAll();
     for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
@@ -243,7 +244,7 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
           }
         }
         Market market(baseCurrencyCode, quoteCurrencyCode);
-        ret.insert_or_assign(market, MarketOrderBook(market, orderBookLines));
+        ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
         if (singleMarketQuote) {
           break;
         }

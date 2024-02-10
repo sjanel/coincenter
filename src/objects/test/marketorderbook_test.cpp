@@ -9,6 +9,7 @@
 #include "cct_exception.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 namespace {
@@ -20,12 +21,12 @@ inline bool operator==(const AmountAtPrice &lhs, const AmountAtPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;
 }
 
-TEST(MarketOrderBookTest, Basic) { EXPECT_TRUE(MarketOrderBook(Market("ETH", "EUR"), {}).empty()); }
+TEST(MarketOrderBookTest, Basic) { EXPECT_TRUE(MarketOrderBook(Clock::now(), Market("ETH", "EUR"), {}).empty()); }
 
 class MarketOrderBookTestCase1 : public ::testing::Test {
  protected:
   MarketOrderBook marketOrderBook{
-      Market("ETH", "EUR"),
+      Clock::now(), Market("ETH", "EUR"),
       std::array<OrderBookLine, 6>{
           OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), false),
           OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), false),
@@ -127,11 +128,9 @@ TEST_F(MarketOrderBookTestCase1, Convert) {
 
 class MarketOrderBookTestCase2 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
+  TimePoint time{};
   MarketOrderBook marketOrderBook{
-      Market("APM", "KRW"),
+      time, Market("APM", "KRW"),
       std::array<OrderBookLine, 9>{
           OrderBookLine(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW"), true),
           OrderBookLine(MonetaryAmount("90184.3951", "APM"), MonetaryAmount("57.81", "KRW"), true),
@@ -158,11 +157,9 @@ TEST_F(MarketOrderBookTestCase2, ConvertQuoteAmountToBase) {
 
 class MarketOrderBookTestCase3 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
+  TimePoint time{};
   MarketOrderBook marketOrderBook{
-      Market("XLM", "BTC"),
+      time, Market("XLM", "BTC"),
       std::array<OrderBookLine, 6>{
           OrderBookLine(MonetaryAmount("126881.164", "XLM"), MonetaryAmount("0.000007130", "BTC"), true),
           OrderBookLine(MonetaryAmount("95716.519", "XLM"), MonetaryAmount("0.000007120", "BTC"), true),
@@ -182,10 +179,9 @@ TEST_F(MarketOrderBookTestCase3, Convert) {
 
 class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
  protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
-  MarketOrderBook marketOrderBook{MonetaryAmount("2300.45 EUR"),
+  TimePoint time{};
+  MarketOrderBook marketOrderBook{time,
+                                  MonetaryAmount("2300.45 EUR"),
                                   MonetaryAmount("193.09 ADA"),
                                   MonetaryAmount("2300.4 EUR"),
                                   MonetaryAmount("41 ADA"),
@@ -204,44 +200,44 @@ TEST_F(MarketOrderBookTestCaseExtended1, Convert) {
 }
 
 TEST(MarketOrderBookExtendedTest, ComputeVolAndPriNbDecimalsFromTickerInfo) {
-  MarketOrderBook marketOrderBook(MonetaryAmount("12355.00002487 XLM"), MonetaryAmount("193.0900000000078 ADA"),
-                                  MonetaryAmount("12355.00002486 XLM"), MonetaryAmount("504787104.7801 ADA"), {4, 8},
-                                  10);
+  MarketOrderBook marketOrderBook(Clock::now(), MonetaryAmount("12355.00002487 XLM"),
+                                  MonetaryAmount("193.0900000000078 ADA"), MonetaryAmount("12355.00002486 XLM"),
+                                  MonetaryAmount("504787104.7801 ADA"), {4, 8}, 10);
 
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("12355.00002486 XLM"));
   EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("12355.00002487 XLM"));
 }
 
 TEST(MarketOrderBookExtendedTest, InvalidPrice) {
-  EXPECT_NO_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_NO_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                   MonetaryAmount("5ADA"), {0, 0}));
-  EXPECT_THROW(MarketOrderBook(MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("1XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("5ADA"), {0, 0}),
                exception);
 }
 
 TEST(MarketOrderBookExtendedTest, InvalidDepth) {
-  EXPECT_NO_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_NO_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                   MonetaryAmount("5ADA"), {0, 0}));
-  EXPECT_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("5ADA"), {0, 0}, 0),
                exception);
-  EXPECT_NO_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_NO_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                   MonetaryAmount("5ADA"), {2, 2}));
-  EXPECT_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
+  EXPECT_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("1ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("5ADA"), {2, 2}, -1),
                exception);
 }
 
 TEST(MarketOrderBookExtendedTest, InvalidNumberOfDecimals) {
-  EXPECT_NO_THROW(MarketOrderBook(MonetaryAmount("0.03XLM"), MonetaryAmount("1ADA"), MonetaryAmount("0.02XLM"),
-                                  MonetaryAmount("5ADA"), {8, 8}));
-  EXPECT_THROW(MarketOrderBook(MonetaryAmount("0.03XLM"), MonetaryAmount("1ADA"), MonetaryAmount("0.02XLM"),
-                               MonetaryAmount("5ADA"), {8, 1}),
+  EXPECT_NO_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("0.03XLM"), MonetaryAmount("1ADA"),
+                                  MonetaryAmount("0.02XLM"), MonetaryAmount("5ADA"), {8, 8}));
+  EXPECT_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("0.03XLM"), MonetaryAmount("1ADA"),
+                               MonetaryAmount("0.02XLM"), MonetaryAmount("5ADA"), {8, 1}),
                exception);
-  EXPECT_NO_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("0.04ADA"), MonetaryAmount("1XLM"),
-                                  MonetaryAmount("0.03ADA"), {8, 8}));
-  EXPECT_THROW(MarketOrderBook(MonetaryAmount("2XLM"), MonetaryAmount("0.04ADA"), MonetaryAmount("1XLM"),
+  EXPECT_NO_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("0.04ADA"),
+                                  MonetaryAmount("1XLM"), MonetaryAmount("0.03ADA"), {8, 8}));
+  EXPECT_THROW(MarketOrderBook(Clock::now(), MonetaryAmount("2XLM"), MonetaryAmount("0.04ADA"), MonetaryAmount("1XLM"),
                                MonetaryAmount("0.03ADA"), {1, 8}),
                exception);
 }

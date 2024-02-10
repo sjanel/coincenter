@@ -18,8 +18,7 @@ string ToString(TimePoint timePoint, const char* format) {
   const std::time_t time = Clock::to_time_t(timePoint);
   std::tm utc{};
 #ifdef CCT_MSVC
-  errno_t err = gmtime_s(&utc, &time);
-  if (err) {
+  if (gmtime_s(&utc, &time)) {
     throw exception("Issue in gmtime_s");
   }
   const std::tm* pUtc = &utc;

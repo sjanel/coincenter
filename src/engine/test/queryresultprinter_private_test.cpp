@@ -976,15 +976,15 @@ class QueryResultPrinterOpenedOrdersNoConstraintsTest : public QueryResultPrinte
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printOpenedOrders(openedOrdersPerExchange, ordersConstraints);
   static constexpr std::string_view kExpected = R"(
-+----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
-| Exchange | Account   | Exchange Id | Placed time         | Side | Price           | Matched Amount   | Remaining Amount |
-+----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
-| bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | Sell | 0.00000045 USDT | 11235435435 SHIB | 11235435.59 SHIB |
-| bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | Buy  | 1.31 USDT       | 13 XRP           | 500.45 XRP       |
-| huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | Sell | 1500.56 USDT    | 0.56 ETH         | 0.44 ETH         |
-| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | Buy  | 50000 EUR       | 0 BTC            | 1 BTC            |
-| huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | Sell | 1574564 KRW     | 34.56 LTC        | 0.4 LTC          |
-+----------+-----------+-------------+---------------------+------+-----------------+------------------+------------------+
++----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
+| Exchange | Account   | Exchange Id | Placed time          | Side | Price           | Matched Amount   | Remaining Amount |
++----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
+| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | Sell | 0.00000045 USDT | 11235435435 SHIB | 11235435.59 SHIB |
+| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | Buy  | 1.31 USDT       | 13 XRP           | 500.45 XRP       |
+| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | Sell | 1500.56 USDT    | 0.56 ETH         | 0.44 ETH         |
+| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | Buy  | 50000 EUR       | 0 BTC            | 1 BTC            |
+| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | Sell | 1574564 KRW     | 34.56 LTC        | 0.4 LTC          |
++----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
 )";
   expectStr(kExpected);
 }
@@ -1018,7 +1018,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "id": "id5",
           "matched": "11235435435",
           "pair": "SHIB-USDT",
-          "placedTime": "2002-06-23 07:58:35",
+          "placedTime": "2002-06-23T07:58:35Z",
           "price": "0.00000045",
           "remaining": "11235435.59",
           "side": "Sell"
@@ -1027,7 +1027,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "id": "id3",
           "matched": "13",
           "pair": "XRP-USDT",
-          "placedTime": "2006-07-14 23:58:24",
+          "placedTime": "2006-07-14T23:58:24Z",
           "price": "1.31",
           "remaining": "500.45",
           "side": "Buy"
@@ -1040,7 +1040,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "id": "id1",
           "matched": "0",
           "pair": "BTC-EUR",
-          "placedTime": "1999-03-25 04:46:43",
+          "placedTime": "1999-03-25T04:46:43Z",
           "price": "50000",
           "remaining": "1",
           "side": "Buy"
@@ -1049,7 +1049,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "id": "id4",
           "matched": "34.56",
           "pair": "LTC-KRW",
-          "placedTime": "2011-10-03 06:49:36",
+          "placedTime": "2011-10-03T06:49:36Z",
           "price": "1574564",
           "remaining": "0.4",
           "side": "Sell"
@@ -1060,7 +1060,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "id": "id2",
           "matched": "0.56",
           "pair": "ETH-USDT",
-          "placedTime": "2002-06-23 07:58:35",
+          "placedTime": "2002-06-23T07:58:35Z",
           "price": "1500.56",
           "remaining": "0.44",
           "side": "Sell"
@@ -1098,15 +1098,15 @@ class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrin
 TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentDeposits(depositsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
-+----------+-----------+-------------+---------------------+-----------------+------------+
-| Exchange | Account   | Exchange Id | Received time       | Amount          | Status     |
-+----------+-----------+-------------+---------------------+-----------------+------------+
-| bithumb  | testuser1 | id3         | 2006-07-14 23:58:24 | 15020.67 EUR    | failed     |
-| bithumb  | testuser1 | id5         | 2011-10-03 06:49:36 | 69204866.9 DOGE | success    |
-| huobi    | testuser2 | id2         | 2002-06-23 07:58:35 | 37 XRP          | success    |
-| huobi    | testuser1 | id1         | 1999-03-25 04:46:43 | 0.045 BTC       | initial    |
-| huobi    | testuser1 | id4         | 2011-10-03 06:49:36 | 1.31 ETH        | processing |
-+----------+-----------+-------------+---------------------+-----------------+------------+
++----------+-----------+-------------+----------------------+-----------------+------------+
+| Exchange | Account   | Exchange Id | Received time        | Amount          | Status     |
++----------+-----------+-------------+----------------------+-----------------+------------+
+| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | 15020.67 EUR    | failed     |
+| bithumb  | testuser1 | id5         | 2011-10-03T06:49:36Z | 69204866.9 DOGE | success    |
+| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | 37 XRP          | success    |
+| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | 0.045 BTC       | initial    |
+| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | 1.31 ETH        | processing |
++----------+-----------+-------------+----------------------+-----------------+------------+
 )";
   expectStr(kExpected);
 }
@@ -1140,14 +1140,14 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "15020.67",
           "cur": "EUR",
           "id": "id3",
-          "receivedTime": "2006-07-14 23:58:24",
+          "receivedTime": "2006-07-14T23:58:24Z",
           "status": "failed"
         },
         {
           "amount": "69204866.9",
           "cur": "DOGE",
           "id": "id5",
-          "receivedTime": "2011-10-03 06:49:36",
+          "receivedTime": "2011-10-03T06:49:36Z",
           "status": "success"
         }
       ]
@@ -1158,14 +1158,14 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "0.045",
           "cur": "BTC",
           "id": "id1",
-          "receivedTime": "1999-03-25 04:46:43",
+          "receivedTime": "1999-03-25T04:46:43Z",
           "status": "initial"
         },
         {
           "amount": "1.31",
           "cur": "ETH",
           "id": "id4",
-          "receivedTime": "2011-10-03 06:49:36",
+          "receivedTime": "2011-10-03T06:49:36Z",
           "status": "processing"
         }
       ],
@@ -1174,7 +1174,7 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, Json) {
           "amount": "37",
           "cur": "XRP",
           "id": "id2",
-          "receivedTime": "2002-06-23 07:58:35",
+          "receivedTime": "2002-06-23T07:58:35Z",
           "status": "success"
         }
       ]
@@ -1214,15 +1214,15 @@ class QueryResultPrinterRecentWithdrawsNoConstraintsTest : public QueryResultPri
 TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable).printRecentWithdraws(withdrawsPerExchange, constraints);
   static constexpr std::string_view kExpected = R"(
-+----------+-----------+-------------+---------------------+--------------------+-------------+------------+
-| Exchange | Account   | Exchange Id | Sent time           | Net Emitted Amount | Fee         | Status     |
-+----------+-----------+-------------+---------------------+--------------------+-------------+------------+
-| bithumb  | testuser1 | id3         | 1999-03-25 04:46:43 | 15020.67 EUR       | 0.1 EUR     | failed     |
-| bithumb  | testuser1 | id5         | 2002-06-23 07:58:35 | 69204866.9 DOGE    | 2 DOGE      | success    |
-| huobi    | testuser2 | id2         | 2011-10-03 06:49:36 | 37 XRP             | 0.02 XRP    | success    |
-| huobi    | testuser1 | id4         | 2002-06-23 07:58:35 | 1.31 ETH           | 0.001 ETH   | processing |
-| huobi    | testuser1 | id1         | 2006-07-14 23:58:24 | 0.045 BTC          | 0.00001 BTC | initial    |
-+----------+-----------+-------------+---------------------+--------------------+-------------+------------+
++----------+-----------+-------------+----------------------+--------------------+-------------+------------+
+| Exchange | Account   | Exchange Id | Sent time            | Net Emitted Amount | Fee         | Status     |
++----------+-----------+-------------+----------------------+--------------------+-------------+------------+
+| bithumb  | testuser1 | id3         | 1999-03-25T04:46:43Z | 15020.67 EUR       | 0.1 EUR     | failed     |
+| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | 69204866.9 DOGE    | 2 DOGE      | success    |
+| huobi    | testuser2 | id2         | 2011-10-03T06:49:36Z | 37 XRP             | 0.02 XRP    | success    |
+| huobi    | testuser1 | id4         | 2002-06-23T07:58:35Z | 1.31 ETH           | 0.001 ETH   | processing |
+| huobi    | testuser1 | id1         | 2006-07-14T23:58:24Z | 0.045 BTC          | 0.00001 BTC | initial    |
++----------+-----------+-------------+----------------------+--------------------+-------------+------------+
 )";
   expectStr(kExpected);
 }
@@ -1257,7 +1257,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "fee": "0.1",
           "id": "id3",
           "netEmittedAmount": "15020.67",
-          "sentTime": "1999-03-25 04:46:43",
+          "sentTime": "1999-03-25T04:46:43Z",
           "status": "failed"
         },
         {
@@ -1265,7 +1265,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "fee": "2",
           "id": "id5",
           "netEmittedAmount": "69204866.9",
-          "sentTime": "2002-06-23 07:58:35",
+          "sentTime": "2002-06-23T07:58:35Z",
           "status": "success"
         }
       ]
@@ -1277,7 +1277,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "fee": "0.001",
           "id": "id4",
           "netEmittedAmount": "1.31",
-          "sentTime": "2002-06-23 07:58:35",
+          "sentTime": "2002-06-23T07:58:35Z",
           "status": "processing"
         },
         {
@@ -1285,7 +1285,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "fee": "0.00001",
           "id": "id1",
           "netEmittedAmount": "0.045",
-          "sentTime": "2006-07-14 23:58:24",
+          "sentTime": "2006-07-14T23:58:24Z",
           "status": "initial"
         }
       ],
@@ -1295,7 +1295,7 @@ TEST_F(QueryResultPrinterRecentWithdrawsNoConstraintsTest, Json) {
           "fee": "0.02",
           "id": "id2",
           "netEmittedAmount": "37",
-          "sentTime": "2011-10-03 06:49:36",
+          "sentTime": "2011-10-03T06:49:36Z",
           "status": "success"
         }
       ]
@@ -1412,11 +1412,11 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
-| From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
-| binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
+| From Exchange | From Account | Gross withdraw amount | Initiated time       | To Exchange | To Account | Net received amount | Received time        |
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
+| binance       | testuser1    | 76.55 XRP             | 1999-03-25T04:46:43Z | huobi       | testuser2  | 75.55 XRP           | 2002-06-23T07:58:35Z |
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
 )";
   expectStr(kExpected);
 }
@@ -1440,9 +1440,9 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
       "account": "testuser1",
       "exchange": "binance"
     },
-    "initiatedTime": "1999-03-25 04:46:43",
+    "initiatedTime": "1999-03-25T04:46:43Z",
     "netReceivedAmount": "75.55",
-    "receivedTime": "2002-06-23 07:58:35",
+    "receivedTime": "2002-06-23T07:58:35Z",
     "to": {
       "account": "testuser2",
       "address": "xrpaddress666",
@@ -1469,11 +1469,11 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
-| From Exchange | From Account | Gross withdraw amount | Initiated time      | To Exchange | To Account | Net received amount | Received time       |
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
-| binance       | testuser1    | 76.55 XRP             | 1999-03-25 04:46:43 | huobi       | testuser2  | 75.55 XRP           | 2002-06-23 07:58:35 |
-+---------------+--------------+-----------------------+---------------------+-------------+------------+---------------------+---------------------+
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
+| From Exchange | From Account | Gross withdraw amount | Initiated time       | To Exchange | To Account | Net received amount | Received time        |
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
+| binance       | testuser1    | 76.55 XRP             | 1999-03-25T04:46:43Z | huobi       | testuser2  | 75.55 XRP           | 2002-06-23T07:58:35Z |
++---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
 )";
   expectStr(kExpected);
 }
@@ -1497,9 +1497,9 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
       "account": "testuser1",
       "exchange": "binance"
     },
-    "initiatedTime": "1999-03-25 04:46:43",
+    "initiatedTime": "1999-03-25T04:46:43Z",
     "netReceivedAmount": "75.55",
-    "receivedTime": "2002-06-23 07:58:35",
+    "receivedTime": "2002-06-23T07:58:35Z",
     "to": {
       "account": "testuser2",
       "address": "xrpaddress666",

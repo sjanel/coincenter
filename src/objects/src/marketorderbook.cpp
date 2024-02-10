@@ -24,8 +24,9 @@
 
 namespace cct {
 
-MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, VolAndPriNbDecimals volAndPriNbDecimals)
-    : _market(market), _volAndPriNbDecimals(volAndPriNbDecimals) {
+MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, OrderBookLineSpan orderLines,
+                                 VolAndPriNbDecimals volAndPriNbDecimals)
+    : _time(timeStamp), _market(market), _volAndPriNbDecimals(volAndPriNbDecimals) {
   const int nbPrices = static_cast<int>(orderLines.size());
   _orders.reserve(nbPrices);
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
@@ -74,11 +75,13 @@ MarketOrderBook::MarketOrderBook(Market market, OrderBookLineSpan orderLines, Vo
   }
 }
 
-MarketOrderBook::MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice,
-                                 MonetaryAmount bidVolume, VolAndPriNbDecimals volAndPriNbDecimals, int depth)
-    : _market(askVolume.currencyCode(), askPrice.currencyCode()),
-      _volAndPriNbDecimals(volAndPriNbDecimals),
-      _isArtificiallyExtended(depth > 1) {
+MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, MonetaryAmount askVolume,
+                                 MonetaryAmount bidPrice, MonetaryAmount bidVolume,
+                                 VolAndPriNbDecimals volAndPriNbDecimals, int depth)
+    : _time(timeStamp),
+      _market(askVolume.currencyCode(), askPrice.currencyCode()),
+      _isArtificiallyExtended(depth > 1),
+      _volAndPriNbDecimals(volAndPriNbDecimals) {
   if (depth <= 0) {
     throw exception("Invalid depth, should be strictly positive");
   }
