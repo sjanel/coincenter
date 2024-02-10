@@ -26,8 +26,11 @@ File GetFiatCacheFile(std::string_view dataDir) {
 
 }  // namespace
 
-CommonAPI::CommonAPI(const CoincenterInfo& config, Duration fiatsUpdateFrequency, AtInit atInit)
-    : _coincenterInfo(config), _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault)) {
+CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateFrequency,
+                     Duration withdrawalFeesUpdateFrequency, AtInit atInit)
+    : _coincenterInfo(coincenterInfo),
+      _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault)),
+      _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
   if (atInit == AtInit::kLoadFromFileCache) {
     json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
     if (!data.empty()) {
@@ -43,6 +46,18 @@ CommonAPI::CommonAPI(const CoincenterInfo& config, Duration fiatsUpdateFrequency
       _fiatsCache.set(std::move(fiats), TimePoint(TimeInS(timeEpoch)));
     }
   }
+}
+
+CommonAPI::Fiats CommonAPI::queryFiats() {
+  std::lock_guard<std::mutex> guard(_globalMutex);
+  return _fiatsCache.get();
+}
+
+bool CommonAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return queryFiats().contains(currencyCode); }
+
+WithdrawalFeesCrawler::WithdrawalInfoMaps CommonAPI::queryWithdrawalFees(std::string_view exchangeName) {
+  std::lock_guard<std::mutex> guard(_globalMutex);
+  return _withdrawalFeesCrawler.get(exchangeName);
 }
 
 namespace {
@@ -157,5 +172,7 @@ void CommonAPI::updateCacheFile() const {
     data["timeepoch"] = TimestampToS(fiatsPtrLastUpdatedTimePair.second);
     fiatsCacheFile.write(data);
   }
+
+  _withdrawalFeesCrawler.updateCacheFile();
 }
 }  // namespace cct::api

@@ -1,4 +1,4 @@
-#include "commonapi_test.hpp"
+#include "exchangecommonapi_test.hpp"
 #include "upbitprivateapi.hpp"
 #include "upbitpublicapi.hpp"
 

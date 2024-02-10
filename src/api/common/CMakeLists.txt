@@ -4,8 +4,8 @@ aux_source_directory(src API_COMMON_SRC)
 include(FindOpenSSL)
 
 add_library(coincenter_api-common STATIC ${API_COMMON_SRC})
-target_link_libraries(coincenter_api-common PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_api-objects)
+target_link_libraries(coincenter_api-common PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_http-request)
 target_link_libraries(coincenter_api-common PRIVATE OpenSSL::SSL)
 
@@ -19,11 +19,8 @@ function(add_common_test name)
    add_unit_test(
      ${name} 
      ${MY_UNPARSED_ARGUMENTS}
-     src/commonapi.cpp
      LIBRARIES
-     coincenter_api-objects
-     coincenter_http-request
-     coincenter_objects
+     coincenter_api-common
    )
 endfunction()
 

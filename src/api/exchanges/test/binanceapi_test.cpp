@@ -1,6 +1,6 @@
 #include "binanceprivateapi.hpp"
 #include "binancepublicapi.hpp"
-#include "commonapi_test.hpp"
+#include "exchangecommonapi_test.hpp"
 
 namespace cct::api {
 

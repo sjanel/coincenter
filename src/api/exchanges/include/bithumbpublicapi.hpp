@@ -5,8 +5,13 @@
 
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
+#include "currencyexchange.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market.hpp"
+#include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 
 namespace cct {
 
@@ -19,6 +24,7 @@ class CommonAPI;
 
 class BithumbPublic : public ExchangePublic {
  public:
+  static constexpr std::string_view kExchangeName = "bithumb";
   static constexpr std::string_view kStatusOKStr = "0000";
 
   BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
@@ -35,11 +41,13 @@ class BithumbPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get()); }
 
-  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _withdrawalFeesCache.get(); }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override {
+    return _commonApi.queryWithdrawalFees(kExchangeName).first;
+  }
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
-  bool isWithdrawalFeesSourceReliable() const override { return true; }
+  bool isWithdrawalFeesSourceReliable() const override { return false; }
 
   MarketOrderBookMap queryAllApproximatedOrderBooks([[maybe_unused]] int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get();
@@ -68,18 +76,6 @@ class BithumbPublic : public ExchangePublic {
     CurlHandle& _curlHandle;
   };
 
-  struct WithdrawalFeesFunc {
-    static constexpr std::string_view kFeeUrl = "https://www.bithumb.com";
-
-    WithdrawalFeesFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
-                       settings::RunMode runMode)
-        : _curlHandle(kFeeUrl, pMetricGateway, permanentCurlOptions, runMode) {}
-
-    MonetaryAmountByCurrencySet operator()();
-
-    CurlHandle _curlHandle;
-  };
-
   struct AllOrderBooksFunc {
     MarketOrderBookMap operator()();
 
@@ -104,7 +100,6 @@ class BithumbPublic : public ExchangePublic {
 
   CurlHandle _curlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
-  CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;
   CachedResult<AllOrderBooksFunc> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;
   CachedResult<TradedVolumeFunc, Market> _tradedVolumeCache;

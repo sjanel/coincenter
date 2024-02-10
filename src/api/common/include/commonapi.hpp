@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <string_view>
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
@@ -11,6 +12,7 @@
 #include "currencycode.hpp"
 #include "exchangebase.hpp"
 #include "timedef.hpp"
+#include "withdrawalfees-crawler.hpp"
 
 namespace cct {
 class CoincenterInfo;
@@ -22,22 +24,20 @@ class CommonAPI : public ExchangeBase {
 
   enum class AtInit : int8_t { kLoadFromFileCache, kNoLoadFromFileCache };
 
-  CommonAPI(const CoincenterInfo &config, Duration fiatsUpdateFrequency = std::chrono::hours(96),
-            AtInit atInit = AtInit::kLoadFromFileCache);
+  explicit CommonAPI(const CoincenterInfo &coincenterInfo, Duration fiatsUpdateFrequency = std::chrono::hours(96),
+                     Duration withdrawalFeesUpdateFrequency = std::chrono::hours(96),
+                     AtInit atInit = AtInit::kLoadFromFileCache);
 
   /// Returns a new set of fiat currencies.
-  Fiats queryFiats() {
-    std::lock_guard<std::mutex> guard(_fiatsMutex);
-    return _fiatsCache.get();
-  }
+  Fiats queryFiats();
 
   /// Tells whether given currency code is a fiat currency or not.
   /// Fiat currencies are traditional currencies, such as EUR, USD, GBP, KRW, etc.
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
-  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode) {
-    std::lock_guard<std::mutex> guard(_fiatsMutex);
-    return _fiatsCache.get().contains(currencyCode);
-  }
+  bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode);
+
+  /// Query withdrawal fees from crawler sources. It's not guaranteed to work though.
+  WithdrawalFeesCrawler::WithdrawalInfoMaps queryWithdrawalFees(std::string_view exchangeName);
 
   void updateCacheFile() const override;
 
@@ -58,8 +58,10 @@ class CommonAPI : public ExchangeBase {
 
   CachedResultVault _cachedResultVault;
   const CoincenterInfo &_coincenterInfo;
-  std::mutex _fiatsMutex;
+  // A single mutex is needed as the cached result vault is shared
+  std::mutex _globalMutex;
   CachedResult<FiatsFunc> _fiatsCache;
+  WithdrawalFeesCrawler _withdrawalFeesCrawler;
 };
 }  // namespace api
 }  // namespace cct

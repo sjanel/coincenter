@@ -82,7 +82,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 }  // namespace
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
-    : ExchangePublic("bithumb", fiatConverter, commonAPI, config),
+    : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
                   PermanentCurlOptions::Builder()
                       .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
@@ -94,14 +94,6 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           commonAPI, _curlHandle),
-      _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
-          config.metricGatewayPtr(),
-          PermanentCurlOptions::Builder()
-              .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
-              .setAcceptedEncoding(exchangeConfig().acceptEncoding())
-              .build(),
-          config.getRunMode()),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
           _curlHandle, exchangeConfig()),
@@ -137,7 +129,7 @@ MarketSet BithumbPublic::queryTradableMarkets() {
 }
 
 std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  const auto& map = _withdrawalFeesCache.get();
+  const auto& map = _commonApi.queryWithdrawalFees(kExchangeName).first;
   auto it = map.find(currencyCode);
   if (it == map.end()) {
     return {};
@@ -153,51 +145,6 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
     return MonetaryAmount(0, mk.quote());
   }
   return *avgPrice;
-}
-
-MonetaryAmountByCurrencySet BithumbPublic::WithdrawalFeesFunc::operator()() {
-  vector<MonetaryAmount> fees;
-  // This is not a published API and only a "standard" html page. We will capture the text information in it.
-  // Warning, it's not in json format so we will need manual parsing.
-  std::string_view dataStr = _curlHandle.query("/customer_support/info_fee", CurlOptions(HttpRequestType::kGet));
-  // Now, we have the big string containing the html data. The following should work as long as format is unchanged.
-  // here is a line containing our coin with its additional withdrawal fees:
-  //
-  // <tr data-coin="Bitcoin"><td class="money_type tx_c">Bitcoin(BTC)</td><td id="COIN_C0101"><div
-  // class="right"></div></td><td><div class="right out_fee">0.001</div></td></tr><tr data-coin="Ethereum"><td
-  // class="money_type tx_c">
-  static constexpr std::string_view kCoinSep = "tr data-coin=";
-  static constexpr std::string_view kFeeSep = "right out_fee";
-  for (std::size_t charPos = dataStr.find(kCoinSep); charPos != string::npos;
-       charPos = dataStr.find(kCoinSep, charPos)) {
-    charPos = dataStr.find("money_type tx_c", charPos);
-    charPos = dataStr.find('(', charPos) + 1;
-    std::size_t endP = dataStr.find(')', charPos);
-    CurrencyCode coinAcro(std::string_view(dataStr.begin() + charPos, dataStr.begin() + endP));
-    std::size_t nextRightOutFee = dataStr.find(kFeeSep, endP);
-    std::size_t nextCoinSep = dataStr.find(kCoinSep, endP);
-    if (nextRightOutFee > nextCoinSep) {
-      // This means no withdraw fee data, probably 0 ?
-      fees.emplace_back(0, coinAcro);
-      continue;
-    }
-    charPos = dataStr.find(kFeeSep, endP);
-    if (charPos == string::npos) {
-      break;
-    }
-    charPos = dataStr.find('>', charPos) + 1;
-    endP = dataStr.find('<', charPos);
-    std::string_view withdrawFee(dataStr.begin() + charPos, dataStr.begin() + endP);
-    MonetaryAmount ma(withdrawFee, coinAcro);
-    log::debug("Updated Bithumb withdrawal fee {}", ma);
-    fees.push_back(std::move(ma));
-  }
-  if (fees.empty()) {
-    log::error("Unable to parse Bithumb withdrawal fees, syntax might have changed");
-  } else {
-    log::info("Updated Bithumb withdrawal fees for {} coins", fees.size());
-  }
-  return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {

@@ -1,4 +1,4 @@
-#include "commonapi_test.hpp"
+#include "exchangecommonapi_test.hpp"
 #include "krakenprivateapi.hpp"
 #include "krakenpublicapi.hpp"
 

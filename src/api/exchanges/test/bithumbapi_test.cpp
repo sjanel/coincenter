@@ -1,6 +1,6 @@
 #include "bithumbprivateapi.hpp"
 #include "bithumbpublicapi.hpp"
-#include "commonapi_test.hpp"
+#include "exchangecommonapi_test.hpp"
 
 namespace cct::api {
 
