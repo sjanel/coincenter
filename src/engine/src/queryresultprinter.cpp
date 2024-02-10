@@ -179,6 +179,8 @@ json MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, std::optiona
     json marketOrderBookForExchange;
     json bidsForExchange;
     json asksForExchange;
+
+    marketOrderBookForExchange.emplace("time", ToString(marketOrderBook.time()));
     for (int bidPos = 1; bidPos <= marketOrderBook.nbBidPrices(); ++bidPos) {
       AppendOrderbookLine(marketOrderBook, -bidPos, optConversionRate, bidsForExchange);
     }
@@ -833,7 +835,7 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
 void QueryResultPrinter::printMarketOrderBooks(
     Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
     const MarketOrderBookConversionRates &marketOrderBooksConversionRates) const {
-  json jsonData = MarketOrderBooksJson(mk, equiCurrencyCode, depth, marketOrderBooksConversionRates);
+  const json jsonData = MarketOrderBooksJson(mk, equiCurrencyCode, depth, marketOrderBooksConversionRates);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
@@ -1126,7 +1128,7 @@ void QueryResultPrinter::printLastTrades(Market mk, int nbLastTrades,
         mk.quote().appendStrTo(priceTitle);
 
         string title(exchangePtr->name());
-        title.append(" trades - UTC");
+        title.append(" trades");
 
         SimpleTable simpleTable(std::move(title), std::move(buyTitle), std::move(priceTitle), std::move(sellTitle));
         std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};

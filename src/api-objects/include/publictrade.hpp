@@ -3,6 +3,7 @@
 #include <compare>
 
 #include "cct_string.hpp"
+#include "market.hpp"
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -17,7 +18,10 @@ class PublicTrade {
 
   TradeSide side() const { return _side; }
 
+  Market market() const { return {_amount.currencyCode(), _price.currencyCode()}; }
+
   MonetaryAmount amount() const { return _amount; }
+
   MonetaryAmount price() const { return _price; }
 
   TimePoint time() const { return _time; }

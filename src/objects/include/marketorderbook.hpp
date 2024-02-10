@@ -8,6 +8,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "simpletable.hpp"
+#include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
@@ -44,16 +45,19 @@ class MarketOrderBook {
 
   using AmountPerPriceVec = SmallVector<AmountAtPrice, 8>;
 
+  /// Constructs an empty MarketOrderBook
   MarketOrderBook() noexcept = default;
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
-  explicit MarketOrderBook(Market market, OrderBookLineSpan orderLines = OrderBookLineSpan(),
+  explicit MarketOrderBook(TimePoint timeStamp, Market market, OrderBookLineSpan orderLines = OrderBookLineSpan(),
                            VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
 
   /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
-  MarketOrderBook(MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice, MonetaryAmount bidVolume,
-                  VolAndPriNbDecimals volAndPriNbDecimals, int depth = kDefaultDepth);
+  MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice,
+                  MonetaryAmount bidVolume, VolAndPriNbDecimals volAndPriNbDecimals, int depth = kDefaultDepth);
+
+  TimePoint time() const { return _time; }
 
   Market market() const { return _market; }
 
@@ -214,12 +218,13 @@ class MarketOrderBook {
   /// This simulates a trade at market price.
   std::optional<MonetaryAmount> convertQuoteAmountToBase(MonetaryAmount amountInQuoteCurrency) const;
 
+  TimePoint _time{};
   Market _market;
-  VolAndPriNbDecimals _volAndPriNbDecimals;
   AmountPriceVector _orders;
   int _highestBidPricePos = 0;
   int _lowestAskPricePos = 0;
   bool _isArtificiallyExtended = false;
+  VolAndPriNbDecimals _volAndPriNbDecimals;
 };
 
 }  // namespace cct

@@ -335,7 +335,9 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   for (Market mk : markets) {
     huobiAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
-  for (const json& tickerDetails : PublicQuery(_curlHandle, "/market/tickers")) {
+  const auto tickerData = PublicQuery(_curlHandle, "/market/tickers");
+  const auto time = Clock::now();
+  for (const json& tickerDetails : tickerData) {
     string upperMarket = ToUpper(tickerDetails["symbol"].get<std::string_view>());
     auto it = huobiAssetPairToStdMarketMap.find(upperMarket);
     if (it == huobiAssetPairToStdMarketMap.end()) {
@@ -358,7 +360,7 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
       continue;
     }
 
-    ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
+    ret.insert_or_assign(mk, MarketOrderBook(time, askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Huobi ticker information from {} markets", ret.size());
@@ -402,7 +404,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
       }
     }
   }
-  return MarketOrderBook(mk, orderBookLines);
+  return MarketOrderBook(Clock::now(), mk, orderBookLines);
 }
 
 MonetaryAmount HuobiPublic::sanitizePrice(Market mk, MonetaryAmount pri) {

@@ -98,21 +98,22 @@ class ExchangePrivateTest : public ::testing::Test {
 
   VolAndPriNbDecimals volAndPriDec{2, 2};
   int depth = 15;
+  TimePoint time{};
 
   MonetaryAmount askPrice1{"2300.45 EUR"};
   MonetaryAmount bidPrice1{"2300.4 EUR"};
   MarketOrderBook marketOrderBook1{
-      askPrice1, MonetaryAmount("1.09 ETH"), bidPrice1, MonetaryAmount("41 ETH"), volAndPriDec, depth};
+      time, askPrice1, MonetaryAmount("1.09 ETH"), bidPrice1, MonetaryAmount("41 ETH"), volAndPriDec, depth};
 
   MonetaryAmount askPrice2{"2300.5 EUR"};
   MonetaryAmount bidPrice2{"2300.45 EUR"};
   MarketOrderBook marketOrderBook2{
-      askPrice2, MonetaryAmount("7.2 ETH"), bidPrice2, MonetaryAmount("1.23 ETH"), volAndPriDec, depth};
+      time, askPrice2, MonetaryAmount("7.2 ETH"), bidPrice2, MonetaryAmount("1.23 ETH"), volAndPriDec, depth};
 
   MonetaryAmount askPrice3{"2300.55 EUR"};
   MonetaryAmount bidPrice3{"2300.5 EUR"};
   MarketOrderBook marketOrderBook3{
-      askPrice3, MonetaryAmount("0.96 ETH"), bidPrice3, MonetaryAmount("3.701 ETH"), volAndPriDec, depth};
+      time, askPrice3, MonetaryAmount("0.96 ETH"), bidPrice3, MonetaryAmount("3.701 ETH"), volAndPriDec, depth};
 };
 
 TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
@@ -640,12 +641,12 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   MonetaryAmount xrpbtcBidPri{31, "BTC", 6};
   MonetaryAmount xrpbtcAskPri{32, "BTC", 6};
   MarketOrderBook xrpbtcMarketOrderBook{
-      xrpbtcAskPri, MonetaryAmount(40, dustCur), xrpbtcBidPri, MonetaryAmount(27909, dustCur, 3), {3, 6}, depth};
+      time, xrpbtcAskPri, MonetaryAmount(40, dustCur), xrpbtcBidPri, MonetaryAmount(27909, dustCur, 3), {3, 6}, depth};
 
   MonetaryAmount xrpeurBidPri{5, "EUR", 1};
   MonetaryAmount xrpeurAskPri{51, "EUR", 2};
   MarketOrderBook xrpeurMarketOrderBook{
-      xrpeurAskPri, MonetaryAmount(40, dustCur), xrpeurBidPri, MonetaryAmount(27909, dustCur, 3), {3, 2}, depth};
+      time, xrpeurAskPri, MonetaryAmount(40, dustCur), xrpeurBidPri, MonetaryAmount(27909, dustCur, 3), {3, 2}, depth};
 
   MonetaryAmount xrpethBidPri{134567, "EUR", 2};
 

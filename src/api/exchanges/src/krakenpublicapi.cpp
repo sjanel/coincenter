@@ -252,6 +252,7 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
         mk);
   }
   json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
+  const auto time = Clock::now();
   for (const auto& [krakenAssetPair, assetPairDetails] : result.items()) {
     if (krakenAssetPairToStdMarketMap.find(krakenAssetPair) == krakenAssetPairToStdMarketMap.end()) {
       log::error("Unable to find {}", krakenAssetPair);
@@ -273,7 +274,8 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
 
     if (bidVol != 0 && askVol != 0) {
-      ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
+      ret.insert_or_assign(
+          mk, MarketOrderBook(time, askPri, askVol, bidPri, bidVol, marketInfo.volAndPriNbDecimals, depth));
     }
   }
 
@@ -321,7 +323,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
   }
 
   const auto volAndPriNbDecimals = _marketsCache.get().second.find(mk)->second.volAndPriNbDecimals;
-  return MarketOrderBook(mk, orderBookLines, volAndPriNbDecimals);
+  return MarketOrderBook(Clock::now(), mk, orderBookLines, volAndPriNbDecimals);
 }
 
 KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market mk) {

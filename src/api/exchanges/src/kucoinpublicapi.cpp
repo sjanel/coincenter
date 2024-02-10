@@ -209,7 +209,8 @@ std::optional<MonetaryAmount> KucoinPublic::queryWithdrawalFee(CurrencyCode curr
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
+  const json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
+  const auto time = Clock::now();
   const auto tickerIt = data.find("ticker");
   if (tickerIt == data.end()) {
     return ret;
@@ -251,7 +252,7 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
     VolAndPriNbDecimals volAndPriNbDecimals{marketInfo.baseIncrement.nbDecimals(),
                                             marketInfo.priceIncrement.nbDecimals()};
 
-    ret.insert_or_assign(mk, MarketOrderBook(askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
+    ret.insert_or_assign(mk, MarketOrderBook(time, askPri, askVol, bidPri, bidVol, volAndPriNbDecimals, depth));
   }
 
   log::info("Retrieved Kucoin ticker information from {} markets", ret.size());
@@ -302,7 +303,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
     FillOrderBook(mk, depth, true, asksIt->begin(), asksIt->end(), orderBookLines);
   }
 
-  return MarketOrderBook(mk, orderBookLines);
+  return MarketOrderBook(Clock::now(), mk, orderBookLines);
 }
 
 MonetaryAmount KucoinPublic::sanitizePrice(Market mk, MonetaryAmount pri) {

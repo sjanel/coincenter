@@ -88,25 +88,26 @@ class ExchangePublicConvertTest : public ExchangePublicTest {
 
   VolAndPriNbDecimals volAndPriDec1{2, 6};
   int depth = 10;
+  TimePoint time{};
 
   MonetaryAmount askPrice1{"0.000017 BTC"};
   MonetaryAmount bidPrice1{"0.000016 BTC"};
   MarketOrderBook marketOrderBook1{
-      askPrice1, MonetaryAmount(40000, "XLM"), bidPrice1, MonetaryAmount(25000, "XLM"), volAndPriDec1, depth};
+      time, askPrice1, MonetaryAmount(40000, "XLM"), bidPrice1, MonetaryAmount(25000, "XLM"), volAndPriDec1, depth};
 
   VolAndPriNbDecimals volAndPriDec2{2, 4};
 
   MonetaryAmount askPrice2{"0.0063 BTC"};
   MonetaryAmount bidPrice2{"0.0062 BTC"};
   MarketOrderBook marketOrderBook2{
-      askPrice2, MonetaryAmount(680, "XRP"), bidPrice2, MonetaryAmount(1479, "XRP"), volAndPriDec2, depth};
+      time, askPrice2, MonetaryAmount(680, "XRP"), bidPrice2, MonetaryAmount(1479, "XRP"), volAndPriDec2, depth};
 
   VolAndPriNbDecimals volAndPriDec3{2, 2};
 
   MonetaryAmount askPrice3{"37.5 EUR"};
   MonetaryAmount bidPrice3{"37.49 EUR"};
   MarketOrderBook marketOrderBook3{
-      askPrice3, MonetaryAmount("12.04 SOL"), bidPrice3, MonetaryAmount("0.45 SOL"), volAndPriDec3, depth};
+      time, askPrice3, MonetaryAmount("12.04 SOL"), bidPrice3, MonetaryAmount("0.45 SOL"), volAndPriDec3, depth};
 
   MarketOrderBookMap marketOrderBookMap{{Market("XLM", "BTC"), marketOrderBook1},
                                         {Market("XRP", "BTC"), marketOrderBook2},
