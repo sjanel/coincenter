@@ -495,12 +495,12 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
     orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
     for (const auto& asksOrBids : {asksIt, bidsIt}) {
-      const bool isAsk = asksOrBids == asksIt;
+      const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityPair : *asksOrBids) {
         MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
 
-        orderBookLines.emplace_back(amount, price, isAsk);
+        orderBookLines.emplace_back(amount, price, type);
       }
     }
   }

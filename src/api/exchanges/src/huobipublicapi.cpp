@@ -389,15 +389,16 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
     orderBookLines.reserve(bidsIt->size() + asksIt->size());
     for (const auto& asksOrBids : {bidsIt, asksIt}) {
       int currentDepth = 0;
-      bool isBid = asksOrBids == bidsIt;
+      const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityPair : *asksOrBids) {
         MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
 
-        orderBookLines.emplace_back(amount, price, !isBid);
+        orderBookLines.emplace_back(amount, price, type);
         if (++currentDepth == depth) {
           if (depth < static_cast<int>(asksOrBids->size())) {
-            log::debug("Truncate number of {} prices in order book to {}", isBid ? "bid" : "ask", depth);
+            log::debug("Truncate number of {} prices in order book to {}",
+                       type == OrderBookLine::Type::kAsk ? "ask" : "bid", depth);
           }
           break;
         }

@@ -261,16 +261,18 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
 
 namespace {
 template <class InputIt>
-void FillOrderBook(Market mk, int depth, bool isAsk, InputIt beg, InputIt end, vector<OrderBookLine>& orderBookLines) {
+void FillOrderBook(Market mk, int depth, OrderBookLine::Type type, InputIt beg, InputIt end,
+                   vector<OrderBookLine>& orderBookLines) {
   int currentDepth = 0;
   for (auto it = beg; it != end; ++it) {
     MonetaryAmount price((*it)[0].template get<std::string_view>(), mk.quote());
     MonetaryAmount amount((*it)[1].template get<std::string_view>(), mk.base());
 
-    orderBookLines.emplace_back(amount, price, isAsk);
+    orderBookLines.emplace_back(amount, price, type);
     if (++currentDepth == depth) {
       if (++it != end) {
-        log::debug("Truncate number of {} prices in order book to {}", isAsk ? "ask" : "bid", depth);
+        log::debug("Truncate number of {} prices in order book to {}",
+                   type == OrderBookLine::Type::kAsk ? "ask" : "bid", depth);
       }
       break;
     }
@@ -299,8 +301,8 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
     orderBookLines.reserve(asksIt->size() + bidsIt->size());
     // Reverse iterate as bids are received in descending order
-    FillOrderBook(mk, depth, false, bidsIt->rbegin(), bidsIt->rend(), orderBookLines);
-    FillOrderBook(mk, depth, true, asksIt->begin(), asksIt->end(), orderBookLines);
+    FillOrderBook(mk, depth, OrderBookLine::Type::kBid, bidsIt->rbegin(), bidsIt->rend(), orderBookLines);
+    FillOrderBook(mk, depth, OrderBookLine::Type::kAsk, asksIt->begin(), asksIt->end(), orderBookLines);
   }
 
   return MarketOrderBook(Clock::now(), mk, orderBookLines);

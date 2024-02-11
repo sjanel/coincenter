@@ -94,6 +94,7 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
   if (bidVolume <= 0) {
     throw exception("Invalid bid volume {}{}", bidVolume, kErrNegVolumeMsg);
   }
+
   static constexpr MonetaryAmount::RoundType roundType = MonetaryAmount::RoundType::kNearest;
 
   askPrice.round(_volAndPriNbDecimals.priNbDecimals, roundType);

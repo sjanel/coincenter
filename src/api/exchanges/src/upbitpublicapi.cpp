@@ -201,8 +201,8 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
       MonetaryAmount askVol(orderbookDetails["ask_size"].get<double>(), base);
       MonetaryAmount bidVol(orderbookDetails["bid_size"].get<double>(), base);
 
-      orderBookLines.emplace_back(askVol, askPri, true /* isAsk */);
-      orderBookLines.emplace_back(bidVol, bidPri, false /* isAsk */);
+      orderBookLines.emplace_back(askVol, askPri, OrderBookLine::Type::kAsk);
+      orderBookLines.emplace_back(bidVol, bidPri, OrderBookLine::Type::kBid);
 
       if (static_cast<int>(orderBookLines.size() / 2) == depth) {
         // Upbit does not have a depth parameter, the only thing we can do is to truncate it manually

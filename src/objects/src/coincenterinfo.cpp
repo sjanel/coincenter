@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -21,6 +20,7 @@
 #include "runmodes.hpp"
 #include "toupperlower-string.hpp"
 #include "toupperlower.hpp"
+
 #ifdef CCT_ENABLE_PROMETHEUS
 #include "prometheusmetricgateway.hpp"
 #else

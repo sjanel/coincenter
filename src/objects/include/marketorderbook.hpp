@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string_view>
+#include <utility>
 
 #include "cct_smallvector.hpp"
 #include "market.hpp"
@@ -18,10 +20,11 @@ class PriceOptions;
 /// Represents an entry in an order book, an amount at a given price.
 class OrderBookLine {
  public:
+  enum class Type : int8_t { kAsk, kBid };
+
   /// Constructs a new OrderBookLine.
-  /// @param isAsk true if it represents a 'ask' price, false if it is a 'bid' price.
-  OrderBookLine(MonetaryAmount amount, MonetaryAmount price, bool isAsk)
-      : _amount(isAsk ? -amount : amount), _price(price) {}
+  OrderBookLine(MonetaryAmount amount, MonetaryAmount price, Type type)
+      : _amount(type == Type::kAsk ? -amount : amount), _price(price) {}
 
  private:
   friend class MarketOrderBook;
@@ -142,6 +145,8 @@ class MarketOrderBook {
 
   std::optional<MonetaryAmount> computeAvgPrice(MonetaryAmount from, const PriceOptions& priceOptions) const;
 
+  VolAndPriNbDecimals volAndPriNbDecimals() const noexcept { return _volAndPriNbDecimals; }
+
   /// Print the market order book in a SimpleTable and returns it.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
@@ -153,7 +158,7 @@ class MarketOrderBook {
   struct AmountPrice {
     using AmountType = MonetaryAmount::AmountType;
 
-    bool operator==(const AmountPrice& o) const noexcept = default;
+    bool operator==(const AmountPrice&) const noexcept = default;
 
     AmountType amount = 0;
     AmountType price = 0;
@@ -165,7 +170,7 @@ class MarketOrderBook {
  public:
   using trivially_relocatable = is_trivially_relocatable<AmountPriceVector>::type;
 
-  bool operator==(const MarketOrderBook&) const = default;
+  bool operator==(const MarketOrderBook&) const noexcept = default;
 
  private:
   /// Represents a total amount of waiting orders at a given price.

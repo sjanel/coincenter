@@ -44,7 +44,7 @@ class Order {
   Market market() const { return Market(_matchedVolume.currencyCode(), _price.currencyCode()); }
 
   /// default ordering by place time first, then matched volume, etc
-  auto operator<=>(const Order &) const = default;
+  std::strong_ordering operator<=>(const Order &) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 

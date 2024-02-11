@@ -28,12 +28,13 @@ class MarketOrderBookTestCase1 : public ::testing::Test {
   MarketOrderBook marketOrderBook{
       Clock::now(), Market("ETH", "EUR"),
       std::array<OrderBookLine, 6>{
-          OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), false),
-          OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), false),
-          OrderBookLine(MonetaryAmount(0, "ETH"), MonetaryAmount("1301.50", "EUR"), false),
-          OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), true),
-          OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), true),
-          OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"), true)}};
+          OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount(0, "ETH"), MonetaryAmount("1301.50", "EUR"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"),
+                        OrderBookLine::Type::kAsk)}};
 };
 
 TEST_F(MarketOrderBookTestCase1, NumberOfElements) {
@@ -132,15 +133,17 @@ class MarketOrderBookTestCase2 : public ::testing::Test {
   MarketOrderBook marketOrderBook{
       time, Market("APM", "KRW"),
       std::array<OrderBookLine, 9>{
-          OrderBookLine(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW"), true),
-          OrderBookLine(MonetaryAmount("90184.3951", "APM"), MonetaryAmount("57.81", "KRW"), true),
-          OrderBookLine(MonetaryAmount("91.1713", "APM"), MonetaryAmount("57.84", "KRW"), true),
-          OrderBookLine(MonetaryAmount("41.0131", "APM"), MonetaryAmount("57.9", "KRW"), true),
-          OrderBookLine(MonetaryAmount("33.5081914157147802", "APM"), MonetaryAmount("57.78", "KRW"), true),
-          OrderBookLine(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW"), false),
-          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.18", "KRW"), false),
-          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.17", "KRW"), false),
-          OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"), false)}};
+          OrderBookLine(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("90184.3951", "APM"), MonetaryAmount("57.81", "KRW"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("91.1713", "APM"), MonetaryAmount("57.84", "KRW"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("41.0131", "APM"), MonetaryAmount("57.9", "KRW"), OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("33.5081914157147802", "APM"), MonetaryAmount("57.78", "KRW"),
+                        OrderBookLine::Type::kAsk),
+          OrderBookLine(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.18", "KRW"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.17", "KRW"), OrderBookLine::Type::kBid),
+          OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"),
+                        OrderBookLine::Type::kBid)}};
 };
 
 TEST_F(MarketOrderBookTestCase2, SimpleQueries) {
@@ -160,13 +163,18 @@ class MarketOrderBookTestCase3 : public ::testing::Test {
   TimePoint time{};
   MarketOrderBook marketOrderBook{
       time, Market("XLM", "BTC"),
-      std::array<OrderBookLine, 6>{
-          OrderBookLine(MonetaryAmount("126881.164", "XLM"), MonetaryAmount("0.000007130", "BTC"), true),
-          OrderBookLine(MonetaryAmount("95716.519", "XLM"), MonetaryAmount("0.000007120", "BTC"), true),
-          OrderBookLine(MonetaryAmount("23726.285", "XLM"), MonetaryAmount("0.000007110", "BTC"), true),
-          OrderBookLine(MonetaryAmount("37863.710", "XLM"), MonetaryAmount("0.000007100", "BTC"), false),
-          OrderBookLine(MonetaryAmount("169165.594", "XLM"), MonetaryAmount("0.000007090", "BTC"), false),
-          OrderBookLine(MonetaryAmount("204218.966", "XLM"), MonetaryAmount("0.000007080", "BTC"), false)}};
+      std::array<OrderBookLine, 6>{OrderBookLine(MonetaryAmount("126881.164", "XLM"),
+                                                 MonetaryAmount("0.000007130", "BTC"), OrderBookLine::Type::kAsk),
+                                   OrderBookLine(MonetaryAmount("95716.519", "XLM"),
+                                                 MonetaryAmount("0.000007120", "BTC"), OrderBookLine::Type::kAsk),
+                                   OrderBookLine(MonetaryAmount("23726.285", "XLM"),
+                                                 MonetaryAmount("0.000007110", "BTC"), OrderBookLine::Type::kAsk),
+                                   OrderBookLine(MonetaryAmount("37863.710", "XLM"),
+                                                 MonetaryAmount("0.000007100", "BTC"), OrderBookLine::Type::kBid),
+                                   OrderBookLine(MonetaryAmount("169165.594", "XLM"),
+                                                 MonetaryAmount("0.000007090", "BTC"), OrderBookLine::Type::kBid),
+                                   OrderBookLine(MonetaryAmount("204218.966", "XLM"),
+                                                 MonetaryAmount("0.000007080", "BTC"), OrderBookLine::Type::kBid)}};
 };
 
 TEST_F(MarketOrderBookTestCase3, Convert) {
