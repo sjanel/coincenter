@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "monetaryamount.hpp"
+
 namespace cct {
 
 class BalancePortfolioTest1 : public ::testing::Test {

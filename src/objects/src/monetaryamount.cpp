@@ -193,7 +193,6 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundTy
 }
 
 std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecimals) const {
-  assert(nbDecimals >= 0);
   AmountType integralAmount = _amount;
   const int8_t ourNbDecimals = this->nbDecimals();
   for (; nbDecimals < ourNbDecimals; ++nbDecimals) {

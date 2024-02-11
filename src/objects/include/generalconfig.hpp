@@ -16,7 +16,7 @@ class GeneralConfig {
 
   static json LoadFile(std::string_view dataDir);
 
-  GeneralConfig() : _loggingInfo(LoggingInfo::WithLoggersCreation::kYes) {}
+  GeneralConfig() = default;
 
   GeneralConfig(LoggingInfo &&loggingInfo, RequestsConfig &&requestsConfig, Duration fiatConversionQueryRate,
                 ApiOutputType apiOutputType);
@@ -30,7 +30,7 @@ class GeneralConfig {
   Duration fiatConversionQueryRate() const { return _fiatConversionQueryRate; }
 
  private:
-  LoggingInfo _loggingInfo;
+  LoggingInfo _loggingInfo{LoggingInfo::WithLoggersCreation::kYes};
   RequestsConfig _requestsConfig;
   Duration _fiatConversionQueryRate = std::chrono::hours(8);
   ApiOutputType _apiOutputType = ApiOutputType::kFormattedTable;

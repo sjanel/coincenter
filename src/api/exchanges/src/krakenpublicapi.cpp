@@ -309,7 +309,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
 
     orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
     for (const auto& asksOrBids : {asksIt, bidsIt}) {
-      const bool isAsk = asksOrBids == asksIt;
+      const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityTuple : *asksOrBids) {
         std::string_view priceStr = priceQuantityTuple[0].get<std::string_view>();
         std::string_view amountStr = priceQuantityTuple[1].get<std::string_view>();
@@ -317,7 +317,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
         MonetaryAmount amount(amountStr, mk.base());
         MonetaryAmount price(priceStr, mk.quote());
 
-        orderBookLines.emplace_back(amount, price, isAsk);
+        orderBookLines.emplace_back(amount, price, type);
       }
     }
   }

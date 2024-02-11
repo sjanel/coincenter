@@ -27,6 +27,8 @@ enum class CoincenterCommandType : int8_t {
   kSell,
   kWithdrawApply,
   kDustSweeper,
+
+  kLast
 };
 
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type);

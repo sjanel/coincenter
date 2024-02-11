@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string_view>
-
 #include "abstractmetricgateway.hpp"
+#include "metric.hpp"
+#include "monitoringinfo.hpp"
 
 namespace cct {
 class VoidMetricGateway : public AbstractMetricGateway {

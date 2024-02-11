@@ -235,12 +235,12 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
         OrderBookVec orderBookLines;
         orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
         for (const json* asksOrBids : asksBids) {
-          const bool isAsk = asksOrBids == asksBids[0];
+          const auto type = asksOrBids == asksBids[0] ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
           for (const json& priceQuantityPair : *asksOrBids) {
             MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
             MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
 
-            orderBookLines.emplace_back(amount, price, isAsk);
+            orderBookLines.emplace_back(amount, price, type);
           }
         }
         Market market(baseCurrencyCode, quoteCurrencyCode);
