@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 
 #include "cct_string.hpp"
@@ -26,6 +27,8 @@ class CoincenterInfo;
 /// such that 'coincenter' uses it instead of the hardcoded one. The reason is that API services are hourly limited and
 /// reaching the limit would make it basically unusable for the community.
 ///
+/// Fallback mechanism exists if api key does not exist or is expired.
+///
 /// Conversion methods are thread safe.
 class FiatConverter {
  public:
@@ -33,10 +36,14 @@ class FiatConverter {
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
   FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency);
 
-  double convert(double amount, CurrencyCode from, CurrencyCode to);
+  std::optional<double> convert(double amount, CurrencyCode from, CurrencyCode to);
 
-  MonetaryAmount convert(MonetaryAmount amount, CurrencyCode to) {
-    return MonetaryAmount(convert(amount.toDouble(), amount.currencyCode(), to), to);
+  std::optional<MonetaryAmount> convert(MonetaryAmount amount, CurrencyCode to) {
+    auto optDouble = convert(amount.toDouble(), amount.currencyCode(), to);
+    if (optDouble) {
+      return MonetaryAmount(*optDouble, to);
+    }
+    return {};
   }
 
   /// Store rates in a file to make data persistent.
@@ -51,13 +58,24 @@ class FiatConverter {
 
   std::optional<double> queryCurrencyRate(Market mk);
 
+  std::optional<double> queryCurrencyRateSource1(Market mk);
+  std::optional<double> queryCurrencyRateSource2(Market mk);
+
+  std::optional<double> retrieveRateFromCache(Market mk) const;
+
+  void store(Market mk, double rate);
+
+  void refreshLastUpdatedTime(Market mk);
+
   using PricesMap = std::unordered_map<Market, PriceTimedValue>;
 
-  CurlHandle _curlHandle;
+  CurlHandle _curlHandle1;
+  CurlHandle _curlHandle2;
   PricesMap _pricesMap;
   Duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;
   string _apiKey;
   string _dataDir;
+  CurrencyCode _baseRateSource2;
 };
 }  // namespace cct
