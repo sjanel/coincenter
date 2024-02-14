@@ -2,10 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <optional>
 #include <string_view>
 
 #include "besturlpicker.hpp"
-#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
@@ -19,11 +20,7 @@ namespace cct {
 namespace {
 void AreDoubleEqual(double lhs, double rhs) {
   static constexpr double kEpsilon = 0.00000001;
-  if (lhs < rhs) {
-    EXPECT_LT(rhs - lhs, kEpsilon);
-  } else {
-    EXPECT_LT(lhs - rhs, kEpsilon);
-  }
+  EXPECT_LT(std::abs(rhs - lhs), kEpsilon);
 }
 
 constexpr double kKRW = 1341.88;
@@ -45,33 +42,48 @@ std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, c
 
   // Rates
   std::string_view marketStr = opts.postData().get("q");
-  std::string_view fromCurrency = marketStr.substr(0, 3);
-  std::string_view targetCurrency = marketStr.substr(4);
-  double rate = 0;
-  if (fromCurrency == "EUR") {
-    if (targetCurrency == "KRW") {
-      rate = kKRW;
-    } else if (targetCurrency == "USD") {
-      rate = kUSD;
-    } else if (targetCurrency == "GBP") {
-      rate = kGBP;
-    }
-  } else if (fromCurrency == "KRW") {
-    if (targetCurrency == "EUR") {
-      rate = 1 / kKRW;
-    } else if (targetCurrency == "USD") {
-      rate = kUSD / kKRW;
-    } else if (targetCurrency == "GBP") {
-      rate = kGBP / kKRW;
-    }
-  } else if (fromCurrency == "GBP") {
-    if (targetCurrency == "USD") {
-      rate = kUSD / kGBP;
-    }
-  }
+  if (!marketStr.empty()) {
+    double rate = 0;
 
-  if (rate != 0) {
-    jsonData["results"][marketStr]["val"] = rate;
+    std::string_view fromCurrency = marketStr.substr(0, 3);
+    std::string_view targetCurrency = marketStr.substr(4);
+
+    if (fromCurrency == "EUR") {
+      if (targetCurrency == "KRW") {
+        rate = kKRW;
+      } else if (targetCurrency == "USD") {
+        rate = kUSD;
+      } else if (targetCurrency == "GBP") {
+        rate = kGBP;
+      }
+    } else if (fromCurrency == "KRW") {
+      if (targetCurrency == "EUR") {
+        rate = 1 / kKRW;
+      } else if (targetCurrency == "USD") {
+        rate = kUSD / kKRW;
+      } else if (targetCurrency == "GBP") {
+        rate = kGBP / kKRW;
+      }
+    } else if (fromCurrency == "GBP") {
+      if (targetCurrency == "USD") {
+        rate = kUSD / kGBP;
+      }
+    }
+    if (rate != 0) {
+      jsonData["results"][marketStr]["val"] = rate;
+    }
+  } else {
+    // second source
+    jsonData = R"(
+{
+  "base": "EUR",
+  "rates": {
+    "SUSHI": 36.78,
+    "KRW": 1341.88,
+    "NOK": 11.3375
+  }
+}
+)"_json;
   }
 
   _queryData = jsonData.dump();
@@ -88,20 +100,29 @@ class FiatConverterTest : public ::testing::Test {
 };
 
 TEST_F(FiatConverterTest, DirectConversion) {
-  const double amount = 10;
-  AreDoubleEqual(converter.convert(amount, "KRW", "KRW"), amount);
-  AreDoubleEqual(converter.convert(amount, "EUR", "KRW"), amount * kKRW);
-  AreDoubleEqual(converter.convert(amount, "EUR", "USD"), amount * kUSD);
-  AreDoubleEqual(converter.convert(amount, "EUR", "GBP"), amount * kGBP);
-  EXPECT_THROW(converter.convert(amount, "EUR", "SUSHI"), exception);
+  constexpr double amount = 10;
+
+  AreDoubleEqual(converter.convert(amount, "KRW", "KRW").value(), amount);
+  AreDoubleEqual(converter.convert(amount, "EUR", "KRW").value(), amount * kKRW);
+  AreDoubleEqual(converter.convert(amount, "EUR", "USD").value(), amount * kUSD);
+  AreDoubleEqual(converter.convert(amount, "EUR", "GBP").value(), amount * kGBP);
+
+  EXPECT_EQ(converter.convert(amount, "EUR", "SUSHI"), 367.8);
 }
 
 TEST_F(FiatConverterTest, DoubleConversion) {
-  const double amount = 20'000'000;
-  AreDoubleEqual(converter.convert(amount, "KRW", "EUR"), amount / kKRW);
-  AreDoubleEqual(converter.convert(amount, "KRW", "USD"), (amount / kKRW) * kUSD);
-  AreDoubleEqual(converter.convert(amount, "GBP", "USD"), (amount / kGBP) * kUSD);
-  EXPECT_THROW(converter.convert(amount, "SUSHI", "EUR"), exception);
+  constexpr double amount = 20'000'000;
+
+  AreDoubleEqual(converter.convert(amount, "KRW", "EUR").value(), amount / kKRW);
+  AreDoubleEqual(converter.convert(amount, "KRW", "USD").value(), (amount / kKRW) * kUSD);
+  AreDoubleEqual(converter.convert(amount, "GBP", "USD").value(), (amount / kGBP) * kUSD);
+
+  EXPECT_EQ(converter.convert(amount, "SUSHI", "KRW"), 729679173.46383917);
+}
+
+TEST_F(FiatConverterTest, NoConversionPossible) {
+  constexpr double amount = 10;
+  EXPECT_EQ(converter.convert(amount, "SUSHI", "USD"), std::nullopt);
 }
 
 }  // namespace cct

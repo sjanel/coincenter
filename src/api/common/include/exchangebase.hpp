@@ -21,13 +21,13 @@ class UniqueQueryHandle {
   }
 
   UniqueQueryHandle(const UniqueQueryHandle &) = delete;
-  UniqueQueryHandle(UniqueQueryHandle &&o) noexcept
-      : _pCachedResultVault(std::exchange(o._pCachedResultVault, nullptr)) {}
+  UniqueQueryHandle(UniqueQueryHandle &&rhs) noexcept
+      : _pCachedResultVault(std::exchange(rhs._pCachedResultVault, nullptr)) {}
 
   UniqueQueryHandle &operator=(const UniqueQueryHandle &) = delete;
-  UniqueQueryHandle &operator=(UniqueQueryHandle &&o) noexcept {
-    if (this != std::addressof(o)) {
-      _pCachedResultVault = std::exchange(o._pCachedResultVault, nullptr);
+  UniqueQueryHandle &operator=(UniqueQueryHandle &&rhs) noexcept {
+    if (this != std::addressof(rhs)) {
+      _pCachedResultVault = std::exchange(rhs._pCachedResultVault, nullptr);
     }
     return *this;
   }
@@ -44,9 +44,9 @@ class UniqueQueryHandle {
 
 class ExchangeBase {
  public:
-  virtual void updateCacheFile() const {}
-
   virtual ~ExchangeBase() = default;
+
+  virtual void updateCacheFile() const {}
 
  protected:
   ExchangeBase() = default;

@@ -6,7 +6,6 @@
 #include <string_view>
 #include <utility>
 
-#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -21,11 +20,17 @@
 namespace cct {
 namespace {
 
+constexpr std::string_view kRatesCacheFile = "ratescache.json";
+
+constexpr std::string_view kFiatConverterSource1BaseUrl = "https://free.currconv.com";
+constexpr std::string_view kFiatConverterSource2BaseUrl = "https://api.vatcomply.com/rates";
+
 string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr std::string_view kDefaultCommunityKey = "b25453de7984135a084b";
   // example http://free.currconv.com/api/v7/currencies?apiKey=b25453de7984135a084b
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
-  File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
+
+  const File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
   json data = thirdPartySecret.readAllJson();
   auto freeConverterIt = data.find("freecurrencyconverter");
   if (freeConverterIt == data.end() || freeConverterIt->get<std::string_view>() == kDefaultCommunityKey) {
@@ -40,29 +45,30 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   return std::move(freeConverterIt->get_ref<string&>());
 }
 
-constexpr std::string_view kRatesCacheFile = "ratescache.json";
-
 File GetRatesCacheFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
 }
 
-constexpr std::string_view kFiatConverterBaseUrl = "https://free.currconv.com";
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
-    : _curlHandle(kFiatConverterBaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
-                  coincenterInfo.getRunMode()),
+    : _curlHandle1(kFiatConverterSource1BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+                   coincenterInfo.getRunMode()),
+      _curlHandle2(kFiatConverterSource2BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+                   coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
-  File ratesCacheFile = GetRatesCacheFile(_dataDir);
-  json data = ratesCacheFile.readAllJson();
+  const File ratesCacheFile = GetRatesCacheFile(_dataDir);
+  const json data = ratesCacheFile.readAllJson();
+
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
-    double rate = rateAndTimeData["rate"];
-    int64_t timeepoch = rateAndTimeData["timeepoch"];
+    const double rate = rateAndTimeData["rate"];
+    const int64_t timeStamp = rateAndTimeData["timeepoch"];
+
     log::trace("Stored rate {} for market {} from {}", rate, marketStr, kRatesCacheFile);
-    _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(TimeInS(timeepoch))});
+    _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(TimeInS(timeStamp))});
   }
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }
@@ -70,7 +76,8 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
 void FiatConverter::updateCacheFile() const {
   json data;
   for (const auto& [market, priceTimeValue] : _pricesMap) {
-    string marketPairStr = market.assetsPairStrUpper('-');
+    const string marketPairStr = market.assetsPairStrUpper('-');
+
     data[marketPairStr]["rate"] = priceTimeValue.rate;
     data[marketPairStr]["timeepoch"] = TimestampToS(priceTimeValue.lastUpdatedTime);
   }
@@ -78,53 +85,104 @@ void FiatConverter::updateCacheFile() const {
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
-  string qStr(mk.assetsPairStrUpper('_'));
-  CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
-  auto dataStr = _curlHandle.query("/api/v7/convert", opts);
+  auto ret = queryCurrencyRateSource1(mk);
+  if (ret) {
+    return ret;
+  }
+  ret = queryCurrencyRateSource2(mk);
+  return ret;
+}
+
+std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
+  const auto qStr = mk.assetsPairStrUpper('_');
+
+  const CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
+
+  const auto dataStr = _curlHandle1.query("/api/v7/convert", opts);
+
   static constexpr bool kAllowExceptions = false;
-  auto data = json::parse(dataStr, nullptr, kAllowExceptions);
+  const auto data = json::parse(dataStr, nullptr, kAllowExceptions);
+
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
-  auto resultsIt = data.find("results");
+  const auto resultsIt = data.find("results");
   if (data == json::value_t::discarded || resultsIt == data.end() || !resultsIt->contains(qStr)) {
-    log::error("No JSON data received from fiat currency converter service for pair '{}'", mk);
-    auto it = _pricesMap.find(mk);
-    if (it != _pricesMap.end()) {
-      // Update cache time anyway to avoid querying too much the service
-      TimePoint nowTime = Clock::now();
-      it->second.lastUpdatedTime = nowTime;
-      _pricesMap[mk.reverse()].lastUpdatedTime = nowTime;
-    }
+    log::warn("No JSON data received from fiat currency converter service's first source for pair '{}'", mk);
+    refreshLastUpdatedTime(mk);
     return std::nullopt;
   }
   const auto& rates = (*resultsIt)[qStr];
-  double rate = rates["val"];
-  log::debug("Stored rate {} for market {}", rate, qStr);
-  TimePoint nowTime = Clock::now();
-  _pricesMap.insert_or_assign(mk.reverse(), PriceTimedValue{static_cast<double>(1) / rate, nowTime});
-  _pricesMap.insert_or_assign(std::move(mk), PriceTimedValue{rate, nowTime});
+  const double rate = rates["val"];
+  store(mk, rate);
   return rate;
 }
 
-double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to) {
+std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
+  const auto dataStr = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
+  const json jsonData = json::parse(dataStr);
+  const auto baseIt = jsonData.find("base");
+  const auto ratesIt = jsonData.find("rates");
+  if (baseIt == jsonData.end() || ratesIt == jsonData.end()) {
+    log::warn("No JSON data received from fiat currency converter service's second source", mk);
+    return {};
+  }
+
+  const TimePoint nowTime = Clock::now();
+
+  _baseRateSource2 = baseIt->get<std::string_view>();
+  for (const auto& [currencyCodeStr, rate] : ratesIt->items()) {
+    const double rateDouble = rate.get<double>();
+    const CurrencyCode currencyCode(currencyCodeStr);
+
+    _pricesMap.insert_or_assign(Market(_baseRateSource2, currencyCode), PriceTimedValue(rateDouble, nowTime));
+  }
+  return retrieveRateFromCache(mk);
+}
+
+void FiatConverter::store(Market mk, double rate) {
+  log::debug("Stored rate {} for {}", rate, mk);
+  const TimePoint nowTime = Clock::now();
+
+  _pricesMap.insert_or_assign(mk.reverse(), PriceTimedValue(static_cast<double>(1) / rate, nowTime));
+  _pricesMap.insert_or_assign(std::move(mk), PriceTimedValue(rate, nowTime));
+}
+
+void FiatConverter::refreshLastUpdatedTime(Market mk) {
+  const auto it = _pricesMap.find(mk);
+  if (it != _pricesMap.end()) {
+    // Update cache time anyway to avoid querying too much the service
+    const TimePoint nowTime = Clock::now();
+
+    it->second.lastUpdatedTime = nowTime;
+    _pricesMap[mk.reverse()].lastUpdatedTime = nowTime;
+  }
+}
+
+std::optional<double> FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to) {
   if (from == to) {
     return amount;
   }
-  Market mk(from, to);
+  const Market mk(from, to);
+
   double rate;
+
   std::lock_guard<std::mutex> guard(_pricesMutex);
-  auto it = _pricesMap.find(mk);
-  if (it != _pricesMap.end() && Clock::now() - it->second.lastUpdatedTime < _ratesUpdateFrequency) {
-    rate = it->second.rate;
+
+  const auto optRate = retrieveRateFromCache(mk);
+  if (optRate) {
+    rate = *optRate;
   } else {
     if (_ratesUpdateFrequency == Duration::max()) {
-      throw exception("Unable to query fiat currency rates and no rate found in cache");
+      log::error("Unable to query fiat currency rates and no rate found in cache for {}", mk);
+      return {};
     }
     std::optional<double> queriedRate = queryCurrencyRate(mk);
     if (queriedRate) {
       rate = *queriedRate;
     } else {
+      const auto it = _pricesMap.find(mk);
       if (it == _pricesMap.end()) {
-        throw exception("Unable to query fiat currency rates and no rate found in cache");
+        log::error("Unable to query fiat currency rates and no rate found in cache for {}", mk);
+        return {};
       }
       log::warn("Fiat currency rate service unavailable, use not up to date currency rate in cache");
       rate = it->second.rate;
@@ -134,4 +192,28 @@ double FiatConverter::convert(double amount, CurrencyCode from, CurrencyCode to)
   return amount * rate;
 }
 
+std::optional<double> FiatConverter::retrieveRateFromCache(Market mk) const {
+  const auto rateIfYoung = [this, nowTime = Clock::now()](Market mk) -> std::optional<double> {
+    const auto it = _pricesMap.find(mk);
+    if (it != _pricesMap.end() && nowTime - it->second.lastUpdatedTime < _ratesUpdateFrequency) {
+      return it->second.rate;
+    }
+    return {};
+  };
+  const auto directRate = rateIfYoung(mk);
+  if (directRate) {
+    return directRate;
+  }
+  if (_baseRateSource2.isDefined()) {
+    // Try with dual rates from base source.
+    const auto rateBase1 = rateIfYoung(Market(_baseRateSource2, mk.base()));
+    if (rateBase1) {
+      const auto rateBase2 = rateIfYoung(Market(_baseRateSource2, mk.quote()));
+      if (rateBase2) {
+        return *rateBase2 / *rateBase1;
+      }
+    }
+  }
+  return {};
+}
 }  // namespace cct
