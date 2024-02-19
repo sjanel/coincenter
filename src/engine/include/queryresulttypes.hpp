@@ -37,7 +37,7 @@ using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmoun
 using MonetaryAmountByCurrencySetPerExchange =
     FixedCapacityVector<ExchangeWith<MonetaryAmountByCurrencySet>, kNbSupportedExchanges>;
 
-using LastTradesPerExchange = FixedCapacityVector<ExchangeWith<LastTradesVector>, kNbSupportedExchanges>;
+using TradesPerExchange = FixedCapacityVector<ExchangeWith<TradesVector>, kNbSupportedExchanges>;
 
 using TradeResultPerExchange = SmallVector<ExchangeWith<TradeResult>, kTypicalNbPrivateAccounts>;
 

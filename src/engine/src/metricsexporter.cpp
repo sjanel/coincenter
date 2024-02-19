@@ -116,7 +116,7 @@ void MetricsExporter::exportOrderbookMetrics(Market mk,
   }
 }
 
-void MetricsExporter::exportLastTradesMetrics(Market mk, const LastTradesPerExchange &lastTradesPerExchange) {
+void MetricsExporter::exportLastTradesMetrics(Market mk, const TradesPerExchange &lastTradesPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
   string marketLowerCase = mk.assetsPairStrLower('-');

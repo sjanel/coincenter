@@ -20,7 +20,7 @@ class MetricsExporter {
 
   void exportOrderbookMetrics(Market mk, const MarketOrderBookConversionRates &marketOrderBookConversionRates);
 
-  void exportLastTradesMetrics(Market mk, const LastTradesPerExchange &lastTradesPerExchange);
+  void exportLastTradesMetrics(Market mk, const TradesPerExchange &lastTradesPerExchange);
 
  private:
   void createSummariesAndHistograms();

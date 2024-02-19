@@ -840,13 +840,13 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchan
   return tradedVolumePerExchange;
 }
 
-LastTradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
-                                                                      int nbLastTrades) {
+TradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
+                                                                  int nbLastTrades) {
   log::info("Query {} last trades on {} volume from {}", nbLastTrades, mk,
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(mk, exchangeNames);
 
-  LastTradesPerExchange ret(selectedExchanges.size());
+  TradesPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [mk, nbLastTrades](Exchange *exchange) {
         return std::make_pair(static_cast<const Exchange *>(exchange), exchange->queryLastTrades(mk, nbLastTrades));

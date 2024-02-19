@@ -16,5 +16,5 @@ using MarketSet = FlatSet<Market>;
 using MarketOrderBookMap = std::unordered_map<Market, MarketOrderBook>;
 using MarketPriceMap = std::unordered_map<Market, MonetaryAmount>;
 using MarketsPath = SmallVector<Market, 3>;
-using LastTradesVector = vector<PublicTrade>;
+using TradesVector = vector<PublicTrade>;
 }  // namespace cct

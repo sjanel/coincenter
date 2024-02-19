@@ -458,12 +458,12 @@ MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
   return MonetaryAmount(last24hVol, mk.base());
 }
 
-LastTradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
+TradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
   nbTrades = std::min(nbTrades, 2000);  // max authorized
   nbTrades = std::max(nbTrades, 1);     // min authorized
   json result =
       PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
-  LastTradesVector ret;
+  TradesVector ret;
   for (const json& detail : result) {
     auto dataDetails = detail.find("data");
     if (dataDetails != detail.end()) {

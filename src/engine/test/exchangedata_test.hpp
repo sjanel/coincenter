@@ -50,21 +50,20 @@ class ExchangesBaseTest : public ::testing::Test {
   Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
   Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
 
-  Market m1{"ETH", "EUR"};
-  Market m2{"BTC", "EUR"};
-  Market m3{"XRP", "BTC"};
+  static constexpr Market m1{"ETH", "EUR"};
+  static constexpr Market m2{"BTC", "EUR"};
+  static constexpr Market m3{"XRP", "BTC"};
 
-  VolAndPriNbDecimals volAndPriDec1{2, 2};
-  int depth = 10;
-  int64_t nbSecondsSinceEpoch = 0;
+  static constexpr VolAndPriNbDecimals volAndPriDec1{2, 2};
+  static constexpr int depth = 10;
 
-  MonetaryAmount askPrice1{"2300.45EUR"};
-  MonetaryAmount bidPrice1{"2300.4EUR"};
+  static constexpr MonetaryAmount askPrice1{230045, "EUR", 2};
+  static constexpr MonetaryAmount bidPrice1{23004, "EUR", 1};
 
   TimePoint time{};
 
   MarketOrderBook marketOrderBook10{
-      time, askPrice1, MonetaryAmount("1.09ETH"), bidPrice1, MonetaryAmount("41ETH"), volAndPriDec1, depth};
+      time, askPrice1, MonetaryAmount(109, "ETH", 2), bidPrice1, MonetaryAmount(41, "ETH"), volAndPriDec1, depth};
   MarketOrderBook marketOrderBook11{time,
                                     MonetaryAmount{"2301.15EUR"},
                                     MonetaryAmount("0.4ETH"),
@@ -73,34 +72,35 @@ class ExchangesBaseTest : public ::testing::Test {
                                     volAndPriDec1,
                                     depth - 2};
 
-  VolAndPriNbDecimals volAndPriDec2{5, 2};
-  MonetaryAmount askPrice2{"31056.67 EUR"};
-  MonetaryAmount bidPrice2{"31056.66 EUR"};
+  static constexpr VolAndPriNbDecimals volAndPriDec2{5, 2};
+  static constexpr MonetaryAmount askPrice2{3105667, "EUR", 2};
+  static constexpr MonetaryAmount bidPrice2{3105666, "EUR", 2};
   MarketOrderBook marketOrderBook20{
-      time, askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"), volAndPriDec2, depth};
+      time, askPrice2, MonetaryAmount(12, "BTC", 2), bidPrice2, MonetaryAmount(234, "BTC", 5), volAndPriDec2, depth};
   MarketOrderBook marketOrderBook21{time,
-                                    MonetaryAmount{"31051.02 EUR"},
-                                    MonetaryAmount("0.409BTC"),
-                                    MonetaryAmount{"31051.01 EUR"},
-                                    MonetaryAmount("1.9087 BTC"),
+                                    MonetaryAmount{3105102, "EUR", 2},
+                                    MonetaryAmount(409, "BTC", 3),
+                                    MonetaryAmount{3105101, "EUR", 2},
+                                    MonetaryAmount(19087, "BTC", 4),
                                     volAndPriDec2,
                                     depth + 1};
 
-  VolAndPriNbDecimals volAndPriDec3{1, 2};
-  MonetaryAmount askPrice3{"0.37 BTC"};
-  MonetaryAmount bidPrice3{"0.36 BTC"};
+  static constexpr VolAndPriNbDecimals volAndPriDec3{1, 2};
+  static constexpr MonetaryAmount askPrice3{37, "BTC", 2};
+  static constexpr MonetaryAmount bidPrice3{36, "BTC", 2};
   MarketOrderBook marketOrderBook3{
-      time, askPrice3, MonetaryAmount("916.4XRP"), bidPrice3, MonetaryAmount("3494XRP"), volAndPriDec3, depth};
+      time, askPrice3, MonetaryAmount(9164, "XRP", 1), bidPrice3, MonetaryAmount(3494, "XRP"), volAndPriDec3, depth};
 
-  const MonetaryAmount amounts1[4] = {MonetaryAmount("1500XRP"), MonetaryAmount("15BTC"), MonetaryAmount("1.5ETH"),
-                                      MonetaryAmount("5000USDT")};
-  const MonetaryAmount amounts2[4] = {MonetaryAmount("37SOL"), MonetaryAmount("1887565SHIB"), MonetaryAmount("0.5BTC"),
-                                      MonetaryAmount("6750USDT")};
-  const MonetaryAmount amounts3[5] = {MonetaryAmount("0.6ETH"), MonetaryAmount("1000XLM"), MonetaryAmount("0.01AVAX"),
-                                      MonetaryAmount("1500EUR"), MonetaryAmount("4250USDT")};
-  const MonetaryAmount amounts4[6] = {MonetaryAmount("147ADA"),     MonetaryAmount("4.76DOT"),
-                                      MonetaryAmount("15004MATIC"), MonetaryAmount("155USD"),
-                                      MonetaryAmount("107.5USDT"),  MonetaryAmount("1200EUR")};
+  static constexpr MonetaryAmount amounts1[] = {MonetaryAmount(1500, "XRP"), MonetaryAmount(15, "BTC"),
+                                                MonetaryAmount(15, "ETH", 1), MonetaryAmount(5000, "USDT")};
+  static constexpr MonetaryAmount amounts2[] = {MonetaryAmount(37, "SOL"), MonetaryAmount(1887565, "SHIB"),
+                                                MonetaryAmount(5, "BTC", 1), MonetaryAmount(6750, "USDT")};
+  static constexpr MonetaryAmount amounts3[] = {MonetaryAmount(6, "ETH", 1), MonetaryAmount(1000, "XLM"),
+                                                MonetaryAmount(1, "AVAX", 2), MonetaryAmount(1500, "EUR"),
+                                                MonetaryAmount(4250, "USDT")};
+  static constexpr MonetaryAmount amounts4[] = {MonetaryAmount(147, "ADA"),      MonetaryAmount(476, "DOT", 2),
+                                                MonetaryAmount(15004, "MATIC"),  MonetaryAmount(155, "USD"),
+                                                MonetaryAmount(1075, "USDT", 1), MonetaryAmount(1200, "EUR")};
 
   BalancePortfolio balancePortfolio1{amounts1};
   BalancePortfolio balancePortfolio2{amounts2};

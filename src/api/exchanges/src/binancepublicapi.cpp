@@ -319,7 +319,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
 MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMins) {
   if (avgPriceMins == 0) {
     // price should be the last matched price
-    LastTradesVector lastTrades = queryLastTrades(mk, 1);
+    TradesVector lastTrades = queryLastTrades(mk, 1);
     if (!lastTrades.empty()) {
       return lastTrades.front().price();
     }
@@ -517,7 +517,7 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
   return {last24hVol, mk.base()};
 }
 
-LastTradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
+TradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
   if (nbTrades > kMaxNbLastTrades) {
     log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, _name);
     nbTrades = kMaxNbLastTrades;
@@ -525,8 +525,8 @@ LastTradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/trades",
                             {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
 
-  LastTradesVector ret;
-  ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
+  TradesVector ret;
+  ret.reserve(static_cast<TradesVector::size_type>(result.size()));
   for (const json& detail : result) {
     MonetaryAmount amount(detail["qty"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());

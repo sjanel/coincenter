@@ -46,7 +46,7 @@ class MarketOrderBook {
     MonetaryAmount price;
   };
 
-  using AmountPerPriceVec = SmallVector<AmountAtPrice, 8>;
+  using AmountPerPriceVec = SmallVector<AmountAtPrice, 4>;
 
   /// Constructs an empty MarketOrderBook
   MarketOrderBook() noexcept = default;

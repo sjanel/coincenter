@@ -301,9 +301,9 @@ TimePoint EpochTime(std::string&& dateStr) {
 }
 }  // namespace
 
-LastTradesVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+TradesVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
   json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote());
-  LastTradesVector ret;
+  TradesVector ret;
   ret.reserve(result.size());
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());

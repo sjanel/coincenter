@@ -22,10 +22,10 @@ void ToChars(char *first, SizeType s, std::integral auto i) {
 }
 }  // namespace details
 
-inline string ToString(std::integral auto i) {
-  const int nbDigitsInt = nchars(i);
+inline string ToString(std::integral auto val) {
+  const int nbDigitsInt = nchars(val);
   string s(nbDigitsInt, '0');
-  details::ToChars(s.data(), nbDigitsInt, i);
+  details::ToChars(s.data(), nbDigitsInt, val);
   return s;
 }
 

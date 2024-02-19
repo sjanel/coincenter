@@ -796,21 +796,18 @@ class QueryResultPrinterLastTradesVolumeTest : public QueryResultPrinterTest {
  protected:
   Market marketLastTrades{"ETH", "USDT"};
   int nbLastTrades = 3;
-  LastTradesPerExchange lastTradesPerExchange{
+  TradesPerExchange lastTradesPerExchange{
       {&exchange1,
-       LastTradesVector{
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
+       TradesVector{PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
+                    PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
+                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
       {&exchange3,
-       LastTradesVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
+       TradesVector{PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
       {&exchange2,
-       LastTradesVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
+       TradesVector{PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
+                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
 };
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
@@ -848,8 +845,7 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
 }
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson)
-      .printLastTrades(marketLastTrades, nbLastTrades, LastTradesPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson).printLastTrades(marketLastTrades, nbLastTrades, TradesPerExchange{});
   static constexpr std::string_view kExpected = R"(
 {
   "in": {

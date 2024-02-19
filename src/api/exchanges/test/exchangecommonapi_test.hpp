@@ -270,7 +270,7 @@ class TestAPI {
     }
     if (!sampleMarkets.empty()) {
       Market mk = sampleMarkets.front();
-      LastTradesVector lastTrades = exchangePublic.queryLastTrades(mk);
+      TradesVector lastTrades = exchangePublic.queryLastTrades(mk);
       if (!lastTrades.empty() && exchangePrivateOpt) {
         auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
           return lhs.amount() < rhs.amount();

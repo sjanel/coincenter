@@ -53,7 +53,7 @@ class Coincenter {
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Retrieve the last trades for each queried exchange
-  LastTradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
+  TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
 
   /// Retrieve the last price for exchanges supporting given market.
   MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
@@ -69,6 +69,7 @@ class Coincenter {
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
                                 const BalanceOptions &balanceOptions);
 
+  /// Get deposit information for given accounts
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
   /// Get opened orders on given list of exchanges following given order constraints

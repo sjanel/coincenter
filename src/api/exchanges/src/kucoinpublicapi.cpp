@@ -348,10 +348,10 @@ MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
   return {amountStr, mk.base()};
 }
 
-LastTradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+TradesVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
   json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
-  LastTradesVector ret;
-  ret.reserve(static_cast<LastTradesVector::size_type>(result.size()));
+  TradesVector ret;
+  ret.reserve(static_cast<TradesVector::size_type>(result.size()));
   for (const json& detail : result) {
     MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());

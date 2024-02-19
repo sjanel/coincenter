@@ -59,7 +59,7 @@ class BithumbPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
+  TradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
   MonetaryAmount queryLastPrice(Market mk) override;
 

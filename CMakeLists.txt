@@ -83,6 +83,7 @@ if(CCT_ENABLE_TESTS)
   enable_testing()
 endif()
 
+# nlohmann_json - coincenter json library
 find_package(nlohmann_json CONFIG)
 if(NOT nlohmann_json_FOUND)
   FetchContent_Declare(
@@ -94,6 +95,7 @@ if(NOT nlohmann_json_FOUND)
   FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+# spdlog - coincenter logging library
 find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
@@ -115,7 +117,7 @@ if(CCT_BUILD_PROMETHEUS_FROM_SRC)
   FetchContent_Declare(
     prometheus-cpp
     GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
-    GIT_TAG v1.2.0
+    GIT_TAG v1.2.3
   )
 
   FetchContent_MakeAvailable(prometheus-cpp)
