@@ -17,9 +17,10 @@ class Market {
  public:
   enum class Type : int8_t { kRegularExchangeMarket, kFiatConversionMarket };
 
-  Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
+  constexpr Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
-  Market(CurrencyCode first, CurrencyCode second, Type type = Type::kRegularExchangeMarket) : _assets({first, second}) {
+  constexpr Market(CurrencyCode first, CurrencyCode second, Type type = Type::kRegularExchangeMarket)
+      : _assets({first, second}) {
     setType(type);
   }
 
@@ -68,7 +69,7 @@ class Market {
  private:
   string assetsPairStr(char sep, bool lowerCase) const;
 
-  void setType(Type type) { _assets[0].uncheckedSetAdditionalBits(static_cast<int8_t>(type)); }
+  constexpr void setType(Type type) { _assets[0].uncheckedSetAdditionalBits(static_cast<int8_t>(type)); }
 
   std::array<CurrencyCode, 2> _assets;
 };

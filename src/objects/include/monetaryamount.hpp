@@ -100,9 +100,13 @@ class MonetaryAmount {
     setNbDecimals(monetaryAmount.nbDecimals());
   }
 
+  /// Get an integral representation of this MonetaryAmount multiplied by current number of decimals.
+  /// Example: "5.6235" with 6 decimals will return 5623500
+  [[nodiscard]] AmountType amount() const { return _amount; }
+
   /// Get an integral representation of this MonetaryAmount multiplied by given number of decimals.
   /// If an overflow would occur for the resulting amount, return std::nullopt
-  /// Example : "5.6235" with 6 decimals will return 5623500
+  /// Example: "5.6235" with 6 decimals will return 5623500
   [[nodiscard]] std::optional<AmountType> amount(int8_t nbDecimals) const;
 
   /// Get the integer part of the amount of this MonetaryAmount.

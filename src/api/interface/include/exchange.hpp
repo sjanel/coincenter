@@ -93,7 +93,7 @@ class Exchange {
   MonetaryAmount queryLast24hVolume(Market mk) { return _exchangePublic.queryLast24hVolume(mk); }
 
   /// Retrieve an ordered vector of recent last trades
-  LastTradesVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
+  TradesVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
     return _exchangePublic.queryLastTrades(mk, nbTrades);
   }
 

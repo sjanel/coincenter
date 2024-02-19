@@ -351,8 +351,7 @@ MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m
   return _exchangesOrchestrator.getLast24hTradedVolumePerExchange(mk, exchangeNames);
 }
 
-LastTradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
-                                                           int nbLastTrades) {
+TradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades) {
   const auto ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
 
   _metricsExporter.exportLastTradesMetrics(mk, ret);

@@ -96,7 +96,7 @@ class ExchangePublic : public ExchangeBase {
   virtual MonetaryAmount queryLast24hVolume(Market mk) = 0;
 
   /// Retrieve an ordered vector of recent last trades
-  virtual LastTradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
+  virtual TradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
 
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market mk) = 0;

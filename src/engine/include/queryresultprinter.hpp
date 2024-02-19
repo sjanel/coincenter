@@ -81,7 +81,7 @@ class QueryResultPrinter {
 
   void printLast24hTradedVolume(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) const;
 
-  void printLastTrades(Market mk, int nbLastTrades, const LastTradesPerExchange &lastTradesPerExchange) const;
+  void printLastTrades(Market mk, int nbLastTrades, const TradesPerExchange &lastTradesPerExchange) const;
 
   void printLastPrice(Market mk, const MonetaryAmountPerExchange &pricePerExchange) const;
 
