@@ -9,6 +9,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "publictrade.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresultprinter_base_test.hpp"

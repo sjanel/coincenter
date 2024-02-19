@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_exception.hpp"
+#include "currencycode.hpp"
+
 namespace cct {
 TEST(MarketTest, DefaultConstructor) {
   Market market;

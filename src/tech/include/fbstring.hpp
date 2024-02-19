@@ -533,7 +533,7 @@ class fbstring_core {
 
   void push_back(Char c) { *expandNoinit(1, /* expGrowth = */ true) = c; }
 
-  size_t size() const {
+  size_t size() const noexcept {
     size_t ret = ml_.size_;
     if constexpr (kIsLittleEndian) {
       // We can save a couple instructions, because the category is
@@ -549,7 +549,7 @@ class fbstring_core {
     return ret;
   }
 
-  size_t capacity() const {
+  size_t capacity() const noexcept {
     FOLLY_PUSH_WARNING
     FOLLY_CLANG_DISABLE_WARNING("-Wcovered-switch-default")
     switch (category()) {
@@ -1338,15 +1338,15 @@ class basic_fbstring {
   }
 
   // C++11 21.4.4 capacity:
-  size_type size() const { return store_.size(); }
+  size_type size() const noexcept { return store_.size(); }
 
-  size_type length() const { return size(); }
+  size_type length() const noexcept { return size(); }
 
-  size_type max_size() const { return std::numeric_limits<size_type>::max(); }
+  size_type max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
 
   void resize(size_type n, value_type c = value_type());
 
-  size_type capacity() const { return store_.capacity(); }
+  size_type capacity() const noexcept { return store_.capacity(); }
 
   void reserve(size_type res_arg = 0) {
     enforce<std::length_error>(res_arg <= max_size(), "");

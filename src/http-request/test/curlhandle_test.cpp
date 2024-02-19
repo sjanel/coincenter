@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <string_view>
+#include <utility>
 
 #include "cct_exception.hpp"
 #include "curloptions.hpp"

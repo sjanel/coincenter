@@ -51,7 +51,7 @@ class CurlHandle {
   /// The pointed memory is valid until a next call to 'query'.
   std::string_view query(std::string_view endpoint, const CurlOptions &opts);
 
-  std::string_view getNextBaseUrl() const { return _bestUrlPicker.getNextBaseURL(); }
+  std::string_view getNextBaseUrl() const { return _bestURLPicker.getNextBaseURL(); }
 
   Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
@@ -78,7 +78,7 @@ class CurlHandle {
   AbstractMetricGateway *_pMetricGateway = nullptr;  // non-owning pointer
   Duration _minDurationBetweenQueries{};
   TimePoint _lastQueryTime{};
-  BestURLPicker _bestUrlPicker;
+  BestURLPicker _bestURLPicker;
   string _queryData;
   log::level::level_enum _requestCallLogLevel = log::level::level_enum::off;
   log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::off;

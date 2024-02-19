@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_exception.hpp"
+#include "cct_log.hpp"
 
 namespace cct {
 TEST(ExchangeName, NoKeyName) {

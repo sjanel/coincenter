@@ -5,6 +5,7 @@
 
 #include "coincenterinfo.hpp"
 #include "runmodes.hpp"
+#include "timedef.hpp"
 
 namespace cct::api {
 

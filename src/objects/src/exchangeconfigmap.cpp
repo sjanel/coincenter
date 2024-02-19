@@ -15,6 +15,8 @@
 #include "parseloglevel.hpp"
 #include "priceoptionsdef.hpp"
 #include "timedef.hpp"
+#include "tradeconfig.hpp"
+#include "tradedefinitions.hpp"
 
 namespace cct {
 

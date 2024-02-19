@@ -4,6 +4,7 @@
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
+#include "monetaryamount.hpp"
 #include "priceoptionsdef.hpp"
 #include "tradeconfig.hpp"
 

@@ -16,6 +16,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
+#include "tradeconfig.hpp"
 
 namespace cct {
 

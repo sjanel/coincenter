@@ -19,6 +19,7 @@
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "simpletable.hpp"
+#include "timedef.hpp"
 #include "unreachable.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
