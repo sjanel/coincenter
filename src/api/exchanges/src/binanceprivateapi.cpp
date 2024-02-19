@@ -38,6 +38,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"

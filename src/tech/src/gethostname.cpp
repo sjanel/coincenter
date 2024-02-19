@@ -1,5 +1,6 @@
 #include "gethostname.hpp"
 
+// NOLINTNEXTLINE(misc-include-cleaner)
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"

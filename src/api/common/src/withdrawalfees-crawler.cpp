@@ -7,12 +7,17 @@
 
 #include "cachedresultvault.hpp"
 #include "cct_cctype.hpp"
+#include "cct_const.hpp"
+#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
+#include "currencycode.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
+#include "monetaryamount.hpp"
 #include "timedef.hpp"
 
 namespace cct {

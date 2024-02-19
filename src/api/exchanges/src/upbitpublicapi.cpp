@@ -31,6 +31,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"

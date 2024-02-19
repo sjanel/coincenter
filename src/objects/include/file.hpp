@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <string_view>
+
 #include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "reader.hpp"
@@ -14,7 +17,7 @@ class File : public Reader, public Writer {
 
   File(std::string_view dataDir, Type type, std::string_view name, IfError ifError);
 
-  string readAll() const override;
+  [[nodiscard]] string readAll() const override;
 
   int write(const json &data, Writer::Mode mode = Writer::Mode::FromStart) const override;
 

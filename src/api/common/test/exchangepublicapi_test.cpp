@@ -7,6 +7,7 @@
 
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
@@ -28,7 +29,7 @@
 namespace cct::api {
 namespace {
 class StableCoinReader : public Reader {
-  string readAll() const override { return R"({"USDT": "USD"})"; }
+  [[nodiscard]] string readAll() const override { return R"({"USDT": "USD"})"; }
 };
 }  // namespace
 class ExchangePublicTest : public ::testing::Test {

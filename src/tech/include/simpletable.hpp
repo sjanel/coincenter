@@ -1,12 +1,11 @@
 #pragma once
 
 #include <compare>
-#include <concepts>
 #include <cstdint>
-#include <ios>
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #ifdef CCT_MSVC
@@ -44,23 +43,23 @@ class SimpleTable {
     using value_type = std::variant<string_type, std::string_view, IntegralType, bool>;
     using size_type = uint32_t;
 
-    explicit Cell(std::string_view v = std::string_view()) : _data(v) {}
+    explicit Cell(std::string_view sv = std::string_view()) : _data(sv) {}
 
-    explicit Cell(const char *v) : _data(std::string_view(v)) {}
+    explicit Cell(const char *cstr) : _data(std::string_view(cstr)) {}
 
 #ifdef CCT_MSVC
     explicit Cell(const string &v) : _data(std::string(v.data(), v.size())) {}
 #else
-    explicit Cell(const string_type &v) : _data(v) {}
+    explicit Cell(const string_type &str) : _data(str) {}
 
-    explicit Cell(string_type &&v) : _data(std::move(v)) {}
+    explicit Cell(string_type &&str) : _data(std::move(str)) {}
 #endif
 
-    explicit Cell(std::integral auto v) : _data(v) {}
+    explicit Cell(std::integral auto val) : _data(val) {}
 
     size_type size() const noexcept;
 
-    void swap(Cell &o) noexcept { _data.swap(o._data); }
+    void swap(Cell &rhs) noexcept { _data.swap(rhs._data); }
 
     using trivially_relocatable = is_trivially_relocatable<string_type>::type;
 
@@ -104,8 +103,8 @@ class SimpleTable {
     value_type &back() { return _cells.back(); }
     const value_type &back() const { return _cells.back(); }
 
-    void push_back(const Cell &c) { _cells.push_back(c); }
-    void push_back(Cell &&c) { _cells.push_back(std::move(c)); }
+    void push_back(const Cell &cell) { _cells.push_back(cell); }
+    void push_back(Cell &&cell) { _cells.push_back(std::move(cell)); }
 
     template <class... Args>
     value_type &emplace_back(Args &&...args) {
@@ -168,7 +167,7 @@ class SimpleTable {
 
   const value_type &operator[](size_type rowPos) const { return _rows[rowPos]; }
 
-  void reserve(size_type s) { _rows.reserve(s); }
+  void reserve(size_type sz) { _rows.reserve(sz); }
 
   friend std::ostream &operator<<(std::ostream &os, const SimpleTable &t);
 

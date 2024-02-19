@@ -80,7 +80,7 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
                        const PermanentCurlOptions &permanentCurlOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
-      _bestUrlPicker(std::move(bestURLPicker)),
+      _bestURLPicker(std::move(bestURLPicker)),
       _requestCallLogLevel(permanentCurlOptions.requestCallLogLevel()),
       _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()),
       _nbMaxRetries(permanentCurlOptions.nbMaxRetries()),
@@ -120,7 +120,7 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
 #endif
 
     log::debug("Initialize CurlHandle for {} with {} as minimum duration between queries",
-               bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
+               _bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
 
     if (settings::IsProxyRequested(runMode)) {
       if (IsProxyAvailable()) {
@@ -151,8 +151,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
 
-  const int8_t baseUrlPos = _bestUrlPicker.nextBaseURLPos();
-  const std::string_view baseUrl = _bestUrlPicker.getBaseURL(baseUrlPos);
+  const int8_t baseUrlPos = _bestURLPicker.nextBaseURLPos();
+  const std::string_view baseUrl = _bestURLPicker.getBaseURL(baseUrlPos);
   const std::string_view postDataStr = postData.str();
   string modifiedURL(baseUrl.size() + endpoint.size() + (appendParametersInQueryStr ? (1U + postDataStr.size()) : 0U),
                      '?');
@@ -262,7 +262,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
     // Store stats
     const auto queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
-    _bestUrlPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
+    _bestURLPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
 
     if (_pMetricGateway != nullptr) {
       _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
@@ -274,7 +274,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
     // Periodic memory release to avoid memory leak for a very large number of requests
     static constexpr int kReleaseMemoryRequestsFrequency = 100;
-    if ((_bestUrlPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
+    if ((_bestURLPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
       _queryData.shrink_to_fit();
     }
 
@@ -332,7 +332,7 @@ void CurlHandle::swap(CurlHandle &rhs) noexcept {
   swap(_pMetricGateway, rhs._pMetricGateway);
   swap(_minDurationBetweenQueries, rhs._minDurationBetweenQueries);
   swap(_lastQueryTime, rhs._lastQueryTime);
-  swap(_bestUrlPicker, rhs._bestUrlPicker);
+  swap(_bestURLPicker, rhs._bestURLPicker);
   _queryData.swap(rhs._queryData);
   swap(_requestCallLogLevel, rhs._requestCallLogLevel);
   swap(_requestAnswerLogLevel, rhs._requestAnswerLogLevel);

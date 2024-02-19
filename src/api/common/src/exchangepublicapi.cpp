@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <compare>
 #include <cstddef>
+#include <functional>
+#include <mutex>
 #include <optional>
 #include <ranges>
 #include <string_view>
@@ -104,7 +107,7 @@ namespace {
 // Struct containing a currency and additional information to create markets with detailed information (order, market
 // type)
 struct CurrencyDir {
-  constexpr auto operator<=>(const CurrencyDir &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyDir &) const noexcept = default;
 
   CurrencyCode cur;
   bool isLastRealMarketReversed = false;

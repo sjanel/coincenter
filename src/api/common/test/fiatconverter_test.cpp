@@ -34,7 +34,7 @@ CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
                        [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
                        [[maybe_unused]] const PermanentCurlOptions &permanentCurlOptions,
                        [[maybe_unused]] settings::RunMode runMode)
-    : _handle(nullptr), _bestUrlPicker(kSomeFakeURL) {}
+    : _bestURLPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, const CurlOptions &opts) {

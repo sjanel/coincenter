@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -12,7 +11,6 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -34,6 +32,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "toupperlower-string.hpp"

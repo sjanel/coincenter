@@ -33,6 +33,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "requestsconfig.hpp"

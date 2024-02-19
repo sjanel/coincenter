@@ -1,14 +1,15 @@
 #include "commonapi.hpp"
 
 #include <cstdint>
+#include <mutex>
 #include <string_view>
 #include <utility>
 
 #include "cachedresult.hpp"
-#include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "currencycode.hpp"

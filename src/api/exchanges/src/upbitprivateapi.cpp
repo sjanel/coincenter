@@ -589,7 +589,7 @@ OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
 std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   auto curStr = currencyCode.str();
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
-                             {{"currency", std::string_view(curStr)}, {"net_type", std::string_view(curStr)}});
+                             {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}});
   std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
   return MonetaryAmount(amountStr, currencyCode);
 }
