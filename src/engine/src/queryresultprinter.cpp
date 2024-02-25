@@ -311,7 +311,7 @@ json TradesJson(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAm
 
 json OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
   json ret;
-  if (ordersConstraints.isCur1Defined()) {
+  if (ordersConstraints.isCurDefined()) {
     ret.emplace("cur1", ordersConstraints.curStr1());
   }
   if (ordersConstraints.isCur2Defined()) {
@@ -333,8 +333,9 @@ json OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
   return ret;
 }
 
-json OrdersOpenedJson(const OpenedOrdersPerExchange &openedOrdersPerExchange,
-                      const OrdersConstraints &ordersConstraints) {
+template <class OrdersPerExchangeType>
+json OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExchangeType &ordersPerExchange,
+                const OrdersConstraints &ordersConstraints) {
   json in;
   json inOpt = OrdersConstraintsToJson(ordersConstraints);
 
@@ -343,17 +344,24 @@ json OrdersOpenedJson(const OpenedOrdersPerExchange &openedOrdersPerExchange,
   }
 
   json out = json::object();
-  for (const auto &[exchangePtr, openedOrders] : openedOrdersPerExchange) {
+  for (const auto &[exchangePtr, ordersData] : ordersPerExchange) {
+    using OrderType = std::remove_cvref_t<decltype(*std::declval<decltype(ordersData)>().begin())>;
+
     json orders = json::array();
-    for (const Order &openedOrder : openedOrders) {
+    for (const auto &orderData : ordersData) {
       json &order = orders.emplace_back();
-      order.emplace("id", openedOrder.id());
-      order.emplace("pair", openedOrder.market().str());
-      order.emplace("placedTime", openedOrder.placedTimeStr());
-      order.emplace("side", openedOrder.sideStr());
-      order.emplace("price", openedOrder.price().amountStr());
-      order.emplace("matched", openedOrder.matchedVolume().amountStr());
-      order.emplace("remaining", openedOrder.remainingVolume().amountStr());
+      order.emplace("id", orderData.id());
+      order.emplace("pair", orderData.market().str());
+      order.emplace("placedTime", orderData.placedTimeStr());
+      if constexpr (std::is_same_v<ClosedOrder, OrderType>) {
+        order.emplace("matchedTime", orderData.matchedTimeStr());
+      }
+      order.emplace("side", orderData.sideStr());
+      order.emplace("price", orderData.price().amountStr());
+      order.emplace("matched", orderData.matchedVolume().amountStr());
+      if constexpr (std::is_same_v<OpenedOrder, OrderType>) {
+        order.emplace("remaining", orderData.remainingVolume().amountStr());
+      }
     }
 
     auto it = out.find(exchangePtr->name());
@@ -366,7 +374,7 @@ json OrdersOpenedJson(const OpenedOrdersPerExchange &openedOrdersPerExchange,
     }
   }
 
-  return ToJson(CoincenterCommandType::kOrdersOpened, std::move(in), std::move(out));
+  return ToJson(coincenterCommandType, std::move(in), std::move(out));
 }
 
 json OrdersCancelledJson(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange,
@@ -923,15 +931,41 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
   logActivity(commandType, jsonData);
 }
 
+void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
+                                           const OrdersConstraints &ordersConstraints) const {
+  json jsonData = OrdersJson(CoincenterCommandType::kOrdersClosed, closedOrdersPerExchange, ordersConstraints);
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Placed time", "Matched time", "Side", "Price",
+                              "Matched Amount");
+      for (const auto &[exchangePtr, closedOrders] : closedOrdersPerExchange) {
+        for (const ClosedOrder &closedOrder : closedOrders) {
+          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), closedOrder.id(),
+                                   closedOrder.placedTimeStr(), closedOrder.matchedTimeStr(), closedOrder.sideStr(),
+                                   closedOrder.price().str(), closedOrder.matchedVolume().str());
+        }
+      }
+      printTable(simpleTable);
+      break;
+    }
+    case ApiOutputType::kJson:
+      printJson(jsonData);
+      break;
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+  logActivity(CoincenterCommandType::kOrdersClosed, jsonData);
+}
+
 void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange,
                                            const OrdersConstraints &ordersConstraints) const {
-  json jsonData = OrdersOpenedJson(openedOrdersPerExchange, ordersConstraints);
+  json jsonData = OrdersJson(CoincenterCommandType::kOrdersOpened, openedOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Placed time", "Side", "Price", "Matched Amount",
                               "Remaining Amount");
       for (const auto &[exchangePtr, openedOrders] : openedOrdersPerExchange) {
-        for (const Order &openedOrder : openedOrders) {
+        for (const OpenedOrder &openedOrder : openedOrders) {
           simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.id(),
                                    openedOrder.placedTimeStr(), openedOrder.sideStr(), openedOrder.price().str(),
                                    openedOrder.matchedVolume().str(), openedOrder.remainingVolume().str());

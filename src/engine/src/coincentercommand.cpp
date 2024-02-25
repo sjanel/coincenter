@@ -15,45 +15,12 @@
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
-bool CoincenterCommand::isPublic() const {
-  switch (_type) {
-    case CoincenterCommandType::kHealthCheck:  // NOLINT(bugprone-branch-clone)
+namespace {
+bool IsOrderCommand(CoincenterCommandType cmd) {
+  switch (cmd) {
+    case CoincenterCommandType::kOrdersCancel:  // NOLINT(bugprone-branch-clone)
       [[fallthrough]];
-    case CoincenterCommandType::kCurrencies:
-      [[fallthrough]];
-    case CoincenterCommandType::kMarkets:
-      [[fallthrough]];
-    case CoincenterCommandType::kConversionPath:
-      [[fallthrough]];
-    case CoincenterCommandType::kLastPrice:
-      [[fallthrough]];
-    case CoincenterCommandType::kTicker:
-      [[fallthrough]];
-    case CoincenterCommandType::kOrderbook:
-      [[fallthrough]];
-    case CoincenterCommandType::kLastTrades:
-      [[fallthrough]];
-    case CoincenterCommandType::kLast24hTradedVolume:
-      [[fallthrough]];
-    case CoincenterCommandType::kWithdrawFees:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool CoincenterCommand::isReadOnly() const {
-  if (isPublic()) {
-    return true;
-  }
-  switch (_type) {
-    case CoincenterCommandType::kBalance:  // NOLINT(bugprone-branch-clone)
-      [[fallthrough]];
-    case CoincenterCommandType::kDepositInfo:
-      [[fallthrough]];
-    case CoincenterCommandType::kRecentDeposits:
-      [[fallthrough]];
-    case CoincenterCommandType::kRecentWithdraws:
+    case CoincenterCommandType::kOrdersClosed:
       [[fallthrough]];
     case CoincenterCommandType::kOrdersOpened:
       return true;
@@ -61,6 +28,7 @@ bool CoincenterCommand::isReadOnly() const {
       return false;
   }
 }
+}  // namespace
 
 CoincenterCommand& CoincenterCommand::setExchangeNames(const ExchangeNames& exchangeNames) {
   _exchangeNames = exchangeNames;
@@ -72,7 +40,7 @@ CoincenterCommand& CoincenterCommand::setExchangeNames(ExchangeNames&& exchangeN
 }
 
 CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstraints& ordersConstraints) {
-  if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
+  if (!IsOrderCommand(_type)) {
     throw exception("Order constraints can only be used for orders related commands");
   }
   _specialOptions = ordersConstraints;
@@ -80,7 +48,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstrain
 }
 
 CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& ordersConstraints) {
-  if (_type != CoincenterCommandType::kOrdersCancel && _type != CoincenterCommandType::kOrdersOpened) {
+  if (!IsOrderCommand(_type)) {
     throw exception("Order constraints can only be used for orders related commands");
   }
   _specialOptions = std::move(ordersConstraints);

@@ -32,7 +32,7 @@ class WithdrawsOrDepositsConstraints {
 
   CurrencyCode currencyCode() const { return _currencyCode; }
 
-  bool validateCur(CurrencyCode cur) const { return _currencyCode.isNeutral() || cur == _currencyCode; }
+  bool validateCur(CurrencyCode cur) const { return currencyCode().isNeutral() || cur == currencyCode(); }
 
   bool validateTime(TimePoint tp) const { return tp >= _timeAfter && tp <= _timeBefore; }
 

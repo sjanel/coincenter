@@ -188,12 +188,102 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return wallet;
 }
 
-Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+namespace {
+TradeSide TradeSideFromTypeStr(std::string_view typeSide) {
+  if (typeSide.starts_with("buy")) {
+    return TradeSide::kBuy;
+  }
+  if (typeSide.starts_with("sell")) {
+    return TradeSide::kSell;
+  }
+  throw exception("Unable to detect order side for type '{}'", typeSide);
+}
+}  // namespace
+
+ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
+  ClosedOrderVector closedOrders;
+
+  CurlPostData params;
+
+  if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
+    params.append("end-time", TimestampToMs(closedOrdersConstraints.placedBefore()));
+  }
+  if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
+    params.append("start-time", TimestampToMs(closedOrdersConstraints.placedAfter()));
+  }
+
+  if (closedOrdersConstraints.isMarketDefined()) {
+    // we can use the more detailed endpoint that requires the market
+
+    // Do not ask for cancelled orders without any matched part
+    params.append("states", "filled");
+
+    params.append("symbol", closedOrdersConstraints.market().assetsPairStrLower());
+  } else {
+    // Only past 48h orders may be retrieved without market
+  }
+
+  const std::string_view closedOrdersEndpoint =
+      closedOrdersConstraints.isMarketDefined() ? "/v1/order/orders" : "/v1/order/history";
+
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, closedOrdersEndpoint, std::move(params));
+
+  const auto dataIt = data.find("data");
+  if (dataIt == data.end()) {
+    log::error("Unexpected closed orders query reply for {}", _exchangePublic.name());
+    return closedOrders;
+  }
+
+  MarketSet markets;
+
+  for (json& orderDetails : *dataIt) {
+    string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
+
+    std::optional<Market> optMarket =
+        _exchangePublic.determineMarketFromMarketStr(marketStr, markets, closedOrdersConstraints.cur1());
+
+    if (!optMarket) {
+      continue;
+    }
+
+    if (!closedOrdersConstraints.validateCur(optMarket->base(), optMarket->quote())) {
+      continue;
+    }
+
+    TimePoint placedTime{TimeInMs(orderDetails["created-at"].get<int64_t>())};
+
+    string idStr = ToString(orderDetails["id"].get<int64_t>());
+
+    if (!closedOrdersConstraints.validateId(idStr)) {
+      continue;
+    }
+
+    TimePoint matchedTime{TimeInMs(orderDetails["finished-at"].get<int64_t>())};
+
+    // 'field' seems to be a typo here (instead of 'filled), but it's really sent by Huobi like that.
+    MonetaryAmount matchedVolume(orderDetails["field-amount"].get<std::string_view>(), optMarket->base());
+    if (matchedVolume == 0) {
+      continue;
+    }
+    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), optMarket->quote());
+
+    std::string_view typeSide = orderDetails["type"].get<std::string_view>();
+    TradeSide tradeSide = TradeSideFromTypeStr(typeSide);
+
+    closedOrders.emplace_back(std::move(idStr), matchedVolume, price, placedTime, matchedTime, tradeSide);
+  }
+
+  std::ranges::sort(closedOrders);
+  log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
+  return closedOrders;
+}
+
+OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   CurlPostData params;
 
   MarketSet markets;
 
-  if (openedOrdersConstraints.isCur1Defined()) {
+  if (openedOrdersConstraints.isCurDefined()) {
     Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
                                                                               openedOrdersConstraints.cur2());
 
@@ -203,23 +293,21 @@ Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
   }
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
-  Orders openedOrders;
+  OpenedOrderVector openedOrders;
   for (const json& orderDetails : data["data"]) {
     string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
 
     std::optional<Market> optMarket =
         _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
 
-    CurrencyCode volumeCur;
-    CurrencyCode priceCur;
+    if (!optMarket) {
+      continue;
+    }
 
-    if (optMarket) {
-      volumeCur = optMarket->base();
-      priceCur = optMarket->quote();
-      if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
-        continue;
-      }
-    } else {
+    CurrencyCode volumeCur = optMarket->base();
+    CurrencyCode priceCur = optMarket->quote();
+
+    if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
       continue;
     }
 
@@ -232,7 +320,7 @@ Orders HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCons
 
     int64_t idInt = orderDetails["id"].get<int64_t>();
     string id = ToString(idInt);
-    if (!openedOrdersConstraints.validateOrderId(id)) {
+    if (!openedOrdersConstraints.validateId(id)) {
       continue;
     }
 
@@ -254,12 +342,12 @@ int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
   if (openedOrdersConstraints.isOrderIdOnlyDependent()) {
     return batchCancel(openedOrdersConstraints.orderIdSet());
   }
-  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
 
   vector<OrderId> orderIds;
   orderIds.reserve(openedOrders.size());
   std::transform(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
-                 std::back_inserter(orderIds), [](Order&& order) -> OrderId&& { return std::move(order.id()); });
+                 std::back_inserter(orderIds), [](OpenedOrder&& order) -> OrderId&& { return std::move(order.id()); });
   return batchCancel(OrdersConstraints::OrderIdSet(std::move(orderIds)));
 }
 

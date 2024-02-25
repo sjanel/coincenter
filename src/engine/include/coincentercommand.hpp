@@ -53,12 +53,6 @@ class CoincenterCommand {
   CoincenterCommand& setPercentageAmount(bool value = true);
   CoincenterCommand& withBalanceInUse(bool value = true);
 
-  bool isPublic() const;
-  bool isPrivate() const { return !isPublic(); }
-
-  bool isReadOnly() const;
-  bool isWrite() const { return !isReadOnly(); }
-
   const ExchangeNames& exchangeNames() const { return _exchangeNames; }
 
   const OrdersConstraints& ordersConstraints() const { return std::get<OrdersConstraints>(_specialOptions); }

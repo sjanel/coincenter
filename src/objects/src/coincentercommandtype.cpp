@@ -22,6 +22,7 @@ constexpr std::string_view kCommandTypeNames[] = {
 
     "Balance",
     "DepositInfo",
+    "OrdersClosed",
     "OrdersOpened",
     "OrdersCancel",
     "RecentDeposits",

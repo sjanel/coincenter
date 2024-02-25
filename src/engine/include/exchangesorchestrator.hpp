@@ -30,6 +30,9 @@ class ExchangesOrchestrator {
 
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
+  ClosedOrdersPerExchange getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
+                                          const OrdersConstraints &closedOrdersConstraints);
+
   OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 

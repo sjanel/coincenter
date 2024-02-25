@@ -253,6 +253,13 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
       {{{"Private queries", 3100}, "--in-use", "", "Include balance in use as well from opened orders"},
        &OptValueType::withBalanceInUse},
       {{{"Private queries", 3250},
+        "orders-closed",
+        "<cur1-cur2[,exch1,...]>",
+        "Print closed (with no remaining unmatched amount) orders matching selection criteria.\n"
+        "All cur1, cur2 and exchanges are optional, "
+        "returned closed orders will be filtered accordingly."},
+       &OptValueType::closedOrdersInfo},
+      {{{"Private queries", 3250},
         "orders-opened",
         "<cur1-cur2[,exch1,...]>",
         "Print opened orders matching selection criteria.\n"

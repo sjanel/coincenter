@@ -32,7 +32,9 @@ class BithumbPrivate : public ExchangePrivate {
 
   bool canGenerateDepositAddress() const override { return false; }
 
-  Orders queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
+  ClosedOrderVector queryClosedOrders(const OrdersConstraints& closedOrdersConstraints = OrdersConstraints()) override;
+
+  OpenedOrderVector queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
   int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) override;
 
@@ -79,11 +81,6 @@ class BithumbPrivate : public ExchangePrivate {
   };
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;
-
-  enum class UserTransactionEnum : int8_t { kDeposit, kOngoingWithdraws, kProcessedWithdraws, kAllWithdraws };
-
-  json queryRecentTransactions(const WithdrawsOrDepositsConstraints& withdrawsOrDepositsConstraints,
-                               UserTransactionEnum depositOrWithdrawEnum);
 
   CurlHandle _curlHandle;
   CurrencyOrderInfoMap _currencyOrderInfoMap;

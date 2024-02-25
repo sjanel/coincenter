@@ -30,7 +30,7 @@ TEST(OrderConstraintsTest, Empty) {
 
 TEST(OrderConstraintsTest, Market1) {
   OrdersConstraints orderConstraints("BTC");
-  EXPECT_TRUE(orderConstraints.isCur1Defined());
+  EXPECT_TRUE(orderConstraints.isCurDefined());
   EXPECT_FALSE(orderConstraints.isCur2Defined());
   EXPECT_TRUE(orderConstraints.isAtMostMarketDependent());
   EXPECT_FALSE(orderConstraints.isOrderIdDependent());
@@ -41,7 +41,7 @@ TEST(OrderConstraintsTest, Market1) {
 
 TEST(OrderConstraintsTest, Market2) {
   OrdersConstraints orderConstraints("BTC", "EUR");
-  EXPECT_TRUE(orderConstraints.isCur1Defined());
+  EXPECT_TRUE(orderConstraints.isCurDefined());
   EXPECT_TRUE(orderConstraints.isCur2Defined());
   EXPECT_TRUE(orderConstraints.isAtMostMarketDependent());
   EXPECT_EQ(orderConstraints.market(), Market("BTC", "EUR"));

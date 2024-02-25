@@ -2,8 +2,9 @@
 
 #include "cct_flatset.hpp"
 #include "cct_vector.hpp"
+#include "closed-order.hpp"
 #include "deposit.hpp"
-#include "order.hpp"
+#include "opened-order.hpp"
 #include "tradedamounts.hpp"
 #include "withdraw.hpp"
 
@@ -14,8 +15,11 @@ using DepositsSet = FlatSet<Deposit>;
 using Withdraws = vector<Withdraw>;
 using WithdrawsSet = FlatSet<Withdraw>;
 
-using Orders = vector<Order>;
-using OrdersSet = FlatSet<Order>;
+using ClosedOrderVector = vector<ClosedOrder>;
+using ClosedOrderSet = FlatSet<ClosedOrder>;
+
+using OpenedOrderVector = vector<OpenedOrder>;
+using OpenedOrderSet = FlatSet<OpenedOrder>;
 
 using TradedAmountsVector = vector<TradedAmounts>;
 

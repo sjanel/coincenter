@@ -60,8 +60,15 @@ class ExchangePrivate : public ExchangeBase {
   /// If not, user should first create manually the deposit address on the website of the exchange.
   virtual bool canGenerateDepositAddress() const = 0;
 
+  /// Get closed (without any remaining unmatched amount) orders filtered according to given constraints
+  /// Depending on the exchange API, it's not always possible to retrieve them all easily matching the constraints,
+  /// try to specify the market to increase your chances of having a successful query.
+  virtual ClosedOrderVector queryClosedOrders(
+      const OrdersConstraints &closedOrdersConstraints = OrdersConstraints()) = 0;
+
   /// Get opened orders filtered according to given constraints
-  virtual Orders queryOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+  virtual OpenedOrderVector queryOpenedOrders(
+      const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Cancel all opened orders on the exchange that matches given constraints
   /// @return number of opened orders cancelled

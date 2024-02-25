@@ -72,6 +72,7 @@ class CoincenterCmdLineOptions {
 
   std::string_view depositInfo;
 
+  std::optional<std::string_view> closedOrdersInfo;
   std::optional<std::string_view> openedOrdersInfo;
   std::optional<std::string_view> cancelOpenedOrders;
 

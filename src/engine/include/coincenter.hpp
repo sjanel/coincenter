@@ -72,6 +72,10 @@ class Coincenter {
   /// Get deposit information for given accounts
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
+  /// Get closed orders on given list of exchanges following given order constraints
+  ClosedOrdersPerExchange getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
+                                          const OrdersConstraints &closedOrdersConstraints);
+
   /// Get opened orders on given list of exchanges following given order constraints
   OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
