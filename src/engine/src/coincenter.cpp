@@ -144,6 +144,11 @@ TransferableCommandResultVector Coincenter::processCommand(
       _queryResultPrinter.printDepositInfo(cmd.cur1(), walletPerExchange);
       break;
     }
+    case CoincenterCommandType::kOrdersClosed: {
+      const auto closedOrdersPerExchange = getClosedOrders(cmd.exchangeNames(), cmd.ordersConstraints());
+      _queryResultPrinter.printClosedOrders(closedOrdersPerExchange, cmd.ordersConstraints());
+      break;
+    }
     case CoincenterCommandType::kOrdersOpened: {
       const auto openedOrdersPerExchange = getOpenedOrders(cmd.exchangeNames(), cmd.ordersConstraints());
       _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange, cmd.ordersConstraints());
@@ -266,6 +271,11 @@ BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateE
 WalletPerExchange Coincenter::getDepositInfo(std::span<const ExchangeName> privateExchangeNames,
                                              CurrencyCode depositCurrency) {
   return _exchangesOrchestrator.getDepositInfo(privateExchangeNames, depositCurrency);
+}
+
+ClosedOrdersPerExchange Coincenter::getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
+                                                    const OrdersConstraints &closedOrdersConstraints) {
+  return _exchangesOrchestrator.getClosedOrders(privateExchangeNames, closedOrdersConstraints);
 }
 
 OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,

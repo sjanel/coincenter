@@ -20,6 +20,8 @@ class CommonAPI;
 
 class UpbitPublic : public ExchangePublic {
  public:
+  static string ReverseMarketStr(Market mk) { return mk.reverse().assetsPairStrUpper('-'); }
+
   UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
@@ -58,8 +60,6 @@ class UpbitPublic : public ExchangePublic {
 
  private:
   friend class UpbitPrivate;
-
-  static string ReverseMarketStr(Market mk) { return mk.reverse().assetsPairStrUpper('-'); }
 
   static bool CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCodeSet& excludedCurrencies);
 

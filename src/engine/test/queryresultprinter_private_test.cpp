@@ -946,31 +946,154 @@ TEST_F(QueryResultPrinterSmartSellTest, NoPrint) {
   expectNoStr();
 }
 
+class QueryResultPrinterClosedOrdersBaseTest : public QueryResultPrinterTest {
+ protected:
+  ClosedOrder order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(50000, "EUR"), tp1, tp1, TradeSide::kBuy};
+  ClosedOrder order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("1500.56USDT"), tp2, tp3, TradeSide::kSell};
+  ClosedOrder order3{"id3", MonetaryAmount(13, "XRP"), MonetaryAmount("1.31USDT"), tp3, tp1, TradeSide::kBuy};
+  ClosedOrder order4{"id4", MonetaryAmount("34.56LTC"), MonetaryAmount("1574564KRW"), tp4, tp2, TradeSide::kSell};
+  ClosedOrder order5{"id5",           MonetaryAmount("11235435.59SHIB"), MonetaryAmount("0.00000045USDT"), tp2, tp4,
+                     TradeSide::kSell};
+};
+
+class QueryResultPrinterClosedOrdersNoConstraintsTest : public QueryResultPrinterClosedOrdersBaseTest {
+ protected:
+  OrdersConstraints ordersConstraints;
+  ClosedOrdersPerExchange closedOrdersPerExchange{{&exchange1, ClosedOrderSet{}},
+                                                  {&exchange2, ClosedOrderSet{order3, order5}},
+                                                  {&exchange4, ClosedOrderSet{order2}},
+                                                  {&exchange3, ClosedOrderSet{order4, order1}}};
+};
+
+TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printClosedOrders(closedOrdersPerExchange, ordersConstraints);
+  static constexpr std::string_view kExpected = R"(
++----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
+| Exchange | Account   | Exchange Id | Placed time          | Matched time         | Side | Price           | Matched Amount   |
++----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
+| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | 2011-10-03T06:49:36Z | Sell | 0.00000045 USDT | 11235435.59 SHIB |
+| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | 1999-03-25T04:46:43Z | Buy  | 1.31 USDT       | 13 XRP           |
+| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | 2006-07-14T23:58:24Z | Sell | 1500.56 USDT    | 0.56 ETH         |
+| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | 1999-03-25T04:46:43Z | Buy  | 50000 EUR       | 0 BTC            |
+| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | 2002-06-23T07:58:35Z | Sell | 1574564 KRW     | 34.56 LTC        |
++----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printClosedOrders(ClosedOrdersPerExchange{}, ordersConstraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "OrdersClosed"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson).printClosedOrders(closedOrdersPerExchange, ordersConstraints);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "req": "OrdersClosed"
+  },
+  "out": {
+    "binance": {
+      "testuser1": []
+    },
+    "bithumb": {
+      "testuser1": [
+        {
+          "id": "id5",
+          "matched": "11235435.59",
+          "matchedTime": "2011-10-03T06:49:36Z",
+          "pair": "SHIB-USDT",
+          "placedTime": "2002-06-23T07:58:35Z",
+          "price": "0.00000045",
+          "side": "Sell"
+        },
+        {
+          "id": "id3",
+          "matched": "13",
+          "matchedTime": "1999-03-25T04:46:43Z",
+          "pair": "XRP-USDT",
+          "placedTime": "2006-07-14T23:58:24Z",
+          "price": "1.31",
+          "side": "Buy"
+        }
+      ]
+    },
+    "huobi": {
+      "testuser1": [
+        {
+          "id": "id1",
+          "matched": "0",
+          "matchedTime": "1999-03-25T04:46:43Z",
+          "pair": "BTC-EUR",
+          "placedTime": "1999-03-25T04:46:43Z",
+          "price": "50000",
+          "side": "Buy"
+        },
+        {
+          "id": "id4",
+          "matched": "34.56",
+          "matchedTime": "2002-06-23T07:58:35Z",
+          "pair": "LTC-KRW",
+          "placedTime": "2011-10-03T06:49:36Z",
+          "price": "1574564",
+          "side": "Sell"
+        }
+      ],
+      "testuser2": [
+        {
+          "id": "id2",
+          "matched": "0.56",
+          "matchedTime": "2006-07-14T23:58:24Z",
+          "pair": "ETH-USDT",
+          "placedTime": "2002-06-23T07:58:35Z",
+          "price": "1500.56",
+          "side": "Sell"
+        }
+      ]
+    }
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, NoPrint) {
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printClosedOrders(closedOrdersPerExchange, ordersConstraints);
+  expectNoStr();
+}
+
 class QueryResultPrinterOpenedOrdersBaseTest : public QueryResultPrinterTest {
  protected:
-  Order order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(1, "BTC"), MonetaryAmount(50000, "EUR"),
-               tp1,   TradeSide::kBuy};
-  Order order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("0.44ETH"), MonetaryAmount("1500.56USDT"),
-               tp2,   TradeSide::kSell};
-  Order order3{"id3",          MonetaryAmount(13, "XRP"), MonetaryAmount("500.45XRP"), MonetaryAmount("1.31USDT"), tp3,
-               TradeSide::kBuy};
-  Order order4{"id4",           MonetaryAmount("34.56LTC"), MonetaryAmount("0.4LTC"), MonetaryAmount("1574564KRW"), tp4,
-               TradeSide::kSell};
-  Order order5{"id5",
-               MonetaryAmount("11235435435SHIB"),
-               MonetaryAmount("11235435.59SHIB"),
-               MonetaryAmount("0.00000045USDT"),
-               tp2,
-               TradeSide::kSell};
+  OpenedOrder order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(1, "BTC"), MonetaryAmount(50000, "EUR"),
+                     tp1,   TradeSide::kBuy};
+  OpenedOrder order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("0.44ETH"), MonetaryAmount("1500.56USDT"),
+                     tp2,   TradeSide::kSell};
+  OpenedOrder order3{
+      "id3", MonetaryAmount(13, "XRP"), MonetaryAmount("500.45XRP"), MonetaryAmount("1.31USDT"), tp3, TradeSide::kBuy};
+  OpenedOrder order4{
+      "id4", MonetaryAmount("34.56LTC"), MonetaryAmount("0.4LTC"), MonetaryAmount("1574564KRW"), tp4, TradeSide::kSell};
+  OpenedOrder order5{"id5",
+                     MonetaryAmount("11235435435SHIB"),
+                     MonetaryAmount("11235435.59SHIB"),
+                     MonetaryAmount("0.00000045USDT"),
+                     tp2,
+                     TradeSide::kSell};
 };
 
 class QueryResultPrinterOpenedOrdersNoConstraintsTest : public QueryResultPrinterOpenedOrdersBaseTest {
  protected:
   OrdersConstraints ordersConstraints;
-  OpenedOrdersPerExchange openedOrdersPerExchange{{&exchange1, OrdersSet{}},
-                                                  {&exchange2, OrdersSet{order3, order5}},
-                                                  {&exchange4, OrdersSet{order2}},
-                                                  {&exchange3, OrdersSet{order4, order1}}};
+  OpenedOrdersPerExchange openedOrdersPerExchange{{&exchange1, OpenedOrderSet{}},
+                                                  {&exchange2, OpenedOrderSet{order3, order5}},
+                                                  {&exchange4, OpenedOrderSet{order2}},
+                                                  {&exchange3, OpenedOrderSet{order4, order1}}};
 };
 
 TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {

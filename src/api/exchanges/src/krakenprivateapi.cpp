@@ -176,7 +176,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
   // Kraken returns total balance, including the amounts in use
   if (!withBalanceInUse) {
     // We need to query the opened orders to remove the balance in use
-    for (const Order& order : queryOpenedOrders()) {
+    for (const OpenedOrder& order : queryOpenedOrders()) {
       MonetaryAmount remVolume = order.remainingVolume();
       switch (order.side()) {
         case TradeSide::kBuy: {
@@ -282,10 +282,99 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return wallet;
 }
 
-Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+namespace {
+TimePoint TimePointFromKrakenTime(double seconds) {
+  int64_t millisecondsSinceEpoch = static_cast<int64_t>(1000 * seconds);
+  return TimePoint{TimeInMs(millisecondsSinceEpoch)};
+}
+}  // namespace
+
+ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
+  ClosedOrderVector closedOrders;
+
+  int page = 0;
+
+  CurlPostData params{{"ofs", page}, {"trades", "true"}};
+
+  if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
+    params.append("start", TimestampToS(closedOrdersConstraints.placedAfter()));
+  }
+  if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
+    params.append("end", TimestampToS(closedOrdersConstraints.placedBefore()));
+  }
+
+  static constexpr int kLimitNbOrdersPerPage = 50;
+  static constexpr int kNbMaxPagesToRetrieve = 10;
+
+  MarketSet markets;
+
+  for (int nbOrdersRetrieved = kLimitNbOrdersPerPage;
+       nbOrdersRetrieved == kLimitNbOrdersPerPage && page < kNbMaxPagesToRetrieve; ++page) {
+    params.set("ofs", page);
+
+    auto [data, err] = PrivateQuery(_curlHandle, _apiKey, "/private/ClosedOrders", params);
+
+    const auto closedItOrders = data.find("closed");
+    if (closedItOrders == data.end()) {
+      throw exception("Unexpected reply from {} for closed orders query", _exchangePublic.name());
+    }
+
+    nbOrdersRetrieved = 0;
+
+    for (const auto& [orderId, orderDetails] : closedItOrders->items()) {
+      ++nbOrdersRetrieved;
+      if (!closedOrdersConstraints.validateId(orderId)) {
+        continue;
+      }
+      const json& descrPart = orderDetails["descr"];
+      std::string_view marketStr = descrPart["pair"].get<std::string_view>();
+
+      std::optional<Market> optMarket =
+          _exchangePublic.determineMarketFromMarketStr(marketStr, markets, closedOrdersConstraints.cur1());
+
+      if (!optMarket) {
+        continue;
+      }
+
+      CurrencyCode volumeCur = optMarket->base();
+      CurrencyCode priceCur = optMarket->quote();
+      if (!closedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+        continue;
+      }
+
+      MonetaryAmount matchedVolume(orderDetails["vol_exec"].get<std::string_view>(), volumeCur);
+      if (matchedVolume == 0) {
+        continue;
+      }
+
+      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+      TimePoint placedTime = TimePointFromKrakenTime(orderDetails["opentm"].get<double>());
+      if (!closedOrdersConstraints.validatePlacedTime(placedTime)) {
+        continue;
+      }
+
+      TimePoint matchedTime = TimePointFromKrakenTime(orderDetails["closetm"].get<double>());
+
+      TradeSide side = descrPart["type"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+
+      closedOrders.emplace_back(orderId, matchedVolume, price, placedTime, matchedTime, side);
+    }
+  }
+
+  if (page == kNbMaxPagesToRetrieve) {
+    log::warn("Already queried {} order pages, stop the queries at this point", page);
+    log::warn("Try to refine the orders query by specifying the market and / or the time window");
+  }
+
+  std::ranges::sort(closedOrders);
+  log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
+  return closedOrders;
+}
+
+OpenedOrderVector KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/OpenOrders", {{"trades", "true"}});
   auto openedPartIt = res.find("open");
-  Orders openedOrders;
+  OpenedOrderVector openedOrders;
   if (openedPartIt != res.end()) {
     MarketSet markets;
 
@@ -296,20 +385,17 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
       std::optional<Market> optMarket =
           _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
 
-      CurrencyCode volumeCur;
-      CurrencyCode priceCur;
-
-      if (optMarket) {
-        volumeCur = optMarket->base();
-        priceCur = optMarket->quote();
-        if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
-          continue;
-        }
-      } else {
+      if (!optMarket) {
         continue;
       }
 
-      if (!openedOrdersConstraints.validateOrderId(id)) {
+      CurrencyCode volumeCur = optMarket->base();
+      CurrencyCode priceCur = optMarket->quote();
+      if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+        continue;
+      }
+
+      if (!openedOrdersConstraints.validateId(id)) {
         continue;
       }
 
@@ -319,9 +405,7 @@ Orders KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCon
       MonetaryAmount price(descrPart["price"].get<std::string_view>(), priceCur);
       TradeSide side = descrPart["type"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-      int64_t secondsSinceEpoch = static_cast<int64_t>(orderDetails["opentm"].get<double>());
-
-      TimePoint placedTime{std::chrono::seconds(secondsSinceEpoch)};
+      TimePoint placedTime = TimePointFromKrakenTime(orderDetails["opentm"].get<double>());
       if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
@@ -339,8 +423,8 @@ int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     auto [cancelledOrders, err] = PrivateQuery(_curlHandle, _apiKey, "/private/CancelAll");
     return cancelledOrders["count"].get<int>();
   }
-  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& order : openedOrders) {
+  OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const OpenedOrder& order : openedOrders) {
     cancelOrderProcess(order.id());
   }
   return openedOrders.size();
@@ -600,7 +684,7 @@ json KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryO
         log::warn("{} is not present in opened nor closed orders, retry {}", orderId, nbRetries);
         continue;
       }
-      throw exception("I lost contact with Kraken order {}", orderId);
+      throw exception("I lost contact with {} order {}", _exchangePublic.name(), orderId);
     }
     return data;
 

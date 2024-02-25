@@ -27,7 +27,8 @@ class MockExchangePrivate : public ExchangePrivate {
   MOCK_METHOD(BalancePortfolio, queryAccountBalance, (const BalanceOptions &), (override));
   MOCK_METHOD(Wallet, queryDepositWallet, (CurrencyCode), (override));
   MOCK_METHOD(bool, canGenerateDepositAddress, (), (const override));
-  MOCK_METHOD(Orders, queryOpenedOrders, (const OrdersConstraints &), (override));
+  MOCK_METHOD(ClosedOrderVector, queryClosedOrders, (const OrdersConstraints &), (override));
+  MOCK_METHOD(OpenedOrderVector, queryOpenedOrders, (const OrdersConstraints &), (override));
   MOCK_METHOD(int, cancelOpenedOrders, (const OrdersConstraints &), (override));
 
   MOCK_METHOD(DepositsSet, queryRecentDeposits, (const DepositsConstraints &), (override));

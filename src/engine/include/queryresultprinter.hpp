@@ -63,6 +63,9 @@ class QueryResultPrinter {
                 CoincenterCommandType::kSell);
   }
 
+  void printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
+                         const OrdersConstraints &ordersConstraints) const;
+
   void printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange,
                          const OrdersConstraints &ordersConstraints) const;
 

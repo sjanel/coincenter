@@ -216,18 +216,25 @@ class TestAPI {
     }
   }
 
-  void testOpenedOrders() {
+  void testOrders() {
     if (!exchangeStatusOK) {
       log::warn("Skipping test as exchange has an outage right now");
       return;
     }
     if (exchangePrivateOpt && !sampleMarkets.empty()) {
-      Market mk = sampleMarkets.front();
-      Orders baseOpenedOrders = exchangePrivateOpt->queryOpenedOrders(OrdersConstraints(mk.base()));
-      if (!baseOpenedOrders.empty()) {
-        const Order &openedOrder = baseOpenedOrders.front();
-        EXPECT_TRUE(openedOrder.market().canTrade(mk.base()));
-        EXPECT_LT(openedOrder.matchedVolume(), openedOrder.originalVolume());
+      const Market mk = sampleMarkets.front();
+      const auto openedOrders = exchangePrivateOpt->queryOpenedOrders(OrdersConstraints(mk.base()));
+      const auto closedOrders = exchangePrivateOpt->queryClosedOrders(OrdersConstraints(mk.base()));
+
+      const Order *pOrder = nullptr;
+      if (!openedOrders.empty()) {
+        pOrder = &openedOrders.front();
+      } else if (!closedOrders.empty()) {
+        pOrder = &closedOrders.front();
+      }
+      if (pOrder != nullptr) {
+        EXPECT_TRUE(pOrder->market().canTrade(mk.base()));
+        EXPECT_NE(pOrder->placedTime(), TimePoint{});
       }
     }
   }
@@ -318,6 +325,6 @@ class TestAPI {
   TEST(TestAPIType##Test, DepositWallet) { testAPI.testDepositWallet(); }     \
   TEST(TestAPIType##Test, RecentDeposits) { testAPI.testRecentDeposits(); }   \
   TEST(TestAPIType##Test, RecentWithdraws) { testAPI.testRecentWithdraws(); } \
-  TEST(TestAPIType##Test, Orders) { testAPI.testOpenedOrders(); }             \
+  TEST(TestAPIType##Test, Orders) { testAPI.testOrders(); }                   \
   TEST(TestAPIType##Test, Trade) { testAPI.testTrade(); }
 }  // namespace cct::api

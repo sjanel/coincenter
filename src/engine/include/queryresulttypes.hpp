@@ -54,7 +54,9 @@ using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, 
 
 using WalletPerExchange = SmallVector<ExchangeWith<Wallet>, kTypicalNbPrivateAccounts>;
 
-using OpenedOrdersPerExchange = SmallVector<ExchangeWith<OrdersSet>, kTypicalNbPrivateAccounts>;
+using ClosedOrdersPerExchange = SmallVector<ExchangeWith<ClosedOrderSet>, kTypicalNbPrivateAccounts>;
+
+using OpenedOrdersPerExchange = SmallVector<ExchangeWith<OpenedOrderSet>, kTypicalNbPrivateAccounts>;
 
 using DepositsPerExchange = SmallVector<ExchangeWith<DepositsSet>, kTypicalNbPrivateAccounts>;
 

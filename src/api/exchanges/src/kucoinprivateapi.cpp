@@ -1,7 +1,6 @@
 #include "kucoinprivateapi.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -35,7 +34,7 @@
 #include "kucoinpublicapi.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
+#include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
@@ -221,57 +220,85 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return wallet;
 }
 
-Orders KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  CurlPostData params{{"status", "active"}, {"tradeType", "TRADE"}};
+namespace {
+template <class OrderVectorType>
+void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHandle, const APIKey& apiKey,
+                ExchangePublic& exchangePublic, OrderVectorType& orderVector) {
+  using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
-  if (openedOrdersConstraints.isCur1Defined()) {
+  CurlPostData params{{"status", std::is_same_v<OrderType, OpenedOrder> ? "active" : "done"}, {"tradeType", "TRADE"}};
+
+  if (ordersConstraints.isCurDefined()) {
     MarketSet markets;
-    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
-                                                                              openedOrdersConstraints.cur2());
+    Market filterMarket =
+        exchangePublic.determineMarketFromFilterCurrencies(markets, ordersConstraints.cur1(), ordersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
       params.append("symbol", filterMarket.assetsPairStrUpper('-'));
     }
   }
-  if (openedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("startAt", TimestampToMs(openedOrdersConstraints.placedAfter()));
+  if (ordersConstraints.isPlacedTimeAfterDefined()) {
+    params.append("startAt", TimestampToMs(ordersConstraints.placedAfter()));
   }
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
+  if (ordersConstraints.isPlacedTimeBeforeDefined()) {
+    params.append("endAt", TimestampToMs(ordersConstraints.placedBefore()));
+  }
+  json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
 
-  Orders openedOrders;
   for (json& orderDetails : data["items"]) {
     std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
-    assert(dashPos != std::string_view::npos);
+    if (dashPos == std::string_view::npos) {
+      throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
+    }
     CurrencyCode volumeCur(std::string_view(marketStr.data(), dashPos));
     CurrencyCode priceCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
 
-    if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
+    if (!ordersConstraints.validateCur(volumeCur, priceCur)) {
       continue;
     }
 
-    int64_t millisecondsSinceEpoch = orderDetails["createdAt"].get<int64_t>();
-
-    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
-    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
-      continue;
-    }
+    TimePoint placedTime{TimeInMs(orderDetails["createdAt"].get<int64_t>())};
 
     string id = std::move(orderDetails["id"].get_ref<string&>());
-    if (!openedOrdersConstraints.validateOrderId(id)) {
+    if (!ordersConstraints.validateId(id)) {
       continue;
     }
 
-    MonetaryAmount originalVolume(orderDetails["size"].get<std::string_view>(), volumeCur);
     MonetaryAmount matchedVolume(orderDetails["dealSize"].get<std::string_view>(), volumeCur);
-    MonetaryAmount remainingVolume = originalVolume - matchedVolume;
     MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
     TradeSide side = orderDetails["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+    if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
+      MonetaryAmount originalVolume(orderDetails["size"].get<std::string_view>(), volumeCur);
+      MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+
+      orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+    } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
+      const TimePoint matchedTime = placedTime;
+
+      orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
+    } else {
+      // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
+      []<bool flag = false>() { static_assert(flag, "no match"); }
+      ();
+    }
   }
-  std::ranges::sort(openedOrders);
-  openedOrders.shrink_to_fit();
+  std::ranges::sort(orderVector);
+  orderVector.shrink_to_fit();
+}
+}  // namespace
+
+ClosedOrderVector KucoinPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
+  ClosedOrderVector closedOrders;
+  FillOrders(closedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, closedOrders);
+  log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
+  return closedOrders;
+}
+
+OpenedOrderVector KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  OpenedOrderVector openedOrders;
+  FillOrders(openedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
@@ -293,8 +320,8 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     }
     return nbCancelledOrders;
   }
-  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& order : openedOrders) {
+  OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const OpenedOrder& order : openedOrders) {
     cancelOrderProcess(order.id());
   }
   return openedOrders.size();

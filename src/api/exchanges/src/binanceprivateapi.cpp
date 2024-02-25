@@ -22,6 +22,7 @@
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
+#include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -40,6 +41,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "opened-order.hpp"
 #include "order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
@@ -284,8 +286,98 @@ bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
   return true;
 }
 
-Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  Orders openedOrders;
+namespace {
+template <class OrderVectorType>
+void FillOrders(const OrdersConstraints& ordersConstraints, const json& ordersArray, ExchangePublic& exchangePublic,
+                OrderVectorType& orderVector) {
+  const auto cur1Str = ordersConstraints.curStr1();
+  const auto cur2Str = ordersConstraints.curStr2();
+
+  MarketSet markets;
+  for (const json& orderDetails : ordersArray) {
+    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
+    std::size_t cur1Pos = marketStr.find(cur1Str);
+    if (ordersConstraints.isCurDefined() && cur1Pos == std::string_view::npos) {
+      continue;
+    }
+    if (ordersConstraints.isCur2Defined() && marketStr.find(cur2Str) == std::string_view::npos) {
+      continue;
+    }
+    const auto placedTimeMsSinceEpoch = orderDetails["time"].get<int64_t>();
+
+    const TimePoint placedTime{TimeInMs(placedTimeMsSinceEpoch)};
+    if (!ordersConstraints.validatePlacedTime(placedTime)) {
+      continue;
+    }
+
+    const auto optMarket = exchangePublic.determineMarketFromMarketStr(marketStr, markets, ordersConstraints.cur1());
+
+    if (!optMarket) {
+      continue;
+    }
+
+    const CurrencyCode volumeCur = optMarket->base();
+    const CurrencyCode priceCur = optMarket->quote();
+    const int64_t orderId = orderDetails["orderId"].get<int64_t>();
+    string id = ToString(orderId);
+    if (!ordersConstraints.validateId(id)) {
+      continue;
+    }
+
+    const MonetaryAmount matchedVolume(orderDetails["executedQty"].get<std::string_view>(), volumeCur);
+    const MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    const TradeSide side = orderDetails["side"].get<std::string_view>() == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
+
+    using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
+
+    if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
+      const MonetaryAmount originalVolume(orderDetails["origQty"].get<std::string_view>(), volumeCur);
+      const MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+
+      orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+    } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
+      const auto matchedTimeMsSinceEpoch = orderDetails["updateTime"].get<int64_t>();
+      const TimePoint matchedTime{TimeInMs(matchedTimeMsSinceEpoch)};
+
+      orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
+    } else {
+      // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
+      []<bool flag = false>() { static_assert(flag, "no match"); }
+      ();
+    }
+  }
+  std::ranges::sort(orderVector);
+}
+}  // namespace
+
+ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
+  ClosedOrderVector closedOrders;
+  CurlPostData params;
+  if (closedOrdersConstraints.isMarketDefined()) {
+    if (!checkMarketAppendSymbol(closedOrdersConstraints.market(), params)) {
+      return closedOrders;
+    }
+    if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
+      params.append("startTime", TimestampToMs(closedOrdersConstraints.placedAfter()));
+    }
+    if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
+      params.append("endTime", TimestampToMs(closedOrdersConstraints.placedBefore()));
+    }
+    const json result =
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
+
+    FillOrders(closedOrdersConstraints, result, _exchangePublic, closedOrders);
+    log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
+  } else {
+    // If market is not provided, it's sadly currently directly impossible to query all closed orders on Binance.
+    log::error("Market should be provided to query closed orders on {}", _exchangePublic.name());
+  }
+
+  return closedOrders;
+}
+
+OpenedOrderVector BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  OpenedOrderVector openedOrders;
   CurlPostData params;
   if (openedOrdersConstraints.isMarketDefined()) {
     // Symbol (which corresponds to a market) is optional - however, it costs 40 credits if omitted and should exist
@@ -293,56 +385,11 @@ Orders BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersCo
       return openedOrders;
     }
   }
-  json result =
+  const json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", _queryDelay, std::move(params));
 
-  auto cur1Str = openedOrdersConstraints.curStr1();
-  auto cur2Str = openedOrdersConstraints.curStr2();
-  MarketSet markets;
-  for (const json& orderDetails : result) {
-    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
-    std::size_t cur1Pos = marketStr.find(cur1Str);
-    if (openedOrdersConstraints.isCur1Defined() && cur1Pos == std::string_view::npos) {
-      continue;
-    }
-    if (openedOrdersConstraints.isCur2Defined() && marketStr.find(cur2Str) == std::string_view::npos) {
-      continue;
-    }
-    int64_t millisecondsSinceEpoch = orderDetails["time"].get<int64_t>();
+  FillOrders(openedOrdersConstraints, result, _exchangePublic, openedOrders);
 
-    TimePoint placedTime{TimeInMs(millisecondsSinceEpoch)};
-    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
-      continue;
-    }
-
-    std::optional<Market> optMarket =
-        _exchangePublic.determineMarketFromMarketStr(marketStr, markets, openedOrdersConstraints.cur1());
-
-    CurrencyCode volumeCur;
-    CurrencyCode priceCur;
-
-    if (optMarket) {
-      volumeCur = optMarket->base();
-      priceCur = optMarket->quote();
-    } else {
-      continue;
-    }
-
-    int64_t orderId = orderDetails["orderId"].get<int64_t>();
-    string id = ToString(orderId);
-    if (!openedOrdersConstraints.validateOrderId(id)) {
-      continue;
-    }
-
-    MonetaryAmount matchedVolume(orderDetails["executedQty"].get<std::string_view>(), volumeCur);
-    MonetaryAmount originalVolume(orderDetails["origQty"].get<std::string_view>(), volumeCur);
-    MonetaryAmount remainingVolume = originalVolume - matchedVolume;
-    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
-    TradeSide side = orderDetails["side"].get<std::string_view>() == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
-
-    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
-  }
-  std::ranges::sort(openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
@@ -362,12 +409,12 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     }
   }
 
-  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
 
-  using OrdersByMarketMap = std::unordered_map<Market, SmallVector<Order, 3>>;
+  using OrdersByMarketMap = std::unordered_map<Market, SmallVector<OpenedOrder, 3>>;
   OrdersByMarketMap ordersByMarketMap;
   std::for_each(std::make_move_iterator(openedOrders.begin()), std::make_move_iterator(openedOrders.end()),
-                [&ordersByMarketMap](Order&& order) {
+                [&ordersByMarketMap](OpenedOrder&& order) {
                   Market mk = order.market();
                   ordersByMarketMap[mk].push_back(std::move(order));
                 });
@@ -382,7 +429,7 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
           PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, params);
       nbOrdersCancelled += static_cast<int>(cancelledOrders.size());
     } else {
-      for (const Order& order : orders) {
+      for (const OpenedOrder& order : orders) {
         params.set("orderId", order.id());
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/order", _queryDelay, params);
       }

@@ -15,25 +15,13 @@ namespace cct {
 
 class Order {
  public:
-  Order(const char *id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
-        TimePoint placedTime, TradeSide side)
-      : Order(OrderId(id), matchedVolume, remainingVolume, price, placedTime, side) {}
-
-  Order(std::string_view id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
-        TimePoint placedTime, TradeSide side);
-
-  Order(OrderId &&id, MonetaryAmount matchedVolume, MonetaryAmount remainingVolume, MonetaryAmount price,
-        TimePoint placedTime, TradeSide side);
-
-  MonetaryAmount originalVolume() const { return _matchedVolume + _remainingVolume; }
-  MonetaryAmount matchedVolume() const { return _matchedVolume; }
-  MonetaryAmount remainingVolume() const { return _remainingVolume; }
-  MonetaryAmount price() const { return _price; }
+  TimePoint placedTime() const { return _placedTime; }
 
   OrderId &id() { return _id; }
   const OrderId &id() const { return _id; }
 
-  TimePoint placedTime() const { return _placedTime; }
+  MonetaryAmount matchedVolume() const { return _matchedVolume; }
+  MonetaryAmount price() const { return _price; }
 
   TradeSide side() const { return _side; }
 
@@ -47,11 +35,13 @@ class Order {
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 
+ protected:
+  Order(OrderId id, MonetaryAmount matchedVolume, MonetaryAmount price, TimePoint placedTime, TradeSide side);
+
  private:
   TimePoint _placedTime;
   OrderId _id;  // exchange internal id, format specific to each exchange
   MonetaryAmount _matchedVolume;
-  MonetaryAmount _remainingVolume;
   MonetaryAmount _price;
   TradeSide _side;
 };

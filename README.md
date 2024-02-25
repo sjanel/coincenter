@@ -109,6 +109,7 @@ Main features:
         - [Examples](#examples-2)
       - [Recent withdraws](#recent-withdraws)
         - [Examples](#examples-3)
+      - [Closed orders](#closed-orders)
       - [Opened orders](#opened-orders)
       - [Cancel opened orders](#cancel-opened-orders)
       - [Withdraw coin](#withdraw-coin)
@@ -863,9 +864,12 @@ Retrieve the withdraw of XRP on Upbit with id `myid3`
 coincenter withdraws upbit,xrp --id myid3
 ```
 
-#### Opened orders
+#### Closed orders
 
-Use option `orders-opened` to retrieve and print currently opened orders on your accounts. You can provide only one currency code, two currency codes separated with a `-`, and / or a list of exchanges on which to filter the orders. It is possible to not specify anything as well, in this case, all opened orders will be returned.
+Use option `orders-closed` to retrieve and print closed orders on your accounts. A closed order is an old order that has no remaining unmatched amount. You can provide only one currency code, two currency codes separated with a `-`, and / or a list of exchanges on which to filter the orders. It is possible to not specify anything as well, in this case, all closed orders will be returned, if the exchange provides a way to retrieve them all. In particular, a specific process is made for the following exchanges:
+
+- On **Binance**, market is mandatory and if `orders-closed` query is made without the market, `coincenter` will log an error and return an empty result.
+- On **Bithumb**, at least one currency code is needed. If only one currency code is given, `coincenter` will perform a closed orders query for all currencies that have a non-zero balance on the account.
 
 Orders can be filtered according to placed time with options `--min-age` and `--max-age` specifying respectively the minimum and maximum age of the orders.
 
@@ -874,13 +878,18 @@ Finally, they can also be filtered by their ID, thanks to `--id` option. Give a 
 Examples:
 
 ```bash
-coincenter orders-opened --min-age 10min            # Retrieve all opened orders placed within the last 10 minutes
-coincenter orders-opened kraken                     # Retrieve all opened orders on Kraken only
-coincenter orders-opened eth --max-age 1w           # Retrieve all opened orders of at most 1 week old, on markets involving Ethereum on all exchanges
-coincenter orders-opened xlm-usdt                   # Retrieve all opened orders matching markets USDT-XLM or XLM-USDT
-coincenter orders-opened btc-krw,upbit,bithumb      # Retrieve all opened orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
-coincenter orders-opened binance_joe --id OID1,OID2 # Check if 'OID1' and 'OID2' are still opened on 'joe' account on Binance
+coincenter orders-closed --min-age 10min            # Retrieve all closed orders placed within the last 10 minutes
+coincenter orders-closed kraken                     # Retrieve all closed orders on Kraken only
+coincenter orders-closed eth --max-age 1w           # Retrieve all closed orders of at most 1 week old, on markets involving Ethereum on all exchanges
+coincenter orders-closed xlm-usdt                   # Retrieve all closed orders matching markets USDT-XLM or XLM-USDT
+coincenter orders-closed btc-krw,upbit,bithumb      # Retrieve all closed orders on BTC-KRW / KRW-BTC on Bithumb and Upbit
+coincenter orders-closed binance_joe --id OID1,OID2 # Check if 'OID1' and 'OID2' are still closed on 'joe' account on Binance
 ```
+
+#### Opened orders
+
+Use option `orders-opened` to retrieve and print currently opened orders on your accounts. An opened order is an order that has some remaining unmatched amount.
+The option syntax is the same as above [closed orders](#closed-orders).
 
 #### Cancel opened orders
 

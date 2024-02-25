@@ -63,6 +63,10 @@ class OrdersConstraints {
 
   bool validatePlacedTime(TimePoint t) const { return t >= _placedAfter && t <= _placedBefore; }
 
+  bool validateTime(TimePoint t) const { return validatePlacedTime(t); }
+
+  bool validateCur(CurrencyCode cur) const { return currencyCode().isNeutral() || cur == currencyCode(); }
+
   bool validateCur(CurrencyCode cur1, CurrencyCode cur2) const {
     if (_cur1.isNeutral()) {
       return _cur2.isNeutral() || _cur2 == cur1 || _cur2 == cur2;
@@ -73,19 +77,21 @@ class OrdersConstraints {
     return (_cur1 == cur1 && _cur2 == cur2) || (_cur1 == cur2 && _cur2 == cur1);
   }
 
-  bool isCur1Defined() const { return !_cur1.isNeutral(); }
+  bool isCurDefined() const { return !_cur1.isNeutral(); }
   bool isCur2Defined() const { return !_cur2.isNeutral(); }
-  bool isMarketDefined() const { return isCur1Defined() && isCur2Defined(); }
+  bool isMarketDefined() const { return isCurDefined() && isCur2Defined(); }
 
   Market market() const { return Market(_cur1, _cur2); }
 
   string curStr1() const { return _cur1.str(); }
   string curStr2() const { return _cur2.str(); }
 
+  CurrencyCode currencyCode() const { return _cur1; }
+
   CurrencyCode cur1() const { return _cur1; }
   CurrencyCode cur2() const { return _cur2; }
 
-  bool validateOrderId(std::string_view orderId) const { return !isOrderIdDefined() || _ordersIdSet.contains(orderId); }
+  bool validateId(std::string_view orderId) const { return !isOrderIdDefined() || _ordersIdSet.contains(orderId); }
 
   const OrderIdSet &orderIdSet() const { return _ordersIdSet; }
 
@@ -130,7 +136,7 @@ struct fmt::formatter<cct::OrdersConstraints> {
 
   template <typename FormatContext>
   auto format(const cct::OrdersConstraints &ordersConstraints, FormatContext &ctx) const -> decltype(ctx.out()) {
-    if (ordersConstraints.isCur1Defined()) {
+    if (ordersConstraints.isCurDefined()) {
       ctx.out() = fmt::format_to(ctx.out(), "{}", ordersConstraints.cur1());
     } else {
       ctx.out() = fmt::format_to(ctx.out(), "any");

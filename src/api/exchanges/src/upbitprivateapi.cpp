@@ -3,7 +3,6 @@
 #include <jwt-cpp/jwt.h>
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -41,7 +40,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
+#include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
@@ -246,62 +245,117 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   return wallet;
 }
 
-Orders UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  CurlPostData params{{"state", "wait"}};
+namespace {
+template <class OrderVectorType>
+void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHandle, const APIKey& apiKey,
+                ExchangePublic& exchangePublic, OrderVectorType& orderVector) {
+  using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
-  if (openedOrdersConstraints.isCur1Defined()) {
+  int page = 0;
+
+  CurlPostData params{{"page", page}, {"state", std::is_same_v<OrderType, OpenedOrder> ? "wait" : "done"}};
+
+  if (ordersConstraints.isCurDefined()) {
     MarketSet markets;
-    Market filterMarket = _exchangePublic.determineMarketFromFilterCurrencies(markets, openedOrdersConstraints.cur1(),
-                                                                              openedOrdersConstraints.cur2());
+    Market filterMarket =
+        exchangePublic.determineMarketFromFilterCurrencies(markets, ordersConstraints.cur1(), ordersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
       params.append("market", UpbitPublic::ReverseMarketStr(filterMarket));
     }
   }
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/orders", std::move(params));
 
-  Orders openedOrders;
-  for (json& orderDetails : data) {
-    std::string_view marketStr = orderDetails["market"].get<std::string_view>();
-    std::size_t dashPos = marketStr.find('-');
-    assert(dashPos != std::string_view::npos);
-    CurrencyCode priceCur(std::string_view(marketStr.data(), dashPos));
-    CurrencyCode volumeCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+  static constexpr int kLimitNbOrdersPerPage = 100;
+  static constexpr int kNbMaxPagesToRetrieve = 10;
 
-    if (!openedOrdersConstraints.validateCur(volumeCur, priceCur)) {
-      continue;
+  for (int nbOrdersRetrieved = kLimitNbOrdersPerPage;
+       nbOrdersRetrieved == kLimitNbOrdersPerPage && page < kNbMaxPagesToRetrieve;) {
+    params.set("page", ++page);
+
+    json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/v1/orders", params);
+
+    nbOrdersRetrieved = data.size();
+
+    for (json& orderDetails : data) {
+      std::string_view marketStr = orderDetails["market"].get<std::string_view>();
+      std::size_t dashPos = marketStr.find('-');
+      if (dashPos == std::string_view::npos) {
+        throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
+      }
+      CurrencyCode priceCur(std::string_view(marketStr.data(), dashPos));
+      CurrencyCode volumeCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+
+      if (!ordersConstraints.validateCur(volumeCur, priceCur)) {
+        continue;
+      }
+
+      // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
+      TimePoint placedTime =
+          FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
+      if (!ordersConstraints.validatePlacedTime(placedTime)) {
+        continue;
+      }
+
+      string id = std::move(orderDetails["uuid"].get_ref<string&>());
+      if (!ordersConstraints.validateId(id)) {
+        continue;
+      }
+
+      auto priceIt = orderDetails.find("price");
+      if (priceIt == orderDetails.end()) {
+        // Some old orders may have no price field set. In this case, just return what we have as the older orders will
+        // probably not be filled as well.
+        break;
+      }
+
+      MonetaryAmount matchedVolume(orderDetails["executed_volume"].get<std::string_view>(), volumeCur);
+      MonetaryAmount price(priceIt->get<std::string_view>(), priceCur);
+      TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+
+      if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
+        MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
+
+        orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+      } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
+        const TimePoint matchedTime = placedTime;
+
+        orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
+      } else {
+        // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
+        []<bool flag = false>() { static_assert(flag, "no match"); }
+        ();
+      }
     }
-
-    // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-    TimePoint placedTime =
-        FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
-    if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
-      continue;
-    }
-
-    string id = std::move(orderDetails["uuid"].get_ref<string&>());
-    if (!openedOrdersConstraints.validateOrderId(id)) {
-      continue;
-    }
-
-    MonetaryAmount originalVolume(orderDetails["volume"].get<std::string_view>(), volumeCur);
-    MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
-    MonetaryAmount matchedVolume = originalVolume - remainingVolume;
-    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
-    TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
-
-    openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
   }
-  std::ranges::sort(openedOrders);
-  openedOrders.shrink_to_fit();
+
+  if (page == kNbMaxPagesToRetrieve) {
+    log::warn("Already queried {} order pages, stop the queries at this point", page);
+    log::warn("Try to refine the orders query by specifying the market");
+  }
+
+  std::ranges::sort(orderVector);
+  orderVector.shrink_to_fit();
+}
+}  // namespace
+
+ClosedOrderVector UpbitPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
+  ClosedOrderVector closedOrders;
+  FillOrders(closedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, closedOrders);
+  log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
+  return closedOrders;
+}
+
+OpenedOrderVector UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
+  OpenedOrderVector openedOrders;
+  FillOrders(openedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
 
 int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   // No faster way to cancel several orders at once, doing a simple for loop
-  Orders openedOrders = queryOpenedOrders(openedOrdersConstraints);
-  for (const Order& order : openedOrders) {
+  OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
+  for (const OpenedOrder& order : openedOrders) {
     TradeContext tradeContext(order.market(), order.side());
     cancelOrder(order.id(), tradeContext);
   }

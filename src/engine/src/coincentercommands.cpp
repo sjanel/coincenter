@@ -102,6 +102,11 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
         .setExchangeNames(optionParser.parseExchanges());
   }
 
+  if (cmdLineOptions.closedOrdersInfo) {
+    optionParser = StringOptionParser(*cmdLineOptions.closedOrdersInfo);
+    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::kOrdersClosed, optionParser));
+  }
+
   if (cmdLineOptions.openedOrdersInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.openedOrdersInfo);
     _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::kOrdersOpened, optionParser));

@@ -217,6 +217,23 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const Exchange
   return ret;
 }
 
+ClosedOrdersPerExchange ExchangesOrchestrator::getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
+                                                               const OrdersConstraints &closedOrdersConstraints) {
+  log::info("Query closed orders matching {} on {}", closedOrdersConstraints,
+            ConstructAccumulatedExchangeNames(privateExchangeNames));
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
+      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+
+  ClosedOrdersPerExchange ret(selectedExchanges.size());
+  _threadPool.parallelTransform(
+      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
+        return std::make_pair(exchange,
+                              ClosedOrderSet(exchange->apiPrivate().queryClosedOrders(closedOrdersConstraints)));
+      });
+
+  return ret;
+}
+
 OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
                                                                const OrdersConstraints &openedOrdersConstraints) {
   log::info("Query opened orders matching {} on {}", openedOrdersConstraints,
@@ -227,7 +244,8 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const E
   OpenedOrdersPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange, OrdersSet(exchange->apiPrivate().queryOpenedOrders(openedOrdersConstraints)));
+        return std::make_pair(exchange,
+                              OpenedOrderSet(exchange->apiPrivate().queryOpenedOrders(openedOrdersConstraints)));
       });
 
   return ret;

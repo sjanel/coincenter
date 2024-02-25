@@ -130,24 +130,24 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
                                                ExchangeName(exchange2.name(), exchange2.keyName()),
                                                ExchangeName(exchange4.name(), exchange4.keyName())};
 
-  Orders orders2{Order("Id1", MonetaryAmount("0.1ETH"), MonetaryAmount("0.9ETH"), MonetaryAmount("0.14BTC"),
-                       Clock::now(), TradeSide::kBuy),
-                 Order("Id2", MonetaryAmount("15XLM"), MonetaryAmount("76XLM"), MonetaryAmount("0.5EUR"), Clock::now(),
-                       TradeSide::kSell)};
-  EXPECT_CALL(exchangePrivate2, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(orders2));
+  OpenedOrderVector openedOrders2{OpenedOrder("Id1", MonetaryAmount("0.1ETH"), MonetaryAmount("0.9ETH"),
+                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kBuy),
+                                  OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("76XLM"),
+                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kSell)};
+  EXPECT_CALL(exchangePrivate2, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders2));
 
-  Orders orders3{};
-  EXPECT_CALL(exchangePrivate3, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(orders3));
+  OpenedOrderVector openedOrders3{};
+  EXPECT_CALL(exchangePrivate3, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders3));
 
-  Orders orders4{Order("Id37", MonetaryAmount("0.7ETH"), MonetaryAmount("0.9ETH"), MonetaryAmount("0.14BTC"),
-                       Clock::now(), TradeSide::kSell),
-                 Order("Id2", MonetaryAmount("15XLM"), MonetaryAmount("19XLM"), MonetaryAmount("0.5EUR"), Clock::now(),
-                       TradeSide::kBuy)};
-  EXPECT_CALL(exchangePrivate4, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(orders4));
+  OpenedOrderVector openedOrders4{OpenedOrder("Id37", MonetaryAmount("0.7ETH"), MonetaryAmount("0.9ETH"),
+                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kSell),
+                                  OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("19XLM"),
+                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kBuy)};
+  EXPECT_CALL(exchangePrivate4, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders4));
 
-  OpenedOrdersPerExchange ret{{&exchange2, OrdersSet(orders2.begin(), orders2.end())},
-                              {&exchange3, OrdersSet(orders3.begin(), orders3.end())},
-                              {&exchange4, OrdersSet(orders4.begin(), orders4.end())}};
+  OpenedOrdersPerExchange ret{{&exchange2, OpenedOrderSet(openedOrders2.begin(), openedOrders2.end())},
+                              {&exchange3, OpenedOrderSet(openedOrders3.begin(), openedOrders3.end())},
+                              {&exchange4, OpenedOrderSet(openedOrders4.begin(), openedOrders4.end())}};
   EXPECT_EQ(exchangesOrchestrator.getOpenedOrders(privateExchangeNames, noConstraints), ret);
 }
 
