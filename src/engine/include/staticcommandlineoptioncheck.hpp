@@ -18,16 +18,16 @@ consteval bool StaticCommandLineOptionsDuplicatesCheck(std::array<T, N>... ar) {
   auto all = ComputeAllCommandLineOptions(ar...);
 
   // Check short names equality with a bitset hashmap of presence
-  // (std::bitset is unfortunately not constexpr yet)
+  // (std::bitset is unfortunately not constexpr in C++20)
   uint64_t charPresenceBmp[8]{};
-  for (const auto& f : all) {
-    if (f.hasShortName()) {
-      uint8_t c = static_cast<uint8_t>(f.shortNameChar());
-      uint64_t& subBmp = charPresenceBmp[c / 64];
-      if ((subBmp & (static_cast<uint64_t>(1) << (c % 64)))) {
+  for (const auto& commandLineOption : all) {
+    if (commandLineOption.hasShortName()) {
+      uint8_t shortNameChar = static_cast<uint8_t>(commandLineOption.shortNameChar());
+      uint64_t& subBmp = charPresenceBmp[shortNameChar / 64];
+      if ((subBmp & (static_cast<uint64_t>(1) << (shortNameChar % 64)))) {
         return false;
       }
-      subBmp |= (static_cast<uint64_t>(1) << (c % 64));
+      subBmp |= (static_cast<uint64_t>(1) << (shortNameChar % 64));
     }
   }
 
