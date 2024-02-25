@@ -40,7 +40,7 @@ class ThreadPool {
 
   // add new work item to the pool
   template <class Func, class... Args>
-  std::future<typename std::invoke_result<Func, Args...>::type> enqueue(Func&& f, Args&&... args);
+  std::future<std::invoke_result_t<Func, Args...>> enqueue(Func&& func, Args&&... args);
 
   // Parallel version of std::transform with unary operation.
   // This function will first enqueue all the tasks at one, using waiting threads of the thread pool,
@@ -104,11 +104,11 @@ inline ThreadPool::~ThreadPool() {
 }
 
 template <class Func, class... Args>
-inline std::future<typename std::invoke_result<Func, Args...>::type> ThreadPool::enqueue(Func&& f, Args&&... args) {
-  using return_type = typename std::invoke_result<Func, Args...>::type;
+inline std::future<std::invoke_result_t<Func, Args...>> ThreadPool::enqueue(Func&& func, Args&&... args) {
+  using return_type = std::invoke_result_t<Func, Args...>;
 
   auto task = std::make_shared<std::packaged_task<return_type()>>(
-      std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
+      std::bind(std::forward<Func>(func), std::forward<Args>(args)...));
 
   std::future<return_type> res = task->get_future();
   {

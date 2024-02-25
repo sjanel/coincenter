@@ -69,10 +69,18 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
 
 string GetCurlVersionInfo() {
   const curl_version_info_data &curlVersionInfo = *curl_version_info(CURLVERSION_NOW);
+
   string curlVersionInfoStr("curl ");
   curlVersionInfoStr.append(curlVersionInfo.version);
+  if (curlVersionInfo.ssl_version == nullptr) {
+    throw exception("Invalid curl install - no ssl support");
+  }
   curlVersionInfoStr.append(" ssl ").append(curlVersionInfo.ssl_version);
-  curlVersionInfoStr.append(" libz ").append(curlVersionInfo.libz_version);
+  if (curlVersionInfo.libz_version != nullptr) {
+    curlVersionInfoStr.append(" libz ").append(curlVersionInfo.libz_version);
+  } else {
+    curlVersionInfoStr.append(" NO libz support");
+  }
   return curlVersionInfoStr;
 }
 
@@ -85,14 +93,13 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
       _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()),
       _nbMaxRetries(permanentCurlOptions.nbMaxRetries()),
       _tooManyErrorsPolicy(permanentCurlOptions.tooManyErrorsPolicy()) {
-  if (settings::AreQueryResponsesOverriden(runMode)) {
-    _handle = nullptr;
-  } else {
-    _handle = curl_easy_init();
-    if (_handle == nullptr) {
+  if (!settings::AreQueryResponsesOverriden(runMode)) {
+    CURL *curl = curl_easy_init();
+    if (curl == nullptr) {
       throw std::bad_alloc();
     }
-    CURL *curl = reinterpret_cast<CURL *>(_handle);
+
+    _handle = curl;
 
     const string &userAgent = permanentCurlOptions.getUserAgent();
     if (userAgent.empty()) {
@@ -123,11 +130,10 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
                _bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
 
     if (settings::IsProxyRequested(runMode)) {
-      if (IsProxyAvailable()) {
-        setUpProxy(GetProxyURL(), false);
-      } else {
-        throw std::runtime_error("Requesting proxy usage without any available proxy.");
+      if (!IsProxyAvailable()) {
+        throw std::runtime_error("Requesting proxy usage without any available proxy");
       }
+      setUpProxy(GetProxyURL(), false);
     }
   }
 }

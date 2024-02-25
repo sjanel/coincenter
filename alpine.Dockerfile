@@ -1,5 +1,10 @@
-# Multi stage build to separate docker build image from executable (to make the latter smaller)
 FROM alpine:3.19.1 AS build
+
+# Declare and set default values of following arguments
+ARG BUILD_MODE=Release
+ARG BUILD_TEST=0
+ARG BUILD_ASAN=0
+ARG BUILD_WITH_PROMETHEUS=1
 
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apk add --update --upgrade --no-cache g++ libc-dev openssl-dev curl-dev cmake ninja git ca-certificates
@@ -22,14 +27,12 @@ COPY data/secret/secret_test.json .
 WORKDIR /app/data/static
 COPY data/static/currency_prefix_translator.json data/static/currencyacronymtranslator.json data/static/stablecoins.json data/static/withdrawfees.json ./
 
+# Copy fiats cache (needed in tests to avoid live requests)
+WORKDIR /app/data/cache
+COPY data/cache/fiatcache.json ./
+
 # Create and go to 'bin' directory
 WORKDIR /app/bin
-
-# Declare and set default values of following arguments
-ARG BUILD_MODE=Release
-ARG BUILD_TEST=0
-ARG BUILD_ASAN=0
-ARG BUILD_WITH_PROMETHEUS=1
 
 # Build and launch tests if any
 RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \

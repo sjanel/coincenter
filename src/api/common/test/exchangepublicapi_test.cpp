@@ -78,9 +78,9 @@ TEST_F(ExchangePublicTest, FindCurrenciesPath) {
 TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(::testing::Return(markets));
 
-  EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW"), Market("BTC", "KRW"));
-  EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC", markets), Market("BTC", "KRW"));
-  EXPECT_THROW(exchangePublic.retrieveMarket("EUR", "EOS", markets), exception);
+  EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW").value(), Market("BTC", "KRW"));
+  EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC", markets).value(), Market("BTC", "KRW"));
+  EXPECT_FALSE(exchangePublic.retrieveMarket("EUR", "EOS", markets).has_value());
 }
 
 class ExchangePublicConvertTest : public ExchangePublicTest {

@@ -34,6 +34,7 @@
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
@@ -275,14 +276,11 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
 }
 
 bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
-  MarketSet markets = _exchangePublic.queryTradableMarkets();
-  if (!markets.contains(mk)) {
-    mk = mk.reverse();
-    if (!markets.contains(mk)) {
-      return false;
-    }
+  const auto optMarket = _exchangePublic.retrieveMarket(mk.base(), mk.quote());
+  if (!optMarket) {
+    return false;
   }
-  params.append("symbol", mk.assetsPairStrUpper());
+  params.append("symbol", optMarket->assetsPairStrUpper());
   return true;
 }
 
