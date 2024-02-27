@@ -4,16 +4,25 @@ FROM ubuntu:22.04 AS build
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apt update && \
     apt upgrade -y && \
-    apt install build-essential curl libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip -y && \
-    curl -L -o /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
-    gunzip /usr/local/bin/ninja.gz && \
-    chmod a+x /usr/local/bin/ninja
+    apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip -y --no-install-recommends
 
-# Set default directory for application
+# Copy source files
+WORKDIR /app/src
+COPY src .
+
 WORKDIR /app
+COPY CMakeLists.txt *.md ./
 
-# Copy all files, excluding the ones in '.dockerignore'
-COPY . .
+WORKDIR /app/cmake
+COPY cmake .
+
+# Copy only the test secrets
+WORKDIR /app/data/secret
+COPY data/secret/secret_test.json .
+
+# Copy mandatory static configuration files
+WORKDIR /app/data/static
+COPY data/static/currency_prefix_translator.json data/static/currencyacronymtranslator.json data/static/stablecoins.json data/static/withdrawfees.json ./
 
 # Create and go to 'bin' directory
 WORKDIR /app/bin

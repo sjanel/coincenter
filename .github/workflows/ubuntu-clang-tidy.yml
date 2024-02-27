@@ -17,11 +17,12 @@ jobs:
 
     steps:
       - name: Checkout repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          sudo apt update && sudo apt install libcurl4-gnutls-dev ninja-build
+          sudo apt update
+          sudo apt install libcurl4-gnutls-dev ninja-build
 
       - name: Install clang (with clang-tidy)
         run: |

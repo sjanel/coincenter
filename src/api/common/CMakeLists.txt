@@ -45,11 +45,11 @@ add_common_test(
 )
 
 add_unit_test( 
-    fiatconverter_test
-    src/fiatconverter.cpp
-    test/fiatconverter_test.cpp
-    LIBRARIES
-    coincenter_objects
+  fiatconverter_test
+  src/fiatconverter.cpp
+  test/fiatconverter_test.cpp
+  LIBRARIES
+  coincenter_objects
 )
 
 add_unit_test(
@@ -61,4 +61,7 @@ add_unit_test(
   OpenSSL::SSL
 )
 
-
+add_common_test(
+  withdrawalfees-crawler_test
+  test/withdrawalfees-crawler_test.cpp
+)

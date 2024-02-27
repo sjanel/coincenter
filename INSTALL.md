@@ -17,8 +17,8 @@
       - [As a static library](#as-a-static-library)
     - [Build with monitoring support](#build-with-monitoring-support)
     - [With Docker](#with-docker)
-      - [Build](#build-1)
-      - [Run](#run)
+      - [Docker Build](#docker-build)
+      - [Docker Run](#docker-run)
   - [Tests](#tests)
 
 </p>
@@ -28,7 +28,7 @@
 
 If you don't want to build `coincenter` locally, you can just download the public docker image, corresponding to the latest version of branch `main`.
 
-```
+```bash
 docker run -t sjanel/coincenter -h
 ```
 
@@ -36,7 +36,7 @@ Docker image does not contain additional `data` directory needed by `coincenter`
 
 To bind your 'data' directory from host to the docker container, you can use `--mount` option:
 
-```
+```bash
 docker run --mount type=bind,source=<path-to-data-dir-on-host>,target=/app/data sjanel/coincenter
 ```
 
@@ -52,7 +52,7 @@ The following compilers are known to compile `coincenter` (and are tested in the
 
 - **GCC** version >= 11
 - **Clang** version >= 17
-- **MSVC** version >= 19.30
+- **MSVC** version >= 19.39
 
 Other compilers have not been tested.
 
@@ -70,8 +70,8 @@ In addition, the basic minimum requirements are:
 Provided that your distribution is sufficiently recent, meta package `build-essential` should provide `gcc` with the correct version.
 Otherwise you can still force it:
 
-```
-sudo apt update && sudo apt install libcurl4-gnutls-dev libssl-dev cmake g++-11
+```bash
+sudo apt update && sudo apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
 ```
 
 You can refer to the provided [Dockerfile](Dockerfile) for more information.
@@ -80,21 +80,28 @@ You can refer to the provided [Dockerfile](Dockerfile) for more information.
 
 With `ninja` generator for instance:
 
-```
-sudo apk update && sudo apk upgrade && sudo apk add g++ libc-dev curl-dev cmake ninja git linux-headers
+```bash
+sudo apk add --update --upgrade g++ libc-dev openssl-dev curl-dev cmake ninja git ca-certificates
 ```
 
 You can refer to the provided [Dockerfile](alpine.Dockerfile) for more information.
 
 ### Windows
 
-On Windows, the easiest method is to use [chocolatey](https://chocolatey.org/install) to install **curl** and **OpenSSL**:
+On Windows, the easiest method is to use [vcpkg](https://chocolatey.org/install) as package manager to install **curl** and **OpenSSL**:
 
-```
-choco install curl openssl
+```bash
+vcpkg install openssl curl
+vcpkg integrate install
 ```
 
-Then, locate where curl is installed (by default, should be in `C:\ProgramData\chocolatey\lib\curl\tools\curl-xxx`, let's note this `CURL_DIR`) and add both `CURL_DIR/lib` and `CURL_DIR/bin` in your `PATH`. From this step, **curl** and **OpenSSL** can be found by `cmake` and will be linked statically to the executables.
+From this step, **curl** and **OpenSSL** can be found by `cmake` with `find_package` by giving the toolchain file of `vcpkg` at configure time:
+
+```bash
+cmake -DCMAKE_TOOLCHAIN_FILE="<vcpkg-root-dir>/scripts/buildsystems/vcpkg.cmake" ...
+```
+
+You can refer to the [Windows workflow](.github/workflows/windows.yml) and the [vcpkg install page](https://vcpkg.io/en/getting-started?platform=windows) for more information.
 
 ## Build
 
@@ -117,7 +124,7 @@ If you are building frequently `coincenter` you can install them to speed up its
 
 This project can be easily built with [cmake](https://cmake.org/).
 
-The minimum tested version is cmake `3.15`.
+The minimum tested version is cmake `3.15`, but it's recommended that you use the latest available one.
 
 #### cmake build options
 
@@ -130,7 +137,7 @@ The minimum tested version is cmake `3.15`.
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 
-```
+```bash
 mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
 ```
 
@@ -142,7 +149,7 @@ On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studi
 
 To build your `cmake` project with **coincenter** library, you can do it with `FetchContent`:
 
-```
+```cmake
 include(FetchContent)
 
 FetchContent_Declare(
@@ -156,7 +163,7 @@ FetchContent_MakeAvailable(coincenter)
 
 Then, a static library named `coincenter` is defined and you can link it as usual:
 
-```
+```cmake
 target_link_libraries(<MyProgram> PRIVATE coincenter)
 ```
 
@@ -189,15 +196,15 @@ Activate Address Sanitizer
 Compile with [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp) to support metric export to Prometheus
 `BUILD_WITH_PROMETHEUS` (default: 1)
 
-#### Build
+#### Docker Build
 
-```
+```bash
 docker build --build-arg BUILD_MODE=Release -t local-coincenter .
 ```
 
-#### Run
+#### Docker Run
 
-```
+```bash
 docker run -ti -e "TERM=xterm-256color" local-coincenter --help
 ```
 

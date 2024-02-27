@@ -2,13 +2,25 @@
 FROM alpine:3.19.1 AS build
 
 # Install base & build dependencies, needed certificates for curl to work with https
-RUN apk add --update --upgrade --no-cache g++ libc-dev curl-dev cmake ninja git ca-certificates
+RUN apk add --update --upgrade --no-cache g++ libc-dev openssl-dev curl-dev cmake ninja git ca-certificates
 
-# Set default directory for application
+# Copy source files
+WORKDIR /app/src
+COPY src .
+
 WORKDIR /app
+COPY CMakeLists.txt *.md ./
 
-# Copy all files, excluding the ones in '.dockerignore'
-COPY . .
+WORKDIR /app/cmake
+COPY cmake .
+
+# Copy only the test secrets
+WORKDIR /app/data/secret
+COPY data/secret/secret_test.json .
+
+# Copy mandatory static configuration files
+WORKDIR /app/data/static
+COPY data/static/currency_prefix_translator.json data/static/currencyacronymtranslator.json data/static/stablecoins.json data/static/withdrawfees.json ./
 
 # Create and go to 'bin' directory
 WORKDIR /app/bin

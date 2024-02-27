@@ -80,7 +80,7 @@ CommonAPI::FiatsFunc::FiatsFunc()
 CommonAPI::Fiats CommonAPI::FiatsFunc::operator()() {
   vector<CurrencyCode> fiatsVec = retrieveFiatsSource1();
   Fiats fiats;
-  if (!fiats.empty()) {
+  if (!fiatsVec.empty()) {
     fiats = Fiats(std::move(fiatsVec));
     log::info("Stored {} fiats from first source", fiats.size());
   } else {

@@ -7,32 +7,27 @@ on:
   pull_request:
 
 jobs:
-  windows-build:
+  windows:
     name: Build on Windows
     runs-on: windows-latest
     strategy:
       matrix:
-        buildmode: [Debug, Release]
+        buildmode: [Debug]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install dependencies
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: install curl openssl
-
-      - name: Add cURL directory in the path
         run: |
-          $curlPath = Get-ChildItem -Path C:\ProgramData\chocolatey\lib\curl\tools\curl* -Name
-          echo "C:\ProgramData\chocolatey\lib\curl\tools\${curlPath}\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "C:\ProgramData\chocolatey\lib\curl\tools\${curlPath}\lib" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          vcpkg install openssl curl
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: End vcpkg install
+        run: |
+          vcpkg integrate install
 
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{matrix.buildmode}}
+        run: |
+          cmake -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -S . -B build
 
       - name: Build
         working-directory: ${{github.workspace}}/build

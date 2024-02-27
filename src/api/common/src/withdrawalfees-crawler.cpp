@@ -77,8 +77,9 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
   withdrawMinMap1.merge(std::move(withdrawMinMap2));
 
   if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
-    throw exception("Unable to parse {} withdrawal fees", exchangeName);
+    log::error("Unable to parse {} withdrawal fees", exchangeName);
   }
+
   return std::make_pair(std::move(withdrawFees1), std::move(withdrawMinMap1));
 }
 
@@ -172,7 +173,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
     ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
   }
   if (ret.first.empty() || ret.second.empty()) {
-    log::error("Unable to parse {} withdrawal fees from first source", exchangeName);
+    log::warn("Unable to parse {} withdrawal fees from first source", exchangeName);
   } else {
     log::info("Updated {} withdraw infos for {} coins from first source", exchangeName, ret.first.size());
   }
@@ -239,7 +240,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
   }
 
   if (ret.first.empty() || ret.second.empty()) {
-    log::error("Unable to parse {} withdrawal fees from second source", exchangeName);
+    log::warn("Unable to parse {} withdrawal fees from second source", exchangeName);
   } else {
     log::info("Updated {} withdraw infos for {} coins from second source", exchangeName, ret.first.size());
   }

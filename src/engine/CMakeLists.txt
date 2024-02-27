@@ -22,14 +22,19 @@ add_unit_test(
   coincenter_engine
 )
 
-add_unit_test(
-  commandlineoptionsparser_test
-  test/commandlineoptionsparser_test.cpp
-  DEFINITIONS
-  CCT_DISABLE_SPDLOG
-  LIBRARIES
-  coincenter_tech
-)
+# As of MSVC 19.38.33135.0, it fails to compile commandlineoptionsparser_test:
+# commandlineoptionsparser_test.cpp(333,79): fatal  error C1001: Internal compiler error
+
+if(NOT MSVC)
+  add_unit_test(
+    commandlineoptionsparser_test
+    test/commandlineoptionsparser_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+    LIBRARIES
+    coincenter_tech
+  )
+endif()
 
 add_unit_test(
   exchangesorchestrator_private_test
