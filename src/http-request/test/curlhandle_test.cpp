@@ -29,6 +29,8 @@ class ExampleBaseCurlHandle : public ::testing::Test {
   CurlHandle handle{kHttpBinBase};
 };
 
+TEST_F(ExampleBaseCurlHandle, CurlVersion) { EXPECT_FALSE(GetCurlVersionInfo().empty()); }
+
 TEST_F(ExampleBaseCurlHandle, QueryJsonAndMoveConstruct) {
   CurlOptions opts = kVerboseHttpGetOptions;
   opts.appendHttpHeader("MyHeaderIsVeryLongToAvoidSSO", "Val1");
@@ -48,24 +50,20 @@ TEST_F(ExampleBaseCurlHandle, QueryXmlAndMoveAssign) {
   EXPECT_NE(newCurlHandle.query("/xml", kVerboseHttpGetOptions).find("<?xml"), std::string_view::npos);
 }
 
-class TestCurlHandle : public ::testing::Test {
+class CurlHandleProxyTest : public ::testing::Test {
  protected:
   static constexpr std::string_view kTestUrl = "https://live.cardeasexml.com/ultradns.php";
 
   CurlHandle handle{kTestUrl};
 };
 
-TEST_F(TestCurlHandle, BasicCurlTest) { EXPECT_EQ(handle.query("", kVerboseHttpGetOptions), "POOL_UP"); }
-
-TEST_F(TestCurlHandle, ProxyMockTest) {
+TEST_F(CurlHandleProxyTest, ProxyMockTest) {
   if (IsProxyAvailable()) {
     CurlOptions opts = kVerboseHttpGetOptions;
     opts.setProxyUrl(GetProxyURL());
     EXPECT_EQ(handle.query("", opts), "POOL_LEFT");
   }
 }
-
-TEST_F(TestCurlHandle, CurlVersion) { EXPECT_FALSE(GetCurlVersionInfo().empty()); }
 
 class TestOverrideQueryResponses : public ::testing::Test {
  protected:

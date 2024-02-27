@@ -31,7 +31,6 @@
 *.creator*
 *.files
 *.includes
-*.cmake
 *.code-workspace
 *.orig
 *.tmp
@@ -59,13 +58,12 @@
 #==============================================================================#
 
 !.vscode/*.default
-.ycm_extra_conf.py*
-*-ut
 cscope*
 **/*secret.json
 data/cache
 data/log
 data/secret
+!data/secret/secret_test.json
 data/static/exchangeconfig.json
 data/static/generalconfig.json
 monitoring/data/grafana/*

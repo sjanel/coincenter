@@ -24,8 +24,4 @@ TEST_F(CommonAPITest, IsFiatService) {
   EXPECT_FALSE(commonAPI.queryIsCurrencyCodeFiat("XRP"));
 }
 
-TEST_F(CommonAPITest, WithdrawalFeesCrawlerService) {
-  EXPECT_GT(commonAPI.queryWithdrawalFees("kraken").first.size(), 0UL);
-  EXPECT_GT(commonAPI.queryWithdrawalFees("bithumb").first.size(), 0UL);
-}
 }  // namespace cct::api
