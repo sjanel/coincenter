@@ -107,71 +107,56 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
     std::string_view exchangeName) {
-  std::string_view withdrawalFeesCsv = _curlHandle1.query(exchangeName, CurlOptions(HttpRequestType::kGet));
-
-  static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = "<td class=withdrawalFee>";
-  static constexpr std::string_view kBeginMinWithdrawalHtmlTag = "<td class=minWithdrawal>";
-  static constexpr std::string_view kParseError1Msg =
-      "Parse error from source 1 - either site information unavailable or code to be updated";
+  string path(exchangeName);
+  path.append(".json");
+  std::string_view withdrawalFeesCsv = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
 
   WithdrawalInfoMaps ret;
 
-  std::size_t searchPos = 0;
-  while ((searchPos = withdrawalFeesCsv.find(kBeginWithdrawalFeeHtmlTag, searchPos)) != string::npos) {
-    auto parseNextFee = [&withdrawalFeesCsv](std::size_t& begPos) {
-      static constexpr std::string_view kBeginFeeHtmlTag = "<div class=fee>";
-      static constexpr std::string_view kEndHtmlTag = "</div>";
-
-      MonetaryAmount ret;
-
-      begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos);
-      if (begPos == string::npos) {
-        log::error(kParseError1Msg);
-        return ret;
-      }
-      begPos += kBeginFeeHtmlTag.size();
-      // There are sometimes strange characters at beginning of the amount
-      while (!isdigit(withdrawalFeesCsv[begPos])) {
-        ++begPos;
-      }
-      std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
-      if (endPos == string::npos) {
-        log::error(kParseError1Msg);
-        return ret;
-      }
-      ret = MonetaryAmount(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
-      begPos = endPos + kEndHtmlTag.size();
+  if (!withdrawalFeesCsv.empty()) {
+    const json jsonData = json::parse(withdrawalFeesCsv);
+    const auto exchangesIt = jsonData.find("exchange");
+    if (exchangesIt == jsonData.end()) {
+      log::error("no exchange data found in source 1 - either site information unavailable or code to be updated");
       return ret;
-    };
-
-    // Locate withdrawal fee
-    searchPos += kBeginWithdrawalFeeHtmlTag.size();
-    MonetaryAmount withdrawalFee = parseNextFee(searchPos);
-    if (withdrawalFee.currencyCode().isNeutral()) {
-      ret.first.clear();
-      break;
+    }
+    const auto feesIt = exchangesIt->find("fees");
+    if (feesIt == exchangesIt->end() || !feesIt->is_array()) {
+      log::error("no fees data found in source 1 - either site information unavailable or code to be updated");
+      return ret;
     }
 
-    log::trace("Updated {} withdrawal fee {} from first source", exchangeName, withdrawalFee);
-    ret.first.insert(withdrawalFee);
+    for (const json& feeJson : *feesIt) {
+      const auto amountIt = feeJson.find("amount");
+      if (amountIt == feeJson.end() || !amountIt->is_number_float()) {
+        continue;
+      }
 
-    // Locate min withdrawal
-    searchPos = withdrawalFeesCsv.find(kBeginMinWithdrawalHtmlTag, searchPos) + kBeginMinWithdrawalHtmlTag.size();
-    if (searchPos == string::npos) {
-      log::error(kParseError1Msg);
-      ret.first.clear();
-      break;
+      const auto coinIt = feeJson.find("coin");
+      if (coinIt == feeJson.end()) {
+        continue;
+      }
+      const auto symbolIt = coinIt->find("symbol");
+      if (symbolIt == coinIt->end() || !symbolIt->is_string()) {
+        continue;
+      }
+
+      MonetaryAmount withdrawalFee(amountIt->get<double>(), symbolIt->get<std::string_view>());
+      log::trace("Updated {} withdrawal fee {} from first source", exchangeName, withdrawalFee);
+      ret.first.insert(withdrawalFee);
+
+      const auto minWithdrawalIt = feeJson.find("min");
+      if (minWithdrawalIt == feeJson.end() || !minWithdrawalIt->is_number_float()) {
+        continue;
+      }
+
+      MonetaryAmount minWithdrawal(minWithdrawalIt->get<double>(), symbolIt->get<std::string_view>());
+
+      log::trace("Updated {} min withdrawal {} from first source", exchangeName, minWithdrawal);
+      ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
     }
-
-    MonetaryAmount minWithdrawal = parseNextFee(searchPos);
-    if (minWithdrawal.currencyCode().isNeutral()) {
-      ret.first.clear();
-      break;
-    }
-
-    log::trace("Updated {} min withdrawal {} from first source", exchangeName, minWithdrawal);
-    ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
   }
+
   if (ret.first.empty() || ret.second.empty()) {
     log::warn("Unable to parse {} withdrawal fees from first source", exchangeName);
   } else {

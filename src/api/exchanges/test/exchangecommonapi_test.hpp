@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <optional>
 #include <random>
+#include <utility>
 
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
@@ -39,8 +40,9 @@ class TestAPI {
                                                                const CurrencyExchangeFlatSet &currencies) {
     CurrencyExchangeFlatSet currencyToKeep;
     std::ranges::copy_if(
-        currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange &c) {
-          return !c.isFiat() && std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
+        currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange &curEx) {
+          return !curEx.isFiat() &&
+                 std::ranges::any_of(markets, [&curEx](Market mk) { return mk.canTrade(curEx.standardCode()); });
         });
 
     CurrencyExchangeFlatSet sample;
@@ -72,18 +74,18 @@ class TestAPI {
     currencies =
         exchangePrivateOpt ? exchangePrivateOpt->queryTradableCurrencies() : exchangePublic.queryTradableCurrencies();
     ASSERT_FALSE(currencies.empty());
-    EXPECT_TRUE(std::ranges::none_of(currencies, [](const auto &c) { return c.standardCode().str().empty(); }));
+    EXPECT_TRUE(std::ranges::none_of(currencies, [](const auto &cur) { return cur.standardCode().str().empty(); }));
 
     // Uncomment below code to print updated Upbit withdrawal fees for static data of withdrawal fees of public API
     // if (exchangePrivateOpt) {
-    //   json d;
-    //   for (const auto &c : currencies) {
-    //     const auto optFeeAmount = exchangePrivateOpt->queryWithdrawalFee(c.standardCode());
+    //   json upbitWithdrawalFeesJson;
+    //   for (const auto &cur : currencies) {
+    //     const auto optFeeAmount = exchangePrivateOpt->queryWithdrawalFee(cur.standardCode());
     //     if (optFeeAmount) {
-    //       d[c.standardStr()] = optFeeAmount->amountStr();
+    //       upbitWithdrawalFeesJson[cur.standardStr()] = optFeeAmount->amountStr();
     //     }
     //   }
-    //   std::cout << d.dump(2) << '\n';
+    //   std::cout << upbitWithdrawalFeesJson.dump(2) << '\n';
     // }
   }
 
@@ -134,11 +136,12 @@ class TestAPI {
       return;
     }
     CurrencyExchangeFlatSet withdrawableCryptos;
-    std::ranges::copy_if(
-        currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()), [this](const CurrencyExchange &c) {
-          return !c.isFiat() && c.canWithdraw() &&
-                 std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
-        });
+    std::ranges::copy_if(currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
+                         [this](const CurrencyExchange &curEx) {
+                           return !curEx.isFiat() && curEx.canWithdraw() &&
+                                  std::ranges::any_of(
+                                      markets, [&curEx](Market mk) { return mk.canTrade(curEx.standardCode()); });
+                         });
 
     if (!withdrawableCryptos.empty()) {
       CurrencyExchangeFlatSet sample;
