@@ -64,6 +64,8 @@ Main features:
         - [Simple usage](#simple-usage)
         - [Multiple commands](#multiple-commands)
         - [Piping commands](#piping-commands)
+        - [Repeat option](#repeat-option)
+        - [Interrupt signal handling for graceful shutdown](#interrupt-signal-handling-for-graceful-shutdown)
       - [Logging](#logging)
         - [Activity history](#activity-history)
     - [Parallel requests](#parallel-requests)
@@ -121,7 +123,6 @@ Main features:
           - [Standard - full information](#standard---full-information-2)
           - [Sell - with information from previous 'piped' command](#sell---with-information-from-previous-piped-command-1)
     - [Monitoring options](#monitoring-options)
-      - [Repeat](#repeat)
     - [Limitations](#limitations)
     - [Examples of use cases](#examples-of-use-cases)
       - [Get an overview of your portfolio in Korean Won](#get-an-overview-of-your-portfolio-in-korean-won)
@@ -217,6 +218,23 @@ coincenter buy 1500XLM,binance withdraw kraken sell
 ```
 
 The 1500XLM will be considered for withdraw from Binance if the buy is completed, and the XLM arrived on Kraken considered for selling when the withdraw completes.
+
+##### Repeat option
+
+`coincenter` commands are normally executed only once, and program is terminated after it.
+To continuously query the same option use `-r <[n]>` or `--repeat <[n]>` (the `n` integer is optional) to repeat `n` times the given command(s) (or undefinably if no `n` given).
+
+**Warning**: for trades and withdraw commands, use with care.
+
+Between each repeat you can set a waiting time with `--repeat-time` option which expects a time duration.
+
+It can be useful to store logs for an extended period of time and for [monitoring](#monitoring-options) data export purposes.
+
+##### Interrupt signal handling for graceful shutdown
+
+`coincenter` can exit gracefully with `SIGINT` and `SIGTERM` signals. When it receives such a signal, `coincenter` will stop processing commands after current one (ignoring the [repeat](#repeat-option) as well).
+
+This allows to flush correctly the latest data (caches, logs, etc) to files at termination.
 
 #### Logging
 
@@ -1002,15 +1020,6 @@ coincenter trade 80%KRW-ADA,upbit withdraw-apply kraken
 Currently, its support is experimental and in development for all major options of `coincenter` (private and market data requests).
 The metrics are exported in *push* mode to the gateway at each new query. You can configure the IP address, port, username and password (if any) thanks to command line options (refer to the help to see their names).
 
-#### Repeat
-
-`coincenter` commands are normally executed only once, and program is terminated after it.
-To continuously query the same option to export regular metrics to Prometheus, you can use `--repeat` option. **Warning**: for trades and withdraw commands, use with care.
-
-Without a following numeric value, the command will repeat endlessly. You can fix a specific number of repeats by giving a number.
-
-Between each repeat you can set a waiting time with `--repeat-time` option which expects a time duration.
-
 ### Limitations
 
 Be aware of the following limitations of `coincenter`:
@@ -1019,7 +1028,7 @@ Be aware of the following limitations of `coincenter`:
   This is to ensure safety between withdrawals performed between exchanges.
 - Only absolute withdraw fees are currently supported.
   In some cases (seen in Huobi), withdraw fee can be a percentage. They will be considered as 0.
-- Not really a limitation, but some **sensitive actions are not possible** by the exchanges API.
+- Not really a limitation of `coincenter` itself, but some **sensitive actions are not possible** by the exchanges API.
   For instance, withdrawal for Kraken is only possible for a stored destination made from the website first.
 
 And probably more that I did not thought of, or never encountered. Feel free to open an issue and I will check it out if it's feasible!

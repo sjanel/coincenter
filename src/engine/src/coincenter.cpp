@@ -1,6 +1,7 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
+#include <csignal>
 #include <optional>
 #include <span>
 #include <thread>
@@ -35,8 +36,20 @@ void FillTransferableCommandResults(const TradeResultPerExchange &tradeResultPer
     }
   }
 }
-
 }  // namespace
+
+volatile sig_atomic_t g_signalStatus = 0;
+
+// According to the standard, 'SignalHandler' function should have C linkage:
+// (https://en.cppreference.com/w/cpp/utility/program/signal
+// Thus it's not possible to use a lambda and pass some
+// objects to it. This is why for this rare occasion we will rely on a static variable. This solution has been inspired
+// by: https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC54-CPP.+A+signal+handler+must+be+a+plain+old+function
+extern "C" void SignalHandler(int sigNum) {
+  log::warn("Signal {} received, will stop after current request", sigNum);
+  g_signalStatus = sigNum;
+}
+
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
 Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
@@ -47,13 +60,17 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _metricsExporter(coincenterInfo.metricGatewayPtr()),
       _exchangePool(coincenterInfo, _fiatConverter, _commonAPI, _apiKeyProvider),
       _exchangesOrchestrator(coincenterInfo.requestsConfig(), _exchangePool.exchanges()),
-      _queryResultPrinter(coincenterInfo.apiOutputType(), _coincenterInfo.loggingInfo()) {}
+      _queryResultPrinter(coincenterInfo.apiOutputType(), _coincenterInfo.loggingInfo()) {
+  // Register the signal handler to gracefully shutdown the main loop for repeated requests.
+  std::signal(SIGINT, SignalHandler);
+  std::signal(SIGTERM, SignalHandler);
+}
 
 int Coincenter::process(const CoincenterCommands &coincenterCommands) {
   int nbCommandsProcessed = 0;
   const auto commands = coincenterCommands.commands();
   const int nbRepeats = commands.empty() ? 0 : coincenterCommands.repeats();
-  for (int repeatPos = 0; repeatPos != nbRepeats; ++repeatPos) {
+  for (int repeatPos = 0; repeatPos != nbRepeats && g_signalStatus == 0; ++repeatPos) {
     if (repeatPos != 0) {
       std::this_thread::sleep_for(coincenterCommands.repeatTime());
     }
