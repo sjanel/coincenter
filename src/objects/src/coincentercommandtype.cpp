@@ -9,31 +9,17 @@
 namespace cct {
 namespace {
 constexpr std::string_view kCommandTypeNames[] = {
-    "HealthCheck",
-    "Currencies",
-    "Markets",
-    "ConversionPath",
-    "LastPrice",
-    "Ticker",
-    "Orderbook",
-    "LastTrades",
-    "Last24hTradedVolume",
+    "HealthCheck",    "Currencies",      "Markets",      "Conversion",   "ConversionPath",
+    "LastPrice",      "Ticker",          "Orderbook",    "LastTrades",   "Last24hTradedVolume",
     "WithdrawFees",
 
-    "Balance",
-    "DepositInfo",
-    "OrdersClosed",
-    "OrdersOpened",
-    "OrdersCancel",
-    "RecentDeposits",
-    "RecentWithdraws",
-    "Trade",
-    "Buy",
-    "Sell",
-    "Withdraw",
-    "DustSweeper",
+    "Balance",        "DepositInfo",     "OrdersClosed", "OrdersOpened", "OrdersCancel",
+    "RecentDeposits", "RecentWithdraws", "Trade",        "Buy",          "Sell",
+    "Withdraw",       "DustSweeper",
 };
-}
+
+static_assert(std::size(kCommandTypeNames) == static_cast<std::size_t>(CoincenterCommandType::kLast));
+}  // namespace
 
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
   const auto intValue = static_cast<std::underlying_type_t<CoincenterCommandType>>(type);

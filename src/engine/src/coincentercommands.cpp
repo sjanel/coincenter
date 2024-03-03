@@ -4,6 +4,7 @@
 #include <string_view>
 #include <utility>
 
+#include "cct_invalid_argument_exception.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandfactory.hpp"
 #include "coincentercommandtype.hpp"
@@ -72,6 +73,19 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (cmdLineOptions.ticker) {
     optionParser = StringOptionParser(*cmdLineOptions.ticker);
     _commands.emplace_back(CoincenterCommandType::kTicker).setExchangeNames(optionParser.parseExchanges());
+  }
+
+  if (!cmdLineOptions.conversion.empty()) {
+    optionParser = StringOptionParser(cmdLineOptions.conversion);
+
+    const auto [amount, amountType] = optionParser.parseNonZeroAmount();
+    if (amountType != StringOptionParser::AmountType::kAbsolute) {
+      throw invalid_argument("conversion should start with an absolute amount");
+    }
+    _commands.emplace_back(CoincenterCommandType::kConversion)
+        .setAmount(amount)
+        .setCur1(optionParser.parseCurrency())
+        .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (!cmdLineOptions.conversionPath.empty()) {

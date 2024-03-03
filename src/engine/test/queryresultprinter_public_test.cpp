@@ -9,6 +9,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "publictrade.hpp"
 #include "queryresultprinter.hpp"
@@ -601,6 +602,80 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
 TEST_F(QueryResultPrinterMarketOrderBookTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
+  expectNoStr();
+}
+
+class QueryResultPrinterConversionTest : public QueryResultPrinterTest {
+ protected:
+  MonetaryAmount fromAmount{34525, "SOL", 2};
+  CurrencyCode targetCurrencyCode{"KRW"};
+  MonetaryAmountPerExchange monetaryAmountPerExchange{{&exchange1, MonetaryAmount{41786641, targetCurrencyCode}},
+                                                      {&exchange3, MonetaryAmount{44487640, targetCurrencyCode}},
+                                                      {&exchange2, MonetaryAmount{59000249, targetCurrencyCode}}};
+};
+
+TEST_F(QueryResultPrinterConversionTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
+  static constexpr std::string_view kExpected = R"(
++----------+-------------------------------+
+| Exchange | 345.25 SOL converted into KRW |
++----------+-------------------------------+
+| binance  | 41786641 KRW                  |
+| huobi    | 44487640 KRW                  |
+| bithumb  | 59000249 KRW                  |
++----------+-------------------------------+
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printConversion(fromAmount, targetCurrencyCode, MonetaryAmountPerExchange{});
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "amount": "345.25 SOL",
+      "targetCurrency": "KRW"
+    },
+    "req": "Conversion"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "amount": "345.25 SOL",
+      "targetCurrency": "KRW"
+    },
+    "req": "Conversion"
+  },
+  "out": {
+    "binance": {
+      "convertedAmount": "41786641 KRW"
+    },
+    "bithumb": {
+      "convertedAmount": "59000249 KRW"
+    },
+    "huobi": {
+      "convertedAmount": "44487640 KRW"
+    }
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionTest, NoPrint) {
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
   expectNoStr();
 }
 

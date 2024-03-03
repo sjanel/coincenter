@@ -21,11 +21,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt update && sudo apt install libcurl4-gnutls-dev ninja-build
+          sudo apt update
+          sudo apt install libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install gcc
         run: |
-          sudo apt install ${{matrix.compiler}}
+          sudo apt install ${{matrix.compiler}} -y --no-install-recommends
         if: startsWith(matrix.compiler, 'g++')
 
       - name: Install clang
@@ -33,7 +34,7 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 17
-        if: startsWith(matrix.compiler, 'clang')
+        if: startsWith(matrix.compiler, 'clang++')
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build

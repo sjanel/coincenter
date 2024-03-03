@@ -109,6 +109,11 @@ TransferableCommandResultVector Coincenter::processCommand(
       _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
       break;
     }
+    case CoincenterCommandType::kConversion: {
+      const auto conversionPerExchange = getConversion(cmd.amount(), cmd.cur1(), cmd.exchangeNames());
+      _queryResultPrinter.printConversion(cmd.amount(), cmd.cur1(), conversionPerExchange);
+      break;
+    }
     case CoincenterCommandType::kConversionPath: {
       const auto conversionPathPerExchange = getConversionPaths(cmd.market(), cmd.exchangeNames());
       _queryResultPrinter.printConversionPath(cmd.market(), conversionPathPerExchange);
@@ -318,6 +323,11 @@ WithdrawsPerExchange Coincenter::getRecentWithdraws(std::span<const ExchangeName
 TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
     std::span<const ExchangeName> privateExchangeNames, CurrencyCode currencyCode) {
   return _exchangesOrchestrator.dustSweeper(privateExchangeNames, currencyCode);
+}
+
+MonetaryAmountPerExchange Coincenter::getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                                                    ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getConversion(amount, targetCurrencyCode, exchangeNames);
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {

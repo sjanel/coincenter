@@ -17,7 +17,7 @@
 namespace cct::ssl {
 namespace {
 
-unsigned int ShaDigestLen(ShaType shaType) { return static_cast<unsigned int>(shaType); }
+auto ShaDigestLen(ShaType shaType) { return static_cast<unsigned int>(shaType); }
 
 const EVP_MD* GetEVPMD(ShaType shaType) { return shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(); }
 }  // namespace
@@ -61,29 +61,37 @@ string ShaHex(ShaType shaType, std::string_view data, std::string_view secret) {
 namespace {
 using EVPMDCTXUniquePtr = std::unique_ptr<EVP_MD_CTX, decltype([](EVP_MD_CTX* ptr) { EVP_MD_CTX_free(ptr); })>;
 
-inline EVPMDCTXUniquePtr InitEVPMDCTXUniquePtr(ShaType shaType) {
+EVPMDCTXUniquePtr InitEVPMDCTXUniquePtr(ShaType shaType) {
   EVPMDCTXUniquePtr mdctx(EVP_MD_CTX_new());
+
   EVP_DigestInit_ex(mdctx.get(), GetEVPMD(shaType), nullptr);
+
   return mdctx;
 }
 
-inline string EVPBinToHex(const EVPMDCTXUniquePtr& mdctx) {
+string EVPBinToHex(const EVPMDCTXUniquePtr& mdctx) {
   unsigned int len = 0;
   unsigned char binData[EVP_MAX_MD_SIZE];
+
   EVP_DigestFinal_ex(mdctx.get(), binData, &len);
+
   return BinToHex(std::span<const unsigned char>(binData, len));
 }
 }  // namespace
 
 string ShaDigest(ShaType shaType, std::string_view data) {
   EVPMDCTXUniquePtr mdctx = InitEVPMDCTXUniquePtr(shaType);
+
   EVP_DigestUpdate(mdctx.get(), data.data(), data.size());
+
   return EVPBinToHex(mdctx);
 }
 
 string ShaDigest(ShaType shaType, std::span<const string> data) {
   EVPMDCTXUniquePtr mdctx = InitEVPMDCTXUniquePtr(shaType);
+
   std::ranges::for_each(data, [&](std::string_view str) { EVP_DigestUpdate(mdctx.get(), str.data(), str.size()); });
+
   return EVPBinToHex(mdctx);
 }
 

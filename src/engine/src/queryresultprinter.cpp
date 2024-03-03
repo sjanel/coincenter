@@ -499,6 +499,26 @@ json RecentWithdrawsJson(const WithdrawsPerExchange &withdrawsPerExchange,
   return ToJson(CoincenterCommandType::kRecentWithdraws, std::move(in), std::move(out));
 }
 
+json ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                    const MonetaryAmountPerExchange &conversionPerExchange) {
+  json in;
+  json inOpt;
+  inOpt.emplace("amount", amount.str());
+  inOpt.emplace("targetCurrency", targetCurrencyCode.str());
+  in.emplace("opt", std::move(inOpt));
+
+  json out = json::object();
+  for (const auto &[e, convertedAmount] : conversionPerExchange) {
+    if (convertedAmount != 0) {
+      json conversionForExchange;
+      conversionForExchange.emplace("convertedAmount", convertedAmount.str());
+      out.emplace(e->name(), std::move(conversionForExchange));
+    }
+  }
+
+  return ToJson(CoincenterCommandType::kConversion, std::move(in), std::move(out));
+}
+
 json ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) {
   json in;
   json inOpt;
@@ -1050,6 +1070,33 @@ void QueryResultPrinter::printRecentWithdraws(const WithdrawsPerExchange &withdr
       break;
   }
   logActivity(CoincenterCommandType::kRecentWithdraws, jsonData);
+}
+
+void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                                         const MonetaryAmountPerExchange &conversionPerExchange) const {
+  json jsonData = ConversionJson(amount, targetCurrencyCode, conversionPerExchange);
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      string conversionStrHeader = amount.str();
+      conversionStrHeader.append(" converted into ");
+      targetCurrencyCode.appendStrTo(conversionStrHeader);
+
+      SimpleTable simpleTable("Exchange", std::move(conversionStrHeader));
+      for (const auto &[e, convertedAmount] : conversionPerExchange) {
+        if (convertedAmount != 0) {
+          simpleTable.emplace_back(e->name(), convertedAmount.str());
+        }
+      }
+      printTable(simpleTable);
+      break;
+    }
+    case ApiOutputType::kJson:
+      printJson(jsonData);
+      break;
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+  logActivity(CoincenterCommandType::kConversion, jsonData);
 }
 
 void QueryResultPrinter::printConversionPath(Market mk,

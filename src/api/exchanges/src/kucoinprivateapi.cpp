@@ -16,6 +16,7 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "closed-order.hpp"
 #include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
