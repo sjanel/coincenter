@@ -45,6 +45,9 @@ class ExchangesOrchestrator {
   WithdrawsPerExchange getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
                                           const WithdrawsConstraints &withdrawsConstraints);
 
+  MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                                          ExchangeNameSpan exchangeNames);
+
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   CurrenciesPerExchange getCurrenciesPerExchange(ExchangeNameSpan exchangeNames);

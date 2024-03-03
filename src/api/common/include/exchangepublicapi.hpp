@@ -54,14 +54,14 @@ class ExchangePublic : public ExchangeBase {
 
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
-  std::optional<MonetaryAmount> estimatedConvert(MonetaryAmount from, CurrencyCode equiCurrency,
+  std::optional<MonetaryAmount> estimatedConvert(MonetaryAmount from, CurrencyCode toCurrency,
                                                  const PriceOptions &priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
     Fiats fiats = queryFiats();
     MarketSet markets;
     MarketsPath conversionPath =
-        findMarketsPath(from.currencyCode(), equiCurrency, markets, fiats, MarketPathMode::kWithLastFiatConversion);
-    return convert(from, equiCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+        findMarketsPath(from.currencyCode(), toCurrency, markets, fiats, MarketPathMode::kWithLastFiatConversion);
+    return convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   }
 
   /// Attempts to convert amount into a target currency.
@@ -108,7 +108,7 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
   /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.
-  /// @return array of Market (in the order in which they are defined in the exchange),
+  /// @return array of Market (in the order in which they are defined on the exchange),
   ///         or empty array if conversion is not possible
   /// For instance, findMarketsPath("XLM", "XRP") can return:
   ///   - XLM-USDT

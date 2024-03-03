@@ -42,7 +42,6 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "opened-order.hpp"
-#include "order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"

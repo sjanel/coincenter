@@ -298,6 +298,22 @@ WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(std::span<const E
   return ret;
 }
 
+MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                                                               ExchangeNameSpan exchangeNames) {
+  log::info("Query {} conversion into {} from {}", amount, targetCurrencyCode,
+            ConstructAccumulatedExchangeNames(exchangeNames));
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+  MonetaryAmountPerExchange convertedAmountPerExchange(selectedExchanges.size());
+  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), convertedAmountPerExchange.begin(),
+                                [amount, targetCurrencyCode](Exchange *exchange) {
+                                  const auto optConvertedAmount =
+                                      exchange->apiPublic().estimatedConvert(amount, targetCurrencyCode);
+                                  return std::make_pair(exchange, optConvertedAmount.value_or(MonetaryAmount{}));
+                                });
+
+  return convertedAmountPerExchange;
+}
+
 ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {
   log::info("Query {} conversion path from {}", mk, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);

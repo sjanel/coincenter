@@ -97,6 +97,10 @@ class Coincenter {
   TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
                                                             CurrencyCode currencyCode);
 
+  /// Returns given amount converted into target currency code for given exchanges, when possible.
+  MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                                          ExchangeNameSpan exchangeNames);
+
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 

@@ -218,6 +218,11 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
        &OptValueType::ticker},
       {{{"Public queries", 2500},
         "conversion",
+        "<amt-cur1-cur2[,exch1,...]>",
+        "Print value of 'amt-cur1' in 'cur2' for given exchanges when such conversion is possible"},
+       &OptValueType::conversion},
+      {{{"Public queries", 2500},
+        "conversion-path",
         "<cur1-cur2[,exch1,...]>",
         "Print fastest conversion path of 'cur1' to 'cur2' "
         "for given exchanges if possible"},

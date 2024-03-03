@@ -33,7 +33,7 @@
 #include "huobipublicapi.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
+#include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"

@@ -78,6 +78,9 @@ class QueryResultPrinter {
   void printRecentWithdraws(const WithdrawsPerExchange &withdrawsPerExchange,
                             const WithdrawsConstraints &withdrawsConstraints) const;
 
+  void printConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                       const MonetaryAmountPerExchange &conversionPerExchange) const;
+
   void printConversionPath(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 
   void printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange, CurrencyCode cur) const;

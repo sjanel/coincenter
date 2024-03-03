@@ -55,6 +55,7 @@ class CoincenterCmdLineOptions {
 
   std::optional<std::string_view> ticker;
 
+  std::string_view conversion;
   std::string_view conversionPath;
 
   std::optional<std::string_view> balance;

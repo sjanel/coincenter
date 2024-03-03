@@ -18,6 +18,7 @@ Main features:
 
 - Currencies
 - Markets
+- Currency conversions
 - Ticker
 - Orderbook
 - Traded volume
@@ -32,6 +33,7 @@ Main features:
 - Deposit information (address & tag)
 - Recent Deposits
 - Recent Withdraws
+- Closed orders
 - Opened orders
 - Cancel opened orders
 - Withdraw (with check at destination that funds are well received)
@@ -80,6 +82,7 @@ Main features:
       - [Last 24h traded volume](#last-24h-traded-volume)
       - [Last price](#last-price)
       - [Last trades](#last-trades)
+      - [Conversion](#conversion)
       - [Conversion path](#conversion-path)
       - [Withdraw fees](#withdraw-fees)
         - [Example 1: query all withdraw fees](#example-1-query-all-withdraw-fees)
@@ -133,6 +136,7 @@ Main features:
       - [Prints bithumb and upbit orderbook of depth 5 of Ethereum and adds a column conversion in euros](#prints-bithumb-and-upbit-orderbook-of-depth-5-of-ethereum-and-adds-a-column-conversion-in-euros)
       - [Prints last 24h traded volume for all exchanges supporting ETH-USDT market](#prints-last-24h-traded-volume-for-all-exchanges-supporting-eth-usdt-market)
       - [Prints last price of Cardano in Bitcoin for all exchanges supporting it](#prints-last-price-of-cardano-in-bitcoin-for-all-exchanges-supporting-it)
+      - [Prints value of `1000 XML` into SHIB for all exchanges where such conversion is possible](#prints-value-of-1000-xml-into-shib-for-all-exchanges-where-such-conversion-is-possible)
 
 </p>
 </details>
@@ -378,18 +382,30 @@ Example: Print the last 15 trades on DOT-USDT on Binance and Huobi
 coincenter last-trades dot-usdt,binance,huobi --n 15
 ```
 
+#### Conversion
+
+From a starting amount to a destination currency, `conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges, and return the converted amount on each exchange where such conversion is possible. The trade fees are not taken into account for this conversion.
+
+The conversion path chosen is the fastest (in terms of number of markets, so trades) possible.
+
+Example: Print the fastest conversion from Shiba Inu to Solana on all exchanges where such conversion is possible
+
+```bash
+coincenter conversion 1000shib-sol
+```
+
 #### Conversion path
 
-From a starting currency to a destination currency, `conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges.
+This option is similar to previous one ([conversion](#conversion)) but takes a starting currency code instead of an amount to convert.
 
 It will print the result as an ordered list of markets for each exchange.
 
-Option `conversion` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query for information.
+Option `conversion-path` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query for information.
 
 Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible
 
 ```bash
-coincenter conversion shib-sol
+coincenter conversion-path shib-sol
 ```
 
 **Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
@@ -1192,4 +1208,25 @@ Possible output:
 | kraken   | 0.00003955 BTC     |
 | upbit    | 0.00003984 BTC     |
 ---------------------------------
+```
+
+#### Prints value of `1000 XML` into SHIB for all exchanges where such conversion is possible
+
+```bash
+coincenter conversion 1000xlm-shib
+```
+
+Possible output:
+
+```bash
++----------+------------------------------+
+| Exchange | 1000 XLM converted into SHIB |
++----------+------------------------------+
+| binance  | 6097126.83826878288 SHIB     |
+| bithumb  | 6113110.2941176275 SHIB      |
+| huobi    | 6083108.03661202044 SHIB     |
+| kraken   | 6088227.73071931392 SHIB     |
+| kucoin   | 6090943.32410022531 SHIB     |
+| upbit    | 6084383.631243834 SHIB       |
++----------+------------------------------+
 ```
