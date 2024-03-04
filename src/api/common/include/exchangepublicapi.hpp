@@ -29,7 +29,15 @@ class ExchangePublic : public ExchangeBase {
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
   static constexpr int kNbLastTradesDefault = 100;
 
-  enum class MarketPathMode : int8_t { kStrict, kWithLastFiatConversion };
+  enum class MarketPathMode : int8_t {
+    // Only authorize conversions from real markets of the exchange.
+    // In particular, fiat conversions will be forbidden  if the fiat pair does not exist as a real market on the
+    // exchange.
+    kStrict,
+
+    // Authorize unique fiat conversion at one extremity of the conversion path (beginning or end, but not both).
+    kWithPossibleFiatConversionAtExtremity
+  };
 
   using Fiats = CommonAPI::Fiats;
 
@@ -59,8 +67,8 @@ class ExchangePublic : public ExchangeBase {
     MarketOrderBookMap marketOrderBookMap;
     Fiats fiats = queryFiats();
     MarketSet markets;
-    MarketsPath conversionPath =
-        findMarketsPath(from.currencyCode(), toCurrency, markets, fiats, MarketPathMode::kWithLastFiatConversion);
+    MarketsPath conversionPath = findMarketsPath(from.currencyCode(), toCurrency, markets, fiats,
+                                                 MarketPathMode::kWithPossibleFiatConversionAtExtremity);
     return convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   }
 
@@ -112,7 +120,7 @@ class ExchangePublic : public ExchangeBase {
   ///         or empty array if conversion is not possible
   /// For instance, findMarketsPath("XLM", "XRP") can return:
   ///   - XLM-USDT
-  ///   - XRP-USDT (and not USDT-XRP, as the pair defined on the exchange is XRP-USDT)
+  ///   - XRP-USDT
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet &markets,
                               const Fiats &fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 

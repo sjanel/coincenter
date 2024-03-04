@@ -45,13 +45,13 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   return std::move(freeConverterIt->get_ref<string&>());
 }
 
-File GetRatesCacheFile(std::string_view dataDir) {
-  return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
-}
-
 }  // namespace
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency)
+    : FiatConverter(coincenterInfo, ratesUpdateFrequency, GetRatesCacheFile(coincenterInfo.dataDir())) {}
+
+FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency,
+                             const Reader& fiatsCacheReader)
     : _curlHandle1(kFiatConverterSource1BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
                    coincenterInfo.getRunMode()),
       _curlHandle2(kFiatConverterSource2BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
@@ -59,8 +59,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
-  const File ratesCacheFile = GetRatesCacheFile(_dataDir);
-  const json data = ratesCacheFile.readAllJson();
+  const json data = fiatsCacheReader.readAllJson();
 
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
@@ -71,6 +70,10 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
     _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(TimeInS(timeStamp))});
   }
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
+}
+
+File FiatConverter::GetRatesCacheFile(std::string_view dataDir) {
+  return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
 }
 
 void FiatConverter::updateCacheFile() const {

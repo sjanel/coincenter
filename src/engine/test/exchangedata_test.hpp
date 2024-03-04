@@ -25,7 +25,7 @@ class ExchangesBaseTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};
   api::CommonAPI commonAPI{coincenterInfo, Duration::max(), Duration::max(),
                            api::CommonAPI::AtInit::kLoadFromFileCache};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
   api::MockExchangePublic exchangePublic1{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{kSupportedExchanges[1], fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic3{kSupportedExchanges[2], fiatConverter, commonAPI, coincenterInfo};

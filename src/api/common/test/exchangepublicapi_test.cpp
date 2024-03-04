@@ -31,6 +31,24 @@ namespace {
 class StableCoinReader : public Reader {
   [[nodiscard]] string readAll() const override { return R"({"USDT": "USD"})"; }
 };
+
+class FiatConverterReader : public Reader {
+  [[nodiscard]] string readAll() const override {
+    return R"(
+{
+  "KRW-EUR": {
+    "rate": 0.000697,
+    "timeepoch": 1709576375
+  },
+  "EUR-KRW": {
+    "rate": 1444.94,
+    "timeepoch": 1709576451
+  }
+}
+)";
+  }
+};
+
 }  // namespace
 class ExchangePublicTest : public ::testing::Test {
  protected:
@@ -39,7 +57,7 @@ class ExchangePublicTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{runMode,          loadConfiguration, GeneralConfig(),
                                 MonitoringInfo(), Reader(),          StableCoinReader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), FiatConverterReader()};
   MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
 
   MarketSet markets{{"BTC", "EUR"}, {"XLM", "EUR"},  {"ETH", "EUR"},  {"ETH", "BTC"},  {"BTC", "KRW"},
@@ -53,6 +71,7 @@ using Fiats = ExchangePublic::Fiats;
 
 TEST_F(ExchangePublicTest, FindConversionPath) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillRepeatedly(::testing::Return(markets));
+
   EXPECT_EQ(exchangePublic.findMarketsPath("BTC", "XLM"), MarketsPath({Market{"BTC", "EUR"}, Market{"XLM", "EUR"}}));
   EXPECT_EQ(exchangePublic.findMarketsPath("XLM", "ETH"), MarketsPath({Market{"XLM", "EUR"}, Market{"ETH", "EUR"}}));
   EXPECT_EQ(exchangePublic.findMarketsPath("ETH", "KRW"), MarketsPath({Market{"ETH", "BTC"}, Market{"BTC", "KRW"}}));
@@ -61,13 +80,24 @@ TEST_F(ExchangePublicTest, FindConversionPath) {
             MarketsPath({Market{"SHIB", "ICP"}, Market{"AVAX", "ICP"}, Market{"AVAX", "USDT"}}));
   EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "KRW"), MarketsPath());
 
-  EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "KRW", ExchangePublic::MarketPathMode::kWithLastFiatConversion),
+  EXPECT_EQ(exchangePublic.findMarketsPath("EUR", "GBP"), MarketsPath());
+
+  EXPECT_EQ(exchangePublic.findMarketsPath("SHIB", "KRW",
+                                           ExchangePublic::MarketPathMode::kWithPossibleFiatConversionAtExtremity),
             MarketsPath({Market{"SHIB", "ICP"}, Market{"AVAX", "ICP"}, Market{"AVAX", "USDT"},
                          Market{"USDT", "KRW", Market::Type::kFiatConversionMarket}}));
+
+  EXPECT_EQ(exchangePublic.findMarketsPath("GBP", "EOS",
+                                           ExchangePublic::MarketPathMode::kWithPossibleFiatConversionAtExtremity),
+            MarketsPath({
+                Market{"GBP", "USD", Market::Type::kFiatConversionMarket},
+                Market{"USD", "EOS"},
+            }));
 }
 
 TEST_F(ExchangePublicTest, FindCurrenciesPath) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillRepeatedly(::testing::Return(markets));
+
   EXPECT_EQ(exchangePublic.findCurrenciesPath("BTC", "XLM"), CurrenciesPath({"BTC", "EUR", "XLM"}));
   EXPECT_EQ(exchangePublic.findCurrenciesPath("XLM", "ETH"), CurrenciesPath({"XLM", "EUR", "ETH"}));
   EXPECT_EQ(exchangePublic.findCurrenciesPath("ETH", "KRW"), CurrenciesPath({"ETH", "BTC", "KRW"}));
@@ -110,9 +140,17 @@ class ExchangePublicConvertTest : public ExchangePublicTest {
   MarketOrderBook marketOrderBook3{
       time, askPrice3, MonetaryAmount("12.04 SOL"), bidPrice3, MonetaryAmount("0.45 SOL"), volAndPriDec3, depth};
 
+  VolAndPriNbDecimals volAndPriDec4{4, 4};
+
+  MonetaryAmount askPrice4{"0.0021 BTC"};
+  MonetaryAmount bidPrice4{"0.002 BTC"};
+  MarketOrderBook marketOrderBook4{
+      time, askPrice4, MonetaryAmount("5.3 SOL"), bidPrice4, MonetaryAmount("6.94 SOL"), volAndPriDec4, depth};
+
   MarketOrderBookMap marketOrderBookMap{{Market("XLM", "BTC"), marketOrderBook1},
                                         {Market("XRP", "BTC"), marketOrderBook2},
-                                        {Market("SOL", "EUR"), marketOrderBook3}};
+                                        {Market("SOL", "EUR"), marketOrderBook3},
+                                        {Market("SOL", "BTC"), marketOrderBook4}};
 
   PriceOptions priceOptions;
 };
@@ -142,14 +180,60 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
   MonetaryAmount from{50000, "XLM"};
   CurrencyCode toCurrency{"XRP"};
   MarketsPath conversionPath{{"XLM", "BTC"}, {"XRP", "BTC"}};
+
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+
   ASSERT_TRUE(ret.has_value());
+
   MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
       marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
   res = exchangePublic.exchangeConfig().applyFee(
       marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
-  EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
+
+  EXPECT_EQ(ret.value(), res);
+}
+
+TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtBeginning) {
+  MonetaryAmount from{50000, "KRW"};
+  CurrencyCode toCurrency{"SOL"};
+  MarketsPath conversionPath{{"KRW", "EUR", Market::Type::kFiatConversionMarket}, {"SOL", "EUR"}};
+
+  std::optional<MonetaryAmount> ret =
+      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+
+  ASSERT_TRUE(ret.has_value());
+
+  auto optRes = fiatConverter.convert(from, "EUR");
+
+  ASSERT_TRUE(optRes.has_value());
+
+  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook3.convert(optRes.value(), priceOptions).value_or(MonetaryAmount{-1}),
+      ExchangeConfig::FeeType::kMaker);
+
+  EXPECT_EQ(ret.value(), res);
+}
+
+TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtEnd) {
+  MonetaryAmount from{50000, "XLM"};
+  CurrencyCode toCurrency{"KRW"};
+  MarketsPath conversionPath{
+      {"XLM", "BTC"}, {"SOL", "BTC"}, {"SOL", "EUR"}, {"EUR", "KRW", Market::Type::kFiatConversionMarket}};
+
+  std::optional<MonetaryAmount> ret =
+      exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
+
+  ASSERT_TRUE(ret.has_value());
+
+  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook4.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  res = exchangePublic.exchangeConfig().applyFee(
+      marketOrderBook3.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+
+  EXPECT_EQ(ret, fiatConverter.convert(res, toCurrency));
 }
 
 }  // namespace cct::api

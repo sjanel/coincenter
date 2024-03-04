@@ -2,13 +2,16 @@
 
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
+#include "file.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "reader.hpp"
 #include "timedef.hpp"
 
 namespace cct {
@@ -32,9 +35,16 @@ class CoincenterInfo;
 /// Conversion methods are thread safe.
 class FiatConverter {
  public:
+  static File GetRatesCacheFile(std::string_view dataDir);
+
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
   FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency);
+
+  /// Creates a FiatConverter able to perform live queries to free converter api.
+  /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
+  /// @param reader the reader from which to load the initial rates conversion cache
+  FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency, const Reader &reader);
 
   std::optional<double> convert(double amount, CurrencyCode from, CurrencyCode to);
 

@@ -83,7 +83,10 @@ Main features:
       - [Last price](#last-price)
       - [Last trades](#last-trades)
       - [Conversion](#conversion)
+        - [Example: Print the value of 1000 Shiba Inu expressed in Solana on all exchanges where such conversion is possible](#example-print-the-value-of-1000-shiba-inu-expressed-in-solana-on-all-exchanges-where-such-conversion-is-possible)
+        - [Example: Print the value of 1000 EUR expressed in Ethereum on all exchanges where such conversion is possible](#example-print-the-value-of-1000-eur-expressed-in-ethereum-on-all-exchanges-where-such-conversion-is-possible)
       - [Conversion path](#conversion-path)
+        - [Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible](#example-print-the-fastest-conversion-path-from-shiba-inu-to-solana-on-all-exchanges-where-such-conversion-is-possible)
       - [Withdraw fees](#withdraw-fees)
         - [Example 1: query all withdraw fees](#example-1-query-all-withdraw-fees)
         - [Example 2: query ETH withdraw fees on Kraken and Kucoin](#example-2-query-eth-withdraw-fees-on-kraken-and-kucoin)
@@ -384,31 +387,84 @@ coincenter last-trades dot-usdt,binance,huobi --n 15
 
 #### Conversion
 
-From a starting amount to a destination currency, `conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges, and return the converted amount on each exchange where such conversion is possible. The trade fees are not taken into account for this conversion.
+From a starting amount to a destination currency, `conversion` examines the shortest conversion path (in terms of number of conversion) possible to reach the destination currency, on optional list of exchanges, and return the converted amount on each exchange where such conversion is possible. The trade fees **are** taken into account for this conversion.
 
 The conversion path chosen is the fastest (in terms of number of markets, so trades) possible.
 
-Example: Print the fastest conversion from Shiba Inu to Solana on all exchanges where such conversion is possible
+**Important note**: fiat conversions (including fiat-like crypto-currencies like `USDT`) are allowed even if the corresponding market is not an exchange market only as a first or a last conversion. No trade fees are taken into account for fiat conversions.
+
+##### Example: Print the value of 1000 Shiba Inu expressed in Solana on all exchanges where such conversion is possible
 
 ```bash
 coincenter conversion 1000shib-sol
 ```
 
+Possible output:
+
+```bash
++----------+------------------------------+
+| Exchange | 1000 SHIB converted into SOL |
++----------+------------------------------+
+| binance  | 0.00020324242724052 SOL      |
+| bithumb  | 0.00020297245011085 SOL      |
+| huobi    | 0.00020276144764053 SOL      |
+| kraken   | 0.00020323457500308 SOL      |
+| kucoin   | 0.00020338540268269 SOL      |
+| upbit    | 0.00020302426059262 SOL      |
++----------+------------------------------+
+```
+
+##### Example: Print the value of 1000 EUR expressed in Ethereum on all exchanges where such conversion is possible
+
+```bash
+coincenter conversion 1000eur-eth
+```
+
+Possible output:
+
+```bash
++----------+-----------------------------+
+| Exchange | 1000 EUR converted into ETH |
++----------+-----------------------------+
+| binance  | 0.31121398375705967 ETH     |
+| bithumb  | 0.29715335705445442 ETH     |
+| huobi    | 0.30978082796054002 ETH     |
+| kraken   | 0.3110542008206231 ETH      |
+| kucoin   | 0.31194281985067939 ETH     |
+| upbit    | 0.29672491761070147 ETH     |
++----------+-----------------------------+
+```
+
 #### Conversion path
 
-This option is similar to previous one ([conversion](#conversion)) but takes a starting currency code instead of an amount to convert.
+This option is similar to previous one ([conversion](#conversion)) but takes a starting currency code instead of an amount to convert, and only real markets from exchanges are taken into account (in particular, fiat conversions that are not proposed by the exchange as a market are not possible).
 
 It will print the result as an ordered list of markets for each exchange.
 
 Option `conversion-path` is used internally for [multi trade](#multi-trade) but is provided as a stand-alone query for information.
 
-Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible
+##### Example: Print the fastest conversion path from Shiba Inu to Solana on all exchanges where such conversion is possible
 
 ```bash
 coincenter conversion-path shib-sol
 ```
 
-**Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies.
+Possible output:
+
+```bash
++----------+--------------------------------------+
+| Exchange | Fastest conversion path for SHIB-SOL |
++----------+--------------------------------------+
+| binance  | SHIB-FDUSD,SOL-FDUSD                 |
+| bithumb  | SHIB-KRW,SOL-KRW                     |
+| huobi    | SHIB-USDT,SOL-USDT                   |
+| kraken   | SHIB-USDT,SOL-USDT                   |
+| kucoin   | SHIB-USDC,SOL-USDC                   |
+| upbit    | SHIB-KRW,SOL-KRW                     |
++----------+--------------------------------------+
+```
+
+**Note**: when several conversion paths of same length are possible, it will favor the ones not involving fiat currencies (stable coins are **not** considered as fiat currencies).
 
 #### Withdraw fees
 
