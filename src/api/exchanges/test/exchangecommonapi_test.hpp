@@ -54,7 +54,7 @@ class TestAPI {
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{runMode, loadConfig};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max()};  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   PublicExchangeT exchangePublic{coincenterInfo, fiatConverter, commonAPI};
   std::optional<PrivateExchangeT> exchangePrivateOpt;

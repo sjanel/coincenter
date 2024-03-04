@@ -433,7 +433,7 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   CurrencyCode resCurrency;
   if (!_curWithDecimals.isNeutral() && !div._curWithDecimals.isNeutral()) {
     if (CCT_UNLIKELY(currencyCode() != div.currencyCode())) {
-      throw exception("Cannot divide two non neutral MonetaryAmounts of different currency");
+      throw exception("Cannot divide two non neutral MonetaryAmounts of different currency: '{}' / '{}'", *this, div);
     }
     // Divide same currency have a neutral result
   } else {

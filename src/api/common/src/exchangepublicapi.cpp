@@ -60,27 +60,29 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
   for (Market mk : conversionPath) {
     switch (mk.type()) {
       case Market::Type::kFiatConversionMarket: {
-        // should be last market
-        const bool isToCurrencyFiatLike = fiats.contains(toCurrency);
-        if (!isToCurrencyFiatLike) {
-          // convert of fiat like crypto-currency (stable coin) to fiat currency is only possible if the destination
-          // currency is a fiat. It cannot be done for an intermediate conversion
-          return std::nullopt;
-        }
         const CurrencyCode mFromCurrencyCode = from.currencyCode();
         const CurrencyCode mToCurrencyCode = mk.opposite(mFromCurrencyCode);
+
         const CurrencyCode fiatLikeFrom = _coincenterInfo.tryConvertStableCoinToFiat(mFromCurrencyCode);
         const CurrencyCode fiatFromLikeCurCode = fiatLikeFrom.isNeutral() ? mFromCurrencyCode : fiatLikeFrom;
+
         const CurrencyCode fiatLikeTo = _coincenterInfo.tryConvertStableCoinToFiat(mToCurrencyCode);
         const CurrencyCode fiatToLikeCurCode = fiatLikeTo.isNeutral() ? mToCurrencyCode : fiatLikeTo;
 
         const bool isFromFiatLike = fiatLikeFrom.isDefined() || fiats.contains(mFromCurrencyCode);
         const bool isToFiatLike = fiatLikeTo.isDefined() || fiats.contains(mToCurrencyCode);
 
-        if (isFromFiatLike && isToFiatLike) {
-          return _fiatConverter.convert(MonetaryAmount(from, fiatFromLikeCurCode), fiatToLikeCurCode);
+        if (!isFromFiatLike || !isToFiatLike) {
+          return std::nullopt;
         }
-        return std::nullopt;
+
+        const auto optConvertedAmount =
+            _fiatConverter.convert(MonetaryAmount(from, fiatFromLikeCurCode), fiatToLikeCurCode);
+        if (!optConvertedAmount) {
+          return std::nullopt;
+        }
+        from = *optConvertedAmount;
+        break;
       }
       case Market::Type::kRegularExchangeMarket: {
         const auto it = marketOrderBookMap.find(mk);
@@ -107,11 +109,13 @@ namespace {
 // Struct containing a currency and additional information to create markets with detailed information (order, market
 // type)
 struct CurrencyDir {
+  enum class Dir : int8_t { kExchangeOrder, kReversed };
+
   constexpr std::strong_ordering operator<=>(const CurrencyDir &) const noexcept = default;
 
   CurrencyCode cur;
-  bool isLastRealMarketReversed = false;
-  bool isRegularExchangeMarket = false;
+  Dir dir = Dir::kExchangeOrder;
+  Market::Type marketType = Market::Type::kRegularExchangeMarket;
 };
 
 using CurrencyDirPath = SmallVector<CurrencyDir, 3>;
@@ -122,7 +126,9 @@ class CurrencyDirFastestPathComparator {
 
   bool operator()(const CurrencyDirPath &lhs, const CurrencyDirPath &rhs) {
     // First, favor paths with the least number of non regular markets
-    const auto hasNonRegularMarket = [](CurrencyDir curDir) { return !curDir.isRegularExchangeMarket; };
+    const auto hasNonRegularMarket = [](CurrencyDir curDir) {
+      return curDir.marketType != Market::Type::kRegularExchangeMarket;
+    };
     const auto lhsNbNonRegularMarkets = std::ranges::count_if(lhs, hasNonRegularMarket);
     const auto rhsNbNonRegularMarkets = std::ranges::count_if(rhs, hasNonRegularMarket);
     if (lhsNbNonRegularMarkets != rhsNbNonRegularMarkets) {
@@ -158,13 +164,12 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
     return ret;
   }
 
-  const auto isFiatLike = [this, marketsPathMode, &fiats](CurrencyCode cur) {
-    return (marketsPathMode == MarketPathMode::kWithLastFiatConversion &&
-            _coincenterInfo.tryConvertStableCoinToFiat(cur).isDefined()) ||
-           fiats.contains(cur);
+  const auto isFiatConvertible = [this, marketsPathMode, &fiats](CurrencyCode cur) {
+    return marketsPathMode == MarketPathMode::kWithPossibleFiatConversionAtExtremity &&
+           (_coincenterInfo.tryConvertStableCoinToFiat(cur).isDefined() || fiats.contains(cur));
   };
 
-  const auto isToCurrencyFiatLike = isFiatLike(toCurrency);
+  const auto isToCurrencyFiatConvertible = isFiatConvertible(toCurrency);
 
   CurrencyDirFastestPathComparator comp(_commonApi);
 
@@ -181,22 +186,27 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
     if (visitedCurrencies.contains(cur)) {
       continue;
     }
+
     if (cur == toCurrency) {
       // stop criteria
       const int nbCurDir = path.size();
       ret.reserve(nbCurDir - 1);
       for (int curDirPos = 1; curDirPos < nbCurDir; ++curDirPos) {
         const auto curDir = path[curDirPos];
-        const auto marketType =
-            curDir.isRegularExchangeMarket ? Market::Type::kRegularExchangeMarket : Market::Type::kFiatConversionMarket;
-        if (curDir.isLastRealMarketReversed) {
-          ret.emplace_back(curDir.cur, path[curDirPos - 1].cur, marketType);
-        } else {
-          ret.emplace_back(path[curDirPos - 1].cur, curDir.cur, marketType);
+        switch (curDir.dir) {
+          case CurrencyDir::Dir::kExchangeOrder:
+            ret.emplace_back(path[curDirPos - 1].cur, curDir.cur, curDir.marketType);
+            break;
+          case CurrencyDir::Dir::kReversed:
+            ret.emplace_back(curDir.cur, path[curDirPos - 1].cur, curDir.marketType);
+            break;
+          default:
+            unreachable();
         }
       }
       return ret;
     }
+
     // Retrieve markets if not already done
     if (markets.empty()) {
       std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
@@ -206,26 +216,40 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
         return ret;
       }
     }
-    bool alreadyInsertedTargetCurrency = false;
+
+    bool reachedTargetCurrency = false;
     for (Market mk : markets | std::views::filter([cur](Market mk) { return mk.canTrade(cur); })) {
-      const bool isLastRealMarketReversed = cur == mk.quote();
-      constexpr bool isRegularExchangeMarket = true;
+      const auto dir = cur == mk.quote() ? CurrencyDir::Dir::kReversed : CurrencyDir::Dir::kExchangeOrder;
       const CurrencyCode newCur = mk.opposite(cur);
-      alreadyInsertedTargetCurrency |= newCur == toCurrency;
+
+      reachedTargetCurrency = reachedTargetCurrency || (newCur == toCurrency);
 
       CurrencyDirPath &newPath = searchPaths.emplace_back(path);
-      newPath.emplace_back(newCur, isLastRealMarketReversed, isRegularExchangeMarket);
+      newPath.emplace_back(newCur, dir, Market::Type::kRegularExchangeMarket);
       std::ranges::push_heap(searchPaths, comp);
     }
-    if (isToCurrencyFiatLike && !alreadyInsertedTargetCurrency && isFiatLike(cur)) {
-      constexpr bool isLastRealMarketReversed = false;
-      constexpr bool isRegularExchangeMarket = false;
-      const CurrencyCode newCur = toCurrency;
 
-      CurrencyDirPath &newPath = searchPaths.emplace_back(std::move(path));
-      newPath.emplace_back(newCur, isLastRealMarketReversed, isRegularExchangeMarket);
-      std::ranges::push_heap(searchPaths, comp);
+    if (isFiatConvertible(cur)) {
+      if (isToCurrencyFiatConvertible && !reachedTargetCurrency) {
+        CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+        newPath.emplace_back(toCurrency, CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
+        std::ranges::push_heap(searchPaths, comp);
+      } else if (path.size() == 1 && searchPaths.empty()) {
+        // A conversion is possible from starting fiat currency
+        for (Market mk : markets) {
+          if (fiats.contains(mk.base())) {
+            CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+            newPath.emplace_back(mk.base(), CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
+            std::ranges::push_heap(searchPaths, comp);
+          } else if (fiats.contains(mk.quote())) {
+            CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+            newPath.emplace_back(mk.quote(), CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
+            std::ranges::push_heap(searchPaths, comp);
+          }
+        }
+      }
     }
+
     visitedCurrencies.insert(std::move(cur));
   }
 
