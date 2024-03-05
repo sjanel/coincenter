@@ -264,28 +264,55 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   return ret;
 }
 
-namespace {
-inline std::optional<MonetaryAmount> ComputeAvgPrice(Market mk,
-                                                     const MarketOrderBook::AmountPerPriceVec& amountsPerPrice) {
-  if (amountsPerPrice.empty()) {
-    return {};
-  }
-  if (amountsPerPrice.size() == 1) {
-    return amountsPerPrice.front().price;
-  }
-  MonetaryAmount ret(0, mk.quote());
-  MonetaryAmount totalAmount(0, mk.base());
-  for (const MarketOrderBook::AmountAtPrice& amountAtPrice : amountsPerPrice) {
-    ret += amountAtPrice.amount.toNeutral() * amountAtPrice.price;
-    totalAmount += amountAtPrice.amount;
-  }
-  return ret / totalAmount.toNeutral();
-}
-}  // namespace
+std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTakerSell(
+    MonetaryAmount baseAmount) const {
+  MonetaryAmount avgPrice(0, _market.quote());
+  MonetaryAmount remainingBaseAmount = baseAmount;
+  for (int pos = _lowestAskPricePos - 1; pos >= 0; --pos) {
+    const MonetaryAmount amount = amountAt(pos);
+    const MonetaryAmount price = priceAt(pos);
+    const MonetaryAmount amountToEat = std::min(amount, remainingBaseAmount);
 
-std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceAtWhichAmountWouldBeBoughtImmediately(
-    MonetaryAmount ma) const {
-  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeBoughtImmediately(ma));
+    avgPrice += amountToEat.toNeutral() * price;
+    remainingBaseAmount -= amountToEat;
+    if (remainingBaseAmount == 0) {
+      break;
+    }
+  }
+  return {avgPrice / baseAmount.toNeutral(), baseAmount - remainingBaseAmount};
+}
+
+std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTakerBuy(
+    MonetaryAmount quoteAmount) const {
+  MonetaryAmount avgPrice;
+  MonetaryAmount remainingQuoteAmount = quoteAmount;
+  MonetaryAmount totalAmountMatched;
+  const int nbOrders = _orders.size();
+  for (int pos = _highestBidPricePos + 1; pos < nbOrders; ++pos) {
+    const MonetaryAmount amount = negAmountAt(pos);
+    const MonetaryAmount price = priceAt(pos);
+    MonetaryAmount quoteAmountToEat = amount.toNeutral() * price;
+
+    if (quoteAmountToEat < remainingQuoteAmount) {
+      totalAmountMatched += amount;
+    } else {
+      quoteAmountToEat = remainingQuoteAmount;
+      totalAmountMatched += MonetaryAmount(remainingQuoteAmount / price, _market.base());
+    }
+
+    remainingQuoteAmount -= quoteAmountToEat;
+
+    if (remainingQuoteAmount == 0 || pos + 1 == nbOrders) {
+      if (pos == _highestBidPricePos + 1) {
+        // to avoid rounding issues
+        avgPrice = price;
+      } else {
+        avgPrice = (quoteAmount - remainingQuoteAmount) / totalAmountMatched.toNeutral();
+      }
+      break;
+    }
+  }
+  return {avgPrice, quoteAmount - remainingQuoteAmount};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeMinPriceAtWhichAmountWouldBeSoldImmediately(
@@ -340,34 +367,12 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   return ret;
 }
 
-std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceAtWhichAmountWouldBeSoldImmediately(
-    MonetaryAmount ma) const {
-  return ComputeAvgPrice(_market, computePricesAtWhichAmountWouldBeSoldImmediately(ma));
-}
-
-std::optional<MonetaryAmount> MarketOrderBook::computeAvgPriceForTakerAmount(MonetaryAmount amountInBaseOrQuote) const {
+std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTaker(
+    MonetaryAmount amountInBaseOrQuote) const {
   if (amountInBaseOrQuote.currencyCode() == _market.base()) {
-    return computeAvgPriceAtWhichAmountWouldBeSoldImmediately(amountInBaseOrQuote);
+    return avgPriceAndMatchedVolumeTakerSell(amountInBaseOrQuote);
   }
-  MonetaryAmount avgPrice(0, _market.quote());
-  MonetaryAmount remQuoteAmount = amountInBaseOrQuote;
-  const int nbOrders = _orders.size();
-  for (int pos = _highestBidPricePos + 1; pos < nbOrders; ++pos) {
-    const MonetaryAmount amount = negAmountAt(pos);
-    const MonetaryAmount price = priceAt(pos);
-    const MonetaryAmount maxAmountToTakeFromThisLine = amount.toNeutral() * price;
-
-    if (maxAmountToTakeFromThisLine < remQuoteAmount) {
-      // We can eat all from this line, take the max and continue
-      avgPrice += maxAmountToTakeFromThisLine.toNeutral() * price;
-      remQuoteAmount -= maxAmountToTakeFromThisLine;
-    } else {
-      // We can finish here
-      avgPrice += remQuoteAmount.toNeutral() * price;
-      return avgPrice / amountInBaseOrQuote.toNeutral();
-    }
-  }
-  return {};
+  return avgPriceAndMatchedVolumeTakerBuy(amountInBaseOrQuote);
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeWorstPriceForTakerAmount(
@@ -428,14 +433,12 @@ std::optional<MonetaryAmount> MarketOrderBook::convertBaseAmountToQuote(Monetary
   for (int pos = _lowestAskPricePos - 1; pos >= 0; --pos) {
     const MonetaryAmount amount = amountAt(pos);
     const MonetaryAmount price = priceAt(pos);
+    const MonetaryAmount amountToEat = std::min(amount, amountInBaseCurrency);
 
-    if (amount < amountInBaseCurrency) {
-      // We can eat all from this line, take the max and continue
-      quoteAmount += amount.toNeutral() * price;
-      amountInBaseCurrency -= amount;
-    } else {
-      // We can finish here
-      return quoteAmount + amountInBaseCurrency.toNeutral() * price;
+    quoteAmount += amountToEat.toNeutral() * price;
+    amountInBaseCurrency -= amountToEat;
+    if (amountInBaseCurrency == 0) {
+      return quoteAmount;
     }
   }
   return {};
@@ -543,12 +546,14 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
   CurrencyCode marketCode = _market.base();
   switch (priceOptions.priceStrategy()) {
     case PriceStrategy::kTaker: {
-      std::optional<MonetaryAmount> optRet = computeAvgPriceForTakerAmount(from);
-      if (optRet) {
-        return optRet;
+      auto [avgPri, avgMatchedFrom] = avgPriceAndMatchedVolumeTaker(from);
+      if (avgMatchedFrom < from) {
+        log::warn(
+            "{} is too big to be matched immediately on {}, return limit price instead ({} matched amount among total "
+            "of {})",
+            from, _market, avgMatchedFrom, from);
       }
-      log::warn("{} is too big to be matched immediately on {}, return limit price instead", from, _market);
-      [[fallthrough]];
+      return avgPri;
     }
     case PriceStrategy::kNibble:
       marketCode = _market.quote();

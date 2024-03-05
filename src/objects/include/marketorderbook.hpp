@@ -110,9 +110,9 @@ class MarketOrderBook {
   /// If operation is not possible, return an empty vector.
   AmountPerPriceVec computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
 
-  /// Given an amount in either base or quote currency, attempt to convert it at market price immediately and return
-  /// the average price matched.
-  std::optional<MonetaryAmount> computeAvgPriceForTakerAmount(MonetaryAmount amountInBaseOrQuote) const;
+  /// Given an amount in either base or quote currency, attempt to convert it at market price immediately.
+  /// @return a pair of {average matched price, total matched amount given in input}
+  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTaker(MonetaryAmount amountInBaseOrQuote) const;
 
   /// Given an amount in either base or quote currency, attempt to convert it at market price immediately and return
   /// the worst price matched.
@@ -209,9 +209,9 @@ class MarketOrderBook {
     return MonetaryAmount(_orders[pos].price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
 
-  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
+  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTakerSell(MonetaryAmount baseAmount) const;
 
-  std::optional<MonetaryAmount> computeAvgPriceAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount ma) const;
+  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTakerBuy(MonetaryAmount quoteAmount) const;
 
   /// Attempt to convert given amount expressed in base currency to quote currency.
   /// It may not be possible, in which case an empty optional will be returned.

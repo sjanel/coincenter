@@ -98,12 +98,22 @@ TEST_F(MarketOrderBookTestCase1, ComputeMaxPriceAtWhichAmountWouldBeBoughtImmedi
             std::nullopt);
 }
 
-TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerAmount) {
-  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount(4, "ETH")), std::nullopt);
-  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("0.24", "ETH")), MonetaryAmount("1301 EUR"));
-  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("1000 EUR")), MonetaryAmount("1302 EUR"));
-  EXPECT_EQ(marketOrderBook.computeAvgPriceForTakerAmount(MonetaryAmount("5000 EUR")),
-            MonetaryAmount("1302.31760282 EUR"));
+TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerBuy) {
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(1000, "EUR")),
+            std::make_pair(MonetaryAmount(1302, "EUR"), MonetaryAmount(1000, "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(5000, "EUR")),
+            std::make_pair(MonetaryAmount("1302.31755833325309", "EUR"), MonetaryAmount(5000, "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(100000, "EUR")),
+            std::make_pair(MonetaryAmount("1302.94629812356546", "EUR"), MonetaryAmount("79845.73830901", "EUR")));
+}
+
+TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerSell) {
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(24, "ETH", 2)),
+            std::make_pair(MonetaryAmount(1301, "EUR"), MonetaryAmount(24, "ETH", 2)));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(5, "ETH", 1)),
+            std::make_pair(MonetaryAmount(130074, "EUR", 2), MonetaryAmount(5, "ETH", 1)));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(4, "ETH")),
+            std::make_pair(MonetaryAmount("289.39125", "EUR"), MonetaryAmount(89, "ETH", 2)));
 }
 
 TEST_F(MarketOrderBookTestCase1, MoreComplexListOfPricesComputations) {
