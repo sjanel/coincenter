@@ -143,7 +143,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   tradeBaseExpectCalls();
 
   MonetaryAmount from(5000, market.quote());
-  MonetaryAmount pri(marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1}));
+  auto [pri, _] = marketOrderBook1.avgPriceAndMatchedVolumeTaker(from);
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
@@ -166,7 +166,7 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
   tradeBaseExpectCalls();
 
   MonetaryAmount from(5000, market.quote());
-  MonetaryAmount pri(marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1}));
+  auto [pri, _] = marketOrderBook1.avgPriceAndMatchedVolumeTaker(from);
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
@@ -387,7 +387,7 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseEmergencyTakerTrade) {
   // Place taker order
   tradeInfo.options.switchToTakerStrategy();
 
-  MonetaryAmount pri2 = marketOrderBook1.computeAvgPriceForTakerAmount(from).value_or(MonetaryAmount{-1});
+  auto [pri2, _] = marketOrderBook1.avgPriceAndMatchedVolumeTaker(from);
   MonetaryAmount vol2(from / pri2, market.base());
 
   PlaceOrderInfo matchedPlacedOrderInfo2(OrderInfo(TradedAmounts(from, vol2), true), OrderId("Order # 1"));
