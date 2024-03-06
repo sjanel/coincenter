@@ -108,7 +108,7 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
 
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   const auto resultsIt = data.find("results");
-  if (data == json::value_t::discarded || resultsIt == data.end() || !resultsIt->contains(qStr)) {
+  if (data.is_discarded() || resultsIt == data.end() || !resultsIt->contains(qStr)) {
     log::warn("No JSON data received from fiat currency converter service's first source for pair '{}'", mk);
     refreshLastUpdatedTime(mk);
     return std::nullopt;

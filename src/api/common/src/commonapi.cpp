@@ -98,10 +98,16 @@ vector<CurrencyCode> CommonAPI::FiatsFunc::retrieveFiatsSource1() {
     log::error("Error parsing currency codes, no fiats found from first source");
     return fiatsVec;
   }
-  json dataCSV = json::parse(data);
+  static constexpr bool kAllowExceptions = false;
+  json dataCSV = json::parse(data, nullptr, kAllowExceptions);
+  if (dataCSV.is_discarded()) {
+    log::error("Error parsing json data of currency codes from source 1");
+    return fiatsVec;
+  }
   for (const json& fiatData : dataCSV) {
     static constexpr std::string_view kCodeKey = "AlphabeticCode";
     static constexpr std::string_view kWithdrawalDateKey = "WithdrawalDate";
+
     auto codeIt = fiatData.find(kCodeKey);
     auto withdrawalDateIt = fiatData.find(kWithdrawalDateKey);
     if (codeIt != fiatData.end() && !codeIt->is_null() && withdrawalDateIt != fiatData.end() &&
