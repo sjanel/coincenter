@@ -264,55 +264,59 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   return ret;
 }
 
-std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTakerSell(
-    MonetaryAmount baseAmount) const {
+MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount,
+                                                                             MonetaryAmount price) const {
   MonetaryAmount avgPrice(0, _market.quote());
   MonetaryAmount remainingBaseAmount = baseAmount;
   for (int pos = _lowestAskPricePos - 1; pos >= 0; --pos) {
-    const MonetaryAmount amount = amountAt(pos);
-    const MonetaryAmount price = priceAt(pos);
-    const MonetaryAmount amountToEat = std::min(amount, remainingBaseAmount);
+    const MonetaryAmount linePrice = priceAt(pos);
+    if (linePrice < price) {
+      break;
+    }
+    const MonetaryAmount lineAmount = amountAt(pos);
+    const MonetaryAmount amountToEat = std::min(lineAmount, remainingBaseAmount);
 
-    avgPrice += amountToEat.toNeutral() * price;
+    avgPrice += amountToEat.toNeutral() * linePrice;
     remainingBaseAmount -= amountToEat;
     if (remainingBaseAmount == 0) {
       break;
     }
   }
-  return {avgPrice / baseAmount.toNeutral(), baseAmount - remainingBaseAmount};
+  MonetaryAmount matchedAmount = baseAmount - remainingBaseAmount;
+  return {matchedAmount, avgPrice / matchedAmount.toNeutral()};
 }
 
-std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTakerBuy(
-    MonetaryAmount quoteAmount) const {
-  MonetaryAmount avgPrice;
+MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolumeBuy(MonetaryAmount quoteAmount,
+                                                                            MonetaryAmount price) const {
   MonetaryAmount remainingQuoteAmount = quoteAmount;
-  MonetaryAmount totalAmountMatched;
+  MonetaryAmount matchedAmount;
   const int nbOrders = _orders.size();
   for (int pos = _highestBidPricePos + 1; pos < nbOrders; ++pos) {
-    const MonetaryAmount amount = negAmountAt(pos);
-    const MonetaryAmount price = priceAt(pos);
-    MonetaryAmount quoteAmountToEat = amount.toNeutral() * price;
+    const MonetaryAmount linePrice = priceAt(pos);
+    if (linePrice > price) {
+      break;
+    }
+    const MonetaryAmount lineAmount = negAmountAt(pos);
+    MonetaryAmount quoteAmountToEat = lineAmount.toNeutral() * linePrice;
 
     if (quoteAmountToEat < remainingQuoteAmount) {
-      totalAmountMatched += amount;
+      matchedAmount += lineAmount;
     } else {
       quoteAmountToEat = remainingQuoteAmount;
-      totalAmountMatched += MonetaryAmount(remainingQuoteAmount / price, _market.base());
+      matchedAmount += MonetaryAmount(remainingQuoteAmount / linePrice, _market.base());
     }
 
     remainingQuoteAmount -= quoteAmountToEat;
 
     if (remainingQuoteAmount == 0 || pos + 1 == nbOrders) {
-      if (pos == _highestBidPricePos + 1) {
-        // to avoid rounding issues
-        avgPrice = price;
-      } else {
-        avgPrice = (quoteAmount - remainingQuoteAmount) / totalAmountMatched.toNeutral();
-      }
       break;
     }
   }
-  return {avgPrice, quoteAmount - remainingQuoteAmount};
+  price = quoteAmount - remainingQuoteAmount;
+  if (matchedAmount != 0) {
+    price /= matchedAmount.toNeutral();
+  }
+  return {matchedAmount, price};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeMinPriceAtWhichAmountWouldBeSoldImmediately(
@@ -367,12 +371,72 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   return ret;
 }
 
-std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::avgPriceAndMatchedVolumeTaker(
+MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSide tradeSide, MonetaryAmount amount,
+                                                                        MonetaryAmount price) const {
+  AmountPerPriceVec ret;
+  const int nbOrders = _orders.size();
+  const auto volumeNbDecimals = _volAndPriNbDecimals.volNbDecimals;
+  const std::optional<AmountType> integralTotalAmountOpt = amount.amount(volumeNbDecimals);
+  if (!integralTotalAmountOpt) {
+    return ret;
+  }
+  AmountType integralTotalAmount = *integralTotalAmountOpt;
+  const auto countAmount = [volumeNbDecimals, &ret, &integralTotalAmount, cur = amount.currencyCode()](
+                               MonetaryAmount price, const AmountType intAmount) {
+    if (intAmount < integralTotalAmount) {
+      ret.emplace_back(MonetaryAmount(intAmount, cur, volumeNbDecimals), price);
+      integralTotalAmount -= intAmount;
+    } else {
+      ret.emplace_back(MonetaryAmount(integralTotalAmount, cur, volumeNbDecimals), price);
+      integralTotalAmount = 0;
+    }
+  };
+  switch (tradeSide) {
+    case TradeSide::kBuy:
+      for (int pos = _highestBidPricePos + 1; pos < nbOrders && integralTotalAmount > 0; ++pos) {
+        // amount is < 0 here
+        const auto linePrice = priceAt(pos);
+        if (price < linePrice) {
+          break;
+        }
+        countAmount(linePrice, -_orders[pos].amount);
+      }
+      break;
+    case TradeSide::kSell:
+      for (int pos = _lowestAskPricePos - 1; pos >= 0 && integralTotalAmount > 0; --pos) {
+        const auto linePrice = priceAt(pos);
+        if (price > linePrice) {
+          break;
+        }
+        countAmount(linePrice, _orders[pos].amount);
+      }
+      break;
+    default:
+      unreachable();
+  }
+  return ret;
+}
+
+MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount,
+                                                                         MonetaryAmount price) const {
+  switch (tradeSide) {
+    case TradeSide::kBuy:
+      return avgPriceAndMatchedVolumeBuy(amount * price, price);
+    case TradeSide::kSell:
+      return avgPriceAndMatchedVolumeSell(amount, price);
+    default:
+      throw exception("Unexpected trade side {}", static_cast<int>(tradeSide));
+  }
+}
+
+MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedAmountTaker(
     MonetaryAmount amountInBaseOrQuote) const {
   if (amountInBaseOrQuote.currencyCode() == _market.base()) {
-    return avgPriceAndMatchedVolumeTakerSell(amountInBaseOrQuote);
+    return avgPriceAndMatchedVolumeSell(amountInBaseOrQuote, MonetaryAmount(0, _market.quote()));
   }
-  return avgPriceAndMatchedVolumeTakerBuy(amountInBaseOrQuote);
+  const auto [matchedVolume, price] = avgPriceAndMatchedVolumeBuy(
+      amountInBaseOrQuote, MonetaryAmount(std::numeric_limits<MonetaryAmount::AmountType>::max(), _market.quote()));
+  return {matchedVolume.toNeutral() * price, price};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::computeWorstPriceForTakerAmount(
@@ -546,7 +610,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
   CurrencyCode marketCode = _market.base();
   switch (priceOptions.priceStrategy()) {
     case PriceStrategy::kTaker: {
-      auto [avgPri, avgMatchedFrom] = avgPriceAndMatchedVolumeTaker(from);
+      auto [avgMatchedFrom, avgPri] = avgPriceAndMatchedAmountTaker(from);
       if (avgMatchedFrom < from) {
         log::warn(
             "{} is too big to be matched immediately on {}, return limit price instead ({} matched amount among total "
