@@ -10,6 +10,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 namespace {
@@ -99,21 +100,21 @@ TEST_F(MarketOrderBookTestCase1, ComputeMaxPriceAtWhichAmountWouldBeBoughtImmedi
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerBuy) {
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(1000, "EUR")),
-            std::make_pair(MonetaryAmount(1302, "EUR"), MonetaryAmount(1000, "EUR")));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(5000, "EUR")),
-            std::make_pair(MonetaryAmount("1302.31755833325309", "EUR"), MonetaryAmount(5000, "EUR")));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(100000, "EUR")),
-            std::make_pair(MonetaryAmount("1302.94629812356546", "EUR"), MonetaryAmount("79845.73830901", "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(1000, "EUR")),
+            AmountAtPrice(MonetaryAmount("999.99999999998784", "EUR"), MonetaryAmount("1302.00000000000001", "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(5000, "EUR")),
+            AmountAtPrice(MonetaryAmount("4999.9999119826894", "EUR"), MonetaryAmount("1302.31755833325309", "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(100000, "EUR")),
+            AmountAtPrice(MonetaryAmount("79845.737428463776", "EUR"), MonetaryAmount("1302.94629812356546", "EUR")));
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerSell) {
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(24, "ETH", 2)),
-            std::make_pair(MonetaryAmount(1301, "EUR"), MonetaryAmount(24, "ETH", 2)));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(5, "ETH", 1)),
-            std::make_pair(MonetaryAmount(130074, "EUR", 2), MonetaryAmount(5, "ETH", 1)));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolumeTaker(MonetaryAmount(4, "ETH")),
-            std::make_pair(MonetaryAmount("289.39125", "EUR"), MonetaryAmount(89, "ETH", 2)));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(24, "ETH", 2)),
+            AmountAtPrice(MonetaryAmount(24, "ETH", 2), MonetaryAmount(1301, "EUR")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(5, "ETH", 1)),
+            AmountAtPrice(MonetaryAmount(5, "ETH", 1), MonetaryAmount(130074, "EUR", 2)));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(4, "ETH")),
+            AmountAtPrice(MonetaryAmount(89, "ETH", 2), MonetaryAmount("1300.63483146067415", "EUR")));
 }
 
 TEST_F(MarketOrderBookTestCase1, MoreComplexListOfPricesComputations) {
@@ -166,6 +167,29 @@ TEST_F(MarketOrderBookTestCase2, ConvertQuoteAmountToBase) {
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("50000000", "KRW")), std::optional<MonetaryAmount>());
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("500", "KRW")), MonetaryAmount("8.6535133264105226", "APM"));
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("500000", "KRW")), MonetaryAmount("8649.3845211510554", "APM"));
+}
+
+TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsBuy) {
+  EXPECT_EQ(
+      marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
+                                          MonetaryAmount("57.81", "KRW")),
+      AmountAtPriceVec({AmountAtPrice(MonetaryAmount("33.5081914157147", "APM"), MonetaryAmount("57.78", "KRW")),
+                        AmountAtPrice(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW")),
+                        AmountAtPrice(MonetaryAmount("88975.0996085842853", "APM"), MonetaryAmount("57.81", "KRW"))}));
+  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
+                                                MonetaryAmount("57.77", "KRW")),
+            AmountAtPriceVec());
+}
+
+TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsSell) {
+  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(5000, "APM"),
+                                                MonetaryAmount("57.19", "KRW")),
+            AmountAtPriceVec({
+                AmountAtPrice(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW")),
+            }));
+  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(91000, "APM"),
+                                                MonetaryAmount("57.23", "KRW")),
+            AmountAtPriceVec());
 }
 
 class MarketOrderBookTestCase3 : public ::testing::Test {

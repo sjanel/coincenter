@@ -11,6 +11,7 @@
 #include "monetaryamount.hpp"
 #include "simpletable.hpp"
 #include "timedef.hpp"
+#include "tradeside.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
@@ -110,9 +111,17 @@ class MarketOrderBook {
   /// If operation is not possible, return an empty vector.
   AmountPerPriceVec computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount ma) const;
 
+  /// Given an amount in base currency and the trade side with its price, compute the average matched amount
+  /// and price
+  /// @return a pair of {total matched amount in base currency, average matched price}
+  AmountAtPrice avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount, MonetaryAmount price) const;
+
   /// Given an amount in either base or quote currency, attempt to convert it at market price immediately.
-  /// @return a pair of {average matched price, total matched amount given in input}
-  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTaker(MonetaryAmount amountInBaseOrQuote) const;
+  /// @return a pair of {total matched amount in given currency, average matched price}
+  AmountAtPrice avgPriceAndMatchedAmountTaker(MonetaryAmount amountInBaseOrQuote) const;
+
+  /// Compute the matched amounts that would occur immediately if an order of given amount were placed at given price
+  AmountPerPriceVec computeMatchedParts(TradeSide tradeSide, MonetaryAmount amount, MonetaryAmount price) const;
 
   /// Given an amount in either base or quote currency, attempt to convert it at market price immediately and return
   /// the worst price matched.
@@ -209,9 +218,9 @@ class MarketOrderBook {
     return MonetaryAmount(_orders[pos].price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
 
-  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTakerSell(MonetaryAmount baseAmount) const;
+  AmountAtPrice avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount, MonetaryAmount price) const;
 
-  std::pair<MonetaryAmount, MonetaryAmount> avgPriceAndMatchedVolumeTakerBuy(MonetaryAmount quoteAmount) const;
+  AmountAtPrice avgPriceAndMatchedVolumeBuy(MonetaryAmount quoteAmount, MonetaryAmount price) const;
 
   /// Attempt to convert given amount expressed in base currency to quote currency.
   /// It may not be possible, in which case an empty optional will be returned.
