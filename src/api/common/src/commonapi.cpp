@@ -17,6 +17,7 @@
 #include "httprequesttype.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
+#include "withdrawalfees-crawler.hpp"
 
 namespace cct::api {
 namespace {

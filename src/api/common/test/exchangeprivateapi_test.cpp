@@ -29,6 +29,7 @@
 #include "orderid.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
+#include "reader.hpp"
 #include "runmodes.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"

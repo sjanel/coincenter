@@ -6,7 +6,6 @@
 #include <optional>
 
 #include "cct_const.hpp"
-#include "cct_exception.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
@@ -109,8 +108,8 @@ TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(::testing::Return(markets));
 
   EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW").value(), Market("BTC", "KRW"));
-  EXPECT_EQ(exchangePublic.retrieveMarket("KRW", "BTC", markets).value(), Market("BTC", "KRW"));
-  EXPECT_FALSE(exchangePublic.retrieveMarket("EUR", "EOS", markets).has_value());
+  EXPECT_EQ(ExchangePublic::RetrieveMarket("KRW", "BTC", markets).value(), Market("BTC", "KRW"));
+  EXPECT_FALSE(ExchangePublic::RetrieveMarket("EUR", "EOS", markets).has_value());
 }
 
 class ExchangePublicConvertTest : public ExchangePublicTest {

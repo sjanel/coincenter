@@ -4,6 +4,7 @@
 #include <cmath>
 #include <compare>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -294,7 +295,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, Mo
   return queryOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
 }
 
-std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
+std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
   Market mk(c1, c2);
   if (!markets.contains(mk)) {
     mk = mk.reverse();
@@ -307,7 +308,7 @@ std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCo
 
 std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
   std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
-  return retrieveMarket(c1, c2, queryTradableMarkets());
+  return RetrieveMarket(c1, c2, queryTradableMarkets());
 }
 
 MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) {

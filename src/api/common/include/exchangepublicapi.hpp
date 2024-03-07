@@ -145,7 +145,7 @@ class ExchangePublic : public ExchangeBase {
   std::optional<MonetaryAmount> computeAvgOrderPrice(Market mk, MonetaryAmount from, const PriceOptions &priceOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
-  std::optional<Market> retrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets);
+  static std::optional<Market> RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets);
 
   std::optional<Market> retrieveMarket(CurrencyCode c1, CurrencyCode c2);
 
