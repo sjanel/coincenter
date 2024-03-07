@@ -8,10 +8,10 @@
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 
 #include "mathhelpers.hpp"
-#include "unreachable.hpp"
 
 namespace cct {
 
@@ -44,16 +44,18 @@ class Align {
 
 SimpleTable::size_type SimpleTable::Cell::size() const noexcept {
   return std::visit(
-      [](auto &&v) -> size_type {
-        using T = std::decay_t<decltype(v)>;
+      [](auto &&val) -> size_type {
+        using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view>) {
-          return v.size();
+          return val.size();
         } else if constexpr (std::is_same_v<T, bool>) {
-          return v ? kBoolValueTrue.size() : kBoolValueFalse.size();
+          return val ? kBoolValueTrue.size() : kBoolValueFalse.size();
         } else if constexpr (std::is_integral_v<T>) {
-          return nchars(v);
+          return nchars(val);
         } else {
-          unreachable();
+          // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
+          []<bool flag = false>() { static_assert(flag, "no match"); }
+          ();
         }
       },
       _data);
@@ -63,15 +65,17 @@ void SimpleTable::Cell::print(std::ostream &os, size_type maxCellWidth) const {
   os << ' ' << Align(AlignTo::kLeft) << std::setw(maxCellWidth);
 
   std::visit(
-      [&os](auto &&v) {
-        using T = std::decay_t<decltype(v)>;
+      [&os](auto &&val) {
+        using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, bool>) {
-          os << (v ? kBoolValueTrue : kBoolValueFalse);
+          os << (val ? kBoolValueTrue : kBoolValueFalse);
         } else if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view> ||
                              std::is_integral_v<T>) {
-          os << v;
+          os << val;
         } else {
-          unreachable();
+          // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
+          []<bool flag = false>() { static_assert(flag, "no match"); }
+          ();
         }
       },
       _data);

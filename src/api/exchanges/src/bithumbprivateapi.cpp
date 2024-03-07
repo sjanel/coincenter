@@ -37,6 +37,7 @@
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"

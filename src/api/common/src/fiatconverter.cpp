@@ -15,6 +15,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "permanentcurloptions.hpp"
+#include "reader.hpp"
 #include "timedef.hpp"
 
 namespace cct {

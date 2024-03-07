@@ -17,7 +17,7 @@
 #include "exchangeprivateapitypes.hpp"
 #include "exchangesorchestrator.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
+#include "opened-order.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "timedef.hpp"

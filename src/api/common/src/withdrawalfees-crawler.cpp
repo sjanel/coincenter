@@ -5,6 +5,7 @@
 #include <string_view>
 #include <utility>
 
+#include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
@@ -18,6 +19,7 @@
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 
 namespace cct {
