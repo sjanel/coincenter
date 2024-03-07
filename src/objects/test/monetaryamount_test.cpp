@@ -139,6 +139,14 @@ TEST(MonetaryAmountTest, IntegralComparison) {
   EXPECT_GE(7, MonetaryAmount("7"));
 }
 
+TEST(MonetaryAmountTest, DoubleComparison) {
+  EXPECT_GT(MonetaryAmount("2.00 EUR"), 1.9);
+  EXPECT_LT(1.9, MonetaryAmount("2.00 EUR"));
+
+  EXPECT_LE(-4.1, MonetaryAmount("-4.0000 EUR"));
+  EXPECT_GE(MonetaryAmount("-4.0000 EUR"), -4.3);
+}
+
 TEST(MonetaryAmountTest, OverflowProtectionDecimalPart) {
   // OK to truncate decimal part
   EXPECT_LT(MonetaryAmount("94729475.1434000003456523423654", "EUR") - MonetaryAmount("94729475.1434", "EUR"),
@@ -170,6 +178,11 @@ TEST(MonetaryAmountTest, Multiply) {
             MonetaryAmount("-2726953.66542788469"));
   MonetaryAmount res;
   EXPECT_THROW(res = MonetaryAmount(1, "EUR") * MonetaryAmount(2, "ETH"), exception);
+}
+
+TEST(MonetaryAmountTest, MultiplyDouble) {
+  EXPECT_EQ(MonetaryAmount("-4.98", CurrencyCode("ETH")) * 1.2, MonetaryAmount("-5.976", CurrencyCode("ETH")));
+  EXPECT_EQ(15.98 * MonetaryAmount("0.2547"), MonetaryAmount("4.070106"));
 }
 
 TEST(MonetaryAmountTest, OverflowProtectionMultiplication) {
@@ -212,6 +225,12 @@ TEST(MonetaryAmountTest, Divide) {
   EXPECT_EQ(MonetaryAmount(10) / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
   EXPECT_EQ(MonetaryAmount("1000000000 KRW") / MonetaryAmount("922337203685477580 KRW"),
             MonetaryAmount("0.00000000108420217"));
+}
+
+TEST(MonetaryAmountTest, DivideDouble) {
+  EXPECT_EQ(MonetaryAmount("-4.98", CurrencyCode("ETH")) / -5.5,
+            MonetaryAmount("0.90545454545454545", CurrencyCode("ETH")));
+  EXPECT_EQ(MonetaryAmount(658) / 0.012, MonetaryAmount("54833.3333333333333"));
 }
 
 TEST(MonetaryAmountTest, OverflowProtectionDivide) {
