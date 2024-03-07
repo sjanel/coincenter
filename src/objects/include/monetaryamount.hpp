@@ -130,7 +130,7 @@ class MonetaryAmount {
   [[nodiscard]] bool isCloseTo(MonetaryAmount otherAmount, double relativeDifference) const;
 
   [[nodiscard]] constexpr CurrencyCode currencyCode() const {
-    // We do not want to expose private nb decimals bits to outside world
+    // We do not want to expose private nb decimals bits
     return _curWithDecimals.withNoDecimalsPart();
   }
 
@@ -170,16 +170,20 @@ class MonetaryAmount {
 
   [[nodiscard]] constexpr bool operator==(const MonetaryAmount &) const = default;
 
-  [[nodiscard]] constexpr bool operator==(AmountType amount) const { return _amount == amount && nbDecimals() == 0; }
-  friend constexpr bool operator==(AmountType amount, MonetaryAmount rhs) { return rhs == amount; }
-
-  [[nodiscard]] constexpr auto operator<=>(AmountType amount) const {
-    return _amount <=> amount * ipow10(static_cast<uint8_t>(nbDecimals()));
+  /// Note: for comparison with numbers (integrals or double), only the amount is compared.
+  /// To be consistent with operator<=>, the currency will be ignored for equality.
+  /// TODO: check if this special behavior be problematic in some cases
+  [[nodiscard]] constexpr bool operator==(std::signed_integral auto amount) const {
+    return _amount == static_cast<AmountType>(amount) && nbDecimals() == 0;
   }
 
-  [[nodiscard]] friend constexpr auto operator<=>(AmountType amount, MonetaryAmount other) {
-    return amount * ipow10(static_cast<uint8_t>(other.nbDecimals())) <=> other._amount;
+  [[nodiscard]] constexpr bool operator==(double amount) const { return amount == toDouble(); }
+
+  [[nodiscard]] constexpr auto operator<=>(std::signed_integral auto amount) const {
+    return _amount <=> static_cast<AmountType>(amount) * ipow10(static_cast<uint8_t>(nbDecimals()));
   }
+
+  [[nodiscard]] constexpr auto operator<=>(double amount) const { return toDouble() <=> amount; }
 
   [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
     return {true, _amount < 0 ? -_amount : _amount, _curWithDecimals};
@@ -199,8 +203,15 @@ class MonetaryAmount {
   MonetaryAmount &operator-=(MonetaryAmount other) { return *this = *this + (-other); }
 
   [[nodiscard]] MonetaryAmount operator*(AmountType mult) const;
+  [[nodiscard]] friend MonetaryAmount operator*(MonetaryAmount rhs, std::signed_integral auto mult) {
+    return static_cast<AmountType>(mult) * rhs;
+  }
+  [[nodiscard]] friend MonetaryAmount operator*(std::signed_integral auto mult, MonetaryAmount rhs) {
+    return rhs * static_cast<AmountType>(mult);
+  }
 
-  [[nodiscard]] friend MonetaryAmount operator*(AmountType mult, MonetaryAmount rhs) { return rhs * mult; }
+  [[nodiscard]] MonetaryAmount operator*(double mult) const { return *this * MonetaryAmount(mult); }
+  [[nodiscard]] friend MonetaryAmount operator*(double mult, MonetaryAmount rhs) { return rhs * mult; }
 
   /// Multiplication involving 2 MonetaryAmounts *must* have at least one 'Neutral' currency.
   /// This is to remove ambiguity on the resulting currency:
@@ -210,15 +221,19 @@ class MonetaryAmount {
   ///  - XXXXXXX * YYYYYYY -> ??????? (exception will be thrown in this case)
   [[nodiscard]] MonetaryAmount operator*(MonetaryAmount mult) const;
 
-  MonetaryAmount &operator*=(AmountType mult) { return *this = *this * mult; }
+  MonetaryAmount &operator*=(std::signed_integral auto mult) { return *this = *this * mult; }
   MonetaryAmount &operator*=(MonetaryAmount mult) { return *this = *this * mult; }
+  MonetaryAmount &operator*=(double mult) { return *this = *this * mult; }
 
-  [[nodiscard]] MonetaryAmount operator/(AmountType div) const { return *this / MonetaryAmount(div); }
+  [[nodiscard]] MonetaryAmount operator/(std::signed_integral auto div) const { return *this / MonetaryAmount(div); }
+
+  [[nodiscard]] MonetaryAmount operator/(double div) const { return *this / MonetaryAmount(div); }
 
   [[nodiscard]] MonetaryAmount operator/(MonetaryAmount div) const;
 
-  MonetaryAmount &operator/=(AmountType div) { return *this = *this / div; }
+  MonetaryAmount &operator/=(std::signed_integral auto div) { return *this = *this / div; }
   MonetaryAmount &operator/=(MonetaryAmount div) { return *this = *this / div; }
+  MonetaryAmount &operator/=(double div) { return *this = *this / div; }
 
   [[nodiscard]] constexpr MonetaryAmount toNeutral() const noexcept {
     return {true, _amount, _curWithDecimals.toNeutral()};
@@ -333,7 +348,8 @@ class MonetaryAmount {
   }
 
   /// Private constructor to set fields directly without checks.
-  /// We add a dummy bool parameter to differentiate it from the public constructor
+  /// We add a dummy bool parameter to differentiate it from the public constructor.
+  /// The number of decimals will be set from within the given curWithDecimals
   constexpr MonetaryAmount(bool, AmountType amount, CurrencyCode curWithDecimals) noexcept
       : _amount(amount), _curWithDecimals(curWithDecimals) {}
 

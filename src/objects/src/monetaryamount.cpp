@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <compare>
+#include <concepts>
 #include <cstdint>
 #include <cstdlib>
 #include <iomanip>
@@ -370,7 +371,8 @@ MonetaryAmount MonetaryAmount::operator+(MonetaryAmount other) const {
 MonetaryAmount MonetaryAmount::operator*(AmountType mult) const {
   AmountType amount = _amount;
   auto nbDecs = nbDecimals();
-  if (mult < -1 || mult > 1) {  // for * -1, * 0 and * -1 result is trivial without overflow
+  // for * -1, * 0 and * -1 result is trivial without overflow
+  if (mult < -1 || mult > 1) {
     // Beware of overflows, they can come faster than we think with multiplications.
     const auto nbDigitsMult = ndigits(mult);
     const auto nbDigitsAmount = ndigits(_amount);
