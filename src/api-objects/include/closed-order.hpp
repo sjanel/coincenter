@@ -18,6 +18,10 @@ class ClosedOrder : public Order {
 
   string matchedTimeStr() const;
 
+  /// Compute the resulting merged closed order from *this and given one.
+  /// Given closed order should be of same ID, TradeSide and Market.
+  [[nodiscard]] ClosedOrder mergeWith(const ClosedOrder &closedOrder) const;
+
  private:
   TimePoint _matchedTime;
 };
