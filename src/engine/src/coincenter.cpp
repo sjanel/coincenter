@@ -48,6 +48,9 @@ volatile sig_atomic_t g_signalStatus = 0;
 extern "C" void SignalHandler(int sigNum) {
   log::warn("Signal {} received, will stop after current request", sigNum);
   g_signalStatus = sigNum;
+
+  // Revert to standard signal handler (to allow for standard kill in case program does not react)
+  std::signal(sigNum, SIG_DFL);
 }
 
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
