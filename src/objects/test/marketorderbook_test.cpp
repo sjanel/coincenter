@@ -219,6 +219,22 @@ TEST_F(MarketOrderBookTestCase3, Convert) {
             MonetaryAmount("216266.409928471248", "XLM"));
 }
 
+TEST_F(MarketOrderBookTestCase3, AvgPriceAndMatchedVolume) {
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
+                                                     MonetaryAmount("0.000007121", "BTC")),
+            AmountAtPrice(MonetaryAmount(100000, "XLM"), MonetaryAmount("0.0000071176273715", "BTC")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
+                                                     MonetaryAmount("0.000007090", "BTC")),
+            AmountAtPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
+
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
+                                                     MonetaryAmount("0.000007079", "BTC")),
+            AmountAtPrice(MonetaryAmount("411248.27", "XLM"), MonetaryAmount("0.00000708595487037", "BTC")));
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
+                                                     MonetaryAmount("0.000007110", "BTC")),
+            AmountAtPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
+}
+
 class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
  protected:
   TimePoint time{};
