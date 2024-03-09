@@ -220,7 +220,7 @@ class MarketOrderBook {
 
   AmountAtPrice avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount, MonetaryAmount price) const;
 
-  AmountAtPrice avgPriceAndMatchedVolumeBuy(MonetaryAmount quoteAmount, MonetaryAmount price) const;
+  AmountAtPrice avgPriceAndMatchedVolumeBuy(MonetaryAmount amountInBaseOrQuote, MonetaryAmount price) const;
 
   /// Attempt to convert given amount expressed in base currency to quote currency.
   /// It may not be possible, in which case an empty optional will be returned.
