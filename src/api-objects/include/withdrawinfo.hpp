@@ -99,7 +99,8 @@ class DeliveredWithdrawInfo {
 template <>
 struct fmt::formatter<cct::DeliveredWithdrawInfo> {
   constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
-    auto it = ctx.begin(), end = ctx.end();
+    const auto it = ctx.begin();
+    const auto end = ctx.end();
     if (it != end && *it != '}') {
       throw format_error("invalid format");
     }

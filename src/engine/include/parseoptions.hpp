@@ -49,6 +49,6 @@ auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
     groupParsedOptions.mergeGlobalWith(globalOptions);
   }
 
-  return parsedOptions;
+  return std::make_pair(std::move(programName), parsedOptions);
 }
 }  // namespace cct

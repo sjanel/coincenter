@@ -38,17 +38,24 @@ class ThreadPool {
 
   auto nbWorkers() const noexcept { return _workers.size(); }
 
-  // add new work item to the pool
+  // Add new work item to the pool
+  // By default, arguments will be copied for safety. If you want to pass arguments by reference,
+  // make sure that the reference lifetime is valid through the whole execution time of the future,
+  // and wrap the argument you want to pass by reference with 'std::ref'.
   template <class Func, class... Args>
   std::future<std::invoke_result_t<Func, Args...>> enqueue(Func&& func, Args&&... args);
 
   // Parallel version of std::transform with unary operation.
   // This function will first enqueue all the tasks at one, using waiting threads of the thread pool,
   // and then retrieves and moves the results to 'out', as for std::transform.
+  // Note: the objects passed in argument from InputIt are not copied and passed by reference (through
+  // std::reference_wrapper)
   template <class InputIt, class OutputIt, class UnaryOperation>
   OutputIt parallelTransform(InputIt first, InputIt last, OutputIt out, UnaryOperation unary_op);
 
   // Parallel version of std::transform with binary operation.
+  // Note: the objects passed in argument from InputIt are not copied and passed by reference (through
+  // std::reference_wrapper)
   template <class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
   OutputIt parallelTransform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out, BinaryOperation binary_op);
 
@@ -105,6 +112,7 @@ inline ThreadPool::~ThreadPool() {
 
 template <class Func, class... Args>
 inline std::future<std::invoke_result_t<Func, Args...>> ThreadPool::enqueue(Func&& func, Args&&... args) {
+  // std::bind copies the arguments. To avoid copies, you can use std::ref to copy reference instead.
   using return_type = std::invoke_result_t<Func, Args...>;
 
   auto task = std::make_shared<std::packaged_task<return_type()>>(
@@ -130,7 +138,7 @@ inline OutputIt ThreadPool::parallelTransform(InputIt first, InputIt last, Outpu
   using FutureT = std::future<std::invoke_result_t<UnaryOperation, decltype(*first)>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
   for (; first != last; ++first) {
-    futures.emplace_back(enqueue(unary_op, *first));
+    futures.emplace_back(enqueue(unary_op, std::ref(*first)));
   }
   return retrieveAllResults(futures, out);
 }
@@ -141,7 +149,7 @@ inline OutputIt ThreadPool::parallelTransform(InputIt1 first1, InputIt1 last1, I
   using FutureT = std::future<std::invoke_result_t<BinaryOperation, decltype(*first1), decltype(*first2)>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
   for (; first1 != last1; ++first1, ++first2) {
-    futures.emplace_back(enqueue(binary_op, *first1, *first2));
+    futures.emplace_back(enqueue(binary_op, std::ref(*first1), std::ref(*first2)));
   }
   return retrieveAllResults(futures, out);
 }
