@@ -83,8 +83,11 @@ class SimpleTableTest : public ::testing::Test {
 TEST_F(SimpleTableTest, SettingRowDirectly) {
   EXPECT_EQ(table.size(), 1U);
   fill();
-  EXPECT_EQ(table[2].front().size(), 7U);
-  EXPECT_EQ(table.back().front().size(), 13U);
+  EXPECT_EQ(table[2].front().size(), 1U);
+  EXPECT_EQ(table[2].front().front().width(), 7U);
+
+  EXPECT_EQ(table.back().front().size(), 1U);
+  EXPECT_EQ(table.back().front().front().width(), 13U);
 
   std::ostringstream ss;
 
@@ -98,6 +101,122 @@ TEST_F(SimpleTableTest, SettingRowDirectly) {
 | -677234.67    | SUSHI    | -12                   |
 | -677256340000 | KEBAB    | -34.09                |
 +---------------+----------+-----------------------+)";
+
+  EXPECT_EQ(ss.view(), kExpected);
+}
+
+TEST_F(SimpleTableTest, MultiLineFields) {
+  fill();
+
+  table[1][2].push_back(SimpleTable::CellLine("... but another line!"));
+  table[3][0].push_back(SimpleTable::CellLine(true));
+
+  table.emplace_back("999.25", "KRW", 16820100000000000000UL);
+
+  std::ostringstream ss;
+
+  ss << '\n' << table;
+
+  static constexpr std::string_view kExpected = R"(
++---------------+----------+-----------------------+
+| Amount        | Currency | This header is longer |
++---------------+----------+-----------------------+
+| 1235          | EUR      | Nothing here          |
+|               |          | ... but another line! |
+|~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~|
+| 3456.78       | USD      | 42                    |
+|~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~|
+| -677234.67    | SUSHI    | -12                   |
+| yes           |          |                       |
+|~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~|
+| -677256340000 | KEBAB    | -34.09                |
+| 999.25        | KRW      | 16820100000000000000  |
++---------------+----------+-----------------------+)";
+
+  EXPECT_EQ(ss.view(), kExpected);
+}
+
+TEST_F(SimpleTableTest, EmptyCellShouldBePossible) {
+  fill();
+
+  table.emplace_back(SimpleTable::Cell{12, -4}, SimpleTable::Cell{}, "Nothing here");
+
+  std::ostringstream ss;
+
+  ss << '\n' << table;
+
+  static constexpr std::string_view kExpected = R"(
++---------------+----------+-----------------------+
+| Amount        | Currency | This header is longer |
++---------------+----------+-----------------------+
+| 1235          | EUR      | Nothing here          |
+| 3456.78       | USD      | 42                    |
+| -677234.67    | SUSHI    | -12                   |
+| -677256340000 | KEBAB    | -34.09                |
+|~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~|
+| 12            |          | Nothing here          |
+| -4            |          |                       |
++---------------+----------+-----------------------+)";
+
+  EXPECT_EQ(ss.view(), kExpected);
+}
+
+class DividerLineTest : public ::testing::Test {
+ protected:
+  void SetUp() override { fill(); }
+
+  void fill() {
+    table.emplace_back(1);
+    table.emplace_back(2);
+    table.emplace_back("");
+    table.emplace_back(SimpleTable::Row::kDivider);
+    table.emplace_back(4);
+    table.emplace_back(SimpleTable::Row::kDivider);
+  }
+
+  SimpleTable table;
+  std::ostringstream ss;
+};
+
+TEST_F(DividerLineTest, SingleLineRows) {
+  ss << '\n' << table;
+
+  static constexpr std::string_view kExpected = R"(
++---+
+| 1 |
++---+
+| 2 |
+|   |
++---+
+| 4 |
++---+
++---+)";
+
+  EXPECT_EQ(ss.view(), kExpected);
+}
+
+TEST_F(DividerLineTest, WithMultiLine) {
+  table[1][0].push_back(SimpleTable::CellLine(42));
+  table[1][0].push_back(SimpleTable::CellLine(true));
+
+  table[4][0].push_back(SimpleTable::CellLine(false));
+
+  ss << '\n' << table;
+
+  static constexpr std::string_view kExpected = R"(
++-----+
+| 1   |
++-----+
+| 2   |
+| 42  |
+| yes |
+|~~~~~|
+|     |
++-----+
+| 4   |
+| no  |
++-----+
++-----+)";
 
   EXPECT_EQ(ss.view(), kExpected);
 }

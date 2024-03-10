@@ -56,6 +56,7 @@ json ToJson(CoincenterCommandType commandType, json &&in, json &&out) {
   in.emplace("req", CoincenterCommandTypeToString(commandType));
 
   json ret;
+
   ret.emplace("in", std::move(in));
   ret.emplace("out", std::move(out));
 
@@ -1154,7 +1155,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
         for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
           auto it = withdrawFees.find(cur);
           if (it == withdrawFees.end()) {
-            row.emplace_back();
+            row.emplace_back("");
           } else {
             row.emplace_back(it->str());
           }
@@ -1314,16 +1315,17 @@ void QueryResultPrinter::printDustSweeper(
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       SimpleTable simpleTable("Exchange", "Account", "Trades", "Final Amount");
+
+      simpleTable.reserve(1U + tradedAmountsVectorWithFinalAmountPerExchange.size());
       for (const auto &[exchangePtr, tradedAmountsVectorWithFinalAmount] :
            tradedAmountsVectorWithFinalAmountPerExchange) {
-        string tradesStr;
-        for (const auto &tradedAmounts : tradedAmountsVectorWithFinalAmount.tradedAmountsVector) {
-          if (!tradesStr.empty()) {
-            tradesStr.append(", ");
-          }
-          tradesStr.append(tradedAmounts.str());
+        SimpleTable::Cell tradesCell;
+        const auto &tradedAmountsVector = tradedAmountsVectorWithFinalAmount.tradedAmountsVector;
+        tradesCell.reserve(tradedAmountsVector.size());
+        for (const auto &tradedAmounts : tradedAmountsVector) {
+          tradesCell.emplace_back(tradedAmounts.str());
         }
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesStr),
+        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesCell),
                                  tradedAmountsVectorWithFinalAmount.finalAmount.str());
       }
       printTable(simpleTable);

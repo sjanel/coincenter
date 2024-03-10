@@ -11,7 +11,6 @@
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "monetaryamount.hpp"
-#include "order.hpp"
 #include "ordersconstraints.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
@@ -1660,13 +1659,15 @@ TEST_F(QueryResultPrinterDustSweeperTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printDustSweeper(tradedAmountsVectorWithFinalAmountPerExchange, cur);
   static constexpr std::string_view kExpected = R"(
-+----------+-----------+-------------------------------------------------------+--------------+
-| Exchange | Account   | Trades                                                | Final Amount |
-+----------+-----------+-------------------------------------------------------+--------------+
-| binance  | testuser1 | 98.47 ETH -> 0.00005 BTC                              | 0 ETH        |
-| huobi    | testuser1 |                                                       | 1.56 ETH     |
-| huobi    | testuser2 | 0.45609 EUR -> 98.47 ETH, 1509.45 ETH -> 0.000612 BTC | 0 ETH        |
-+----------+-----------+-------------------------------------------------------+--------------+
++----------+-----------+-----------------------------+--------------+
+| Exchange | Account   | Trades                      | Final Amount |
++----------+-----------+-----------------------------+--------------+
+| binance  | testuser1 | 98.47 ETH -> 0.00005 BTC    | 0 ETH        |
+| huobi    | testuser1 |                             | 1.56 ETH     |
+|~~~~~~~~~~|~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~|
+| huobi    | testuser2 | 0.45609 EUR -> 98.47 ETH    | 0 ETH        |
+|          |           | 1509.45 ETH -> 0.000612 BTC |              |
++----------+-----------+-----------------------------+--------------+
 )";
   expectStr(kExpected);
 }
