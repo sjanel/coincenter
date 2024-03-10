@@ -2,7 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <chrono>
 #include <forward_list>
 #include <future>
 #include <numeric>
@@ -28,6 +27,19 @@ int SlowAdd(const int &lhs, const int &rhs) {
   std::this_thread::sleep_for(10ms);
   return lhs + rhs;
 }
+
+struct NonCopyable {
+  NonCopyable(int i = 0) : i(i) {}
+
+  NonCopyable(const NonCopyable &) = delete;
+
+  int i;
+};
+
+int SlowDoubleNonCopyable(const NonCopyable &val) {
+  std::this_thread::sleep_for(10ms);
+  return val.i * 2;
+}
 }  // namespace
 
 TEST(ThreadPoolTest, Enqueue) {
@@ -37,6 +49,22 @@ TEST(ThreadPoolTest, Enqueue) {
   constexpr int kNbElems = 4;
   for (int elem = 0; elem < kNbElems; ++elem) {
     results.push_back(threadPool.enqueue(SlowDouble, elem));
+  }
+
+  for (int elem = 0; elem < kNbElems; ++elem) {
+    EXPECT_EQ(results[elem].get(), elem * 2);
+  }
+}
+
+TEST(ThreadPoolTest, EnqueueNonCopyable) {
+  ThreadPool threadPool(2);
+  vector<std::future<int>> results;
+
+  constexpr int kNbElems = 4;
+  vector<NonCopyable> inputData(kNbElems);
+  for (int elem = 0; elem < kNbElems; ++elem) {
+    inputData[elem] = NonCopyable(elem);
+    results.push_back(threadPool.enqueue(SlowDoubleNonCopyable, std::ref(inputData[elem])));
   }
 
   for (int elem = 0; elem < kNbElems; ++elem) {

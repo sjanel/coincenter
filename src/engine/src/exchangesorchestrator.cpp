@@ -19,6 +19,7 @@
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -31,7 +32,6 @@
 #include "exchangeretriever.hpp"
 #include "exchangeretrieverbase.hpp"
 #include "market.hpp"
-#include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "ordersconstraints.hpp"
@@ -56,16 +56,43 @@ template <class MainVec>
 void FilterVector(MainVec &main, std::span<const bool> considerSpan) {
   const auto begIt = main.begin();
   const auto endIt = main.end();
+
   main.erase(std::remove_if(begIt, endIt, [=](const auto &val) { return !considerSpan[&val - &*begIt]; }), endIt);
 }
 
 using ExchangeAmountPairVector = SmallVector<std::pair<Exchange *, MonetaryAmount>, kTypicalNbPrivateAccounts>;
-using ExchangeAmountMarketsPathVector =
-    SmallVector<std::tuple<Exchange *, MonetaryAmount, MarketsPath>, kTypicalNbPrivateAccounts>;
-using ExchangeAmountToCurrency = std::tuple<Exchange *, MonetaryAmount, CurrencyCode, MarketsPath>;
-using ExchangeAmountToCurrencyToAmount =
-    std::tuple<Exchange *, MonetaryAmount, CurrencyCode, MarketsPath, MonetaryAmount>;
+
+struct ExchangeAmountMarkets {
+  Exchange *exchange;
+  MonetaryAmount amount;
+  MarketsPath marketsPath;
+
+  using trivially_relocatable = is_trivially_relocatable<MarketsPath>::type;
+};
+
+using ExchangeAmountMarketsPathVector = SmallVector<ExchangeAmountMarkets, kTypicalNbPrivateAccounts>;
+
+struct ExchangeAmountToCurrency {
+  Exchange *exchange;
+  MonetaryAmount amount;
+  CurrencyCode currency;
+  MarketsPath marketsPath;
+
+  using trivially_relocatable = is_trivially_relocatable<MarketsPath>::type;
+};
+
 using ExchangeAmountToCurrencyVector = SmallVector<ExchangeAmountToCurrency, kTypicalNbPrivateAccounts>;
+
+struct ExchangeAmountToCurrencyToAmount {
+  Exchange *exchange;
+  MonetaryAmount amount;
+  CurrencyCode currency;
+  MarketsPath marketsPath;
+  MonetaryAmount endAmount;
+
+  using trivially_relocatable = is_trivially_relocatable<MarketsPath>::type;
+};
+
 using ExchangeAmountToCurrencyToAmountVector = SmallVector<ExchangeAmountToCurrencyToAmount, kTypicalNbPrivateAccounts>;
 
 template <class VecWithExchangeFirstPos>
@@ -138,12 +165,12 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
         equiCurrencyCode.isNeutral()
             ? std::nullopt
             : exchange->apiPublic().estimatedConvert(MonetaryAmount(1, mk.quote()), equiCurrencyCode);
-    MarketOrderBook marketOrderBook(depth ? exchange->queryOrderBook(mk, *depth) : exchange->queryOrderBook(mk));
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
-      log::warn("Unable to convert {} into {} on {}", marketOrderBook.market().quote(), equiCurrencyCode,
-                exchange->name());
+      log::warn("Unable to convert {} into {} on {}", mk.quote(), equiCurrencyCode, exchange->name());
     }
-    return std::make_tuple(exchange->name(), std::move(marketOrderBook), optConversionRate);
+    return std::make_tuple(exchange->name(),
+                           depth ? exchange->queryOrderBook(mk, *depth) : exchange->queryOrderBook(mk),
+                           optConversionRate);
   };
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), marketOrderBooksFunc);
   return ret;
@@ -157,17 +184,17 @@ BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeNam
   log::info("Query balance from {}{}{} with{} balance in use", ConstructAccumulatedExchangeNames(privateExchangeNames),
             equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency, withBalanceInUse ? "" : "out");
 
-  ExchangeRetriever::SelectedExchanges balanceExchanges =
+  ExchangeRetriever::SelectedExchanges selectedExchanges =
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
-  SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(balanceExchanges.size());
+  SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(selectedExchanges.size());
   _threadPool.parallelTransform(
-      balanceExchanges.begin(), balanceExchanges.end(), balancePortfolios.begin(),
+      selectedExchanges.begin(), selectedExchanges.end(), balancePortfolios.begin(),
       [&balanceOptions](Exchange *exchange) { return exchange->apiPrivate().getAccountBalance(balanceOptions); });
 
   BalancePerExchange ret;
-  ret.reserve(balanceExchanges.size());
-  std::transform(balanceExchanges.begin(), balanceExchanges.end(), std::make_move_iterator(balancePortfolios.begin()),
+  ret.reserve(selectedExchanges.size());
+  std::transform(selectedExchanges.begin(), selectedExchanges.end(), std::make_move_iterator(balancePortfolios.begin()),
                  std::back_inserter(ret), [](Exchange *exchange, BalancePortfolio &&balancePortfolio) {
                    return std::make_pair(exchange, std::move(balancePortfolio));
                  });
@@ -483,12 +510,17 @@ TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAm
                                               ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
                                               const TradeOptions &tradeOptions) {
   TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
-  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(), [toCurrency, &tradeOptions](auto &tuple) {
-    Exchange *exchange = std::get<0>(tuple);
-    const MonetaryAmount from = std::get<1>(tuple);
-    TradedAmounts tradedAmounts = exchange->apiPrivate().trade(from, toCurrency, tradeOptions, std::get<2>(tuple));
-    return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
-  });
+  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(),
+                               [toCurrency, &tradeOptions](ExchangeAmountMarkets &exchangeAmountMarketsPath) {
+                                 Exchange *exchange = exchangeAmountMarketsPath.exchange;
+                                 const MonetaryAmount from = exchangeAmountMarketsPath.amount;
+                                 const auto &marketsPath = exchangeAmountMarketsPath.marketsPath;
+
+                                 TradedAmounts tradedAmounts =
+                                     exchange->apiPrivate().trade(from, toCurrency, tradeOptions, marketsPath);
+
+                                 return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
+                               });
   return tradeResultPerExchange;
 }
 
@@ -496,13 +528,17 @@ template <class Iterator>
 TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, Iterator first, Iterator last,
                                               const TradeOptions &tradeOptions) {
   TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
-  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(), [&tradeOptions](auto &tuple) {
-    Exchange *exchange = std::get<0>(tuple);
-    const MonetaryAmount from = std::get<1>(tuple);
-    const CurrencyCode toCurrency = std::get<2>(tuple);
-    TradedAmounts tradedAmounts = exchange->apiPrivate().trade(from, toCurrency, tradeOptions, std::get<3>(tuple));
-    return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
-  });
+  using ObjType = decltype(*first);
+  threadPool.parallelTransform(
+      first, last, tradeResultPerExchange.begin(), [&tradeOptions](ObjType &exchangeAmountMarketsPath) {
+        Exchange *exchange = exchangeAmountMarketsPath.exchange;
+        const MonetaryAmount from = exchangeAmountMarketsPath.amount;
+        const CurrencyCode toCurrency = exchangeAmountMarketsPath.currency;
+        const auto &marketsPath = exchangeAmountMarketsPath.marketsPath;
+
+        TradedAmounts tradedAmounts = exchange->apiPrivate().trade(from, toCurrency, tradeOptions, marketsPath);
+        return std::make_pair(exchange, TradeResult(std::move(tradedAmounts), from));
+      });
   return tradeResultPerExchange;
 }
 
@@ -549,17 +585,17 @@ TradeResultPerExchange ExchangesOrchestrator::trade(MonetaryAmount from, bool is
   if (!exchangeAmountMarketsPathVector.empty()) {
     // Sort exchanges from largest to lowest available amount (should be after filter on markets and conversion paths)
     std::ranges::stable_sort(exchangeAmountMarketsPathVector,
-                             [](const auto &lhs, const auto &rhs) { return std::get<1>(lhs) > std::get<1>(rhs); });
+                             [](const auto &lhs, const auto &rhs) { return lhs.amount > rhs.amount; });
 
     // Locate the point where there is enough available amount to trade for this currency
     if (isPercentageTrade) {
-      MonetaryAmount totalAvailableAmount = std::accumulate(
-          exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(), currentTotalAmount,
-          [](MonetaryAmount tot, const auto &tuple) { return tot + std::get<1>(tuple); });
+      MonetaryAmount totalAvailableAmount =
+          std::accumulate(exchangeAmountMarketsPathVector.begin(), exchangeAmountMarketsPathVector.end(),
+                          currentTotalAmount, [](MonetaryAmount tot, const auto &tuple) { return tot + tuple.amount; });
       from = (totalAvailableAmount * from.toNeutral()) / 100;
     }
     for (auto endIt = exchangeAmountMarketsPathVector.end(); it != endIt && currentTotalAmount < from; ++it) {
-      MonetaryAmount &amount = std::get<1>(*it);
+      MonetaryAmount &amount = it->amount;
       if (currentTotalAmount + amount > from) {
         // Cap last amount such that total start trade on all exchanges reaches exactly 'startAmount'
         amount = from - currentTotalAmount;
@@ -628,8 +664,8 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
         }
         MonetaryAmount avAmount = balance.get(fromCurrency);
         if (avAmount > 0 &&
-            std::none_of(trades.begin(), trades.begin() + nbTrades, [pExchange, fromCurrency](const auto &tuple) {
-              return std::get<0>(tuple) == pExchange && std::get<1>(tuple).currencyCode() == fromCurrency;
+            std::none_of(trades.begin(), trades.begin() + nbTrades, [pExchange, fromCurrency](const auto &obj) {
+              return obj.exchange == pExchange && obj.amount.currencyCode() == fromCurrency;
             })) {
           auto conversionPath = exchangePublic.findMarketsPath(fromCurrency, toCurrency, markets, fiats,
                                                                api::ExchangePublic::MarketPathMode::kStrict);
@@ -649,7 +685,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
     }
     // Sort exchanges from largest to lowest end amount
     std::stable_sort(trades.begin() + nbTrades, trades.end(),
-                     [](const auto &lhs, const auto &rhs) { return std::get<4>(lhs) > std::get<4>(rhs); });
+                     [](const auto &lhs, const auto &rhs) { return lhs.endAmount > rhs.endAmount; });
     int nbTradesToKeep = 0;
     for (auto &[pExchange, startAmount, tradeToCurrency, conversionPath, tradeEndAmount] : trades) {
       if (tradeEndAmount > remEndAmount) {

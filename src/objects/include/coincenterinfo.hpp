@@ -60,6 +60,8 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
+  const GeneralConfig &generalConfig() const { return _generalConfig; }
+
   const LoggingInfo &loggingInfo() const { return _generalConfig.loggingInfo(); }
 
   const RequestsConfig &requestsConfig() const { return _generalConfig.requestsConfig(); }
