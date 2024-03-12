@@ -23,10 +23,10 @@ class CoincenterCmdLineOptionsDefinitions {
  public:
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
   static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
-  static constexpr Duration kDefaultRepeatTime = TimeInS(1);
+  static constexpr Duration kDefaultRepeatTime = seconds(1);
 
   static constexpr int64_t kDefaultRepeatDurationSeconds =
-      std::chrono::duration_cast<TimeInS>(kDefaultRepeatTime).count();
+      std::chrono::duration_cast<seconds>(kDefaultRepeatTime).count();
 
  protected:
   static constexpr std::string_view kOutput1 = "Output format. One of (";
@@ -114,7 +114,7 @@ class CoincenterCmdLineOptionsDefinitions {
   static constexpr std::string_view kWithdrawRefreshTime1 =
       "Time interval for regular withdraw status checking during synchronous withdrawal. Default is ";
   static constexpr int64_t kDefaultWithdrawRefreshTimeSeconds =
-      std::chrono::duration_cast<TimeInS>(WithdrawOptions().withdrawRefreshTime()).count();
+      std::chrono::duration_cast<seconds>(WithdrawOptions().withdrawRefreshTime()).count();
   static constexpr std::string_view kWithdrawRefreshTime2 = "s.";
   static constexpr std::string_view kWithdrawRefreshTime =
       JoinStringView_v<kWithdrawRefreshTime1, IntToStringView_v<kDefaultWithdrawRefreshTimeSeconds>,

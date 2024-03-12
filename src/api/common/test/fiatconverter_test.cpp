@@ -96,7 +96,7 @@ class FiatConverterTest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode};
-  FiatConverter converter{coincenterInfo, TimeInMs(1), Reader()};
+  FiatConverter converter{coincenterInfo, milliseconds(1), Reader()};
 };
 
 TEST_F(FiatConverterTest, DirectConversion) {

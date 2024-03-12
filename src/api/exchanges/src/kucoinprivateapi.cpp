@@ -239,10 +239,10 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
     }
   }
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("startAt", TimestampToMs(ordersConstraints.placedAfter()));
+    params.append("startAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
   }
   if (ordersConstraints.isPlacedTimeBeforeDefined()) {
-    params.append("endAt", TimestampToMs(ordersConstraints.placedBefore()));
+    params.append("endAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedBefore()));
   }
   json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
 
@@ -259,7 +259,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
       continue;
     }
 
-    TimePoint placedTime{TimeInMs(orderDetails["createdAt"].get<int64_t>())};
+    TimePoint placedTime{milliseconds(orderDetails["createdAt"].get<int64_t>())};
 
     string id = std::move(orderDetails["id"].get_ref<string&>());
     if (!ordersConstraints.validateId(id)) {
@@ -349,10 +349,10 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     options.append("currency", depositsConstraints.currencyCode().str());
   }
   if (depositsConstraints.isTimeAfterDefined()) {
-    options.append("startAt", TimestampToMs(depositsConstraints.timeAfter()));
+    options.append("startAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
   }
   if (depositsConstraints.isTimeBeforeDefined()) {
-    options.append("endAt", TimestampToMs(depositsConstraints.timeBefore()));
+    options.append("endAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
   }
   if (depositsConstraints.isIdDefined()) {
     if (depositsConstraints.idSet().size() == 1) {
@@ -375,7 +375,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     std::string_view statusStr = depositDetail["status"].get<std::string_view>();
     Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
-    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
 
     // Kucoin does not provide any transaction id, let's generate it from currency and timestamp...
     string id = currencyCode.str();
@@ -424,10 +424,10 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
     options.append("currency", withdrawsConstraints.currencyCode().str());
   }
   if (withdrawsConstraints.isTimeAfterDefined()) {
-    options.append("startAt", TimestampToMs(withdrawsConstraints.timeAfter()));
+    options.append("startAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
   }
   if (withdrawsConstraints.isTimeBeforeDefined()) {
-    options.append("endAt", TimestampToMs(withdrawsConstraints.timeBefore()));
+    options.append("endAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
   }
   return options;
 }
@@ -452,7 +452,7 @@ WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& wit
     std::string_view statusStr = withdrawDetail["status"].get<std::string_view>();
     Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isIdDependent());
 
-    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
 
     std::string_view id = withdrawDetail["id"].get<std::string_view>();
     if (!withdrawsConstraints.validateId(id)) {
@@ -512,7 +512,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   // Add automatic cancelling just in case program unexpectedly stops
   params.append("timeInForce", "GTT");  // Good until cancelled or time expires
-  params.append("cancelAfter", std::chrono::duration_cast<TimeInS>(tradeInfo.options.maxTradeTime()).count() + 1);
+  params.append("cancelAfter", std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count() + 1);
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params))["data"];
   placeOrderInfo.orderId = std::move(result["orderId"].get_ref<string&>());

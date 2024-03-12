@@ -534,7 +534,7 @@ TradesVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
     int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
     TradeSide tradeSide = detail["isBuyerMaker"].get<bool>() ? TradeSide::kSell : TradeSide::kBuy;
 
-    ret.emplace_back(tradeSide, amount, price, TimePoint(std::chrono::milliseconds(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;

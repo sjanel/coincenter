@@ -19,13 +19,11 @@ TEST(ParseDuration, DurationMinutesSpaces) {
   EXPECT_EQ(ParseDuration("1 h 45      min "), std::chrono::hours(1) + std::chrono::minutes(45));
 }
 
-TEST(ParseDuration, DurationSeconds) { EXPECT_EQ(ParseDuration("3s"), std::chrono::seconds(3)); }
+TEST(ParseDuration, DurationSeconds) { EXPECT_EQ(ParseDuration("3s"), seconds(3)); }
 
-TEST(ParseDuration, DurationMilliseconds) { EXPECT_EQ(ParseDuration("1500 ms"), std::chrono::milliseconds(1500)); }
+TEST(ParseDuration, DurationMilliseconds) { EXPECT_EQ(ParseDuration("1500 ms"), milliseconds(1500)); }
 
-TEST(ParseDuration, DurationMicroseconds) {
-  EXPECT_EQ(ParseDuration("567889358us"), std::chrono::microseconds(567889358));
-}
+TEST(ParseDuration, DurationMicroseconds) { EXPECT_EQ(ParseDuration("567889358us"), microseconds(567889358)); }
 
 TEST(ParseDuration, DurationLongTime) {
   EXPECT_EQ(ParseDuration("3y9mon2w5min"),
@@ -50,12 +48,11 @@ TEST(DurationString, DurationToStringWeeksDaysMinutes) {
   EXPECT_EQ(DurationToString(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57)), "2w6d57min");
 }
 TEST(DurationString, DurationToStringYearsHoursSecondsMilliseconds) {
-  EXPECT_EQ(DurationToString(std::chrono::years(50) + std::chrono::hours(2) + std::chrono::seconds(13) +
-                             std::chrono::milliseconds(556)),
+  EXPECT_EQ(DurationToString(std::chrono::years(50) + std::chrono::hours(2) + seconds(13) + milliseconds(556)),
             "50y2h13s556ms");
 }
 TEST(DurationString, DurationToStringMicroseconds) {
-  EXPECT_EQ(DurationToString(std::chrono::microseconds(31736913078454L)), "1y2d1h59min21s78ms454us");
+  EXPECT_EQ(DurationToString(microseconds(31736913078454L)), "1y2d1h59min21s78ms454us");
 }
 
 }  // namespace cct

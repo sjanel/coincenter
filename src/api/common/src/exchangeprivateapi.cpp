@@ -132,8 +132,8 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   const CurrencyCode toCurrency = mk.opposite(fromCurrency);
 
   const TimePoint timerStart = Clock::now();
-  const UserRefInt userRef =
-      static_cast<UserRefInt>(TimestampToS(timerStart) % static_cast<int64_t>(std::numeric_limits<UserRefInt>::max()));
+  const UserRefInt userRef = static_cast<UserRefInt>(TimestampToSecondsSinceEpoch(timerStart) %
+                                                     static_cast<int64_t>(std::numeric_limits<UserRefInt>::max()));
 
   const TradeSide side = fromCurrency == mk.base() ? TradeSide::kSell : TradeSide::kBuy;
   TradeContext tradeContext(mk, side, userRef);
@@ -209,7 +209,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 
     TimePoint nowTime = Clock::now();
 
-    const bool reachedEmergencyTime = options.maxTradeTime() < TimeInS(1) + nowTime - timerStart;
+    const bool reachedEmergencyTime = options.maxTradeTime() < seconds(1) + nowTime - timerStart;
     bool updatePriceNeeded = false;
     if (!options.isFixedPrice() && !reachedEmergencyTime &&
         options.minTimeBetweenPriceUpdates() < nowTime - lastPriceUpdateTime) {

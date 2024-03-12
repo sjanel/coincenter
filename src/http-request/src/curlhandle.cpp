@@ -202,6 +202,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   }
 
   CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
+
   curl_slist *curlListPtr = nullptr;
   curl_slist *oldCurlListPtr = nullptr;
   for (const auto &[httpHeaderKey, httpHeaderValue] : opts.httpHeaders()) {
@@ -217,8 +218,10 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
     oldCurlListPtr = curlListPtr;
   }
+
   using CurlSlistDeleter = decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); });
   using CurlListUniquePtr = std::unique_ptr<curl_slist, CurlSlistDeleter>;
+
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
 
   CurlSetLogIfError(curl, CURLOPT_HTTPHEADER, curlListPtr);
@@ -227,7 +230,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   if (_minDurationBetweenQueries != Duration::zero()) {
     // Check last request time
-    const TimePoint nowTime = Clock::now();
+    const auto nowTime = Clock::now();
     if (nowTime < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
       const Duration sleepingTime = _minDurationBetweenQueries - (nowTime - _lastQueryTime);
@@ -244,7 +247,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
            optsStr);
 
   // Actually make the query, with a fast retry mechanism
-  Duration sleepingTime = std::chrono::milliseconds(100);
+  Duration sleepingTime = milliseconds(100);
   int retryPos = 0;
   CURLcode res;
 
@@ -267,7 +270,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     res = curl_easy_perform(curl);
 
     // Store stats
-    const auto queryRTInMs = static_cast<uint32_t>(GetTimeFrom<TimeInMs>(t1).count());
+    const auto queryRTInMs = static_cast<uint32_t>(GetTimeFrom<milliseconds>(t1).count());
     _bestURLPicker.storeResponseTimePerBaseURL(baseUrlPos, queryRTInMs);
 
     if (_pMetricGateway != nullptr) {

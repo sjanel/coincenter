@@ -15,6 +15,7 @@
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
+#include "timedef.hpp"
 #include "tradedefinitions.hpp"
 #include "tradeoptions.hpp"
 
@@ -111,12 +112,12 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradePriceNeutral) {
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradePrice) {
   opts.tradePrice = "4XRP";
-  opts.tradeTimeout = std::chrono::seconds(100);
+  opts.tradeTimeout = seconds(100);
   opts.async = true;
-  EXPECT_EQ(opts.computeTradeOptions(),
-            TradeOptions(PriceOptions(MonetaryAmount(4, "XRP")), TradeTimeoutAction::kDefault, TradeMode::kReal,
-                         std::chrono::seconds(100), opts.tradeUpdatePrice, TradeTypePolicy::kForceSingleTrade,
-                         TradeSyncPolicy::kAsynchronous));
+  EXPECT_EQ(
+      opts.computeTradeOptions(),
+      TradeOptions(PriceOptions(MonetaryAmount(4, "XRP")), TradeTimeoutAction::kDefault, TradeMode::kReal, seconds(100),
+                   opts.tradeUpdatePrice, TradeTypePolicy::kForceSingleTrade, TradeSyncPolicy::kAsynchronous));
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrDefault) { EXPECT_TRUE(opts.getTradeArgStr().first.empty()); }

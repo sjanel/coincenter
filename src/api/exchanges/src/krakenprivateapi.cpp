@@ -285,7 +285,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 namespace {
 TimePoint TimePointFromKrakenTime(double seconds) {
   int64_t millisecondsSinceEpoch = static_cast<int64_t>(1000 * seconds);
-  return TimePoint{TimeInMs(millisecondsSinceEpoch)};
+  return TimePoint{milliseconds(millisecondsSinceEpoch)};
 }
 }  // namespace
 
@@ -297,10 +297,10 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
   CurlPostData params{{"ofs", page}, {"trades", "true"}};
 
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("start", TimestampToS(closedOrdersConstraints.placedAfter()));
+    params.append("start", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
   }
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-    params.append("end", TimestampToS(closedOrdersConstraints.placedBefore()));
+    params.append("end", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
   }
 
   static constexpr int kLimitNbOrdersPerPage = 50;
@@ -467,7 +467,7 @@ DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
     int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
     std::string_view id = trx["txid"].get<std::string_view>();
-    TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
+    TimePoint timestamp{seconds(secondsSinceEpoch)};
 
     if (!depositsConstraints.validateTime(timestamp)) {
       continue;
@@ -515,7 +515,7 @@ WithdrawsSet KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& wit
                                  CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (const json& trx : res) {
     int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
-    TimePoint timestamp{std::chrono::seconds(secondsSinceEpoch)};
+    TimePoint timestamp{seconds(secondsSinceEpoch)};
     if (!withdrawsConstraints.validateTime(timestamp)) {
       continue;
     }
@@ -572,10 +572,10 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   // minimum expire time tested on my side was 5 seconds. I chose 10 seconds just to be sure that we will not have any
   // problem.
   const int maxTradeTimeInSeconds =
-      static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(tradeInfo.options.maxTradeTime()).count());
+      static_cast<int>(std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count());
   const int expireTimeInSeconds = std::max(10, maxTradeTimeInSeconds);
 
-  const auto nbSecondsSinceEpoch = TimestampToS(Clock::now());
+  const auto nbSecondsSinceEpoch = TimestampToSecondsSinceEpoch(Clock::now());
 
   // oflags: Ask fee in destination currency.
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).

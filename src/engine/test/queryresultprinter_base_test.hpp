@@ -17,10 +17,10 @@ namespace cct {
 
 class QueryResultPrinterTest : public ExchangesBaseTest {
  protected:
-  TimePoint tp1{TimeInMs{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{TimeInMs{std::numeric_limits<int64_t>::max() / 9000000}};
-  TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 8000000}};
-  TimePoint tp4{TimeInMs{std::numeric_limits<int64_t>::max() / 7000000}};
+  TimePoint tp1{milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{milliseconds{std::numeric_limits<int64_t>::max() / 9000000}};
+  TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
+  TimePoint tp4{milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
 
   TradeOptions defaultTradeOptions{TradeOptions{}, coincenterInfo.exchangeConfig(exchangePublic1.name())};
 

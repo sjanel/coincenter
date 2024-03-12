@@ -14,15 +14,15 @@ namespace cct {
 
 TEST(TimeStringTest, TimeSinceEpoch) {
   Nonce n1 = Nonce_TimeSinceEpochInMs();
-  std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  std::this_thread::sleep_for(milliseconds(2));
   Nonce n2 = Nonce_TimeSinceEpochInMs();
   EXPECT_LT(n1, n2);
   EXPECT_LT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
 }
 
 TEST(TimeStringTest, TimeSinceEpochDelay) {
-  Nonce n1 = Nonce_TimeSinceEpochInMs(std::chrono::seconds(1));
-  std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  Nonce n1 = Nonce_TimeSinceEpochInMs(seconds(1));
+  std::this_thread::sleep_for(milliseconds(2));
   Nonce n2 = Nonce_TimeSinceEpochInMs();
   EXPECT_GT(n1, n2);
   EXPECT_GT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
@@ -30,7 +30,7 @@ TEST(TimeStringTest, TimeSinceEpochDelay) {
 
 TEST(TimeStringTest, LiteralDate) {
   Nonce n1 = Nonce_LiteralDate(kTimeYearToSecondSpaceSeparatedFormat);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1020));
+  std::this_thread::sleep_for(milliseconds(1020));
   Nonce n2 = Nonce_LiteralDate(kTimeYearToSecondSpaceSeparatedFormat);
   EXPECT_LT(n1, n2);
 

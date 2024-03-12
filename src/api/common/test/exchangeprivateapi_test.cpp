@@ -171,8 +171,8 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::kTaker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, std::chrono::seconds(10),
-                            std::chrono::seconds(5), TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
   TradeContext tradeContext(market, TradeSide::kBuy);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
@@ -198,8 +198,8 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyMaker) {
   TradeContext tradeContext(market, side);
 
   PriceOptions priceOptions(PriceStrategy::kMaker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, std::chrono::seconds(10),
-                            std::chrono::seconds(5), TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));

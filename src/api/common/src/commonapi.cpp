@@ -45,7 +45,7 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
         fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
       }
       log::debug("Loaded {} fiats from cache file", fiats.size());
-      _fiatsCache.set(std::move(fiats), TimePoint(TimeInS(timeEpoch)));
+      _fiatsCache.set(std::move(fiats), TimePoint(seconds(timeEpoch)));
     }
   }
 }
@@ -168,7 +168,7 @@ void CommonAPI::updateCacheFile() const {
   const auto timeEpochIt = data.find("timeepoch");
   if (timeEpochIt != data.end()) {
     const int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
-    if (TimePoint(TimeInS(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
+    if (TimePoint(seconds(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
       return;  // No update
     }
   }
@@ -177,7 +177,7 @@ void CommonAPI::updateCacheFile() const {
     for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
       data["fiats"].emplace_back(fiatCode.str());
     }
-    data["timeepoch"] = TimestampToS(fiatsPtrLastUpdatedTimePair.second);
+    data["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
     fiatsCacheFile.write(data);
   }
 

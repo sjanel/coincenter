@@ -215,7 +215,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     if (genCoinAddressResult.contains("success")) {
       log::info("Successfully generated address");
     }
-    TimeInS sleepingTime(1);
+    seconds sleepingTime(1);
     static constexpr int kNbMaxRetries = 15;
     int nbRetries = 0;
     do {
@@ -224,7 +224,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       }
       std::this_thread::sleep_for(sleepingTime);
       result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData);
-      sleepingTime += TimeInS(1);
+      sleepingTime += seconds(1);
       ++nbRetries;
     } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
   }

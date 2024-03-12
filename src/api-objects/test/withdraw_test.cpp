@@ -13,10 +13,10 @@
 namespace cct {
 class WithdrawTest : public ::testing::Test {
  protected:
-  TimePoint tp1{TimeInMs{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{TimeInMs{std::numeric_limits<int64_t>::max() / 9000000}};
-  TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 8000000}};
-  TimePoint tp4{TimeInMs{std::numeric_limits<int64_t>::max() / 7000000}};
+  TimePoint tp1{milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{milliseconds{std::numeric_limits<int64_t>::max() / 9000000}};
+  TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
+  TimePoint tp4{milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
 
   Withdraw withdraw1{"id1", tp2, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kSuccess,
                      MonetaryAmount("0.001", "BTC")};

@@ -473,7 +473,7 @@ TradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
         TradeSide tradeSide =
             detail2["direction"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
-        ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
+        ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
       }
     }
   }
