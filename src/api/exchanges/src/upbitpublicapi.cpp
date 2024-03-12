@@ -260,7 +260,7 @@ TradesVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
     int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
     TradeSide tradeSide = detail["ask_bid"].get<std::string_view>() == "BID" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
+    ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }
   std::ranges::sort(ret);
   return ret;

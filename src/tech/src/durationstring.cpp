@@ -59,11 +59,11 @@ Duration ParseDuration(std::string_view durationStr) {
     } else if (timeUnitStr == "min") {
       ret += std::chrono::minutes(timeAmount);
     } else if (timeUnitStr == "s") {
-      ret += std::chrono::seconds(timeAmount);
+      ret += seconds(timeAmount);
     } else if (timeUnitStr == "ms") {
-      ret += std::chrono::milliseconds(timeAmount);
+      ret += milliseconds(timeAmount);
     } else if (timeUnitStr == "us") {
-      ret += std::chrono::microseconds(timeAmount);
+      ret += microseconds(timeAmount);
     } else {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
@@ -97,9 +97,9 @@ string DurationToString(Duration dur) {
     AdjustWithUnit<std::chrono::days>("d", dur, ret);
     AdjustWithUnit<std::chrono::hours>("h", dur, ret);
     AdjustWithUnit<std::chrono::minutes>("min", dur, ret);
-    AdjustWithUnit<std::chrono::seconds>("s", dur, ret);
-    AdjustWithUnit<std::chrono::milliseconds>("ms", dur, ret);
-    AdjustWithUnit<std::chrono::microseconds>("us", dur, ret);
+    AdjustWithUnit<seconds>("s", dur, ret);
+    AdjustWithUnit<milliseconds>("ms", dur, ret);
+    AdjustWithUnit<microseconds>("us", dur, ret);
   }
 
   return ret;

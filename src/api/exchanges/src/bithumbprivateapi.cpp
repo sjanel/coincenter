@@ -130,7 +130,7 @@ bool LoadCurrencyInfoField(const json& currencyOrderInfoJson, std::string_view k
       val = valIt->get<ValueType>();
       log::debug("Loaded {} for '{}' from cache file", val, keyStr);
     }
-    ts = TimePoint(std::chrono::seconds(tsIt->get<int64_t>()));
+    ts = TimePoint(seconds(tsIt->get<int64_t>()));
     return true;
   }
   return false;
@@ -144,7 +144,7 @@ json CurrencyOrderInfoField2Json(const ValueType& val, TimePoint ts) {
   } else {
     data.emplace(kValueKeyStr, val);
   }
-  data.emplace(kTimestampKeyStr, TimestampToS(ts));
+  data.emplace(kTimestampKeyStr, TimestampToSecondsSinceEpoch(ts));
   return data;
 }
 
@@ -415,7 +415,7 @@ TimePoint RetrieveTimePointFromTrxJson(const json& trx, std::string_view fieldNa
     throw exception("Cannot understand '{}' parameter type", fieldName);
   }
 
-  return TimePoint{TimeInUs(microsecondsSinceEpoch)};
+  return TimePoint{microseconds(microsecondsSinceEpoch)};
 }
 
 auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePublic& exchangePublic,
@@ -470,7 +470,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
 
   OrderVectorType orders;
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("after", TimestampToMs(ordersConstraints.placedAfter()));
+    params.append("after", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
   }
   if (orderCurrencies.size() > 1) {
     if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
@@ -542,7 +542,7 @@ string GenerateDepositIdFromTrx(TimePoint timestamp, const json& trx) {
   // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
   string id{trx[kOrderCurrencyParamStr].get<std::string_view>()};
   id.push_back('-');
-  AppendString(id, TimestampToMs(timestamp));
+  AppendString(id, TimestampToMillisecondsSinceEpoch(timestamp));
   return id;
 }
 
@@ -1079,7 +1079,7 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
 
   // Query the withdraws, hopefully we will be able to find our withdraw
   json newWithdrawTrx;
-  TimeInS sleepingTime(1);
+  seconds sleepingTime(1);
   static constexpr int kNbRetriesCatchWindow = 15;
   for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTrx.empty(); ++retryPos) {
     if (retryPos != 0) {

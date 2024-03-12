@@ -41,7 +41,7 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
   if (!data.empty()) {
     const auto nowTime = Clock::now();
     for (const auto& [exchangeName, exchangeData] : data.items()) {
-      TimePoint lastUpdatedTime(TimeInS(exchangeData["timeepoch"].get<int64_t>()));
+      TimePoint lastUpdatedTime(seconds(exchangeData["timeepoch"].get<int64_t>()));
       if (nowTime < lastUpdatedTime + minDurationBetweenQueries) {
         // we can reuse file data
         WithdrawalInfoMaps withdrawalInfoMaps;
@@ -93,7 +93,7 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
       const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
 
       json exchangeData;
-      exchangeData["timeepoch"] = TimestampToS(latestUpdate);
+      exchangeData["timeepoch"] = TimestampToSecondsSinceEpoch(latestUpdate);
       for (const auto withdrawFee : withdrawalInfoMaps.first) {
         string curCodeStr = withdrawFee.currencyCode().str();
         exchangeData["assets"][curCodeStr]["min"] =

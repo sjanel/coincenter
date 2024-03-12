@@ -106,7 +106,7 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
 
 bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
                        Duration& queryDelay) {
-  static constexpr Duration kInitialDurationQueryDelay = TimeInMs(200);
+  static constexpr Duration kInitialDurationQueryDelay = milliseconds(200);
   switch (statusCode) {
     case kInvalidTimestamp: {
       auto msgIt = ret.find("msg");
@@ -304,7 +304,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json& ordersAr
     }
     const auto placedTimeMsSinceEpoch = orderDetails["time"].get<int64_t>();
 
-    const TimePoint placedTime{TimeInMs(placedTimeMsSinceEpoch)};
+    const TimePoint placedTime{milliseconds(placedTimeMsSinceEpoch)};
     if (!ordersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -336,7 +336,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json& ordersAr
       orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
     } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
       const auto matchedTimeMsSinceEpoch = orderDetails["updateTime"].get<int64_t>();
-      const TimePoint matchedTime{TimeInMs(matchedTimeMsSinceEpoch)};
+      const TimePoint matchedTime{milliseconds(matchedTimeMsSinceEpoch)};
 
       orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
     } else {
@@ -357,10 +357,10 @@ ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& clo
       return closedOrders;
     }
     if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-      params.append("startTime", TimestampToMs(closedOrdersConstraints.placedAfter()));
+      params.append("startTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
     }
     if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-      params.append("endTime", TimestampToMs(closedOrdersConstraints.placedBefore()));
+      params.append("endTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
     }
     const json result =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
@@ -464,10 +464,10 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
     options.append("coin", depositsConstraints.currencyCode().str());
   }
   if (depositsConstraints.isTimeAfterDefined()) {
-    options.append("startTime", TimestampToMs(depositsConstraints.timeAfter()));
+    options.append("startTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
   }
   if (depositsConstraints.isTimeBeforeDefined()) {
-    options.append("endTime", TimestampToMs(depositsConstraints.timeBefore()));
+    options.append("endTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
   }
   if (depositsConstraints.isIdDefined()) {
     if (depositsConstraints.idSet().size() == 1) {
@@ -484,7 +484,7 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
     string& id = depositDetail["id"].get_ref<string&>();
     MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
     int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
-    TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
+    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
 
     deposits.emplace_back(std::move(id), timestamp, amountReceived, status);
   }
@@ -544,7 +544,7 @@ TimePoint RetrieveTimeStampFromWithdrawJson(const json& withdrawJson) {
   } else {
     millisecondsSinceEpoch = withdrawJson["applyTime"].get<int64_t>();
   }
-  return TimePoint{TimeInMs(millisecondsSinceEpoch)};
+  return TimePoint{milliseconds(millisecondsSinceEpoch)};
 }
 
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
@@ -553,10 +553,10 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
     options.append("coin", withdrawsConstraints.currencyCode().str());
   }
   if (withdrawsConstraints.isTimeAfterDefined()) {
-    options.append("startTime", TimestampToMs(withdrawsConstraints.timeAfter()));
+    options.append("startTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
   }
   if (withdrawsConstraints.isTimeBeforeDefined()) {
-    options.append("endTime", TimestampToMs(withdrawsConstraints.timeBefore()));
+    options.append("endTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
   }
   return options;
 }
@@ -786,7 +786,7 @@ MonetaryAmount BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo
         MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
         int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
 
-        TimePoint timestamp{TimeInMs(millisecondsSinceEpoch)};
+        TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
 
         closestRecentDepositPicker.addDeposit(RecentDeposit(amountReceived, timestamp));
       }

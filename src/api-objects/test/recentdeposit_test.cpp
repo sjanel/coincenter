@@ -33,7 +33,7 @@ class RecentDepositTest : public ::testing::Test {
   }
 
   void setRecentDepositsDifferentAmounts() {
-    closestRecentDepositPicker.addDeposit(RecentDeposit(MonetaryAmount(37), refTimePoint - std::chrono::seconds(6)));
+    closestRecentDepositPicker.addDeposit(RecentDeposit(MonetaryAmount(37), refTimePoint - seconds(6)));
     closestRecentDepositPicker.addDeposit(RecentDeposit(MonetaryAmount("37.5"), refTimePoint - std::chrono::hours(2)));
     closestRecentDepositPicker.addDeposit(RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(8)));
     closestRecentDepositPicker.addDeposit(RecentDeposit(MonetaryAmount(32), refTimePoint - std::chrono::hours(1)));

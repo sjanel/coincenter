@@ -206,10 +206,10 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
   CurlPostData params;
 
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-    params.append("end-time", TimestampToMs(closedOrdersConstraints.placedBefore()));
+    params.append("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
   }
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("start-time", TimestampToMs(closedOrdersConstraints.placedAfter()));
+    params.append("start-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
   }
 
   if (closedOrdersConstraints.isMarketDefined()) {
@@ -250,7 +250,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
       continue;
     }
 
-    TimePoint placedTime{TimeInMs(orderDetails["created-at"].get<int64_t>())};
+    TimePoint placedTime{milliseconds(orderDetails["created-at"].get<int64_t>())};
 
     string idStr = ToString(orderDetails["id"].get<int64_t>());
 
@@ -258,7 +258,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
       continue;
     }
 
-    TimePoint matchedTime{TimeInMs(orderDetails["finished-at"].get<int64_t>())};
+    TimePoint matchedTime{milliseconds(orderDetails["finished-at"].get<int64_t>())};
 
     // 'field' seems to be a typo here (instead of 'filled), but it's really sent by Huobi like that.
     MonetaryAmount matchedVolume(orderDetails["field-amount"].get<std::string_view>(), optMarket->base());
@@ -313,7 +313,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
 
     int64_t millisecondsSinceEpoch = orderDetails["created-at"].get<int64_t>();
 
-    TimePoint placedTime{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint placedTime{milliseconds(millisecondsSinceEpoch)};
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
       continue;
     }
@@ -384,7 +384,7 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
     CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
     int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
-    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
     if (!depositsConstraints.validateTime(timestamp)) {
       continue;
     }
@@ -508,7 +508,7 @@ WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
     MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<double>(), currencyCode);
     MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
     int64_t millisecondsSinceEpoch = withdrawDetail["updated-at"].get<int64_t>();
-    TimePoint timestamp{std::chrono::milliseconds(millisecondsSinceEpoch)};
+    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
     if (!withdrawsConstraints.validateTime(timestamp)) {
       continue;
     }

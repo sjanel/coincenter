@@ -10,6 +10,7 @@
 #include "exchangeconfigparser.hpp"
 #include "loadconfiguration.hpp"
 #include "monetaryamount.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 class ExchangeConfigTest : public ::testing::Test {
@@ -41,8 +42,8 @@ TEST_F(ExchangeConfigTest, TradeFees) {
 }
 
 TEST_F(ExchangeConfigTest, Query) {
-  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(binanceExchangeInfo.publicAPIRate()).count(), 1236);
-  EXPECT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(binanceExchangeInfo.privateAPIRate()).count(), 1055);
+  EXPECT_EQ(std::chrono::duration_cast<milliseconds>(binanceExchangeInfo.publicAPIRate()).count(), 1236);
+  EXPECT_EQ(std::chrono::duration_cast<milliseconds>(binanceExchangeInfo.privateAPIRate()).count(), 1055);
 }
 
 TEST_F(ExchangeConfigTest, MiscellaneousOptions) {

@@ -56,7 +56,7 @@ TimePoint FromString(std::string_view timeStr, const char* format) {
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
   const auto nowTime = Clock::now();
-  return ToString(std::chrono::duration_cast<std::chrono::milliseconds>(nowTime.time_since_epoch() + delay).count());
+  return ToString(std::chrono::duration_cast<milliseconds>(nowTime.time_since_epoch() + delay).count());
 }
 
 }  // namespace cct

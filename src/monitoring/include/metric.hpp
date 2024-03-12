@@ -1,12 +1,12 @@
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 #include <string_view>
 
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "flatkeyvaluestring.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 // Metric type (and documentation) is extracted from Prometheus model
@@ -42,7 +42,7 @@ struct MetricSummaryInfo {
   using trivially_relocatable = is_trivially_relocatable<Quantiles>::type;
 
   Quantiles quantiles;
-  std::chrono::milliseconds max_age = std::chrono::seconds{60};
+  milliseconds max_age = seconds{60};
   int age_buckets = 5;
 };
 

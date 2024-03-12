@@ -12,9 +12,9 @@ namespace cct {
 
 class ClosedOrderTest : public ::testing::Test {
  protected:
-  TimePoint tp1{TimeInMs{std::numeric_limits<int64_t>::max() / 10000000}};
-  TimePoint tp2{TimeInMs{std::numeric_limits<int64_t>::max() / 9900000}};
-  TimePoint tp3{TimeInMs{std::numeric_limits<int64_t>::max() / 9800000}};
+  TimePoint tp1{milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
+  TimePoint tp2{milliseconds{std::numeric_limits<int64_t>::max() / 9900000}};
+  TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 9800000}};
 
   ClosedOrder closedOrder1{"1", MonetaryAmount(15, "BTC", 1), MonetaryAmount(35000, "USDT"), tp1, tp1, TradeSide::kBuy};
   ClosedOrder closedOrder2{"2", MonetaryAmount(25, "BTC", 1), MonetaryAmount(45000, "USDT"), tp2, tp3, TradeSide::kBuy};
@@ -39,6 +39,6 @@ TEST_F(ClosedOrderTest, Merge) {
   EXPECT_EQ(mergedClosedOrder.matchedVolume(), closedOrder1.matchedVolume() + closedOrder2.matchedVolume());
   EXPECT_EQ(mergedClosedOrder.price(), MonetaryAmount(41250, closedOrder1.price().currencyCode()));
   EXPECT_EQ(mergedClosedOrder.market(), closedOrder1.market());
-  EXPECT_EQ(mergedClosedOrder.matchedTime(), TimePoint{TimeInMs{934101708833}});
+  EXPECT_EQ(mergedClosedOrder.matchedTime(), TimePoint{milliseconds{934101708833}});
 }
 }  // namespace cct

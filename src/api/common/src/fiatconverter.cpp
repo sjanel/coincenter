@@ -68,7 +68,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
     const int64_t timeStamp = rateAndTimeData["timeepoch"];
 
     log::trace("Stored rate {} for market {} from {}", rate, marketStr, kRatesCacheFile);
-    _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(TimeInS(timeStamp))});
+    _pricesMap.insert_or_assign(Market(marketStr, '-'), PriceTimedValue{rate, TimePoint(seconds(timeStamp))});
   }
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }
@@ -83,7 +83,7 @@ void FiatConverter::updateCacheFile() const {
     const string marketPairStr = market.assetsPairStrUpper('-');
 
     data[marketPairStr]["rate"] = priceTimeValue.rate;
-    data[marketPairStr]["timeepoch"] = TimestampToS(priceTimeValue.lastUpdatedTime);
+    data[marketPairStr]["timeepoch"] = TimestampToSecondsSinceEpoch(priceTimeValue.lastUpdatedTime);
   }
   GetRatesCacheFile(_dataDir).write(data);
 }

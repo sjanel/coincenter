@@ -29,7 +29,7 @@ class WithdrawOptions {
  private:
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.
   /// A very small value is not relevant as withdraw time order of magnitude are minutes or hours
-  static constexpr auto kWithdrawRefreshTime = std::chrono::seconds(5);
+  static constexpr auto kWithdrawRefreshTime = seconds(5);
 
   Duration _withdrawRefreshTime = kWithdrawRefreshTime;
   WithdrawSyncPolicy _withdrawSyncPolicy = WithdrawSyncPolicy::kSynchronous;

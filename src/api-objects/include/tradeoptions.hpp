@@ -12,7 +12,7 @@ namespace cct {
 class ExchangeConfig;
 class TradeOptions {
  public:
-  static constexpr Duration kDefaultMinTimeBetweenPriceUpdates = std::chrono::seconds(5);
+  static constexpr Duration kDefaultMinTimeBetweenPriceUpdates = seconds(5);
 
   constexpr TradeOptions() noexcept = default;
 

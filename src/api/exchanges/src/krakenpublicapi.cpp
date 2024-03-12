@@ -353,7 +353,7 @@ TradesVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
       int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
       TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
-      ret.emplace_back(tradeSide, amount, price, TimePoint(TimeInMs(millisecondsSinceEpoch)));
+      ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
     }
     std::ranges::sort(ret);
   }
