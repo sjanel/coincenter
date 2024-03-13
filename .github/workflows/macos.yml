@@ -19,7 +19,7 @@ jobs:
           xcode-version: latest-stable
 
       - name: Install dependencies
-        run: brew install ninja
+        run: brew install cmake ninja
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -GNinja
@@ -28,10 +28,6 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ninja
 
-      - name: Local Tests
+      - name: Tests
         working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure --exclude-regex api_test
-
-      - name: Public API Tests # Tries several times to avoid random timeout errors not coming from coincenter
-        working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure --tests-regex api_test --repeat until-pass:10
+        run: ctest -j 2 --output-on-failure

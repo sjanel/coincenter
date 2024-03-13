@@ -23,7 +23,7 @@ jobs:
       - name: Prerequisites
         run: |
           sudo apt update
-          sudo apt install libcurl4-gnutls-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake libssl-dev git libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install prometheus-cpp
         run: |
@@ -54,12 +54,7 @@ jobs:
         shell: bash
         run: ninja
 
-      - name: Local Tests
+      - name: Tests
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --exclude-regex api_test
-
-      - name: Public API Tests # Tries several times to avoid random timeout errors not coming from coincenter
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --tests-regex api_test --repeat until-pass:10
+        run: ctest -j 4 -C ${{matrix.buildmode}} --output-on-failure

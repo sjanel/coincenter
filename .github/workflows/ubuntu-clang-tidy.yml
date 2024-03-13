@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        clang-version: [17]
+        clang-version: [18]
         buildmode: [Debug]
 
     steps:
@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install libcurl4-gnutls-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake libssl-dev libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install clang (with clang-tidy)
         run: |
