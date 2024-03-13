@@ -51,7 +51,7 @@ But they have partial support which is sufficient to build `coincenter`.
 The following compilers are known to compile `coincenter` (and are tested in the CI):
 
 - **GCC** version >= 11
-- **Clang** version >= 17
+- **Clang** version >= 18
 - **MSVC** version >= 19.39
 
 Other compilers have not been tested.
