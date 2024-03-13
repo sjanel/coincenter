@@ -42,7 +42,7 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
     const auto nowTime = Clock::now();
     for (const auto& [exchangeName, exchangeData] : data.items()) {
       TimePoint lastUpdatedTime(seconds(exchangeData["timeepoch"].get<int64_t>()));
-      if (nowTime < lastUpdatedTime + minDurationBetweenQueries) {
+      if (nowTime - lastUpdatedTime < minDurationBetweenQueries) {
         // we can reuse file data
         WithdrawalInfoMaps withdrawalInfoMaps;
 

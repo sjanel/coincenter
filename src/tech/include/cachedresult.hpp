@@ -78,7 +78,7 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
   template <class... Args>
   const ResultType &get(Args &&...funcArgs) {
     TKey key(std::forward<Args &&>(funcArgs)...);
-    auto t = ClockT::now();
+    auto nowTime = ClockT::now();
     auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
     if (this->_state == State::kForceUniqueRefresh) {
       _cachedResultsMap.clear();
@@ -86,11 +86,10 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
     }
     auto it = _cachedResultsMap.find(key);
     if (it == _cachedResultsMap.end()) {
-      TValue val(std::apply(flattenTuple, key), t);
+      TValue val(std::apply(flattenTuple, key), nowTime);
       it = _cachedResultsMap.insert_or_assign(std::move(key), std::move(val)).first;
-    } else if (this->_state != State::kForceCache && this->_refreshPeriod != Duration::max() &&
-               it->second.second + this->_refreshPeriod < t) {
-      it->second = TValue(std::apply(flattenTuple, std::move(key)), t);
+    } else if (this->_state != State::kForceCache && this->_refreshPeriod < nowTime - it->second.second) {
+      it->second = TValue(std::apply(flattenTuple, std::move(key)), nowTime);
     }
     return it->second.first;
   }
