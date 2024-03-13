@@ -13,9 +13,9 @@
 namespace cct {
 
 TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
-                           Duration dur, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
+                           Duration maxTradeTime, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
                            TradeSyncPolicy tradeSyncPolicy)
-    : _maxTradeTime(dur),
+    : _maxTradeTime(maxTradeTime),
       _minTimeBetweenPriceUpdates(minTimeBetweenPriceUpdates),
       _priceOptions(priceOptions),
       _timeoutAction(timeoutAction),

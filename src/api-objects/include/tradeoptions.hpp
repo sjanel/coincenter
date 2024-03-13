@@ -22,8 +22,8 @@ class TradeOptions {
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
-  TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode, Duration dur,
-               Duration minTimeBetweenPriceUpdates = kUndefinedDuration,
+  TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+               Duration maxTradeTime, Duration minTimeBetweenPriceUpdates = kUndefinedDuration,
                TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault,
                TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
 
