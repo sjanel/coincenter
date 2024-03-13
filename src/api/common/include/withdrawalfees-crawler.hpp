@@ -25,7 +25,7 @@ class WithdrawalFeesCrawler {
   using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
   using WithdrawalInfoMaps = std::pair<MonetaryAmountByCurrencySet, WithdrawalMinMap>;
 
-  WithdrawalInfoMaps get(std::string_view exchangeName) { return _withdrawalFeesCache.get(exchangeName); }
+  const WithdrawalInfoMaps& get(std::string_view exchangeName) { return _withdrawalFeesCache.get(exchangeName); }
 
   void updateCacheFile() const;
 

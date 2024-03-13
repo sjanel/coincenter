@@ -37,7 +37,7 @@ class CommonAPI : public ExchangeBase {
   bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode);
 
   /// Query withdrawal fees from crawler sources. It's not guaranteed to work though.
-  WithdrawalFeesCrawler::WithdrawalInfoMaps queryWithdrawalFees(std::string_view exchangeName);
+  const WithdrawalFeesCrawler::WithdrawalInfoMaps &queryWithdrawalFees(std::string_view exchangeName);
 
   void updateCacheFile() const override;
 

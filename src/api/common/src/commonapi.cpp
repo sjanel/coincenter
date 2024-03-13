@@ -57,7 +57,7 @@ CommonAPI::Fiats CommonAPI::queryFiats() {
 
 bool CommonAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return queryFiats().contains(currencyCode); }
 
-WithdrawalFeesCrawler::WithdrawalInfoMaps CommonAPI::queryWithdrawalFees(std::string_view exchangeName) {
+const WithdrawalFeesCrawler::WithdrawalInfoMaps& CommonAPI::queryWithdrawalFees(std::string_view exchangeName) {
   std::lock_guard<std::mutex> guard(_globalMutex);
   return _withdrawalFeesCrawler.get(exchangeName);
 }

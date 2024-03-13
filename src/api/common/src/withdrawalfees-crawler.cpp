@@ -58,7 +58,15 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
           withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
         }
 
-        _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, exchangeName);
+        // Warning: we store a std::string_view in the cache, and 'exchangeName' will be destroyed at the end
+        // of this function. So we need to retrieve the 'constant' std::string_view of this exchange (in static memory)
+        // to store in the cache.
+        auto constantExchangeNameSVIt = std::ranges::find(kSupportedExchanges, exchangeName);
+        if (constantExchangeNameSVIt == std::end(kSupportedExchanges)) {
+          throw exception("unknown exchange name {}", exchangeName);
+        }
+
+        _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, *constantExchangeNameSVIt);
       }
     }
   }
