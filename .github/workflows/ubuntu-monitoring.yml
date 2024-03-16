@@ -48,7 +48,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -GNinja
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
 
       - name: Build
         working-directory: ${{github.workspace}}/build
