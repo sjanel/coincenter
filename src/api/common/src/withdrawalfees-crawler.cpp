@@ -1,5 +1,6 @@
 #include "withdrawalfees-crawler.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>

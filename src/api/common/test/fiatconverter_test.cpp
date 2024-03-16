@@ -102,10 +102,10 @@ class FiatConverterTest : public ::testing::Test {
 TEST_F(FiatConverterTest, DirectConversion) {
   constexpr double amount = 10;
 
-  AreDoubleEqual(converter.convert(amount, "KRW", "KRW").value(), amount);
-  AreDoubleEqual(converter.convert(amount, "EUR", "KRW").value(), amount * kKRW);
-  AreDoubleEqual(converter.convert(amount, "EUR", "USD").value(), amount * kUSD);
-  AreDoubleEqual(converter.convert(amount, "EUR", "GBP").value(), amount * kGBP);
+  AreDoubleEqual(converter.convert(amount, "KRW", "KRW").value_or(0), amount);
+  AreDoubleEqual(converter.convert(amount, "EUR", "KRW").value_or(0), amount * kKRW);
+  AreDoubleEqual(converter.convert(amount, "EUR", "USD").value_or(0), amount * kUSD);
+  AreDoubleEqual(converter.convert(amount, "EUR", "GBP").value_or(0), amount * kGBP);
 
   EXPECT_EQ(converter.convert(amount, "EUR", "SUSHI"), 367.8);
 }
@@ -113,9 +113,9 @@ TEST_F(FiatConverterTest, DirectConversion) {
 TEST_F(FiatConverterTest, DoubleConversion) {
   constexpr double amount = 20'000'000;
 
-  AreDoubleEqual(converter.convert(amount, "KRW", "EUR").value(), amount / kKRW);
-  AreDoubleEqual(converter.convert(amount, "KRW", "USD").value(), (amount / kKRW) * kUSD);
-  AreDoubleEqual(converter.convert(amount, "GBP", "USD").value(), (amount / kGBP) * kUSD);
+  AreDoubleEqual(converter.convert(amount, "KRW", "EUR").value_or(0), amount / kKRW);
+  AreDoubleEqual(converter.convert(amount, "KRW", "USD").value_or(0), (amount / kKRW) * kUSD);
+  AreDoubleEqual(converter.convert(amount, "GBP", "USD").value_or(0), (amount / kGBP) * kUSD);
 
   EXPECT_EQ(converter.convert(amount, "SUSHI", "KRW"), 729679173.46383917);
 }

@@ -61,7 +61,7 @@ class ExchangesBaseTest : public ::testing::Test {
   static constexpr MonetaryAmount askPrice1{230045, "EUR", 2};
   static constexpr MonetaryAmount bidPrice1{23004, "EUR", 1};
 
-  TimePoint time{};
+  TimePoint time;
 
   MarketOrderBook marketOrderBook10{
       time, askPrice1, MonetaryAmount(109, "ETH", 2), bidPrice1, MonetaryAmount(41, "ETH"), volAndPriDec1, depth};

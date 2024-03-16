@@ -99,7 +99,7 @@ class ExchangePrivateTest : public ::testing::Test {
 
   VolAndPriNbDecimals volAndPriDec{2, 2};
   int depth = 15;
-  TimePoint time{};
+  TimePoint time;
 
   MonetaryAmount askPrice1{"2300.45 EUR"};
   MonetaryAmount bidPrice1{"2300.4 EUR"};

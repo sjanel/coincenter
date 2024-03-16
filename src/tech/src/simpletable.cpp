@@ -46,7 +46,7 @@ template <class>
 constexpr bool always_false_v = false;
 }  // namespace
 
-SimpleTable::size_type SimpleTable::CellLine::width() const noexcept {
+SimpleTable::size_type SimpleTable::CellLine::width() const {
   return std::visit(
       [](auto &&val) -> size_type {
         using T = std::decay_t<decltype(val)>;
@@ -84,7 +84,7 @@ std::ostream &operator<<(std::ostream &os, const SimpleTable::CellLine &singleLi
   return os;
 }
 
-SimpleTable::Cell::size_type SimpleTable::Cell::width() const noexcept {
+SimpleTable::Cell::size_type SimpleTable::Cell::width() const {
   const auto maxWidthLineIt = std::ranges::max_element(
       _singleLineCells, [](const auto &lhs, const auto &rhs) { return lhs.width() < rhs.width(); });
   return maxWidthLineIt == _singleLineCells.end() ? size_type{} : maxWidthLineIt->width();

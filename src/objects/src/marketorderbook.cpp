@@ -10,16 +10,19 @@
 #include <string_view>
 #include <utility>
 
+#include "amount-price.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "order-book-line.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "simpletable.hpp"
 #include "timedef.hpp"
+#include "tradeside.hpp"
 #include "unreachable.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
@@ -49,12 +52,17 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, const Marke
       throw exception("Invalid market order book currencies");
     }
 
-    const auto amountIntegral = orderBookLine.amount().amount(_volAndPriNbDecimals.volNbDecimals);
-    const auto priceIntegral = orderBookLine.price().amount(_volAndPriNbDecimals.priNbDecimals);
+    const auto optAmountInt = orderBookLine.amount().amount(_volAndPriNbDecimals.volNbDecimals);
+    if (!optAmountInt) {
+      throw exception("Unable to retrieve amount");
+    }
+    const auto optPriceInt = orderBookLine.price().amount(_volAndPriNbDecimals.priNbDecimals);
+    if (!optPriceInt) {
+      throw exception("Unable to retrieve price");
+    }
 
-    // Usage of std::optional::value() instead of operator* here to throw an exception if the value is not present.
     // It's not expected at this point to not have a value for asked number of decimals
-    _orders.emplace_back(amountIntegral.value(), priceIntegral.value());
+    _orders.emplace_back(*optAmountInt, *optPriceInt);
   }
 
   std::ranges::sort(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; });

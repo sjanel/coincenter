@@ -68,7 +68,7 @@ class SimpleTable {
     explicit CellLine(std::integral auto val) : _data(val) {}
 
     // Number of chars of this single line cell value.
-    size_type width() const noexcept;
+    size_type width() const;
 
     void swap(CellLine &rhs) noexcept { _data.swap(rhs._data); }
 
@@ -129,7 +129,7 @@ class SimpleTable {
 
     size_type size() const noexcept { return _singleLineCells.size(); }
 
-    size_type width() const noexcept;
+    size_type width() const;
 
     value_type &operator[](size_type cellPos) { return _singleLineCells[cellPos]; }
     const value_type &operator[](size_type cellPos) const { return _singleLineCells[cellPos]; }

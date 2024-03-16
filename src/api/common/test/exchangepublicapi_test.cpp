@@ -107,8 +107,8 @@ TEST_F(ExchangePublicTest, FindCurrenciesPath) {
 TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(::testing::Return(markets));
 
-  EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW").value(), Market("BTC", "KRW"));
-  EXPECT_EQ(ExchangePublic::RetrieveMarket("KRW", "BTC", markets).value(), Market("BTC", "KRW"));
+  EXPECT_EQ(exchangePublic.retrieveMarket("BTC", "KRW").value_or(Market()), Market("BTC", "KRW"));
+  EXPECT_EQ(ExchangePublic::RetrieveMarket("KRW", "BTC", markets).value_or(Market()), Market("BTC", "KRW"));
   EXPECT_FALSE(ExchangePublic::RetrieveMarket("EUR", "EOS", markets).has_value());
 }
 
@@ -118,7 +118,7 @@ class ExchangePublicConvertTest : public ExchangePublicTest {
 
   VolAndPriNbDecimals volAndPriDec1{2, 6};
   int depth = 10;
-  TimePoint time{};
+  TimePoint time;
 
   MonetaryAmount askPrice1{"0.000017 BTC"};
   MonetaryAmount bidPrice1{"0.000016 BTC"};
@@ -189,8 +189,7 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
       marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
   res = exchangePublic.exchangeConfig().applyFee(
       marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
-
-  EXPECT_EQ(ret.value(), res);
+  EXPECT_EQ(ret.value_or(MonetaryAmount{}), res);
 }
 
 TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtBeginning) {
@@ -208,10 +207,10 @@ TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtBeginning) {
   ASSERT_TRUE(optRes.has_value());
 
   MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook3.convert(optRes.value(), priceOptions).value_or(MonetaryAmount{-1}),
+      marketOrderBook3.convert(optRes.value_or(MonetaryAmount{}), priceOptions).value_or(MonetaryAmount{-1}),
       ExchangeConfig::FeeType::kMaker);
 
-  EXPECT_EQ(ret.value(), res);
+  EXPECT_EQ(ret.value_or(MonetaryAmount{}), res);
 }
 
 TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtEnd) {

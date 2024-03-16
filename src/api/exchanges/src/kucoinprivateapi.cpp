@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "apikey.hpp"
@@ -30,6 +31,7 @@
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "httprequesttype.hpp"
 #include "kucoinpublicapi.hpp"
