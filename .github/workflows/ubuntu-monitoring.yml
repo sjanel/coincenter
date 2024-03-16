@@ -23,6 +23,7 @@ jobs:
       - name: Prerequisites
         run: |
           sudo apt update
+          sudo apt upgrade -y
           sudo apt install cmake libssl-dev git libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install prometheus-cpp
