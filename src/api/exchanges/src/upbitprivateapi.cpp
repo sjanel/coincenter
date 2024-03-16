@@ -575,7 +575,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const Market mk = tradeInfo.tradeContext.mk;
 
   const std::string_view askOrBid = fromCurrencyCode == mk.base() ? "ask" : "bid";
-  const std::string_view orderType = isTakerStrategy ? (fromCurrencyCode == mk.base() ? "market" : "price") : "limit";
+  const std::string_view marketOrPrice = fromCurrencyCode == mk.base() ? "market" : "price";
+  const std::string_view orderType = isTakerStrategy ? marketOrPrice : "limit";
 
   CurlPostData placePostData{
       {"market", UpbitPublic::ReverseMarketStr(mk)}, {"side", askOrBid}, {"ord_type", orderType}};

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <limits>
 
 #include "monetaryamount.hpp"

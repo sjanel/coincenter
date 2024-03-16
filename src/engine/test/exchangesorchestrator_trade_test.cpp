@@ -244,7 +244,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount askPri2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
     MonetaryAmount bidPri1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
     MonetaryAmount bidPri2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
-    TimePoint time{};
+    TimePoint time;
     MarketOrderBook marketOrderbook1{
         time, askPri1, maxVol1, bidPri1, maxVol1, volAndPriDec1, MarketOrderBook::kDefaultDepth};
     MarketOrderBook marketOrderbook2{

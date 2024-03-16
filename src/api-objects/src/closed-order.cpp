@@ -5,6 +5,7 @@
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "order.hpp"
+#include "orderid.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradeside.hpp"
@@ -33,6 +34,6 @@ ClosedOrder ClosedOrder::mergeWith(const ClosedOrder &closedOrder) const {
         ((matchedVolume().toNeutral() * price()) + (closedOrder.matchedVolume().toNeutral() * closedOrder.price())) /
         totalMatchedVolume.toNeutral();
   }
-  return ClosedOrder(id(), totalMatchedVolume, avgPrice, placedTime(), avgMatchedTime, side());
+  return {id(), totalMatchedVolume, avgPrice, placedTime(), avgMatchedTime, side()};
 }
 }  // namespace cct

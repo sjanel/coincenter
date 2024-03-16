@@ -4,7 +4,6 @@
 
 #include <initializer_list>
 #include <optional>
-#include <utility>
 
 #include "cct_exception.hpp"
 #include "market.hpp"
@@ -155,7 +154,7 @@ TEST_F(MarketOrderBookTestCase1, Convert) {
 
 class MarketOrderBookTestCase2 : public ::testing::Test {
  protected:
-  TimePoint time{};
+  TimePoint time;
   MarketOrderBook marketOrderBook{
       time, Market("APM", "KRW"),
       CreateMarketOrderBookLines(
@@ -210,7 +209,7 @@ TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsSell) {
 
 class MarketOrderBookTestCase3 : public ::testing::Test {
  protected:
-  TimePoint time{};
+  TimePoint time;
   MarketOrderBook marketOrderBook{
       time, Market("XLM", "BTC"),
       CreateMarketOrderBookLines({OrderBookLine(MonetaryAmount("126881.164", "XLM"),
@@ -253,7 +252,7 @@ TEST_F(MarketOrderBookTestCase3, AvgPriceAndMatchedVolume) {
 
 class MarketOrderBookTestCaseExtended1 : public ::testing::Test {
  protected:
-  TimePoint time{};
+  TimePoint time;
   MarketOrderBook marketOrderBook{time,
                                   MonetaryAmount("2300.45 EUR"),
                                   MonetaryAmount("193.09 ADA"),

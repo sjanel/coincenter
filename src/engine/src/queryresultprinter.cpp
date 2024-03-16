@@ -761,6 +761,7 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
         string canDeposit;
         string canWithdraw;
         std::optional<bool> isFiat;
+        const Exchange *pPrevExchange = nullptr;
         for (const auto &[exchange, currencies] : currenciesPerExchange) {
           auto it = currencies.find(cur);
           if (it != currencies.end()) {
@@ -781,15 +782,17 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
             if (!isFiat) {
               isFiat = it->isFiat();
             } else if (*isFiat != it->isFiat()) {
-              log::error("Currency {} is fiat for an exchange and not fiat for another ('{}'), consider not fiat", cur,
-                         exchange->name());
+              log::warn("{} and {} disagree on whether {} is a fiat - consider not fiat", pPrevExchange->name(),
+                        exchange->name(), cur);
               isFiat = false;
             }
           }
+          pPrevExchange = exchange;
         }
 
         simpleTable.emplace_back(cur.str(), std::move(supportedExchanges), std::move(exchangeCodes),
-                                 std::move(altCodes), std::move(canDeposit), std::move(canWithdraw), isFiat.value());
+                                 std::move(altCodes), std::move(canDeposit), std::move(canWithdraw),
+                                 isFiat.value_or(false));
       }
 
       printTable(simpleTable);

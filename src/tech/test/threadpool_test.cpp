@@ -2,7 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <forward_list>
+#include <functional>
 #include <future>
 #include <numeric>
 #include <stdexcept>
@@ -29,16 +31,21 @@ int SlowAdd(const int &lhs, const int &rhs) {
 }
 
 struct NonCopyable {
-  NonCopyable(int i = 0) : i(i) {}
+  NonCopyable(int val = 0) : val(val) {}
 
   NonCopyable(const NonCopyable &) = delete;
+  NonCopyable(NonCopyable &&) = default;
+  NonCopyable &operator=(const NonCopyable &) = delete;
+  NonCopyable &operator=(NonCopyable &&) = default;
 
-  int i;
+  ~NonCopyable() = default;
+
+  int val;
 };
 
 int SlowDoubleNonCopyable(const NonCopyable &val) {
   std::this_thread::sleep_for(10ms);
-  return val.i * 2;
+  return val.val * 2;
 }
 }  // namespace
 
@@ -107,12 +114,15 @@ TEST(ThreadPoolTest, ParallelTransformException) {
   std::iota(data.begin(), data.end(), 40);
   vector<int> res(data.size(), 40);
 
+  bool exceptionThrown = false;
+
   try {
     threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
-    EXPECT_TRUE(false);  // should not arrive here
   } catch (...) {
+    exceptionThrown = true;
   }
 
+  EXPECT_TRUE(exceptionThrown);
   EXPECT_EQ(res, (vector<int>{80, 82, 0, 86, 88}));
 }
 
