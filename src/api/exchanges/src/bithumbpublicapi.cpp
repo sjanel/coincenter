@@ -18,7 +18,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -35,6 +34,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
@@ -173,7 +173,7 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 }
 
 namespace {
-MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& config,
+MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config,
                                  const ExchangeConfig& exchangeConfig, std::optional<Market> optM = std::nullopt,
                                  std::optional<int> optDepth = std::nullopt) {
   MarketOrderBookMap ret;
@@ -195,11 +195,11 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
   if (!result.empty()) {
     //  Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
     //  anymore
+    const auto nowTime = Clock::now();
     std::string_view quoteCurrency = result["payment_currency"].get<std::string_view>();
     if (quoteCurrency != "KRW") {
       log::error("Unexpected Bithumb reply for orderbook. May require code api update");
     }
-    const auto time = Clock::now();
     CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
     const CurrencyCodeSet& excludedCurrencies = exchangeConfig.excludedCurrenciesAll();
     for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
@@ -231,37 +231,36 @@ MarketOrderBookMap GetOrderbooks(CurlHandle& curlHandle, const CoincenterInfo& c
           "asks": [{"quantity" : "2.67575", "price" : "506000"},
                    {"quantity" : "3.54343","price" : "507000"}]
         */
-        using OrderBookVec = vector<OrderBookLine>;
-        OrderBookVec orderBookLines;
-        orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksBids[0]->size() + asksBids[1]->size()));
+        MarketOrderBookLines orderBookLines;
+        orderBookLines.reserve(asksBids[0]->size() + asksBids[1]->size());
         for (const json* asksOrBids : asksBids) {
           const auto type = asksOrBids == asksBids[0] ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
           for (const json& priceQuantityPair : *asksOrBids) {
             MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
             MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
 
-            orderBookLines.emplace_back(amount, price, type);
+            orderBookLines.push(amount, price, type);
           }
         }
         Market market(baseCurrencyCode, quoteCurrencyCode);
-        ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
+        ret.insert_or_assign(market, MarketOrderBook(nowTime, market, orderBookLines));
         if (singleMarketQuote) {
           break;
         }
       }
     }
   }
-  log::info("Retrieved {} markets (+ orderbooks) from Bithumb", ret.size());
+  log::info("Retrieved {} markets (+ order books) from Bithumb", ret.size());
   return ret;
 }
 }  // namespace
 
 MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
-  return GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeConfig);
+  return GetOrderBooks(_curlHandle, _coincenterInfo, _exchangeConfig);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
-  MarketOrderBookMap marketOrderBookMap = GetOrderbooks(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
+  MarketOrderBookMap marketOrderBookMap = GetOrderBooks(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
   auto it = marketOrderBookMap.find(mk);
   if (it == marketOrderBookMap.end()) {
     throw exception("Cannot find {} in market order book map", mk);

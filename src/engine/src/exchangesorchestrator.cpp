@@ -188,6 +188,7 @@ BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeNam
       _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
 
   SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(selectedExchanges.size());
+
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), balancePortfolios.begin(),
       [&balanceOptions](Exchange *exchange) { return exchange->apiPrivate().getAccountBalance(balanceOptions); });

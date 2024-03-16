@@ -96,13 +96,13 @@ vector<CurrencyCode> CommonAPI::FiatsFunc::retrieveFiatsSource1() {
 
   std::string_view data = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
   if (data.empty()) {
-    log::error("Error parsing currency codes, no fiats found from first source");
+    log::warn("Error parsing currency codes, no fiats found from first source");
     return fiatsVec;
   }
   static constexpr bool kAllowExceptions = false;
   json dataCSV = json::parse(data, nullptr, kAllowExceptions);
   if (dataCSV.is_discarded()) {
-    log::error("Error parsing json data of currency codes from source 1");
+    log::warn("Error parsing json data of currency codes from source 1");
     return fiatsVec;
   }
   for (const json& fiatData : dataCSV) {
