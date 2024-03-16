@@ -71,7 +71,8 @@ Provided that your distribution is sufficiently recent, meta package `build-esse
 Otherwise you can still force it:
 
 ```bash
-sudo apt update && sudo apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
+sudo apt update
+sudo apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
 ```
 
 You can refer to the provided [Dockerfile](Dockerfile) for more information.
