@@ -28,6 +28,9 @@ jobs:
       - name: Install gcc
         run: |
           sudo apt install ${{matrix.compiler}} -y --no-install-recommends
+
+          # Temporary workaround for libasan bug stated here: https://github.com/google/sanitizers/issues/1716
+          sudo sysctl vm.mmap_rnd_bits=28
         if: startsWith(matrix.compiler, 'g++')
 
       - name: Install clang
