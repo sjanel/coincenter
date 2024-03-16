@@ -2,23 +2,38 @@
 
 #include <gtest/gtest.h>
 
-#include <array>
+#include <initializer_list>
 #include <optional>
 #include <utility>
 
 #include "cct_exception.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "order-book-line.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
 namespace {
-using AmountAtPrice = MarketOrderBook::AmountAtPrice;
 using AmountAtPriceVec = MarketOrderBook::AmountPerPriceVec;
 }  // namespace
 
-inline bool operator==(const AmountAtPrice &lhs, const AmountAtPrice &rhs) {
+MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookLine> init) {
+  MarketOrderBookLines marketOrderBookLines;
+  marketOrderBookLines.reserve(init.size());
+
+  for (const auto &orderBookLine : init) {
+    if (orderBookLine.amount() < 0) {
+      marketOrderBookLines.pushAsk(-orderBookLine.amount(), orderBookLine.price());
+    } else {
+      marketOrderBookLines.pushBid(orderBookLine.amount(), orderBookLine.price());
+    }
+  }
+
+  return marketOrderBookLines;
+}
+
+constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;
 }
 
@@ -28,14 +43,14 @@ class MarketOrderBookTestCase1 : public ::testing::Test {
  protected:
   MarketOrderBook marketOrderBook{
       Clock::now(), Market("ETH", "EUR"),
-      std::array<OrderBookLine, 6>{
-          OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount(0, "ETH"), MonetaryAmount("1301.50", "EUR"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"),
-                        OrderBookLine::Type::kAsk)}};
+      CreateMarketOrderBookLines(
+          {OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount(0, "ETH"), MonetaryAmount("1301.50", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"),
+                         OrderBookLine::Type::kAsk)})};
 };
 
 TEST_F(MarketOrderBookTestCase1, NumberOfElements) {
@@ -50,12 +65,12 @@ TEST_F(MarketOrderBookTestCase1, MiddleElements) {
 }
 
 TEST_F(MarketOrderBookTestCase1, OperatorBrackets) {
-  EXPECT_EQ(marketOrderBook[-2], std::make_pair(MonetaryAmount("1300.5EUR"), MonetaryAmount("0.65ETH")));
-  EXPECT_EQ(marketOrderBook[-1], std::make_pair(MonetaryAmount("1301EUR"), MonetaryAmount("0.24ETH")));
-  EXPECT_EQ(marketOrderBook[0], std::make_pair(MonetaryAmount("1301.5EUR"), MonetaryAmount("0.82045ETH")));
-  EXPECT_EQ(marketOrderBook[1], std::make_pair(MonetaryAmount("1302EUR"), MonetaryAmount("1.4009ETH")));
-  EXPECT_EQ(marketOrderBook[2], std::make_pair(MonetaryAmount("1302.5EUR"), MonetaryAmount("3.78ETH")));
-  EXPECT_EQ(marketOrderBook[3], std::make_pair(MonetaryAmount("1303EUR"), MonetaryAmount("56.10001267ETH")));
+  EXPECT_EQ(marketOrderBook[-2], AmountPrice(MonetaryAmount("0.65ETH"), MonetaryAmount("1300.5EUR")));
+  EXPECT_EQ(marketOrderBook[-1], AmountPrice(MonetaryAmount("0.24ETH"), MonetaryAmount("1301EUR")));
+  EXPECT_EQ(marketOrderBook[0], AmountPrice(MonetaryAmount("0.82045ETH"), MonetaryAmount("1301.5EUR")));
+  EXPECT_EQ(marketOrderBook[1], AmountPrice(MonetaryAmount("1.4009ETH"), MonetaryAmount("1302EUR")));
+  EXPECT_EQ(marketOrderBook[2], AmountPrice(MonetaryAmount("3.78ETH"), MonetaryAmount("1302.5EUR")));
+  EXPECT_EQ(marketOrderBook[3], AmountPrice(MonetaryAmount("56.10001267ETH"), MonetaryAmount("1303EUR")));
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeCumulAmountBoughtImmediately) {
@@ -101,28 +116,28 @@ TEST_F(MarketOrderBookTestCase1, ComputeMaxPriceAtWhichAmountWouldBeBoughtImmedi
 
 TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerBuy) {
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(1000, "EUR")),
-            AmountAtPrice(MonetaryAmount("999.99999999998784", "EUR"), MonetaryAmount("1302.00000000000001", "EUR")));
+            AmountPrice(MonetaryAmount("999.99999999998784", "EUR"), MonetaryAmount("1302.00000000000001", "EUR")));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(5000, "EUR")),
-            AmountAtPrice(MonetaryAmount("4999.9999119826894", "EUR"), MonetaryAmount("1302.31755833325309", "EUR")));
+            AmountPrice(MonetaryAmount("4999.9999119826894", "EUR"), MonetaryAmount("1302.31755833325309", "EUR")));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(100000, "EUR")),
-            AmountAtPrice(MonetaryAmount("79845.737428463776", "EUR"), MonetaryAmount("1302.94629812356546", "EUR")));
+            AmountPrice(MonetaryAmount("79845.737428463776", "EUR"), MonetaryAmount("1302.94629812356546", "EUR")));
 }
 
 TEST_F(MarketOrderBookTestCase1, ComputeAvgPriceForTakerSell) {
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(24, "ETH", 2)),
-            AmountAtPrice(MonetaryAmount(24, "ETH", 2), MonetaryAmount(1301, "EUR")));
+            AmountPrice(MonetaryAmount(24, "ETH", 2), MonetaryAmount(1301, "EUR")));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(5, "ETH", 1)),
-            AmountAtPrice(MonetaryAmount(5, "ETH", 1), MonetaryAmount(130074, "EUR", 2)));
+            AmountPrice(MonetaryAmount(5, "ETH", 1), MonetaryAmount(130074, "EUR", 2)));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedAmountTaker(MonetaryAmount(4, "ETH")),
-            AmountAtPrice(MonetaryAmount(89, "ETH", 2), MonetaryAmount("1300.63483146067415", "EUR")));
+            AmountPrice(MonetaryAmount(89, "ETH", 2), MonetaryAmount("1300.63483146067415", "EUR")));
 }
 
 TEST_F(MarketOrderBookTestCase1, MoreComplexListOfPricesComputations) {
   EXPECT_EQ(marketOrderBook.computePricesAtWhichAmountWouldBeBoughtImmediately(MonetaryAmount(4, "ETH")),
-            AmountAtPriceVec({AmountAtPrice(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR")),
-                              AmountAtPrice(MonetaryAmount("2.5991", "ETH"), MonetaryAmount("1302.50", "EUR"))}));
+            AmountAtPriceVec({AmountPrice(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR")),
+                              AmountPrice(MonetaryAmount("2.5991", "ETH"), MonetaryAmount("1302.50", "EUR"))}));
   EXPECT_EQ(marketOrderBook.computePricesAtWhichAmountWouldBeSoldImmediately(MonetaryAmount("0.24", "ETH")),
-            AmountAtPriceVec({AmountAtPrice(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"))}));
+            AmountAtPriceVec({AmountPrice(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"))}));
 }
 
 TEST_F(MarketOrderBookTestCase1, ConvertBaseAmountToQuote) {
@@ -143,18 +158,19 @@ class MarketOrderBookTestCase2 : public ::testing::Test {
   TimePoint time{};
   MarketOrderBook marketOrderBook{
       time, Market("APM", "KRW"),
-      std::array<OrderBookLine, 9>{
-          OrderBookLine(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("90184.3951", "APM"), MonetaryAmount("57.81", "KRW"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("91.1713", "APM"), MonetaryAmount("57.84", "KRW"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("41.0131", "APM"), MonetaryAmount("57.9", "KRW"), OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("33.5081914157147802", "APM"), MonetaryAmount("57.78", "KRW"),
-                        OrderBookLine::Type::kAsk),
-          OrderBookLine(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.18", "KRW"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.17", "KRW"), OrderBookLine::Type::kBid),
-          OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"),
-                        OrderBookLine::Type::kBid)}};
+      CreateMarketOrderBookLines(
+          {OrderBookLine(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("90184.3951", "APM"), MonetaryAmount("57.81", "KRW"),
+                         OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("91.1713", "APM"), MonetaryAmount("57.84", "KRW"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("41.0131", "APM"), MonetaryAmount("57.9", "KRW"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("33.5081914157147802", "APM"), MonetaryAmount("57.78", "KRW"),
+                         OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.18", "KRW"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("14", "APM"), MonetaryAmount("57.17", "KRW"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"),
+                         OrderBookLine::Type::kBid)})};
 };
 
 TEST_F(MarketOrderBookTestCase2, SimpleQueries) {
@@ -173,9 +189,9 @@ TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsBuy) {
   EXPECT_EQ(
       marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
                                           MonetaryAmount("57.81", "KRW")),
-      AmountAtPriceVec({AmountAtPrice(MonetaryAmount("33.5081914157147", "APM"), MonetaryAmount("57.78", "KRW")),
-                        AmountAtPrice(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW")),
-                        AmountAtPrice(MonetaryAmount("88975.0996085842853", "APM"), MonetaryAmount("57.81", "KRW"))}));
+      AmountAtPriceVec({AmountPrice(MonetaryAmount("33.5081914157147", "APM"), MonetaryAmount("57.78", "KRW")),
+                        AmountPrice(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW")),
+                        AmountPrice(MonetaryAmount("88975.0996085842853", "APM"), MonetaryAmount("57.81", "KRW"))}));
   EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
                                                 MonetaryAmount("57.77", "KRW")),
             AmountAtPriceVec());
@@ -185,7 +201,7 @@ TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsSell) {
   EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(5000, "APM"),
                                                 MonetaryAmount("57.19", "KRW")),
             AmountAtPriceVec({
-                AmountAtPrice(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW")),
+                AmountPrice(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW")),
             }));
   EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(91000, "APM"),
                                                 MonetaryAmount("57.23", "KRW")),
@@ -197,18 +213,18 @@ class MarketOrderBookTestCase3 : public ::testing::Test {
   TimePoint time{};
   MarketOrderBook marketOrderBook{
       time, Market("XLM", "BTC"),
-      std::array<OrderBookLine, 6>{OrderBookLine(MonetaryAmount("126881.164", "XLM"),
-                                                 MonetaryAmount("0.000007130", "BTC"), OrderBookLine::Type::kAsk),
-                                   OrderBookLine(MonetaryAmount("95716.519", "XLM"),
-                                                 MonetaryAmount("0.000007120", "BTC"), OrderBookLine::Type::kAsk),
-                                   OrderBookLine(MonetaryAmount("23726.285", "XLM"),
-                                                 MonetaryAmount("0.000007110", "BTC"), OrderBookLine::Type::kAsk),
-                                   OrderBookLine(MonetaryAmount("37863.710", "XLM"),
-                                                 MonetaryAmount("0.000007100", "BTC"), OrderBookLine::Type::kBid),
-                                   OrderBookLine(MonetaryAmount("169165.594", "XLM"),
-                                                 MonetaryAmount("0.000007090", "BTC"), OrderBookLine::Type::kBid),
-                                   OrderBookLine(MonetaryAmount("204218.966", "XLM"),
-                                                 MonetaryAmount("0.000007080", "BTC"), OrderBookLine::Type::kBid)}};
+      CreateMarketOrderBookLines({OrderBookLine(MonetaryAmount("126881.164", "XLM"),
+                                                MonetaryAmount("0.000007130", "BTC"), OrderBookLine::Type::kAsk),
+                                  OrderBookLine(MonetaryAmount("95716.519", "XLM"),
+                                                MonetaryAmount("0.000007120", "BTC"), OrderBookLine::Type::kAsk),
+                                  OrderBookLine(MonetaryAmount("23726.285", "XLM"),
+                                                MonetaryAmount("0.000007110", "BTC"), OrderBookLine::Type::kAsk),
+                                  OrderBookLine(MonetaryAmount("37863.710", "XLM"),
+                                                MonetaryAmount("0.000007100", "BTC"), OrderBookLine::Type::kBid),
+                                  OrderBookLine(MonetaryAmount("169165.594", "XLM"),
+                                                MonetaryAmount("0.000007090", "BTC"), OrderBookLine::Type::kBid),
+                                  OrderBookLine(MonetaryAmount("204218.966", "XLM"),
+                                                MonetaryAmount("0.000007080", "BTC"), OrderBookLine::Type::kBid)})};
 };
 
 TEST_F(MarketOrderBookTestCase3, Convert) {
@@ -222,17 +238,17 @@ TEST_F(MarketOrderBookTestCase3, Convert) {
 TEST_F(MarketOrderBookTestCase3, AvgPriceAndMatchedVolume) {
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
                                                      MonetaryAmount("0.000007121", "BTC")),
-            AmountAtPrice(MonetaryAmount(100000, "XLM"), MonetaryAmount("0.0000071176273715", "BTC")));
+            AmountPrice(MonetaryAmount(100000, "XLM"), MonetaryAmount("0.0000071176273715", "BTC")));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
                                                      MonetaryAmount("0.000007090", "BTC")),
-            AmountAtPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
+            AmountPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
 
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
                                                      MonetaryAmount("0.000007079", "BTC")),
-            AmountAtPrice(MonetaryAmount("411248.27", "XLM"), MonetaryAmount("0.00000708595487037", "BTC")));
+            AmountPrice(MonetaryAmount("411248.27", "XLM"), MonetaryAmount("0.00000708595487037", "BTC")));
   EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
                                                      MonetaryAmount("0.000007110", "BTC")),
-            AmountAtPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
+            AmountPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
 }
 
 class MarketOrderBookTestCaseExtended1 : public ::testing::Test {

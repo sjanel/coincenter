@@ -37,6 +37,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
@@ -485,28 +486,29 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
     lb = std::next(kAuthorizedDepths.end(), -1);
     log::error("Invalid depth {}, default to {}", depth, *lb);
   }
-  using OrderBookVec = vector<OrderBookLine>;
-  OrderBookVec orderBookLines;
 
-  CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
-  json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
+  MarketOrderBookLines orderBookLines;
+
+  const CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
+  const json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
+  const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
 
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
+    orderBookLines.reserve(asksIt->size() + bidsIt->size());
     for (const auto& asksOrBids : {asksIt, bidsIt}) {
       const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityPair : *asksOrBids) {
         MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
 
-        orderBookLines.emplace_back(amount, price, type);
+        orderBookLines.push(amount, price, type);
       }
     }
   }
 
-  return MarketOrderBook(Clock::now(), mk, orderBookLines);
+  return MarketOrderBook(nowTime, mk, orderBookLines);
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {

@@ -13,7 +13,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -32,6 +31,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -299,32 +299,29 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
   string krakenAssetPair = krakenCurrencyExchangeBase.altStr();
   krakenAssetPair.append(krakenCurrencyExchangeQuote.altStr());
 
-  using OrderBookVec = vector<OrderBookLine>;
-  OrderBookVec orderBookLines;
+  MarketOrderBookLines orderBookLines;
 
   json result = PublicQuery(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
+  const auto nowTime = Clock::now();
   if (!result.empty()) {
     const json& entry = result.front();
     const auto asksIt = entry.find("asks");
     const auto bidsIt = entry.find("bids");
 
-    orderBookLines.reserve(static_cast<OrderBookVec::size_type>(asksIt->size() + bidsIt->size()));
+    orderBookLines.reserve(asksIt->size() + bidsIt->size());
     for (const auto& asksOrBids : {asksIt, bidsIt}) {
       const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityTuple : *asksOrBids) {
-        std::string_view priceStr = priceQuantityTuple[0].get<std::string_view>();
-        std::string_view amountStr = priceQuantityTuple[1].get<std::string_view>();
+        MonetaryAmount amount(priceQuantityTuple[1].get<std::string_view>(), mk.base());
+        MonetaryAmount price(priceQuantityTuple[0].get<std::string_view>(), mk.quote());
 
-        MonetaryAmount amount(amountStr, mk.base());
-        MonetaryAmount price(priceStr, mk.quote());
-
-        orderBookLines.emplace_back(amount, price, type);
+        orderBookLines.push(amount, price, type);
       }
     }
   }
 
   const auto volAndPriNbDecimals = _marketsCache.get().second.find(mk)->second.volAndPriNbDecimals;
-  return MarketOrderBook(Clock::now(), mk, orderBookLines, volAndPriNbDecimals);
+  return MarketOrderBook(nowTime, mk, orderBookLines, volAndPriNbDecimals);
 }
 
 KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market mk) {

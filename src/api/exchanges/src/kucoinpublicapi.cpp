@@ -32,6 +32,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
@@ -262,13 +263,13 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
 namespace {
 template <class InputIt>
 void FillOrderBook(Market mk, int depth, OrderBookLine::Type type, InputIt beg, InputIt end,
-                   vector<OrderBookLine>& orderBookLines) {
+                   MarketOrderBookLines& orderBookLines) {
   int currentDepth = 0;
   for (auto it = beg; it != end; ++it) {
     MonetaryAmount price((*it)[0].template get<std::string_view>(), mk.quote());
     MonetaryAmount amount((*it)[1].template get<std::string_view>(), mk.base());
 
-    orderBookLines.emplace_back(amount, price, type);
+    orderBookLines.push(amount, price, type);
     if (++currentDepth == depth) {
       if (++it != end) {
         log::debug("Truncate number of {} prices in order book to {}",
@@ -292,10 +293,10 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   string endpoint("/api/v1/market/orderbook/level2_");
   AppendString(endpoint, *lb);
 
-  using OrderBookVec = vector<OrderBookLine>;
-  OrderBookVec orderBookLines;
+  MarketOrderBookLines orderBookLines;
 
-  json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
@@ -305,7 +306,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
     FillOrderBook(mk, depth, OrderBookLine::Type::kAsk, asksIt->begin(), asksIt->end(), orderBookLines);
   }
 
-  return MarketOrderBook(Clock::now(), mk, orderBookLines);
+  return MarketOrderBook(nowTime, mk, orderBookLines);
 }
 
 MonetaryAmount KucoinPublic::sanitizePrice(Market mk, MonetaryAmount pri) {

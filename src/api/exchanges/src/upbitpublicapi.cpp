@@ -13,7 +13,6 @@
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
-#include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
@@ -33,6 +32,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -190,21 +190,26 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
       continue;
     }
 
-    SmallVector<OrderBookLine, 10> orderBookLines;
-
     /// Remember, Upbit markets are inverted, quote first then base
     CurrencyCode quote(std::string_view(marketStr.begin(), marketStr.begin() + dashPos));
     CurrencyCode base(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
     Market market(base, quote);
-    for (const json& orderbookDetails : marketDetails["orderbook_units"]) {
+
+    const auto& orderBookLinesJson = marketDetails["orderbook_units"];
+
+    MarketOrderBookLines orderBookLines;
+
+    orderBookLines.reserve(orderBookLinesJson.size() * 2U);
+
+    for (const json& orderbookDetails : orderBookLinesJson) {
       // Amounts are not strings, but doubles
       MonetaryAmount askPri(orderbookDetails["ask_price"].get<double>(), quote);
       MonetaryAmount bidPri(orderbookDetails["bid_price"].get<double>(), quote);
       MonetaryAmount askVol(orderbookDetails["ask_size"].get<double>(), base);
       MonetaryAmount bidVol(orderbookDetails["bid_size"].get<double>(), base);
 
-      orderBookLines.emplace_back(askVol, askPri, OrderBookLine::Type::kAsk);
-      orderBookLines.emplace_back(bidVol, bidPri, OrderBookLine::Type::kBid);
+      orderBookLines.pushAsk(askVol, askPri);
+      orderBookLines.pushBid(bidVol, bidPri);
 
       if (static_cast<int>(orderBookLines.size() / 2) == depth) {
         // Upbit does not have a depth parameter, the only thing we can do is to truncate it manually

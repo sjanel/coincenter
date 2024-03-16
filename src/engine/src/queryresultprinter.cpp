@@ -154,10 +154,10 @@ json TickerInformationJson(const ExchangeTickerMaps &exchangeTickerMaps) {
 
 void AppendOrderbookLine(const MarketOrderBook &marketOrderBook, int pos,
                          std::optional<MonetaryAmount> optConversionRate, json &data) {
-  auto [p, a] = marketOrderBook[pos];
+  auto [amount, price] = marketOrderBook[pos];
   json &line = data.emplace_back();
-  line.emplace("a", a.amountStr());
-  line.emplace("p", p.amountStr());
+  line.emplace("a", amount.amountStr());
+  line.emplace("p", price.amountStr());
   if (optConversionRate) {
     line.emplace("eq", optConversionRate->amountStr());
   }

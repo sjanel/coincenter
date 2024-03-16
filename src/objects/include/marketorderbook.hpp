@@ -2,13 +2,13 @@
 
 #include <cstdint>
 #include <optional>
-#include <span>
 #include <string_view>
-#include <utility>
 
+#include "amount-price.hpp"
 #include "cct_smallvector.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
+#include "order-book-line.hpp"
 #include "simpletable.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -18,43 +18,21 @@ namespace cct {
 
 class PriceOptions;
 
-/// Represents an entry in an order book, an amount at a given price.
-class OrderBookLine {
- public:
-  enum class Type : int8_t { kAsk, kBid };
-
-  /// Constructs a new OrderBookLine.
-  OrderBookLine(MonetaryAmount amount, MonetaryAmount price, Type type)
-      : _amount(type == Type::kAsk ? -amount : amount), _price(price) {}
-
- private:
-  friend class MarketOrderBook;
-
-  MonetaryAmount _amount;
-  MonetaryAmount _price;
-};
-
 /// Represents a full order book associated to a Market.
 /// Important note: all convert methods do not take fees into account, they should be handled accordingly.
 class MarketOrderBook {
  public:
   static constexpr int kDefaultDepth = 10;
 
-  using OrderBookLineSpan = std::span<const OrderBookLine>;
-
-  struct AmountAtPrice {
-    MonetaryAmount amount;
-    MonetaryAmount price;
-  };
-
-  using AmountPerPriceVec = SmallVector<AmountAtPrice, 4>;
+  using AmountPerPriceVec = SmallVector<AmountPrice, 4>;
 
   /// Constructs an empty MarketOrderBook
   MarketOrderBook() noexcept = default;
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
-  explicit MarketOrderBook(TimePoint timeStamp, Market market, OrderBookLineSpan orderLines = OrderBookLineSpan(),
+  explicit MarketOrderBook(TimePoint timeStamp, Market market,
+                           const MarketOrderBookLines& orderLines = MarketOrderBookLines(),
                            VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
 
   /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
@@ -114,11 +92,11 @@ class MarketOrderBook {
   /// Given an amount in base currency and the trade side with its price, compute the average matched amount
   /// and price
   /// @return a pair of {total matched amount in base currency, average matched price}
-  AmountAtPrice avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount, MonetaryAmount price) const;
+  AmountPrice avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount, MonetaryAmount price) const;
 
   /// Given an amount in either base or quote currency, attempt to convert it at market price immediately.
   /// @return a pair of {total matched amount in given currency, average matched price}
-  AmountAtPrice avgPriceAndMatchedAmountTaker(MonetaryAmount amountInBaseOrQuote) const;
+  AmountPrice avgPriceAndMatchedAmountTaker(MonetaryAmount amountInBaseOrQuote) const;
 
   /// Compute the matched amounts that would occur immediately if an order of given amount were placed at given price
   AmountPerPriceVec computeMatchedParts(TradeSide tradeSide, MonetaryAmount amount, MonetaryAmount price) const;
@@ -140,11 +118,11 @@ class MarketOrderBook {
   int nbAskPrices() const { return static_cast<int>(_orders.size()) - _lowestAskPricePos; }
   int nbBidPrices() const { return _lowestAskPricePos; }
 
-  /// Get a pair of {Price, Amount} of values positioned at given relative price from limit price.
-  /// At position 0, the pair will contain average limit prices and average amounts from both highest bid and lowest ask
+  /// Get an AmountPrice of values positioned at given relative price from limit price.
+  /// At position 0, it will contain average limit prices and average amounts from both highest bid and lowest ask
   /// prices.
   /// No bounds check is made.
-  std::pair<MonetaryAmount, MonetaryAmount> operator[](int relativePosToLimitPrice) const;
+  AmountPrice operator[](int relativePosToLimitPrice) const;
 
   MonetaryAmount getHighestTheoreticalPrice() const;
   MonetaryAmount getLowestTheoreticalPrice() const;
@@ -164,17 +142,17 @@ class MarketOrderBook {
  private:
   using AmountType = MonetaryAmount::AmountType;
 
-  struct AmountPrice {
+  struct AmountPriceInt {
     using AmountType = MonetaryAmount::AmountType;
 
-    bool operator==(const AmountPrice&) const noexcept = default;
+    bool operator==(const AmountPriceInt&) const noexcept = default;
 
     AmountType amount = 0;
     AmountType price = 0;
   };
 
-  // Use a SmallVector to avoid memory allocation for all order book requests (ticker)
-  using AmountPriceVector = SmallVector<AmountPrice, 2 * 1>;
+  // Use a SmallVector with one inline slot per side to avoid memory allocation for all order book requests (ticker)
+  using AmountPriceVector = SmallVector<AmountPriceInt, 2UL>;
 
  public:
   using trivially_relocatable = is_trivially_relocatable<AmountPriceVector>::type;
@@ -218,9 +196,9 @@ class MarketOrderBook {
     return MonetaryAmount(_orders[pos].price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
 
-  AmountAtPrice avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount, MonetaryAmount price) const;
+  AmountPrice avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount, MonetaryAmount price) const;
 
-  AmountAtPrice avgPriceAndMatchedVolumeBuy(MonetaryAmount amountInBaseOrQuote, MonetaryAmount price) const;
+  AmountPrice avgPriceAndMatchedVolumeBuy(MonetaryAmount amountInBaseOrQuote, MonetaryAmount price) const;
 
   /// Attempt to convert given amount expressed in base currency to quote currency.
   /// It may not be possible, in which case an empty optional will be returned.
@@ -235,8 +213,8 @@ class MarketOrderBook {
   TimePoint _time{};
   Market _market;
   AmountPriceVector _orders;
-  int _highestBidPricePos = 0;
-  int _lowestAskPricePos = 0;
+  int32_t _highestBidPricePos = 0;
+  int32_t _lowestAskPricePos = 0;
   bool _isArtificiallyExtended = false;
   VolAndPriNbDecimals _volAndPriNbDecimals;
 };

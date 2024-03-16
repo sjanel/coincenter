@@ -25,55 +25,54 @@
 
 namespace cct {
 
-MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, OrderBookLineSpan orderLines,
+MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, const MarketOrderBookLines& orderLines,
                                  VolAndPriNbDecimals volAndPriNbDecimals)
     : _time(timeStamp), _market(market), _volAndPriNbDecimals(volAndPriNbDecimals) {
-  const int nbPrices = static_cast<int>(orderLines.size());
-  _orders.reserve(nbPrices);
+  const auto nbPrices = orderLines.size();
+  if (nbPrices == 0) {
+    return;
+  }
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
     for (const OrderBookLine& orderBookLine : orderLines) {
       _volAndPriNbDecimals.volNbDecimals =
-          std::min(_volAndPriNbDecimals.volNbDecimals, orderBookLine._amount.currentMaxNbDecimals());
+          std::min(_volAndPriNbDecimals.volNbDecimals, orderBookLine.amount().currentMaxNbDecimals());
       _volAndPriNbDecimals.priNbDecimals =
-          std::min(_volAndPriNbDecimals.priNbDecimals, orderBookLine._price.currentMaxNbDecimals());
+          std::min(_volAndPriNbDecimals.priNbDecimals, orderBookLine.price().currentMaxNbDecimals());
     }
   }
-  if (nbPrices == 0) {
-    _lowestAskPricePos = 0;
-    _highestBidPricePos = 0;
-  } else {
-    for (const OrderBookLine& orderBookLine : orderLines) {
-      assert(orderBookLine._amount.currencyCode() == market.base() &&
-             orderBookLine._price.currencyCode() == market.quote());
-      // amounts cannot be nullopt here
-      if (orderBookLine._amount == 0) {
-        // Just ignore empty lines
-        continue;
-      }
 
-      const auto amountIntegral = orderBookLine._amount.amount(_volAndPriNbDecimals.volNbDecimals);
-      const auto priceIntegral = orderBookLine._price.amount(_volAndPriNbDecimals.priNbDecimals);
+  _orders.reserve(nbPrices);
 
-      assert(amountIntegral.has_value());
-      assert(priceIntegral.has_value());
-
-      _orders.emplace_back(*amountIntegral, *priceIntegral);
+  for (const OrderBookLine& orderBookLine : orderLines) {
+    if (orderBookLine.amount().currencyCode() != market.base() ||
+        orderBookLine.price().currencyCode() != market.quote()) {
+      throw exception("Invalid market order book currencies");
     }
 
-    std::ranges::sort(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price < rhs.price; });
-    auto adjacentFindIt =
-        std::ranges::adjacent_find(_orders, [](AmountPrice lhs, AmountPrice rhs) { return lhs.price == rhs.price; });
-    if (adjacentFindIt != _orders.end()) {
-      throw exception("Forbidden duplicate price {} in the order book for market {}", adjacentFindIt->price, market);
-    }
+    const auto amountIntegral = orderBookLine.amount().amount(_volAndPriNbDecimals.volNbDecimals);
+    const auto priceIntegral = orderBookLine.price().amount(_volAndPriNbDecimals.priNbDecimals);
 
-    auto highestBidPriceIt =
-        std::ranges::partition_point(_orders, [](AmountPrice amountPrice) { return amountPrice.amount > 0; });
-    _highestBidPricePos = static_cast<int>(highestBidPriceIt - _orders.begin() - 1);
-    _lowestAskPricePos = static_cast<int>(
-        std::find_if(highestBidPriceIt, _orders.end(), [](AmountPrice amountPrice) { return amountPrice.amount < 0; }) -
-        _orders.begin());
+    // Usage of std::optional::value() instead of operator* here to throw an exception if the value is not present.
+    // It's not expected at this point to not have a value for asked number of decimals
+    _orders.emplace_back(amountIntegral.value(), priceIntegral.value());
   }
+
+  std::ranges::sort(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; });
+  const auto adjacentFindIt =
+      std::ranges::adjacent_find(_orders, [](auto lhs, auto rhs) { return lhs.price == rhs.price; });
+  if (adjacentFindIt != _orders.end()) {
+    throw exception("Forbidden duplicate price {} in the order book for market {}", adjacentFindIt->price, market);
+  }
+
+  const auto highestBidPriceIt =
+      std::ranges::partition_point(_orders, [](auto amountPrice) { return amountPrice.amount > 0; });
+
+  using PricePosT = decltype(_highestBidPricePos);
+
+  _highestBidPricePos = static_cast<PricePosT>(highestBidPriceIt - _orders.begin() - 1);
+  _lowestAskPricePos = static_cast<PricePosT>(
+      std::find_if(highestBidPriceIt, _orders.end(), [](auto amountPrice) { return amountPrice.amount < 0; }) -
+      _orders.begin());
 }
 
 MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, MonetaryAmount askVolume,
@@ -123,7 +122,7 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
         "price",
         askPrice, bidPrice);
   }
-  const AmountPrice::AmountType stepPrice = *optStepPrice;
+  const auto stepPrice = *optStepPrice;
 
   std::optional<AmountType> optBidVol = bidVolume.amount(_volAndPriNbDecimals.volNbDecimals);
   std::optional<AmountType> optAskVol = askVolume.amount(_volAndPriNbDecimals.volNbDecimals);
@@ -147,17 +146,18 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
                     _volAndPriNbDecimals.priNbDecimals);
   }
 
-  const AmountPrice refBidAmountPrice(*optBidVol, *optBidPri);
-  const AmountPrice refAskAmountPrice(-(*optAskVol), *optAskPri);
-  const AmountPrice::AmountType simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
+  const AmountPriceInt refBidAmountPrice(*optBidVol, *optBidPri);
+  const AmountPriceInt refAskAmountPrice(-(*optAskVol), *optAskPri);
+  const auto simulatedStepVol = std::midpoint(refBidAmountPrice.amount, -refAskAmountPrice.amount);
 
-  constexpr AmountPrice::AmountType kMaxVol = std::numeric_limits<AmountPrice::AmountType>::max() / 2;
+  constexpr auto kMaxVol = std::numeric_limits<AmountPriceInt::AmountType>::max() / 2;
 
   _orders.resize(depth * 2);
 
   // Add bid lines first
   for (int currentDepth = 0; currentDepth < depth; ++currentDepth) {
-    AmountPrice amountPrice = currentDepth == 0 ? refBidAmountPrice : _orders[depth - currentDepth];
+    auto amountPrice = currentDepth == 0 ? refBidAmountPrice : _orders[depth - currentDepth];
+
     amountPrice.price -= stepPrice * currentDepth;
     if (currentDepth != 0 && amountPrice.amount < kMaxVol) {
       amountPrice.amount += simulatedStepVol / 2;
@@ -169,7 +169,8 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
 
   // Finally add ask lines
   for (int currentDepth = 0; currentDepth < depth; ++currentDepth) {
-    AmountPrice amountPrice = currentDepth == 0 ? refAskAmountPrice : _orders[depth + currentDepth - 1];
+    auto amountPrice = currentDepth == 0 ? refAskAmountPrice : _orders[depth + currentDepth - 1];
+
     amountPrice.price += stepPrice * currentDepth;
     if (currentDepth != 0 && -amountPrice.amount < kMaxVol) {
       amountPrice.amount -= simulatedStepVol / 2;
@@ -264,8 +265,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computePricesAtWhichAmountWo
   return ret;
 }
 
-MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount,
-                                                                             MonetaryAmount price) const {
+AmountPrice MarketOrderBook::avgPriceAndMatchedVolumeSell(MonetaryAmount baseAmount, MonetaryAmount price) const {
   MonetaryAmount avgPrice(0, _market.quote());
 
   MonetaryAmount remainingBaseAmount = baseAmount;
@@ -290,8 +290,8 @@ MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolumeSell(Mon
   return {matchedAmount, avgPrice};
 }
 
-MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolumeBuy(MonetaryAmount amountInBaseOrQuote,
-                                                                            MonetaryAmount price) const {
+AmountPrice MarketOrderBook::avgPriceAndMatchedVolumeBuy(MonetaryAmount amountInBaseOrQuote,
+                                                         MonetaryAmount price) const {
   MonetaryAmount remainingAmountInBaseOrQuote = amountInBaseOrQuote;
   MonetaryAmount matchedAmount(0, _market.base());
   MonetaryAmount avgPrice(0, _market.quote());
@@ -430,8 +430,8 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSid
   return ret;
 }
 
-MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount,
-                                                                         MonetaryAmount price) const {
+AmountPrice MarketOrderBook::avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount,
+                                                      MonetaryAmount price) const {
   switch (tradeSide) {
     case TradeSide::kBuy:
       return avgPriceAndMatchedVolumeBuy(amount, price);
@@ -442,8 +442,7 @@ MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedVolume(TradeSi
   }
 }
 
-MarketOrderBook::AmountAtPrice MarketOrderBook::avgPriceAndMatchedAmountTaker(
-    MonetaryAmount amountInBaseOrQuote) const {
+AmountPrice MarketOrderBook::avgPriceAndMatchedAmountTaker(MonetaryAmount amountInBaseOrQuote) const {
   if (amountInBaseOrQuote.currencyCode() == _market.base()) {
     return avgPriceAndMatchedVolumeSell(amountInBaseOrQuote, MonetaryAmount(0, _market.quote()));
   }
@@ -487,19 +486,19 @@ std::optional<MonetaryAmount> MarketOrderBook::convert(MonetaryAmount amountInBa
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-std::pair<MonetaryAmount, MonetaryAmount> MarketOrderBook::operator[](int relativePosToLimitPrice) const {
+AmountPrice MarketOrderBook::operator[](int relativePosToLimitPrice) const {
   if (relativePosToLimitPrice == 0) {
     const auto [v11, v12] = (*this)[-1];
     const auto [v21, v22] = (*this)[1];
-    return std::make_pair(v11 + (v21 - v11) / 2, v12 + (v22 - v12) / 2);
+    return {v11 + (v21 - v11) / 2, v12 + (v22 - v12) / 2};
   }
   if (relativePosToLimitPrice < 0) {
     const int pos = _lowestAskPricePos + relativePosToLimitPrice;
-    return std::make_pair(priceAt(pos), amountAt(pos));
+    return {amountAt(pos), priceAt(pos)};
   }
   // > 0
   const int pos = _highestBidPricePos + relativePosToLimitPrice;
-  return std::make_pair(priceAt(pos), negAmountAt(pos));
+  return {negAmountAt(pos), priceAt(pos)};
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::convertBaseAmountToQuote(MonetaryAmount amountInBaseCurrency) const {
@@ -581,7 +580,7 @@ std::optional<MonetaryAmount> ComputeRelativePrice(bool isBuy, const MarketOrder
   if (relativePrice == 0) {
     return std::nullopt;
   }
-  return marketOrderBook[relativePrice].first;
+  return marketOrderBook[relativePrice].price;
 }
 }  // namespace
 

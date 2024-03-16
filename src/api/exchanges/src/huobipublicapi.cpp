@@ -33,6 +33,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "toupperlower-string.hpp"
@@ -378,10 +379,10 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
       postData.append("depth", *lb);
     }
   }
-  using OrderBookVec = vector<OrderBookLine>;
-  OrderBookVec orderBookLines;
+  MarketOrderBookLines orderBookLines;
 
   const json asksAndBids = PublicQuery(_curlHandle, "/market/depth", postData);
+  const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
@@ -393,7 +394,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
         MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
 
-        orderBookLines.emplace_back(amount, price, type);
+        orderBookLines.push(amount, price, type);
         if (++currentDepth == depth) {
           if (depth < static_cast<int>(asksOrBids->size())) {
             log::debug("Truncate number of {} prices in order book to {}",
@@ -404,7 +405,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
       }
     }
   }
-  return MarketOrderBook(Clock::now(), mk, orderBookLines);
+  return MarketOrderBook(nowTime, mk, orderBookLines);
 }
 
 MonetaryAmount HuobiPublic::sanitizePrice(Market mk, MonetaryAmount pri) {
