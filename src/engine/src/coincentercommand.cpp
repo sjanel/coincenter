@@ -30,24 +30,12 @@ bool IsOrderCommand(CoincenterCommandType cmd) {
 }
 }  // namespace
 
-CoincenterCommand& CoincenterCommand::setExchangeNames(const ExchangeNames& exchangeNames) {
-  _exchangeNames = exchangeNames;
-  return *this;
-}
-CoincenterCommand& CoincenterCommand::setExchangeNames(ExchangeNames&& exchangeNames) {
+CoincenterCommand& CoincenterCommand::setExchangeNames(ExchangeNames exchangeNames) {
   _exchangeNames = std::move(exchangeNames);
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setOrdersConstraints(const OrdersConstraints& ordersConstraints) {
-  if (!IsOrderCommand(_type)) {
-    throw exception("Order constraints can only be used for orders related commands");
-  }
-  _specialOptions = ordersConstraints;
-  return *this;
-}
-
-CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& ordersConstraints) {
+CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints ordersConstraints) {
   if (!IsOrderCommand(_type)) {
     throw exception("Order constraints can only be used for orders related commands");
   }
@@ -55,15 +43,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints&& o
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setDepositsConstraints(const DepositsConstraints& depositsConstraints) {
-  if (_type != CoincenterCommandType::kRecentDeposits) {
-    throw exception("Deposit constraints can only be used for deposits related commands");
-  }
-  _specialOptions = depositsConstraints;
-  return *this;
-}
-
-CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints&& depositsConstraints) {
+CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints depositsConstraints) {
   if (_type != CoincenterCommandType::kRecentDeposits) {
     throw exception("Deposit constraints can only be used for deposits related commands");
   }
@@ -71,15 +51,7 @@ CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  if (_type != CoincenterCommandType::kRecentWithdraws) {
-    throw exception("Withdraw constraints can only be used for withdraws related commands");
-  }
-  _specialOptions = withdrawsConstraints;
-  return *this;
-}
-
-CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstraints&& withdrawsConstraints) {
+CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstraints withdrawsConstraints) {
   if (_type != CoincenterCommandType::kRecentWithdraws) {
     throw exception("Withdraw constraints can only be used for withdraws related commands");
   }
@@ -87,16 +59,7 @@ CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstrain
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setTradeOptions(const TradeOptions& tradeOptions) {
-  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
-      _type != CoincenterCommandType::kTrade) {
-    throw exception("Trade options can only be used for trade related commands");
-  }
-  _specialOptions = tradeOptions;
-  return *this;
-}
-
-CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOptions) {
+CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions tradeOptions) {
   if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
       _type != CoincenterCommandType::kTrade) {
     throw exception("Trade options can only be used for trade related commands");
@@ -105,15 +68,7 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions&& tradeOption
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setWithdrawOptions(const WithdrawOptions& withdrawOptions) {
-  if (_type != CoincenterCommandType::kWithdrawApply) {
-    throw exception("Withdraw options can only be used for withdraws");
-  }
-  _specialOptions = withdrawOptions;
-  return *this;
-}
-
-CoincenterCommand& CoincenterCommand::setWithdrawOptions(WithdrawOptions&& withdrawOptions) {
+CoincenterCommand& CoincenterCommand::setWithdrawOptions(WithdrawOptions withdrawOptions) {
   if (_type != CoincenterCommandType::kWithdrawApply) {
     throw exception("Withdraw options can only be used for withdraws");
   }

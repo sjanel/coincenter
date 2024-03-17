@@ -33,6 +33,7 @@
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
+#include "public-trade-vector.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 
@@ -336,10 +337,10 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
   throw exception("Invalid data retrieved from ticker information");
 }
 
-TradesVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
+PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
                       _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
-  TradesVector ret;
+  PublicTradeVector ret;
   json result = PublicQuery(_curlHandle, "/public/Trades",
                             {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
   if (!result.empty()) {

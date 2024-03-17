@@ -60,7 +60,7 @@ TEST_F(CoincenterCmdLineOptionsTest, MergeGlobal) {
 
   CoincenterCmdLineOptions rhs;
   rhs.trade = "some value";
-  rhs.nbLastTrades = 42;
+  rhs.depth = 42;
   rhs.repeatTime = std::chrono::minutes(45);
   rhs.monitoringPort = 999;
 

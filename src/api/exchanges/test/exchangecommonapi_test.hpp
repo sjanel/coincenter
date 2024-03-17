@@ -14,6 +14,7 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct::api {
 
@@ -280,7 +281,7 @@ class TestAPI {
     }
     if (!sampleMarkets.empty()) {
       Market mk = sampleMarkets.front();
-      TradesVector lastTrades = exchangePublic.queryLastTrades(mk);
+      PublicTradeVector lastTrades = exchangePublic.queryLastTrades(mk);
       if (!lastTrades.empty() && exchangePrivateOpt) {
         auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
           return lhs.amount() < rhs.amount();

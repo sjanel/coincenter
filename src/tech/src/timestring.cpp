@@ -51,7 +51,8 @@ TimePoint FromString(std::string_view timeStr, const char* format) {
   std::tm utc{};
   std::istringstream ss{std::string(timeStr)};
   ss >> std::get_time(&utc, format);
-  return Clock::from_time_t(std::mktime(&utc));  // TODO: fix issue of local time switch
+  // TODO: fix issue of local time switch
+  return Clock::from_time_t(std::mktime(&utc));
 }
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {

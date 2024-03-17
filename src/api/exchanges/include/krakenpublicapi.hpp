@@ -7,7 +7,6 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "static_string_view_helpers.hpp"
-#include "timedef.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
 namespace cct {
@@ -56,7 +55,7 @@ class KrakenPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market mk) override { return _tickerCache.get(mk).first; }
 
-  TradesVector queryLastTrades(Market mk, int nbLastTrades = kNbLastTradesDefault) override;
+  PublicTradeVector queryLastTrades(Market mk, int nbLastTrades = kNbLastTradesDefault) override;
 
   MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk).second; }
 

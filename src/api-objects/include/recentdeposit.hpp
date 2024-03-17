@@ -18,7 +18,7 @@ class RecentDeposit {
 
  private:
   MonetaryAmount _amount;
-  TimePoint _timePoint{};
+  TimePoint _timePoint;
 };
 
 class ClosestRecentDepositPicker {

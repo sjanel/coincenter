@@ -210,7 +210,7 @@ class MarketOrderBook {
   /// This simulates a trade at market price.
   std::optional<MonetaryAmount> convertQuoteAmountToBase(MonetaryAmount amountInQuoteCurrency) const;
 
-  TimePoint _time{};
+  TimePoint _time;
   Market _market;
   AmountPriceVector _orders;
   int32_t _highestBidPricePos = 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <type_traits>
 
 #include "accountowner.hpp"
 #include "cct_string.hpp"
@@ -57,8 +58,8 @@ class APIKey {
   std::string_view passphrase() const { return _passphrase; }
   const AccountOwner &accountOwner() const { return _accountOwner; }
 
-  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<string> &&
-                                                                 is_trivially_relocatable_v<AccountOwner>>::type;
+  using trivially_relocatable =
+      std::bool_constant<is_trivially_relocatable_v<string> && is_trivially_relocatable_v<AccountOwner>>::type;
 
  private:
   string _platform;

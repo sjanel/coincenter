@@ -22,28 +22,21 @@ class CoincenterCommand {
  public:
   explicit CoincenterCommand(CoincenterCommandType type) : _type(type) {}
 
-  CoincenterCommand& setExchangeNames(const ExchangeNames& exchangeNames);
-  CoincenterCommand& setExchangeNames(ExchangeNames&& exchangeNames);
+  CoincenterCommand& setExchangeNames(ExchangeNames exchangeNames);
 
-  CoincenterCommand& setOrdersConstraints(const OrdersConstraints& ordersConstraints);
-  CoincenterCommand& setOrdersConstraints(OrdersConstraints&& ordersConstraints);
+  CoincenterCommand& setOrdersConstraints(OrdersConstraints ordersConstraints);
 
-  CoincenterCommand& setDepositsConstraints(const DepositsConstraints& depositsConstraints);
-  CoincenterCommand& setDepositsConstraints(DepositsConstraints&& depositsConstraints);
+  CoincenterCommand& setDepositsConstraints(DepositsConstraints depositsConstraints);
 
-  CoincenterCommand& setWithdrawsConstraints(const WithdrawsConstraints& withdrawsConstraints);
-  CoincenterCommand& setWithdrawsConstraints(WithdrawsConstraints&& withdrawsConstraints);
+  CoincenterCommand& setWithdrawsConstraints(WithdrawsConstraints withdrawsConstraints);
 
-  CoincenterCommand& setTradeOptions(const TradeOptions& tradeOptions);
-  CoincenterCommand& setTradeOptions(TradeOptions&& tradeOptions);
+  CoincenterCommand& setTradeOptions(TradeOptions tradeOptions);
 
-  CoincenterCommand& setWithdrawOptions(const WithdrawOptions& withdrawOptions);
-  CoincenterCommand& setWithdrawOptions(WithdrawOptions&& withdrawOptions);
+  CoincenterCommand& setWithdrawOptions(WithdrawOptions withdrawOptions);
 
   CoincenterCommand& setAmount(MonetaryAmount amount);
 
   CoincenterCommand& setDepth(int depth);
-  CoincenterCommand& setNbLastTrades(int nbTrades) { return setDepth(nbTrades); }
 
   CoincenterCommand& setMarket(Market market);
 
@@ -67,7 +60,7 @@ class CoincenterCommand {
 
   MonetaryAmount amount() const { return _amount; }
 
-  int nbLastTrades() const { return _n; }
+  int depth() const { return _n; }
   std::optional<int> optDepth() const { return _n == -1 ? std::nullopt : std::optional<int>(_n); }
 
   Market market() const { return _market; }
@@ -82,11 +75,12 @@ class CoincenterCommand {
 
   bool operator==(const CoincenterCommand&) const noexcept = default;
 
-  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<ExchangeNames> &&
-                                                                 is_trivially_relocatable_v<OrdersConstraints>>::type;
+  using trivially_relocatable = std::bool_constant<is_trivially_relocatable_v<ExchangeNames> &&
+                                                   is_trivially_relocatable_v<OrdersConstraints>>::type;
 
  private:
-  using SpecialOptions = std::variant<OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions, WithdrawOptions>;
+  using SpecialOptions =
+      std::variant<std::monostate, OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions, WithdrawOptions>;
 
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;

@@ -77,7 +77,7 @@ class CurlHandle {
   void *_handle = nullptr;
   AbstractMetricGateway *_pMetricGateway = nullptr;  // non-owning pointer
   Duration _minDurationBetweenQueries{};
-  TimePoint _lastQueryTime{};
+  TimePoint _lastQueryTime;
   BestURLPicker _bestURLPicker;
   string _queryData;
   log::level::level_enum _requestCallLogLevel = log::level::level_enum::off;

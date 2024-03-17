@@ -1,5 +1,4 @@
-Configuration
-=============
+# Configuration
 
 At this step, `coincenter` is built. To execute properly, it needs read/write access to a special directory `data` which contains a tree of files as follows:
 
@@ -14,9 +13,9 @@ This directory is set according to these rules, by decreasing priority:
 - or from `CCT_DATA_DIR` environment variable if it is set at runtime
 - or defaults to the default data directory chosen at build time from `CCT_DATA_DIR` environment variable
 
-# Important files
+## Important files
 
-## secret/secret.json
+### secret/secret.json
 
 Fill this file with your private keys for each of your account(s) in the exchanges. 
 Of course, no need to say that this file should be kept secret, and not transit in the internet, or any other *Docker* image/layer or *git* commit. 
@@ -26,13 +25,13 @@ For additional security, always bind your keys to your IP (some exchanges will f
 
 [data/secret/secret_test.json](data/secret/secret_test.json) shows the syntax.
 
-### Additional information
+#### Additional information
 
-#### Kucoin
+##### Kucoin
 
 In addition of the `key` and `private` values, you will need to provide your `passphrase` as well. It's provided as a string field along with your key in the `secret.json` file.
 
-#### Bithumb
+##### Bithumb
 
 Bithumb **withdrawals** have an extra personal information check: they need to know the **English** and **Korean** name of the owner of the destination account.
 Thus it's also an information that you need to provide in the keys of your targeted accounts for a Bithumb withdrawal.
@@ -41,13 +40,13 @@ Korean name should be provided with the `accountOwner.koName` field in the key o
 
 Refer to the [data/secret/secret_test.json](data/secret/secret_test.json) example file in case of doubt.
 
-## static/generalconfig.json
+### static/generalconfig.json
 
 Contains options that are not exchange specific.
 
 Configures the logging, tracking activity of relevant commands, and console output type.
 
-### Options description
+#### General options description
 
 | Name                                           | Value                                    | Description                                                                                                                                                                                                                                                                                                     |
 | ---------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,10 +60,10 @@ Configures the logging, tracking activity of relevant commands, and console outp
 | **log.maxNbFiles**                             | Integer                                  | Number of maximum rotating files for log in files                                                                                                                                                                                                                                                               |
 | **requests.concurrency.nbMaxParallelRequests** | Integer                                  | Size of the thread pool that makes exchange requests.                                                                                                                                                                                                                                                           |
 
-
-## static/exchangeconfig.json
+### static/exchangeconfig.json
 
 This json file should follow this specific format:
+
 ```yaml
   - top_level_option:
     - default:
@@ -79,6 +78,7 @@ This json file should follow this specific format:
 ```
 
 Currently, options are set from two ways:
+
 - **Comma separated values** are aggregated for each exchange with the 'default' values (if present)
 - **Single values** are retrieved in a 'bottom first' priority model, meaning that if a value is specified for an exchange name, it is chosen. Otherwise, it checks at the default value for this option, and if again not present, uses a hardcoded default one (cf in the code).
 
@@ -122,7 +122,7 @@ The chosen values will be:
 
 Refer to the hardcoded default json example as a model in case of doubt.
 
-### Options description
+#### Exchanges options description
 
 | Module      | Name                               | Value                                                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ----------- | ---------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -156,10 +156,8 @@ Refer to the hardcoded default json example as a model in case of doubt.
 | *tradefees* | **taker**                          | String as decimal number representing a percentage (for instance, "0.15")        | Trade fees occurring when a taker order is matched                                                                                                                                                                                                                                                                                                                                                                       |
 | *withdraw*  | **validateDepositAddressesInFile** | Boolean (`true` or `false`)                                                      | If `true`, each withdraw will perform an additional validation check from a trusted list of "whitelisted" addresses in `depositaddresses.json` file. Withdraw will not be processed if destination wallet is not present in the file.                                                                                                                                                                                    |
 
-#### Notes
- - `updateFrequency` is itself a json document containing all duration values as query frequencies. 
+##### Notes
+
+- `updateFrequency` is itself a json document containing all duration values as query frequencies. 
   See [ExchangeConfig default file](src/objects/src/exchangeconfigdefault.hpp) as an example for the syntax.
- - Unused and not explicitly set values (so, when loaded from default values) from your personal `exchangeconfig.json` file will be logged for information about what will actually be used by `coincenter`.
-
-
-
+- Unused and not explicitly set values (so, when loaded from default values) from your personal `exchangeconfig.json` file will be logged for information about what will actually be used by `coincenter`.

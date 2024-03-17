@@ -9,6 +9,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "monetaryamount.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct::api {
 class MockExchangePublic : public ExchangePublic {
@@ -28,7 +29,7 @@ class MockExchangePublic : public ExchangePublic {
   MOCK_METHOD(MarketOrderBookMap, queryAllApproximatedOrderBooks, (int depth), (override));
   MOCK_METHOD(MarketOrderBook, queryOrderBook, (Market mk, int depth), (override));
   MOCK_METHOD(MonetaryAmount, queryLast24hVolume, (Market mk), (override));
-  MOCK_METHOD(TradesVector, queryLastTrades, (Market mk, int nbTrades), (override));
+  MOCK_METHOD(PublicTradeVector, queryLastTrades, (Market mk, int nbTrades), (override));
   MOCK_METHOD(MonetaryAmount, queryLastPrice, (Market mk), (override));
 };
 }  // namespace cct::api

@@ -68,7 +68,8 @@ TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandSingleCurTest) {
 
 TEST_F(CoincenterCommandFactoryTest, CreateOrderCommandAll) {
   CoincenterCommandType type = CoincenterCommandType::kOrdersOpened;
-  EXPECT_EQ(commandFactory.createOrderCommand(type, inputStr("")), CoincenterCommand(type));
+  EXPECT_EQ(commandFactory.createOrderCommand(type, inputStr("")),
+            CoincenterCommand(type).setOrdersConstraints(OrdersConstraints{}));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 

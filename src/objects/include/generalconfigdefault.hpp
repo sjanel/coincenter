@@ -27,8 +27,8 @@ struct GeneralConfigDefault {
     },
     "consoleLevel": "info",
     "fileLevel": "debug",
-    "maxNbFiles": 20,
-    "maxFileSize": "5Mi"
+    "maxFileSize": "5Mi",
+    "maxNbFiles": 20
   },
   "requests": {
     "concurrency": {

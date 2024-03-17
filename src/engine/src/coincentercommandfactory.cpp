@@ -21,7 +21,9 @@ CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionPars
     market = Market(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
   }
   CoincenterCommand ret(CoincenterCommandType::kMarkets);
-  ret.setCur1(market.base()).setCur2(market.quote()).setExchangeNames(optionParser.parseExchanges());
+  ret.setCur1(market.base());
+  ret.setCur2(market.quote());
+  ret.setExchangeNames(optionParser.parseExchanges());
   return ret;
 }
 

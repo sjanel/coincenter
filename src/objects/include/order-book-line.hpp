@@ -37,6 +37,11 @@ class MarketOrderBookLines {
   auto end() const noexcept { return _orderBookLines.end(); }
 
   auto size() const noexcept { return _orderBookLines.size(); }
+  auto capacity() const noexcept { return _orderBookLines.capacity(); }
+
+  void clear() noexcept { _orderBookLines.clear(); }
+
+  void shrink_to_fit() { _orderBookLines.shrink_to_fit(); }
 
   void reserve(std::size_t capacity) { _orderBookLines.reserve(capacity); }
 

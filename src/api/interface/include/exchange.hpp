@@ -12,9 +12,11 @@
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct {
 class Exchange {
@@ -86,16 +88,12 @@ class Exchange {
     return _exchangePublic.queryAllApproximatedOrderBooks(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth) {
-    return _exchangePublic.queryOrderBook(mk, depth);
-  }
+  MarketOrderBook queryOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth);
 
   MonetaryAmount queryLast24hVolume(Market mk) { return _exchangePublic.queryLast24hVolume(mk); }
 
   /// Retrieve an ordered vector of recent last trades
-  TradesVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault) {
-    return _exchangePublic.queryLastTrades(mk, nbTrades);
-  }
+  PublicTradeVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault);
 
   /// Retrieve the last price of given market.
   MonetaryAmount queryLastPrice(Market mk) { return _exchangePublic.queryLastPrice(mk); }

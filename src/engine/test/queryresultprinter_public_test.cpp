@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
+#include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -229,7 +230,7 @@ class QueryResultPrinterMarketsTest : public QueryResultPrinterTest {
 
 TEST_F(QueryResultPrinterMarketsTest, FormattedTableNoCurrency) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange);
+      .printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 +----------+---------+
 | Exchange | Markets |
@@ -245,7 +246,8 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableNoCurrency) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, FormattedTableOneCurrency) {
-  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printMarkets(cur1, CurrencyCode(), marketsPerExchange, CoincenterCommandType::kMarkets);
   // We only test the title line here, it's normal that all markets are printed (they come from marketsPerExchange and
   // are not filtered again inside the print function)
   static constexpr std::string_view kExpected = R"(
@@ -263,7 +265,8 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableOneCurrency) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, FormattedTableTwoCurrencies) {
-  basicQueryResultPrinter(ApiOutputType::kFormattedTable).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printMarkets(cur1, cur2, marketsPerExchange, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 +----------+----------------------+
 | Exchange | Markets with XRP-BTC |
@@ -279,7 +282,8 @@ TEST_F(QueryResultPrinterMarketsTest, FormattedTableTwoCurrencies) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, CurrencyCode(), MarketsPerExchange{});
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarkets(cur1, CurrencyCode(), MarketsPerExchange{}, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -294,7 +298,8 @@ TEST_F(QueryResultPrinterMarketsTest, EmptyJson) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, JsonNoCurrency) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarkets(CurrencyCode(), CurrencyCode(), marketsPerExchange, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -319,7 +324,8 @@ TEST_F(QueryResultPrinterMarketsTest, JsonNoCurrency) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, JsonOneCurrency) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarkets(cur1, CurrencyCode(), marketsPerExchange, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -345,7 +351,8 @@ TEST_F(QueryResultPrinterMarketsTest, JsonOneCurrency) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, JsonTwoCurrencies) {
-  basicQueryResultPrinter(ApiOutputType::kJson).printMarkets(cur1, cur2, marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printMarkets(cur1, cur2, marketsPerExchange, CoincenterCommandType::kMarkets);
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
@@ -372,7 +379,8 @@ TEST_F(QueryResultPrinterMarketsTest, JsonTwoCurrencies) {
 }
 
 TEST_F(QueryResultPrinterMarketsTest, NoPrint) {
-  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarkets(cur1, CurrencyCode(), marketsPerExchange);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printMarkets(cur1, CurrencyCode(), marketsPerExchange, CoincenterCommandType::kMarkets);
   expectNoStr();
 }
 
@@ -874,16 +882,19 @@ class QueryResultPrinterLastTradesVolumeTest : public QueryResultPrinterTest {
   int nbLastTrades = 3;
   TradesPerExchange lastTradesPerExchange{
       {&exchange1,
-       TradesVector{PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
-                    PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
-                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
+       PublicTradeVector{
+           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
+           PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
+           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
       {&exchange3,
-       TradesVector{PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
+       PublicTradeVector{
+           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
       {&exchange2,
-       TradesVector{PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
-                    PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
+       PublicTradeVector{
+           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
+           PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
 };
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
