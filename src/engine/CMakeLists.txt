@@ -41,6 +41,8 @@ add_unit_test(
   test/exchangesorchestrator_private_test.cpp
   LIBRARIES
   coincenter_engine
+  DIRECTORIES
+  ../api/common/test/include
 )
 
 add_unit_test(
@@ -48,6 +50,8 @@ add_unit_test(
   test/exchangesorchestrator_public_test.cpp
   LIBRARIES
   coincenter_engine
+  DIRECTORIES
+  ../api/common/test/include
 )
 
 add_unit_test(
@@ -55,6 +59,8 @@ add_unit_test(
   test/exchangesorchestrator_trade_test.cpp
   LIBRARIES
   coincenter_engine
+  DIRECTORIES
+  ../api/common/test/include
 )
 
 add_unit_test(
@@ -62,6 +68,8 @@ add_unit_test(
   test/queryresultprinter_public_test.cpp
   LIBRARIES
   coincenter_engine
+  DIRECTORIES
+  ../api/common/test/include
 )
 
 add_unit_test(
@@ -69,6 +77,8 @@ add_unit_test(
   test/queryresultprinter_private_test.cpp
   LIBRARIES
   coincenter_engine
+  DIRECTORIES
+  ../api/common/test/include
 )
 
 add_unit_test(

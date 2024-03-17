@@ -21,6 +21,8 @@ function(add_common_test name)
      ${MY_UNPARSED_ARGUMENTS}
      LIBRARIES
      coincenter_api-common
+     DIRECTORIES
+     test/include
    )
 endfunction()
 

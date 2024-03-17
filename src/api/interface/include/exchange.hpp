@@ -19,16 +19,17 @@
 #include "public-trade-vector.hpp"
 
 namespace cct {
+
 class Exchange {
  public:
   using ExchangePublic = api::ExchangePublic;
+  using ExchangePrivate = api::ExchangePrivate;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
-  Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic);
+  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic);
 
   /// Build a Exchange with both private and public exchanges
-  Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic,
-           api::ExchangePrivate &exchangePrivate);
+  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic, ExchangePrivate &exchangePrivate);
 
   std::string_view name() const { return _exchangePublic.name(); }
   std::string_view keyName() const { return apiPrivate().keyName(); }
@@ -40,17 +41,17 @@ class Exchange {
     return ExchangeName(name());
   }
 
-  api::ExchangePublic &apiPublic() { return _exchangePublic; }
-  const api::ExchangePublic &apiPublic() const { return _exchangePublic; }
+  ExchangePublic &apiPublic() { return _exchangePublic; }
+  const ExchangePublic &apiPublic() const { return _exchangePublic; }
 
-  api::ExchangePrivate &apiPrivate() {
+  ExchangePrivate &apiPrivate() {
     if (hasPrivateAPI()) {
       return *_pExchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const api::ExchangePrivate &apiPrivate() const {
+  const ExchangePrivate &apiPrivate() const {
     if (hasPrivateAPI()) {
       return *_pExchangePrivate;
     }
@@ -109,8 +110,9 @@ class Exchange {
   void updateCacheFile() const;
 
  private:
-  api::ExchangePublic &_exchangePublic;
-  api::ExchangePrivate *_pExchangePrivate = nullptr;
+  ExchangePublic &_exchangePublic;
+  ExchangePrivate *_pExchangePrivate = nullptr;
   const ExchangeConfig &_exchangeConfig;
 };
+
 }  // namespace cct
