@@ -30,7 +30,6 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "exchangeretriever.hpp"
-#include "exchangeretrieverbase.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
@@ -184,8 +183,8 @@ BalancePerExchange ExchangesOrchestrator::getBalance(std::span<const ExchangeNam
   log::info("Query balance from {}{}{} with{} balance in use", ConstructAccumulatedExchangeNames(privateExchangeNames),
             equiCurrency.isNeutral() ? "" : " with equi currency ", equiCurrency, withBalanceInUse ? "" : "out");
 
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(selectedExchanges.size());
 
@@ -207,8 +206,8 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(std::span<const Exchange
                                                         CurrencyCode depositCurrency) {
   log::info("Query {} deposit information from {}", depositCurrency,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges depositInfoExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges depositInfoExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   /// Keep only exchanges which can receive given currency
   SmallVector<bool, kTypicalNbPrivateAccounts> canDepositCurrency(depositInfoExchanges.size());
@@ -249,8 +248,8 @@ ClosedOrdersPerExchange ExchangesOrchestrator::getClosedOrders(std::span<const E
                                                                const OrdersConstraints &closedOrdersConstraints) {
   log::info("Query closed orders matching {} on {}", closedOrdersConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   ClosedOrdersPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
@@ -266,8 +265,8 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(std::span<const E
                                                                const OrdersConstraints &openedOrdersConstraints) {
   log::info("Query opened orders matching {} on {}", openedOrdersConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   OpenedOrdersPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
@@ -283,8 +282,8 @@ NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(std::span<const
                                                                  const OrdersConstraints &ordersConstraints) {
   log::info("Cancel opened orders matching {} on {}", ordersConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
   NbCancelledOrdersPerExchange nbOrdersCancelled(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges.begin(), selectedExchanges.end(), nbOrdersCancelled.begin(), [&](Exchange *exchange) {
@@ -298,8 +297,8 @@ DepositsPerExchange ExchangesOrchestrator::getRecentDeposits(std::span<const Exc
                                                              const DepositsConstraints &depositsConstraints) {
   log::info("Query recent deposits matching {} on {}", depositsConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   DepositsPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
@@ -314,8 +313,8 @@ WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(std::span<const E
                                                                const WithdrawsConstraints &withdrawsConstraints) {
   log::info("Query recent withdraws matching {} on {}", withdrawsConstraints,
             ConstructAccumulatedExchangeNames(privateExchangeNames));
-  ExchangeRetriever::SelectedExchanges selectedExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   WithdrawsPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(
@@ -809,8 +808,8 @@ TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper
     std::span<const ExchangeName> privateExchangeNames, CurrencyCode currencyCode) {
   log::info("Query {} dust sweeper from {}", currencyCode, ConstructAccumulatedExchangeNames(privateExchangeNames));
 
-  ExchangeRetriever::SelectedExchanges selExchanges =
-      _exchangeRetriever.select(ExchangeRetriever::Order::kInitial, privateExchangeNames);
+  ExchangeRetriever::SelectedExchanges selExchanges = _exchangeRetriever.select(
+      ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   TradedAmountsVectorWithFinalAmountPerExchange ret(selExchanges.size());
   _threadPool.parallelTransform(selExchanges.begin(), selExchanges.end(), ret.begin(),
