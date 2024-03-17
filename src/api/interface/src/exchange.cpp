@@ -8,6 +8,8 @@
 #include "exchangeconfig.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
+#include "marketorderbook.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct {
 
@@ -33,12 +35,19 @@ bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlat
 }
 
 bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
-  auto lb = currencyExchangeSet.find(currencyCode);
+  const auto lb = currencyExchangeSet.find(currencyCode);
   if (lb == currencyExchangeSet.end()) {
     log::trace("{} cannot be deposited on {}", currencyCode, name());
     return false;
   }
   return lb->canDeposit();
+}
+
+MarketOrderBook Exchange::queryOrderBook(Market mk, int depth) { return _exchangePublic.queryOrderBook(mk, depth); }
+
+/// Retrieve an ordered vector of recent last trades
+PublicTradeVector Exchange::queryLastTrades(Market mk, int nbTrades) {
+  return _exchangePublic.queryLastTrades(mk, nbTrades);
 }
 
 void Exchange::updateCacheFile() const {

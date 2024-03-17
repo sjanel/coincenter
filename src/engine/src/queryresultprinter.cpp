@@ -335,6 +335,26 @@ json OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
   return ret;
 }
 
+template <class OrderType>
+json OrderJson(const OrderType &orderData) {
+  static_assert(std::is_same_v<ClosedOrder, OrderType> || std::is_same_v<OpenedOrder, OrderType>);
+
+  json order;
+  order.emplace("id", orderData.id());
+  order.emplace("pair", orderData.market().str());
+  order.emplace("placedTime", orderData.placedTimeStr());
+  if constexpr (std::is_same_v<ClosedOrder, OrderType>) {
+    order.emplace("matchedTime", orderData.matchedTimeStr());
+  }
+  order.emplace("side", orderData.sideStr());
+  order.emplace("price", orderData.price().amountStr());
+  order.emplace("matched", orderData.matchedVolume().amountStr());
+  if constexpr (std::is_same_v<OpenedOrder, OrderType>) {
+    order.emplace("remaining", orderData.remainingVolume().amountStr());
+  }
+  return order;
+}
+
 template <class OrdersPerExchangeType>
 json OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExchangeType &ordersPerExchange,
                 const OrdersConstraints &ordersConstraints) {
@@ -347,23 +367,9 @@ json OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExch
 
   json out = json::object();
   for (const auto &[exchangePtr, ordersData] : ordersPerExchange) {
-    using OrderType = std::remove_cvref_t<decltype(*std::declval<decltype(ordersData)>().begin())>;
-
     json orders = json::array();
     for (const auto &orderData : ordersData) {
-      json &order = orders.emplace_back();
-      order.emplace("id", orderData.id());
-      order.emplace("pair", orderData.market().str());
-      order.emplace("placedTime", orderData.placedTimeStr());
-      if constexpr (std::is_same_v<ClosedOrder, OrderType>) {
-        order.emplace("matchedTime", orderData.matchedTimeStr());
-      }
-      order.emplace("side", orderData.sideStr());
-      order.emplace("price", orderData.price().amountStr());
-      order.emplace("matched", orderData.matchedVolume().amountStr());
-      if constexpr (std::is_same_v<OpenedOrder, OrderType>) {
-        order.emplace("remaining", orderData.remainingVolume().amountStr());
-      }
+      orders.emplace_back(OrderJson(orderData));
     }
 
     auto it = out.find(exchangePtr->name());
@@ -808,7 +814,8 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
 }
 
 void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
-                                      const MarketsPerExchange &marketsPerExchange) const {
+                                      const MarketsPerExchange &marketsPerExchange,
+                                      CoincenterCommandType coincenterCommandType) const {
   json jsonData = MarketsJson(cur1, cur2, marketsPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
@@ -836,7 +843,7 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
     case ApiOutputType::kNoPrint:
       break;
   }
-  logActivity(CoincenterCommandType::kMarkets, jsonData);
+  logActivity(coincenterCommandType, jsonData);
 }
 
 void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const {

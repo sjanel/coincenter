@@ -31,13 +31,13 @@ class InitiatedWithdrawInfo {
   MonetaryAmount grossEmittedAmount() const { return _grossEmittedAmount; }
 
   using trivially_relocatable =
-      std::integral_constant<bool, is_trivially_relocatable_v<Wallet> && is_trivially_relocatable_v<string>>::type;
+      std::bool_constant<is_trivially_relocatable_v<Wallet> && is_trivially_relocatable_v<string>>::type;
 
  private:
   Wallet _receivingWallet;
   string _withdrawIdOrMsgIfNotInitiated;
   MonetaryAmount _grossEmittedAmount;
-  TimePoint _initiatedTime{};  // The time at which withdraw has been ordered from the source exchange
+  TimePoint _initiatedTime;  // The time at which withdraw has been ordered from the source exchange
 };
 
 class SentWithdrawInfo {
@@ -84,12 +84,11 @@ class DeliveredWithdrawInfo {
 
   std::string_view withdrawId() const;
 
-  using trivially_relocatable =
-      std::integral_constant<bool, is_trivially_relocatable_v<Wallet> && is_trivially_relocatable_v<string>>::type;
+  using trivially_relocatable = is_trivially_relocatable<api::InitiatedWithdrawInfo>::type;
 
  private:
   api::InitiatedWithdrawInfo _initiatedWithdrawInfo;
-  TimePoint _receivedTime{};       // time at which destination provides received funds as available for trade
+  TimePoint _receivedTime;         // time at which destination provides received funds as available for trade
   MonetaryAmount _receivedAmount;  // fee deduced amount that destination will receive
 };
 

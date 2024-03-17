@@ -35,7 +35,8 @@ class QueryResultPrinter {
 
   void printCurrencies(const CurrenciesPerExchange &currenciesPerExchange) const;
 
-  void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) const;
+  void printMarkets(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange,
+                    CoincenterCommandType coincenterCommandType) const;
 
   void printMarketOrderBooks(Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
                              const MarketOrderBookConversionRates &marketOrderBooksConversionRates) const;

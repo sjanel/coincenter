@@ -98,9 +98,8 @@ class CoincenterCmdLineOptions {
   std::string_view lastTrades;
 
   CommandLineOptionalInt repeats;
-  int nbLastTrades = api::ExchangePublic::kNbLastTradesDefault;
   int monitoringPort = CoincenterCmdLineOptionsDefinitions::kDefaultMonitoringPort;
-  int orderbookDepth = 0;
+  int depth = 0;
 
   bool forceMultiTrade = false;
   bool forceSingleTrade = false;

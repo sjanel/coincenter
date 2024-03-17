@@ -8,6 +8,7 @@
 #include "currencycodeset.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct {
 
@@ -52,7 +53,7 @@ class UpbitPublic : public ExchangePublic {
 
   MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 
-  TradesVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
+  PublicTradeVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) override;
 
   MonetaryAmount queryLastPrice(Market mk) override { return _tickerCache.get(mk); }
 

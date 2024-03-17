@@ -66,7 +66,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     _commands.emplace_back(CoincenterCommandType::kOrderbook)
         .setMarket(optionParser.parseMarket())
         .setExchangeNames(optionParser.parseExchanges())
-        .setDepth(cmdLineOptions.orderbookDepth)
+        .setDepth(cmdLineOptions.depth)
         .setCur1(cmdLineOptions.orderbookCur);
   }
 
@@ -184,7 +184,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     optionParser = StringOptionParser(cmdLineOptions.lastTrades);
     _commands.emplace_back(CoincenterCommandType::kLastTrades)
         .setMarket(optionParser.parseMarket())
-        .setNbLastTrades(cmdLineOptions.nbLastTrades)
+        .setDepth(cmdLineOptions.depth)
         .setExchangeNames(optionParser.parseExchanges());
   }
 

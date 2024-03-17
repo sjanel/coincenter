@@ -36,6 +36,7 @@
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
+#include "public-trade-vector.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
@@ -300,9 +301,9 @@ TimePoint EpochTime(std::string&& dateStr) {
 }
 }  // namespace
 
-TradesVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+PublicTradeVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
   json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote());
-  TradesVector ret;
+  PublicTradeVector ret;
   ret.reserve(result.size());
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());

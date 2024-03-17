@@ -26,7 +26,7 @@ Main features:
 - Last trades
 - Withdraw fees
 
-## Private requests
+## Account requests
 
 - Balance
 - Trade (buy & sell in several flavors)
@@ -55,7 +55,7 @@ Main features:
 
 - [coincenter](#coincenter)
   - [Market Data](#market-data)
-  - [Private requests](#private-requests)
+  - [Account requests](#account-requests)
   - [Supported exchanges](#supported-exchanges)
   - [About](#about)
   - [Installation](#installation)
@@ -76,7 +76,7 @@ Main features:
       - [Currencies](#currencies)
         - [Examples](#examples)
       - [Markets](#markets)
-        - [Examples](#examples-1)
+        - [Examples of markets queries](#examples-of-markets-queries)
       - [Ticker information](#ticker-information)
       - [Order books](#order-books)
       - [Last 24h traded volume](#last-24h-traded-volume)
@@ -90,7 +90,7 @@ Main features:
       - [Withdraw fees](#withdraw-fees)
         - [Example 1: query all withdraw fees](#example-1-query-all-withdraw-fees)
         - [Example 2: query ETH withdraw fees on Kraken and Kucoin](#example-2-query-eth-withdraw-fees-on-kraken-and-kucoin)
-    - [Private requests](#private-requests-1)
+    - [Private requests](#private-requests)
       - [Selecting private keys on exchanges](#selecting-private-keys-on-exchanges)
       - [Balance](#balance)
       - [Trade](#trade)
@@ -114,9 +114,9 @@ Main features:
         - [Examples with explanation](#examples-with-explanation-1)
       - [Deposit information](#deposit-information)
       - [Recent deposits](#recent-deposits)
-        - [Examples](#examples-2)
+        - [Examples](#examples-1)
       - [Recent withdraws](#recent-withdraws)
-        - [Examples](#examples-3)
+        - [Examples](#examples-2)
       - [Closed orders](#closed-orders)
       - [Opened orders](#opened-orders)
       - [Cancel opened orders](#cancel-opened-orders)
@@ -251,7 +251,7 @@ This allows to flush correctly the latest data (caches, logs, etc) to files at t
 
 By default, it logs in the console with the 'info' level, and in 'debug' in rotating files.
 
-For this, you can configure statically the default level for each in the [config file](CONFIG.md#options-description).
+For this, you can configure statically the default level for each in the [config file](CONFIG.md#general-options-description).
 It can be overridden on the command line, with options `--log <log-level>` and `--log-file <log-level>`.
 
 ##### Activity history
@@ -268,7 +268,7 @@ By default, it stores all types of trades and withdraws results, but the list is
 ### Parallel requests
 
 You may want to query several exchanges for a command at the same time. In this case, it's possible to ask `coincenter` to launch requests in parallel when it's possible.
-By default, the number of requests in parallel is `1`. To increase it, change the value of the field `nbMaxParallelRequests` in `generalconfig.json` file (more information [here](CONFIG.md#options-description)).
+By default, the number of requests in parallel is `1`. To increase it, change the value of the field `nbMaxParallelRequests` in `generalconfig.json` file (more information [here](CONFIG.md#general-options-description)).
 
 You will have a nice boost of speed when you query the same thing from multiple exchanges / or accounts. However, the logs may not be ordered anymore.
 
@@ -310,7 +310,7 @@ Also, result can be narrowed to list of exchanges given after the optional curre
 
 **Note**: Markets are returned with the currency pair presented in original order from the exchange, as it could give additional information for services relying on this option (even though it's not needed for `trade` option of `coincenter`)
 
-##### Examples
+##### Examples of markets queries
 
 Lists all markets for all exchanges
 
@@ -793,7 +793,7 @@ If you want to trade coin *AAA* into *CCC* but exchange does not have a *AAA-CCC
 
 In order to activate multi trades, there are two ways:
 
-- Default behavior is controlled by [multiTradeAllowedByDefault option](CONFIG.md#options-description) in the `exchangeconfig.json` file. If `true`, multi trade is allowed for the given exchange (or all exchanges if under `default` level).
+- Default behavior is controlled by [multiTradeAllowedByDefault option](CONFIG.md#exchanges-options-description) in the `exchangeconfig.json` file. If `true`, multi trade is allowed for the given exchange (or all exchanges if under `default` level).
 - It can be forced by adding command line flag `--multi-trade`.
 
 In the case it's activated in the config file, `--no-multi-trade` can force deactivation of the multi trade.
@@ -804,13 +804,13 @@ Some exchanges (**Kraken** and **Binance** for instance) allow to actually query
 
 #### Buy / Sell
 
-Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `buy` and `sell` commands when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
+Trade family of commands require that you specify the *start amount* (with the start currency) and the *target currency*. You can use `buy` and `sell` commands when you have a start amount (for *sell*) or a target amount (for *buy*) only. It's more easy to use, but `coincenter` needs to know which are the [preferred currencies](CONFIG.md#exchanges-options-description) to which it can *sell* the start amount to, or use as start amount for a *buy*.
 
 Sell option also supports percentage as start amount. In this case, the desired percentage of total available amount of given currency on matching exchanges (the ones specified after the `,` or all if none given as usual) will be sold. To complement this, `sell-all` option with a start currency instead of an amount is supported as well, which is syntactic sugar of a sell of `100%` of available amount.
 
 Buy a percentage is not available yet, simply because I am not sure about what should be the behavior of this option. If you have ideas about it, do not hesitate to propose them.
 
-The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md#options-description) file to see how to set the preferred currencies.
+The list of preferred currencies should be filled prior to **buy / sell** command and is statically loaded at start of coincenter. It is an array of currencies ordered by decreasing priority, and they represent the currencies that can be used as target currency for a *sell*, and base currency for a *buy*. See [config](CONFIG.md#exchanges-options-description) file to see how to set the preferred currencies.
 
 ##### Syntax
 

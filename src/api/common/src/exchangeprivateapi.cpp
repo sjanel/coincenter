@@ -16,7 +16,6 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cct_log.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
@@ -28,6 +27,7 @@
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market-vector.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -337,11 +337,11 @@ void IncrementPenalty(Market mk, PenaltyPerMarketMap &penaltyPerMarketMap) {
   }
 }
 
-vector<Market> GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
-                                                   const MonetaryAmountByCurrencySet &dustThresholds,
-                                                   CurrencyCode currencyCode, const MarketSet &markets,
-                                                   const PenaltyPerMarketMap &penaltyPerMarketMap) {
-  vector<Market> possibleMarkets;
+MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
+                                                 const MonetaryAmountByCurrencySet &dustThresholds,
+                                                 CurrencyCode currencyCode, const MarketSet &markets,
+                                                 const PenaltyPerMarketMap &penaltyPerMarketMap) {
+  MarketVector possibleMarkets;
   for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
     MonetaryAmount avAmount = avAmountEq.amount;
     CurrencyCode avCur = avAmount.currencyCode();
@@ -494,7 +494,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
 
     // Pick a trade currency which has some available balance for which the market exists with 'currencyCode',
     // whose amount is higher than its dust amount threshold if it exists
-    vector<Market> possibleMarkets =
+    MarketVector possibleMarkets =
         GetPossibleMarketsForDustThresholds(balance, dustThresholds, currencyCode, markets, penaltyPerMarketMap);
     if (possibleMarkets.empty()) {
       log::warn("No more market is allowed for trade in dust threshold sweeper context");
@@ -513,7 +513,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
       continue;
     }
 
-    // At this point we did not sell all amount, but it's possible that some trades have been done, with remainings.
+    // At this point we did not sell all amount, but it's possible that some trades have been done, with remaining.
     // Selling has not worked - so we need to buy some amount on the requested currency first
     tradedAmounts = buySomeAmountToMakeFutureSellPossible(possibleMarkets, marketPriceMap, dustThreshold, balance,
                                                           tradeOptions, dustThresholds);

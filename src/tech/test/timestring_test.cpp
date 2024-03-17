@@ -40,7 +40,7 @@ TEST(TimeStringTest, LiteralDate) {
 }
 
 TEST(TimeStringTest, ToString) {
-  TimePoint tp{};
+  TimePoint tp;
   tp += std::chrono::years(15);
   tp += std::chrono::months(9);
   tp += std::chrono::days(25);

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <utility>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
@@ -12,7 +13,20 @@
 #include "timedef.hpp"
 
 namespace cct {
+
+namespace {
+constexpr std::pair<std::string_view, Duration> kDurationUnits[] = {
+    {"y", std::chrono::years(1)},   {"mon", std::chrono::months(1)},      {"w", std::chrono::weeks(1)},
+    {"d", std::chrono::days(1)},    {"h", std::chrono::hours(1)},         {"min", std::chrono::minutes(1)},
+    {"s", std::chrono::seconds(1)}, {"ms", std::chrono::milliseconds(1)}, {"us", std::chrono::microseconds(1)},
+};
+}
+
 Duration ParseDuration(std::string_view durationStr) {
+  while (!durationStr.empty() && isspace(durationStr.front())) {
+    durationStr.remove_prefix(1);
+  }
+
   if (durationStr.empty()) {
     throw invalid_argument("Empty duration is not allowed");
   }
@@ -27,7 +41,7 @@ Duration ParseDuration(std::string_view durationStr) {
   const std::size_t sz = durationStr.size();
   Duration ret{};
   for (std::size_t charPos = 0; charPos < sz;) {
-    std::size_t intFirst = charPos;
+    const std::size_t intFirst = charPos;
 
     while (charPos < sz && isdigit(durationStr[charPos])) {
       ++charPos;
@@ -35,38 +49,24 @@ Duration ParseDuration(std::string_view durationStr) {
     if (intFirst == charPos) {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
-    std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + charPos);
-    int64_t timeAmount = FromString<int64_t>(timeAmountStr);
+    const std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + charPos);
+    const int64_t timeAmount = FromString<int64_t>(timeAmountStr);
 
     while (charPos < sz && isspace(durationStr[charPos])) {
       ++charPos;
     }
-    std::size_t unitFirst = charPos;
+    const std::size_t unitFirst = charPos;
     while (charPos < sz && islower(durationStr[charPos])) {
       ++charPos;
     }
-    std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + charPos);
-    if (timeUnitStr == "y") {
-      ret += std::chrono::years(timeAmount);
-    } else if (timeUnitStr == "mon") {
-      ret += std::chrono::months(timeAmount);
-    } else if (timeUnitStr == "w") {
-      ret += std::chrono::weeks(timeAmount);
-    } else if (timeUnitStr == "d") {
-      ret += std::chrono::days(timeAmount);
-    } else if (timeUnitStr == "h") {
-      ret += std::chrono::hours(timeAmount);
-    } else if (timeUnitStr == "min") {
-      ret += std::chrono::minutes(timeAmount);
-    } else if (timeUnitStr == "s") {
-      ret += seconds(timeAmount);
-    } else if (timeUnitStr == "ms") {
-      ret += milliseconds(timeAmount);
-    } else if (timeUnitStr == "us") {
-      ret += microseconds(timeAmount);
-    } else {
+    const std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + charPos);
+    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
+      return durationUnitWithDuration.first == timeUnitStr;
+    });
+    if (it == std::end(kDurationUnits)) {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
+    ret += timeAmount * it->second;
     while (charPos < sz && isspace(durationStr[charPos])) {
       ++charPos;
     }
@@ -78,7 +78,8 @@ Duration ParseDuration(std::string_view durationStr) {
 template <class TimeUnitT>
 void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
   if (dur >= TimeUnitT(1)) {
-    auto nU = std::chrono::duration_cast<TimeUnitT>(dur).count();
+    const auto nU = std::chrono::duration_cast<TimeUnitT>(dur).count();
+
     AppendString(ret, nU);
     ret += unitStr;
     dur -= TimeUnitT(nU);

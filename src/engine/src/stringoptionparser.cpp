@@ -44,6 +44,7 @@ CurrencyCode StringOptionParser::parseCurrency(FieldIs fieldIs) {
   const auto begIt = _opt.begin() + _pos;
   const bool isCommaPresent = commaPos != std::string_view::npos;
   const std::string_view firstStr(begIt, isCommaPresent ? _opt.begin() + commaPos : _opt.end());
+
   std::string_view curStr;
   if (!firstStr.empty() && !ExchangeName::IsValid(firstStr) && CurrencyCode::IsValid(firstStr)) {
     // disambiguate currency code from exchange name
@@ -65,6 +66,7 @@ Market StringOptionParser::parseMarket(FieldIs fieldIs) {
   const bool isCommaPresent = commaPos != std::string_view::npos;
   const std::string_view marketStr(begIt, isCommaPresent ? begIt + commaPos : _opt.end());
   const std::size_t dashPos = marketStr.find('-');
+
   if (dashPos == std::string_view::npos) {
     if (fieldIs == FieldIs::kMandatory) {
       throw invalid_argument("Expected a dash in '{}'", std::string_view(_opt.begin() + _pos, _opt.end()));
@@ -180,10 +182,12 @@ ExchangeNames StringOptionParser::parseExchanges(char exchangesSep, char endExch
     std::size_t last = str.find(exchangesSep);
     for (; last != std::string_view::npos; last = str.find(exchangesSep, last + 1)) {
       std::string_view exchangeNameStr(str.begin() + first, str.begin() + last);
-      if (!ExchangeName::IsValid(exchangeNameStr)) {
-        return exchanges;
+      if (!exchangeNameStr.empty()) {
+        if (!ExchangeName::IsValid(exchangeNameStr)) {
+          return exchanges;
+        }
+        exchanges.emplace_back(exchangeNameStr);
       }
-      exchanges.emplace_back(exchangeNameStr);
       first = last + 1;
       _pos += exchangeNameStr.size() + 1U;
     }

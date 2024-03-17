@@ -34,6 +34,7 @@
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
+#include "public-trade-vector.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 
@@ -255,10 +256,10 @@ MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
   return MonetaryAmount(last24hVol, mk.base());
 }
 
-TradesVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
+PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
   json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
-  TradesVector ret;
-  ret.reserve(static_cast<TradesVector::size_type>(result.size()));
+  PublicTradeVector ret;
+  ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
   for (const json& detail : result) {
     MonetaryAmount amount(detail["trade_volume"].get<double>(), mk.base());
     MonetaryAmount price(detail["trade_price"].get<double>(), mk.quote());

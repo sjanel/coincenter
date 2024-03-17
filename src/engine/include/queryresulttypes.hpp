@@ -16,6 +16,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "public-trade-vector.hpp"
 #include "traderesult.hpp"
 #include "wallet.hpp"
 #include "withdrawinfo.hpp"
@@ -37,7 +38,7 @@ using MonetaryAmountPerExchange = FixedCapacityVector<ExchangeWith<MonetaryAmoun
 using MonetaryAmountByCurrencySetPerExchange =
     FixedCapacityVector<ExchangeWith<MonetaryAmountByCurrencySet>, kNbSupportedExchanges>;
 
-using TradesPerExchange = FixedCapacityVector<ExchangeWith<TradesVector>, kNbSupportedExchanges>;
+using TradesPerExchange = FixedCapacityVector<ExchangeWith<PublicTradeVector>, kNbSupportedExchanges>;
 
 using TradeResultPerExchange = SmallVector<ExchangeWith<TradeResult>, kTypicalNbPrivateAccounts>;
 

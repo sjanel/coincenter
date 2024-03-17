@@ -16,6 +16,7 @@
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
 #include "exchangename.hpp"
+#include "exchangepublicapi.hpp"
 #include "exchangeretriever.hpp"
 #include "exchangesecretsinfo.hpp"
 #include "market.hpp"
@@ -41,7 +42,7 @@ void FillTransferableCommandResults(const TradeResultPerExchange &tradeResultPer
 volatile sig_atomic_t g_signalStatus = 0;
 
 // According to the standard, 'SignalHandler' function should have C linkage:
-// (https://en.cppreference.com/w/cpp/utility/program/signal
+// https://en.cppreference.com/w/cpp/utility/program/signal
 // Thus it's not possible to use a lambda and pass some
 // objects to it. This is why for this rare occasion we will rely on a static variable. This solution has been inspired
 // by: https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC54-CPP.+A+signal+handler+must+be+a+plain+old+function
@@ -109,7 +110,7 @@ TransferableCommandResultVector Coincenter::processCommand(
     }
     case CoincenterCommandType::kMarkets: {
       const auto marketsPerExchange = getMarketsPerExchange(cmd.cur1(), cmd.cur2(), cmd.exchangeNames());
-      _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange);
+      _queryResultPrinter.printMarkets(cmd.cur1(), cmd.cur2(), marketsPerExchange, cmd.type());
       break;
     }
     case CoincenterCommandType::kConversion: {
@@ -140,9 +141,9 @@ TransferableCommandResultVector Coincenter::processCommand(
       break;
     }
     case CoincenterCommandType::kLastTrades: {
-      const auto lastTradesPerExchange =
-          getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), cmd.nbLastTrades());
-      _queryResultPrinter.printLastTrades(cmd.market(), cmd.nbLastTrades(), lastTradesPerExchange);
+      const int depth = cmd.depth() == 0 ? api::ExchangePublic::kNbLastTradesDefault : cmd.depth();
+      const auto lastTradesPerExchange = getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), depth);
+      _queryResultPrinter.printLastTrades(cmd.market(), depth, lastTradesPerExchange);
       break;
     }
     case CoincenterCommandType::kLast24hTradedVolume: {

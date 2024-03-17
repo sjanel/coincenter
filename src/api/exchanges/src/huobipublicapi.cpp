@@ -35,6 +35,7 @@
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
+#include "public-trade-vector.hpp"
 #include "timedef.hpp"
 #include "toupperlower-string.hpp"
 #include "tradeside.hpp"
@@ -458,12 +459,12 @@ MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
   return MonetaryAmount(last24hVol, mk.base());
 }
 
-TradesVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
+PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
   nbTrades = std::min(nbTrades, 2000);  // max authorized
   nbTrades = std::max(nbTrades, 1);     // min authorized
   json result =
       PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
-  TradesVector ret;
+  PublicTradeVector ret;
   for (const json& detail : result) {
     auto dataDetails = detail.find("data");
     if (dataDetails != detail.end()) {

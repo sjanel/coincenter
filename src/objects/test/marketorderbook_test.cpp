@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <optional>
 
+#include "amount-price.hpp"
 #include "cct_exception.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
