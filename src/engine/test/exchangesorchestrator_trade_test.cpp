@@ -180,28 +180,28 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     // EXPECT_CALL does not allow references. Or I did not found the way to make it work, so we use ugly macros here
     switch (exchangePrivateNum) {
       case 1:
-        EXPECT_TRADE(exchangePublic1, exchangePrivate1)
+        EXPECT_TRADE(exchangePublic1, ExchangePrivate(exchange1))
         break;
       case 2:
-        EXPECT_TRADE(exchangePublic2, exchangePrivate2)
+        EXPECT_TRADE(exchangePublic2, ExchangePrivate(exchange2))
         break;
       case 3:
-        EXPECT_TRADE(exchangePublic3, exchangePrivate3)
+        EXPECT_TRADE(exchangePublic3, ExchangePrivate(exchange3))
         break;
       case 4:
-        EXPECT_TRADE(exchangePublic3, exchangePrivate4)
+        EXPECT_TRADE(exchangePublic3, ExchangePrivate(exchange4))
         break;
       case 5:
-        EXPECT_TRADE(exchangePublic3, exchangePrivate5)
+        EXPECT_TRADE(exchangePublic3, ExchangePrivate(exchange5))
         break;
       case 6:
-        EXPECT_TRADE(exchangePublic3, exchangePrivate6)
+        EXPECT_TRADE(exchangePublic3, ExchangePrivate(exchange6))
         break;
       case 7:
-        EXPECT_TRADE(exchangePublic3, exchangePrivate7)
+        EXPECT_TRADE(exchangePublic3, ExchangePrivate(exchange7))
         break;
       case 8:
-        EXPECT_TRADE(exchangePublic1, exchangePrivate8)
+        EXPECT_TRADE(exchangePublic1, ExchangePrivate(exchange8))
         break;
       default:
         throw exception("Unexpected exchange number ");
@@ -271,28 +271,28 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     // EXPECT_CALL does not allow references. Or I did not found the way to make it work, so we use ugly macros here
     switch (exchangePrivateNum) {
       case 1:
-        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate1, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic1, ExchangePrivate(exchange1), market1, market2)
         break;
       case 2:
-        EXPECT_TWO_STEP_TRADE(exchangePublic2, exchangePrivate2, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic2, ExchangePrivate(exchange2), market1, market2)
         break;
       case 3:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate3, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, ExchangePrivate(exchange3), market1, market2)
         break;
       case 4:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate4, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, ExchangePrivate(exchange4), market1, market2)
         break;
       case 5:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate5, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, ExchangePrivate(exchange5), market1, market2)
         break;
       case 6:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate6, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, ExchangePrivate(exchange6), market1, market2)
         break;
       case 7:
-        EXPECT_TWO_STEP_TRADE(exchangePublic3, exchangePrivate7, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic3, ExchangePrivate(exchange7), market1, market2)
         break;
       case 8:
-        EXPECT_TWO_STEP_TRADE(exchangePublic1, exchangePrivate8, market1, market2)
+        EXPECT_TWO_STEP_TRADE(exchangePublic1, ExchangePrivate(exchange8), market1, market2)
         break;
       default:
         throw exception("Unexpected exchange number ");
@@ -335,8 +335,10 @@ TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
                                                ExchangeName(exchange2.name(), exchange2.keyName())};
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(BalanceOptions()))
+      .WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(BalanceOptions()))
+      .WillOnce(testing::Return(balancePortfolio2));
 
   MonetaryAmount zero(0, from.currencyCode());
   expectSingleTrade(2, zero, toCurrency, side, TradableMarkets::kExpectCall, OrderBook::kExpectNoCall,
@@ -357,10 +359,12 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
                                                ExchangeName(exchange4.name(), exchange4.keyName())};
 
   // 1.5ETH
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(BalanceOptions()))
+      .WillOnce(testing::Return(balancePortfolio1));
 
   // 0.6ETH
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(BalanceOptions())).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(BalanceOptions()))
+      .WillOnce(testing::Return(balancePortfolio3));
 
   MonetaryAmount traded1("1.5 ETH");
   MonetaryAmount traded2("0.5 ETH");
@@ -380,10 +384,10 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuy) {
   CurrencyCode toCurrency("LUNA");
   TradeSide side = TradeSide::kBuy;
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   MonetaryAmount from1(5000, fromCurrency);
   MonetaryAmount from2(6750, fromCurrency);
@@ -409,10 +413,10 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   CurrencyCode toCurrency("LUNA");
   TradeSide side = TradeSide::kBuy;
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   MonetaryAmount from1(0, fromCurrency);
   MonetaryAmount from2(6750, fromCurrency);
@@ -441,15 +445,15 @@ TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
   CurrencyCode toCurrency("LUNA");
   TradeSide side = TradeSide::kBuy;
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange5), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange6), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange7), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange8), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
   MonetaryAmount from1(5000, fromCurrency);
   MonetaryAmount from2(6750, fromCurrency);
@@ -492,7 +496,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName())};
 
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   MonetaryAmount from(1500, fromCurrency);
   TradedAmounts tradedAmounts3 = expectSingleTrade(3, from, toCurrency, side, TradableMarkets::kExpectCall,
@@ -514,9 +518,9 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
                                                ExchangeName(exchange2.name(), exchange2.keyName()),
                                                ExchangeName(exchange3.name(), exchange3.keyName())};
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   const auto from1 = balancePortfolio1.get(fromCurrency);
   const auto from3 = balancePortfolio3.get(fromCurrency);
@@ -542,10 +546,10 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
       ExchangeName(exchange1.name(), exchange1.keyName()), ExchangeName(exchange3.name(), exchange3.keyName()),
       ExchangeName(exchange2.name(), exchange2.keyName()), ExchangeName(exchange4.name(), exchange4.keyName())};
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   expectSingleTrade(1, MonetaryAmount(0, fromCurrency), toCurrency, side, TradableMarkets::kExpectCall,
                     OrderBook::kExpectNoCall, AllOrderBooks::kExpectNoCall, false);
@@ -580,7 +584,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
   TradedAmounts tradedAmounts1 = expectSingleTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
 
@@ -600,7 +604,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuyTwoSteps) {
   TradedAmounts tradedAmounts1 = expectTwoStepTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
                                                     OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
 
@@ -624,8 +628,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
   TradedAmounts tradedAmounts32 = expectSingleTrade(3, from32, toCurrency, side, TradableMarkets::kExpectCall,
                                                     OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
                                                ExchangeName(exchange1.name(), exchange1.keyName())};
@@ -649,8 +653,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange)
   TradedAmounts tradedAmounts3 = expectSingleTrade(3, from3, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
                                                ExchangeName(exchange1.name(), exchange1.keyName())};
@@ -683,9 +687,9 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
   TradedAmounts tradedAmounts4 = expectSingleTrade(4, from42, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.name(), exchange4.keyName()),
                                                ExchangeName(exchange2.name(), exchange2.keyName()),
@@ -721,10 +725,10 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartBuyAllExchanges) {
   TradedAmounts tradedAmounts42 = expectSingleTrade(4, from42, toCurrency, side, TradableMarkets::kNoExpectation,
                                                     OrderBook::kNoExpectation, AllOrderBooks::kNoExpectation, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange2, TradeResult(tradedAmounts2, from2)),
                                                 std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1)),
@@ -745,7 +749,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartSell) {
   TradedAmounts tradedAmounts1 = expectSingleTrade(1, from1, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
 
@@ -761,10 +765,10 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllNoAvailableAmount) {
   EXPECT_CALL(exchangePublic2, queryTradableMarkets()).Times(0);
   EXPECT_CALL(exchangePublic3, queryTradableMarkets()).Times(0);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   EXPECT_TRUE(exchangesOrchestrator.smartSell(startAmount, true, ExchangeNames{}, tradeOptions).empty());
 }
@@ -783,8 +787,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSell) {
   TradedAmounts tradedAmounts2 = expectSingleTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
                                                ExchangeName(exchange2.name(), exchange2.keyName())};
@@ -809,8 +813,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellPercentage) {
   expectSingleTrade(3, from3, toCurrency, side, TradableMarkets::kExpectNoCall, OrderBook::kExpectNoCall,
                     AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
                                                ExchangeName(exchange3.name(), exchange3.keyName())};
@@ -833,8 +837,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange
   TradedAmounts tradedAmounts2 = expectSingleTrade(2, from2, toCurrency, side, TradableMarkets::kExpectCall,
                                                    OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.name(), exchange2.keyName()),
                                                ExchangeName(exchange3.name(), exchange3.keyName())};
@@ -860,9 +864,9 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartSellFromAnotherPreferre
   TradedAmounts tradedAmounts4 = expectSingleTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation,
                                                    OrderBook::kNoExpectation, AllOrderBooks::kExpectNoCall, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.name(), exchange4.keyName()),
                                                ExchangeName(exchange1.name(), exchange1.keyName()),
@@ -893,10 +897,10 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllExchanges) {
   expectSingleTrade(4, from4, toCurrency, side, TradableMarkets::kNoExpectation, OrderBook::kNoExpectation,
                     AllOrderBooks::kNoExpectation, true);
 
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate2, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1))};
   EXPECT_EQ(tradeResultPerExchange, exchangesOrchestrator.smartSell(startAmount, false, ExchangeNames{}, tradeOptions));
