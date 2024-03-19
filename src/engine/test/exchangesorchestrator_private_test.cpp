@@ -40,7 +40,8 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
 };
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(balanceOptions))
+      .WillOnce(testing::Return(balancePortfolio1));
 
   const ExchangeName privateExchangeNames[1] = {ExchangeName(exchange1.name(), exchange1.keyName())};
   BalancePerExchange ret{{&exchange1, balancePortfolio1}};
@@ -48,9 +49,12 @@ TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
 }
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencySeveralExchanges) {
-  EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
-  EXPECT_CALL(exchangePrivate3, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio2));
-  EXPECT_CALL(exchangePrivate4, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio3));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(balanceOptions))
+      .WillOnce(testing::Return(balancePortfolio1));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(balanceOptions))
+      .WillOnce(testing::Return(balancePortfolio2));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(balanceOptions))
+      .WillOnce(testing::Return(balancePortfolio3));
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
                                                ExchangeName(exchange1.name(), exchange1.keyName()),
@@ -70,11 +74,11 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("XRP", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   Wallet wallet2{privateExchangeNames[0],           depositCurrency, "address1", "", WalletCheck(),
                  AccountOwner("en_name", "ko_name")};
-  EXPECT_CALL(exchangePrivate2, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet2));
 
   WalletPerExchange ret{{&exchange2, wallet2}};
   EXPECT_EQ(exchangesOrchestrator.getDepositInfo(privateExchangeNames, depositCurrency), ret);
@@ -92,11 +96,11 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
 
   CurrencyExchangeFlatSet tradableCurrencies2{CurrencyExchangeVector{CurrencyExchange(
       "XLM", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   CurrencyExchangeFlatSet tradableCurrencies3{CurrencyExchangeVector{
       CurrencyExchange("BTC", CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
@@ -108,16 +112,16 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
       CurrencyExchange("EUR", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
                        Type::kFiat),
   }};
-  EXPECT_CALL(exchangePrivate3, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
-  EXPECT_CALL(exchangePrivate4, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies3));
 
   Wallet wallet31{privateExchangeNames[2],           depositCurrency, "address2", "tag2", WalletCheck(),
                   AccountOwner("en_name", "ko_name")};
-  EXPECT_CALL(exchangePrivate3, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet31));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet31));
 
   Wallet wallet32{privateExchangeNames[3],           depositCurrency, "address3", "tag3", WalletCheck(),
                   AccountOwner("en_name", "ko_name")};
-  EXPECT_CALL(exchangePrivate4, queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet32));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryDepositWallet(depositCurrency)).WillOnce(testing::Return(wallet32));
 
   WalletPerExchange ret{{&exchange3, wallet31}, {&exchange4, wallet32}};
   EXPECT_EQ(exchangesOrchestrator.getDepositInfo(privateExchangeNames, depositCurrency), ret);
@@ -134,16 +138,16 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
                                               MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kBuy),
                                   OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("76XLM"),
                                               MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kSell)};
-  EXPECT_CALL(exchangePrivate2, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders2));
 
   OpenedOrderVector openedOrders3{};
-  EXPECT_CALL(exchangePrivate3, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders3));
+  EXPECT_CALL(ExchangePrivate(exchange3), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders3));
 
   OpenedOrderVector openedOrders4{OpenedOrder("Id37", MonetaryAmount("0.7ETH"), MonetaryAmount("0.9ETH"),
                                               MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kSell),
                                   OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("19XLM"),
                                               MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kBuy)};
-  EXPECT_CALL(exchangePrivate4, queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders4));
+  EXPECT_CALL(ExchangePrivate(exchange4), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders4));
 
   OpenedOrdersPerExchange ret{{&exchange2, OpenedOrderSet(openedOrders2.begin(), openedOrders2.end())},
                               {&exchange3, OpenedOrderSet(openedOrders3.begin(), openedOrders3.end())},
@@ -169,13 +173,13 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
                                               CurrencyExchange::Withdraw::kUnavailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
   CurrencyExchangeFlatSet tradableCurrencies2{
       CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   auto [exchanges, deliveredWithdrawInfo] =
       exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions);
@@ -192,13 +196,13 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
+  EXPECT_CALL(ExchangePrivate(exchange1), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
   CurrencyExchangeFlatSet tradableCurrencies2{
       CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kUnavailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+  EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
   auto [exchanges, deliveredWithdrawInfo] =
       exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions);
@@ -233,30 +237,31 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
                                CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                                 CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
 
-    EXPECT_CALL(exchangePrivate1, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
-    EXPECT_CALL(exchangePrivate2, queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
+    EXPECT_CALL(ExchangePrivate(exchange1), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies1));
+    EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
   }
 
   DeliveredWithdrawInfo createWithdrawInfo(MonetaryAmount grossAmount, bool isPercentageWithdraw) {
     if (isPercentageWithdraw) {
-      EXPECT_CALL(exchangePrivate1, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balancePortfolio1));
+      EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(balanceOptions))
+          .WillOnce(testing::Return(balancePortfolio1));
       grossAmount = (grossAmount.toNeutral() * balancePortfolio1.get(cur)) / 100;
     } else {
-      EXPECT_CALL(exchangePrivate1, queryAccountBalance(testing::_)).Times(0);
+      EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).Times(0);
     }
     MonetaryAmount netEmittedAmount = grossAmount - fee;
     Wallet receivingWallet{toExchange, cur,           "TestAddress",
                            "TestTag",  WalletCheck(), AccountOwner("SmithJohn", "스미스존")};
-    EXPECT_CALL(exchangePrivate2, queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
+    EXPECT_CALL(ExchangePrivate(exchange2), queryDepositWallet(cur)).WillOnce(testing::Return(receivingWallet));
 
     api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
-    EXPECT_CALL(exchangePrivate1, launchWithdraw(grossAmount, std::move(receivingWallet)))
+    EXPECT_CALL(ExchangePrivate(exchange1), launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
     api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
-    EXPECT_CALL(exchangePrivate1, queryRecentWithdraws(testing::_))
+    EXPECT_CALL(ExchangePrivate(exchange1), queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
             WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
-    EXPECT_CALL(exchangePrivate2, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
+    EXPECT_CALL(ExchangePrivate(exchange2), queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .WillOnce(testing::Return(netEmittedAmount));
     return {std::move(initiatedWithdrawInfo), netEmittedAmount};
   }

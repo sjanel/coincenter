@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 #include "cct_exception.hpp"
 #include "currencycode.hpp"
@@ -29,9 +31,10 @@ class Exchange {
   Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic);
 
   /// Build a Exchange with both private and public exchanges
-  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic, ExchangePrivate &exchangePrivate);
+  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+           std::unique_ptr<ExchangePrivate> exchangePrivate);
 
-  std::string_view name() const { return _exchangePublic.name(); }
+  std::string_view name() const { return apiPublic().name(); }
   std::string_view keyName() const { return apiPrivate().keyName(); }
 
   ExchangeName createExchangeName() const {
@@ -41,63 +44,63 @@ class Exchange {
     return ExchangeName(name());
   }
 
-  ExchangePublic &apiPublic() { return _exchangePublic; }
-  const ExchangePublic &apiPublic() const { return _exchangePublic; }
+  ExchangePublic &apiPublic() { return *_pExchangePublic; }
+  const ExchangePublic &apiPublic() const { return *_pExchangePublic; }
 
   ExchangePrivate &apiPrivate() {
     if (hasPrivateAPI()) {
-      return *_pExchangePrivate;
+      return *_exchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
   const ExchangePrivate &apiPrivate() const {
     if (hasPrivateAPI()) {
-      return *_pExchangePrivate;
+      return *_exchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
+  const ExchangeConfig &exchangeConfig() const { return *_pExchangeConfig; }
 
-  bool hasPrivateAPI() const { return _pExchangePrivate != nullptr; }
+  bool hasPrivateAPI() const { return static_cast<bool>(_exchangePrivate); }
 
-  bool healthCheck() { return _exchangePublic.healthCheck(); }
+  bool healthCheck() { return apiPublic().healthCheck(); }
 
   CurrencyExchangeFlatSet queryTradableCurrencies() {
-    return hasPrivateAPI() ? _pExchangePrivate->queryTradableCurrencies() : _exchangePublic.queryTradableCurrencies();
+    return hasPrivateAPI() ? _exchangePrivate->queryTradableCurrencies() : apiPublic().queryTradableCurrencies();
   }
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode currencyCode) {
-    return _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
+    return apiPublic().convertStdCurrencyToCurrencyExchange(currencyCode);
   }
 
-  MarketSet queryTradableMarkets() { return _exchangePublic.queryTradableMarkets(); }
+  MarketSet queryTradableMarkets() { return apiPublic().queryTradableMarkets(); }
 
-  MarketPriceMap queryAllPrices() { return _exchangePublic.queryAllPrices(); }
+  MarketPriceMap queryAllPrices() { return apiPublic().queryAllPrices(); }
 
   MonetaryAmountByCurrencySet queryWithdrawalFees() {
-    return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFees() : _exchangePublic.queryWithdrawalFees();
+    return hasPrivateAPI() ? _exchangePrivate->queryWithdrawalFees() : apiPublic().queryWithdrawalFees();
   }
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) {
-    return hasPrivateAPI() ? _pExchangePrivate->queryWithdrawalFee(currencyCode)
-                           : _exchangePublic.queryWithdrawalFee(currencyCode);
+    return hasPrivateAPI() ? _exchangePrivate->queryWithdrawalFee(currencyCode)
+                           : apiPublic().queryWithdrawalFee(currencyCode);
   }
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = ExchangePublic::kDefaultDepth) {
-    return _exchangePublic.queryAllApproximatedOrderBooks(depth);
+    return apiPublic().queryAllApproximatedOrderBooks(depth);
   }
 
   MarketOrderBook queryOrderBook(Market mk, int depth = ExchangePublic::kDefaultDepth);
 
-  MonetaryAmount queryLast24hVolume(Market mk) { return _exchangePublic.queryLast24hVolume(mk); }
+  MonetaryAmount queryLast24hVolume(Market mk) { return apiPublic().queryLast24hVolume(mk); }
 
   /// Retrieve an ordered vector of recent last trades
   PublicTradeVector queryLastTrades(Market mk, int nbTrades = ExchangePublic::kNbLastTradesDefault);
 
   /// Retrieve the last price of given market.
-  MonetaryAmount queryLastPrice(Market mk) { return _exchangePublic.queryLastPrice(mk); }
+  MonetaryAmount queryLastPrice(Market mk) { return apiPublic().queryLastPrice(mk); }
 
   bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
 
@@ -109,10 +112,13 @@ class Exchange {
 
   void updateCacheFile() const;
 
+  /// unique_ptr is always trivially relocatable whatever the underlying type.
+  using trivially_relocatable = std::true_type;
+
  private:
-  ExchangePublic &_exchangePublic;
-  ExchangePrivate *_pExchangePrivate = nullptr;
-  const ExchangeConfig &_exchangeConfig;
+  ExchangePublic *_pExchangePublic;
+  std::unique_ptr<ExchangePrivate> _exchangePrivate;
+  const ExchangeConfig *_pExchangeConfig;
 };
 
 }  // namespace cct

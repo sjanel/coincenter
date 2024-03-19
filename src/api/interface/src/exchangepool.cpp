@@ -1,11 +1,13 @@
 #include "exchangepool.hpp"
 
+#include <memory>
 #include <string_view>
 
 #include "apikey.hpp"
 #include "apikeysprovider.hpp"
 #include "binanceprivateapi.hpp"
 #include "bithumbprivateapi.hpp"
+#include "bithumbpublicapi.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
@@ -53,21 +55,21 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
     const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(exchangePublic->name());
     if (canUsePrivateExchange) {
       for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeStr)) {
-        api::ExchangePrivate* exchangePrivate;
+        std::unique_ptr<api::ExchangePrivate> exchangePrivate;
         ExchangeName exchangeName(exchangeStr, keyName);
         const api::APIKey& apiKey = _apiKeyProvider.get(exchangeName);
         if (exchangePublic == &_binancePublic) {
-          exchangePrivate = &_binancePrivates.emplace_front(_coincenterInfo, _binancePublic, apiKey);
+          exchangePrivate = std::make_unique<api::BinancePrivate>(_coincenterInfo, _binancePublic, apiKey);
         } else if (exchangePublic == &_bithumbPublic) {
-          exchangePrivate = &_bithumbPrivates.emplace_front(_coincenterInfo, _bithumbPublic, apiKey);
+          exchangePrivate = std::make_unique<api::BithumbPrivate>(_coincenterInfo, _bithumbPublic, apiKey);
         } else if (exchangePublic == &_huobiPublic) {
-          exchangePrivate = &_huobiPrivates.emplace_front(_coincenterInfo, _huobiPublic, apiKey);
+          exchangePrivate = std::make_unique<api::HuobiPrivate>(_coincenterInfo, _huobiPublic, apiKey);
         } else if (exchangePublic == &_krakenPublic) {
-          exchangePrivate = &_krakenPrivates.emplace_front(_coincenterInfo, _krakenPublic, apiKey);
+          exchangePrivate = std::make_unique<api::KrakenPrivate>(_coincenterInfo, _krakenPublic, apiKey);
         } else if (exchangePublic == &_kucoinPublic) {
-          exchangePrivate = &_kucoinPrivates.emplace_front(_coincenterInfo, _kucoinPublic, apiKey);
+          exchangePrivate = std::make_unique<api::KucoinPrivate>(_coincenterInfo, _kucoinPublic, apiKey);
         } else if (exchangePublic == &_upbitPublic) {
-          exchangePrivate = &_upbitPrivates.emplace_front(_coincenterInfo, _upbitPublic, apiKey);
+          exchangePrivate = std::make_unique<api::UpbitPrivate>(_coincenterInfo, _upbitPublic, apiKey);
         } else {
           throw exception("Unsupported platform {}", exchangeStr);
         }
@@ -81,7 +83,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
           }
         }
 
-        _exchanges.emplace_back(exchangeConfig, *exchangePublic, *exchangePrivate);
+        _exchanges.emplace_back(exchangeConfig, *exchangePublic, std::move(exchangePrivate));
       }
     } else {
       _exchanges.emplace_back(exchangeConfig, *exchangePublic);
@@ -89,7 +91,5 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
   }
   _exchanges.shrink_to_fit();
 }
-
-ExchangePool::~ExchangePool() = default;
 
 }  // namespace cct

@@ -8,22 +8,20 @@
 #include "exchangeconfig.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
-#include "marketorderbook.hpp"
-#include "public-trade-vector.hpp"
 
 namespace cct {
 
-Exchange::Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic,
-                   api::ExchangePrivate &exchangePrivate)
-    : _exchangePublic(exchangePublic),
-      _pExchangePrivate(std::addressof(exchangePrivate)),
-      _exchangeConfig(exchangeConfig) {}
+Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic)
+    : Exchange(exchangeConfig, exchangePublic, std::unique_ptr<ExchangePrivate>()) {}
 
-Exchange::Exchange(const ExchangeConfig &exchangeConfig, api::ExchangePublic &exchangePublic)
-    : _exchangePublic(exchangePublic), _exchangeConfig(exchangeConfig) {}
+Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+                   std::unique_ptr<ExchangePrivate> exchangePrivate)
+    : _pExchangePublic(std::addressof(exchangePublic)),
+      _exchangePrivate(std::move(exchangePrivate)),
+      _pExchangeConfig(std::addressof(exchangeConfig)) {}
 
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
-  if (_exchangeConfig.excludedCurrenciesWithdrawal().contains(currencyCode)) {
+  if (_pExchangeConfig->excludedCurrenciesWithdrawal().contains(currencyCode)) {
     return false;
   }
   auto lb = currencyExchangeSet.find(currencyCode);
@@ -43,17 +41,17 @@ bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatS
   return lb->canDeposit();
 }
 
-MarketOrderBook Exchange::queryOrderBook(Market mk, int depth) { return _exchangePublic.queryOrderBook(mk, depth); }
+MarketOrderBook Exchange::queryOrderBook(Market mk, int depth) { return apiPublic().queryOrderBook(mk, depth); }
 
 /// Retrieve an ordered vector of recent last trades
 PublicTradeVector Exchange::queryLastTrades(Market mk, int nbTrades) {
-  return _exchangePublic.queryLastTrades(mk, nbTrades);
+  return apiPublic().queryLastTrades(mk, nbTrades);
 }
 
 void Exchange::updateCacheFile() const {
-  _exchangePublic.updateCacheFile();
-  if (_pExchangePrivate != nullptr) {
-    _pExchangePrivate->updateCacheFile();
+  apiPublic().updateCacheFile();
+  if (_exchangePrivate) {
+    _exchangePrivate->updateCacheFile();
   }
 }
 }  // namespace cct

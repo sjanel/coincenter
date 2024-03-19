@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "exchange.hpp"
@@ -13,11 +15,19 @@ namespace cct {
 
 class ExchangesBaseTest : public ::testing::Test {
  protected:
+  static api::MockExchangePrivate &ExchangePrivate(Exchange &exchange) {
+    return dynamic_cast<api::MockExchangePrivate &>(exchange.apiPrivate());
+  }
+
   void SetUp() override {
-    EXPECT_CALL(exchangePrivate5, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate6, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate7, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
-    EXPECT_CALL(exchangePrivate8, queryAccountBalance(testing::_)).WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(ExchangePrivate(exchange5), queryAccountBalance(testing::_))
+        .WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(ExchangePrivate(exchange6), queryAccountBalance(testing::_))
+        .WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(ExchangePrivate(exchange7), queryAccountBalance(testing::_))
+        .WillRepeatedly(testing::Return(emptyBalance));
+    EXPECT_CALL(ExchangePrivate(exchange8), queryAccountBalance(testing::_))
+        .WillRepeatedly(testing::Return(emptyBalance));
   }
 
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
@@ -34,22 +44,22 @@ class ExchangesBaseTest : public ::testing::Test {
   api::APIKey key3{"test3", "testuser3", "", "", ""};
   api::APIKey key4{"test4", "testuser4", "", "", ""};
   api::APIKey key5{"test5", "testuser5", "", "", ""};
-  api::MockExchangePrivate exchangePrivate1{exchangePublic1, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate2{exchangePublic2, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate3{exchangePublic3, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate4{exchangePublic3, coincenterInfo, key2};
-  api::MockExchangePrivate exchangePrivate5{exchangePublic3, coincenterInfo, key3};
-  api::MockExchangePrivate exchangePrivate6{exchangePublic3, coincenterInfo, key4};
-  api::MockExchangePrivate exchangePrivate7{exchangePublic3, coincenterInfo, key5};
-  api::MockExchangePrivate exchangePrivate8{exchangePublic1, coincenterInfo, key2};
-  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
-  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
-  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
-  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
-  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
-  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
-  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate7};
-  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
+  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
+  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic2, coincenterInfo, key1)};
+  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key1)};
+  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key2)};
+  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key3)};
+  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key4)};
+  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key5)};
+  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key2)};
 
   static constexpr Market m1{"ETH", "EUR"};
   static constexpr Market m2{"BTC", "EUR"};

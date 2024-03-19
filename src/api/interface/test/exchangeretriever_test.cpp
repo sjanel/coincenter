@@ -3,9 +3,12 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <iterator>
+#include <memory>
 #include <span>
 #include <string_view>
 
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -41,22 +44,13 @@ class ExchangeRetrieverTest : public ::testing::Test {
   api::APIKey key3{"test3", "user3", "", "", ""};
   api::APIKey key4{"test4", "user4", "", "", ""};
   api::APIKey key5{"test5", "user5", "", "", ""};
-  api::MockExchangePrivate exchangePrivate1{exchangePublic1, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate2{exchangePublic2, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate3{exchangePublic3, coincenterInfo, key1};
-  api::MockExchangePrivate exchangePrivate4{exchangePublic3, coincenterInfo, key2};
-  api::MockExchangePrivate exchangePrivate5{exchangePublic3, coincenterInfo, key3};
-  api::MockExchangePrivate exchangePrivate6{exchangePublic3, coincenterInfo, key4};
-  api::MockExchangePrivate exchangePrivate7{exchangePublic3, coincenterInfo, key5};
-  api::MockExchangePrivate exchangePrivate8{exchangePublic1, coincenterInfo, key2};
-  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate1};
-  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2, exchangePrivate2};
-  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate3};
-  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate4};
-  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate5};
-  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3, exchangePrivate6};
-  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3};
-  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1, exchangePrivate8};
+  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
+  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic2, coincenterInfo, key1)};
+  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3};
+  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+                     std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key2)};
 };
 
 TEST_F(ExchangeRetrieverTest, Empty) {
@@ -65,7 +59,7 @@ TEST_F(ExchangeRetrieverTest, Empty) {
 }
 
 TEST_F(ExchangeRetrieverTest, EmptySelection) {
-  Exchange kAllExchanges[] = {exchange1, exchange2, exchange7, exchange8};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange3), std::move(exchange4)};
 
   ExchangeRetriever exchangeRetriever(kAllExchanges);
 
@@ -80,7 +74,7 @@ TEST_F(ExchangeRetrieverTest, EmptySelection) {
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveUniqueCandidate) {
-  Exchange kAllExchanges[] = {exchange1, exchange2, exchange7, exchange8};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange3), std::move(exchange4)};
 
   ExchangeRetriever exchangeRetriever(kAllExchanges);
 
@@ -98,7 +92,7 @@ TEST_F(ExchangeRetrieverTest, RetrieveUniqueCandidate) {
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesInitialOrder) {
-  Exchange kAllExchanges[] = {exchange1, exchange2, exchange7, exchange8};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange3), std::move(exchange4)};
 
   ExchangeRetriever exchangeRetriever(kAllExchanges);
 
@@ -123,7 +117,7 @@ TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesInitialOrder) {
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesFilterWhenAccountNotPresent) {
-  Exchange kAllExchanges[] = {exchange1, exchange2, exchange7, exchange8};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange3), std::move(exchange4)};
 
   ExchangeRetriever exchangeRetriever(kAllExchanges);
 
@@ -152,14 +146,10 @@ TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesFilterWhenAccountNotPrese
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesSelectedOrder) {
-  Exchange kAllExchanges1[] = {exchange1, exchange2, exchange8};
-  Exchange kAllExchanges2[] = {exchange8, exchange1, exchange2};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange4)};
 
-  std::span<Exchange> exchangesSpan1 = kAllExchanges1;
-  std::span<Exchange> exchangesSpan2 = kAllExchanges2;
-
-  for (auto exchangesSpan : {exchangesSpan1, exchangesSpan2}) {
-    ExchangeRetriever exchangeRetriever(exchangesSpan);
+  for (int pos = 0; pos < 2; ++pos) {
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
     ExchangeNames names{ExchangeName("kraken"), ExchangeName("bithumb")};
     ExchangeRetriever::SelectedExchanges selectedExchanges =
         exchangeRetriever.select(ExchangeRetriever::Order::kSelection, names);
@@ -167,18 +157,16 @@ TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesSelectedOrder) {
     EXPECT_EQ(selectedExchanges[0]->name(), "kraken");
     EXPECT_EQ(selectedExchanges[1]->name(), "bithumb");
     EXPECT_EQ(selectedExchanges[2]->name(), "bithumb");
+
+    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
   }
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveAtMostOneAccountSelectedExchanges) {
-  Exchange kAllExchanges1[] = {exchange1, exchange2, exchange8};
-  Exchange kAllExchanges2[] = {exchange8, exchange1, exchange2};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange4)};
 
-  std::span<Exchange> exchangesSpan1 = kAllExchanges1;
-  std::span<Exchange> exchangesSpan2 = kAllExchanges2;
-
-  for (auto exchangesSpan : {exchangesSpan1, exchangesSpan2}) {
-    ExchangeRetriever exchangeRetriever(exchangesSpan);
+  for (int pos = 0; pos < 2; ++pos) {
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
 
     ExchangeNames names{ExchangeName("kraken"), ExchangeName("bithumb")};
     ExchangeRetriever::UniquePublicSelectedExchanges selectedExchanges = exchangeRetriever.selectOneAccount(names);
@@ -192,24 +180,24 @@ TEST_F(ExchangeRetrieverTest, RetrieveAtMostOneAccountSelectedExchanges) {
     ASSERT_EQ(exchangesInitialOrder.size(), 2U);
     EXPECT_EQ(exchangesInitialOrder.front()->name(), "bithumb");
     EXPECT_EQ(exchangesInitialOrder.back()->name(), "kraken");
+
+    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
   }
 }
 
 TEST_F(ExchangeRetrieverTest, RetrieveUniquePublicExchange) {
-  Exchange kAllExchanges1[] = {exchange1, exchange2, exchange8};
-  Exchange kAllExchanges2[] = {exchange8, exchange1, exchange2};
+  Exchange kAllExchanges[] = {std::move(exchange1), std::move(exchange2), std::move(exchange4)};
 
-  std::span<Exchange> exchangesSpan1 = kAllExchanges1;
-  std::span<Exchange> exchangesSpan2 = kAllExchanges2;
-
-  for (auto exchangesSpan : {exchangesSpan1, exchangesSpan2}) {
-    ExchangeRetriever exchangeRetriever(exchangesSpan);
+  for (int pos = 0; pos < 2; ++pos) {
+    ExchangeRetriever exchangeRetriever(kAllExchanges);
     ExchangeNames names{ExchangeName("kraken"), ExchangeName("bithumb")};
     ExchangeRetriever::PublicExchangesVec selectedExchanges = exchangeRetriever.selectPublicExchanges(names);
 
     ASSERT_EQ(selectedExchanges.size(), 2U);
     EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
     EXPECT_EQ(selectedExchanges.back()->name(), "bithumb");
+
+    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
   }
 }
 }  // namespace cct

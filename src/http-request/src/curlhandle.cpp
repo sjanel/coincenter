@@ -282,7 +282,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
 
     // Periodic memory release to avoid memory leak for a very large number of requests
-    static constexpr int kReleaseMemoryRequestsFrequency = 100;
+    static constexpr int kReleaseMemoryRequestsFrequency = 1000;
     if ((_bestURLPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
       _queryData.shrink_to_fit();
     }

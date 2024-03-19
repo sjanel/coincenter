@@ -185,7 +185,7 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingCurrency) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto),
                              CurrencyExchange("SHIB", CurrencyExchange::Deposit::kAvailable,
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
-  EXPECT_CALL(exchangePrivate1, queryTradableCurrencies())
+  EXPECT_CALL(ExchangePrivate(exchange1), queryTradableCurrencies())
       .Times(2)
       .WillRepeatedly(testing::Return(tradableCurrencies1));
 
@@ -199,7 +199,7 @@ TEST_F(ExchangeOrchestratorTest, GetExchangesTradingCurrency) {
       CurrencyExchange("EUR", CurrencyExchange::Deposit::kAvailable, CurrencyExchange::Withdraw::kAvailable,
                        Type::kFiat),
   }};
-  EXPECT_CALL(exchangePrivate3, queryTradableCurrencies())
+  EXPECT_CALL(ExchangePrivate(exchange3), queryTradableCurrencies())
       .Times(2)
       .WillRepeatedly(testing::Return(tradableCurrencies3));
 

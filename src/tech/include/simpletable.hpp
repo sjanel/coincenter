@@ -31,6 +31,19 @@ namespace cct {
 /// It is also possible to force a line separator between any row in the print. For that, you can insert the special Row
 /// Row::kDivider at the desired place in the SimpleTable.
 /// See the unit test to have an overview of its usage and the look and feel of the print.
+/// Example:
+///
+/// +---------------+----------+-----------------------+
+/// | Amount        | Currency | This header is longer |
+/// +---------------+----------+-----------------------+
+/// | 1235          | EUR      | Nothing here          |
+/// | 3456.78       | USD      | 42                    |
+/// | -677234.67    | SUSHI    | -12                   |
+/// | -677256340000 | KEBAB    | -34.09                |
+/// |~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~|
+/// | 12            |          | Nothing here          |
+/// | -4            |          |                       |
+/// +---------------+----------+-----------------------+
 class SimpleTable {
  public:
   class Row;

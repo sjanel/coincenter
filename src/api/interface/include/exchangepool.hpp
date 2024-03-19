@@ -1,8 +1,6 @@
 #pragma once
 
-#include <forward_list>
 #include <span>
-#include <string_view>
 
 #include "binancepublicapi.hpp"
 #include "bithumbpublicapi.hpp"
@@ -21,13 +19,6 @@ class CoincenterInfo;
 class FiatConverter;
 
 namespace api {
-class BinancePrivate;
-class BithumbPrivate;
-class HuobiPrivate;
-class KrakenPrivate;
-class KucoinPrivate;
-class UpbitPrivate;
-
 class CommonAPI;
 class APIKeysProvider;
 }  // namespace api
@@ -36,13 +27,6 @@ class ExchangePool {
  public:
   ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter, api::CommonAPI& commonAPI,
                const api::APIKeysProvider& apiKeyProvider);
-
-  ExchangePool(const ExchangePool&) = delete;
-  ExchangePool(ExchangePool&&) = delete;
-  ExchangePool& operator=(const ExchangePool&) = delete;
-  ExchangePool& operator=(ExchangePool&&) = delete;
-
-  ~ExchangePool();
 
   std::span<Exchange> exchanges() { return _exchanges; }
   std::span<const Exchange> exchanges() const { return _exchanges; }
@@ -62,16 +46,6 @@ class ExchangePool {
   api::KrakenPublic _krakenPublic;
   api::KucoinPublic _kucoinPublic;
   api::UpbitPublic _upbitPublic;
-
-  // Private exchanges (based on provided keys)
-  // Use std::forward_list to guarantee validity of the iterators and pointers, as we give them to Exchange object as
-  // pointers
-  std::forward_list<api::BinancePrivate> _binancePrivates;
-  std::forward_list<api::BithumbPrivate> _bithumbPrivates;
-  std::forward_list<api::HuobiPrivate> _huobiPrivates;
-  std::forward_list<api::KrakenPrivate> _krakenPrivates;
-  std::forward_list<api::KucoinPrivate> _kucoinPrivates;
-  std::forward_list<api::UpbitPrivate> _upbitPrivates;
 
   ExchangeVector _exchanges;
 };
