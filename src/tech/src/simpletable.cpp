@@ -11,13 +11,12 @@
 #include <type_traits>
 #include <variant>
 
+#include "cct_smallvector.hpp"
 #include "mathhelpers.hpp"
 
 namespace cct {
 
-/// A divider row is represented as an empty row.
-/// It will be treated specially in the print
-const SimpleTable::Row SimpleTable::Row::kDivider;
+namespace table {
 
 namespace {
 constexpr char kColumnSep = '|';
@@ -46,7 +45,7 @@ template <class>
 constexpr bool always_false_v = false;
 }  // namespace
 
-SimpleTable::size_type SimpleTable::CellLine::width() const {
+CellLine::size_type CellLine::width() const {
   return std::visit(
       [](auto &&val) -> size_type {
         using T = std::decay_t<decltype(val)>;
@@ -65,15 +64,15 @@ SimpleTable::size_type SimpleTable::CellLine::width() const {
       _data);
 }
 
-std::ostream &operator<<(std::ostream &os, const SimpleTable::CellLine &singleLineCell) {
+std::ostream &operator<<(std::ostream &os, const CellLine &singleLineCell) {
   std::visit(
       [&os](auto &&val) {
         using T = std::decay_t<decltype(val)>;
 
         if constexpr (std::is_same_v<T, bool>) {
           os << (val ? kBoolValueTrue : kBoolValueFalse);
-        } else if constexpr (std::is_same_v<T, SimpleTable::CellLine::string_type> ||
-                             std::is_same_v<T, std::string_view> || std::is_integral_v<T>) {
+        } else if constexpr (std::is_same_v<T, CellLine::string_type> || std::is_same_v<T, std::string_view> ||
+                             std::is_integral_v<T>) {
           os << val;
         } else {
           // Note: can be replaced with 'static_assert(false);' in C++23
@@ -84,17 +83,22 @@ std::ostream &operator<<(std::ostream &os, const SimpleTable::CellLine &singleLi
   return os;
 }
 
-SimpleTable::Cell::size_type SimpleTable::Cell::width() const {
+Cell::size_type Cell::width() const {
   const auto maxWidthLineIt = std::ranges::max_element(
       _singleLineCells, [](const auto &lhs, const auto &rhs) { return lhs.width() < rhs.width(); });
   return maxWidthLineIt == _singleLineCells.end() ? size_type{} : maxWidthLineIt->width();
 }
 
-void SimpleTable::Cell::print(std::ostream &os, size_type linePos, size_type maxCellWidth) const {
+namespace {
+bool IsMultiLine(const Row &row) {
+  return std::ranges::any_of(row, [](const auto &cell) { return cell.size() > 1U; });
+}
+
+void PrintCell(std::ostream &os, const Cell &cell, Cell::size_type linePos, Cell::size_type maxCellWidth) {
   os << ' ' << Align(AlignTo::kLeft) << std::setw(maxCellWidth);
 
-  if (linePos < size()) {
-    os << _singleLineCells[linePos];
+  if (linePos < cell.size()) {
+    os << cell[linePos];
   } else {
     // No value for this line pos for given cell, just print spaces
     os << kEmptyValueChar;
@@ -103,56 +107,55 @@ void SimpleTable::Cell::print(std::ostream &os, size_type linePos, size_type max
   os << ' ' << kColumnSep;
 }
 
-bool SimpleTable::Row::isMultiLine() const noexcept {
-  return std::ranges::any_of(_cells, [](const Cell &cell) { return cell.size() > 1U; });
-}
-
-void SimpleTable::Row::print(std::ostream &os, std::span<const uint16_t> maxWidthPerColumn) const {
+void PrintRow(std::ostream &os, const Row &row, std::span<const uint16_t> maxWidthPerColumn) {
   const auto maxSingleLineCellsIt =
-      std::ranges::max_element(_cells, [](const Cell &lhs, const Cell &rhs) { return lhs.size() < rhs.size(); });
-  const auto maxNbSingleLineCells = maxSingleLineCellsIt == _cells.end() ? size_type{} : maxSingleLineCellsIt->size();
-  for (std::remove_const_t<decltype(maxNbSingleLineCells)> linePos = 0; linePos < maxNbSingleLineCells; ++linePos) {
+      std::ranges::max_element(row, [](const auto &lhs, const auto &rhs) { return lhs.size() < rhs.size(); });
+  const auto maxNbSingleLineCells = maxSingleLineCellsIt == row.end() ? 0 : maxSingleLineCellsIt->size();
+  using size_type = std::remove_const_t<decltype(maxNbSingleLineCells)>;
+  for (size_type linePos = 0; linePos < maxNbSingleLineCells; ++linePos) {
     os << kColumnSep;
 
     size_type columnPos{};
 
-    for (const Cell &cell : _cells) {
-      cell.print(os, linePos, maxWidthPerColumn[columnPos]);
+    for (const auto &cell : row) {
+      PrintCell(os, cell, linePos, maxWidthPerColumn[columnPos]);
       ++columnPos;
     }
 
     os << '\n';
   }
 }
+}  // namespace
 
-SimpleTable::MaxWidthPerColumnVector SimpleTable::computeMaxWidthPerColumn() const {
-  // We assume that each row has same number of cells
-  const size_type nbColumns = _rows.front().size();
-  MaxWidthPerColumnVector res(nbColumns, 0);
-  for (const Row &row : _rows) {
-    if (row.isDivider()) {
+}  // namespace table
+
+namespace {
+auto ComputeMaxWidthPerColumn(const SimpleTable &table) {
+  const auto nbColumns = table.front().size();
+  SmallVector<uint16_t, 16> res(nbColumns, 0);
+  for (const auto &row : table) {
+    if (row.empty()) {
       continue;
     }
-    for (size_type columnPos = 0; columnPos < nbColumns; ++columnPos) {
-      const Cell &cell = row[columnPos];
 
-      res[columnPos] = std::max(res[columnPos], static_cast<uint16_t>(cell.width()));
+    for (std::remove_const_t<decltype(nbColumns)> columnPos{}; columnPos < nbColumns; ++columnPos) {
+      res[columnPos] = std::max(res[columnPos], static_cast<uint16_t>(row[columnPos].width()));
     }
   }
   return res;
 }
 
-namespace {
 auto ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector, char cellFiller, char columnSep) {
-  const SimpleTable::size_type sumWidths =
-      std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), 0U);
+  using size_type = SimpleTable::size_type;
+
+  const auto sumWidths = std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), size_type{});
 
   // 3 as one space before, one space after the field name and column separator. +1 for the first column separator
-  const SimpleTable::size_type tableWidth = sumWidths + maxWidthPerColumnVector.size() * 3 + 1;
+  const size_type tableWidth = sumWidths + maxWidthPerColumnVector.size() * 3 + 1;
 
   SimpleTable::value_type::value_type::value_type::string_type lineSep(tableWidth, cellFiller);
 
-  SimpleTable::size_type curWidth{};
+  size_type curWidth{};
   lineSep[curWidth] = columnSep;
   for (auto maxWidth : maxWidthPerColumnVector) {
     curWidth += maxWidth + 3;
@@ -164,11 +167,11 @@ auto ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector, char cell
 }  // namespace
 
 std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
-  if (table._rows.empty()) {
+  if (table.empty()) {
     return os;
   }
 
-  const auto maxWidthPerColumnVector = table.computeMaxWidthPerColumn();
+  const auto maxWidthPerColumnVector = ComputeMaxWidthPerColumn(table);
   const auto lineSep = ComputeLineSep(maxWidthPerColumnVector, '-', '+');
   const auto multiLineSep = ComputeLineSep(maxWidthPerColumnVector, '~', '|');
 
@@ -176,28 +179,28 @@ std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
 
   bool isLastLineSep = false;
   for (SimpleTable::size_type rowPos{}, nbRows = table.size(); rowPos < nbRows; ++rowPos) {
-    const SimpleTable::Row &row = table[rowPos];
+    const auto &row = table[rowPos];
 
-    if (row.isDivider()) {
+    if (row.empty()) {
       os << lineSep << '\n';
       isLastLineSep = true;
       continue;
     }
 
-    const bool isMultiLine = row.isMultiLine();
+    const bool isMultiLine = table::IsMultiLine(row);
 
     if (isMultiLine && !isLastLineSep) {
       os << multiLineSep << '\n';
     }
 
-    row.print(os, maxWidthPerColumnVector);
+    table::PrintRow(os, row, maxWidthPerColumnVector);
 
     if (rowPos == 0 && nbRows > 1) {
       // header sep
       os << lineSep << '\n';
       isLastLineSep = true;
     } else {
-      isLastLineSep = isMultiLine && rowPos + 1 < nbRows && !table[rowPos + 1].isDivider();
+      isLastLineSep = isMultiLine && rowPos + 1 < nbRows && !table[rowPos + 1].empty();
 
       if (isLastLineSep) {
         os << multiLineSep << '\n';

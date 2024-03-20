@@ -13,13 +13,13 @@
 #include "market.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
+#include "simpletable.hpp"
 #include "withdrawsconstraints.hpp"
 
 namespace cct {
 
 class DeliveredWithdrawInfo;
 class LoggingInfo;
-class SimpleTable;
 class TradeOptions;
 class WithdrawOptions;
 
@@ -103,7 +103,7 @@ class QueryResultPrinter {
   void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount, bool isPercentageTrade,
                    CurrencyCode toCurrency, const TradeOptions &tradeOptions, CoincenterCommandType commandType) const;
 
-  void printTable(const SimpleTable &simpleTable) const;
+  void printTable(const SimpleTable &table) const;
 
   void printJson(const json &jsonData) const;
 
