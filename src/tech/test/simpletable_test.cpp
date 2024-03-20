@@ -37,17 +37,17 @@ TEST(SimpleTable, OneLinePrint) {
 
 TEST(SimpleTable, SimplePrint) {
   SimpleTable table;
-  SimpleTable::Row row1;
+  table::Row row1;
   row1.emplace_back("Amount");
   row1.emplace_back("Currency");
   row1.emplace_back("Is Fiat");
   table.push_back(std::move(row1));
-  SimpleTable::Row row2;
+  table::Row row2;
   row2.emplace_back("123.45");
   row2.emplace_back("EUR");
   row2.emplace_back(true);
   table.push_back(std::move(row2));
-  SimpleTable::Row row3;
+  table::Row row3;
   row3.emplace_back(65);
   row3.emplace_back("BTC");
   row3.emplace_back(false);
@@ -77,7 +77,7 @@ class SimpleTableTest : public ::testing::Test {
     table.emplace_back(-677256340000, "KEBAB", "-34.09");
   }
 
-  SimpleTable table{"Amount", "Currency", "This header is longer"};
+  SimpleTable table{table::Row("Amount", "Currency", "This header is longer")};
 };
 
 TEST_F(SimpleTableTest, SettingRowDirectly) {
@@ -108,8 +108,8 @@ TEST_F(SimpleTableTest, SettingRowDirectly) {
 TEST_F(SimpleTableTest, MultiLineFields) {
   fill();
 
-  table[1][2].push_back(SimpleTable::CellLine("... but another line!"));
-  table[3][0].push_back(SimpleTable::CellLine(true));
+  table[1][2].push_back(table::CellLine("... but another line!"));
+  table[3][0].push_back(table::CellLine(true));
 
   table.emplace_back("999.25", "KRW", 16820100000000000000UL);
 
@@ -139,7 +139,7 @@ TEST_F(SimpleTableTest, MultiLineFields) {
 TEST_F(SimpleTableTest, EmptyCellShouldBePossible) {
   fill();
 
-  table.emplace_back(SimpleTable::Cell{12, -4}, SimpleTable::Cell{}, "Nothing here");
+  table.emplace_back(table::Cell{12, -4}, table::Cell{}, "Nothing here");
 
   std::ostringstream ss;
 
@@ -169,9 +169,9 @@ class DividerLineTest : public ::testing::Test {
     table.emplace_back(1);
     table.emplace_back(2);
     table.emplace_back("");
-    table.emplace_back(SimpleTable::Row::kDivider);
+    table.emplace_back();
     table.emplace_back(4);
-    table.emplace_back(SimpleTable::Row::kDivider);
+    table.emplace_back();
   }
 
   SimpleTable table;
@@ -196,10 +196,10 @@ TEST_F(DividerLineTest, SingleLineRows) {
 }
 
 TEST_F(DividerLineTest, WithMultiLine) {
-  table[1][0].push_back(SimpleTable::CellLine(42));
-  table[1][0].push_back(SimpleTable::CellLine(true));
+  table[1][0].push_back(table::CellLine(42));
+  table[1][0].push_back(table::CellLine(true));
 
-  table[4][0].push_back(SimpleTable::CellLine(false));
+  table[4][0].push_back(table::CellLine(false));
 
   ss << '\n' << table;
 

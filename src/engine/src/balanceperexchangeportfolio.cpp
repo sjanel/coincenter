@@ -27,7 +27,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   BalancePortfolio total = computeTotal();
   CurrencyCode balanceCurrencyCode = total.empty() ? CurrencyCode() : total.front().equi.currencyCode();
   const bool countEqui = !balanceCurrencyCode.isNeutral();
-  SimpleTable::Row header("Currency", "Total amount on selected");
+  table::Row header("Currency", "Total amount on selected");
 
   if (countEqui) {
     total.sortByDecreasingEquivalentAmount();
@@ -51,7 +51,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   const int nbExchanges = _balancePerExchange.size();
   for (const auto &[amount, equi] : total) {
     // Amounts impossible to convert have a zero value
-    SimpleTable::Row row(amount.currencyStr(), amount.amountStr());
+    table::Row row(amount.currencyStr(), amount.amountStr());
     if (countEqui) {
       row.emplace_back(equi.amountStr());
     }
@@ -63,8 +63,8 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
     balanceTable.push_back(std::move(row));
   }
   if (countEqui) {
-    balanceTable.push_back(SimpleTable::Row::kDivider);
-    SimpleTable::Row row("Total", "", ComputeTotalSum(total).amountStr());
+    balanceTable.emplace_back();
+    table::Row row("Total", "", ComputeTotalSum(total).amountStr());
     if (wide) {
       for (int exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
         row.emplace_back("");

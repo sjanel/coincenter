@@ -675,7 +675,7 @@ SimpleTable MarketOrderBook::getTable(std::string_view exchangeName,
     const int pos = op - 1;
     MonetaryAmount amount(std::abs(_orders[pos].amount), CurrencyCode(), _volAndPriNbDecimals.volNbDecimals);
     MonetaryAmount price = priceAt(pos);
-    SimpleTable::Row row(amount.str());
+    table::Row row(amount.str());
     row.emplace_back(price.amountStr());
     if (conversionPriceRate) {
       MonetaryAmount convertedPrice = price.toNeutral() * conversionPriceRate->toNeutral();

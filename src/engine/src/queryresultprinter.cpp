@@ -708,11 +708,13 @@ void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healt
   json jsonData = HealthCheckJson(healthCheckPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Health Check status");
+      SimpleTable table;
+      table.reserve(1U + healthCheckPerExchange.size());
+      table.emplace_back("Exchange", "Health Check status");
       for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
-        simpleTable.emplace_back(e->name(), healthCheckValue ? "OK" : "Not OK!");
+        table.emplace_back(e->name(), healthCheckValue ? "OK" : "Not OK!");
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -747,8 +749,6 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
   json jsonData = CurrenciesJson(currenciesPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Currency", "Supported exchanges", "Exchange code(s)", "Alt code(s)", "Can deposit to",
-                              "Can withdraw from", "Is fiat");
       // Compute all currencies for all exchanges
       CurrencyCodeVector allCurrencyCodes;
 
@@ -757,8 +757,12 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
       }
 
       RemoveDuplicates(allCurrencyCodes);
+      SimpleTable table;
 
-      simpleTable.reserve(1U + allCurrencyCodes.size());
+      table.reserve(1U + allCurrencyCodes.size());
+
+      table.emplace_back("Currency", "Supported exchanges", "Exchange code(s)", "Alt code(s)", "Can deposit to",
+                         "Can withdraw from", "Is fiat");
 
       for (CurrencyCode cur : allCurrencyCodes) {
         string supportedExchanges;
@@ -796,12 +800,11 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
           pPrevExchange = exchange;
         }
 
-        simpleTable.emplace_back(cur.str(), std::move(supportedExchanges), std::move(exchangeCodes),
-                                 std::move(altCodes), std::move(canDeposit), std::move(canWithdraw),
-                                 isFiat.value_or(false));
+        table.emplace_back(cur.str(), std::move(supportedExchanges), std::move(exchangeCodes), std::move(altCodes),
+                           std::move(canDeposit), std::move(canWithdraw), isFiat.value_or(false));
       }
 
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -828,13 +831,14 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
         marketsCol.push_back('-');
         cur2.appendStrTo(marketsCol);
       }
-      SimpleTable simpleTable("Exchange", std::move(marketsCol));
+      SimpleTable table;
+      table.emplace_back("Exchange", std::move(marketsCol));
       for (const auto &[e, markets] : marketsPerExchange) {
         for (Market mk : markets) {
-          simpleTable.emplace_back(e->name(), mk.str());
+          table.emplace_back(e->name(), mk.str());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -850,17 +854,18 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
   json jsonData = TickerInformationJson(exchangeTickerMaps);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
+      SimpleTable table;
+      table.emplace_back("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
       for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
         for (const auto &[mk, marketOrderBook] : marketOrderBookMap) {
-          simpleTable.emplace_back(e->name(), mk.str(), marketOrderBook.highestBidPrice().str(),
-                                   marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
-                                   marketOrderBook.amountAtAskPrice().str());
+          table.emplace_back(e->name(), mk.str(), marketOrderBook.highestBidPrice().str(),
+                             marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
+                             marketOrderBook.amountAtAskPrice().str());
         }
         // Sort rows in lexicographical order for consistent output
-        std::sort(simpleTable.begin(), simpleTable.end());
+        std::ranges::sort(table);
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -916,11 +921,13 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
     case ApiOutputType::kFormattedTable: {
       string walletStr(depositCurrencyCode.str());
       walletStr.append(" address");
-      SimpleTable simpleTable("Exchange", "Account", std::move(walletStr), "Destination Tag");
+      SimpleTable table;
+      table.reserve(1U + walletPerExchange.size());
+      table.emplace_back("Exchange", "Account", std::move(walletStr), "Destination Tag");
       for (const auto &[exchangePtr, wallet] : walletPerExchange) {
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), wallet.address(), wallet.tag());
+        table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), wallet.address(), wallet.tag());
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -944,14 +951,18 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
       string tradedToStr("Traded to amount (");
       tradedToStr.append(TradeModeToStr(tradeOptions.tradeMode()));
       tradedToStr.push_back(')');
-      SimpleTable simpleTable("Exchange", "Account", "From", std::move(tradedFromStr), std::move(tradedToStr),
-                              "Status");
+      SimpleTable table;
+
+      table.reserve(1U + tradeResultPerExchange.size());
+      table.emplace_back("Exchange", "Account", "From", std::move(tradedFromStr), std::move(tradedToStr), "Status");
+
       for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
         const TradedAmounts &tradedAmounts = tradeResult.tradedAmounts();
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradeResult.from().str(),
-                                 tradedAmounts.from.str(), tradedAmounts.to.str(), tradeResult.stateStr());
+
+        table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradeResult.from().str(),
+                           tradedAmounts.from.str(), tradedAmounts.to.str(), tradeResult.stateStr());
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -968,16 +979,17 @@ void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closed
   json jsonData = OrdersJson(CoincenterCommandType::kOrdersClosed, closedOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Placed time", "Matched time", "Side", "Price",
-                              "Matched Amount");
+      SimpleTable table;
+      table.emplace_back("Exchange", "Account", "Exchange Id", "Placed time", "Matched time", "Side", "Price",
+                         "Matched Amount");
       for (const auto &[exchangePtr, closedOrders] : closedOrdersPerExchange) {
         for (const ClosedOrder &closedOrder : closedOrders) {
-          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), closedOrder.id(),
-                                   closedOrder.placedTimeStr(), closedOrder.matchedTimeStr(), closedOrder.sideStr(),
-                                   closedOrder.price().str(), closedOrder.matchedVolume().str());
+          table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), closedOrder.id(), closedOrder.placedTimeStr(),
+                             closedOrder.matchedTimeStr(), closedOrder.sideStr(), closedOrder.price().str(),
+                             closedOrder.matchedVolume().str());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -994,16 +1006,17 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
   json jsonData = OrdersJson(CoincenterCommandType::kOrdersOpened, openedOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Placed time", "Side", "Price", "Matched Amount",
-                              "Remaining Amount");
+      SimpleTable table;
+      table.emplace_back("Exchange", "Account", "Exchange Id", "Placed time", "Side", "Price", "Matched Amount",
+                         "Remaining Amount");
       for (const auto &[exchangePtr, openedOrders] : openedOrdersPerExchange) {
         for (const OpenedOrder &openedOrder : openedOrders) {
-          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.id(),
-                                   openedOrder.placedTimeStr(), openedOrder.sideStr(), openedOrder.price().str(),
-                                   openedOrder.matchedVolume().str(), openedOrder.remainingVolume().str());
+          table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.id(), openedOrder.placedTimeStr(),
+                             openedOrder.sideStr(), openedOrder.price().str(), openedOrder.matchedVolume().str(),
+                             openedOrder.remainingVolume().str());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1020,11 +1033,13 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
   json jsonData = OrdersCancelledJson(nbCancelledOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Number of cancelled orders");
+      SimpleTable table;
+      table.reserve(1U + nbCancelledOrdersPerExchange.size());
+      table.emplace_back("Exchange", "Account", "Number of cancelled orders");
       for (const auto &[exchangePtr, nbCancelledOrders] : nbCancelledOrdersPerExchange) {
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), nbCancelledOrders);
+        table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), nbCancelledOrders);
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1041,14 +1056,15 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
   json jsonData = RecentDepositsJson(depositsPerExchange, depositsConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Received time", "Amount", "Status");
+      SimpleTable table;
+      table.emplace_back("Exchange", "Account", "Exchange Id", "Received time", "Amount", "Status");
       for (const auto &[exchangePtr, deposits] : depositsPerExchange) {
         for (const Deposit &deposit : deposits) {
-          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), deposit.id(), deposit.timeStr(),
-                                   deposit.amount().str(), deposit.statusStr());
+          table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), deposit.id(), deposit.timeStr(),
+                             deposit.amount().str(), deposit.statusStr());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1065,14 +1081,15 @@ void QueryResultPrinter::printRecentWithdraws(const WithdrawsPerExchange &withdr
   json jsonData = RecentWithdrawsJson(withdrawsPerExchange, withdrawsConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Exchange Id", "Sent time", "Net Emitted Amount", "Fee", "Status");
+      SimpleTable table;
+      table.emplace_back("Exchange", "Account", "Exchange Id", "Sent time", "Net Emitted Amount", "Fee", "Status");
       for (const auto &[exchangePtr, withdraws] : withdrawsPerExchange) {
         for (const Withdraw &withdraw : withdraws) {
-          simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), withdraw.id(), withdraw.timeStr(),
-                                   withdraw.amount().str(), withdraw.withdrawFee().str(), withdraw.statusStr());
+          table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), withdraw.id(), withdraw.timeStr(),
+                             withdraw.amount().str(), withdraw.withdrawFee().str(), withdraw.statusStr());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1093,13 +1110,15 @@ void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode tar
       conversionStrHeader.append(" converted into ");
       targetCurrencyCode.appendStrTo(conversionStrHeader);
 
-      SimpleTable simpleTable("Exchange", std::move(conversionStrHeader));
+      SimpleTable table;
+      table.reserve(1U + conversionPerExchange.size());
+      table.emplace_back("Exchange", std::move(conversionStrHeader));
       for (const auto &[e, convertedAmount] : conversionPerExchange) {
         if (convertedAmount != 0) {
-          simpleTable.emplace_back(e->name(), convertedAmount.str());
+          table.emplace_back(e->name(), convertedAmount.str());
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1118,20 +1137,23 @@ void QueryResultPrinter::printConversionPath(Market mk,
     case ApiOutputType::kFormattedTable: {
       string conversionPathStrHeader("Fastest conversion path for ");
       conversionPathStrHeader.append(mk.str());
-      SimpleTable simpleTable("Exchange", std::move(conversionPathStrHeader));
+      SimpleTable table;
+      table.reserve(1U + conversionPathsPerExchange.size());
+      table.emplace_back("Exchange", std::move(conversionPathStrHeader));
       for (const auto &[e, conversionPath] : conversionPathsPerExchange) {
-        if (!conversionPath.empty()) {
-          string conversionPathStr;
-          for (Market market : conversionPath) {
-            if (!conversionPathStr.empty()) {
-              conversionPathStr.push_back(',');
-            }
-            conversionPathStr.append(market.str());
-          }
-          simpleTable.emplace_back(e->name(), std::move(conversionPathStr));
+        if (conversionPath.empty()) {
+          continue;
         }
+        string conversionPathStr;
+        for (Market market : conversionPath) {
+          if (!conversionPathStr.empty()) {
+            conversionPathStr.push_back(',');
+          }
+          conversionPathStr.append(market.str());
+        }
+        table.emplace_back(e->name(), std::move(conversionPathStr));
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1148,7 +1170,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
   json jsonData = WithdrawFeesJson(withdrawFeesPerExchange, cur);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable::Row header("Withdraw fee currency");
+      table::Row header("Withdraw fee currency");
       CurrencyCodeVector allCurrencyCodes;
       for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
         header.emplace_back(e->name());
@@ -1159,9 +1181,12 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
 
       RemoveDuplicates(allCurrencyCodes);
 
-      SimpleTable simpleTable(std::move(header));
+      SimpleTable table;
+      table.reserve(1U + allCurrencyCodes.size());
+
+      table.emplace_back(std::move(header));
       for (CurrencyCode cur : allCurrencyCodes) {
-        auto &row = simpleTable.emplace_back(cur.str());
+        auto &row = table.emplace_back(cur.str());
         for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
           auto it = withdrawFees.find(cur);
           if (it == withdrawFees.end()) {
@@ -1171,7 +1196,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
           }
         }
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1191,11 +1216,13 @@ void QueryResultPrinter::printLast24hTradedVolume(Market mk,
       string headerTradedVolume("Last 24h ");
       headerTradedVolume.append(mk.str());
       headerTradedVolume.append(" traded volume");
-      SimpleTable simpleTable("Exchange", std::move(headerTradedVolume));
+      SimpleTable table;
+      table.reserve(1U + tradedVolumePerExchange.size());
+      table.emplace_back("Exchange", std::move(headerTradedVolume));
       for (const auto &[e, tradedVolume] : tradedVolumePerExchange) {
-        simpleTable.emplace_back(e->name(), tradedVolume.str());
+        table.emplace_back(e->name(), tradedVolume.str());
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1223,24 +1250,26 @@ void QueryResultPrinter::printLastTrades(Market mk, int nbLastTrades,
         string title(exchangePtr->name());
         title.append(" trades");
 
-        SimpleTable simpleTable(std::move(title), std::move(buyTitle), std::move(priceTitle), std::move(sellTitle));
+        SimpleTable table;
+        table.reserve(1U + lastTrades.size() + (lastTrades.empty() ? 0U : 2U));
+        table.emplace_back(std::move(title), std::move(buyTitle), std::move(priceTitle), std::move(sellTitle));
         std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};
         MonetaryAmount totalPrice(0, mk.quote());
         std::array<int, 2> nb{};
         for (const PublicTrade &trade : lastTrades) {
           if (trade.side() == TradeSide::kBuy) {
-            simpleTable.emplace_back(trade.timeStr(), trade.amount().amountStr(), trade.price().amountStr(), "");
+            table.emplace_back(trade.timeStr(), trade.amount().amountStr(), trade.price().amountStr(), "");
             totalAmounts[0] += trade.amount();
             ++nb[0];
           } else {
-            simpleTable.emplace_back(trade.timeStr(), "", trade.price().amountStr(), trade.amount().amountStr());
+            table.emplace_back(trade.timeStr(), "", trade.price().amountStr(), trade.amount().amountStr());
             totalAmounts[1] += trade.amount();
             ++nb[1];
           }
           totalPrice += trade.price();
         }
         if (nb[0] + nb[1] > 0) {
-          simpleTable.push_back(SimpleTable::Row::kDivider);
+          table.emplace_back();
           std::array<string, 2> summary;
           for (int buyOrSell = 0; buyOrSell < 2; ++buyOrSell) {
             summary[buyOrSell].append(totalAmounts[buyOrSell].str());
@@ -1252,10 +1281,10 @@ void QueryResultPrinter::printLastTrades(Market mk, int nbLastTrades,
           }
 
           MonetaryAmount avgPrice = totalPrice / (nb[0] + nb[1]);
-          simpleTable.emplace_back("Summary", std::move(summary[0]), avgPrice.str(), std::move(summary[1]));
+          table.emplace_back("Summary", std::move(summary[0]), avgPrice.str(), std::move(summary[1]));
         }
 
-        printTable(simpleTable);
+        printTable(table);
       }
       break;
     }
@@ -1274,11 +1303,13 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
     case ApiOutputType::kFormattedTable: {
       string headerLastPrice(mk.str());
       headerLastPrice.append(" last price");
-      SimpleTable simpleTable("Exchange", std::move(headerLastPrice));
+      SimpleTable table;
+      table.reserve(1U + pricePerExchange.size());
+      table.emplace_back("Exchange", std::move(headerLastPrice));
       for (const auto &[e, lastPrice] : pricePerExchange) {
-        simpleTable.emplace_back(e->name(), lastPrice.str());
+        table.emplace_back(e->name(), lastPrice.str());
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1300,13 +1331,14 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
       WithdrawJson(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("From Exchange", "From Account", "Gross withdraw amount", "Initiated time", "To Exchange",
-                              "To Account", "Net received amount", "Received time");
-      simpleTable.emplace_back(fromExchange.name(), fromExchange.keyName(), grossAmount.str(),
-                               ToString(deliveredWithdrawInfo.initiatedTime()), toExchange.name(), toExchange.keyName(),
-                               deliveredWithdrawInfo.receivedAmount().str(),
-                               ToString(deliveredWithdrawInfo.receivedTime()));
-      printTable(simpleTable);
+      SimpleTable table;
+      table.reserve(2U);
+      table.emplace_back("From Exchange", "From Account", "Gross withdraw amount", "Initiated time", "To Exchange",
+                         "To Account", "Net received amount", "Received time");
+      table.emplace_back(fromExchange.name(), fromExchange.keyName(), grossAmount.str(),
+                         ToString(deliveredWithdrawInfo.initiatedTime()), toExchange.name(), toExchange.keyName(),
+                         deliveredWithdrawInfo.receivedAmount().str(), ToString(deliveredWithdrawInfo.receivedTime()));
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1324,21 +1356,23 @@ void QueryResultPrinter::printDustSweeper(
   json jsonData = DustSweeperJson(tradedAmountsVectorWithFinalAmountPerExchange, currencyCode);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
-      SimpleTable simpleTable("Exchange", "Account", "Trades", "Final Amount");
+      SimpleTable table;
+      table.reserve(1U + tradedAmountsVectorWithFinalAmountPerExchange.size());
 
-      simpleTable.reserve(1U + tradedAmountsVectorWithFinalAmountPerExchange.size());
+      table.emplace_back("Exchange", "Account", "Trades", "Final Amount");
+
       for (const auto &[exchangePtr, tradedAmountsVectorWithFinalAmount] :
            tradedAmountsVectorWithFinalAmountPerExchange) {
-        SimpleTable::Cell tradesCell;
+        table::Cell tradesCell;
         const auto &tradedAmountsVector = tradedAmountsVectorWithFinalAmount.tradedAmountsVector;
         tradesCell.reserve(tradedAmountsVector.size());
         for (const auto &tradedAmounts : tradedAmountsVector) {
           tradesCell.emplace_back(tradedAmounts.str());
         }
-        simpleTable.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesCell),
-                                 tradedAmountsVectorWithFinalAmount.finalAmount.str());
+        table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), std::move(tradesCell),
+                           tradedAmountsVectorWithFinalAmount.finalAmount.str());
       }
-      printTable(simpleTable);
+      printTable(table);
       break;
     }
     case ApiOutputType::kJson:
@@ -1350,11 +1384,11 @@ void QueryResultPrinter::printDustSweeper(
   logActivity(CoincenterCommandType::kDustSweeper, jsonData);
 }
 
-void QueryResultPrinter::printTable(const SimpleTable &simpleTable) const {
+void QueryResultPrinter::printTable(const SimpleTable &table) const {
   std::ostringstream ss;
   std::ostream &os = _pOs != nullptr ? *_pOs : ss;
 
-  os << simpleTable;
+  os << table;
 
   if (_pOs != nullptr) {
     *_pOs << '\n';
