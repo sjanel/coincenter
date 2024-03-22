@@ -74,9 +74,15 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
 }
 
 WithdrawalFeesCrawler::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo)
-    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                       .build(),
                    coincenterInfo.getRunMode()),
-      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                       .build(),
                    coincenterInfo.getRunMode()) {}
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::operator()(
