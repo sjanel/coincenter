@@ -13,6 +13,7 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangeconfigmap.hpp"
 #include "exchangeconfigparser.hpp"

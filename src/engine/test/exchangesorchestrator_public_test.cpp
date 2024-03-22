@@ -8,6 +8,7 @@
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangedata_test.hpp"
 #include "exchangename.hpp"

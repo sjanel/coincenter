@@ -6,6 +6,7 @@
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepool.hpp"
 #include "exchangesorchestrator.hpp"

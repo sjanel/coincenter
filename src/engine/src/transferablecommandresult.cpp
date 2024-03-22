@@ -8,6 +8,7 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "coincentercommand.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"
 

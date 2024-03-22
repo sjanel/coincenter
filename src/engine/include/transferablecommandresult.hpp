@@ -5,6 +5,7 @@
 
 #include "cct_smallvector.hpp"
 #include "cct_type_traits.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"
 

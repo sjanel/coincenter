@@ -9,6 +9,7 @@
 #include "balanceoptions.hpp"
 #include "cct_exception.hpp"
 #include "currencycode.hpp"
+#include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangedata_test.hpp"
 #include "exchangename.hpp"

@@ -27,7 +27,7 @@ class OrderConstraintsBitmap {
   void set(ConstraintType constraintType) { _bmp |= (1U << static_cast<uint8_t>(constraintType)); }
 
   bool isConstrained(ConstraintType constraintType) const {
-    return _bmp & (1U << static_cast<uint8_t>(constraintType));
+    return (_bmp & (1U << static_cast<uint8_t>(constraintType))) != decltype(_bmp){};
   }
 
   bool empty() const { return _bmp == 0U; }
@@ -40,7 +40,7 @@ class OrderConstraintsBitmap {
 
   bool isOrderIdOnlyDependent() const { return _bmp == kIdConstrained; }
 
-  bool operator==(const OrderConstraintsBitmap &) const = default;
+  bool operator==(const OrderConstraintsBitmap &) const noexcept = default;
 
  private:
   uint8_t _bmp{};
@@ -61,9 +61,9 @@ class OrdersConstraints {
   bool isPlacedTimeAfterDefined() const { return _placedAfter != TimePoint::min(); }
   bool isPlacedTimeBeforeDefined() const { return _placedBefore != TimePoint::max(); }
 
-  bool validatePlacedTime(TimePoint t) const { return t >= _placedAfter && t <= _placedBefore; }
+  bool validatePlacedTime(TimePoint tp) const { return tp >= _placedAfter && tp <= _placedBefore; }
 
-  bool validateTime(TimePoint t) const { return validatePlacedTime(t); }
+  bool validateTime(TimePoint tp) const { return validatePlacedTime(tp); }
 
   bool validateCur(CurrencyCode cur) const { return currencyCode().isNeutral() || cur == currencyCode(); }
 
@@ -81,7 +81,7 @@ class OrdersConstraints {
   bool isCur2Defined() const { return !_cur2.isNeutral(); }
   bool isMarketDefined() const { return isCurDefined() && isCur2Defined(); }
 
-  Market market() const { return Market(_cur1, _cur2); }
+  Market market() const { return {_cur1, _cur2}; }
 
   string curStr1() const { return _cur1.str(); }
   string curStr2() const { return _cur2.str(); }

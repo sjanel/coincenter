@@ -9,6 +9,7 @@
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "currencycode.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"

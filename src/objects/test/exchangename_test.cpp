@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 
 namespace cct {
@@ -35,9 +35,20 @@ TEST(ExchangeName, ComplexKeyName) {
   EXPECT_EQ(ExchangeName("upbit__thisisaTrap_").str(), "upbit__thisisaTrap_");
 }
 
-TEST(ExchangeName, ConstructorWith2Params) {
+TEST(ExchangeName, ConstructorWith1ParamInvalid) {
+  EXPECT_THROW(ExchangeName("huobi_"), invalid_argument);
+  EXPECT_THROW(ExchangeName("unknown"), invalid_argument);
+  EXPECT_THROW(ExchangeName("ucoin_user1"), invalid_argument);
+}
+
+TEST(ExchangeName, ConstructorWith2ParamsValid) {
+  EXPECT_EQ(ExchangeName("upbit", "user1").str(), "upbit_user1");
   EXPECT_EQ(ExchangeName("binance", "_user13").str(), "binance__user13");
-  EXPECT_THROW(ExchangeName("kraken_", "_user13"), exception);
+}
+
+TEST(ExchangeName, ConstructorWith2ParamsInvalid) {
+  EXPECT_THROW(ExchangeName("kraken_", "_user13"), invalid_argument);
+  EXPECT_THROW(ExchangeName("unknown", "user1"), invalid_argument);
 }
 
 TEST(ExchangeName, IsKeyNameDefined) {
@@ -49,7 +60,7 @@ TEST(ExchangeName, IsKeyNameDefined) {
 
 TEST(ExchangeName, Equality) {
   EXPECT_EQ(ExchangeName("binance", "_user13"), ExchangeName("BinanCE", "_user13"));
-  EXPECT_NE(ExchangeName("binance", "_user13"), ExchangeName("inanCE", "_user13"));
+  EXPECT_NE(ExchangeName("kucoin", "_user13"), ExchangeName("huobi", "_user13"));
   EXPECT_NE(ExchangeName("binance", "_user13"), ExchangeName("binance", "_uSer13"));
   EXPECT_NE(ExchangeName("upbit", "_user13"), ExchangeName("binance", "_user13"));
 }
