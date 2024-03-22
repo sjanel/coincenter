@@ -1,8 +1,9 @@
 #pragma once
 
-#include "exchangename.hpp"
+#include "exchange-names.hpp"
 
 namespace cct {
+
 class ExchangeSecretsInfo {
  public:
   /// Constructs a default Exchange secrets info.
@@ -24,4 +25,5 @@ class ExchangeSecretsInfo {
   ExchangeNames _exchangesWithoutSecrets;
   bool _allExchangesWithoutSecrets = false;
 };
+
 }  // namespace cct

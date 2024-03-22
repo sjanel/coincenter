@@ -2,23 +2,30 @@
 
 #include <algorithm>
 #include <compare>
-#include <cstddef>
 #include <ostream>
-#include <span>
 #include <string_view>
 
 #include "cct_const.hpp"
 #include "cct_format.hpp"
-#include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 
 namespace cct {
 
+/// Returns the constant index (starting at 0) of given public exchange name in lower case.
+/// If not found, kNbSupportedExchanges will be returned.
+constexpr auto PublicExchangePos(std::string_view publicExchangeName) {
+  return std::ranges::find_if(
+             kSupportedExchanges,
+             [publicExchangeName](const auto exchangeStr) { return exchangeStr == publicExchangeName; }) -
+         std::begin(kSupportedExchanges);
+}
+
 class ExchangeName {
  public:
   static bool IsValid(std::string_view str);
 
+  /// Constructs an ExchangeName with an invalid empty name.
   ExchangeName() noexcept = default;
 
   /// Constructs a ExchangeName with a unique identifier name.
@@ -32,15 +39,17 @@ class ExchangeName {
   ExchangeName(std::string_view exchangeName, std::string_view keyName);
 
   std::string_view name() const {
-    const std::size_t underscore = underscorePos();
+    const auto underscore = underscorePos();
     return {_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore};
   }
 
   std::string_view keyName() const {
-    const std::size_t underscore = underscorePos();
+    const auto underscore = underscorePos();
     return {_nameWithKey.begin() + (underscore == string::npos ? _nameWithKey.size() : underscore + 1U),
             _nameWithKey.end()};
   }
+
+  auto publicExchangePos() const { return PublicExchangePos(name()); }
 
   bool isKeyNameDefined() const { return underscorePos() != string::npos; }
 
@@ -54,32 +63,15 @@ class ExchangeName {
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  static constexpr std::size_t kMinExchangeNameLength =
+  static constexpr auto kMinExchangeNameLength =
       std::ranges::min_element(kSupportedExchanges, [](auto lhs, auto rhs) { return lhs.size() < rhs.size(); })
           -> size();
 
-  std::size_t underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
+  string::size_type underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
 
   string _nameWithKey;
 };
 
-using ExchangeNameSpan = std::span<const ExchangeName>;
-using ExchangeNames = SmallVector<ExchangeName, 1>;
-
-inline std::string_view ToString(std::string_view exchangeName) { return exchangeName; }
-inline std::string_view ToString(const ExchangeName &exchangeName) { return exchangeName.str(); }
-
-template <class ExchangeNames>
-inline string ConstructAccumulatedExchangeNames(const ExchangeNames &exchangeNames) {
-  string exchangesStr(exchangeNames.empty() ? "all" : "");
-  for (const auto &exchangeName : exchangeNames) {
-    if (!exchangesStr.empty()) {
-      exchangesStr.push_back(',');
-    }
-    exchangesStr.append(ToString(exchangeName));
-  }
-  return exchangesStr;
-}
 }  // namespace cct
 
 #ifndef CCT_DISABLE_SPDLOG
@@ -123,12 +115,12 @@ struct fmt::formatter<cct::ExchangeName> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::ExchangeName &e, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::ExchangeName &exchangeName, FormatContext &ctx) const -> decltype(ctx.out()) {
     if (printExchangeName) {
-      ctx.out() = fmt::format_to(ctx.out(), "{}", e.name());
+      ctx.out() = fmt::format_to(ctx.out(), "{}", exchangeName.name());
     }
-    if (printKeyName && e.isKeyNameDefined()) {
-      ctx.out() = fmt::format_to(ctx.out(), "{}{}", printExchangeName ? "_" : "", e.keyName());
+    if (printKeyName && exchangeName.isKeyNameDefined()) {
+      ctx.out() = fmt::format_to(ctx.out(), "{}{}", printExchangeName ? "_" : "", exchangeName.keyName());
     }
     return ctx.out();
   }

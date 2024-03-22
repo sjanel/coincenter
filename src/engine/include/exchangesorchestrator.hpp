@@ -3,6 +3,8 @@
 #include <optional>
 #include <span>
 
+#include "exchange-names.hpp"
+#include "exchangename.hpp"
 #include "exchangeretriever.hpp"
 #include "market.hpp"
 #include "queryresulttypes.hpp"
@@ -25,24 +27,24 @@ class ExchangesOrchestrator {
   MarketOrderBookConversionRates getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                      CurrencyCode equiCurrencyCode, std::optional<int> depth);
 
-  BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
+  BalancePerExchange getBalance(ExchangeNameSpan privateExchangeNames,
                                 const BalanceOptions &balanceOptions = BalanceOptions());
 
-  WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
+  WalletPerExchange getDepositInfo(ExchangeNameSpan privateExchangeNames, CurrencyCode depositCurrency);
 
-  ClosedOrdersPerExchange getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
+  ClosedOrdersPerExchange getClosedOrders(ExchangeNameSpan privateExchangeNames,
                                           const OrdersConstraints &closedOrdersConstraints);
 
-  OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
+  OpenedOrdersPerExchange getOpenedOrders(ExchangeNameSpan privateExchangeNames,
                                           const OrdersConstraints &openedOrdersConstraints);
 
-  NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
+  NbCancelledOrdersPerExchange cancelOrders(ExchangeNameSpan privateExchangeNames,
                                             const OrdersConstraints &ordersConstraints);
 
-  DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
+  DepositsPerExchange getRecentDeposits(ExchangeNameSpan privateExchangeNames,
                                         const DepositsConstraints &depositsConstraints);
 
-  WithdrawsPerExchange getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
+  WithdrawsPerExchange getRecentWithdraws(ExchangeNameSpan privateExchangeNames,
                                           const WithdrawsConstraints &withdrawsConstraints);
 
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
@@ -60,16 +62,15 @@ class ExchangesOrchestrator {
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames);
 
   TradeResultPerExchange trade(MonetaryAmount from, bool isPercentageTrade, CurrencyCode toCurrency,
-                               std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                               ExchangeNameSpan privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradeResultPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
+  TradeResultPerExchange smartBuy(MonetaryAmount endAmount, ExchangeNameSpan privateExchangeNames,
                                   const TradeOptions &tradeOptions);
 
   TradeResultPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                   std::span<const ExchangeName> privateExchangeNames,
-                                   const TradeOptions &tradeOptions);
+                                   ExchangeNameSpan privateExchangeNames, const TradeOptions &tradeOptions);
 
-  TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(std::span<const ExchangeName> privateExchangeNames,
+  TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(ExchangeNameSpan privateExchangeNames,
                                                             CurrencyCode currencyCode);
 
   DeliveredWithdrawInfoWithExchanges withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,

@@ -15,6 +15,7 @@
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangeretriever.hpp"

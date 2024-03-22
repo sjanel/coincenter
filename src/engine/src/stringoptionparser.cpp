@@ -9,6 +9,7 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
+#include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"

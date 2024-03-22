@@ -16,9 +16,22 @@ bool ExchangeName::IsValid(std::string_view str) {
   if (str.size() < kMinExchangeNameLength) {
     return false;
   }
-  return std::ranges::any_of(kSupportedExchanges, [lowerStr = ToLower(str)](std::string_view ex) {
-    return lowerStr.starts_with(ex) && (lowerStr.size() == ex.size() || lowerStr[ex.size()] == '_');
-  });
+  const auto lowerStr = ToLower(str);
+  const auto exchangePos =
+      std::ranges::find_if(kSupportedExchanges, [&lowerStr](std::string_view ex) { return lowerStr.starts_with(ex); }) -
+      std::begin(kSupportedExchanges);
+  if (exchangePos == kNbSupportedExchanges) {
+    return false;
+  }
+  const auto publicExchangeName = kSupportedExchanges[exchangePos];
+  if (publicExchangeName.size() == lowerStr.size()) {
+    return true;
+  }
+  if (lowerStr[publicExchangeName.size()] != '_') {
+    return false;
+  }
+  std::string_view keyName(lowerStr.begin() + publicExchangeName.size() + 1U, lowerStr.end());
+  return !keyName.empty();
 }
 
 ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(globalExchangeName) {
@@ -33,8 +46,10 @@ ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(g
 
 ExchangeName::ExchangeName(std::string_view exchangeName, std::string_view keyName)
     : _nameWithKey(ToLower(exchangeName)) {
-  if (_nameWithKey.find('_') != string::npos) {
-    throw invalid_argument("Invalid exchange name '{}'", _nameWithKey);
+  if (std::ranges::find_if(kSupportedExchanges, [this](const auto exchangeStr) {
+        return exchangeStr == this->_nameWithKey;
+      }) == std::end(kSupportedExchanges)) {
+    throw invalid_argument("Invalid exchange name '{}'", exchangeName);
   }
   if (!keyName.empty()) {
     _nameWithKey.push_back('_');
