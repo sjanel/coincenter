@@ -18,6 +18,7 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
+#include "overflow-check.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "simpletable.hpp"
@@ -67,24 +68,32 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, const Marke
 
   std::ranges::sort(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; });
 
-  for (auto it = _orders.begin(); it != _orders.end();) {
-    it = std::adjacent_find(it, _orders.end(), [](auto lhs, auto rhs) { return lhs.price == rhs.price; });
-    if (it != _orders.end()) {
-      auto nextIt = std::next(it);
-      log::warn("Forbidden duplicate price {} at amounts {} & {} in the order book for market {}, summing them",
-                it->price, it->amount, nextIt->amount, market);
+  auto it = _orders.begin();
+  while ((it = std::adjacent_find(it, _orders.end(), [](auto lhs, auto rhs) { return lhs.price == rhs.price; })) !=
+         _orders.end()) {
+    auto nextIt = std::next(it);
+    log::warn("Forbidden duplicate price {} at amounts {} & {} in the order book for market {}, merging them",
+              it->price, it->amount, nextIt->amount, market);
+    if (WillSumOverflow(nextIt->amount, it->amount)) {
+      nextIt->amount = std::midpoint(nextIt->amount, it->amount);
+    } else {
       nextIt->amount += it->amount;
-      // Remove the first duplicated price line (we summed the amounts on the next line)
-      it = _orders.erase(it);
-      if (it->amount == 0) {
-        // If the sum has 0 amount, remove the next one as well
-        it = _orders.erase(it);
-      }
+    }
+    // Remove the first duplicated price line (we summed the amounts on the next line)
+    if (nextIt->amount == 0) {
+      // If the sum has 0 amount, remove the next one as well
+      _orders.erase(it, std::next(nextIt));
+    } else {
+      _orders.erase(it);
     }
   }
 
-  const auto highestBidPriceIt =
-      std::ranges::partition_point(_orders, [](auto amountPrice) { return amountPrice.amount > 0; });
+  const auto positiveAmounts = [](auto amountPrice) { return amountPrice.amount > 0; };
+  if (!std::ranges::is_partitioned(_orders, positiveAmounts)) {
+    throw exception("Invalid market order book - check input data");
+  }
+
+  const auto highestBidPriceIt = std::ranges::partition_point(_orders, positiveAmounts);
 
   using PricePosT = decltype(_highestBidPricePos);
 

@@ -24,8 +24,6 @@ class OrderBookLine {
   MonetaryAmount price() const { return _amountPrice.price; }
 
  private:
-  friend class MarketOrderBook;
-
   AmountPrice _amountPrice;
 };
 

@@ -59,6 +59,13 @@ TEST_F(MarketOrderBookTestCase1, NumberOfElements) {
   EXPECT_EQ(marketOrderBook.nbBidPrices(), 2);
 }
 
+TEST_F(MarketOrderBookTestCase1, NbDecimals) {
+  const auto [volNbDecimals, priNbDecimals] = marketOrderBook.volAndPriNbDecimals();
+
+  EXPECT_EQ(volNbDecimals, 16);
+  EXPECT_EQ(priNbDecimals, 14);
+}
+
 TEST_F(MarketOrderBookTestCase1, MiddleElements) {
   EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("1302", "EUR"));
   EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("1301", "EUR"));
@@ -203,6 +210,29 @@ class MarketOrderBookTestCase2 : public ::testing::Test {
            OrderBookLine(MonetaryAmount("3848.8453", "APM"), MonetaryAmount("57.16", "KRW"),
                          OrderBookLine::Type::kBid)})};
 };
+
+TEST_F(MarketOrderBookTestCase2, NbDecimals) {
+  const auto [volNbDecimals, priNbDecimals] = marketOrderBook.volAndPriNbDecimals();
+
+  EXPECT_EQ(volNbDecimals, 13);
+  EXPECT_EQ(priNbDecimals, 16);
+
+  const int nbBids = marketOrderBook.nbBidPrices();
+  for (int bidPos = 1; bidPos <= nbBids; ++bidPos) {
+    const auto [amount, price] = marketOrderBook[-bidPos];
+
+    EXPECT_NE(amount.amount(volNbDecimals), std::nullopt);
+    EXPECT_NE(price.amount(priNbDecimals), std::nullopt);
+  }
+
+  const int nbAsks = marketOrderBook.nbAskPrices();
+  for (int askPos = 1; askPos <= nbAsks; ++askPos) {
+    const auto [amount, price] = marketOrderBook[askPos];
+
+    EXPECT_NE(amount.amount(volNbDecimals), std::nullopt);
+    EXPECT_NE(price.amount(priNbDecimals), std::nullopt);
+  }
+}
 
 TEST_F(MarketOrderBookTestCase2, SimpleQueries) {
   EXPECT_EQ(marketOrderBook.size(), 9);

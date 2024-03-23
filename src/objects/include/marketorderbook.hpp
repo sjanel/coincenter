@@ -31,8 +31,7 @@ class MarketOrderBook {
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
-  explicit MarketOrderBook(TimePoint timeStamp, Market market,
-                           const MarketOrderBookLines& orderLines = MarketOrderBookLines(),
+  explicit MarketOrderBook(TimePoint timeStamp, Market market, const MarketOrderBookLines& orderLines,
                            VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
 
   /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
@@ -213,8 +212,8 @@ class MarketOrderBook {
   TimePoint _time;
   Market _market;
   AmountPriceVector _orders;
-  int32_t _highestBidPricePos = 0;
-  int32_t _lowestAskPricePos = 0;
+  int32_t _highestBidPricePos{};
+  int32_t _lowestAskPricePos{};
   bool _isArtificiallyExtended = false;
   VolAndPriNbDecimals _volAndPriNbDecimals;
 };
