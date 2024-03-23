@@ -91,6 +91,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    overflow-check_test
+    test/overflow-check_test.cpp
+)
+
+add_unit_test(
     simpletable_test
     src/simpletable.cpp
     test/simpletable_test.cpp
