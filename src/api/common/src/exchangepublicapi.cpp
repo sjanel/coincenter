@@ -54,7 +54,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
       priceOptions.isTakerStrategy() ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
 
   if (marketOrderBookMap.empty()) {
-    std::lock_guard<std::mutex> guard(_allOrderBooksMutex);
+    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
     marketOrderBookMap = queryAllApproximatedOrderBooks(1);
   }
 
@@ -210,7 +210,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
 
     // Retrieve markets if not already done
     if (markets.empty()) {
-      std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
+      std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
       markets = queryTradableMarkets();
       if (markets.empty()) {
         log::error("No markets retrieved for {}", _name);
@@ -307,7 +307,7 @@ std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCo
 }
 
 std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
-  std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
+  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
   return RetrieveMarket(c1, c2, queryTradableMarkets());
 }
 
@@ -355,7 +355,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
   if (markets.empty()) {
     // Without any currency, and because "marketStr" is returned without hyphen, there is no easy way to guess the
     // currencies so we need to compare with the markets that exist
-    std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
+    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
     markets = queryTradableMarkets();
   }
   const auto symbolStrSize = marketStr.size();
@@ -382,7 +382,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
 Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
                                                            CurrencyCode filterCur2) {
   if (markets.empty()) {
-    std::lock_guard<std::mutex> guard(_tradableMarketsMutex);
+    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
     markets = queryTradableMarkets();
   }
 

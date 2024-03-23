@@ -4,7 +4,6 @@
 #include <optional>
 #include <string_view>
 
-#include "cct_string.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -184,14 +183,13 @@ class ExchangePublic : public ExchangeBase {
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                  const CoincenterInfo &coincenterInfo);
 
-  string _name;
+  std::string_view _name;
   CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
   CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
   const ExchangeConfig &_exchangeConfig;
-  std::mutex _tradableMarketsMutex;
-  std::mutex _allOrderBooksMutex;
+  std::recursive_mutex _publicRequestsMutex;
 };
 }  // namespace api
 }  // namespace cct
