@@ -67,7 +67,7 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
   }
 }
 
-/// Optimization of ipow10( exp)
+/// Optimization of ipow(int64_t base, 10)
 constexpr int64_t ipow10(uint8_t exp) noexcept {
   constexpr const int64_t kPow10Table[] = {1LL,
                                            10LL,

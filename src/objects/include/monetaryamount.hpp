@@ -22,7 +22,7 @@ namespace cct {
 /// Represents a fixed-precision decimal amount with a CurrencyCode (fiat or coin).
 /// It is designed to be
 ///  - fast
-///  - small (16 bytes only). Thus can be passed by copy instead of reference
+///  - small (16 bytes only). Thus can be passed by copy instead of reference (it is trivially copyable)
 ///  - precise (amount is stored in a int64_t)
 ///  - optimized, predictive and exact for additions and subtractions (if no overflow during the operation)
 ///
@@ -33,7 +33,8 @@ namespace cct {
 /// - A CurrencyCode holding up to 10 chars + the number of decimals
 ///
 /// It can support up to 17 decimals for currency codes whose length is less than 9,
-/// and up to 15 decimals for currencies whose length is 9 or 10.
+/// and up to 15 decimals for currencies whose length is 9 or 10. Note that it's not possible to
+/// store positive powers of 10 (only decimals, so negative powers of 10 are possible).
 ///
 /// Examples: $50, -2.045 BTC.
 /// The integral value stored in the MonetaryAmount is multiplied by 10^'_nbDecimals'
@@ -110,7 +111,7 @@ class MonetaryAmount {
   [[nodiscard]] std::optional<AmountType> amount(int8_t nbDecimals) const;
 
   /// Get the integer part of the amount of this MonetaryAmount.
-  [[nodiscard]] constexpr AmountType integerPart() const {
+  [[nodiscard]] constexpr AmountType integerPart() const noexcept {
     return _amount / ipow10(static_cast<uint8_t>(nbDecimals()));
   }
 
@@ -134,9 +135,9 @@ class MonetaryAmount {
     return _curWithDecimals.withNoDecimalsPart();
   }
 
-  [[nodiscard]] constexpr int8_t nbDecimals() const { return _curWithDecimals.getAdditionalBits(); }
+  [[nodiscard]] constexpr int8_t nbDecimals() const noexcept { return _curWithDecimals.getAdditionalBits(); }
 
-  [[nodiscard]] constexpr int8_t maxNbDecimals() const {
+  [[nodiscard]] constexpr int8_t maxNbDecimals() const noexcept {
     return _curWithDecimals.isLongCurrencyCode()
                ? CurrencyCodeBase::kMaxNbDecimalsLongCurrencyCode
                : std::numeric_limits<AmountType>::digits10 - 1;  // -1 as minimal nb digits of integral part
@@ -146,7 +147,7 @@ class MonetaryAmount {
   /// Examples:
   ///  0.00426622338114037 EUR -> 17
   ///  45.546675 EUR           -> 16
-  [[nodiscard]] constexpr int8_t currentMaxNbDecimals() const {
+  [[nodiscard]] constexpr int8_t currentMaxNbDecimals() const noexcept {
     return static_cast<int8_t>(maxNbDecimals() - ndigits(integerPart()) + 1);
   }
 
@@ -168,22 +169,22 @@ class MonetaryAmount {
 
   [[nodiscard]] std::strong_ordering operator<=>(const MonetaryAmount &other) const;
 
-  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &) const = default;
+  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &) const noexcept = default;
 
   /// Note: for comparison with numbers (integrals or double), only the amount is compared.
   /// To be consistent with operator<=>, the currency will be ignored for equality.
   /// TODO: check if this special behavior be problematic in some cases
-  [[nodiscard]] constexpr bool operator==(std::signed_integral auto amount) const {
+  [[nodiscard]] constexpr bool operator==(std::signed_integral auto amount) const noexcept {
     return _amount == static_cast<AmountType>(amount) && nbDecimals() == 0;
   }
 
-  [[nodiscard]] constexpr bool operator==(double amount) const { return amount == toDouble(); }
+  [[nodiscard]] constexpr bool operator==(double amount) const noexcept { return amount == toDouble(); }
 
   [[nodiscard]] constexpr auto operator<=>(std::signed_integral auto amount) const {
     return _amount <=> static_cast<AmountType>(amount) * ipow10(static_cast<uint8_t>(nbDecimals()));
   }
 
-  [[nodiscard]] constexpr auto operator<=>(double amount) const { return toDouble() <=> amount; }
+  [[nodiscard]] constexpr auto operator<=>(double amount) const noexcept { return toDouble() <=> amount; }
 
   [[nodiscard]] constexpr MonetaryAmount abs() const noexcept {
     return {true, _amount < 0 ? -_amount : _amount, _curWithDecimals};

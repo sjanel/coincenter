@@ -732,4 +732,19 @@ TEST(MonetaryAmountTest, CloseTo) {
   EXPECT_FALSE(MonetaryAmount("-0.90005").isCloseTo(MonetaryAmount("-0.9008"), 0.0001));
 }
 
+TEST(MonetaryAmountTest, CurrentMaxNbDecimals) {
+  MonetaryAmount ma1("0.00426622338114037 EUR");
+  MonetaryAmount ma2("45.546675 EUR");
+  MonetaryAmount ma3("3890.879");
+
+  EXPECT_EQ(ma1.currentMaxNbDecimals(), 17);
+  EXPECT_EQ(ma1.amount(ma1.currentMaxNbDecimals()), 426622338114037L);
+
+  EXPECT_EQ(ma2.currentMaxNbDecimals(), 16);
+  EXPECT_EQ(ma2.amount(ma2.currentMaxNbDecimals()), 455466750000000000L);
+
+  EXPECT_EQ(ma3.currentMaxNbDecimals(), 14);
+  EXPECT_EQ(ma3.amount(ma3.currentMaxNbDecimals()), 389087900000000000L);
+}
+
 }  // namespace cct

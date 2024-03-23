@@ -57,7 +57,7 @@ class Market {
 
   string str() const { return assetsPairStrUpper('-'); }
 
-  Type type() const { return static_cast<Type>(_assets[0].getAdditionalBits()); }
+  Type type() const noexcept { return static_cast<Type>(_assets[0].getAdditionalBits()); }
 
   friend std::ostream& operator<<(std::ostream& os, const Market& mk);
 
