@@ -33,6 +33,6 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: cmake --build . --config ${{matrix.buildmode}} --parallel 4
 
-      - name: Local Tests
+      - name: Tests
         working-directory: ${{github.workspace}}/build
         run: ctest -j 4 -C ${{matrix.buildmode}} --output-on-failure
