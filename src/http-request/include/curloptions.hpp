@@ -59,8 +59,8 @@ class CurlOptions {
   void setHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.set(key, value); }
   void setHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.set(key, value); }
 
-  using trivially_relocatable = std::integral_constant<bool, is_trivially_relocatable_v<HttpHeaders> &&
-                                                                 is_trivially_relocatable_v<CurlPostData>>::type;
+  using trivially_relocatable =
+      std::bool_constant<is_trivially_relocatable_v<HttpHeaders> && is_trivially_relocatable_v<CurlPostData>>::type;
 
  private:
   void setPostDataInJsonFormat() {

@@ -49,35 +49,28 @@ class CommandLineOptionsParser {
   CommandLineOptionsParser& append(std::ranges::input_range auto&& opts) {
     const auto insertedIt = _opts.insert(_opts.end(), std::ranges::begin(opts), std::ranges::end(opts));
     const auto sortByFirst = [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; };
+
     std::sort(insertedIt, _opts.end(), sortByFirst);
     std::inplace_merge(_opts.begin(), insertedIt, _opts.end(), sortByFirst);
+
     return *this;
   }
 
-  OptValueType parse(std::span<const char*> groupedArguments) {
-    _callbacks.clear();
-    _callbacks.reserve(_opts.size());
+  auto parse(std::span<const char* const> groupedArguments) {
     OptValueType data;
-    for (const auto& [cmdLineOption, prop] : _opts) {
-      _callbacks[cmdLineOption] = registerCallback(cmdLineOption, prop, data);
-    }
+
+    registerCallbacks(data);
+
     const int nbArgs = static_cast<int>(groupedArguments.size());
     for (int argPos = 0; argPos < nbArgs; ++argPos) {
       std::string_view argStr(groupedArguments[argPos]);
-      if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
-        const auto [possibleOptionIdx, minDistance] = minLevenshteinDistanceOpt(argStr);
-        auto existingOptionStr = _opts[possibleOptionIdx].first.fullName();
 
-        if (minDistance <= 2 ||
-            minDistance < static_cast<decltype(minDistance)>(std::min(argStr.size(), existingOptionStr.size()) / 2)) {
-          throw invalid_argument("Unrecognized command-line option '{}' - did you mean '{}'?", argStr,
-                                 existingOptionStr);
-        }
-        throw invalid_argument("Unrecognized command-line option '{}'", argStr);
+      if (std::ranges::none_of(_opts, [argStr](const auto& opt) { return opt.first.matches(argStr); })) {
+        invalidArgument(argStr);
       }
 
-      for (auto& callback : _callbacks) {
-        callback.second(argPos, groupedArguments);
+      for (auto& [_, callback] : _callbacks) {
+        callback(argPos, groupedArguments);
       }
     }
 
@@ -138,7 +131,8 @@ class CommandLineOptionsParser {
 
  private:
   static constexpr std::string_view kEmptyLine =
-      "                                                                                                                "
+      "                                                                                                              "
+      "  "
       "        ";
   static constexpr int kMaxCharLine = kEmptyLine.length();
 
@@ -147,7 +141,7 @@ class CommandLineOptionsParser {
   template <class>
   friend class CommandLineOptionsParserIterator;
 
-  using CallbackType = std::function<void(int&, std::span<const char*>)>;
+  using CallbackType = std::function<void(int&, std::span<const char* const>)>;
 
   [[nodiscard]] bool isOptionValue(std::string_view opt) const {
     return std::ranges::none_of(_opts, [opt](const auto& cmdLineOpt) { return cmdLineOpt.first.matches(opt); });
@@ -162,71 +156,71 @@ class CommandLineOptionsParser {
 
   CallbackType registerCallback(const CommandLineOption& commandLineOption, CommandLineOptionType prop,
                                 OptValueType& data) {
-    return [this, &commandLineOption, prop, &data](int& idx, std::span<const char*> argv) {
-      if (commandLineOption.matches(argv[idx])) {
-        std::visit(overloaded{
-                       // integral value matcher including bool
-                       [&data, &idx, argv, &commandLineOption](std::integral auto OptValueType::*arg) {
-                         using IntType = std::remove_reference_t<decltype(data.*arg)>;
-                         if constexpr (std::is_same_v<IntType, bool>) {
-                           data.*arg = true;
-                         } else {
-                           if (idx + 1U < argv.size()) {
-                             std::string_view nextOpt(argv[idx + 1]);
-                             if (IsOptionInt(nextOpt)) {
-                               data.*arg = FromString<IntType>(nextOpt);
-                               ++idx;
-                               return;
-                             }
-                           }
-                           ThrowExpectingValueException(commandLineOption);
-                         }
-                       },
-
-                       // CommandLineOptionalInt value matcher
-                       [&data, &idx, argv](CommandLineOptionalInt OptValueType::*arg) {
-                         data.*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
-                         if (idx + 1U < argv.size()) {
-                           std::string_view nextOpt(argv[idx + 1]);
-                           if (IsOptionInt(nextOpt)) {
-                             data.*arg = FromString<int>(nextOpt);
-                             ++idx;
-                           }
-                         }
-                       },
-
-                       // std::string_view value matcher
-                       [&data, &idx, argv, &commandLineOption](std::string_view OptValueType::*arg) {
-                         if (idx + 1U < argv.size()) {
-                           data.*arg = std::string_view(argv[idx + 1]);
-                           ++idx;
-                         } else {
-                           ThrowExpectingValueException(commandLineOption);
-                         }
-                       },
-
-                       // optional std::string_view value matcher
-                       [this, &data, &idx, argv](std::optional<std::string_view> OptValueType::*arg) {
-                         if (idx + 1U < argv.size() && this->isOptionValue(argv[idx + 1])) {
-                           data.*arg = std::string_view(argv[idx + 1]);
-                           ++idx;
-                         } else {
-                           data.*arg = std::string_view();
-                         }
-                       },
-
-                       // duration value matcher
-                       [&data, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
-                         if (idx + 1U < argv.size()) {
-                           data.*arg = ParseDuration(argv[idx + 1]);
-                           ++idx;
-                         } else {
-                           ThrowExpectingValueException(commandLineOption);
-                         }
-                       },
-                   },
-                   prop);
+    return [this, &commandLineOption, prop, &data](int& idx, std::span<const char* const> argv) {
+      if (!commandLineOption.matches(argv[idx])) {
+        return;
       }
+
+      std::visit(overloaded{
+                     // integral value matcher including bool
+                     [&data, &idx, argv, &commandLineOption](std::integral auto OptValueType::*arg) {
+                       using IntType = std::remove_reference_t<decltype(data.*arg)>;
+                       if constexpr (std::is_same_v<IntType, bool>) {
+                         data.*arg = true;
+                       } else {
+                         if (idx + 1U < argv.size()) {
+                           std::string_view opt(argv[idx + 1]);
+                           if (IsOptionInt(opt)) {
+                             data.*arg = FromString<IntType>(opt);
+                             ++idx;
+                             return;
+                           }
+                         }
+                         ThrowExpectingValueException(commandLineOption);
+                       }
+                     },
+
+                     // CommandLineOptionalInt value matcher
+                     [&data, &idx, argv](CommandLineOptionalInt OptValueType::*arg) {
+                       data.*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+                       if (idx + 1U < argv.size()) {
+                         std::string_view opt(argv[idx + 1]);
+                         if (IsOptionInt(opt)) {
+                           data.*arg = FromString<int>(opt);
+                           ++idx;
+                         }
+                       }
+                     },
+
+                     // std::string_view value matcher
+                     [&data, &idx, argv, &commandLineOption](std::string_view OptValueType::*arg) {
+                       if (idx + 1U < argv.size()) {
+                         data.*arg = std::string_view(argv[++idx]);
+                         return;
+                       }
+                       ThrowExpectingValueException(commandLineOption);
+                     },
+
+                     // optional std::string_view value matcher
+                     [this, &data, &idx, argv](std::optional<std::string_view> OptValueType::*arg) {
+                       if (idx + 1U < argv.size() && this->isOptionValue(argv[idx + 1])) {
+                         data.*arg = std::string_view(argv[idx + 1]);
+                         ++idx;
+                         return;
+                       }
+                       data.*arg = std::string_view();
+                     },
+
+                     // duration value matcher
+                     [&data, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
+                       if (idx + 1U < argv.size()) {
+                         data.*arg = ParseDuration(argv[++idx]);
+                         return;
+                       }
+                       ThrowExpectingValueException(commandLineOption);
+                     },
+                 },
+                 prop);
     };
   }
 
@@ -262,6 +256,17 @@ class CommandLineOptionsParser {
     return lenFirstRows + 3;
   }
 
+  void invalidArgument(std::string_view argStr) const {
+    const auto [possibleOptionIdx, minDistance] = minLevenshteinDistanceOpt(argStr);
+    auto existingOptionStr = _opts[possibleOptionIdx].first.fullName();
+
+    if (minDistance <= 2 ||
+        minDistance < static_cast<decltype(minDistance)>(std::min(argStr.size(), existingOptionStr.size()) / 2)) {
+      throw invalid_argument("Unrecognized command-line option '{}' - did you mean '{}'?", argStr, existingOptionStr);
+    }
+    throw invalid_argument("Unrecognized command-line option '{}'", argStr);
+  }
+
   std::pair<int, int> minLevenshteinDistanceOpt(std::string_view argStr) const {
     vector<int> minDistancesToFullNameOptions(_opts.size());
     LevenshteinDistanceCalculator calc;
@@ -269,6 +274,14 @@ class CommandLineOptionsParser {
                            [argStr, &calc](const auto opt) { return calc(opt.first.fullName(), argStr); });
     const auto optIt = std::ranges::min_element(minDistancesToFullNameOptions);
     return {optIt - minDistancesToFullNameOptions.begin(), *optIt};
+  }
+
+  void registerCallbacks(OptValueType& data) {
+    _callbacks.reserve(_opts.size());
+    _callbacks.clear();
+    for (const auto& [cmdLineOption, prop] : _opts) {
+      _callbacks[cmdLineOption] = registerCallback(cmdLineOption, prop, data);
+    }
   }
 
   vector<CommandLineOptionWithValue> _opts;

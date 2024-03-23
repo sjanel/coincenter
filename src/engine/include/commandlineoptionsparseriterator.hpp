@@ -11,7 +11,7 @@ template <class OptValueType>
 class CommandLineOptionsParserIterator {
  public:
   CommandLineOptionsParserIterator(const CommandLineOptionsParser<OptValueType>& parser,
-                                   std::span<const char*> allArguments)
+                                   std::span<const char* const> allArguments)
       : _parser(parser),
         _allArguments(allArguments),
         _begIt(_allArguments.begin()),
@@ -26,8 +26,8 @@ class CommandLineOptionsParserIterator {
    * @brief Get next grouped arguments that should be treated together.
    *        hasNext needs to return true prior to the call to this method
    */
-  std::span<const char*> next() {
-    std::span<const char*> ret(_begIt, _endIt);
+  auto next() {
+    std::span<const char* const> ret(_begIt, _endIt);
     _begIt = _endIt;
     _endIt = getNextGroupedEndIt(_endIt);
     _hasReturnedAtLeastOneSpan = true;
@@ -35,7 +35,7 @@ class CommandLineOptionsParserIterator {
   }
 
  private:
-  using ConstIt = std::span<const char*>::iterator;
+  using ConstIt = std::span<const char* const>::iterator;
 
   [[nodiscard]] ConstIt getNextGroupedEndIt(ConstIt searchFromIt) const {
     if (searchFromIt == _allArguments.end()) {
@@ -46,6 +46,7 @@ class CommandLineOptionsParserIterator {
       for (const auto& [cmdLineOption, _] : _parser._opts) {
         std::string_view cmdLineOptionFullName = cmdLineOption.fullName();
         if (cmdLineOptionFullName[0] != '-' && cmdLineOptionFullName == optStr) {
+          // It's a new command name
           return searchFromIt;
         }
       }
@@ -55,7 +56,7 @@ class CommandLineOptionsParserIterator {
   }
 
   const CommandLineOptionsParser<OptValueType>& _parser;
-  std::span<const char*> _allArguments;
+  std::span<const char* const> _allArguments;
   ConstIt _begIt;
   ConstIt _endIt;
   bool _hasReturnedAtLeastOneSpan = false;

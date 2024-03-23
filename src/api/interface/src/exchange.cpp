@@ -20,6 +20,8 @@ Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchang
       _exchangePrivate(std::move(exchangePrivate)),
       _pExchangeConfig(std::addressof(exchangeConfig)) {}
 
+std::size_t Exchange::publicExchangePos() const { return PublicExchangePos(name()); }
+
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
   if (_pExchangeConfig->excludedCurrenciesWithdrawal().contains(currencyCode)) {
     return false;

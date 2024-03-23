@@ -264,6 +264,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime *= 2;
     }
+
     auto t1 = Clock::now();
 
     // Call

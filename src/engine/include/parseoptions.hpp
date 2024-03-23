@@ -10,11 +10,12 @@
 #include "commandlineoptionsparseriterator.hpp"
 
 namespace cct {
+
 template <class ParserType>
 auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
   auto programName = std::filesystem::path(argv[0]).filename().string();
 
-  std::span<const char *> allArguments(argv, argc);
+  std::span<const char *const> allArguments(argv, argc);
 
   // skip first argument which is program name
   CommandLineOptionsParserIterator parserIt(parser, allArguments.last(allArguments.size() - 1U));
@@ -29,6 +30,7 @@ auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
     auto groupedArguments = parserIt.next();
 
     auto groupParsedOptions = parser.parse(groupedArguments);
+
     globalOptions.mergeGlobalWith(groupParsedOptions);
 
     if (groupedArguments.empty()) {
@@ -36,12 +38,17 @@ auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
     }
     if (groupParsedOptions.help) {
       parser.displayHelp(programName, std::cout);
-    } else if (groupParsedOptions.version) {
-      CoincenterCmdLineOptions::PrintVersion(programName, std::cout);
-    } else {
-      // Only store commands if they are not 'help' nor 'version'
-      parsedOptions.push_back(std::move(groupParsedOptions));
+      parsedOptions.clear();
+      break;
     }
+    if (groupParsedOptions.version) {
+      CoincenterCmdLineOptions::PrintVersion(programName, std::cout);
+      parsedOptions.clear();
+      break;
+    }
+
+    // Only store commands if they are not 'help' nor 'version'
+    parsedOptions.push_back(std::move(groupParsedOptions));
   }
 
   // Apply global options to all parsed options containing commands
