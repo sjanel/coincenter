@@ -90,13 +90,12 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
   }
 }
 
-void MetricsExporter::exportOrderbookMetrics(Market mk,
-                                             const MarketOrderBookConversionRates &marketOrderBookConversionRates) {
+void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRates &marketOrderBookConversionRates) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("limit_pri", "Best bids and asks prices");
-  string marketLowerCase = mk.assetsPairStrLower('-');
-  key.append("market", marketLowerCase);
+
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+    key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
     key.set("exchange", exchangeName);
     key.set("side", "ask");
     _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.lowestAskPrice().toDouble());
@@ -106,6 +105,7 @@ void MetricsExporter::exportOrderbookMetrics(Market mk,
   key.set(kMetricNameKey, "limit_vol");
   key.set(kMetricHelpKey, "Best bids and asks volumes");
   for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+    key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
     key.set("exchange", exchangeName);
     key.set("side", "ask");
     _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
@@ -116,13 +116,16 @@ void MetricsExporter::exportOrderbookMetrics(Market mk,
   }
 }
 
-void MetricsExporter::exportLastTradesMetrics(Market mk, const TradesPerExchange &lastTradesPerExchange) {
+void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTradesPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
-  string marketLowerCase = mk.assetsPairStrLower('-');
-  key.append("market", marketLowerCase);
 
   for (const auto &[e, lastTrades] : lastTradesPerExchange) {
+    if (lastTrades.empty()) {
+      continue;
+    }
+    Market mk = lastTrades.front().market();
+    key.set("market", mk.assetsPairStrLower('-'));
     key.set("exchange", e->name());
 
     std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};

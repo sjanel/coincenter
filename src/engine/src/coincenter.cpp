@@ -15,6 +15,7 @@
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
+#include "durationstring.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"
@@ -72,18 +73,29 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
 }
 
 int Coincenter::process(const CoincenterCommands &coincenterCommands) {
-  int nbCommandsProcessed = 0;
   const auto commands = coincenterCommands.commands();
   const int nbRepeats = commands.empty() ? 0 : coincenterCommands.repeats();
+  const auto repeatTime = coincenterCommands.repeatTime();
+
+  int nbCommandsProcessed = 0;
+  TimePoint lastCommandTime;
   for (int repeatPos = 0; repeatPos != nbRepeats && g_signalStatus == 0; ++repeatPos) {
-    if (repeatPos != 0) {
-      std::this_thread::sleep_for(coincenterCommands.repeatTime());
+    const auto earliestTimeNextCommand = lastCommandTime + repeatTime;
+    lastCommandTime = Clock::now();
+
+    if (earliestTimeNextCommand > lastCommandTime) {
+      const auto waitingDuration = earliestTimeNextCommand - lastCommandTime;
+
+      lastCommandTime += waitingDuration;
+
+      log::debug("Sleep for {} before next command", DurationToString(waitingDuration));
+      std::this_thread::sleep_for(waitingDuration);
     }
     if (nbRepeats != 1) {
       if (nbRepeats == -1) {
-        log::info("Processing request {}", repeatPos + 1);
+        log::info("Process request {}", repeatPos + 1);
       } else {
-        log::info("Processing request {}/{}", repeatPos + 1, nbRepeats);
+        log::info("Process request {}/{}", repeatPos + 1, nbRepeats);
       }
     }
     TransferableCommandResultVector transferableResults;
@@ -274,7 +286,7 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, Exchan
                                                                std::optional<int> depth) {
   const auto ret = _exchangesOrchestrator.getMarketOrderBooks(mk, exchangeNames, equiCurrencyCode, depth);
 
-  _metricsExporter.exportOrderbookMetrics(mk, ret);
+  _metricsExporter.exportOrderbookMetrics(ret);
 
   return ret;
 }
@@ -396,7 +408,7 @@ MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m
 TradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades) {
   const auto ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
 
-  _metricsExporter.exportLastTradesMetrics(mk, ret);
+  _metricsExporter.exportLastTradesMetrics(ret);
 
   return ret;
 }
@@ -407,8 +419,10 @@ MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market mk, Exchang
 
 void Coincenter::updateFileCaches() const {
   log::debug("Store all cache files");
+
   _commonAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
+
   std::ranges::for_each(_exchangePool.exchanges(), [](const Exchange &exchange) { exchange.updateCacheFile(); });
 }
 
