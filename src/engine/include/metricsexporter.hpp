@@ -1,7 +1,6 @@
 #pragma once
 
 #include "currencycode.hpp"
-#include "market.hpp"
 #include "queryresulttypes.hpp"
 
 namespace cct {
@@ -18,9 +17,9 @@ class MetricsExporter {
 
   void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps);
 
-  void exportOrderbookMetrics(Market mk, const MarketOrderBookConversionRates &marketOrderBookConversionRates);
+  void exportOrderbookMetrics(const MarketOrderBookConversionRates &marketOrderBookConversionRates);
 
-  void exportLastTradesMetrics(Market mk, const TradesPerExchange &lastTradesPerExchange);
+  void exportLastTradesMetrics(const TradesPerExchange &lastTradesPerExchange);
 
  private:
   void createSummariesAndHistograms();
