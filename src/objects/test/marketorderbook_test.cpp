@@ -153,6 +153,37 @@ TEST_F(MarketOrderBookTestCase1, Convert) {
   EXPECT_EQ(marketOrderBook.convert(MonetaryAmount("800", "EUR")), MonetaryAmount("0.61443932411674347", "ETH"));
 }
 
+class MarketOrderBookTestDuplicatedLines : public ::testing::Test {
+ protected:
+  MarketOrderBook marketOrderBook{
+      TimePoint{}, Market("ETH", "EUR"),
+      CreateMarketOrderBookLines(
+          {OrderBookLine(MonetaryAmount("0.65", "ETH"), MonetaryAmount("1300.50", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1301", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("0.11", "ETH"), MonetaryAmount("1301.50", "EUR"), OrderBookLine::Type::kBid),
+           OrderBookLine(MonetaryAmount("0.11", "ETH"), MonetaryAmount("1301.50", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("1.4009", "ETH"), MonetaryAmount("1302", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("3.78", "ETH"), MonetaryAmount("1302.50", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("0.24", "ETH"), MonetaryAmount("1302.50", "EUR"), OrderBookLine::Type::kAsk),
+           OrderBookLine(MonetaryAmount("56.10001267", "ETH"), MonetaryAmount("1303", "EUR"),
+                         OrderBookLine::Type::kAsk)})};
+};
+
+TEST_F(MarketOrderBookTestDuplicatedLines, NumberOfElements) {
+  EXPECT_EQ(marketOrderBook.size(), 5);
+  EXPECT_EQ(marketOrderBook.nbAskPrices(), 3);
+  EXPECT_EQ(marketOrderBook.nbBidPrices(), 2);
+}
+
+TEST_F(MarketOrderBookTestDuplicatedLines, MiddleElements) {
+  EXPECT_EQ(marketOrderBook.lowestAskPrice(), MonetaryAmount("1302", "EUR"));
+  EXPECT_EQ(marketOrderBook.highestBidPrice(), MonetaryAmount("1301", "EUR"));
+}
+
+TEST_F(MarketOrderBookTestDuplicatedLines, SummedAmountAsk) {
+  EXPECT_EQ(marketOrderBook[2].amount, MonetaryAmount("4.02", "ETH"));
+}
+
 class MarketOrderBookTestCase2 : public ::testing::Test {
  protected:
   TimePoint time;

@@ -66,10 +66,21 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, const Marke
   }
 
   std::ranges::sort(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; });
-  const auto adjacentFindIt =
-      std::ranges::adjacent_find(_orders, [](auto lhs, auto rhs) { return lhs.price == rhs.price; });
-  if (adjacentFindIt != _orders.end()) {
-    throw exception("Forbidden duplicate price {} in the order book for market {}", adjacentFindIt->price, market);
+
+  for (auto it = _orders.begin(); it != _orders.end();) {
+    it = std::adjacent_find(it, _orders.end(), [](auto lhs, auto rhs) { return lhs.price == rhs.price; });
+    if (it != _orders.end()) {
+      auto nextIt = std::next(it);
+      log::warn("Forbidden duplicate price {} at amounts {} & {} in the order book for market {}, summing them",
+                it->price, it->amount, nextIt->amount, market);
+      nextIt->amount += it->amount;
+      // Remove the first duplicated price line (we summed the amounts on the next line)
+      it = _orders.erase(it);
+      if (it->amount == 0) {
+        // If the sum has 0 amount, remove the next one as well
+        it = _orders.erase(it);
+      }
+    }
   }
 
   const auto highestBidPriceIt =
