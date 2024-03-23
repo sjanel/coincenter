@@ -40,7 +40,7 @@ struct CurrencyCodeBase {
            kFirstAuthorizedLetter;
   }
 
-  static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) {
+  static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) noexcept {
     return isLongCurrencyCode ? kNbDecimals4Mask : kNbDecimals6Mask;
   }
 
@@ -248,15 +248,15 @@ class CurrencyCode {
 
   explicit constexpr CurrencyCode(uint64_t data) : _data(data) {}
 
-  constexpr bool isLongCurrencyCode() const { return static_cast<bool>(_data & CurrencyCodeBase::kBeforeLastCharMask); }
+  constexpr bool isLongCurrencyCode() const noexcept { return (_data & CurrencyCodeBase::kBeforeLastCharMask) != 0; }
 
-  constexpr void uncheckedSetAdditionalBits(int8_t data) {
+  constexpr void uncheckedSetAdditionalBits(int8_t data) noexcept {
     // For currency codes whose length is > 8, only 15 digits are supported
     // max 64 decimals for currency codes whose length is maximum 8 (most cases)
     _data = static_cast<uint64_t>(data) + (_data & (~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode())));
   }
 
-  constexpr int8_t getAdditionalBits() const {
+  constexpr int8_t getAdditionalBits() const noexcept {
     return static_cast<int8_t>(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
