@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "cachedresult.hpp"
+#include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycodeset.hpp"
 #include "exchangepublicapi.hpp"
@@ -83,7 +84,7 @@ class UpbitPublic : public ExchangePublic {
   struct WithdrawalFeesFunc {
     MonetaryAmountByCurrencySet operator()();
 
-    const string& _name;
+    std::string_view _name;
     std::string_view _dataDir;
   };
 
