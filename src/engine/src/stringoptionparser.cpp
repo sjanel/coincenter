@@ -15,6 +15,47 @@
 #include "monetaryamount.hpp"
 
 namespace cct {
+
+// At the end of the currency, either the end of the string or a comma is expected.
+CurrencyCode StringOptionParser::parseCurrency(FieldIs fieldIs, char delimiter) {
+  const auto delimiterPos = _opt.find(delimiter, _pos);
+  const auto begIt = _opt.begin() + _pos;
+  const bool isDelimiterPresent = delimiterPos != std::string_view::npos;
+  const std::string_view tokenStr(begIt, isDelimiterPresent ? _opt.begin() + delimiterPos : _opt.end());
+
+  if (!tokenStr.empty() && !ExchangeName::IsValid(tokenStr) && CurrencyCode::IsValid(tokenStr)) {
+    // disambiguate currency code from exchange name
+    _pos += tokenStr.size();
+    if (isDelimiterPresent) {
+      ++_pos;
+    }
+    return tokenStr;
+  }
+  if (fieldIs == FieldIs::kMandatory) {
+    throw invalid_argument("Expected a valid currency code in '{}'", std::string_view(_opt.begin() + _pos, _opt.end()));
+  }
+
+  return {};
+}
+
+// At the end of the market, either the end of the string or a comma is expected.
+Market StringOptionParser::parseMarket(FieldIs fieldIs, char delimiter) {
+  const auto oldPos = _pos;
+
+  CurrencyCode firstCur = parseCurrency(fieldIs, '-');
+  CurrencyCode secondCur;
+
+  if (firstCur.isDefined()) {
+    secondCur = parseCurrency(fieldIs, delimiter);
+    if (secondCur.isNeutral()) {
+      firstCur = CurrencyCode();
+      _pos = oldPos;
+    }
+  }
+
+  return {firstCur, secondCur};
+}
+
 namespace {
 
 template <class CharOrStringType>
@@ -39,70 +80,12 @@ std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::siz
 
 }  // namespace
 
-// At the end of the currency, either the end of the string or a comma is expected.
-CurrencyCode StringOptionParser::parseCurrency(FieldIs fieldIs) {
-  const std::size_t commaPos = _opt.find(',', _pos);
-  const auto begIt = _opt.begin() + _pos;
-  const bool isCommaPresent = commaPos != std::string_view::npos;
-  const std::string_view firstStr(begIt, isCommaPresent ? _opt.begin() + commaPos : _opt.end());
-
-  std::string_view curStr;
-  if (!firstStr.empty() && !ExchangeName::IsValid(firstStr) && CurrencyCode::IsValid(firstStr)) {
-    // disambiguate currency code from exchange name
-    curStr = firstStr;
-    _pos += curStr.size();
-    if (isCommaPresent) {
-      ++_pos;
-    }
-  } else if (fieldIs == FieldIs::kMandatory) {
-    throw invalid_argument("Expected a valid currency code in '{}'", std::string_view(_opt.begin() + _pos, _opt.end()));
-  }
-  return curStr;
-}
-
-// At the end of the market, either the end of the string or a comma is expected.
-Market StringOptionParser::parseMarket(FieldIs fieldIs) {
-  const std::size_t commaPos = _opt.find(',', _pos);
-  const auto begIt = _opt.begin() + _pos;
-  const bool isCommaPresent = commaPos != std::string_view::npos;
-  const std::string_view marketStr(begIt, isCommaPresent ? begIt + commaPos : _opt.end());
-  const std::size_t dashPos = marketStr.find('-');
-
-  if (dashPos == std::string_view::npos) {
-    if (fieldIs == FieldIs::kMandatory) {
-      throw invalid_argument("Expected a dash in '{}'", std::string_view(_opt.begin() + _pos, _opt.end()));
-    }
-    return {};
-  }
-  std::string_view firstCur(marketStr.begin(), marketStr.begin() + dashPos);
-  if (!CurrencyCode::IsValid(firstCur)) {
-    if (fieldIs == FieldIs::kMandatory) {
-      throw invalid_argument("Expected a valid first currency in '{}'",
-                             std::string_view(_opt.begin() + _pos, _opt.end()));
-    }
-    return {};
-  }
-  std::string_view secondCur(marketStr.begin() + dashPos + 1, marketStr.end());
-  if (!CurrencyCode::IsValid(secondCur)) {
-    if (fieldIs == FieldIs::kMandatory) {
-      throw invalid_argument("Expected a valid second currency in '{}'",
-                             std::string_view(_opt.begin() + _pos, _opt.end()));
-    }
-    return {};
-  }
-  _pos += marketStr.size();
-  if (isCommaPresent) {
-    ++_pos;
-  }
-  return {CurrencyCode(firstCur), CurrencyCode(secondCur)};
-}
-
 // At the end of the currency, either the end of the string, or a dash or comma is expected.
 std::pair<MonetaryAmount, StringOptionParser::AmountType> StringOptionParser::parseNonZeroAmount(FieldIs fieldIs) {
-  constexpr std::string_view sepWithPercentageAtLast = "-,%";
-  std::size_t originalPos = _pos;
+  static constexpr std::string_view sepWithPercentageAtLast = "-,%";
+  const auto originalPos = _pos;
   auto amountStr = GetNextStr(_opt, sepWithPercentageAtLast, _pos);
-  std::pair<MonetaryAmount, AmountType> ret{MonetaryAmount(), StringOptionParser::AmountType::kNotPresent};
+  auto ret = std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent);
   if (amountStr.empty()) {
     if (_pos == _opt.size()) {
       if (fieldIs == FieldIs::kMandatory) {
@@ -179,8 +162,8 @@ ExchangeNames StringOptionParser::parseExchanges(char exchangesSep, char endExch
   std::string_view str(_opt.begin() + _pos, _opt.begin() + endPos);
   ExchangeNames exchanges;
   if (!str.empty()) {
-    std::size_t first = 0;
-    std::size_t last = str.find(exchangesSep);
+    auto last = str.find(exchangesSep);
+    decltype(last) first = 0;
     for (; last != std::string_view::npos; last = str.find(exchangesSep, last + 1)) {
       std::string_view exchangeNameStr(str.begin() + first, str.begin() + last);
       if (!exchangeNameStr.empty()) {

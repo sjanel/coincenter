@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <type_traits>
 #include <variant>
@@ -61,7 +62,7 @@ class CoincenterCommand {
   MonetaryAmount amount() const { return _amount; }
 
   int depth() const { return _n; }
-  std::optional<int> optDepth() const { return _n == -1 ? std::nullopt : std::optional<int>(_n); }
+  auto optDepth() const { return _n == -1 ? std::nullopt : std::optional<int>(_n); }
 
   Market market() const { return _market; }
 
@@ -87,7 +88,7 @@ class CoincenterCommand {
   MonetaryAmount _amount;
   Market _market;
   CurrencyCode _cur1, _cur2;
-  int _n = -1;
+  int32_t _n = -1;
   CoincenterCommandType _type;
   bool _isPercentageAmount = false;
   bool _withBalanceInUse = false;

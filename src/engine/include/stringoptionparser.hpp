@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -26,11 +25,15 @@ class StringOptionParser {
 
   /// If FieldIs is kOptional and there is no currency, default currency code will be returned.
   /// otherwise exception invalid_argument will be raised
-  CurrencyCode parseCurrency(FieldIs fieldIs = FieldIs::kMandatory);
+  /// @param delimiter defines the expected character (could be not present, which means end of parsing)
+  ///                  after the currency
+  CurrencyCode parseCurrency(FieldIs fieldIs = FieldIs::kMandatory, char delimiter = ',');
 
   /// If FieldIs is kOptional and there is no market, default market will be returned.
-  /// otherwise exception invalid_argument will be raised
-  Market parseMarket(FieldIs fieldIs = FieldIs::kMandatory);
+  /// otherwise exception invalid_argument will be raised.
+  /// @param delimiter defines the expected character (could be not present, which means end of parsing)
+  ///                  after the market
+  Market parseMarket(FieldIs fieldIs = FieldIs::kMandatory, char delimiter = ',');
 
   /// If FieldIs is kOptional and there is no amount, AmountType kNotPresent will be returned
   /// otherwise exception invalid_argument will be raised
@@ -50,6 +53,6 @@ class StringOptionParser {
 
  private:
   std::string_view _opt;
-  std::size_t _pos{};
+  std::string_view::size_type _pos{};
 };
 }  // namespace cct

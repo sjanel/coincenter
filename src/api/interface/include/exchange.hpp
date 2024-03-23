@@ -37,6 +37,8 @@ class Exchange {
   std::string_view name() const { return apiPublic().name(); }
   std::string_view keyName() const { return apiPrivate().keyName(); }
 
+  std::size_t publicExchangePos() const;
+
   ExchangeName createExchangeName() const {
     if (hasPrivateAPI()) {
       return {name(), keyName()};
