@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compare>
+#include <cstdint>
 #include <optional>
 #include <string_view>
 #include <variant>
@@ -70,26 +71,26 @@ class CommandLineOption {
 
 /// Basically an extension of the std::optional class with an additional state.
 /// Indeed, we want to distinguish the presence of the option with its optional value.
-class CommandLineOptionalInt {
+class CommandLineOptionalInt32 {
  public:
   enum class State : int8_t { kValueIsSet, kOptionPresent, kOptionNotPresent };
 
-  constexpr CommandLineOptionalInt() noexcept = default;
+  constexpr CommandLineOptionalInt32() noexcept = default;
 
-  constexpr CommandLineOptionalInt(State state) : _state(state) {}
+  constexpr CommandLineOptionalInt32(State state) : _state(state) {}
 
-  constexpr CommandLineOptionalInt(int value) : _value(value), _state(State::kValueIsSet) {}
+  constexpr CommandLineOptionalInt32(int32_t value) : _value(value), _state(State::kValueIsSet) {}
 
-  constexpr int& operator*() { return _value; }
-  constexpr int operator*() const { return _value; }
+  constexpr auto& operator*() { return _value; }
+  constexpr auto operator*() const { return _value; }
 
   constexpr bool isPresent() const { return _state == State::kOptionPresent || _state == State::kValueIsSet; }
   constexpr bool isSet() const { return _state == State::kValueIsSet; }
 
-  bool operator==(const CommandLineOptionalInt&) const noexcept = default;
+  bool operator==(const CommandLineOptionalInt32&) const noexcept = default;
 
  private:
-  int _value = 0;
+  int32_t _value = 0;
   State _state = State::kOptionNotPresent;
 };
 
@@ -97,7 +98,7 @@ template <class OptValueType>
 struct AllowedCommandLineOptionsBase {
   using CommandLineOptionType =
       std::variant<std::string_view OptValueType::*, std::optional<std::string_view> OptValueType::*,
-                   int OptValueType::*, CommandLineOptionalInt OptValueType::*, bool OptValueType::*,
+                   int OptValueType::*, CommandLineOptionalInt32 OptValueType::*, bool OptValueType::*,
                    Duration OptValueType::*>;
   using CommandLineOptionWithValue = std::pair<CommandLineOption, CommandLineOptionType>;
 };

@@ -23,7 +23,7 @@ namespace cct {
 class CoincenterCmdLineOptionsDefinitions {
  public:
   static constexpr std::string_view kDefaultMonitoringIPAddress = "0.0.0.0";  // in Docker, localhost does not work
-  static constexpr int kDefaultMonitoringPort = 9091;                         // Prometheus default push port
+  static constexpr uint16_t kDefaultMonitoringPort = 9091;                    // Prometheus default push port
   static constexpr Duration kDefaultRepeatTime = seconds(1);
 
   static constexpr int64_t kDefaultRepeatDurationSeconds =

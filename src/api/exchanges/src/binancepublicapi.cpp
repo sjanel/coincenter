@@ -8,6 +8,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -497,10 +498,11 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
   const auto bidsIt = asksAndBids.find("bids");
 
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(asksIt->size() + bidsIt->size());
+    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksIt->size()), depth) +
+                           std::min(static_cast<decltype(depth)>(bidsIt->size()), depth));
     for (const auto& asksOrBids : {asksIt, bidsIt}) {
       const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
-      for (const auto& priceQuantityPair : *asksOrBids) {
+      for (const auto& priceQuantityPair : *asksOrBids | std::ranges::views::take(depth)) {
         MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
 

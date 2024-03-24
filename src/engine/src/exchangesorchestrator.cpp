@@ -169,7 +169,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
       log::warn("Unable to convert {} into {} on {}", mk.quote(), equiCurrencyCode, exchange->name());
     }
     return std::make_tuple(exchange->name(),
-                           depth ? exchange->queryOrderBook(mk, *depth) : exchange->queryOrderBook(mk),
+                           exchange->queryOrderBook(mk, depth.value_or(api::ExchangePublic::kDefaultDepth)),
                            optConversionRate);
   };
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), marketOrderBooksFunc);

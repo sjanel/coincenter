@@ -37,7 +37,7 @@ class CoincenterCommand {
 
   CoincenterCommand& setAmount(MonetaryAmount amount);
 
-  CoincenterCommand& setDepth(int depth);
+  CoincenterCommand& setDepth(int32_t depth);
 
   CoincenterCommand& setMarket(Market market);
 
@@ -76,8 +76,10 @@ class CoincenterCommand {
 
   bool operator==(const CoincenterCommand&) const noexcept = default;
 
-  using trivially_relocatable = std::bool_constant<is_trivially_relocatable_v<ExchangeNames> &&
-                                                   is_trivially_relocatable_v<OrdersConstraints>>::type;
+  using trivially_relocatable =
+      std::bool_constant<is_trivially_relocatable_v<ExchangeNames> && is_trivially_relocatable_v<OrdersConstraints> &&
+                         is_trivially_relocatable_v<WithdrawsOrDepositsConstraints> &&
+                         is_trivially_relocatable_v<TradeOptions> && is_trivially_relocatable_v<WithdrawOptions>>::type;
 
  private:
   using SpecialOptions =

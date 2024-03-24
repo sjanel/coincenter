@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -373,36 +374,31 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
   CurlPostData postData{{"symbol", mk.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
     static constexpr std::array kAuthorizedDepths = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
-    auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
+    const auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
     if (lb == kAuthorizedDepths.end()) {
       log::warn("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else if (*lb != kHuobiStandardOrderBookDefaultDepth) {
       postData.append("depth", *lb);
     }
   }
+
   MarketOrderBookLines orderBookLines;
 
   const json asksAndBids = PublicQuery(_curlHandle, "/market/depth", postData);
   const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
+
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(bidsIt->size() + asksIt->size());
+    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksIt->size()), depth) +
+                           std::min(static_cast<decltype(depth)>(bidsIt->size()), depth));
     for (const auto& asksOrBids : {bidsIt, asksIt}) {
-      int currentDepth = 0;
       const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
-      for (const auto& priceQuantityPair : *asksOrBids) {
+      for (const auto& priceQuantityPair : *asksOrBids | std::ranges::views::take(depth)) {
         MonetaryAmount amount(priceQuantityPair.back().get<double>(), mk.base());
         MonetaryAmount price(priceQuantityPair.front().get<double>(), mk.quote());
 
         orderBookLines.push(amount, price, type);
-        if (++currentDepth == depth) {
-          if (depth < static_cast<int>(asksOrBids->size())) {
-            log::debug("Truncate number of {} prices in order book to {}",
-                       type == OrderBookLine::Type::kAsk ? "ask" : "bid", depth);
-          }
-          break;
-        }
       }
     }
   }

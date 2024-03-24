@@ -25,7 +25,7 @@ struct Opts {
   int intOpt = 0;
   int int2Opt = 0;
   bool boolOpt = false;
-  CommandLineOptionalInt optInt;
+  CommandLineOptionalInt32 optInt;
   Duration timeOpt;
 };
 
@@ -151,26 +151,26 @@ TEST_F(CommandLineOptionsParserTest, OptStringEmpty2) {
 TEST_F(CommandLineOptionsParserTest, OptStringEmpty3) { EXPECT_EQ(createOptions({"--help"}).optStr, std::nullopt); }
 
 TEST_F(CommandLineOptionsParserTest, OptIntNotEmpty) {
-  CommandLineOptionalInt optInt = createOptions({"--optInt", "-42", "--opt4", "2000 EUR, kraken"}).optInt;
+  CommandLineOptionalInt32 optInt = createOptions({"--optInt", "-42", "--opt4", "2000 EUR, kraken"}).optInt;
   EXPECT_TRUE(optInt.isPresent());
   EXPECT_TRUE(optInt.isSet());
   EXPECT_EQ(*optInt, -42);
 }
 
 TEST_F(CommandLineOptionsParserTest, OptIntPresent) {
-  CommandLineOptionalInt optInt = createOptions({"--optInt", "--opt1", "Opt1 value"}).optInt;
+  CommandLineOptionalInt32 optInt = createOptions({"--optInt", "--opt1", "Opt1 value"}).optInt;
   EXPECT_TRUE(optInt.isPresent());
   EXPECT_FALSE(optInt.isSet());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptIntPresent2) {
-  CommandLineOptionalInt optInt = createOptions({"--opt1", "Opt1 value", "--optInt"}).optInt;
+  CommandLineOptionalInt32 optInt = createOptions({"--opt1", "Opt1 value", "--optInt"}).optInt;
   EXPECT_TRUE(optInt.isPresent());
   EXPECT_FALSE(optInt.isSet());
 }
 
 TEST_F(CommandLineOptionsParserTest, OptIntUnset) {
-  CommandLineOptionalInt optInt = createOptions({"--opt1", "Opt1 value"}).optInt;
+  CommandLineOptionalInt32 optInt = createOptions({"--opt1", "Opt1 value"}).optInt;
   EXPECT_FALSE(optInt.isPresent());
 }
 

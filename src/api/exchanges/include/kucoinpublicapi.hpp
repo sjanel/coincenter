@@ -53,7 +53,9 @@ class KucoinPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market mk, int depth = 10) override { return _orderbookCache.get(mk, depth); }
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
+    return _orderbookCache.get(mk, depth);
+  }
 
   MonetaryAmount queryLast24hVolume(Market mk) override { return _tradedVolumeCache.get(mk); }
 

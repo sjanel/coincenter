@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <utility>
 
@@ -261,27 +262,6 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   return ret;
 }
 
-namespace {
-template <class InputIt>
-void FillOrderBook(Market mk, int depth, OrderBookLine::Type type, InputIt beg, InputIt end,
-                   MarketOrderBookLines& orderBookLines) {
-  int currentDepth = 0;
-  for (auto it = beg; it != end; ++it) {
-    MonetaryAmount price((*it)[0].template get<std::string_view>(), mk.quote());
-    MonetaryAmount amount((*it)[1].template get<std::string_view>(), mk.base());
-
-    orderBookLines.push(amount, price, type);
-    if (++currentDepth == depth) {
-      if (++it != end) {
-        log::debug("Truncate number of {} prices in order book to {}",
-                   type == OrderBookLine::Type::kAsk ? "ask" : "bid", depth);
-      }
-      break;
-    }
-  }
-}
-}  // namespace
-
 MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Kucoin has a fixed range of authorized values for depth
   static constexpr std::array kAuthorizedDepths = {20, 100};
@@ -301,10 +281,23 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
   if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(asksIt->size() + bidsIt->size());
+    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksIt->size()), depth) +
+                           std::min(static_cast<decltype(depth)>(bidsIt->size()), depth));
+
     // Reverse iterate as bids are received in descending order
-    FillOrderBook(mk, depth, OrderBookLine::Type::kBid, bidsIt->rbegin(), bidsIt->rend(), orderBookLines);
-    FillOrderBook(mk, depth, OrderBookLine::Type::kAsk, asksIt->begin(), asksIt->end(), orderBookLines);
+    for (const auto& val : *bidsIt | std::views::reverse | std::ranges::views::take(depth)) {
+      MonetaryAmount price(val[0].get<std::string_view>(), mk.quote());
+      MonetaryAmount amount(val[1].get<std::string_view>(), mk.base());
+
+      orderBookLines.pushBid(amount, price);
+    }
+
+    for (const auto& val : *asksIt | std::ranges::views::take(depth)) {
+      MonetaryAmount price(val[0].get<std::string_view>(), mk.quote());
+      MonetaryAmount amount(val[1].get<std::string_view>(), mk.base());
+
+      orderBookLines.pushAsk(amount, price);
+    }
   }
 
   return MarketOrderBook(nowTime, mk, orderBookLines);

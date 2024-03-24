@@ -53,7 +53,7 @@ class HuobiPublic : public ExchangePublic {
     return _allOrderBooksCache.get(depth);
   }
 
-  MarketOrderBook queryOrderBook(Market mk, int depth = kHuobiStandardOrderBookDefaultDepth) override {
+  MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) override {
     return _orderbookCache.get(mk, depth);
   }
 
