@@ -52,7 +52,6 @@ void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t resp
 
   // How many requests we consider to compute stats?
   using NbRequestType = decltype(stats.nbRequestsDone);
-  static constexpr NbRequestType kMaxLastNbRequestsToConsider = 20;
 
   if (stats.nbRequestsDone == std::numeric_limits<NbRequestType>::max()) {
     // If one URL has reached the max number of requests done, we reset all stats and give an equal chance for all Base
@@ -64,36 +63,42 @@ void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t resp
 
   ++stats.nbRequestsDone;
 
+  static constexpr NbRequestType kMaxLastNbRequestsToConsider = 20;
+
   NbRequestType nbRequestsToConsider = std::min(stats.nbRequestsDone, kMaxLastNbRequestsToConsider);
 
   // Update moving average
-  uint64_t sumResponseTime = static_cast<uint64_t>(stats.avgResponseTimeInMs) * (nbRequestsToConsider - 1);
-  sumResponseTime += responseTimeInMs;
-  uint64_t newAverageResponseTime = sumResponseTime / nbRequestsToConsider;
+  const uint64_t sumResponseTime =
+      static_cast<uint64_t>(stats.avgResponseTimeInMs) * (nbRequestsToConsider - 1) + responseTimeInMs;
+  const uint64_t newAverageResponseTime = sumResponseTime / nbRequestsToConsider;
   using RTType = decltype(stats.avgResponseTimeInMs);
   if (newAverageResponseTime > static_cast<uint64_t>(std::numeric_limits<RTType>::max())) {
-    log::warn("Cannot update accurately the new average response time {} because of overflow", newAverageResponseTime);
+    // Cannot update accurately the new average response time because of overflow
     stats.avgResponseTimeInMs = std::numeric_limits<RTType>::max();
   } else {
     stats.avgResponseTimeInMs = static_cast<RTType>(newAverageResponseTime);
   }
 
   // Update moving deviation
-  uint64_t sumDeviation = static_cast<uint64_t>(ipow(stats.avgDeviationInMs, 2)) * (nbRequestsToConsider - 1);
-  sumDeviation += static_cast<uint64_t>(
-      ipow(static_cast<int64_t>(stats.avgResponseTimeInMs) - static_cast<int64_t>(responseTimeInMs), 2));
-  auto newDeviationResponseTime = static_cast<uint64_t>(std::sqrt(sumDeviation / nbRequestsToConsider));
+  const uint64_t sumDeviation =
+      static_cast<uint64_t>(ipow(stats.avgDeviationInMs, 2)) * (nbRequestsToConsider - 1) +
+      static_cast<uint64_t>(
+          ipow(static_cast<int64_t>(stats.avgResponseTimeInMs) - static_cast<int64_t>(responseTimeInMs), 2));
+  const auto newDeviationResponseTime = static_cast<uint64_t>(std::sqrt(sumDeviation / nbRequestsToConsider));
   using DevType = decltype(stats.avgDeviationInMs);
   if (newDeviationResponseTime > static_cast<uint64_t>(std::numeric_limits<DevType>::max())) {
-    log::warn("Cannot update accurately the new deviation response time {} because of overflow",
-              newDeviationResponseTime);
+    // Cannot update accurately the new deviation response time because of overflow
     stats.avgDeviationInMs = std::numeric_limits<DevType>::max();
   } else {
     stats.avgDeviationInMs = static_cast<DevType>(newDeviationResponseTime);
   }
 
-  log::debug("Response time stats for '{}': Avg: {} ms, Dev: {} ms, Nb: {} (last: {} ms)", _pBaseUrls[baseUrlPos],
-             stats.avgResponseTimeInMs, stats.avgDeviationInMs, stats.nbRequestsDone, responseTimeInMs);
+  static constexpr NbRequestType kBitmapFrequencyPrintStats = (2 << 5) - 1;
+
+  if ((stats.nbRequestsDone & kBitmapFrequencyPrintStats) == NbRequestType{}) {
+    log::info("Response time stats for '{}': Avg: {} ms, Dev: {} ms, Nb: {} (last: {} ms)", _pBaseUrls[baseUrlPos],
+              stats.avgResponseTimeInMs, stats.avgDeviationInMs, stats.nbRequestsDone, responseTimeInMs);
+  }
 }
 
 int BestURLPicker::nbRequestsDone() const {

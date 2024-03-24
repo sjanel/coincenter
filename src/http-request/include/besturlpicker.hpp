@@ -59,7 +59,7 @@ class BestURLPicker {
   struct ResponseTimeStats {
     constexpr bool operator==(const ResponseTimeStats &) const noexcept = default;
 
-    constexpr auto score() const { return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs; }
+    constexpr auto score() const noexcept { return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs; }
 
     uint16_t nbRequestsDone;       // when reaching max, all stats are reset to give equal chances to all base URLs
     uint16_t avgResponseTimeInMs;  // approximation of moving average

@@ -35,39 +35,51 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
     case 255:  // we use 255 as an overflow marker and return 0 on overflow/underflow
       return base == 1 ? 1 : (base == -1 ? (1 - 2 * (exp & 1)) : 0);
     case 6:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       exp >>= 1;
       base *= base;
       [[fallthrough]];
     case 5:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       exp >>= 1;
       base *= base;
       [[fallthrough]];
     case 4:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       exp >>= 1;
       base *= base;
       [[fallthrough]];
     case 3:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       exp >>= 1;
       base *= base;
       [[fallthrough]];
     case 2:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       exp >>= 1;
       base *= base;
       [[fallthrough]];
     case 1:
-      if (exp & 1) result *= base;
+      if ((exp & 1U) != 0) {
+        result *= base;
+      }
       [[fallthrough]];
     default:
       return result;
   }
 }
 
-/// Optimization of ipow(int64_t base, 10)
+/// Optimization of ipow(10, uint8_t exp)
 constexpr int64_t ipow10(uint8_t exp) noexcept {
   constexpr const int64_t kPow10Table[] = {1LL,
                                            10LL,
