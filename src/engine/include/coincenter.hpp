@@ -54,7 +54,7 @@ class Coincenter {
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
   /// Retrieve the last trades for each queried exchange
-  TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
+  TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, std::optional<int> depth);
 
   /// Retrieve the last price for exchanges supporting given market.
   MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);

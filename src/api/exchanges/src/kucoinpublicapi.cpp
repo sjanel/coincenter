@@ -343,16 +343,24 @@ MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
   return {amountStr, mk.base()};
 }
 
-PublicTradeVector KucoinPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
+PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
+  static constexpr auto kMaxNbLastTrades = 100;
+  if (nbTrades > kMaxNbLastTrades) {
+    log::warn("Maximum number of last trades to query from {} is {}", name(), kMaxNbLastTrades);
+  }
+
   json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
+
   PublicTradeVector ret;
-  ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
-  for (const json& detail : result) {
-    MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
-    MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
+  ret.reserve(std::min(static_cast<PublicTradeVector::size_type>(result.size()),
+                       static_cast<PublicTradeVector::size_type>(nbTrades)));
+
+  for (const json& detail : result | std::ranges::views::take(nbTrades)) {
+    const MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
+    const MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // time is in nanoseconds
-    int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
-    TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+    const int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
+    const TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }

@@ -154,9 +154,8 @@ TransferableCommandResultVector Coincenter::processCommand(
       break;
     }
     case CoincenterCommandType::kLastTrades: {
-      const int depth = cmd.depth() == 0 ? api::ExchangePublic::kNbLastTradesDefault : cmd.depth();
-      const auto lastTradesPerExchange = getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), depth);
-      _queryResultPrinter.printLastTrades(cmd.market(), depth, lastTradesPerExchange);
+      const auto lastTradesPerExchange = getLastTradesPerExchange(cmd.market(), cmd.exchangeNames(), cmd.optDepth());
+      _queryResultPrinter.printLastTrades(cmd.market(), cmd.optDepth(), lastTradesPerExchange);
       break;
     }
     case CoincenterCommandType::kLast24hTradedVolume: {
@@ -405,8 +404,9 @@ MonetaryAmountPerExchange Coincenter::getLast24hTradedVolumePerExchange(Market m
   return _exchangesOrchestrator.getLast24hTradedVolumePerExchange(mk, exchangeNames);
 }
 
-TradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades) {
-  const auto ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, nbLastTrades);
+TradesPerExchange Coincenter::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
+                                                       std::optional<int> depth) {
+  const auto ret = _exchangesOrchestrator.getLastTradesPerExchange(mk, exchangeNames, depth);
 
   _metricsExporter.exportLastTradesMetrics(ret);
 

@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -292,8 +293,9 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
 }
 
 namespace {
-TimePoint EpochTime(std::string&& dateStr) {
-  std::istringstream ss(std::move(dateStr));
+TimePoint EpochTime(std::string_view dateStr) {
+  // In C++26, std::istringstream can be built from a std::string_view
+  std::istringstream ss(std::string{dateStr});
   std::tm tm{};
   ss >> std::get_time(&tm, kTimeYearToSecondSpaceSeparatedFormat);
   static constexpr Duration kKoreaUTCTime = std::chrono::hours(9);
@@ -301,18 +303,33 @@ TimePoint EpochTime(std::string&& dateStr) {
 }
 }  // namespace
 
-PublicTradeVector BithumbPublic::queryLastTrades(Market mk, [[maybe_unused]] int nbTrades) {
-  json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote());
+PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
+  static constexpr auto kNbMinLastTrades = 1;
+  static constexpr auto kNbMaxLastTrades = 100;
+
+  if (nbTrades < kNbMinLastTrades) {
+    log::warn("Minimum number of last trades to ask on {} is {}", name(), kNbMinLastTrades);
+    nbTrades = kNbMinLastTrades;
+  } else if (nbTrades > kNbMaxLastTrades) {
+    log::warn("Maximum number of last trades to ask on {} is {}", name(), kNbMaxLastTrades);
+    nbTrades = kNbMaxLastTrades;
+  }
+
+  string urlOpts("count=");
+  AppendString(urlOpts, nbTrades);
+
+  json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote(), urlOpts);
+
   PublicTradeVector ret;
   ret.reserve(result.size());
+
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"
     TradeSide tradeSide = detail["type"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
-    ret.emplace_back(tradeSide, amount, price,
-                     EpochTime(std::string(detail["transaction_date"].get<std::string_view>())));
+    ret.emplace_back(tradeSide, amount, price, EpochTime(detail["transaction_date"].get<std::string_view>()));
   }
   std::ranges::sort(ret);
   return ret;

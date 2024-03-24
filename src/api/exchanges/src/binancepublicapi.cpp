@@ -49,8 +49,6 @@
 namespace cct::api {
 namespace {
 
-constexpr int kMaxNbLastTrades = 1000;
-
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
   string endpoint(method);
   if (!curlPostData.empty()) {
@@ -524,15 +522,19 @@ MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
 }
 
 PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
+  static constexpr int kMaxNbLastTrades = 1000;
+
   if (nbTrades > kMaxNbLastTrades) {
     log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, _name);
     nbTrades = kMaxNbLastTrades;
   }
+
   json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/trades",
                             {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
+
   for (const json& detail : result) {
     MonetaryAmount amount(detail["qty"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());

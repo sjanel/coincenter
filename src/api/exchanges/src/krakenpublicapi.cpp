@@ -340,16 +340,20 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
                       _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
-  PublicTradeVector ret;
+
   json result = PublicQuery(_curlHandle, "/public/Trades",
                             {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
+
+  PublicTradeVector ret;
+
   if (!result.empty()) {
-    ret.reserve(result.front().size());
-    for (const json& det : result.front()) {
-      MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
-      MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
-      int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
-      TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
+    const auto& lastTrades = result.front();
+    ret.reserve(lastTrades.size());
+    for (const json& det : lastTrades) {
+      const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
+      const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
+      const int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
+      const TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
       ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
     }

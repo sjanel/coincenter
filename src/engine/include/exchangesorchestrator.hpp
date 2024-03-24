@@ -82,7 +82,7 @@ class ExchangesOrchestrator {
 
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
-  TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, int nbLastTrades);
+  TradesPerExchange getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames, std::optional<int> depth);
 
   MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 

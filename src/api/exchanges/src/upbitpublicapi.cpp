@@ -254,8 +254,10 @@ MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
 
 PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
   json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
+
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
+
   for (const json& detail : result) {
     MonetaryAmount amount(detail["trade_volume"].get<double>(), mk.base());
     MonetaryAmount price(detail["trade_price"].get<double>(), mk.quote());
