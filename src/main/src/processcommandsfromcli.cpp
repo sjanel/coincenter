@@ -22,9 +22,9 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
   try {
     Coincenter coincenter(coincenterInfo, ExchangeSecretsInfo_Create(generalOptions));
 
-    int nbCommandsProcessed = coincenter.process(coincenterCommands);
+    const auto nbCommandsProcessed = coincenter.process(coincenterCommands);
 
-    if (nbCommandsProcessed > 0) {
+    if (nbCommandsProcessed != 0) {
       // Write potentially updated cache data on disk at end of program
       coincenter.updateFileCaches();
     }

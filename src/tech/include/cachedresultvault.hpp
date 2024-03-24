@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "timedef.hpp"
 
@@ -54,6 +55,10 @@ class CachedResultVaultT {
  private:
   using CachedResultPtrs = vector<CachedResultBase<DurationT> *>;
 
+ public:
+  using trivially_relocatable = is_trivially_relocatable<CachedResultPtrs>::type;
+
+ private:
   CachedResultPtrs _cachedResults;
   bool _allFrozen = false;
 };

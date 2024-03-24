@@ -86,10 +86,18 @@ add_unit_test(
 
 add_unit_test(
     parseloglevel_test
-    src/parseloglevel.cpp
     test/parseloglevel_test.cpp
     LIBRARIES 
-    coincenter_tech
+    coincenter_objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    publictrade_test
+    test/publictrade_test.cpp
+    LIBRARIES 
+    coincenter_objects
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
