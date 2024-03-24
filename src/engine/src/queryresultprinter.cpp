@@ -581,11 +581,13 @@ json Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchange &tradedV
   return ToJson(CoincenterCommandType::kLast24hTradedVolume, std::move(in), std::move(out));
 }
 
-json LastTradesJson(Market mk, int nbLastTrades, const TradesPerExchange &lastTradesPerExchange) {
+json LastTradesJson(Market mk, std::optional<int> nbLastTrades, const TradesPerExchange &lastTradesPerExchange) {
   json in;
   json inOpt;
   inOpt.emplace("market", mk.str());
-  inOpt.emplace("nb", nbLastTrades);
+  if (nbLastTrades) {
+    inOpt.emplace("nb", *nbLastTrades);
+  }
   in.emplace("opt", std::move(inOpt));
 
   json out = json::object();
@@ -1234,7 +1236,7 @@ void QueryResultPrinter::printLast24hTradedVolume(Market mk,
   logActivity(CoincenterCommandType::kLast24hTradedVolume, jsonData);
 }
 
-void QueryResultPrinter::printLastTrades(Market mk, int nbLastTrades,
+void QueryResultPrinter::printLastTrades(Market mk, std::optional<int> nbLastTrades,
                                          const TradesPerExchange &lastTradesPerExchange) const {
   json jsonData = LastTradesJson(mk, nbLastTrades, lastTradesPerExchange);
   switch (_apiOutputType) {

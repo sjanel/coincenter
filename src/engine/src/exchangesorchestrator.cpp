@@ -149,7 +149,9 @@ ExchangeTickerMaps ExchangesOrchestrator::getTickerInformation(ExchangeNameSpan 
 MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market mk, ExchangeNameSpan exchangeNames,
                                                                           CurrencyCode equiCurrencyCode,
                                                                           std::optional<int> depth) {
-  log::info("Order book of {} on {} requested{}{}", mk, ConstructAccumulatedExchangeNames(exchangeNames),
+  const auto actualDepth = depth.value_or(api::ExchangePublic::kDefaultDepth);
+  log::info("{} order book of depth {} on {} requested{}{}", mk, actualDepth,
+            ConstructAccumulatedExchangeNames(exchangeNames),
             equiCurrencyCode.isNeutral() ? "" : " with equi currency ",
             equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode);
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
@@ -160,7 +162,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
   FilterVector(selectedExchanges, isMarketTradable);
 
   MarketOrderBookConversionRates ret(selectedExchanges.size());
-  auto marketOrderBooksFunc = [mk, equiCurrencyCode, depth](Exchange *exchange) {
+  auto marketOrderBooksFunc = [mk, equiCurrencyCode, actualDepth](Exchange *exchange) {
     std::optional<MonetaryAmount> optConversionRate =
         equiCurrencyCode.isNeutral()
             ? std::nullopt
@@ -168,9 +170,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
       log::warn("Unable to convert {} into {} on {}", mk.quote(), equiCurrencyCode, exchange->name());
     }
-    return std::make_tuple(exchange->name(),
-                           exchange->queryOrderBook(mk, depth.value_or(api::ExchangePublic::kDefaultDepth)),
-                           optConversionRate);
+    return std::make_tuple(exchange->name(), exchange->queryOrderBook(mk, actualDepth), optConversionRate);
   };
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), marketOrderBooksFunc);
   return ret;
@@ -911,7 +911,8 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchan
 }
 
 TradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market mk, ExchangeNameSpan exchangeNames,
-                                                                  int nbLastTrades) {
+                                                                  std::optional<int> depth) {
+  const auto nbLastTrades = depth.value_or(api::ExchangePublic::kNbLastTradesDefault);
   log::info("Query {} last trades on {} volume from {}", nbLastTrades, mk,
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(mk, exchangeNames);

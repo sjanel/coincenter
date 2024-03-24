@@ -456,22 +456,41 @@ MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
 }
 
 PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
-  nbTrades = std::min(nbTrades, 2000);  // max authorized
-  nbTrades = std::max(nbTrades, 1);     // min authorized
+  static constexpr auto kNbMinLastTrades = 1;
+  static constexpr auto kNbMaxLastTrades = 2000;
+
+  if (nbTrades < kNbMinLastTrades) {
+    log::warn("Minimum number of last trades to ask on {} is {}", name(), kNbMinLastTrades);
+    nbTrades = kNbMinLastTrades;
+  } else if (nbTrades > kNbMaxLastTrades) {
+    log::warn("Maximum number of last trades to ask on {} is {}", name(), kNbMaxLastTrades);
+    nbTrades = kNbMaxLastTrades;
+  }
+
   json result =
       PublicQuery(_curlHandle, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
+
   PublicTradeVector ret;
+  ret.reserve(nbTrades);
+
   for (const json& detail : result) {
-    auto dataDetails = detail.find("data");
+    const auto dataDetails = detail.find("data");
     if (dataDetails != detail.end()) {
       for (const json& detail2 : *dataDetails) {
-        MonetaryAmount amount(detail2["amount"].get<double>(), mk.base());
-        MonetaryAmount price(detail2["price"].get<double>(), mk.quote());
-        int64_t millisecondsSinceEpoch = detail2["ts"].get<int64_t>();
-        TradeSide tradeSide =
+        const MonetaryAmount amount(detail2["amount"].get<double>(), mk.base());
+        const MonetaryAmount price(detail2["price"].get<double>(), mk.quote());
+        const int64_t millisecondsSinceEpoch = detail2["ts"].get<int64_t>();
+        const TradeSide tradeSide =
             detail2["direction"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
         ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
+
+        if (static_cast<int>(ret.size()) == nbTrades) {
+          break;
+        }
+      }
+      if (static_cast<int>(ret.size()) == nbTrades) {
+        break;
       }
     }
   }
