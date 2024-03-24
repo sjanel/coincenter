@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <ostream>
 #include <string_view>
@@ -18,6 +19,8 @@ namespace cct {
 
 class CoincenterCmdLineOptions {
  public:
+  static constexpr int32_t kUndefinedDepth = std::numeric_limits<int32_t>::min();
+
   static std::ostream& PrintVersion(std::string_view programName, std::ostream& os) noexcept;
 
   constexpr CoincenterCmdLineOptions() noexcept = default;
@@ -97,9 +100,9 @@ class CoincenterCmdLineOptions {
 
   std::string_view lastTrades;
 
-  CommandLineOptionalInt repeats;
-  int monitoringPort = CoincenterCmdLineOptionsDefinitions::kDefaultMonitoringPort;
-  int depth = 0;
+  CommandLineOptionalInt32 repeats;
+  int32_t monitoringPort = CoincenterCmdLineOptionsDefinitions::kDefaultMonitoringPort;
+  int32_t depth = kUndefinedDepth;
 
   bool forceMultiTrade = false;
   bool forceSingleTrade = false;

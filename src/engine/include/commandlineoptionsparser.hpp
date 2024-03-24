@@ -180,13 +180,13 @@ class CommandLineOptionsParser {
                        }
                      },
 
-                     // CommandLineOptionalInt value matcher
-                     [&data, &idx, argv](CommandLineOptionalInt OptValueType::*arg) {
-                       data.*arg = CommandLineOptionalInt(CommandLineOptionalInt::State::kOptionPresent);
+                     // CommandLineOptionalInt32 value matcher
+                     [&data, &idx, argv](CommandLineOptionalInt32 OptValueType::*arg) {
+                       data.*arg = CommandLineOptionalInt32(CommandLineOptionalInt32::State::kOptionPresent);
                        if (idx + 1U < argv.size()) {
                          std::string_view opt(argv[idx + 1]);
                          if (IsOptionInt(opt)) {
-                           data.*arg = FromString<int>(opt);
+                           data.*arg = FromString<int32_t>(opt);
                            ++idx;
                          }
                        }

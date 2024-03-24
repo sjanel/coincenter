@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <utility>
 
@@ -202,7 +203,7 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
 
     orderBookLines.reserve(orderBookLinesJson.size() * 2U);
 
-    for (const json& orderbookDetails : orderBookLinesJson) {
+    for (const json& orderbookDetails : orderBookLinesJson | std::ranges::views::take(depth)) {
       // Amounts are not strings, but doubles
       MonetaryAmount askPri(orderbookDetails["ask_price"].get<double>(), quote);
       MonetaryAmount bidPri(orderbookDetails["bid_price"].get<double>(), quote);
@@ -211,11 +212,6 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
 
       orderBookLines.pushAsk(askVol, askPri);
       orderBookLines.pushBid(bidVol, bidPri);
-
-      if (static_cast<int>(orderBookLines.size() / 2) == depth) {
-        // Upbit does not have a depth parameter, the only thing we can do is to truncate it manually
-        break;
-      }
     }
     if (static_cast<int>(orderBookLines.size() / 2) < depth) {
       log::warn("Upbit does not support orderbook depth larger than {}", orderBookLines.size() / 2);

@@ -63,11 +63,13 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.orderbook.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.orderbook);
-    _commands.emplace_back(CoincenterCommandType::kOrderbook)
-        .setMarket(optionParser.parseMarket())
-        .setExchangeNames(optionParser.parseExchanges())
-        .setDepth(cmdLineOptions.depth)
-        .setCur1(cmdLineOptions.orderbookCur);
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::kOrderbook)
+                    .setMarket(optionParser.parseMarket())
+                    .setExchangeNames(optionParser.parseExchanges())
+                    .setCur1(cmdLineOptions.orderbookCur);
+    if (cmdLineOptions.depth != CoincenterCmdLineOptions::kUndefinedDepth) {
+      cmd.setDepth(cmdLineOptions.depth);
+    }
   }
 
   if (cmdLineOptions.ticker) {
@@ -182,10 +184,12 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.lastTrades.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.lastTrades);
-    _commands.emplace_back(CoincenterCommandType::kLastTrades)
-        .setMarket(optionParser.parseMarket())
-        .setDepth(cmdLineOptions.depth)
-        .setExchangeNames(optionParser.parseExchanges());
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::kLastTrades)
+                    .setMarket(optionParser.parseMarket())
+                    .setExchangeNames(optionParser.parseExchanges());
+    if (cmdLineOptions.depth != CoincenterCmdLineOptions::kUndefinedDepth) {
+      cmd.setDepth(cmdLineOptions.depth);
+    }
   }
 
   if (!cmdLineOptions.lastPrice.empty()) {

@@ -81,7 +81,10 @@ CoincenterCommand& CoincenterCommand::setAmount(MonetaryAmount amount) {
   return *this;
 }
 
-CoincenterCommand& CoincenterCommand::setDepth(int depth) {
+CoincenterCommand& CoincenterCommand::setDepth(int32_t depth) {
+  if (depth < 0) {
+    throw exception("Depth cannot be negative");
+  }
   _n = depth;
   return *this;
 }
