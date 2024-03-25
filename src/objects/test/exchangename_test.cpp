@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_format.hpp"
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_log.hpp"
 
 namespace cct {
 TEST(ExchangeName, NoKeyName) {
@@ -67,20 +67,20 @@ TEST(ExchangeName, Equality) {
 
 TEST(ExchangeName, FormatWithoutKey) {
   ExchangeName en("kraken");
-  EXPECT_EQ(fmt::format("{}", en), "kraken");
-  EXPECT_EQ(fmt::format("{:e}", en), "kraken");
-  EXPECT_EQ(fmt::format("{:n}", en), "kraken");
-  EXPECT_EQ(fmt::format("{:k}", en), "");
-  EXPECT_EQ(fmt::format("{:ek}", en), "kraken");
+  EXPECT_EQ(format("{}", en), "kraken");
+  EXPECT_EQ(format("{:e}", en), "kraken");
+  EXPECT_EQ(format("{:n}", en), "kraken");
+  EXPECT_EQ(format("{:k}", en), "");
+  EXPECT_EQ(format("{:ek}", en), "kraken");
 }
 
 TEST(ExchangeName, FormatWithKey) {
   ExchangeName en("binance_key");
-  EXPECT_EQ(fmt::format("{}", en), "binance_key");
-  EXPECT_EQ(fmt::format("{:e}", en), "binance");
-  EXPECT_EQ(fmt::format("{:n}", en), "binance");
-  EXPECT_EQ(fmt::format("{:k}", en), "key");
-  EXPECT_EQ(fmt::format("{:ek}", en), "binance_key");
+  EXPECT_EQ(format("{}", en), "binance_key");
+  EXPECT_EQ(format("{:e}", en), "binance");
+  EXPECT_EQ(format("{:n}", en), "binance");
+  EXPECT_EQ(format("{:k}", en), "key");
+  EXPECT_EQ(format("{:ek}", en), "binance_key");
 }
 
 }  // namespace cct
