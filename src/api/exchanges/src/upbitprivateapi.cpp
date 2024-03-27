@@ -264,7 +264,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
         exchangePublic.determineMarketFromFilterCurrencies(markets, ordersConstraints.cur1(), ordersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.append("market", UpbitPublic::ReverseMarketStr(filterMarket));
+      params.push_back("market", UpbitPublic::ReverseMarketStr(filterMarket));
     }
   }
 
@@ -388,12 +388,12 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   Deposits deposits;
   CurlPostData options{{"limit", kNbResultsPerPage}};
   if (depositsConstraints.isCurDefined()) {
-    options.append("currency", depositsConstraints.currencyCode().str());
+    options.push_back("currency", depositsConstraints.currencyCode().str());
   }
   if (depositsConstraints.isIdDefined()) {
     for (std::string_view depositId : depositsConstraints.idSet()) {
       // Use the "PHP" method of arrays in query string parameter
-      options.append("txids[]", depositId);
+      options.push_back("txids[]", depositId);
     }
   }
 
@@ -454,12 +454,12 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options{{"limit", kNbResultsPerPage}};
   if (withdrawsConstraints.isCurDefined()) {
-    options.append("currency", withdrawsConstraints.currencyCode().str());
+    options.push_back("currency", withdrawsConstraints.currencyCode().str());
   }
   if (withdrawsConstraints.isIdDefined()) {
     for (std::string_view depositId : withdrawsConstraints.idSet()) {
       // Use the "PHP" method of arrays in query string parameter
-      options.append("txids[]", depositId);
+      options.push_back("txids[]", depositId);
     }
   }
   return options;
@@ -600,13 +600,13 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   if (isTakerStrategy) {
     // Upbit has an exotic way to distinguish buy and sell on the same market
     if (fromCurrencyCode == mk.base()) {
-      placePostData.append("volume", volume.amountStr());
+      placePostData.push_back("volume", volume.amountStr());
     } else {
-      placePostData.append("price", from.amountStr());
+      placePostData.push_back("price", from.amountStr());
     }
   } else {
-    placePostData.append("volume", volume.amountStr());
-    placePostData.append("price", price.amountStr());
+    placePostData.push_back("volume", volume.amountStr());
+    placePostData.push_back("price", price.amountStr());
   }
 
   json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
@@ -661,7 +661,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
                                 {"amount", netEmittedAmount.amountStr()},
                                 {"address", destinationWallet.address()}};
   if (destinationWallet.hasTag()) {
-    withdrawPostData.append("secondary_address", destinationWallet.tag());
+    withdrawPostData.push_back("secondary_address", destinationWallet.tag());
   }
 
   json result =

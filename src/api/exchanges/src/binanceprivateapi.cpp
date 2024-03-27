@@ -100,9 +100,15 @@ enum class QueryDelayDir : int8_t {
 void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration queryDelay) {
   Nonce nonce = Nonce_TimeSinceEpochInMs(queryDelay);
   postData.set("timestamp", nonce);
-  // Erase + append signature as it should be computed without the old signature itself
-  postData.erase("signature");
-  postData.append("signature", ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
+
+  static constexpr std::string_view kSignatureKey = "signature";
+
+  /// Erase signature if present
+  if (postData.back().key() == kSignatureKey) {
+    postData.pop_back();
+  }
+
+  postData.push_back(kSignatureKey, ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
 }
 
 bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
@@ -181,8 +187,16 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }
+
     SetNonceAndSignature(apiKey, opts.mutablePostData(), queryDelay);
-    ret = json::parse(curlHandle.query(endpoint, opts));
+
+    static constexpr bool kAllowExceptions = false;
+
+    ret = json::parse(curlHandle.query(endpoint, opts), nullptr, kAllowExceptions);
+    if (ret.is_discarded()) {
+      log::error("Badly formatted response from Binance, retry");
+      continue;
+    }
 
     auto codeIt = ret.find("code");
     if (codeIt == ret.end() || !ret.contains("msg")) {
@@ -282,7 +296,7 @@ bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
   if (!optMarket) {
     return false;
   }
-  params.append("symbol", optMarket->assetsPairStrUpper());
+  params.push_back("symbol", optMarket->assetsPairStrUpper());
   return true;
 }
 
@@ -358,10 +372,10 @@ ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& clo
       return closedOrders;
     }
     if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-      params.append("startTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
+      params.push_back("startTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
     }
     if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-      params.append("endTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
+      params.push_back("endTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
     }
     const json result =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
@@ -462,17 +476,17 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
-    options.append("coin", depositsConstraints.currencyCode().str());
+    options.push_back("coin", depositsConstraints.currencyCode().str());
   }
   if (depositsConstraints.isTimeAfterDefined()) {
-    options.append("startTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
+    options.push_back("startTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
   }
   if (depositsConstraints.isTimeBeforeDefined()) {
-    options.append("endTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
+    options.push_back("endTime", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
   }
   if (depositsConstraints.isIdDefined()) {
     if (depositsConstraints.idSet().size() == 1) {
-      options.append("txId", depositsConstraints.idSet().front());
+      options.push_back("txId", depositsConstraints.idSet().front());
     }
   }
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
@@ -551,13 +565,13 @@ TimePoint RetrieveTimeStampFromWithdrawJson(const json& withdrawJson) {
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
-    options.append("coin", withdrawsConstraints.currencyCode().str());
+    options.push_back("coin", withdrawsConstraints.currencyCode().str());
   }
   if (withdrawsConstraints.isTimeAfterDefined()) {
-    options.append("startTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
+    options.push_back("startTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
   }
   if (withdrawsConstraints.isTimeBeforeDefined()) {
-    options.append("endTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
+    options.push_back("endTime", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
   }
   return options;
 }
@@ -696,8 +710,8 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
       {"symbol", mk.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
   if (!isTakerStrategy) {
-    placePostData.append("timeInForce", "GTC");
-    placePostData.append("price", price.amountStr());
+    placePostData.push_back("timeInForce", "GTC");
+    placePostData.push_back("price", price.amountStr());
   }
 
   const std::string_view methodName = isSimulation ? "/api/v3/order/test" : "/api/v3/order";
@@ -745,7 +759,7 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
     CurlPostData myTradesOpts{{"symbol", assets}};
     auto timeIt = result.find("time");
     if (timeIt != result.end()) {
-      myTradesOpts.append("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
+      myTradesOpts.push_back("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
     }
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
     int64_t integralOrderId = FromString<int64_t>(orderId);
@@ -763,7 +777,7 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   CurlPostData withdrawPostData{
       {"coin", currencyCode.str()}, {"address", destinationWallet.address()}, {"amount", grossAmount.amountStr()}};
   if (destinationWallet.hasTag()) {
-    withdrawPostData.append("addressTag", destinationWallet.tag());
+    withdrawPostData.push_back("addressTag", destinationWallet.tag());
   }
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply",
                              _queryDelay, std::move(withdrawPostData));

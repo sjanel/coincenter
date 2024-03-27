@@ -85,7 +85,7 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
 
   Nonce nonce = Nonce_TimeSinceEpochInMs();
-  opts.mutablePostData().append("nonce", nonce);
+  opts.mutablePostData().push_back("nonce", nonce);
   opts.appendHttpHeader("API-Key", apiKey.key());
   opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.postData().str()));
 
@@ -297,10 +297,10 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
   CurlPostData params{{"ofs", page}, {"trades", "true"}};
 
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("start", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
+    params.push_back("start", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
   }
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-    params.append("end", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
+    params.push_back("end", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
   }
 
   static constexpr int kLimitNbOrdersPerPage = 50;
@@ -449,7 +449,7 @@ DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& deposi
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
-    options.append("asset", depositsConstraints.currencyCode().str());
+    options.push_back("asset", depositsConstraints.currencyCode().str());
   }
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", options);
   for (const json& trx : res) {
@@ -503,7 +503,7 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
-    options.append("asset", withdrawsConstraints.currencyCode().str());
+    options.push_back("asset", withdrawsConstraints.currencyCode().str());
   }
   return options;
 }
@@ -590,7 +590,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
                              {"expiretm", nbSecondsSinceEpoch + expireTimeInSeconds},
                              {"userref", tradeInfo.tradeContext.userRef}};
   if (isSimulation) {
-    placePostData.append("validate", "true");  // validate inputs only. do not submit order (optional)
+    placePostData.push_back("validate", "true");  // validate inputs only. do not submit order (optional)
   }
 
   auto [placeOrderRes, err] = PrivateQuery(_curlHandle, _apiKey, "/private/AddOrder", std::move(placePostData));

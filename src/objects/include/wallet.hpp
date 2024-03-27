@@ -64,13 +64,14 @@ class Wallet {
                              std::string_view expectedAddress, std::string_view expectedTag);
 
   using trivially_relocatable =
-      std::bool_constant<is_trivially_relocatable_v<ExchangeName> && is_trivially_relocatable_v<string> >::type;
+      std::bool_constant<is_trivially_relocatable_v<ExchangeName> && is_trivially_relocatable_v<string> &&
+                         is_trivially_relocatable_v<AccountOwner> >::type;
 
  private:
   const char *startTag() const { return _addressAndTag.data() + (hasTag() ? _tagPos : _addressAndTag.size()); }
 
   void check() const {
-    if (CCT_UNLIKELY(_addressAndTag.empty())) {
+    if (_addressAndTag.empty()) {
       throw exception("Cannot use an empty wallet address!");
     }
   }
