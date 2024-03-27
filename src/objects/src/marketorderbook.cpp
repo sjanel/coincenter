@@ -207,6 +207,36 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
   }
 }
 
+MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, AmountPriceVector&& orders,
+                                 int32_t highestBidPricePos, int32_t lowestAskPricePos,
+                                 VolAndPriNbDecimals volAndPriNbDecimals)
+    : _time(timeStamp),
+      _market(market),
+      _orders(std::move(orders)),
+      _highestBidPricePos(highestBidPricePos),
+      _lowestAskPricePos(lowestAskPricePos),
+      _volAndPriNbDecimals(volAndPriNbDecimals) {}
+
+bool MarketOrderBook::isValid() const {
+  if (_orders.size() < 2U) {
+    log::error("Market order book is invalid as size is {}", _orders.size());
+    return false;
+  }
+  if (!std::ranges::is_sorted(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; })) {
+    log::error("Market order book is invalid because orders are not sorted by price");
+    return false;
+  }
+  if (std::ranges::adjacent_find(_orders, [](auto lhs, auto rhs) { return lhs.price == rhs.price; }) != _orders.end()) {
+    log::error("Market order book is invalid because of duplicate prices");
+    return false;
+  }
+  if (!std::ranges::is_partitioned(_orders, [](auto amountPrice) { return amountPrice.amount > 0; })) {
+    log::error("Market order book is invalid because lines are not partitioned by asks / bids");
+    return false;
+  }
+  return true;
+}
+
 std::optional<MonetaryAmount> MarketOrderBook::averagePrice() const {
   switch (_orders.size()) {
     case 0U:

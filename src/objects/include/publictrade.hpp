@@ -30,8 +30,7 @@ class PublicTrade {
 
   bool isValid() const;
 
-  /// 3 way operator - make compiler generate all 6 operators (including == and !=)
-  /// we order by time first, then amount, price, etc. Do not change the fields order!
+  /// We order by time first, then amount, price, etc. Do not change the fields order!
   std::strong_ordering operator<=>(const PublicTrade&) const noexcept = default;
 
  private:
@@ -40,4 +39,5 @@ class PublicTrade {
   MonetaryAmount _price;
   TradeSide _side;
 };
+
 }  // namespace cct

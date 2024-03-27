@@ -43,7 +43,13 @@ class MarketOrderBook {
   Market market() const { return _market; }
 
   bool empty() const { return _orders.empty(); }
+
   int size() const { return _orders.size(); }
+
+  /// Check if data stored in this MarketOrderBook is valid.
+  /// This is especially useful for optional check of data after deserialization,
+  /// as for the standard case the market order book should be valid by design.
+  bool isValid() const;
 
   bool isArtificiallyExtended() const { return _isArtificiallyExtended; }
 
@@ -184,6 +190,12 @@ class MarketOrderBook {
   ///                 0.36          15
   ///                 0.35          20
   ///                 0.34          23
+
+  // To allow faster MarketOrderBook constructs
+  friend class MarketOrderBookConverter;
+
+  MarketOrderBook(TimePoint timeStamp, Market market, AmountPriceVector&& orders, int32_t highestBidPricePos,
+                  int32_t lowestAskPricePos, VolAndPriNbDecimals volAndPriNbDecimals);
 
   MonetaryAmount amountAt(int pos) const {
     return MonetaryAmount(_orders[pos].amount, _market.base(), _volAndPriNbDecimals.volNbDecimals);

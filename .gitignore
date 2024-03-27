@@ -64,6 +64,7 @@ data/cache
 data/log
 data/secret
 !data/secret/secret_test.json
+data/serialized
 data/static/exchangeconfig.json
 data/static/generalconfig.json
 monitoring/data/grafana/*

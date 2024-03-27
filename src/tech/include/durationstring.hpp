@@ -6,6 +6,11 @@
 #include "timedef.hpp"
 
 namespace cct {
+
+/// Check if 'str' starts with a Duration.
+/// Returns the duration string length (0 if no duration detected)
+int DurationLen(std::string_view str);
+
 /// Parse given string representation of a duration and return the duration.
 /// Amounts and units may be separated by spaces. For example:
 /// "1h45min" is allowed, as well as "1h 45min" and "1 h 45      min "

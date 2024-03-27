@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string_view>
@@ -9,15 +10,19 @@
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market-order-book-vector.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "priceoptions.hpp"
 #include "public-trade-vector.hpp"
+#include "time-window.hpp"
 
 namespace cct {
 
+class AbstractMarketDataDeserializer;
+class AbstractMarketDataSerializer;
 class CoincenterInfo;
 class ExchangeConfig;
 class FiatConverter;
@@ -41,7 +46,7 @@ class ExchangePublic : public ExchangeBase {
 
   using Fiats = CommonAPI::Fiats;
 
-  virtual ~ExchangePublic() = default;
+  virtual ~ExchangePublic();
 
   /// Check if public exchange is responding to basic health check, return true in this case.
   /// Exchange that implements the HealthCheck do not need to add a retry mechanism.
@@ -98,13 +103,13 @@ class ExchangePublic : public ExchangeBase {
 
   /// Retrieve the order book of given market.
   /// It should be more precise that previous version with possibility to go deeper.
-  virtual MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) = 0;
+  MarketOrderBook getOrderBook(Market mk, int depth = kDefaultDepth);
+
+  /// Retrieve an ordered vector of recent last trades
+  PublicTradeVector getLastTrades(Market mk, int nbTrades = kNbLastTradesDefault);
 
   /// Retrieve the total volume exchange on given market in the last 24 hours.
   virtual MonetaryAmount queryLast24hVolume(Market mk) = 0;
-
-  /// Retrieve an ordered vector of recent last trades
-  virtual PublicTradeVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
 
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market mk) = 0;
@@ -177,7 +182,20 @@ class ExchangePublic : public ExchangeBase {
   /// If no data found, return a 0 MonetaryAmount on given currency.
   MonetaryAmount queryWithdrawalFeeOrZero(CurrencyCode currencyCode);
 
+  MarketSet pullAvailableMarketsForReplay(TimeWindow timeWindow);
+
+  PublicTradeVector pullTradesForReplay(Market market, TimeWindow timeWindow);
+
+  MarketOrderBookVector pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow);
+
  protected:
+  /// Retrieve the order book of given market.
+  /// It should be more precise that previous version with possibility to go deeper.
+  virtual MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) = 0;
+
+  /// Retrieve an ordered vector of recent last trades
+  virtual PublicTradeVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
+
   friend class ExchangePrivate;
 
   ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
@@ -189,6 +207,8 @@ class ExchangePublic : public ExchangeBase {
   CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
   const ExchangeConfig &_exchangeConfig;
+  std::unique_ptr<AbstractMarketDataDeserializer> _marketDataDeserializerPtr;
+  std::unique_ptr<AbstractMarketDataSerializer> _marketDataSerializerPtr;
   std::recursive_mutex _publicRequestsMutex;
 };
 }  // namespace api

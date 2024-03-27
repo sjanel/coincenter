@@ -31,14 +31,37 @@
 #include "priceoptionsdef.hpp"
 #include "unreachable.hpp"
 
+#ifdef CCT_ENABLE_PROTO
+#include "proto-market-data-deserializer.hpp"
+#include "proto-market-data-serializer.hpp"
+#else
+#include "dummy-market-data-deserializer.hpp"
+#include "dummy-market-data-serializer.hpp"
+#endif
+
 namespace cct::api {
+
+#ifdef CCT_ENABLE_PROTO
+using MarketDataDeserializer = ProtoMarketDataDeserializer;
+using MarketDataSerializer = ProtoMarketDataSerializer;
+#else
+using MarketDataDeserializer = DummyMarketDataDeserializer;
+using MarketDataSerializer = DummyMarketDataSerializer;
+#endif
+
 ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
                                const CoincenterInfo &coincenterInfo)
     : _name(name),
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
-      _exchangeConfig(coincenterInfo.exchangeConfig(name)) {}
+      _exchangeConfig(coincenterInfo.exchangeConfig(name)),
+      _marketDataDeserializerPtr(new MarketDataDeserializer(coincenterInfo.dataDir(), name)),
+      _marketDataSerializerPtr(_exchangeConfig.withMarketDataSerialization()
+                                   ? new MarketDataSerializer(coincenterInfo.dataDir(), name)
+                                   : nullptr) {}
+
+ExchangePublic::~ExchangePublic() = default;
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
                                                       const MarketsPath &conversionPath, const Fiats &fiats,
@@ -278,7 +301,7 @@ ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode f
 std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
                                                                      const PriceOptions &priceOptions) {
   const int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
-  return queryOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
+  return getOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
 }
 
 std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, MonetaryAmount from,
@@ -292,7 +315,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, Mo
   } else if (priceOptions.priceStrategy() == PriceStrategy::kTaker) {
     depth = kDefaultDepth;
   }
-  return queryOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
+  return getOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
 }
 
 std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
@@ -431,6 +454,40 @@ MonetaryAmount ExchangePublic::queryWithdrawalFeeOrZero(CurrencyCode currencyCod
     withdrawFee = MonetaryAmount(0, currencyCode);
   }
   return withdrawFee;
+}
+
+MarketOrderBook ExchangePublic::getOrderBook(Market mk, int depth) {
+  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  const auto marketOrderBook = queryOrderBook(mk, depth);
+  if (_marketDataSerializerPtr) {
+    _marketDataSerializerPtr->push(marketOrderBook);
+  }
+  return marketOrderBook;
+}
+
+/// Retrieve an ordered vector of recent last trades
+PublicTradeVector ExchangePublic::getLastTrades(Market mk, int nbTrades) {
+  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  const auto lastTrades = queryLastTrades(mk, nbTrades);
+  if (_marketDataSerializerPtr) {
+    _marketDataSerializerPtr->push(mk, lastTrades);
+  }
+  return lastTrades;
+}
+
+MarketSet ExchangePublic::pullAvailableMarketsForReplay(TimeWindow timeWindow) {
+  MarketSet ret = MarketSet(_marketDataDeserializerPtr->pullMarketOrderBooksMarkets(timeWindow));
+  const auto tradesMarkets = _marketDataDeserializerPtr->pullTradeMarkets(timeWindow);
+  ret.insert(tradesMarkets.begin(), tradesMarkets.end());
+  return ret;
+}
+
+PublicTradeVector ExchangePublic::pullTradesForReplay(Market market, TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullTrades(market, timeWindow);
+}
+
+MarketOrderBookVector ExchangePublic::pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow) {
+  return _marketDataDeserializerPtr->pullMarketOrderBooks(market, timeWindow);
 }
 
 }  // namespace cct::api
