@@ -31,13 +31,13 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
@@ -59,18 +59,18 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     methodUrl.append(urlOpts);
   }
 
-  InvariantRequestRetry requestRetry(curlHandle, methodUrl, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+  json jsonResponse = requestRetry.queryJson(methodUrl, [](const json& jsonResponse) {
     const auto errorIt = jsonResponse.find("status");
     if (errorIt != jsonResponse.end()) {
       const std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
       if (statusCode != BithumbPublic::kStatusOKStr) {                       // "0000" stands for: request OK
         log::warn("Full Bithumb json error ({}): '{}'", statusCode, jsonResponse.dump());
-        return InvariantRequestRetry::Status::kResponseError;
+        return RequestRetry::Status::kResponseError;
       }
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
 
   const auto dataIt = jsonResponse.find("data");
@@ -106,7 +106,13 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           _curlHandle) {}
 
 bool BithumbPublic::healthCheck() {
-  json result = json::parse(_curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)));
+  static constexpr bool kAllowExceptions = false;
+  json result = json::parse(_curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)), nullptr,
+                            kAllowExceptions);
+  if (result.is_discarded()) {
+    log::error("{} health check response is badly formatted", _name);
+    return false;
+  }
   auto statusIt = result.find("status");
   if (statusIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());

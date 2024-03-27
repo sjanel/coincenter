@@ -15,6 +15,7 @@
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "codec.hpp"
@@ -37,6 +38,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
@@ -69,48 +71,73 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
   return paramsStr;
 }
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
-  CurlPostData signaturePostData{{"AccessKeyId", apiKey.key()},
-                                 {"SignatureMethod", "HmacSHA256"},
-                                 {"SignatureVersion", 2},
-                                 {"Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat))}};
-
+CurlOptions::PostDataFormat ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
-  if (!postData.empty()) {
-    if (requestType == HttpRequestType::kGet) {
-      // Warning: Huobi expects that all parameters of the query are ordered lexicographically
-      // We trust the caller for this. In case the order is not respected, error 'Signature not valid' will be returned
-      // from Huobi
-      signaturePostData.append(postData);
-      postData = CurlPostData();
-    } else {
-      postDataFormat = CurlOptions::PostDataFormat::kJson;
-    }
+  if (!postData.empty() && requestType != HttpRequestType::kGet) {
+    postDataFormat = CurlOptions::PostDataFormat::kJson;
+  }
+  return postDataFormat;
+}
+
+void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
+                          std::string_view endpoint, CurlPostData& postData, CurlPostData& signaturePostData) {
+  signaturePostData.set("Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat)));
+
+  if (!postData.empty() && requestType == HttpRequestType::kGet) {
+    // Warning: Huobi expects that all parameters of the query are ordered lexicographically
+    // We trust the caller for this. In case the order is not respected, error 'Signature not valid' will be
+    // returned from Huobi
+    signaturePostData.append(postData);
+    postData = CurlPostData();
   }
 
-  string sig = URLEncode(B64Encode(ssl::ShaBin(
-      ssl::ShaType::kSha256, BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostData.str()),
-      apiKey.privateKey())));
+  static constexpr std::string_view kSignatureKey = "Signature";
 
-  signaturePostData.append("Signature", sig);
+  /// Erase signature if present
+  if (signaturePostData.back().key() == kSignatureKey) {
+    signaturePostData.pop_back();
+  }
+
+  signaturePostData.push_back(
+      kSignatureKey, URLEncode(B64Encode(ssl::ShaBin(
+                         ssl::ShaType::kSha256,
+                         BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostData.str()),
+                         apiKey.privateKey()))));
+}
+
+json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
+                  CurlPostData&& postData = CurlPostData()) {
+  CurlPostData signaturePostData{
+      {"AccessKeyId", apiKey.key()}, {"SignatureMethod", "HmacSHA256"}, {"SignatureVersion", 2}};
 
   string method(endpoint);
   method.push_back('?');
-  method.append(signaturePostData.str());
 
-  json ret = json::parse(curlHandle.query(method, CurlOptions(requestType, std::move(postData), postDataFormat)));
-  if (throwIfError) {
-    auto statusIt = ret.find("status");
-    if (statusIt != ret.end() && statusIt->get<std::string_view>() != "ok") {
-      log::error("Full Huobi json error: '{}'", ret.dump());
-      auto errIt = ret.find("err-msg");
-      throw exception("Huobi error: {}", errIt == ret.end() ? "unknown" : errIt->get<std::string_view>());
-    }
-  }
+  CurlOptions::PostDataFormat postDataFormat = ComputePostDataFormat(requestType, postData);
+
+  RequestRetry requestRetry(curlHandle, CurlOptions(requestType, std::move(postData), postDataFormat),
+                            QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
+
+  json ret = requestRetry.queryJson(
+      method,
+      [](const json& jsonResponse) {
+        const auto statusIt = jsonResponse.find("status");
+        if (statusIt != jsonResponse.end() && statusIt->get<std::string_view>() != "ok") {
+          log::warn("Full Huobi json error: '{}'", jsonResponse.dump());
+          return RequestRetry::Status::kResponseError;
+        }
+        return RequestRetry::Status::kResponseOK;
+      },
+      [&signaturePostData, &curlHandle, &apiKey, requestType, endpoint, &method](CurlOptions& opts) {
+        SetNonceAndSignature(curlHandle, apiKey, requestType, endpoint, opts.mutablePostData(), signaturePostData);
+
+        method.replace(method.begin() + endpoint.size() + 1U, method.end(), signaturePostData.str());
+      });
 
   return ret;
 }
+
+constexpr std::string_view kBaseUrlOrders = "/v1/order/orders/";
 
 }  // namespace
 
@@ -124,15 +151,16 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
                       .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
                       .build(),
                   coincenterInfo.getRunMode()),
-      _accountIdCache(CachedResultOptions(std::chrono::hours(96), _cachedResultVault), _curlHandle, apiKey),
+      _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {
-  constexpr bool throwIfError = false;
-  json result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts", CurlPostData(), throwIfError);
+  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts", CurlPostData());
+  if (result.empty()) {
+    return false;
+  }
   auto statusIt = result.find("status");
   return statusIt == result.end() || statusIt->get<std::string_view>() == "ok";
 }
@@ -143,6 +171,9 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   BalancePortfolio balancePortfolio;
+  if (result.empty()) {
+    return balancePortfolio;
+  }
 
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
@@ -154,7 +185,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
     if (typeStr == "trade" || (withBalanceInUse && typeStr == "frozen")) {
       this->addBalance(balancePortfolio, amount, equiCurrency);
     } else {
-      log::debug("Do not consider {} as it is {} on {}", amount, typeStr, _exchangePublic.name());
+      log::trace("Do not consider {} as it is {} on {}", amount, typeStr, _exchangePublic.name());
     }
   }
   return balancePortfolio;
@@ -163,24 +194,29 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = ToLower(currencyCode.str());
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
-                           {{"currency", lowerCaseCur}})["data"];
+                           {{"currency", lowerCaseCur}});
+
   string address;
   std::string_view tag;
   ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeConfig(_huobiPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  for (json& depositDetail : data) {
-    tag = depositDetail["addressTag"].get<std::string_view>();
 
-    std::string_view addressView = depositDetail["address"].get<std::string_view>();
+  auto dataIt = data.find("data");
+  if (dataIt != data.end()) {
+    for (json& depositDetail : *dataIt) {
+      tag = depositDetail["addressTag"].get<std::string_view>();
 
-    if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, addressView, tag)) {
-      address = std::move(depositDetail["address"].get_ref<string&>());
-      break;
+      std::string_view addressView = depositDetail["address"].get<std::string_view>();
+
+      if (Wallet::ValidateWallet(walletCheck, exchangeName, currencyCode, addressView, tag)) {
+        address = std::move(depositDetail["address"].get_ref<string&>());
+        break;
+      }
+      log::warn("{} & tag {} are not validated in the deposit addresses file", addressView, tag);
+      tag = std::string_view();
     }
-    log::warn("{} & tag {} are not validated in the deposit addresses file", addressView, tag);
-    tag = std::string_view();
   }
 
   Wallet wallet(std::move(exchangeName), currencyCode, std::move(address), tag, walletCheck, _apiKey.accountOwner());
@@ -206,19 +242,19 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
   CurlPostData params;
 
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-    params.append("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
+    params.push_back("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
   }
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("start-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
+    params.push_back("start-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
   }
 
   if (closedOrdersConstraints.isMarketDefined()) {
     // we can use the more detailed endpoint that requires the market
 
     // Do not ask for cancelled orders without any matched part
-    params.append("states", "filled");
+    params.push_back("states", "filled");
 
-    params.append("symbol", closedOrdersConstraints.market().assetsPairStrLower());
+    params.push_back("symbol", closedOrdersConstraints.market().assetsPairStrLower());
   } else {
     // Only past 48h orders may be retrieved without market
   }
@@ -288,13 +324,19 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
                                                                               openedOrdersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.append("symbol", filterMarket.assetsPairStrLower());
+      params.push_back("symbol", filterMarket.assetsPairStrLower());
     }
   }
 
   json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
   OpenedOrderVector openedOrders;
-  for (const json& orderDetails : data["data"]) {
+  const auto dataIt = data.find("data");
+  if (dataIt == data.end()) {
+    log::error("Unexpected opened orders query reply for {}", _exchangePublic.name());
+    return openedOrders;
+  }
+
+  for (const json& orderDetails : *dataIt) {
     string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
 
     std::optional<Market> optMarket =
@@ -370,33 +412,38 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
-    options.append("currency", ToLower(depositsConstraints.currencyCode().str()));
+    options.push_back("currency", ToLower(depositsConstraints.currencyCode().str()));
   }
-  options.append("size", 500);
-  options.append("type", "deposit");
-  json depositJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                                  std::move(options))["data"];
-  for (const json& depositDetail : depositJson) {
-    std::string_view statusStr = depositDetail["state"].get<std::string_view>();
-    int64_t id = depositDetail["id"].get<int64_t>();
-    Deposit::Status status = DepositStatusFromStatusStr(statusStr);
+  options.push_back("size", 500);
+  options.push_back("type", "deposit");
+  json data =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw", std::move(options));
+  const auto dataIt = data.find("data");
+  if (dataIt != data.end()) {
+    for (const json& depositDetail : *dataIt) {
+      std::string_view statusStr = depositDetail["state"].get<std::string_view>();
+      int64_t id = depositDetail["id"].get<int64_t>();
+      Deposit::Status status = DepositStatusFromStatusStr(statusStr);
 
-    CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
-    MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
-    int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
-    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
-    if (!depositsConstraints.validateTime(timestamp)) {
-      continue;
-    }
-    string idStr = ToString(id);
-    if (!depositsConstraints.validateId(idStr)) {
-      continue;
-    }
+      CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
+      MonetaryAmount amount(depositDetail["amount"].get<double>(), currencyCode);
+      int64_t millisecondsSinceEpoch = depositDetail["updated-at"].get<int64_t>();
+      TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
+      if (!depositsConstraints.validateTime(timestamp)) {
+        continue;
+      }
+      string idStr = ToString(id);
+      if (!depositsConstraints.validateId(idStr)) {
+        continue;
+      }
 
-    deposits.emplace_back(std::move(idStr), timestamp, amount, status);
+      deposits.emplace_back(std::move(idStr), timestamp, amount, status);
+    }
   }
   DepositsSet depositsSet(std::move(deposits));
-  log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  if (dataIt != data.end()) {
+    log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
+  }
   return depositsSet;
 }
 
@@ -487,40 +534,45 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
-    options.append("currency", ToLower(withdrawsConstraints.currencyCode().str()));
+    options.push_back("currency", ToLower(withdrawsConstraints.currencyCode().str()));
   }
-  options.append("size", 500);
-  options.append("type", "withdraw");
+  options.push_back("size", 500);
+  options.push_back("type", "withdraw");
   return options;
 }
 }  // namespace
 
 WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
-  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                                   CreateOptionsFromWithdrawConstraints(withdrawsConstraints))["data"];
-  for (const json& withdrawDetail : withdrawJson) {
-    std::string_view statusStr = withdrawDetail["state"].get<std::string_view>();
-    int64_t id = withdrawDetail["id"].get<int64_t>();
-    Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isCurDefined());
+  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
+                           CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
+  const auto dataIt = data.find("data");
+  if (dataIt != data.end()) {
+    for (const json& withdrawDetail : *dataIt) {
+      std::string_view statusStr = withdrawDetail["state"].get<std::string_view>();
+      int64_t id = withdrawDetail["id"].get<int64_t>();
+      Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isCurDefined());
 
-    CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
-    MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<double>(), currencyCode);
-    MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
-    int64_t millisecondsSinceEpoch = withdrawDetail["updated-at"].get<int64_t>();
-    TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
-    if (!withdrawsConstraints.validateTime(timestamp)) {
-      continue;
-    }
-    string idStr = ToString(id);
-    if (!withdrawsConstraints.validateId(idStr)) {
-      continue;
-    }
+      CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
+      MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<double>(), currencyCode);
+      MonetaryAmount fee(withdrawDetail["fee"].get<double>(), currencyCode);
+      int64_t millisecondsSinceEpoch = withdrawDetail["updated-at"].get<int64_t>();
+      TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
+      if (!withdrawsConstraints.validateTime(timestamp)) {
+        continue;
+      }
+      string idStr = ToString(id);
+      if (!withdrawsConstraints.validateId(idStr)) {
+        continue;
+      }
 
-    withdraws.emplace_back(std::move(idStr), timestamp, netEmittedAmount, status, fee);
+      withdraws.emplace_back(std::move(idStr), timestamp, netEmittedAmount, status, fee);
+    }
   }
   WithdrawsSet withdrawsSet(std::move(withdraws));
-  log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  if (dataIt != data.end()) {
+    log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
+  }
   return withdrawsSet;
 }
 
@@ -589,19 +641,26 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
       placePostData.set("amount", from.amountStr());
     }
   } else {
-    placePostData.append("price", price.amountStr());
+    placePostData.push_back("price", price.amountStr());
   }
-  placePostData.append("symbol", lowerCaseMarket);
-  placePostData.append("type", type);
+  placePostData.push_back("symbol", lowerCaseMarket);
+  placePostData.push_back("type", type);
 
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", std::move(placePostData));
-  placeOrderInfo.orderId = std::move(result["data"].get_ref<string&>());
+
+  auto dataIt = result.find("data");
+  if (dataIt == result.end()) {
+    log::error("Unable to retrieve order id");
+  } else {
+    placeOrderInfo.orderId = std::move(dataIt->get_ref<string&>());
+  }
+
   return placeOrderInfo;
 }
 
 void HuobiPrivate::cancelOrderProcess(OrderIdView id) {
-  string endpoint = "/v1/order/orders/";
+  string endpoint(kBaseUrlOrders);
   endpoint.append(id);
   endpoint.append("/submitcancel");
   PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, endpoint);
@@ -616,34 +675,42 @@ OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
   const Market mk = tradeContext.mk;
-  string endpoint = "/v1/order/orders/";
+
+  string endpoint(kBaseUrlOrders);
   endpoint.append(orderId);
 
-  json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
-  const json& data = res["data"];
+  const json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
+  const auto dataIt = res.find("data");
+
   // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is
   // ambiguous on this point). Let's handle both just to be sure.
   std::string_view filledAmount;
   std::string_view filledCashAmount;
   std::string_view filledFees;
-  if (data.contains("field-amount")) {
-    filledAmount = data["field-amount"].get<std::string_view>();
-    filledCashAmount = data["field-cash-amount"].get<std::string_view>();
-    filledFees = data["field-fees"].get<std::string_view>();
-  } else {
-    filledAmount = data["filled-amount"].get<std::string_view>();
-    filledCashAmount = data["filled-cash-amount"].get<std::string_view>();
-    filledFees = data["filled-fees"].get<std::string_view>();
+
+  if (dataIt != res.end()) {
+    if (dataIt->contains("field-amount")) {
+      filledAmount = (*dataIt)["field-amount"].get<std::string_view>();
+      filledCashAmount = (*dataIt)["field-cash-amount"].get<std::string_view>();
+      filledFees = (*dataIt)["field-fees"].get<std::string_view>();
+    } else {
+      filledAmount = (*dataIt)["filled-amount"].get<std::string_view>();
+      filledCashAmount = (*dataIt)["filled-cash-amount"].get<std::string_view>();
+      filledFees = (*dataIt)["filled-fees"].get<std::string_view>();
+    }
   }
 
   MonetaryAmount baseMatchedAmount(filledAmount, mk.base());
   MonetaryAmount quoteMatchedAmount(filledCashAmount, mk.quote());
   MonetaryAmount fromAmount = fromCurrencyCode == mk.base() ? baseMatchedAmount : quoteMatchedAmount;
   MonetaryAmount toAmount = fromCurrencyCode == mk.base() ? quoteMatchedAmount : baseMatchedAmount;
+
   // Fee is always in destination currency (according to Huobi documentation)
   MonetaryAmount fee(filledFees, toCurrencyCode);
+
   toAmount -= fee;
-  std::string_view state = data["state"].get<std::string_view>();
+
+  std::string_view state = dataIt != res.end() ? (*dataIt)["state"].get<std::string_view>() : "";
   bool isClosed = state == "filled" || state == "partial-canceled" || state == "canceled";
   return OrderInfo(TradedAmounts(fromAmount, toAmount), isClosed);
 }
@@ -655,8 +722,12 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
   json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
                                                "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
+  const auto addressDataIt = queryWithdrawAddressJson.find("data");
+  if (addressDataIt == queryWithdrawAddressJson.end()) {
+    throw exception("Unexpected reply from Huobi withdraw address");
+  }
   std::string_view huobiWithdrawAddressName;
-  for (const json& withdrawAddress : queryWithdrawAddressJson["data"]) {
+  for (const json& withdrawAddress : *addressDataIt) {
     std::string_view address(withdrawAddress["address"].get<std::string_view>());
     std::string_view addressTag(withdrawAddress["addressTag"].get<std::string_view>());
     if (address == destinationWallet.address() && addressTag == destinationWallet.tag()) {
@@ -667,13 +738,14 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   if (huobiWithdrawAddressName.empty()) {
     throw exception("Address should be stored in your Huobi account manually in order to withdraw from API");
   }
+
   log::info("Found stored {} withdraw address '{}'", _exchangePublic.name(), huobiWithdrawAddressName);
 
   CurlPostData withdrawPostData;
   if (destinationWallet.hasTag()) {
-    withdrawPostData.append("addr-tag", destinationWallet.tag());
+    withdrawPostData.push_back("addr-tag", destinationWallet.tag());
   }
-  withdrawPostData.append("address", destinationWallet.address());
+  withdrawPostData.push_back("address", destinationWallet.address());
 
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
@@ -693,20 +765,28 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     grossAmount.truncate(withdrawParams.withdrawPrecision);
   }
 
-  withdrawPostData.append("amount", netEmittedAmount.amountStr());
-  withdrawPostData.append("currency", lowerCaseCur);
+  withdrawPostData.push_back("amount", netEmittedAmount.amountStr());
+  withdrawPostData.push_back("currency", lowerCaseCur);
   // Strange to have the fee as input parameter of a withdraw...
-  withdrawPostData.append("fee", withdrawFee.amountStr());
+  withdrawPostData.push_back("fee", withdrawFee.amountStr());
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
                              std::move(withdrawPostData));
-  string withdrawIdStr = ToString(result["data"].get<int64_t>());
+  const auto createDataIt = result.find("data");
+  if (createDataIt == result.end()) {
+    throw exception("Unexpected response from withdraw create for {}", huobiPublic.name());
+  }
+  string withdrawIdStr = ToString(createDataIt->get<int64_t>());
   return {std::move(destinationWallet), std::move(withdrawIdStr), grossAmount};
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts");
-  for (const json& accDetails : result["data"]) {
+  const auto dataIt = result.find("data");
+  if (dataIt == result.end()) {
+    throw exception("Unexpected reply from account id query for Huobi");
+  }
+  for (const json& accDetails : *dataIt) {
     std::string_view state = accDetails["state"].get<std::string_view>();
     if (state == "working") {
       return accDetails["id"].get<int>();
