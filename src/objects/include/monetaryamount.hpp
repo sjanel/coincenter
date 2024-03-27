@@ -92,6 +92,7 @@ class MonetaryAmount {
 
   /// Constructs a new MonetaryAmount from a string representing the amount only and a currency code.
   /// Precision is calculated automatically.
+  /// If 'amountStr' is empty, the amount will be set to 0.
   MonetaryAmount(std::string_view amountStr, CurrencyCode currencyCode);
 
   /// Constructs a new MonetaryAmount from another MonetaryAmount and a new CurrencyCode.

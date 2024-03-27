@@ -122,7 +122,12 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
 
 std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
   const auto dataStr = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
-  const json jsonData = json::parse(dataStr);
+  static constexpr bool kAllowExceptions = false;
+  const json jsonData = json::parse(dataStr, nullptr, kAllowExceptions);
+  if (jsonData.is_discarded()) {
+    log::error("Invalid response received from fiat currency converter service's second source");
+    return {};
+  }
   const auto baseIt = jsonData.find("base");
   const auto ratesIt = jsonData.find("rates");
   if (baseIt == jsonData.end() || ratesIt == jsonData.end()) {
