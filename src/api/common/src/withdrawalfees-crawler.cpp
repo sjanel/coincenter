@@ -131,9 +131,10 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
   WithdrawalInfoMaps ret;
 
   if (!withdrawalFeesCsv.empty()) {
-    const json jsonData = json::parse(withdrawalFeesCsv);
+    static constexpr bool kAllowExceptions = false;
+    const json jsonData = json::parse(withdrawalFeesCsv, nullptr, kAllowExceptions);
     const auto exchangesIt = jsonData.find("exchange");
-    if (exchangesIt == jsonData.end()) {
+    if (jsonData.is_discarded() || exchangesIt == jsonData.end()) {
       log::error("no exchange data found in source 1 - either site information unavailable or code to be updated");
       return ret;
     }
