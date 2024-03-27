@@ -21,7 +21,6 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangebase.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -56,7 +55,16 @@ ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangeP
     : _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
 BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
-  UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
+  CacheFreezerRAII uniqueQueryHandle;
+  if (balanceOptions.equiCurrency().isDefined()) {
+    // In case of balance with equivalent currencies, for each exchange these requests will be made:
+    // - Markets
+    // - Ticker
+    // To avoid making several ticker queries (especially) for each exchange during the whole balance process,
+    // we "allow" only one query per argument in the cache of results of all exchanges.
+    // The freeze will be lifted automatically (as the object is RAII) at the end of this function.
+    uniqueQueryHandle = CacheFreezerRAII(_cachedResultVault);
+  }
   BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
   log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
   return balancePortfolio;
@@ -66,7 +74,7 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
   if (amount != 0) {
     ExchangeName exchangeName = this->exchangeName();
     if (equiCurrency.isNeutral()) {
-      log::debug("{} Balance {}", exchangeName, amount);
+      log::trace("{} balance {}", exchangeName, amount);
       balancePortfolio.add(amount);
     } else {
       std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
@@ -75,10 +83,10 @@ void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmo
       if (optConvertedAmountEquiCurrency) {
         equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
       } else {
-        log::warn("Cannot convert {} -> {} on {}", amount.currencyStr(), equiCurrency, exchangeName);
+        log::debug("No {} -> {} conversion possible on {}", amount.currencyStr(), equiCurrency, exchangeName);
         equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
       }
-      log::debug("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);
+      log::trace("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);
       balancePortfolio.add(amount, equivalentInMainCurrency);
     }
   }
@@ -257,10 +265,12 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
-  Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+  const Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+
   log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {}",
             initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
             targetExchange.exchangeName(), DurationToString(withdrawRefreshTime));
+
   SentWithdrawInfo sentWithdrawInfo(currencyCode);
   MonetaryAmount netDeliveredAmount;
 

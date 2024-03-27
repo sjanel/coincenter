@@ -26,7 +26,6 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -34,6 +33,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 
@@ -41,15 +41,15 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  InvariantRequestRetry requestRetry(curlHandle, method, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
 
-  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+  json jsonResponse = requestRetry.queryJson(method, [](const json& jsonResponse) {
     const auto errorIt = jsonResponse.find("error");
     if (errorIt != jsonResponse.end() && !errorIt->empty()) {
       log::warn("Full Kraken json error: '{}'", jsonResponse.dump());
-      return InvariantRequestRetry::Status::kResponseError;
+      return RequestRetry::Status::kResponseError;
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
 
   const auto resultIt = jsonResponse.find("result");

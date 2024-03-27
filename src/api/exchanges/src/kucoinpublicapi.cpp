@@ -28,7 +28,6 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -36,6 +35,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -45,15 +45,15 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet, curlPostData));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, curlPostData));
 
-  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+  json jsonResponse = requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
     const auto errorIt = jsonResponse.find("code");
     if (errorIt != jsonResponse.end() && errorIt->get<std::string_view>() != "200000") {
       log::warn("Full Kucoin json error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
-      return InvariantRequestRetry::Status::kResponseError;
+      return RequestRetry::Status::kResponseError;
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
   json ret;
   const auto dataIt = jsonResponse.find("data");

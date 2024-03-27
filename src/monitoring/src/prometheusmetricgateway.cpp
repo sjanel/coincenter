@@ -63,13 +63,13 @@ inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
   ExtractedDataFromMetricKey ret;
   std::string_view metricNameSV;
   std::string_view metricHelpSV;
-  for (const auto& [k, v] : key) {
-    if (k == kMetricNameKey) {
-      metricNameSV = v;
-    } else if (k == kMetricHelpKey) {
-      metricHelpSV = v;
+  for (const auto& kv : key) {
+    if (kv.key() == kMetricNameKey) {
+      metricNameSV = kv.val();
+    } else if (kv.key() == kMetricHelpKey) {
+      metricHelpSV = kv.val();
     } else {
-      std::get<0>(ret).insert_or_assign(std::string(k), std::string(v));
+      std::get<0>(ret).insert_or_assign(std::string(kv.key()), std::string(kv.val()));
     }
   }
   std::get<1>(ret) = std::string(metricNameSV);

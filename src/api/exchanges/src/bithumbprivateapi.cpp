@@ -48,6 +48,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "request-retry.hpp"
 #include "runmodes.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
@@ -62,7 +63,6 @@
 #include "withdrawinfo.hpp"
 #include "withdrawordeposit.hpp"
 #include "withdrawsconstraints.hpp"
-#include "withdrawsordepositsconstraints.hpp"
 
 namespace cct::api {
 namespace {
@@ -86,8 +86,9 @@ constexpr int kOrderRelatedErrorCode = 5600;
 
 constexpr std::string_view kWalletAddressEndpointStr = "/info/wallet_address";
 
-std::pair<string, Nonce> GetStrData(std::string_view endpoint, std::string_view postDataStr) {
+auto GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   Nonce nonce = Nonce_TimeSinceEpochInMs();
+
   static constexpr char kParChar = 1;
   string strData(endpoint.size() + 2U + postDataStr.size() + nonce.size(), kParChar);
 
@@ -103,15 +104,6 @@ void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, std::string_view si
   opts.appendHttpHeader("API-Sign", signature);
   opts.appendHttpHeader("API-Nonce", nonce);
   opts.appendHttpHeader("api-client-type", 1);
-}
-
-json PrivateQueryProcess(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint, CurlOptions& opts) {
-  auto strDataAndNoncePair = GetStrData(endpoint, opts.postData().str());
-
-  string signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strDataAndNoncePair.first, apiKey.privateKey()));
-
-  SetHttpHeaders(opts, apiKey, signature, strDataAndNoncePair.second);
-  return json::parse(curlHandle.query(endpoint, opts));
 }
 
 template <class ValueType>
@@ -178,39 +170,44 @@ bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::str
   return false;
 }
 
-bool IsSynchronizedTime(std::string_view msg) {
+void CheckAndLogSynchronizedTime(std::string_view msg) {
   std::size_t requestTimePos = msg.find("Request Time");
   if (requestTimePos != std::string_view::npos) {
     // Bad Request.(Request Time:reqTime1638699638274/nowTime1638699977771)
     static constexpr std::string_view kReqTime = "reqTime";
     static constexpr std::string_view kNowTime = "nowTime";
+
     std::size_t reqTimePos = msg.find(kReqTime, requestTimePos);
     if (reqTimePos == std::string_view::npos) {
       log::warn("Unable to parse Bithumb bad request msg {}", msg);
     } else {
       reqTimePos += kReqTime.size();
       std::size_t nowTimePos = msg.find(kNowTime, reqTimePos);
+
       if (nowTimePos == std::string_view::npos) {
         log::warn("Unable to parse Bithumb bad request msg {}", msg);
       } else {
         nowTimePos += kNowTime.size();
+
         static constexpr std::string_view kAllDigits = "0123456789";
+
         std::size_t reqTimeEndPos = msg.find_first_not_of(kAllDigits, reqTimePos);
         std::size_t nowTimeEndPos = msg.find_first_not_of(kAllDigits, nowTimePos);
         if (nowTimeEndPos == std::string_view::npos) {
           nowTimeEndPos = msg.size();
         }
+
         std::string_view reqTimeStr(msg.begin() + reqTimePos, msg.begin() + reqTimeEndPos);
         std::string_view nowTimeStr(msg.begin() + nowTimePos, msg.begin() + nowTimeEndPos);
+
         int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
         int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
+
         log::error("Bithumb time is not synchronized with us (difference of {} s)", (reqTimeInt - nowTimeInt) / 1000);
         log::error("It can sometimes come from a Bithumb bug, retry");
-        return false;
       }
     }
   }
-  return false;
 }
 
 bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json& data) {
@@ -237,7 +234,8 @@ bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json& dat
     data.clear();
     return true;
   }
-  if (isDepositInfo && msg.find("잘못된 접근입니다.") != std::string_view::npos) {
+  if (isDepositInfo && msg.find("잘못된 요청 입니다. 요청 정보를 확인 하세요.") != std::string_view::npos) {
+    // This means that address is not generated for asked currency. It's useless to retry in these cases.
     data.clear();
     return true;
   }
@@ -253,53 +251,56 @@ int64_t ErrCodeFromQueryResponse(const json& queryResponse) {
 }
 
 json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                                    bool throwIfError, CurlOptions& opts) {
-  json ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
+                                    CurlOptions&& opts) {
+  RequestRetry requestRetry(curlHandle, std::move(opts));
 
-  // Example of error json: {"status":"5300","message":"Invalid Apikey"}
-  constexpr int kMaxNbRetries = 5;
-  int nbRetries = 0;
-  int64_t errorCode = ErrCodeFromQueryResponse(ret);
-  while (errorCode != 0 && ++nbRetries < kMaxNbRetries) {
-    // "5300" for instance. "0000" stands for: request OK
-    std::string_view msg;
-    auto messageIt = ret.find("message");
-    if (messageIt != ret.end()) {
-      msg = messageIt->get<std::string_view>();
-      switch (errorCode) {
-        case kBadRequestErrorCode:
-          if (!IsSynchronizedTime(msg)) {
-            ret = PrivateQueryProcess(curlHandle, apiKey, endpoint, opts);
-            errorCode = ErrCodeFromQueryResponse(ret);
-            continue;
+  json ret = requestRetry.queryJson(
+      endpoint,
+      [endpoint](json& ret) {
+        int64_t errorCode = ErrCodeFromQueryResponse(ret);
+        if (errorCode == 0) {
+          return RequestRetry::Status::kResponseOK;
+        }
+
+        // "5300" for instance. "0000" stands for: request OK
+        std::string_view msg;
+        auto messageIt = ret.find("message");
+        if (messageIt != ret.end()) {
+          msg = messageIt->get<std::string_view>();
+          switch (errorCode) {
+            case kBadRequestErrorCode:
+              CheckAndLogSynchronizedTime(msg);
+              break;
+            case kOrderRelatedErrorCode:
+              if (CheckOrderErrors(endpoint, msg, ret)) {
+                return RequestRetry::Status::kResponseOK;
+              }
+              break;
+            default:
+              break;
           }
-          break;
-        case kOrderRelatedErrorCode:
-          if (CheckOrderErrors(endpoint, msg, ret)) {
-            return ret;
-          }
-          break;
-        default:
-          break;
-      }
-    }
-    break;
-  }
-  if (errorCode != 0 && throwIfError) {
-    log::error("Full Bithumb json error: '{}'", ret.dump());
-    throw exception("Bithumb error {}", errorCode);
-  }
+        }
+        return RequestRetry::Status::kResponseError;
+      },
+      [endpoint, &apiKey](CurlOptions& opts) {
+        auto [strData, nonce] = GetStrData(endpoint, opts.postData().str());
+
+        auto signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strData, apiKey.privateKey()));
+
+        SetHttpHeaders(opts, apiKey, signature, nonce);
+      });
+
   return ret;
 }
 
 template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                  CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
+                  CurlPostDataT&& curlPostData = CurlPostData()) {
   CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
-  postData.prepend("endpoint", endpoint);
+  postData.push_front("endpoint", endpoint);
   CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
 
-  return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, throwIfError, opts);
+  return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, std::move(opts));
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
@@ -341,15 +342,28 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
 }
 
 bool BithumbPrivate::validateApiKey() {
-  constexpr bool throwIfError = false;
-  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData(), throwIfError);
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData());
+  if (result.is_discarded()) {
+    return false;
+  }
   auto statusIt = result.find("status");
   return statusIt != result.end() && statusIt->get<std::string_view>() == BithumbPublic::kStatusOKStr;
 }
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}})["data"];
+  json jsonReply = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}});
+
   BalancePortfolio balancePortfolio;
+
+  const auto balanceItemsIt = jsonReply.find("data");
+  if (jsonReply.is_discarded()) {
+    log::error("Badly formatted {} reply from balance", exchangeName());
+    return balancePortfolio;
+  }
+  if (balanceItemsIt == jsonReply.end()) {
+    return balancePortfolio;
+  }
+
   CurrencyCode equiCurrency = balanceOptions.equiCurrency();
 
   static constexpr std::array<std::string_view, 2> kKnownPrefixes = {"available_", "in_use_"};
@@ -358,7 +372,7 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
     --endPrefixIt;
   }
 
-  for (const auto& [key, value] : result.items()) {
+  for (const auto& [key, value] : balanceItemsIt->items()) {
     for (auto prefixIt = kKnownPrefixes.begin(); prefixIt != endPrefixIt; ++prefixIt) {
       if (key.starts_with(*prefixIt)) {
         std::string_view curStr(key.begin() + prefixIt->size(), key.end());
@@ -373,6 +387,9 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json ret = PrivateQuery(_curlHandle, _apiKey, kWalletAddressEndpointStr, {{"currency", currencyCode.str()}});
+  if (ret.is_discarded()) {
+    throw exception("Bithumb unexpected reply from wallet address query for {}", currencyCode);
+  }
   if (ret.empty()) {
     throw exception(
         "Bithumb wallet is not created for {}, it should be done with the UI first (no way to do it via API)",
@@ -432,15 +449,24 @@ auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePub
     if (!filterMarket.base().isNeutral()) {
       orderCurrencies.push_back(filterMarket.base());
       if (!filterMarket.quote().isNeutral()) {
-        params.append(kPaymentCurParamStr, filterMarket.quote().str());
+        params.push_back(kPaymentCurParamStr, filterMarket.quote().str());
       }
     }
   } else {
     // Trick: let's use balance query to guess where we can search for orders,
     // by looking at "is_use" amounts to retrieve opened orders or "available" amounts to retrieve closed orders.
     // The only drawback is that we need to make one query for each currency, but it's better than nothing.
-    const json result = PrivateQuery(curlHandle, apiKey, "/info/balance", {{"currency", "all"}})["data"];
-    for (const auto& [key, value] : result.items()) {
+    const json jsonReply = PrivateQuery(curlHandle, apiKey, "/info/balance", {{"currency", "all"}});
+    const auto itemsIt = jsonReply.find("data");
+    if (jsonReply.is_discarded()) {
+      log::error("Badly formatted {} reply from balance", exchangePublic.name());
+      return orderCurrencies;
+    }
+    if (itemsIt == jsonReply.end()) {
+      return orderCurrencies;
+    }
+
+    for (const auto& [key, value] : itemsIt->items()) {
       if (key.starts_with(prefixKeyBalance)) {
         CurrencyCode cur(std::string_view(key.begin() + prefixKeyBalance.size(), key.end()));
         if (cur != "KRW") {
@@ -471,7 +497,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
 
   OrderVectorType orders;
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    params.append("after", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
+    params.push_back("after", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
   }
   if (orderCurrencies.size() > 1) {
     if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
@@ -484,9 +510,17 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
   for (CurrencyCode volumeCur : orderCurrencies) {
     params.set(kOrderCurrencyParamStr, volumeCur.str());
 
-    json result = PrivateQuery(curlHandle, apiKey, "/info/orders", params)["data"];
+    json jsonReply = PrivateQuery(curlHandle, apiKey, "/info/orders", params);
+    auto orderDetailsIt = jsonReply.find("data");
+    if (jsonReply.is_discarded()) {
+      log::error("Badly formatted {} reply from order details", exchangePublic.name());
+      continue;
+    }
+    if (orderDetailsIt == jsonReply.end()) {
+      continue;
+    }
 
-    for (json& orderDetails : result) {
+    for (json& orderDetails : *orderDetailsIt) {
       TimePoint placedTime = RetrieveTimePointFromTrxJson(orderDetails, "order_date");
       if (!ordersConstraints.validatePlacedTime(placedTime)) {
         continue;
@@ -626,16 +660,16 @@ json QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
   if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
     if constexpr (std::is_same_v<ConstraintsType, OrdersConstraints>) {
       if (constraints.isCur2Defined()) {
-        options.append(kPaymentCurParamStr, constraints.curStr2());
+        options.push_back(kPaymentCurParamStr, constraints.curStr2());
       } else {
-        options.append(kPaymentCurParamStr, "KRW");
+        options.push_back(kPaymentCurParamStr, "KRW");
       }
     }
   } else {
     // It's not clear what the payment currency option is for user_transactions endpoint for deposits and withdraws.
     // For withdraws it seems to have no impact, and even worse, it returns weird output when
     // querying withdraws for a specific coin, it can return KRW withdraws to user bank account.
-    options.append(kPaymentCurParamStr, "BTC");
+    options.push_back(kPaymentCurParamStr, "BTC");
   }
 
   json allResults;
@@ -680,8 +714,17 @@ json QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
 
     for (int searchGb : searchGbsVector) {
       options.set("searchGb", searchGb);
-      json txrList = PrivateQuery(curlHandle, apiKey, "/info/user_transactions", options)["data"];
-      for (json& trx : txrList) {
+      json jsonReply = PrivateQuery(curlHandle, apiKey, "/info/user_transactions", options);
+      auto txrListIt = jsonReply.find("data");
+      if (jsonReply.is_discarded()) {
+        log::error("Badly formatted {} reply from user transactions", exchangePrivate.exchangeName());
+        continue;
+      }
+      if (txrListIt == jsonReply.end()) {
+        continue;
+      }
+
+      for (json& trx : *txrListIt) {
         if (!constraints.validateCur(CurrencyCodeFromTrx(trx))) {
           continue;
         }
@@ -815,8 +858,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     endpoint.append(fromCurrencyCode == mk.base() ? "market_sell" : "market_buy");
   } else {
     endpoint.append("place");
-    placePostData.append(kTypeParamStr, orderType);
-    placePostData.append("price", price.amountStr());
+    placePostData.push_back(kTypeParamStr, orderType);
+    placePostData.push_back("price", price.amountStr());
   }
 
   // Volume is gross amount if from amount is in quote currency, we should remove the fees
@@ -891,7 +934,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     }
   }
 
-  placePostData.append("units", volume.amountStr());
+  placePostData.push_back("units", volume.amountStr());
 
   placeOrderInfo.setClosed();
 
@@ -899,58 +942,64 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   bool currencyInfoUpdated = false;
   for (int nbRetries = 0; nbRetries < kNbMaxRetries; ++nbRetries) {
     json result = PrivateQuery(_curlHandle, _apiKey, endpoint, placePostData);
+    if (result.is_discarded()) {
+      log::error("Unexpected answer from {} place order - reply badly formatted", exchangeName());
+      break;
+    }
+
     auto orderIdIt = result.find(kOrderIdParamStr);
-    if (orderIdIt == result.end()) {
-      currencyInfoUpdated = true;
-      if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
-                                currencyOrderInfo.lastNbDecimalsUpdatedTime)) {
-        volume.truncate(currencyOrderInfo.nbDecimals);
-        if (volume == 0) {
-          log::warn("No trade of {} into {} because volume is 0 after truncating to {} decimals", volume,
-                    toCurrencyCode, static_cast<int>(currencyOrderInfo.nbDecimals));
-          break;
-        }
-        placePostData.set("units", volume.amountStr());
-      } else if (LoadCurrencyInfoField(result, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
-                                       currencyOrderInfo.lastMinOrderSizeUpdatedTime)) {
-        if (!isSimulationWithRealOrder || currencyOrderInfo.minOrderSize.currencyCode() != price.currencyCode()) {
-          log::warn("No trade of {} into {} because min order size is {} for this market", volume, toCurrencyCode,
-                    currencyOrderInfo.minOrderSize);
-          break;
-        }
-        volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
-        placePostData.set("units", volume.amountStr());
-      } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
-                                       currencyOrderInfo.lastMinOrderPriceUpdatedTime)) {
-        if (isSimulationWithRealOrder) {
-          if (!isTakerStrategy) {
-            price = currencyOrderInfo.minOrderPrice;
-            placePostData.set("price", price.amountStr());
-          }
-        } else {
-          log::warn("No trade of {} into {} because min order price is {} for this market", volume, toCurrencyCode,
-                    currencyOrderInfo.minOrderPrice);
-          break;
-        }
-      } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
-                                       currencyOrderInfo.lastMaxOrderPriceUpdatedTime)) {
-        if (isSimulationWithRealOrder) {
-          if (!isTakerStrategy) {
-            price = currencyOrderInfo.maxOrderPrice;
-            placePostData.set("price", price.amountStr());
-          }
-        } else {
-          log::warn("No trade of {} into {} because max order price is {} for this market", volume, toCurrencyCode,
-                    currencyOrderInfo.maxOrderPrice);
-          break;
+
+    if (orderIdIt != result.end()) {
+      placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
+      placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext);
+      break;
+    }
+
+    currencyInfoUpdated = true;
+    if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals,
+                              currencyOrderInfo.lastNbDecimalsUpdatedTime)) {
+      volume.truncate(currencyOrderInfo.nbDecimals);
+      if (volume == 0) {
+        log::warn("No trade of {} into {} because volume is 0 after truncating to {} decimals", volume, toCurrencyCode,
+                  static_cast<int>(currencyOrderInfo.nbDecimals));
+        break;
+      }
+      placePostData.set("units", volume.amountStr());
+    } else if (LoadCurrencyInfoField(result, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize,
+                                     currencyOrderInfo.lastMinOrderSizeUpdatedTime)) {
+      if (!isSimulationWithRealOrder || currencyOrderInfo.minOrderSize.currencyCode() != price.currencyCode()) {
+        log::warn("No trade of {} into {} because min order size is {} for this market", volume, toCurrencyCode,
+                  currencyOrderInfo.minOrderSize);
+        break;
+      }
+      volume = MonetaryAmount(currencyOrderInfo.minOrderSize / price, volume.currencyCode());
+      placePostData.set("units", volume.amountStr());
+    } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice,
+                                     currencyOrderInfo.lastMinOrderPriceUpdatedTime)) {
+      if (isSimulationWithRealOrder) {
+        if (!isTakerStrategy) {
+          price = currencyOrderInfo.minOrderPrice;
+          placePostData.set("price", price.amountStr());
         }
       } else {
-        log::error("Unexpected answer from {} place order, no data", _exchangePublic.name());
+        log::warn("No trade of {} into {} because min order price is {} for this market", volume, toCurrencyCode,
+                  currencyOrderInfo.minOrderPrice);
+        break;
+      }
+    } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice,
+                                     currencyOrderInfo.lastMaxOrderPriceUpdatedTime)) {
+      if (isSimulationWithRealOrder) {
+        if (!isTakerStrategy) {
+          price = currencyOrderInfo.maxOrderPrice;
+          placePostData.set("price", price.amountStr());
+        }
+      } else {
+        log::warn("No trade of {} into {} because max order price is {} for this market", volume, toCurrencyCode,
+                  currencyOrderInfo.maxOrderPrice);
         break;
       }
     } else {
-      placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
-      placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext);
+      log::error("Unexpected answer from {} place order, no data", _exchangePublic.name());
       break;
     }
   }
@@ -970,20 +1019,28 @@ OrderInfo BithumbPrivate::cancelOrder(OrderIdView orderId, const TradeContext& t
 namespace {
 CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
   CurlPostData ret;
+
   auto baseStr = mk.base().str();
   auto quoteStr = mk.quote().str();
-  ret.reserve(kOrderCurrencyParamStr.size() + kPaymentCurParamStr.size() + kTypeParamStr.size() +
-              kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + orderId.size() + 10U);
-  ret.append(kOrderCurrencyParamStr, baseStr);
-  ret.append(kPaymentCurParamStr, quoteStr);
-  ret.append(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
-  ret.append(kOrderIdParamStr, orderId);
+
+  ret.underlyingBufferReserve(kOrderCurrencyParamStr.size() + kPaymentCurParamStr.size() + kTypeParamStr.size() +
+                              kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + orderId.size() + 10U);
+
+  ret.push_back(kOrderCurrencyParamStr, baseStr);
+  ret.push_back(kPaymentCurParamStr, quoteStr);
+  ret.push_back(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
+  ret.push_back(kOrderIdParamStr, orderId);
+
   return ret;
 }
 }  // namespace
 
 void BithumbPrivate::cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext) {
-  PrivateQuery(_curlHandle, _apiKey, "/trade/cancel", OrderInfoPostData(tradeContext.mk, tradeContext.side, orderId));
+  json ret = PrivateQuery(_curlHandle, _apiKey, "/trade/cancel",
+                          OrderInfoPostData(tradeContext.mk, tradeContext.side, orderId));
+  if (ret.is_discarded()) {
+    log::error("Cancel order process failed for {}, assuming order cancelled", exchangeName());
+  }
 }
 
 OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
@@ -992,30 +1049,48 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
 
   CurlPostData postData = OrderInfoPostData(mk, tradeContext.side, orderId);
-  json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", postData)["data"];
+  json result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", postData);
+  if (result.is_discarded()) {
+    log::error("Badly formatted reply from {} query order info, considering order closed", exchangeName());
+  }
+  auto dataIt = result.find("data");
 
-  const bool isClosed = result.empty() || result.front()[kOrderIdParamStr].get<std::string_view>() != orderId;
+  const bool isClosed = dataIt == result.end() ||
+                        (dataIt->empty() || dataIt->front()[kOrderIdParamStr].get<std::string_view>() != orderId);
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
-  if (isClosed) {
-    postData.erase(kTypeParamStr);
-    result = PrivateQuery(_curlHandle, _apiKey, "/info/order_detail", std::move(postData))["data"];
+  if (!isClosed) {
+    return orderInfo;
+  }
 
-    for (const json& contractDetail : result["contract"]) {
-      MonetaryAmount tradedVol(contractDetail["units"].get<std::string_view>(), mk.base());  // always in base currency
-      MonetaryAmount price(contractDetail["price"].get<std::string_view>(), mk.quote());     // always in quote currency
-      MonetaryAmount tradedCost = tradedVol.toNeutral() * price;
-      CurrencyCode feeCurrency(contractDetail["fee_currency"].get<std::string_view>());
-      MonetaryAmount fee(contractDetail["fee"].get<std::string_view>(), feeCurrency);
+  postData.erase(kTypeParamStr);
+  result = PrivateQuery(_curlHandle, _apiKey, "/info/order_detail", std::move(postData));
+  if (result.is_discarded()) {
+    log::error("Badly formatted reply from {} query order info details, considering order closed", exchangeName());
+  }
 
-      if (fromCurrencyCode == mk.quote()) {
-        orderInfo.tradedAmounts.from += tradedCost + fee;
-        orderInfo.tradedAmounts.to += tradedVol;
-      } else {
-        orderInfo.tradedAmounts.from += tradedVol;
-        orderInfo.tradedAmounts.to += tradedCost - fee;
-      }
+  dataIt = result.find("data");
+  if (dataIt == result.end()) {
+    return orderInfo;
+  }
+
+  for (const json& contractDetail : (*dataIt)["contract"]) {
+    // always in base currency
+    MonetaryAmount tradedVol(contractDetail["units"].get<std::string_view>(), mk.base());
+    // always in quote currency
+    MonetaryAmount price(contractDetail["price"].get<std::string_view>(), mk.quote());
+    MonetaryAmount tradedCost = tradedVol.toNeutral() * price;
+    CurrencyCode feeCurrency(contractDetail["fee_currency"].get<std::string_view>());
+    MonetaryAmount fee(contractDetail["fee"].get<std::string_view>(), feeCurrency);
+
+    if (fromCurrencyCode == mk.quote()) {
+      orderInfo.tradedAmounts.from += tradedCost + fee;
+      orderInfo.tradedAmounts.to += tradedVol;
+    } else {
+      orderInfo.tradedAmounts.from += tradedVol;
+      orderInfo.tradedAmounts.to += tradedCost - fee;
     }
   }
+
   return orderInfo;
 }
 
@@ -1042,14 +1117,14 @@ CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, 
   // coincenter can retrieve the account owner name automatically provided that the user filled the fields in the
   // destination api key part in the secrets json file.
   if (desAccountOwner.isFullyDefined()) {
-    withdrawPostData.append("en_name", desAccountOwner.enName());
-    withdrawPostData.append("ko_name", desAccountOwner.koName());
+    withdrawPostData.push_back("en_name", desAccountOwner.enName());
+    withdrawPostData.push_back("ko_name", desAccountOwner.koName());
   } else {
     log::error("Bithumb withdrawal needs further information for destination account");
     log::error("it needs the English and Korean name of its owner so query will most probably fail");
   }
   if (destinationWallet.hasTag()) {
-    withdrawPostData.append("destination", destinationWallet.tag());
+    withdrawPostData.push_back("destination", destinationWallet.tag());
   }
   return withdrawPostData;
 }
@@ -1075,8 +1150,12 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   std::sort(oldWithdraws.begin(), oldWithdraws.end(), CompareTrxByDate);
 
   // Actually launch the withdraw
-  PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal",
-               ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
+  json ret = PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal",
+                          ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
+  if (ret.is_discarded()) {
+    log::error("Withdrawal query error for {} - please double check whether withdrawal has been applied or not",
+               exchangeName());
+  }
 
   // Query the withdraws, hopefully we will be able to find our withdraw
   json newWithdrawTrx;

@@ -29,7 +29,6 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -37,6 +36,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "timedef.hpp"
 #include "toupperlower-string.hpp"
 #include "tradeside.hpp"
@@ -54,18 +54,18 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
     method.append(curlPostData.str());
   }
 
-  InvariantRequestRetry requestRetry(curlHandle, method, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  json jsonResponse = requestRetry.queryJson([](const json& jsonResponse) {
+  json jsonResponse = requestRetry.queryJson(method, [](const json& jsonResponse) {
     const auto dataIt = jsonResponse.find("data");
     if (dataIt == jsonResponse.end()) {
       const auto tickIt = jsonResponse.find("tick");
       if (tickIt == jsonResponse.end()) {
         log::warn("Full Huobi json error: '{}'", jsonResponse.dump());
-        return InvariantRequestRetry::Status::kResponseError;
+        return RequestRetry::Status::kResponseError;
       }
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
   json ret;
   const auto dataIt = jsonResponse.find("data");
@@ -113,7 +113,13 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                    _curlHandle) {}
 
 bool HuobiPublic::healthCheck() {
-  json result = json::parse(_healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet)));
+  static constexpr bool kAllowExceptions = false;
+  json result = json::parse(_healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet)),
+                            nullptr, kAllowExceptions);
+  if (result.is_discarded()) {
+    log::error("{} health check response is badly formatted", _name);
+    return false;
+  }
   auto statusIt = result.find("status");
   if (statusIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());
@@ -378,7 +384,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
     if (lb == kAuthorizedDepths.end()) {
       log::warn("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else if (*lb != kHuobiStandardOrderBookDefaultDepth) {
-      postData.append("depth", *lb);
+      postData.push_back("depth", *lb);
     }
   }
 

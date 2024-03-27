@@ -3,8 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <ranges>
 #include <string_view>
 
+#include "cct_exception.hpp"
 #include "cct_json.hpp"
 
 namespace cct {
@@ -31,8 +33,8 @@ TEST(FlatKeyValueStringTest, SetEmpty) {
 
 TEST(FlatKeyValueStringTest, SetAndAppend) {
   KvPairs kvPairs;
-  kvPairs.append("abc", "666");
-  kvPairs.append({"de", "aX"});
+  kvPairs.push_back("abc", "666");
+  kvPairs.push_back({"de", "aX"});
   EXPECT_EQ(kvPairs.get("def"), "");
   EXPECT_FALSE(kvPairs.empty());
   EXPECT_EQ(kvPairs.str(), "abc=666&de=aX");
@@ -51,11 +53,11 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   kvPairs.set("d", "cestboncestfini");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
-  kvPairs.append("newKey", "=");
+  kvPairs.push_back("newKey", "=");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==");
-  kvPairs.append("$5*(%", ".9h===,Mj");
+  kvPairs.push_back("$5*(%", ".9h===,Mj");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj");
-  kvPairs.append("encoreplustricky", "=");
+  kvPairs.push_back("encoreplustricky", "=");
   EXPECT_EQ(kvPairs.str(),
             "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj&encoreplustricky==");
   kvPairs.set("$5*(%", ".9h==,Mj");
@@ -65,13 +67,13 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
 
 TEST(FlatKeyValueStringTest, Prepend) {
   KvPairs kvPairs;
-  kvPairs.prepend("statue", "liberty");
+  kvPairs.push_front("statue", "liberty");
   EXPECT_EQ(kvPairs.str(), "statue=liberty");
-  kvPairs.prepend("city", "New York City");
+  kvPairs.push_front("city", "New York City");
   EXPECT_EQ(kvPairs.str(), "city=New York City&statue=liberty");
-  kvPairs.prepend({"state", "New York"});
+  kvPairs.push_front({"state", "New York"});
   EXPECT_EQ(kvPairs.str(), "state=New York&city=New York City&statue=liberty");
-  kvPairs.prepend("Postal Code", 10015);
+  kvPairs.push_front("Postal Code", 10015);
   EXPECT_EQ(kvPairs.str(), "Postal Code=10015&state=New York&city=New York City&statue=liberty");
 }
 
@@ -103,11 +105,12 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0rm:Yy3\0huhu:haha"sv));
   kvPairs.erase("rm");
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha"sv));
-  kvPairs.append("&newField", "&&newValue&&");
+  kvPairs.push_back("&newField", "&&newValue&&");
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
 
   int kvPairPos = 0;
-  for (const auto &[key, val] : kvPairs) {
+  for (const auto &v : kvPairs) {
+    const auto key = v.key();
     const char *kvPairPtr = key.data();
     switch (kvPairPos++) {
       case 0:
@@ -120,7 +123,7 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
         ASSERT_STREQ(kvPairPtr, "&newField:&&newValue&&");
         break;
       default:
-        ASSERT_TRUE(false);
+        throw exception("Too many values in kvPairs");
     }
   }
   EXPECT_EQ(kvPairPos, 3);
@@ -130,16 +133,50 @@ TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(),
 
 class CurlOptionsCase1 : public ::testing::Test {
  protected:
-  KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},
-                  {"hola", "quetal"},   {"array1", "val1,,"}, {"array2", ",val1,val2,value,"},
-                  {"emptyArray", ","}};
+  KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},     {"hola", "quetal"},
+                  {"k", "v"},           {"array1", "val1,,"}, {"array2", ",val1,val2,value,"}, {"emptyArray", ","}};
 };
+
+TEST_F(CurlOptionsCase1, Front) {
+  const auto &kvFront = kvPairs.front();
+
+  EXPECT_EQ(kvFront.key(), "units");
+  EXPECT_EQ(kvFront.keyLen(), 5U);
+
+  EXPECT_EQ(kvFront.val(), "0.11176");
+  EXPECT_EQ(kvFront.valLen(), 7U);
+
+  EXPECT_EQ(kvFront.size(), 13U);
+}
+
+TEST_F(CurlOptionsCase1, Back) {
+  const auto kvFront = kvPairs.back();
+
+  EXPECT_EQ(kvFront.key(), "emptyArray");
+  EXPECT_EQ(kvFront.keyLen(), 10U);
+
+  EXPECT_EQ(kvFront.val(), ",");
+  EXPECT_EQ(kvFront.valLen(), 1U);
+
+  EXPECT_EQ(kvFront.size(), 12U);
+}
+
+TEST_F(CurlOptionsCase1, PopBack) {
+  EXPECT_NE(kvPairs.find("emptyArray"), string::npos);
+  kvPairs.pop_back();
+  EXPECT_EQ(kvPairs.find("emptyArray"), string::npos);
+
+  const auto newBack = kvPairs.back();
+  EXPECT_EQ(newBack.key(), "array2");
+  EXPECT_EQ(newBack.val(), ",val1,val2,value,");
+}
 
 TEST_F(CurlOptionsCase1, Get) {
   EXPECT_EQ(kvPairs.get("units"), "0.11176");
   EXPECT_EQ(kvPairs.get("price"), "357.78");
   EXPECT_EQ(kvPairs.get("777"), "encoredutravail?");
   EXPECT_EQ(kvPairs.get("hola"), "quetal");
+  EXPECT_EQ(kvPairs.get("k"), "v");
   EXPECT_EQ(kvPairs.get("array1"), "val1,,");
   EXPECT_EQ(kvPairs.get("array2"), ",val1,val2,value,");
   EXPECT_EQ(kvPairs.get("emptyArray"), ",");
@@ -147,9 +184,11 @@ TEST_F(CurlOptionsCase1, Get) {
   EXPECT_EQ(kvPairs.get("laipas"), "");
 }
 
-TEST_F(CurlOptionsCase1, Iterator) {
+TEST_F(CurlOptionsCase1, ForwardIterator) {
   int itPos = 0;
-  for (const auto &[key, val] : kvPairs) {
+  for (const auto &kv : kvPairs) {
+    const auto key = kv.key();
+    const auto val = kv.val();
     switch (itPos++) {
       case 0:
         EXPECT_EQ(key, "units");
@@ -168,22 +207,129 @@ TEST_F(CurlOptionsCase1, Iterator) {
         EXPECT_EQ(val, "quetal");
         break;
       case 4:
+        EXPECT_EQ(key, "k");
+        EXPECT_EQ(val, "v");
+        break;
+      case 5:
         EXPECT_EQ(key, "array1");
         EXPECT_EQ(val, "val1,,");
         break;
-      case 5:
+      case 6:
         EXPECT_EQ(key, "array2");
         EXPECT_EQ(val, ",val1,val2,value,");
         break;
-      case 6:
+      case 7:
         EXPECT_EQ(key, "emptyArray");
         EXPECT_EQ(val, ",");
         break;
       default:
-        EXPECT_TRUE(false);
+        throw exception("Too many values in kvPairs");
     }
   }
-  EXPECT_EQ(itPos, 7);
+  EXPECT_EQ(itPos, 8);
+}
+
+TEST_F(CurlOptionsCase1, BackwardIterator) {
+  int itPos = 0;
+  for (auto it = kvPairs.end(); it != kvPairs.begin();) {
+    const auto kv = *--it;
+    const auto key = kv.key();
+    const auto val = kv.val();
+    switch (itPos++) {
+      case 0:
+        EXPECT_EQ(key, "emptyArray");
+        EXPECT_EQ(val, ",");
+        break;
+      case 1:
+        EXPECT_EQ(key, "array2");
+        EXPECT_EQ(val, ",val1,val2,value,");
+        break;
+      case 2:
+        EXPECT_EQ(key, "array1");
+        EXPECT_EQ(val, "val1,,");
+        break;
+      case 3:
+        EXPECT_EQ(key, "k");
+        EXPECT_EQ(val, "v");
+        break;
+      case 4:
+        EXPECT_EQ(key, "hola");
+        EXPECT_EQ(val, "quetal");
+        break;
+      case 5:
+        EXPECT_EQ(key, "777");
+        EXPECT_EQ(val, "encoredutravail?");
+        break;
+      case 6:
+        EXPECT_EQ(key, "price");
+        EXPECT_EQ(val, "357.78");
+        break;
+      case 7:
+        EXPECT_EQ(key, "units");
+        EXPECT_EQ(val, "0.11176");
+        break;
+      default:
+        throw exception("Too many values in kvPairs");
+    }
+  }
+  EXPECT_EQ(itPos, 8);
+}
+
+TEST_F(CurlOptionsCase1, EraseIncrementDecrement) {
+  kvPairs.erase(kvPairs.begin());
+  const auto &kvFront = kvPairs.front();
+
+  EXPECT_EQ(kvFront.key(), "price");
+  EXPECT_EQ(kvFront.val(), "357.78");
+
+  auto it = kvPairs.begin();
+  ++it;
+  it++;
+
+  EXPECT_EQ(it->key(), "hola");
+  EXPECT_EQ(it->val(), "quetal");
+
+  EXPECT_NE(kvPairs.find("hola"), string::npos);
+
+  kvPairs.erase(it);
+
+  EXPECT_EQ(kvPairs.find("hola"), string::npos);
+  EXPECT_NE(kvPairs.find("k"), string::npos);
+
+  it = kvPairs.end()--;
+  it--;
+  kvPairs.erase(it);
+
+  int itPos = 0;
+  for (const auto &kv : kvPairs) {
+    const auto key = kv.key();
+    const auto val = kv.val();
+    switch (itPos++) {
+      case 0:
+        EXPECT_EQ(key, "price");
+        EXPECT_EQ(val, "357.78");
+        break;
+      case 1:
+        EXPECT_EQ(key, "777");
+        EXPECT_EQ(val, "encoredutravail?");
+        break;
+      case 2:
+        EXPECT_EQ(key, "k");
+        EXPECT_EQ(val, "v");
+        break;
+      case 3:
+        EXPECT_EQ(key, "array1");
+        EXPECT_EQ(val, "val1,,");
+        break;
+      case 4:
+        EXPECT_EQ(key, "array2");
+        EXPECT_EQ(val, ",val1,val2,value,");
+        break;
+      default:
+        throw exception("Too many values in kvPairs");
+    }
+  }
+  EXPECT_EQ(itPos, 5);
 }
 
 TEST_F(CurlOptionsCase1, ConvertToJson) {
@@ -220,10 +366,10 @@ TEST_F(CurlOptionsCase1, ConvertToJson) {
 }
 
 TEST_F(CurlOptionsCase1, AppendIntegralValues) {
-  kvPairs.append("price1", 1957386078376L);
+  kvPairs.push_back("price1", 1957386078376L);
   EXPECT_EQ(kvPairs.get("price1"), "1957386078376");
   int8_t val = -116;
-  kvPairs.append("testu", val);
+  kvPairs.push_back("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");
 }
 
@@ -233,9 +379,9 @@ TEST_F(CurlOptionsCase1, SetIntegralValues) {
   EXPECT_EQ(kvPairs.get("price1"), "42");
   kvPairs.set("777", -666);
   EXPECT_EQ(kvPairs.get("777"), "-666");
-  EXPECT_EQ(
-      kvPairs.str(),
-      "units=0.11176&price=357.78&777=-666&hola=quetal&array1=val1,,&array2=,val1,val2,value,&emptyArray=,&price1=42");
+  EXPECT_EQ(kvPairs.str(),
+            "units=0.11176&price=357.78&777=-666&hola=quetal&k=v&array1=val1,,&array2=,val1,val2,value,&emptyArray=,&"
+            "price1=42");
   int8_t val = -116;
   kvPairs.set("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");

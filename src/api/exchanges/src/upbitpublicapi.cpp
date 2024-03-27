@@ -28,7 +28,6 @@
 #include "fiatconverter.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -36,6 +35,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 
@@ -43,9 +43,9 @@ namespace cct::api {
 namespace {
 
 json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
 
-  return requestRetry.queryJson([](const json& jsonResponse) {
+  return requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
     const auto foundErrorIt = jsonResponse.find("error");
     if (foundErrorIt != jsonResponse.end()) {
       const auto statusCodeIt = jsonResponse.find("name");
@@ -53,9 +53,9 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData
       const auto msgIt = jsonResponse.find("message");
       const std::string_view msg = msgIt == jsonResponse.end() ? "Unknown" : msgIt->get<std::string_view>();
       log::warn("Upbit error ({}, '{}'), full json: '{}'", statusCode, msg, jsonResponse.dump());
-      return InvariantRequestRetry::Status::kResponseError;
+      return RequestRetry::Status::kResponseError;
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
 }
 
@@ -91,8 +91,14 @@ UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConver
                    _curlHandle) {}
 
 bool UpbitPublic::healthCheck() {
+  static constexpr auto kAllowExceptions = false;
   json result =
-      json::parse(_curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})));
+      json::parse(_curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})),
+                  nullptr, kAllowExceptions);
+  if (result.is_discarded()) {
+    log::error("{} health check response badly formatted", _name);
+    return false;
+  }
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
     log::error("Error in {} status: {}", _name, errorIt->dump());
