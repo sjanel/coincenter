@@ -52,8 +52,8 @@ inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdraw
 
 inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
   BalancePortfolio ret = balancePortfolio;
-  ret.add(tradedAmounts.to);
-  ret.add(-tradedAmounts.from);
+  ret += tradedAmounts.to;
+  ret += -tradedAmounts.from;
   return ret;
 }
 

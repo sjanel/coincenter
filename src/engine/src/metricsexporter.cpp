@@ -45,11 +45,11 @@ void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerE
     key.set("account", exchange.keyName());
     key.set("total", "no");
     MonetaryAmount totalEquiAmount(0, equiCurrency);
-    for (BalancePortfolio::MonetaryAmountWithEquivalent amountWithEqui : balancePortfolio) {
-      key.set("currency", amountWithEqui.amount.currencyStr());
-      _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, amountWithEqui.amount.toDouble());
-      if (!equiCurrency.isNeutral()) {
-        totalEquiAmount += amountWithEqui.equi;
+    for (auto [amount, equi] : balancePortfolio) {
+      key.set("currency", amount.currencyStr());
+      _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, amount.toDouble());
+      if (equiCurrency.isDefined()) {
+        totalEquiAmount += equi;
       }
     }
     if (!equiCurrency.isNeutral()) {

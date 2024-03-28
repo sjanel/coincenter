@@ -14,7 +14,7 @@ namespace cct {
 
 namespace {
 MonetaryAmount ComputeTotalSum(const BalancePortfolio &total) {
-  CurrencyCode balanceCurrencyCode = total.empty() ? CurrencyCode() : total.front().equi.currencyCode();
+  CurrencyCode balanceCurrencyCode = total.equiCurrency();
   MonetaryAmount totalSum(0, balanceCurrencyCode);
   for (const auto &[amount, equi] : total) {
     totalSum += equi;
@@ -25,7 +25,7 @@ MonetaryAmount ComputeTotalSum(const BalancePortfolio &total) {
 
 SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   BalancePortfolio total = computeTotal();
-  CurrencyCode balanceCurrencyCode = total.empty() ? CurrencyCode() : total.front().equi.currencyCode();
+  CurrencyCode balanceCurrencyCode = total.equiCurrency();
   const bool countEqui = !balanceCurrencyCode.isNeutral();
   table::Row header("Currency", "Total amount on selected");
 

@@ -185,15 +185,18 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
   BalancePortfolio balancePortfolio;
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   const std::string_view amountKey = withBalanceInUse ? "balance" : "available";
+
+  balancePortfolio.reserve(result.size());
+
   for (const json& balanceDetail : result) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(
         _coincenterInfo.standardizeCurrencyCode(balanceDetail["currency"].get<std::string_view>()));
     MonetaryAmount amount(balanceDetail[amountKey].get<std::string_view>(), currencyCode);
     log::debug("{} in account '{}' on {}", amount, typeStr, exchangeName());
-    this->addBalance(balancePortfolio, amount, equiCurrency);
+
+    balancePortfolio += amount;
   }
   return balancePortfolio;
 }

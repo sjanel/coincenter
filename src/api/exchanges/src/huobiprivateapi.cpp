@@ -177,13 +177,12 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   for (const json& balanceDetail : result["data"]["list"]) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(balanceDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(balanceDetail["balance"].get<std::string_view>(), currencyCode);
     if (typeStr == "trade" || (withBalanceInUse && typeStr == "frozen")) {
-      this->addBalance(balancePortfolio, amount, equiCurrency);
+      balancePortfolio += amount;
     } else {
       log::trace("Do not consider {} as it is {} on {}", amount, typeStr, _exchangePublic.name());
     }

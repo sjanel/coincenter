@@ -5,6 +5,7 @@
 #include "accountowner.hpp"
 #include "apioutputtype.hpp"
 #include "balanceportfolio.hpp"
+#include "cct_exception.hpp"
 #include "closed-order.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
@@ -238,14 +239,43 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, NoPrint) {
 
 class QueryResultPrinterBalanceEquiCurTest : public QueryResultPrinterTest {
  protected:
+  void SetUp() override {
+    for (auto &[amount, equi] : bp1) {
+      if (amount == ma1) {
+        equi = MonetaryAmount{10000, equiCur};
+      } else if (amount == ma2) {
+        equi = MonetaryAmount{90677, equiCur, 1};
+      } else {
+        throw exception("Should not happen");
+      }
+    }
+
+    for (auto &[amount, equi] : bp2) {
+      if (amount == ma3) {
+        equi = MonetaryAmount{4508, equiCur, 2};
+      } else if (amount == ma4) {
+        equi = MonetaryAmount{25000, equiCur};
+      } else if (amount == ma5) {
+        equi = MonetaryAmount{675, equiCur, 1};
+      } else {
+        throw exception("Should not happen");
+      }
+    }
+
+    balancePerExchange = BalancePerExchange{{&exchange1, bp1}, {&exchange4, bp2}, {&exchange2, bp3}, {&exchange3, bp3}};
+  }
+
+  MonetaryAmount ma1{15000, "ADA"};
+  MonetaryAmount ma2{56, "BTC", 2};
+  MonetaryAmount ma3{347, "XRP", 1};
+  MonetaryAmount ma4{15, "ETH"};
+  MonetaryAmount ma5{123, "XLM"};
+
   CurrencyCode equiCur{"EUR"};
-  BalancePortfolio bp1{{MonetaryAmount("15000ADA"), MonetaryAmount("10000EUR")},
-                       {MonetaryAmount("0.56BTC"), MonetaryAmount("9067.7EUR")}};
-  BalancePortfolio bp2{{MonetaryAmount("34.7XRP"), MonetaryAmount("45.08EUR")},
-                       {MonetaryAmount("15ETH"), MonetaryAmount("25000EUR")},
-                       {MonetaryAmount("123XLM"), MonetaryAmount("67.5EUR")}};
+  BalancePortfolio bp1{ma1, ma2};
+  BalancePortfolio bp2{ma3, ma4, ma5};
   BalancePortfolio bp3;
-  BalancePerExchange balancePerExchange{{&exchange1, bp1}, {&exchange4, bp2}, {&exchange2, bp3}, {&exchange3, bp3}};
+  BalancePerExchange balancePerExchange;
 };
 
 TEST_F(QueryResultPrinterBalanceEquiCurTest, FormattedTable) {
