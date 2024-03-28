@@ -171,7 +171,6 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
 
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
 
   // Kraken returns total balance, including the amounts in use
   if (!withBalanceInUse) {
@@ -203,9 +202,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
       }
     }
   }
-  for (MonetaryAmount amount : balanceAmounts) {
-    addBalance(balancePortfolio, amount, equiCurrency);
-  }
+  std::ranges::for_each(balanceAmounts, [&balancePortfolio](const auto amt) { balancePortfolio += amt; });
   return balancePortfolio;
 }
 

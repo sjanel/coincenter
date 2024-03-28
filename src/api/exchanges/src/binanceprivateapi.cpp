@@ -258,12 +258,21 @@ bool BinancePrivate::validateApiKey() {
 }
 
 BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account", _queryDelay);
-  bool withBalanceInUse =
+  const json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account", _queryDelay);
+  const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
+
   BalancePortfolio balancePortfolio;
-  for (const json& balance : result["balances"]) {
+
+  auto dataIt = result.find("balances");
+  if (dataIt == result.end()) {
+    log::error("Unexpected get account balance reply from {}", exchangeName());
+    return balancePortfolio;
+  }
+
+  balancePortfolio.reserve(dataIt->size());
+
+  for (const json& balance : *dataIt) {
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
     MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
 
@@ -272,7 +281,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
       amount += usedAmount;
     }
 
-    addBalance(balancePortfolio, amount, equiCurrency);
+    balancePortfolio += amount;
   }
   return balancePortfolio;
 }
