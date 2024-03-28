@@ -15,8 +15,8 @@ namespace cct {
 
 namespace details {
 template <class SizeType>
-void ToChars(char *first, SizeType s, std::integral auto i) {
-  if (auto [ptr, errc] = std::to_chars(first, first + s, i); CCT_UNLIKELY(errc != std::errc())) {
+void ToChars(char *first, SizeType sz, std::integral auto val) {
+  if (auto [ptr, errc] = std::to_chars(first, first + sz, val); CCT_UNLIKELY(errc != std::errc())) {
     throw exception("Unable to decode integral into string");
   }
 }
@@ -24,9 +24,9 @@ void ToChars(char *first, SizeType s, std::integral auto i) {
 
 inline string ToString(std::integral auto val) {
   const int nbDigitsInt = nchars(val);
-  string s(nbDigitsInt, '0');
-  details::ToChars(s.data(), nbDigitsInt, val);
-  return s;
+  string str(nbDigitsInt, '0');
+  details::ToChars(str.data(), nbDigitsInt, val);
+  return str;
 }
 
 template <std::integral Integral>
@@ -42,17 +42,17 @@ Integral FromString(std::string_view str) {
 }
 
 template <class StringType>
-void SetString(StringType &s, std::integral auto i) {
-  const int nbDigitsInt = nchars(i);
-  s.resize(nbDigitsInt, '0');
-  details::ToChars(s.data(), nbDigitsInt, i);
+void SetString(StringType &str, std::integral auto val) {
+  const int nbDigitsInt = nchars(val);
+  str.resize(nbDigitsInt, '0');
+  details::ToChars(str.data(), nbDigitsInt, val);
 }
 
 template <class StringType>
-void AppendString(StringType &s, std::integral auto i) {
-  const int nbDigitsInt = nchars(i);
-  s.append(nbDigitsInt, '0');
-  details::ToChars(s.data() + static_cast<int>(s.size()) - nbDigitsInt, nbDigitsInt, i);
+void AppendString(StringType &str, std::integral auto val) {
+  const int nbDigitsInt = nchars(val);
+  str.append(nbDigitsInt, '0');
+  details::ToChars(str.data() + static_cast<int>(str.size()) - nbDigitsInt, nbDigitsInt, val);
 }
 
 inline std::size_t strnlen(const char *start, std::size_t maxLen) {

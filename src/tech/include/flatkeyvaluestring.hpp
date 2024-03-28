@@ -6,7 +6,6 @@
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <initializer_list>
 #include <iterator>
 #include <limits>
@@ -22,6 +21,7 @@
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "unreachable.hpp"
+#include "url-encode.hpp"
 
 namespace cct {
 
@@ -228,7 +228,7 @@ class FlatKeyValueString {
   auto front() const { return *begin(); }
   auto back() const { return *(--end()); }
 
-  /// Append a new value for a key. No check is done on a duplicate key.
+  /// Pushes a new {key, value} entry to the back of the FlatKeyValueString. No check is done on a duplicate key.
   /// There are several ways to set values as arrays (and none is standard). Choose the method depending on your
   /// usage:
   ///   - "aKey[]=val1&aKey[]=val2" can be used with several appends (one per value) with the same key suffixed with
@@ -240,14 +240,15 @@ class FlatKeyValueString {
   ///       "val": value is a single string
   ///       "val,": value is an array of a single string
   ///       "val1,val2,": value is an array of two values val1 and val2
-  void push_back(std::string_view key, std::string_view value);
+  void emplace_back(std::string_view key, std::string_view value);
 
-  void push_back(std::string_view key, std::integral auto val) {
+  void emplace_back(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
-    char buf[std::numeric_limits<decltype(val)>::digits10 + 2];
-    auto ret = std::to_chars(buf, std::end(buf), val);
+    std::array<char, std::numeric_limits<decltype(val)>::digits10 + 2> buf;
 
-    push_back(key, std::string_view(buf, ret.ptr));
+    auto [ptr, errc] = std::to_chars(buf.data(), buf.data() + buf.size(), val);
+
+    emplace_back(key, std::string_view(buf.data(), ptr));
   }
 
   void push_back(const KeyValuePair &kvPair);
@@ -256,14 +257,16 @@ class FlatKeyValueString {
   /// No check is made on duplicated keys.
   void append(const FlatKeyValueString &rhs);
 
-  /// Like push_back, but insert at beginning instead
-  void push_front(std::string_view key, std::string_view value);
+  /// Pushes a new {key, value} entry at the front of this buffer.
+  void emplace_front(std::string_view key, std::string_view value);
 
-  void push_front(std::string_view key, std::integral auto i) {
+  void emplace_front(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
-    char buf[std::numeric_limits<decltype(i)>::digits10 + 2];
-    auto ret = std::to_chars(buf, std::end(buf), i);
-    push_front(key, std::string_view(buf, ret.ptr));
+    std::array<char, std::numeric_limits<decltype(val)>::digits10 + 2> buf;
+
+    auto [ptr, errc] = std::to_chars(buf.data(), buf.data() + buf.size(), val);
+
+    emplace_front(key, std::string_view(buf.data(), ptr));
   }
 
   void push_front(const KeyValuePair &kvPair);
@@ -319,7 +322,7 @@ class FlatKeyValueString {
   /// Returns a new FlatKeyValueString URL encoded except delimiters.
   FlatKeyValueString urlEncodeExceptDelimiters() const;
 
-  auto operator<=>(const FlatKeyValueString &) const = default;
+  auto operator<=>(const FlatKeyValueString &) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
@@ -332,13 +335,11 @@ class FlatKeyValueString {
 
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::FlatKeyValueString(std::span<const KeyValuePair> init) {
-  for (const KeyValuePair &kv : init) {
-    push_back(kv);
-  }
+  std::ranges::for_each(init, [this](const auto &kv) { push_back(kv); });
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_back(std::string_view key, std::string_view value) {
+void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::emplace_back(std::string_view key, std::string_view value) {
   assert(!key.empty());
   assert(!value.empty());
   assert(key.find(KeyValuePairSep) == std::string_view::npos);
@@ -359,10 +360,10 @@ template <char KeyValuePairSep, char AssignmentChar>
 inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_back(const KeyValuePair &kv) {
   switch (kv.val.index()) {
     case 0:
-      push_back(kv.key, std::get<std::string_view>(kv.val));
+      emplace_back(kv.key, std::get<std::string_view>(kv.val));
       break;
     case 1:
-      push_back(kv.key, std::get<typename KeyValuePair::IntegralType>(kv.val));
+      emplace_back(kv.key, std::get<typename KeyValuePair::IntegralType>(kv.val));
       break;
     default:
       unreachable();
@@ -380,7 +381,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyVa
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_front(std::string_view key, std::string_view value) {
+void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::emplace_front(std::string_view key, std::string_view value) {
   assert(!key.empty());
   assert(!value.empty());
   assert(key.find(KeyValuePairSep) == std::string_view::npos);
@@ -403,10 +404,10 @@ template <char KeyValuePairSep, char AssignmentChar>
 inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_front(const KeyValuePair &kv) {
   switch (kv.val.index()) {
     case 0:
-      push_front(kv.key, std::get<std::string_view>(kv.val));
+      emplace_front(kv.key, std::get<std::string_view>(kv.val));
       break;
     case 1:
-      push_front(kv.key, std::get<typename KeyValuePair::IntegralType>(kv.val));
+      emplace_front(kv.key, std::get<typename KeyValuePair::IntegralType>(kv.val));
       break;
     default:
       unreachable();
@@ -423,7 +424,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::set(std::string_view k
 
   const std::size_t pos = find(key);
   if (pos == string::npos) {
-    push_back(key, value);
+    emplace_back(key, value);
   } else {
     string::const_iterator first = _data.begin() + pos + key.size() + 1;
     string::const_iterator last = first + 1;
@@ -535,23 +536,10 @@ json FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJson() const {
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::urlEncodeExceptDelimiters() const {
-  string ret(3U * _data.size(), '\0');
-  char *outCharIt = ret.data();
-  for (char ch : _data) {
-    if (isalnum(ch) || ch == '@' || ch == '.' || ch == '\\' || ch == '-' || ch == '_' || ch == ':' ||
-        ch == KeyValuePairSep || ch == AssignmentChar) {
-      *outCharIt++ = ch;
-    } else {
-#ifdef CCT_MSVC
-      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(ch));
-#else
-      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(ch));
-#endif
-      outCharIt += 3;
-    }
-  }
-  ret.resize(outCharIt - ret.data());
-  return FlatKeyValueString<KeyValuePairSep, AssignmentChar>(std::move(ret));
+  return FlatKeyValueString<KeyValuePairSep, AssignmentChar>(URLEncode(_data, [](char ch) {
+    return isalnum(ch) || ch == '@' || ch == '.' || ch == '\\' || ch == '-' || ch == '_' || ch == ':' ||
+           ch == KeyValuePairSep || ch == AssignmentChar;
+  }));
 }
 
 }  // namespace cct

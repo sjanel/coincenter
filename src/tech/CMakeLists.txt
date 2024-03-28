@@ -30,6 +30,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    char-hexadecimal-converter_test
+    test/char-hexadecimal-converter_test.cpp
+)
+
+add_unit_test(
     codec_test
     src/codec.cpp
     test/codec_test.cpp
@@ -141,4 +146,9 @@ add_unit_test(
     test/unitsparser_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    url-encode_test.cpp
+    test/url-encode_test.cpp
 )

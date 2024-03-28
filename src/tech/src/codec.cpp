@@ -1,23 +1,22 @@
 #include "codec.hpp"
 
 #include <cstddef>
-#include <cstdio>
 #include <span>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
+#include "char-hexadecimal-converter.hpp"
 
 namespace cct {
 
 string BinToHex(std::span<const unsigned char> binData) {
-  static constexpr const char* const kHexits = "0123456789abcdef";
-  auto sz = binData.size();
-  string ret(2 * sz, '\0');
-  while (sz != 0) {
-    --sz;
-    ret[2 * sz] = kHexits[binData[sz] >> 4];
-    ret[(2 * sz) + 1] = kHexits[binData[sz] & 0x0F];
+  string ret(2 * binData.size(), '\0');
+
+  auto out = ret.data();
+
+  for (auto beg = binData.data(), end = beg + binData.size(); beg != end; ++beg) {
+    out = to_lower_hex(*beg, out);
   }
   return ret;
 }
@@ -77,22 +76,4 @@ string B64Decode(std::span<const char> ascData) {
   return ret;
 }
 
-string URLEncode(std::span<const char> ascData) {
-  string ret(3U * ascData.size(), '\0');
-  char* outCharIt = ret.data();
-  for (char ch : ascData) {
-    if (isalnum(ch) || ch == '-' || ch == '.' || ch == '_' || ch == '~') {
-      *outCharIt++ = ch;
-    } else {
-#ifdef CCT_MSVC
-      sprintf_s(outCharIt, 4, "%%%02X", static_cast<unsigned char>(ch));
-#else
-      std::sprintf(outCharIt, "%%%02X", static_cast<unsigned char>(ch));
-#endif
-      outCharIt += 3;
-    }
-  }
-  ret.resize(outCharIt - ret.data());
-  return ret;
-}
 }  // namespace cct

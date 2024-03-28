@@ -47,6 +47,7 @@
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "tradeside.hpp"
+#include "url-encode.hpp"
 #include "wallet.hpp"
 #include "withdraw.hpp"
 #include "withdrawinfo.hpp"
@@ -81,7 +82,9 @@ CurlOptions::PostDataFormat ComputePostDataFormat(HttpRequestType requestType, c
 
 void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
                           std::string_view endpoint, CurlPostData& postData, CurlPostData& signaturePostData) {
-  signaturePostData.set("Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat)));
+  auto isNotEncoded = [](char ch) { return isalnum(ch) || ch == '-' || ch == '.' || ch == '_' || ch == '~'; };
+
+  signaturePostData.set("Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat), isNotEncoded));
 
   if (!postData.empty() && requestType == HttpRequestType::kGet) {
     // Warning: Huobi expects that all parameters of the query are ordered lexicographically
@@ -98,11 +101,12 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
     signaturePostData.pop_back();
   }
 
-  signaturePostData.push_back(
-      kSignatureKey, URLEncode(B64Encode(ssl::ShaBin(
-                         ssl::ShaType::kSha256,
-                         BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint, signaturePostData.str()),
-                         apiKey.privateKey()))));
+  signaturePostData.emplace_back(
+      kSignatureKey, URLEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256,
+                                                     BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint,
+                                                                   signaturePostData.str()),
+                                                     apiKey.privateKey())),
+                               isNotEncoded));
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
@@ -241,19 +245,19 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
   CurlPostData params;
 
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
-    params.push_back("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
+    params.emplace_back("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
   }
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
-    params.push_back("start-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
+    params.emplace_back("start-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
   }
 
   if (closedOrdersConstraints.isMarketDefined()) {
     // we can use the more detailed endpoint that requires the market
 
     // Do not ask for cancelled orders without any matched part
-    params.push_back("states", "filled");
+    params.emplace_back("states", "filled");
 
-    params.push_back("symbol", closedOrdersConstraints.market().assetsPairStrLower());
+    params.emplace_back("symbol", closedOrdersConstraints.market().assetsPairStrLower());
   } else {
     // Only past 48h orders may be retrieved without market
   }
@@ -323,7 +327,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
                                                                               openedOrdersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.push_back("symbol", filterMarket.assetsPairStrLower());
+      params.emplace_back("symbol", filterMarket.assetsPairStrLower());
     }
   }
 
@@ -411,10 +415,10 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
-    options.push_back("currency", ToLower(depositsConstraints.currencyCode().str()));
+    options.emplace_back("currency", ToLower(depositsConstraints.currencyCode().str()));
   }
-  options.push_back("size", 500);
-  options.push_back("type", "deposit");
+  options.emplace_back("size", 500);
+  options.emplace_back("type", "deposit");
   json data =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw", std::move(options));
   const auto dataIt = data.find("data");
@@ -533,10 +537,10 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
-    options.push_back("currency", ToLower(withdrawsConstraints.currencyCode().str()));
+    options.emplace_back("currency", ToLower(withdrawsConstraints.currencyCode().str()));
   }
-  options.push_back("size", 500);
-  options.push_back("type", "withdraw");
+  options.emplace_back("size", 500);
+  options.emplace_back("type", "withdraw");
   return options;
 }
 }  // namespace
@@ -640,10 +644,10 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
       placePostData.set("amount", from.amountStr());
     }
   } else {
-    placePostData.push_back("price", price.amountStr());
+    placePostData.emplace_back("price", price.amountStr());
   }
-  placePostData.push_back("symbol", lowerCaseMarket);
-  placePostData.push_back("type", type);
+  placePostData.emplace_back("symbol", lowerCaseMarket);
+  placePostData.emplace_back("type", type);
 
   json result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", std::move(placePostData));
@@ -742,9 +746,9 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
   CurlPostData withdrawPostData;
   if (destinationWallet.hasTag()) {
-    withdrawPostData.push_back("addr-tag", destinationWallet.tag());
+    withdrawPostData.emplace_back("addr-tag", destinationWallet.tag());
   }
-  withdrawPostData.push_back("address", destinationWallet.address());
+  withdrawPostData.emplace_back("address", destinationWallet.address());
 
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   HuobiPublic::WithdrawParams withdrawParams = huobiPublic.getWithdrawParams(currencyCode);
@@ -764,10 +768,10 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     grossAmount.truncate(withdrawParams.withdrawPrecision);
   }
 
-  withdrawPostData.push_back("amount", netEmittedAmount.amountStr());
-  withdrawPostData.push_back("currency", lowerCaseCur);
+  withdrawPostData.emplace_back("amount", netEmittedAmount.amountStr());
+  withdrawPostData.emplace_back("currency", lowerCaseCur);
   // Strange to have the fee as input parameter of a withdraw...
-  withdrawPostData.push_back("fee", withdrawFee.amountStr());
+  withdrawPostData.emplace_back("fee", withdrawFee.amountStr());
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
                              std::move(withdrawPostData));

@@ -32,6 +32,8 @@ class CacheFreezerRAII {
     return *this;
   }
 
+  void swap(CacheFreezerRAII &rhs) noexcept { std::swap(_pCachedResultVault, rhs._pCachedResultVault); }
+
   ~CacheFreezerRAII() {
     if (_pCachedResultVault != nullptr) {
       _pCachedResultVault->unfreezeAll();

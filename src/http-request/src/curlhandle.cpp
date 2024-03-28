@@ -323,7 +323,7 @@ void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &quer
   }
   FlatQueryResponseMap flatQueryResponses;
   for (const auto &[query, response] : queryResponsesMap) {
-    flatQueryResponses.push_back(query, response);
+    flatQueryResponses.emplace_back(query, response);
   }
   _queryData = string(flatQueryResponses.str());
 }
