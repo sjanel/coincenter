@@ -21,7 +21,6 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangebase.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -56,31 +55,31 @@ ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangeP
     : _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
 BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
-  UniqueQueryHandle uniqueQueryHandle(_cachedResultVault);
   BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
+
+  const auto equiCurrency = balanceOptions.equiCurrency();
+  if (equiCurrency.isDefined()) {
+    computeEquiCurrencyAmounts(balancePortfolio, equiCurrency);
+  }
+
   log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
+
   return balancePortfolio;
 }
 
-void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
-  if (amount != 0) {
-    ExchangeName exchangeName = this->exchangeName();
-    if (equiCurrency.isNeutral()) {
-      log::debug("{} Balance {}", exchangeName, amount);
-      balancePortfolio.add(amount);
-    } else {
-      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
-          _exchangePublic.estimatedConvert(amount, equiCurrency);
-      MonetaryAmount equivalentInMainCurrency;
-      if (optConvertedAmountEquiCurrency) {
-        equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
-      } else {
-        log::warn("Cannot convert {} -> {} on {}", amount.currencyStr(), equiCurrency, exchangeName);
-        equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
-      }
-      log::debug("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);
-      balancePortfolio.add(amount, equivalentInMainCurrency);
-    }
+void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency) {
+  MarketOrderBookMap marketOrderBookMap;
+  auto fiats = _exchangePublic.queryFiats();
+  MarketSet markets;
+  ExchangeName exchangeName = this->exchangeName();
+
+  for (auto &[amount, equi] : balancePortfolio) {
+    MarketsPath conversionPath =
+        _exchangePublic.findMarketsPath(amount.currencyCode(), equiCurrency, markets, fiats,
+                                        ExchangePublic::MarketPathMode::kWithPossibleFiatConversionAtExtremity);
+    equi = _exchangePublic.convert(amount, equiCurrency, conversionPath, fiats, marketOrderBookMap)
+               .value_or(MonetaryAmount(0, equiCurrency));
+    log::trace("{} Balance {} (eq. {})", exchangeName, amount, equi);
   }
 }
 
@@ -257,10 +256,12 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   InitiatedWithdrawInfo initiatedWithdrawInfo =
       launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
-  Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+  const Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+
   log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {}",
             initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
             targetExchange.exchangeName(), DurationToString(withdrawRefreshTime));
+
   SentWithdrawInfo sentWithdrawInfo(currencyCode);
   MonetaryAmount netDeliveredAmount;
 
@@ -342,8 +343,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
                                                  CurrencyCode currencyCode, const MarketSet &markets,
                                                  const PenaltyPerMarketMap &penaltyPerMarketMap) {
   MarketVector possibleMarkets;
-  for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
-    MonetaryAmount avAmount = avAmountEq.amount;
+  for (const auto [avAmount, _] : balance) {
     CurrencyCode avCur = avAmount.currencyCode();
     const auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
     if (lbAvAmount == dustThresholds.end() || *lbAvAmount < avAmount) {

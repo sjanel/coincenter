@@ -33,7 +33,6 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
-#include "invariant-request-retry.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -41,6 +40,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "request-retry.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -55,17 +55,17 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
     endpoint.push_back('?');
     endpoint.append(curlPostData.str());
   }
-  InvariantRequestRetry requestRetry(curlHandle, endpoint, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  return requestRetry.queryJson([](const json& jsonResponse) {
+  return requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
     const auto foundErrorIt = jsonResponse.find("code");
     const auto foundMsgIt = jsonResponse.find("msg");
     if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
       const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
       log::warn("Binance error ({}), full json: '{}'", statusCode, jsonResponse.dump());
-      return InvariantRequestRetry::Status::kResponseError;
+      return RequestRetry::Status::kResponseError;
     }
-    return InvariantRequestRetry::Status::kResponseOK;
+    return RequestRetry::Status::kResponseOK;
   });
 }
 
@@ -114,7 +114,13 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                    _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
-  json result = json::parse(_commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)));
+  static constexpr bool kAllowExceptions = false;
+  json result = json::parse(_commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr,
+                            kAllowExceptions);
+  if (result.is_discarded()) {
+    log::error("{} health check response is badly formatted", _name, result.dump());
+    return false;
+  }
   if (!result.empty()) {
     log::error("{} health check is not empty: {}", _name, result.dump());
   }

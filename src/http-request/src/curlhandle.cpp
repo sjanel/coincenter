@@ -205,13 +205,13 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   curl_slist *curlListPtr = nullptr;
   curl_slist *oldCurlListPtr = nullptr;
-  for (const auto &[httpHeaderKey, httpHeaderValue] : opts.httpHeaders()) {
+  for (const auto &httpHeader : opts.httpHeaders()) {
     // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
     // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
     // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
     // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
     // guaranteed to be null-terminated since C++11)
-    curlListPtr = curl_slist_append(curlListPtr, httpHeaderKey.data());
+    curlListPtr = curl_slist_append(curlListPtr, httpHeader.key().data());
     if (curlListPtr == nullptr) {
       curl_slist_free_all(oldCurlListPtr);
       throw std::bad_alloc();
@@ -323,7 +323,7 @@ void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &quer
   }
   FlatQueryResponseMap flatQueryResponses;
   for (const auto &[query, response] : queryResponsesMap) {
-    flatQueryResponses.append(query, response);
+    flatQueryResponses.push_back(query, response);
   }
   _queryData = string(flatQueryResponses.str());
 }

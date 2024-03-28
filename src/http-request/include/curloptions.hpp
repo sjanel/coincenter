@@ -53,8 +53,8 @@ class CurlOptions {
 
   void clearHttpHeaders() { _httpHeaders.clear(); }
 
-  void appendHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.append(key, value); }
-  void appendHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.append(key, value); }
+  void appendHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.push_back(key, value); }
+  void appendHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.push_back(key, value); }
 
   void setHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.set(key, value); }
   void setHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.set(key, value); }
@@ -64,7 +64,7 @@ class CurlOptions {
 
  private:
   void setPostDataInJsonFormat() {
-    _httpHeaders.append("Content-Type", "application/json");
+    _httpHeaders.push_back("Content-Type", "application/json");
     _postdataInJsonFormat = true;
   }
 
