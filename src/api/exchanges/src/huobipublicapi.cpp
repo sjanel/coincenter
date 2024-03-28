@@ -384,7 +384,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
     if (lb == kAuthorizedDepths.end()) {
       log::warn("Invalid depth {}, default to {}", depth, kHuobiStandardOrderBookDefaultDepth);
     } else if (*lb != kHuobiStandardOrderBookDefaultDepth) {
-      postData.push_back("depth", *lb);
+      postData.emplace_back("depth", *lb);
     }
   }
 

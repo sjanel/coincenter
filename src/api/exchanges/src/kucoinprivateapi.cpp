@@ -240,14 +240,14 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
         exchangePublic.determineMarketFromFilterCurrencies(markets, ordersConstraints.cur1(), ordersConstraints.cur2());
 
     if (filterMarket.isDefined()) {
-      params.push_back("symbol", filterMarket.assetsPairStrUpper('-'));
+      params.emplace_back("symbol", filterMarket.assetsPairStrUpper('-'));
     }
   }
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    params.push_back("startAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
+    params.emplace_back("startAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
   }
   if (ordersConstraints.isPlacedTimeBeforeDefined()) {
-    params.push_back("endAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedBefore()));
+    params.emplace_back("endAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedBefore()));
   }
   json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
 
@@ -313,7 +313,7 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
   if (openedOrdersConstraints.isMarketOnlyDependent() || openedOrdersConstraints.noConstraints()) {
     CurlPostData params;
     if (openedOrdersConstraints.isMarketDefined()) {
-      params.push_back("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
+      params.emplace_back("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
     }
     json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
     int nbCancelledOrders = 0;
@@ -351,17 +351,17 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
 DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
-    options.push_back("currency", depositsConstraints.currencyCode().str());
+    options.emplace_back("currency", depositsConstraints.currencyCode().str());
   }
   if (depositsConstraints.isTimeAfterDefined()) {
-    options.push_back("startAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
+    options.emplace_back("startAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeAfter()));
   }
   if (depositsConstraints.isTimeBeforeDefined()) {
-    options.push_back("endAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
+    options.emplace_back("endAt", TimestampToMillisecondsSinceEpoch(depositsConstraints.timeBefore()));
   }
   if (depositsConstraints.isIdDefined()) {
     if (depositsConstraints.idSet().size() == 1) {
-      options.push_back("txId", depositsConstraints.idSet().front());
+      options.emplace_back("txId", depositsConstraints.idSet().front());
     }
   }
   json depositJson =
@@ -426,13 +426,13 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
   CurlPostData options;
   if (withdrawsConstraints.isCurDefined()) {
-    options.push_back("currency", withdrawsConstraints.currencyCode().str());
+    options.emplace_back("currency", withdrawsConstraints.currencyCode().str());
   }
   if (withdrawsConstraints.isTimeAfterDefined()) {
-    options.push_back("startAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
+    options.emplace_back("startAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeAfter()));
   }
   if (withdrawsConstraints.isTimeBeforeDefined()) {
-    options.push_back("endAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
+    options.emplace_back("endAt", TimestampToMillisecondsSinceEpoch(withdrawsConstraints.timeBefore()));
   }
   return options;
 }
@@ -505,19 +505,19 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
 
   CurlPostData params = KucoinPublic::GetSymbolPostData(mk);
-  params.push_back("clientOid", Nonce_TimeSinceEpochInMs());
-  params.push_back("side", buyOrSell);
-  params.push_back("type", strategyType);
-  params.push_back("remark", "Placed by coincenter client");
-  params.push_back("tradeType", "TRADE");
-  params.push_back("size", volume.amountStr());
+  params.emplace_back("clientOid", Nonce_TimeSinceEpochInMs());
+  params.emplace_back("side", buyOrSell);
+  params.emplace_back("type", strategyType);
+  params.emplace_back("remark", "Placed by coincenter client");
+  params.emplace_back("tradeType", "TRADE");
+  params.emplace_back("size", volume.amountStr());
   if (!isTakerStrategy) {
-    params.push_back("price", price.amountStr());
+    params.emplace_back("price", price.amountStr());
   }
 
   // Add automatic cancelling just in case program unexpectedly stops
-  params.push_back("timeInForce", "GTT");  // Good until cancelled or time expires
-  params.push_back("cancelAfter", std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count() + 1);
+  params.emplace_back("timeInForce", "GTT");  // Good until cancelled or time expires
+  params.emplace_back("cancelAfter", std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count() + 1);
 
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params))["data"];
   placeOrderInfo.orderId = std::move(result["orderId"].get_ref<string&>());
@@ -576,7 +576,7 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
                     {"address", destinationWallet.address()},
                     {"amount", netEmittedAmount.amountStr()}};
   if (destinationWallet.hasTag()) {
-    opts.push_back("memo", destinationWallet.tag());
+    opts.emplace_back("memo", destinationWallet.tag());
   }
 
   json result =

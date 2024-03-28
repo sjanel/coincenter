@@ -6,8 +6,8 @@ namespace cct {
 MetricKey CreateMetricKey(std::string_view name, std::string_view help) {
   MetricKey key;
 
-  key.push_back(kMetricNameKey, name);
-  key.push_back(kMetricHelpKey, help);
+  key.emplace_back(kMetricNameKey, name);
+  key.emplace_back(kMetricHelpKey, help);
 
   return key;
 }

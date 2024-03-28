@@ -33,7 +33,7 @@ TEST(FlatKeyValueStringTest, SetEmpty) {
 
 TEST(FlatKeyValueStringTest, SetAndAppend) {
   KvPairs kvPairs;
-  kvPairs.push_back("abc", "666");
+  kvPairs.emplace_back("abc", "666");
   kvPairs.push_back({"de", "aX"});
   EXPECT_EQ(kvPairs.get("def"), "");
   EXPECT_FALSE(kvPairs.empty());
@@ -53,11 +53,11 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=encoreplustricky");
   kvPairs.set("d", "cestboncestfini");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini");
-  kvPairs.push_back("newKey", "=");
+  kvPairs.emplace_back("newKey", "=");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==");
-  kvPairs.push_back("$5*(%", ".9h===,Mj");
+  kvPairs.emplace_back("$5*(%", ".9h===,Mj");
   EXPECT_EQ(kvPairs.str(), "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj");
-  kvPairs.push_back("encoreplustricky", "=");
+  kvPairs.emplace_back("encoreplustricky", "=");
   EXPECT_EQ(kvPairs.str(),
             "abc=777&de=aX&def=titi&777=yoplalepiege&d=cestboncestfini&newKey==&$5*(%=.9h===,Mj&encoreplustricky==");
   kvPairs.set("$5*(%", ".9h==,Mj");
@@ -67,13 +67,13 @@ TEST(FlatKeyValueStringTest, SetAndAppend) {
 
 TEST(FlatKeyValueStringTest, Prepend) {
   KvPairs kvPairs;
-  kvPairs.push_front("statue", "liberty");
+  kvPairs.emplace_front("statue", "liberty");
   EXPECT_EQ(kvPairs.str(), "statue=liberty");
-  kvPairs.push_front("city", "New York City");
+  kvPairs.emplace_front("city", "New York City");
   EXPECT_EQ(kvPairs.str(), "city=New York City&statue=liberty");
   kvPairs.push_front({"state", "New York"});
   EXPECT_EQ(kvPairs.str(), "state=New York&city=New York City&statue=liberty");
-  kvPairs.push_front("Postal Code", 10015);
+  kvPairs.emplace_front("Postal Code", 10015);
   EXPECT_EQ(kvPairs.str(), "Postal Code=10015&state=New York&city=New York City&statue=liberty");
 }
 
@@ -105,7 +105,7 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0rm:Yy3\0huhu:haha"sv));
   kvPairs.erase("rm");
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha"sv));
-  kvPairs.push_back("&newField", "&&newValue&&");
+  kvPairs.emplace_back("&newField", "&&newValue&&");
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
 
   int kvPairPos = 0;
@@ -131,13 +131,13 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
 
 TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(), json()); }
 
-class CurlOptionsCase1 : public ::testing::Test {
+class FlatKeyValueStringCase1 : public ::testing::Test {
  protected:
   KvPairs kvPairs{{"units", "0.11176"}, {"price", "357.78"},  {"777", "encoredutravail?"},     {"hola", "quetal"},
                   {"k", "v"},           {"array1", "val1,,"}, {"array2", ",val1,val2,value,"}, {"emptyArray", ","}};
 };
 
-TEST_F(CurlOptionsCase1, Front) {
+TEST_F(FlatKeyValueStringCase1, Front) {
   const auto &kvFront = kvPairs.front();
 
   EXPECT_EQ(kvFront.key(), "units");
@@ -149,7 +149,7 @@ TEST_F(CurlOptionsCase1, Front) {
   EXPECT_EQ(kvFront.size(), 13U);
 }
 
-TEST_F(CurlOptionsCase1, Back) {
+TEST_F(FlatKeyValueStringCase1, Back) {
   const auto kvFront = kvPairs.back();
 
   EXPECT_EQ(kvFront.key(), "emptyArray");
@@ -161,7 +161,7 @@ TEST_F(CurlOptionsCase1, Back) {
   EXPECT_EQ(kvFront.size(), 12U);
 }
 
-TEST_F(CurlOptionsCase1, PopBack) {
+TEST_F(FlatKeyValueStringCase1, PopBack) {
   EXPECT_NE(kvPairs.find("emptyArray"), string::npos);
   kvPairs.pop_back();
   EXPECT_EQ(kvPairs.find("emptyArray"), string::npos);
@@ -171,7 +171,7 @@ TEST_F(CurlOptionsCase1, PopBack) {
   EXPECT_EQ(newBack.val(), ",val1,val2,value,");
 }
 
-TEST_F(CurlOptionsCase1, Get) {
+TEST_F(FlatKeyValueStringCase1, Get) {
   EXPECT_EQ(kvPairs.get("units"), "0.11176");
   EXPECT_EQ(kvPairs.get("price"), "357.78");
   EXPECT_EQ(kvPairs.get("777"), "encoredutravail?");
@@ -184,7 +184,7 @@ TEST_F(CurlOptionsCase1, Get) {
   EXPECT_EQ(kvPairs.get("laipas"), "");
 }
 
-TEST_F(CurlOptionsCase1, ForwardIterator) {
+TEST_F(FlatKeyValueStringCase1, ForwardIterator) {
   int itPos = 0;
   for (const auto &kv : kvPairs) {
     const auto key = kv.key();
@@ -229,7 +229,7 @@ TEST_F(CurlOptionsCase1, ForwardIterator) {
   EXPECT_EQ(itPos, 8);
 }
 
-TEST_F(CurlOptionsCase1, BackwardIterator) {
+TEST_F(FlatKeyValueStringCase1, BackwardIterator) {
   int itPos = 0;
   for (auto it = kvPairs.end(); it != kvPairs.begin();) {
     const auto kv = *--it;
@@ -275,7 +275,7 @@ TEST_F(CurlOptionsCase1, BackwardIterator) {
   EXPECT_EQ(itPos, 8);
 }
 
-TEST_F(CurlOptionsCase1, EraseIncrementDecrement) {
+TEST_F(FlatKeyValueStringCase1, EraseIncrementDecrement) {
   kvPairs.erase(kvPairs.begin());
   const auto &kvFront = kvPairs.front();
 
@@ -332,7 +332,7 @@ TEST_F(CurlOptionsCase1, EraseIncrementDecrement) {
   EXPECT_EQ(itPos, 5);
 }
 
-TEST_F(CurlOptionsCase1, ConvertToJson) {
+TEST_F(FlatKeyValueStringCase1, ConvertToJson) {
   json jsonData = kvPairs.toJson();
 
   EXPECT_EQ(jsonData["units"].get<std::string_view>(), "0.11176");
@@ -365,15 +365,15 @@ TEST_F(CurlOptionsCase1, ConvertToJson) {
   EXPECT_TRUE(arrayIt->empty());
 }
 
-TEST_F(CurlOptionsCase1, AppendIntegralValues) {
-  kvPairs.push_back("price1", 1957386078376L);
+TEST_F(FlatKeyValueStringCase1, AppendIntegralValues) {
+  kvPairs.emplace_back("price1", 1957386078376L);
   EXPECT_EQ(kvPairs.get("price1"), "1957386078376");
   int8_t val = -116;
-  kvPairs.push_back("testu", val);
+  kvPairs.emplace_back("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");
 }
 
-TEST_F(CurlOptionsCase1, SetIntegralValues) {
+TEST_F(FlatKeyValueStringCase1, SetIntegralValues) {
   kvPairs.set("price1", 42);
   EXPECT_EQ(kvPairs.get("price"), "357.78");
   EXPECT_EQ(kvPairs.get("price1"), "42");
@@ -385,6 +385,12 @@ TEST_F(CurlOptionsCase1, SetIntegralValues) {
   int8_t val = -116;
   kvPairs.set("testu", val);
   EXPECT_EQ(kvPairs.get("testu"), "-116");
+}
+
+TEST_F(FlatKeyValueStringCase1, UrlEncode) {
+  EXPECT_EQ(kvPairs.urlEncodeExceptDelimiters().str(),
+            "units=0.11176&price=357.78&777=encoredutravail%3F&hola=quetal&k=v&array1=val1%2C%2C&array2=%2Cval1%2Cval2%"
+            "2Cvalue%2C&emptyArray=%2C");
 }
 
 }  // namespace cct

@@ -297,7 +297,8 @@ template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                   CurlPostDataT&& curlPostData = CurlPostData()) {
   CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
-  postData.push_front("endpoint", endpoint);
+  postData.emplace_front("endpoint", endpoint);
+
   CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
 
   return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, std::move(opts));
@@ -354,12 +355,12 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
   json jsonReply = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}});
 
   BalancePortfolio balancePortfolio;
-
-  const auto balanceItemsIt = jsonReply.find("data");
   if (jsonReply.is_discarded()) {
     log::error("Badly formatted {} reply from balance", exchangeName());
     return balancePortfolio;
   }
+
+  const auto balanceItemsIt = jsonReply.find("data");
   if (balanceItemsIt == jsonReply.end()) {
     return balancePortfolio;
   }
@@ -448,7 +449,7 @@ auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePub
     if (!filterMarket.base().isNeutral()) {
       orderCurrencies.push_back(filterMarket.base());
       if (!filterMarket.quote().isNeutral()) {
-        params.push_back(kPaymentCurParamStr, filterMarket.quote().str());
+        params.emplace_back(kPaymentCurParamStr, filterMarket.quote().str());
       }
     }
   } else {
@@ -496,7 +497,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
 
   OrderVectorType orders;
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    params.push_back("after", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
+    params.emplace_back("after", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedAfter()));
   }
   if (orderCurrencies.size() > 1) {
     if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
@@ -659,16 +660,16 @@ json QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
   if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
     if constexpr (std::is_same_v<ConstraintsType, OrdersConstraints>) {
       if (constraints.isCur2Defined()) {
-        options.push_back(kPaymentCurParamStr, constraints.curStr2());
+        options.emplace_back(kPaymentCurParamStr, constraints.curStr2());
       } else {
-        options.push_back(kPaymentCurParamStr, "KRW");
+        options.emplace_back(kPaymentCurParamStr, "KRW");
       }
     }
   } else {
     // It's not clear what the payment currency option is for user_transactions endpoint for deposits and withdraws.
     // For withdraws it seems to have no impact, and even worse, it returns weird output when
     // querying withdraws for a specific coin, it can return KRW withdraws to user bank account.
-    options.push_back(kPaymentCurParamStr, "BTC");
+    options.emplace_back(kPaymentCurParamStr, "BTC");
   }
 
   json allResults;
@@ -857,8 +858,8 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     endpoint.append(fromCurrencyCode == mk.base() ? "market_sell" : "market_buy");
   } else {
     endpoint.append("place");
-    placePostData.push_back(kTypeParamStr, orderType);
-    placePostData.push_back("price", price.amountStr());
+    placePostData.emplace_back(kTypeParamStr, orderType);
+    placePostData.emplace_back("price", price.amountStr());
   }
 
   // Volume is gross amount if from amount is in quote currency, we should remove the fees
@@ -933,7 +934,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     }
   }
 
-  placePostData.push_back("units", volume.amountStr());
+  placePostData.emplace_back("units", volume.amountStr());
 
   placeOrderInfo.setClosed();
 
@@ -1025,10 +1026,10 @@ CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
   ret.underlyingBufferReserve(kOrderCurrencyParamStr.size() + kPaymentCurParamStr.size() + kTypeParamStr.size() +
                               kOrderIdParamStr.size() + baseStr.size() + quoteStr.size() + orderId.size() + 10U);
 
-  ret.push_back(kOrderCurrencyParamStr, baseStr);
-  ret.push_back(kPaymentCurParamStr, quoteStr);
-  ret.push_back(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
-  ret.push_back(kOrderIdParamStr, orderId);
+  ret.emplace_back(kOrderCurrencyParamStr, baseStr);
+  ret.emplace_back(kPaymentCurParamStr, quoteStr);
+  ret.emplace_back(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
+  ret.emplace_back(kOrderIdParamStr, orderId);
 
   return ret;
 }
@@ -1116,14 +1117,14 @@ CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, 
   // coincenter can retrieve the account owner name automatically provided that the user filled the fields in the
   // destination api key part in the secrets json file.
   if (desAccountOwner.isFullyDefined()) {
-    withdrawPostData.push_back("en_name", desAccountOwner.enName());
-    withdrawPostData.push_back("ko_name", desAccountOwner.koName());
+    withdrawPostData.emplace_back("en_name", desAccountOwner.enName());
+    withdrawPostData.emplace_back("ko_name", desAccountOwner.koName());
   } else {
     log::error("Bithumb withdrawal needs further information for destination account");
     log::error("it needs the English and Korean name of its owner so query will most probably fail");
   }
   if (destinationWallet.hasTag()) {
-    withdrawPostData.push_back("destination", destinationWallet.tag());
+    withdrawPostData.emplace_back("destination", destinationWallet.tag());
   }
   return withdrawPostData;
 }

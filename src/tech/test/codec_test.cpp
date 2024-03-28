@@ -46,9 +46,4 @@ TEST(Base64, Decode7) { EXPECT_EQ(B64Decode(std::string_view("Zm9vYmFyeg==")), "
 TEST(Base64, Decode8) { EXPECT_EQ(B64Decode(std::string_view("Zm9vYmFyelk=")), "foobarzY"); }
 TEST(Base64, Decode9) { EXPECT_EQ(B64Decode(std::string_view("Zm9vYmFyelln")), "foobarzYg"); }
 
-TEST(URLEncode, Test1) {
-  EXPECT_EQ(URLEncode(std::string_view("2023-05-14T09:42:00")), "2023-05-14T09%3A42%3A00");
-  EXPECT_EQ(URLEncode(std::string_view("GORgnlPotuGH5cv4JK8d63JWQqkyCPyIo/Z09DvPd4g=")),
-            "GORgnlPotuGH5cv4JK8d63JWQqkyCPyIo%2FZ09DvPd4g%3D");
-}
 }  // namespace cct
