@@ -36,14 +36,18 @@ COPY data/cache/fiatcache.json ./
 # Create and go to 'bin' directory
 WORKDIR /app/bin
 
-# Build and launch tests if any
+# Configure
 RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
     -DCCT_ENABLE_TESTS=${BUILD_TEST} \
     -DCCT_ENABLE_ASAN=${BUILD_ASAN} \
     -DCCT_BUILD_PROMETHEUS_FROM_SRC=${BUILD_WITH_PROMETHEUS} \
-    -GNinja .. && \
-    ninja && \
-    if [ "$BUILD_TEST" = "1" -o "$BUILD_TEST" = "ON" ]; then \
+    -GNinja ..
+
+# Build
+RUN cmake --build .
+
+# Launch tests if any
+RUN if [ "$BUILD_TEST" = "1" -o "$BUILD_TEST" = "ON" ]; then \
     ctest -j 2 --output-on-failure; \
     fi
 
@@ -64,6 +68,9 @@ COPY --from=build /app/data /app/data
 
 # Copy executable
 COPY --from=build /app/bin/coincenter /app/coincenter
+
+# Test that executable has all its dependencies
+RUN [ "/app/coincenter", "--help" ]
 
 # 'data' directory of host machine can be mounted when launching the container.
 # To do this, you can use --mount option:
