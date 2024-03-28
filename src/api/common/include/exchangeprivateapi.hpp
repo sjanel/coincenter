@@ -132,12 +132,8 @@ class ExchangePrivate : public ExchangeBase {
 
   virtual BalancePortfolio queryAccountBalance(const BalanceOptions &balanceOptions = BalanceOptions()) = 0;
 
-  /// Adds an amount to given BalancePortfolio.
-  /// @param equiCurrency Asks conversion of given amount into this currency as well
-  void addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency);
-
-  /// Return true if exchange supports simulated order (some exchanges such as Kraken or Binance for instance support
-  /// this query parameter)
+  /// Return true if exchange supports simulated order (some exchanges such as Kraken or Binance for instance
+  /// support this query parameter)
   virtual bool isSimulatedOrderSupported() const = 0;
 
   /// Place an order in mode fire and forget.
@@ -190,6 +186,8 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Check if withdraw has been confirmed and successful from 'this' exchange
   SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo);
+
+  void computeEquiCurrencyAmounts(BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency);
 };
 }  // namespace api
 }  // namespace cct

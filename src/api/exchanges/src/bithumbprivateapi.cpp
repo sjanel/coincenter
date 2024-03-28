@@ -364,8 +364,6 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
     return balancePortfolio;
   }
 
-  CurrencyCode equiCurrency = balanceOptions.equiCurrency();
-
   static constexpr std::array<std::string_view, 2> kKnownPrefixes = {"available_", "in_use_"};
   auto endPrefixIt = kKnownPrefixes.end();
   if (balanceOptions.amountIncludePolicy() != BalanceOptions::AmountIncludePolicy::kWithBalanceInUse) {
@@ -377,7 +375,8 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
       if (key.starts_with(*prefixIt)) {
         std::string_view curStr(key.begin() + prefixIt->size(), key.end());
         MonetaryAmount amount(value.get<std::string_view>(), _coincenterInfo.standardizeCurrencyCode(curStr));
-        this->addBalance(balancePortfolio, amount, equiCurrency);
+
+        balancePortfolio += amount;
         break;
       }
     }

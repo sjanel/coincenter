@@ -55,40 +55,31 @@ ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangeP
     : _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
 BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
-  CacheFreezerRAII uniqueQueryHandle;
-  if (balanceOptions.equiCurrency().isDefined()) {
-    // In case of balance with equivalent currencies, for each exchange these requests will be made:
-    // - Markets
-    // - Ticker
-    // To avoid making several ticker queries (especially) for each exchange during the whole balance process,
-    // we "allow" only one query per argument in the cache of results of all exchanges.
-    // The freeze will be lifted automatically (as the object is RAII) at the end of this function.
-    uniqueQueryHandle = CacheFreezerRAII(_cachedResultVault);
-  }
   BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
+
+  const auto equiCurrency = balanceOptions.equiCurrency();
+  if (equiCurrency.isDefined()) {
+    computeEquiCurrencyAmounts(balancePortfolio, equiCurrency);
+  }
+
   log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
+
   return balancePortfolio;
 }
 
-void ExchangePrivate::addBalance(BalancePortfolio &balancePortfolio, MonetaryAmount amount, CurrencyCode equiCurrency) {
-  if (amount != 0) {
-    ExchangeName exchangeName = this->exchangeName();
-    if (equiCurrency.isNeutral()) {
-      log::trace("{} balance {}", exchangeName, amount);
-      balancePortfolio.add(amount);
-    } else {
-      std::optional<MonetaryAmount> optConvertedAmountEquiCurrency =
-          _exchangePublic.estimatedConvert(amount, equiCurrency);
-      MonetaryAmount equivalentInMainCurrency;
-      if (optConvertedAmountEquiCurrency) {
-        equivalentInMainCurrency = *optConvertedAmountEquiCurrency;
-      } else {
-        log::debug("No {} -> {} conversion possible on {}", amount.currencyStr(), equiCurrency, exchangeName);
-        equivalentInMainCurrency = MonetaryAmount(0, equiCurrency);
-      }
-      log::trace("{} Balance {} (eq. {})", exchangeName, amount, equivalentInMainCurrency);
-      balancePortfolio.add(amount, equivalentInMainCurrency);
-    }
+void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency) {
+  MarketOrderBookMap marketOrderBookMap;
+  auto fiats = _exchangePublic.queryFiats();
+  MarketSet markets;
+  ExchangeName exchangeName = this->exchangeName();
+
+  for (auto &[amount, equi] : balancePortfolio) {
+    MarketsPath conversionPath =
+        _exchangePublic.findMarketsPath(amount.currencyCode(), equiCurrency, markets, fiats,
+                                        ExchangePublic::MarketPathMode::kWithPossibleFiatConversionAtExtremity);
+    equi = _exchangePublic.convert(amount, equiCurrency, conversionPath, fiats, marketOrderBookMap)
+               .value_or(MonetaryAmount(0, equiCurrency));
+    log::trace("{} Balance {} (eq. {})", exchangeName, amount, equi);
   }
 }
 
@@ -352,8 +343,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
                                                  CurrencyCode currencyCode, const MarketSet &markets,
                                                  const PenaltyPerMarketMap &penaltyPerMarketMap) {
   MarketVector possibleMarkets;
-  for (const BalancePortfolio::MonetaryAmountWithEquivalent &avAmountEq : balance) {
-    MonetaryAmount avAmount = avAmountEq.amount;
+  for (const auto [avAmount, _] : balance) {
     CurrencyCode avCur = avAmount.currencyCode();
     const auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
     if (lbAvAmount == dustThresholds.end() || *lbAvAmount < avAmount) {

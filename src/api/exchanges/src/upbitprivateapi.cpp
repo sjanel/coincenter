@@ -176,22 +176,24 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
 BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  const CurrencyCode equiCurrency = balanceOptions.equiCurrency();
 
-  BalancePortfolio ret;
-  for (const json& accountDetail : PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts")) {
+  BalancePortfolio balancePortfolio;
+
+  json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
+
+  balancePortfolio.reserve(ret.size());
+
+  for (const json& accountDetail : ret) {
     const CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
-    const MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
-
-    this->addBalance(ret, availableAmount, equiCurrency);
+    MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
 
     if (withBalanceInUse) {
-      const MonetaryAmount amountInUse(accountDetail["locked"].get<std::string_view>(), currencyCode);
-
-      this->addBalance(ret, amountInUse, equiCurrency);
+      availableAmount += MonetaryAmount(accountDetail["locked"].get<std::string_view>(), currencyCode);
     }
+
+    balancePortfolio += availableAmount;
   }
-  return ret;
+  return balancePortfolio;
 }
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {

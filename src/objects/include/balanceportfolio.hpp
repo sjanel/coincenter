@@ -10,20 +10,22 @@
 
 namespace cct {
 
+namespace api {
+class ExchangePrivate;
+}
+
 class BalancePortfolio {
- public:
+ private:
   struct MonetaryAmountWithEquivalent {
     MonetaryAmount amount;
     MonetaryAmount equi;
 
-    bool operator==(const MonetaryAmountWithEquivalent &) const = default;
+    bool operator==(const MonetaryAmountWithEquivalent&) const noexcept = default;
   };
 
- private:
   using MonetaryAmountVec = vector<MonetaryAmountWithEquivalent>;
 
  public:
-  using const_iterator = MonetaryAmountVec::const_iterator;
   using size_type = MonetaryAmountVec::size_type;
 
   BalancePortfolio() noexcept = default;
@@ -33,39 +35,42 @@ class BalancePortfolio {
 
   BalancePortfolio(std::span<const MonetaryAmount> init);
 
-  BalancePortfolio(std::initializer_list<MonetaryAmountWithEquivalent> init)
-      : BalancePortfolio(std::span<const MonetaryAmountWithEquivalent>(init.begin(), init.end())) {}
-
-  BalancePortfolio(std::span<const MonetaryAmountWithEquivalent> init);
-
-  /// Adds an amount in the `BalancePortfolio`.
-  /// @param equivalentInMainCurrency (optional) also add its corresponding value in another currency
-  void add(MonetaryAmount amount, MonetaryAmount equivalentInMainCurrency = MonetaryAmount());
-
   MonetaryAmount get(CurrencyCode currencyCode) const;
 
   bool hasSome(CurrencyCode cur) const { return get(cur) > 0; }
   bool hasAtLeast(MonetaryAmount amount) const { return get(amount.currencyCode()) >= amount; }
 
-  const_iterator begin() const { return _sortedAmounts.begin(); }
-  const_iterator end() const { return _sortedAmounts.end(); }
+  auto begin() { return _sortedAmounts.begin(); }
+  auto end() { return _sortedAmounts.end(); }
 
-  MonetaryAmountWithEquivalent front() const { return _sortedAmounts.front(); }
-  MonetaryAmountWithEquivalent back() const { return _sortedAmounts.back(); }
+  auto begin() const { return _sortedAmounts.begin(); }
+  auto end() const { return _sortedAmounts.end(); }
+
+  auto cbegin() const { return _sortedAmounts.cbegin(); }
+  auto cend() const { return _sortedAmounts.cend(); }
 
   bool empty() const noexcept { return _sortedAmounts.empty(); }
 
   size_type size() const noexcept { return _sortedAmounts.size(); }
 
+  void reserve(size_type newCapacity) { _sortedAmounts.reserve(newCapacity); }
+
+  CurrencyCode equiCurrency() const;
+
   void sortByDecreasingEquivalentAmount();
 
-  BalancePortfolio &operator+=(const BalancePortfolio &other);
+  /// Adds an amount in this portfolio without an equivalent amount.
+  BalancePortfolio& operator+=(MonetaryAmount amount);
 
-  bool operator==(const BalancePortfolio &) const = default;
+  /// Merge the amounts of two different portfolios.
+  BalancePortfolio& operator+=(const BalancePortfolio& other);
+
+  bool operator==(const BalancePortfolio&) const = default;
 
   using trivially_relocatable = is_trivially_relocatable<MonetaryAmountVec>::type;
 
  private:
   MonetaryAmountVec _sortedAmounts;
 };
+
 }  // namespace cct
