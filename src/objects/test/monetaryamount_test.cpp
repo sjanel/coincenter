@@ -220,8 +220,7 @@ TEST(MonetaryAmountTest, Divide) {
   EXPECT_EQ(MonetaryAmount("-870.5647", CurrencyCode("ETH")) / MonetaryAmount("4709.3467736", CurrencyCode("ETH")),
             MonetaryAmount("-0.18485890758358997"));
   EXPECT_EQ(MonetaryAmount("487.76 EUR") / MonetaryAmount("1300.5 EUR"), MonetaryAmount("0.3750557477893118"));
-  MonetaryAmount res;
-  EXPECT_THROW(res = MonetaryAmount("100") / MonetaryAmount("0.00000000000000001"), exception);
+  EXPECT_THROW(MonetaryAmount(100) / MonetaryAmount("0.00000000000000001"), exception);
   EXPECT_EQ(MonetaryAmount(10) / MonetaryAmount("0.0000000000000001"), MonetaryAmount("100000000000000000"));
   EXPECT_EQ(MonetaryAmount("1000000000 KRW") / MonetaryAmount("922337203685477580 KRW"),
             MonetaryAmount("0.00000000108420217"));
@@ -248,6 +247,9 @@ TEST(MonetaryAmountTest, OverflowProtectionDivide) {
             MonetaryAmount("0.00000030482381689"));
   EXPECT_EQ(MonetaryAmount("0.00000598978800261", "Magic4Life") / 17,
             MonetaryAmount("0.00000035234047074", "Magic4Life"));
+
+  EXPECT_EQ(MonetaryAmount("1489950.87030903569", "KRW") / MonetaryAmount("0.29106287757551"),
+            MonetaryAmount(5119000, "KRW"));
 }
 
 TEST(MonetaryAmountTest, Convert) {

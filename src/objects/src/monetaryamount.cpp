@@ -451,17 +451,17 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   // Indeed, on 64 bits the unsigned integral type can hold one more digit than its signed counterpart.
   static_assert(std::numeric_limits<UnsignedAmountType>::digits10 > std::numeric_limits<AmountType>::digits10);
 
-  int8_t lhsNbDigits = static_cast<int8_t>(ndigits(_amount));
+  int8_t lhsNbDigits = static_cast<int8_t>(ndigits(lhsAmount));
   const int8_t lhsNbDigitsToAdd = std::numeric_limits<UnsignedAmountType>::digits10 - lhsNbDigits;
-  UnsignedAmountType lhs =
-      static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow10(static_cast<uint8_t>(lhsNbDigitsToAdd));
-  UnsignedAmountType rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
+  auto lhs = static_cast<UnsignedAmountType>(std::abs(lhsAmount)) * ipow10(static_cast<uint8_t>(lhsNbDigitsToAdd));
+  auto rhs = static_cast<UnsignedAmountType>(std::abs(rhsAmount));
 
   int8_t lhsNbDecimals = nbDecimals() + lhsNbDigitsToAdd;
 
   UnsignedAmountType totalIntPart = 0;
   int8_t nbDecs = lhsNbDecimals - div.nbDecimals();
   int8_t totalPartNbDigits;
+
   while (true) {
     totalIntPart += lhs / rhs;  // Add integral part
     totalPartNbDigits = static_cast<int8_t>(ndigits(totalIntPart));
@@ -481,16 +481,20 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   }
 
   if (nbDecs < 0) {
-    throw exception("Overflow during divide");
-  }
-
-  const int8_t nbDigitsTruncate = totalPartNbDigits - std::numeric_limits<AmountType>::digits10;
-  if (nbDigitsTruncate > 0) {
-    if (nbDecs < nbDigitsTruncate) {
-      throw exception("Overflow during divide");
+    if (std::numeric_limits<AmountType>::digits10 < totalPartNbDigits - nbDecs) {
+      throw exception("Overflow during divide {} / {}", *this, div);
     }
-    totalIntPart /= ipow10(static_cast<uint8_t>(nbDigitsTruncate));
-    nbDecs -= nbDigitsTruncate;
+    totalIntPart *= ipow10(-nbDecs);
+    nbDecs = 0;
+  } else {
+    const int8_t nbDigitsTruncate = totalPartNbDigits - std::numeric_limits<AmountType>::digits10;
+    if (nbDigitsTruncate > 0) {
+      if (nbDecs < nbDigitsTruncate) {
+        throw exception("Overflow during divide {} / {}", *this, div);
+      }
+      totalIntPart /= ipow10(static_cast<uint8_t>(nbDigitsTruncate));
+      nbDecs -= nbDigitsTruncate;
+    }
   }
 
   return {static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs};
