@@ -10,7 +10,10 @@ jobs:
   xcode:
     name: Build on MacOS
     runs-on: macos-latest
-
+    strategy:
+      matrix:
+        compiler: [g++-11]
+        buildmode: [Debug]
     steps:
       - uses: actions/checkout@v4
 
@@ -19,14 +22,16 @@ jobs:
           xcode-version: latest-stable
 
       - name: Install dependencies
-        run: brew install cmake ninja
+        run: brew install ninja
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-11 -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -GNinja
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -GNinja
+        env:
+          CXX: ${{matrix.compiler}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: ninja
+        run: cmake --build .
 
       - name: Tests
         working-directory: ${{github.workspace}}/build

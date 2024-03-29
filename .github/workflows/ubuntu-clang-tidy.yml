@@ -22,7 +22,6 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt upgrade -y
           sudo apt install cmake libssl-dev libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install clang (with clang-tidy)
@@ -46,4 +45,4 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ninja
+        run: cmake --build .

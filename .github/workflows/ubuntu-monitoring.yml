@@ -23,7 +23,6 @@ jobs:
       - name: Prerequisites
         run: |
           sudo apt update
-          sudo apt upgrade -y
           sudo apt install cmake libssl-dev git libcurl4-gnutls-dev ninja-build -y --no-install-recommends
 
       - name: Install prometheus-cpp
@@ -37,7 +36,7 @@ jobs:
           cd _build
 
           cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
-          ninja
+          cmake --build .
 
           sudo cmake --install .
         if: matrix.build-prometheus-from-source == 0
@@ -53,9 +52,9 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ninja
+        run: cmake --build .
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ctest -j 4 -C ${{matrix.buildmode}} --output-on-failure
+        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure
