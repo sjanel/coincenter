@@ -80,8 +80,8 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (!cmdLineOptions.conversion.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.conversion);
 
-    const auto [amount, amountType] = optionParser.parseNonZeroAmount();
-    if (amountType != StringOptionParser::AmountType::kAbsolute) {
+    const auto [amount, amountType] = optionParser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional);
+    if (amountType == StringOptionParser::AmountType::kPercentage) {
       throw invalid_argument("conversion should start with an absolute amount");
     }
     _commands.emplace_back(CoincenterCommandType::kConversion)

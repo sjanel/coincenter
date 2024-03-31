@@ -32,15 +32,14 @@ jobs:
           sudo apt install clang-tidy-${{matrix.clang-version}}
           sudo ln -s /usr/bin/clang-tidy-${{matrix.clang-version}} /usr/local/bin/clang-tidy
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
       - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           clang-tidy --dump-config
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=clang++-${{matrix.clang-version}} -DCCT_ENABLE_CLANG_TIDY=ON -DCCT_ENABLE_ASAN=OFF -GNinja
+          cmake -S . -B build -DCCT_ENABLE_CLANG_TIDY=ON -DCCT_ENABLE_ASAN=OFF -GNinja
+        env:
+          CXX: clang++-${{matrix.clang-version}}
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build

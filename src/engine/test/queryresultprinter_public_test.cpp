@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
+#include "cct_const.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
@@ -613,7 +614,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, NoPrint) {
   expectNoStr();
 }
 
-class QueryResultPrinterConversionTest : public QueryResultPrinterTest {
+class QueryResultPrinterConversionSingleAmountTest : public QueryResultPrinterTest {
  protected:
   MonetaryAmount fromAmount{34525, "SOL", 2};
   CurrencyCode targetCurrencyCode{"KRW"};
@@ -622,7 +623,7 @@ class QueryResultPrinterConversionTest : public QueryResultPrinterTest {
                                                       {&exchange2, MonetaryAmount{59000249, targetCurrencyCode}}};
 };
 
-TEST_F(QueryResultPrinterConversionTest, FormattedTable) {
+TEST_F(QueryResultPrinterConversionSingleAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
@@ -637,7 +638,7 @@ TEST_F(QueryResultPrinterConversionTest, FormattedTable) {
   expectStr(kExpected);
 }
 
-TEST_F(QueryResultPrinterConversionTest, EmptyJson) {
+TEST_F(QueryResultPrinterConversionSingleAmountTest, EmptyJson) {
   basicQueryResultPrinter(ApiOutputType::kJson)
       .printConversion(fromAmount, targetCurrencyCode, MonetaryAmountPerExchange{});
   static constexpr std::string_view kExpected = R"(
@@ -654,7 +655,7 @@ TEST_F(QueryResultPrinterConversionTest, EmptyJson) {
   expectJson(kExpected);
 }
 
-TEST_F(QueryResultPrinterConversionTest, Json) {
+TEST_F(QueryResultPrinterConversionSingleAmountTest, Json) {
   basicQueryResultPrinter(ApiOutputType::kJson)
       .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
   static constexpr std::string_view kExpected = R"(
@@ -681,9 +682,98 @@ TEST_F(QueryResultPrinterConversionTest, Json) {
   expectJson(kExpected);
 }
 
-TEST_F(QueryResultPrinterConversionTest, NoPrint) {
+TEST_F(QueryResultPrinterConversionSingleAmountTest, NoPrint) {
   basicQueryResultPrinter(ApiOutputType::kNoPrint)
       .printConversion(fromAmount, targetCurrencyCode, monetaryAmountPerExchange);
+  expectNoStr();
+}
+
+class QueryResultPrinterConversionSeveralAmountTest : public QueryResultPrinterTest {
+ protected:
+  void SetUp() override {
+    fromAmounts[0] = MonetaryAmount{1, sourceCurrencyCode, 0};
+    fromAmounts[2] = MonetaryAmount{11, sourceCurrencyCode, 1};
+    fromAmounts[1] = MonetaryAmount{14, sourceCurrencyCode, 1};
+  }
+
+  CurrencyCode sourceCurrencyCode{"BTC"};
+  CurrencyCode targetCurrencyCode{"KRW"};
+  std::array<MonetaryAmount, kNbSupportedExchanges> fromAmounts;
+  MonetaryAmountPerExchange monetaryAmountPerExchange{{&exchange1, MonetaryAmount{41786641, targetCurrencyCode}},
+                                                      {&exchange3, MonetaryAmount{44487640, targetCurrencyCode}},
+                                                      {&exchange2, MonetaryAmount{59000249, targetCurrencyCode}}};
+};
+
+TEST_F(QueryResultPrinterConversionSeveralAmountTest, FormattedTable) {
+  basicQueryResultPrinter(ApiOutputType::kFormattedTable)
+      .printConversion(fromAmounts, targetCurrencyCode, monetaryAmountPerExchange);
+  static constexpr std::string_view kExpected = R"(
++----------+---------+--------------+
+| Exchange | From    | To           |
++----------+---------+--------------+
+| binance  | 1 BTC   | 41786641 KRW |
+| huobi    | 1.1 BTC | 44487640 KRW |
+| bithumb  | 1.4 BTC | 59000249 KRW |
++----------+---------+--------------+
+)";
+  expectStr(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionSeveralAmountTest, EmptyJson) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printConversion(fromAmounts, targetCurrencyCode, MonetaryAmountPerExchange{});
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "sourceAmount": {
+        "binance": "1 BTC",
+        "bithumb": "1.4 BTC",
+        "huobi": "1.1 BTC"
+      },
+      "targetCurrency": "KRW"
+    },
+    "req": "Conversion"
+  },
+  "out": {}
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionSeveralAmountTest, Json) {
+  basicQueryResultPrinter(ApiOutputType::kJson)
+      .printConversion(fromAmounts, targetCurrencyCode, monetaryAmountPerExchange);
+  static constexpr std::string_view kExpected = R"(
+{
+  "in": {
+    "opt": {
+      "sourceAmount": {
+        "binance": "1 BTC",
+        "bithumb": "1.4 BTC",
+        "huobi": "1.1 BTC"
+      },
+      "targetCurrency": "KRW"
+    },
+    "req": "Conversion"
+  },
+  "out": {
+    "binance": {
+      "convertedAmount": "41786641 KRW"
+    },
+    "bithumb": {
+      "convertedAmount": "59000249 KRW"
+    },
+    "huobi": {
+      "convertedAmount": "44487640 KRW"
+    }
+  }
+})";
+  expectJson(kExpected);
+}
+
+TEST_F(QueryResultPrinterConversionSeveralAmountTest, NoPrint) {
+  basicQueryResultPrinter(ApiOutputType::kNoPrint)
+      .printConversion(fromAmounts, targetCurrencyCode, monetaryAmountPerExchange);
   expectNoStr();
 }
 

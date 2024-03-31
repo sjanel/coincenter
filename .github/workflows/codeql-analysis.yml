@@ -55,16 +55,14 @@ jobs:
           sudo apt update
           sudo apt install build-essential ninja-build libssl-dev libcurl4-gnutls-dev cmake git ca-certificates gzip -y --no-install-recommends
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
       - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -GNinja ..
+        run: cmake -S . -B build -GNinja
+        env:
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: ninja
+        run: cmake --build .
 
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 https://git.io/JvXDl

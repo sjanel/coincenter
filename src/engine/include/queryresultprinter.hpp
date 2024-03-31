@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <span>
 
 #include "apioutputtype.hpp"
 #include "cct_json.hpp"
@@ -80,6 +81,9 @@ class QueryResultPrinter {
                             const WithdrawsConstraints &withdrawsConstraints) const;
 
   void printConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                       const MonetaryAmountPerExchange &conversionPerExchange) const;
+
+  void printConversion(std::span<const MonetaryAmount> startAmountPerExchangePos, CurrencyCode targetCurrencyCode,
                        const MonetaryAmountPerExchange &conversionPerExchange) const;
 
   void printConversionPath(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) const;

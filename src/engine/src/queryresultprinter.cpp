@@ -527,6 +527,37 @@ json ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
   return ToJson(CoincenterCommandType::kConversion, std::move(in), std::move(out));
 }
 
+json ConversionJson(std::span<const MonetaryAmount> startAmountPerExchangePos, CurrencyCode targetCurrencyCode,
+                    const MonetaryAmountPerExchange &conversionPerExchange) {
+  json in;
+  json inOpt;
+
+  json fromAmounts;
+
+  int publicExchangePos{};
+  for (MonetaryAmount startAmount : startAmountPerExchangePos) {
+    if (!startAmount.isDefault()) {
+      fromAmounts.emplace(kSupportedExchanges[publicExchangePos], startAmount.str());
+    }
+    ++publicExchangePos;
+  }
+  inOpt.emplace("sourceAmount", std::move(fromAmounts));
+
+  inOpt.emplace("targetCurrency", targetCurrencyCode.str());
+  in.emplace("opt", std::move(inOpt));
+
+  json out = json::object();
+  for (const auto &[e, convertedAmount] : conversionPerExchange) {
+    if (convertedAmount != 0) {
+      json conversionForExchange;
+      conversionForExchange.emplace("convertedAmount", convertedAmount.str());
+      out.emplace(e->name(), std::move(conversionForExchange));
+    }
+  }
+
+  return ToJson(CoincenterCommandType::kConversion, std::move(in), std::move(out));
+}
+
 json ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) {
   json in;
   json inOpt;
@@ -1118,6 +1149,32 @@ void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode tar
       for (const auto &[e, convertedAmount] : conversionPerExchange) {
         if (convertedAmount != 0) {
           table.emplace_back(e->name(), convertedAmount.str());
+        }
+      }
+      printTable(table);
+      break;
+    }
+    case ApiOutputType::kJson:
+      printJson(jsonData);
+      break;
+    case ApiOutputType::kNoPrint:
+      break;
+  }
+  logActivity(CoincenterCommandType::kConversion, jsonData);
+}
+
+void QueryResultPrinter::printConversion(std::span<const MonetaryAmount> startAmountPerExchangePos,
+                                         CurrencyCode targetCurrencyCode,
+                                         const MonetaryAmountPerExchange &conversionPerExchange) const {
+  json jsonData = ConversionJson(startAmountPerExchangePos, targetCurrencyCode, conversionPerExchange);
+  switch (_apiOutputType) {
+    case ApiOutputType::kFormattedTable: {
+      SimpleTable table;
+      table.reserve(1U + conversionPerExchange.size());
+      table.emplace_back("Exchange", "From", "To");
+      for (const auto &[e, convertedAmount] : conversionPerExchange) {
+        if (convertedAmount != 0) {
+          table.emplace_back(e->name(), startAmountPerExchangePos[e->publicExchangePos()].str(), convertedAmount.str());
         }
       }
       printTable(table);
