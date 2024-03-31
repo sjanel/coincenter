@@ -4,6 +4,7 @@ aux_source_directory(src OBJECTS_SRC)
 add_library(coincenter_objects STATIC ${OBJECTS_SRC})
 target_link_libraries(coincenter_objects PUBLIC coincenter_monitoring)
 target_link_libraries(coincenter_objects PUBLIC coincenter_tech)
+target_link_libraries(coincenter_objects PUBLIC coincenter_http-request)
 target_include_directories(coincenter_objects PUBLIC include)
 
 add_unit_test(
@@ -20,8 +21,6 @@ add_unit_test(
     test/coincenterinfo_test.cpp
     LIBRARIES
     coincenter_objects
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
@@ -38,8 +37,6 @@ add_unit_test(
     test/exchangeconfig_test.cpp
     LIBRARIES
     coincenter_objects
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(

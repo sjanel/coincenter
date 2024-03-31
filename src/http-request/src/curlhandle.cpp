@@ -121,6 +121,11 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
 
     CurlSetLogIfError(curl, CURLOPT_FOLLOWLOCATION, permanentCurlOptions.followLocation() ? 1L : 0L);
 
+    if (permanentCurlOptions.timeout() != Duration{}) {
+      CurlSetLogIfError(curl, CURLOPT_TIMEOUT_MS,
+                        std::chrono::duration_cast<milliseconds>(permanentCurlOptions.timeout()).count());
+    }
+
 #ifdef CCT_MSVC
     // https://stackoverflow.com/questions/37551409/configure-curl-to-use-default-system-cert-store-on-windows
     CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);

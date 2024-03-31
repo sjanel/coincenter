@@ -84,32 +84,26 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPo
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic("huobi", fiatConverter, commonAPI, config),
-      _exchangeConfig(config.exchangeConfig(_name)),
       _curlHandle(kURLBases, config.metricGatewayPtr(),
-                  PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(_exchangeConfig.publicAPIRate())
-                      .setAcceptedEncoding(_exchangeConfig.acceptEncoding())
-                      .setRequestCallLogLevel(_exchangeConfig.requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(_exchangeConfig.requestsAnswerLogLevel())
-                      .build(),
-                  config.getRunMode()),
+                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
       _healthCheckCurlHandle(
           kHealthCheckBaseUrl, config.metricGatewayPtr(),
-          PermanentCurlOptions::Builder().setMinDurationBetweenQueries(_exchangeConfig.publicAPIRate()).build(),
+          PermanentCurlOptions::Builder().setMinDurationBetweenQueries(exchangeConfig().publicAPIRate()).build(),
           config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle),
-      _marketsCache(CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _curlHandle, _exchangeConfig),
-      _allOrderBooksCache(
-          CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle, _exchangeConfig),
-      _orderbookCache(CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      _curlHandle, _exchangeConfig),
-      _tradedVolumeCache(
-          CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(_exchangeConfig.getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
+      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
+                    _curlHandle, exchangeConfig()),
+      _allOrderBooksCache(
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          _marketsCache, _curlHandle, exchangeConfig()),
+      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+                      _curlHandle, exchangeConfig()),
+      _tradedVolumeCache(
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          _curlHandle),
+      _tickerCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
                    _curlHandle) {}
 
 bool HuobiPublic::healthCheck() {

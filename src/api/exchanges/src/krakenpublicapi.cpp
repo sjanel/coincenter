@@ -101,13 +101,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
-                  PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
-                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
-                      .build(),
-                  config.getRunMode()),
+                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           commonAPI, _curlHandle, exchangeConfig()),
@@ -169,11 +163,11 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
                                  _commonApi.queryIsCurrencyCodeFiat(standardCode) ? CurrencyExchange::Type::kFiat
                                                                                   : CurrencyExchange::Type::kCrypto);
 
-    log::debug("Retrieved Kraken Currency {}", newCurrency.str());
+    log::trace("Retrieved kraken Currency {}", newCurrency.str());
     currencies.push_back(std::move(newCurrency));
   }
   CurrencyExchangeFlatSet ret(std::move(currencies));
-  log::info("Retrieved {} Kraken currencies", ret.size());
+  log::debug("Retrieved {} kraken currencies", ret.size());
   return ret;
 }
 
@@ -211,11 +205,11 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
       continue;
     }
     auto mkIt = ret.first.emplace(base, quote).first;
-    log::debug("Retrieved Kraken market {}", *mkIt);
+    log::trace("Retrieved Kraken market {}", *mkIt);
     MonetaryAmount orderMin(value["ordermin"].get<std::string_view>(), base);
     ret.second.insert_or_assign(*mkIt, MarketInfo{{value["lot_decimals"], value["pair_decimals"]}, orderMin});
   }
-  log::info("Retrieved {} markets from Kraken", ret.first.size());
+  log::debug("Retrieved {} markets from kraken", ret.first.size());
   return ret;
 }
 
@@ -338,8 +332,9 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 }
 
 PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
-  Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
-                      _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
+  const auto& currenciesCache = _tradableCurrenciesCache.get();
+  Market krakenMarket(currenciesCache.getOrThrow(mk.base()).altCode(),
+                      currenciesCache.getOrThrow(mk.quote()).altCode());
 
   json result = PublicQuery(_curlHandle, "/public/Trades",
                             {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
@@ -352,7 +347,7 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
     for (const json& det : lastTrades) {
       const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
       const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
-      const int64_t millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
+      const auto millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
       const TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
       ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));

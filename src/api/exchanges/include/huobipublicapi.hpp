@@ -140,7 +140,6 @@ class HuobiPublic : public ExchangePublic {
 
   static bool ShouldDiscardChain(CurrencyCode cur, const json& chainDetail);
 
-  const ExchangeConfig& _exchangeConfig;
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

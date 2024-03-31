@@ -224,12 +224,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
       _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(),
-                  PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeConfig().privateAPIRate())
-                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
-                      .build(),
+                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,

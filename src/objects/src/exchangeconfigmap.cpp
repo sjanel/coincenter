@@ -11,6 +11,7 @@
 #include "exchangeconfig.hpp"
 #include "exchangeconfigdefault.hpp"
 #include "exchangeconfigparser.hpp"
+#include "http-config.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "parseloglevel.hpp"
 #include "priceoptionsdef.hpp"
@@ -75,6 +76,11 @@ ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json
                             StrategyFromStr(queryTopLevelOption.getStr(exchangeName, kTradeConfigPart, "strategy")),
                             tradeTimeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel);
 
+    static constexpr std::string_view kHttpConfigPart = "http";
+
+    const auto httpTimeout = queryTopLevelOption.getDuration(exchangeName, kHttpConfigPart, "timeout");
+    HttpConfig httpConfig(httpTimeout);
+
     map.insert_or_assign(
         exchangeName,
         ExchangeConfig(exchangeName, makerStr, takerStr,
@@ -84,7 +90,7 @@ ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json
                        std::move(dustAmountsThresholds), std::move(apiUpdateFrequencies), publicAPIRate, privateAPIRate,
                        acceptEncoding, dustSweeperMaxNbTrades, requestsCallLogLevel, requestsAnswerLogLevel,
                        multiTradeAllowedByDefault, validateDepositAddressesInFile, placeSimulatedRealOrder,
-                       validateApiKey, std::move(tradeConfig)));
+                       validateApiKey, std::move(tradeConfig), std::move(httpConfig)));
   }  // namespace cct
 
   // Print json unused values

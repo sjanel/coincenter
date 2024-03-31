@@ -86,13 +86,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(),
-                  PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(exchangeConfig().publicAPIRate())
-                      .setAcceptedEncoding(exchangeConfig().acceptEncoding())
-                      .setRequestCallLogLevel(exchangeConfig().requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(exchangeConfig().requestsAnswerLogLevel())
-                      .build(),
-                  config.getRunMode()),
+                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           commonAPI, _curlHandle),
@@ -176,7 +170,7 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
   currencies.emplace_back("KRW", "KRW", "KRW", CurrencyExchange::Deposit::kUnavailable,
                           CurrencyExchange::Withdraw::kUnavailable, CurrencyExchange::Type::kFiat);
   CurrencyExchangeFlatSet ret(std::move(currencies));
-  log::info("Retrieved {} Bithumb currencies", ret.size());
+  log::info("Retrieved {} bithumb currencies", ret.size());
   return ret;
 }
 

@@ -33,6 +33,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "market-vector.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -95,11 +96,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
       _globalInfosCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
           coincenterInfo.metricGatewayPtr(),
-          PermanentCurlOptions::Builder()
-              .setMinDurationBetweenQueries(_commonInfo._exchangeConfig.publicAPIRate())
-              .setAcceptedEncoding(_commonInfo._exchangeConfig.acceptEncoding())
-              .build(),
-          coincenterInfo.getRunMode()),
+          _exchangeConfig.curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), coincenterInfo.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._exchangeConfig),
       _allOrderBooksCache(
@@ -131,13 +128,7 @@ BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, cons
                                       settings::RunMode runMode)
     : _exchangeConfig(exchangeConfig),
       _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(),
-                  PermanentCurlOptions::Builder()
-                      .setMinDurationBetweenQueries(_exchangeConfig.publicAPIRate())
-                      .setAcceptedEncoding(_exchangeConfig.acceptEncoding())
-                      .setRequestCallLogLevel(_exchangeConfig.requestsCallLogLevel())
-                      .setRequestAnswerLogLevel(_exchangeConfig.requestsAnswerLogLevel())
-                      .build(),
-                  runMode) {}
+                  _exchangeConfig.curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), runMode) {}
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
   CurrencyExchangeVector currencies;
@@ -179,8 +170,10 @@ CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data)
 MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeConfigCache.get();
   const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
-  MarketSet ret;
-  ret.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
+
+  MarketVector markets;
+  markets.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
+
   for (const auto& marketJsonPair : exchangeInfoData) {
     const json& symbol = marketJsonPair.second;
     std::string_view baseAsset = symbol["baseAsset"].get<std::string_view>();
@@ -190,9 +183,10 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
     if (excludedCurrencies.contains(base) || excludedCurrencies.contains(quote)) {
       continue;
     }
-    ret.insert(Market(base, quote));
+    markets.emplace_back(base, quote);
   }
-  log::info("Retrieved binance {} markets", ret.size());
+  MarketSet ret(std::move(markets));
+  log::debug("Retrieved {} markets from binance", ret.size());
   return ret;
 }
 
@@ -221,7 +215,7 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
-    log::debug("Accept {}-{} Binance asset pair", baseAsset, quoteAsset);
+    log::trace("Accept {}-{} Binance asset pair", baseAsset, quoteAsset);
     ret.insert_or_assign(Market(baseAsset, quoteAsset), std::move(*it));
   }
   return ret;
@@ -237,7 +231,15 @@ BinancePublic::GlobalInfosFunc::GlobalInfosFunc(AbstractMetricGateway* pMetricGa
     : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
 json BinancePublic::GlobalInfosFunc::operator()() {
-  return PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll").at("data");
+  json ret = PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll");
+  auto dataIt = ret.find("data");
+  json dataRet;
+  if (dataIt == ret.end()) {
+    dataRet = json::array_t();
+  } else {
+    dataRet = std::move(*dataIt);
+  }
+  return dataRet;
 }
 
 namespace {
