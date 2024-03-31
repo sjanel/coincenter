@@ -1,7 +1,9 @@
 #include "publictrade.hpp"
 
 #include "cct_string.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 

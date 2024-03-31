@@ -2,6 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
+
+#include "market.hpp"
+#include "monetaryamount.hpp"
+#include "timedef.hpp"
+#include "tradeside.hpp"
+
 namespace cct {
 class PublicTradeTest : public ::testing::Test {
  protected:

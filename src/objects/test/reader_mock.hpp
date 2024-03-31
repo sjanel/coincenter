@@ -2,6 +2,7 @@
 
 #include <gmock/gmock.h>
 
+#include "cct_string.hpp"
 #include "reader.hpp"
 
 namespace cct {

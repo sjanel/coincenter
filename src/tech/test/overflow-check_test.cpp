@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+
 namespace cct {
 TEST(WillSumOverflowTest, Int8) {
   EXPECT_FALSE(WillSumOverflow(int8_t{}, int8_t{}));

@@ -5,12 +5,14 @@
 #include <cstdint>
 #include <optional>
 #include <ostream>
+#include <span>
 #include <sstream>
 #include <string_view>
 #include <utility>
 
 #include "apioutputtype.hpp"
 #include "balanceperexchangeportfolio.hpp"
+#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"

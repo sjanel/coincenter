@@ -3,11 +3,11 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
-#include <ranges>
 #include <string_view>
 
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
+#include "cct_string.hpp"
 
 namespace cct {
 namespace {
@@ -109,8 +109,8 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
 
   int kvPairPos = 0;
-  for (const auto &v : kvPairs) {
-    const auto key = v.key();
+  for (const auto &kv : kvPairs) {
+    const auto key = kv.key();
     const char *kvPairPtr = key.data();
     switch (kvPairPos++) {
       case 0:

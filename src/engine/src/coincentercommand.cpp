@@ -1,5 +1,6 @@
 #include "coincentercommand.hpp"
 
+#include <cstdint>
 #include <utility>
 
 #include "cct_exception.hpp"

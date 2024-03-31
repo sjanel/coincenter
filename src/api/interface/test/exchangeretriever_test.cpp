@@ -7,7 +7,9 @@
 #include <memory>
 #include <span>
 #include <string_view>
+#include <utility>
 
+#include "apikey.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
@@ -23,6 +25,7 @@
 #include "fiatconverter.hpp"
 #include "loadconfiguration.hpp"
 #include "reader.hpp"
+#include "runmodes.hpp"
 #include "timedef.hpp"
 
 namespace cct {

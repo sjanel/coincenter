@@ -3,6 +3,7 @@
 #include <cstdint>
 
 namespace cct::api {
+
 enum QueryType : int8_t {};
 
 static constexpr QueryType kCurrencies{0};
