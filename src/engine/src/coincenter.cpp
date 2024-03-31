@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "balanceoptions.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
@@ -29,6 +30,7 @@
 #include "ordersconstraints.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
+#include "timedef.hpp"
 #include "transferablecommandresult.hpp"
 #include "withdrawsconstraints.hpp"
 

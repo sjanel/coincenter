@@ -1,13 +1,18 @@
 #include "exchange.hpp"
 
+#include <cstddef>
 #include <memory>
+#include <utility>
 
 #include "cct_log.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangeconfig.hpp"
+#include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
+#include "marketorderbook.hpp"
+#include "public-trade-vector.hpp"
 
 namespace cct {
 

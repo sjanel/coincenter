@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct {
 
@@ -30,4 +31,5 @@ class AccountOwner {
   string _enName;
   string _koName;
 };
+
 }  // namespace cct

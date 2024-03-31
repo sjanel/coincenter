@@ -3,8 +3,6 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
-#include "balanceportfolio.hpp"
-#include "cct_string.hpp"
 #include "curlmetrics.hpp"
 #include "currencycode.hpp"
 #include "exchange.hpp"

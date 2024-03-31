@@ -1,5 +1,7 @@
 #include "exchange-names.hpp"
 
+#include "cct_string.hpp"
+
 namespace cct {
 
 string ConstructAccumulatedExchangeNames(ExchangeNameSpan exchangeNames) {

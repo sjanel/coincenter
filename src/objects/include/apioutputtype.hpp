@@ -4,6 +4,7 @@
 #include <string_view>
 
 namespace cct {
+
 enum class ApiOutputType : int8_t {
   kNoPrint,
   kFormattedTable,
@@ -15,4 +16,5 @@ static constexpr std::string_view kApiOutputTypeTableStr = "table";
 static constexpr std::string_view kApiOutputTypeJsonStr = "json";
 
 ApiOutputType ApiOutputTypeFromString(std::string_view str);
+
 }  // namespace cct
