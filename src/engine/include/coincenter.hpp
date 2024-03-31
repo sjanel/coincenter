@@ -102,6 +102,10 @@ class Coincenter {
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
                                           ExchangeNameSpan exchangeNames);
 
+  /// Returns given amount per exchange converted into target currency code for given exchanges, when possible.
+  MonetaryAmountPerExchange getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
+                                          CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames);
+
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 

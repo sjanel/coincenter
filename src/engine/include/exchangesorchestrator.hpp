@@ -50,6 +50,9 @@ class ExchangesOrchestrator {
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
                                           ExchangeNameSpan exchangeNames);
 
+  MonetaryAmountPerExchange getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
+                                          CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames);
+
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
   CurrenciesPerExchange getCurrenciesPerExchange(ExchangeNameSpan exchangeNames);

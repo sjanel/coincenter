@@ -1,6 +1,7 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <csignal>
 #include <optional>
 #include <span>
@@ -9,7 +10,9 @@
 
 #include "balanceoptions.hpp"
 #include "cct_exception.hpp"
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
+#include "coincentercommand.hpp"
 #include "coincentercommands.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenterinfo.hpp"
@@ -31,14 +34,23 @@
 
 namespace cct {
 namespace {
-void FillTransferableCommandResults(const TradeResultPerExchange &tradeResultPerExchange,
-                                    TransferableCommandResultVector &transferableResults) {
+
+void FillTradeTransferableCommandResults(const TradeResultPerExchange &tradeResultPerExchange,
+                                         TransferableCommandResultVector &transferableResults) {
   for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
     if (tradeResult.isComplete()) {
       transferableResults.emplace_back(exchangePtr->createExchangeName(), tradeResult.tradedAmounts().to);
     }
   }
 }
+
+void FillConversionTransferableCommandResults(const MonetaryAmountPerExchange &monetaryAmountPerExchange,
+                                              TransferableCommandResultVector &transferableResults) {
+  for (const auto &[exchangePtr, amount] : monetaryAmountPerExchange) {
+    transferableResults.emplace_back(exchangePtr->createExchangeName(), amount);
+  }
+}
+
 }  // namespace
 
 volatile sig_atomic_t g_signalStatus = 0;
@@ -91,7 +103,7 @@ int Coincenter::process(const CoincenterCommands &coincenterCommands) {
       log::debug("Sleep for {} before next command", DurationToString(waitingDuration));
       std::this_thread::sleep_for(waitingDuration);
     }
-    if (nbRepeats != 1) {
+    if (nbRepeats != 1 && (repeatPos < 100 || repeatPos % 100 == 0)) {
       if (nbRepeats == -1) {
         log::info("Process request {}", repeatPos + 1);
       } else {
@@ -127,8 +139,31 @@ TransferableCommandResultVector Coincenter::processCommand(
       break;
     }
     case CoincenterCommandType::kConversion: {
-      const auto conversionPerExchange = getConversion(cmd.amount(), cmd.cur1(), cmd.exchangeNames());
-      _queryResultPrinter.printConversion(cmd.amount(), cmd.cur1(), conversionPerExchange);
+      if (cmd.amount().isDefault()) {
+        std::array<MonetaryAmount, kNbSupportedExchanges> startAmountsPerExchangePos;
+        bool oneSet = false;
+        for (const auto &transferableResult : previousTransferableResults) {
+          auto publicExchangePos = transferableResult.targetedExchange().publicExchangePos();
+          if (startAmountsPerExchangePos[publicExchangePos].isDefault()) {
+            startAmountsPerExchangePos[publicExchangePos] = transferableResult.resultedAmount();
+            oneSet = true;
+          } else {
+            throw invalid_argument(
+                "Transferable results to conversion should have at most one amount per public exchange");
+          }
+        }
+        if (!oneSet) {
+          throw invalid_argument("Missing input amount to convert from");
+        }
+
+        const auto conversionPerExchange = getConversion(startAmountsPerExchangePos, cmd.cur1(), cmd.exchangeNames());
+        _queryResultPrinter.printConversion(startAmountsPerExchangePos, cmd.cur1(), conversionPerExchange);
+        FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
+      } else {
+        const auto conversionPerExchange = getConversion(cmd.amount(), cmd.cur1(), cmd.exchangeNames());
+        _queryResultPrinter.printConversion(cmd.amount(), cmd.cur1(), conversionPerExchange);
+        FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
+      }
       break;
     }
     case CoincenterCommandType::kConversionPath: {
@@ -220,13 +255,13 @@ TransferableCommandResultVector Coincenter::processCommand(
           trade(startAmount, cmd.isPercentageAmount(), cmd.cur1(), exchangeNames, cmd.tradeOptions());
       _queryResultPrinter.printTrades(tradeResultPerExchange, startAmount, cmd.isPercentageAmount(), cmd.cur1(),
                                       cmd.tradeOptions());
-      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
+      FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kBuy: {
       const auto tradeResultPerExchange = smartBuy(cmd.amount(), cmd.exchangeNames(), cmd.tradeOptions());
       _queryResultPrinter.printBuyTrades(tradeResultPerExchange, cmd.amount(), cmd.tradeOptions());
-      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
+      FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kSell: {
@@ -238,7 +273,7 @@ TransferableCommandResultVector Coincenter::processCommand(
           smartSell(startAmount, cmd.isPercentageAmount(), exchangeNames, cmd.tradeOptions());
       _queryResultPrinter.printSellTrades(tradeResultPerExchange, cmd.amount(), cmd.isPercentageAmount(),
                                           cmd.tradeOptions());
-      FillTransferableCommandResults(tradeResultPerExchange, transferableResults);
+      FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
     case CoincenterCommandType::kWithdrawApply: {
@@ -344,6 +379,11 @@ TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
 MonetaryAmountPerExchange Coincenter::getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
                                                     ExchangeNameSpan exchangeNames) {
   return _exchangesOrchestrator.getConversion(amount, targetCurrencyCode, exchangeNames);
+}
+
+MonetaryAmountPerExchange Coincenter::getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
+                                                    CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames) {
+  return _exchangesOrchestrator.getConversion(monetaryAmountPerExchangeToConvert, targetCurrencyCode, exchangeNames);
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {

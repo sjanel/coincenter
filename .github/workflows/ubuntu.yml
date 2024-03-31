@@ -40,13 +40,12 @@ jobs:
           sudo ./llvm.sh ${CLANG_VERSION}
         if: startsWith(matrix.compiler, 'clang++')
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
       - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
+        run: cmake -S . -B build -GNinja
+        env:
+          CXX: ${{matrix.compiler}}
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
         working-directory: ${{github.workspace}}/build
