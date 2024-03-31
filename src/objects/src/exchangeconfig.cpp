@@ -15,6 +15,7 @@
 #include "durationstring.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeconfig.hpp"
 
@@ -65,7 +66,7 @@ ExchangeConfig::ExchangeConfig(
     const APIUpdateFrequencies &apiUpdateFrequencies, Duration publicAPIRate, Duration privateAPIRate,
     std::string_view acceptEncoding, int dustSweeperMaxNbTrades, log::level::level_enum requestsCallLogLevel,
     log::level::level_enum requestsAnswerLogLevel, bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile,
-    bool placeSimulateRealOrder, bool validateApiKey, TradeConfig tradeConfig)
+    bool placeSimulateRealOrder, bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig)
     : _excludedCurrenciesAll(std::move(excludedAllCurrencies)),
       _excludedCurrenciesWithdrawal(std::move(excludedCurrenciesWithdraw)),
       _preferredPaymentCurrencies(std::move(preferredPaymentCurrencies)),
@@ -77,6 +78,7 @@ ExchangeConfig::ExchangeConfig(
       _generalMakerRatio((MonetaryAmount(100) - MonetaryAmount(makerStr)) / 100),
       _generalTakerRatio((MonetaryAmount(100) - MonetaryAmount(takerStr)) / 100),
       _tradeConfig(std::move(tradeConfig)),
+      _httpConfig(std::move(httpConfig)),
       _dustSweeperMaxNbTrades(DustSweeperMaxNbTrades(dustSweeperMaxNbTrades)),
       _requestsCallLogLevel(PosFromLevel(requestsCallLogLevel)),
       _requestsAnswerLogLevel(PosFromLevel(requestsAnswerLogLevel)),
@@ -101,6 +103,7 @@ ExchangeConfig::ExchangeConfig(
                log::level::to_string_view(LevelFromPos(_requestsAnswerLogLevel)));
     log::trace(" - General update frequencies   : {} for public, {} for private", DurationToString(publicAPIRate),
                DurationToString(privateAPIRate));
+    log::trace(" - Http timeout duration        : {}", DurationToString(_httpConfig.timeout()));
     log::trace(" - Accept encoding              : {}", _acceptEncoding);
     log::trace(" - Update frequencies by method : {}", BuildUpdateFrequenciesString(_apiUpdateFrequencies));
     log::trace(" - Taker / Maker fees           : {} / {}", makerStr, takerStr);
@@ -116,6 +119,29 @@ ExchangeConfig::ExchangeConfig(
   if (_dustAmountsThreshold.empty()) {
     log::warn("{} set of dust amounts threshold is empty, dust sweeper is not possible", exchangeNameStr);
   }
+}
+
+PermanentCurlOptions::Builder ExchangeConfig::curlOptionsBuilderBase(Api api) const {
+  PermanentCurlOptions::Builder builder;
+
+  builder.setAcceptedEncoding(acceptEncoding())
+      .setRequestCallLogLevel(requestsCallLogLevel())
+      .setRequestAnswerLogLevel(requestsAnswerLogLevel())
+      .setTimeout(httpConfig().timeout());
+
+  switch (api) {
+    case Api::kPrivate:
+      builder.setMinDurationBetweenQueries(privateAPIRate());
+      break;
+    case Api::kPublic:
+      builder.setMinDurationBetweenQueries(publicAPIRate())
+          .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse);
+      break;
+    default:
+      break;
+  }
+
+  return builder;
 }
 
 }  // namespace cct

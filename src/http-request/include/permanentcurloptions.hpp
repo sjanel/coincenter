@@ -32,6 +32,8 @@ class PermanentCurlOptions {
 
   auto nbMaxRetries() const { return _nbMaxRetries; }
 
+  auto timeout() const { return _timeout; }
+
   class Builder {
    public:
     Builder() noexcept = default;
@@ -96,16 +98,28 @@ class PermanentCurlOptions {
       return *this;
     }
 
+    Builder &setTimeout(Duration timeout) {
+      _timeout = timeout;
+      return *this;
+    }
+
     PermanentCurlOptions build() {
-      return {std::move(_userAgent), std::move(_acceptedEncoding), _minDurationBetweenQueries,
-              _requestCallLogLevel,  _requestAnswerLogLevel,       _nbMaxRetries,
-              _followLocation,       _tooManyErrorsPolicy};
+      return {std::move(_userAgent),
+              std::move(_acceptedEncoding),
+              _minDurationBetweenQueries,
+              _timeout,
+              _requestCallLogLevel,
+              _requestAnswerLogLevel,
+              _nbMaxRetries,
+              _followLocation,
+              _tooManyErrorsPolicy};
     }
 
    private:
     string _userAgent;
     string _acceptedEncoding;
     Duration _minDurationBetweenQueries{};
+    Duration _timeout{};
     log::level::level_enum _requestCallLogLevel = log::level::level_enum::info;
     log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::trace;
     int _nbMaxRetries = kDefaultNbMaxRetries;
@@ -114,12 +128,13 @@ class PermanentCurlOptions {
   };
 
  private:
-  PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries,
+  PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries, Duration timeout,
                        log::level::level_enum requestCallLogLevel, log::level::level_enum requestAnswerLogLevel,
                        int nbMaxRetries, bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
       : _userAgent(std::move(userAgent)),
         _acceptedEncoding(std::move(acceptedEncoding)),
         _minDurationBetweenQueries(minDurationBetweenQueries),
+        _timeout(timeout),
         _requestCallLogLevel(requestCallLogLevel),
         _requestAnswerLogLevel(requestAnswerLogLevel),
         _nbMaxRetries(nbMaxRetries),
@@ -129,6 +144,7 @@ class PermanentCurlOptions {
   string _userAgent;
   string _acceptedEncoding;
   Duration _minDurationBetweenQueries;
+  Duration _timeout;
   log::level::level_enum _requestCallLogLevel;
   log::level::level_enum _requestAnswerLogLevel;
   int _nbMaxRetries;

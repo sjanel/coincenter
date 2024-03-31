@@ -52,6 +52,9 @@ struct ExchangeConfigDefault {
         "0.000001 BTC"
       ],
       "dustSweeperMaxNbTrades": 7,
+      "http": {
+        "timeout": "15s"
+      },
       "logLevels": {
         "requestsCall": "info",
         "requestsAnswer": "trace"
@@ -176,6 +179,9 @@ struct ExchangeConfigDefault {
         "0.5 XRP"
       ],
       "dustSweeperMaxNbTrades": 5,
+      "http": {
+        "timeout": "10s"
+      },
       "logLevels": {
         "requestsCall": "info",
         "requestsAnswer": "trace"

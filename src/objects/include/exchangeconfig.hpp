@@ -8,8 +8,10 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
+#include "http-config.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeconfig.hpp"
 
@@ -29,7 +31,7 @@ class ExchangeConfig {
                  std::string_view acceptEncoding, int dustSweeperMaxNbTrades,
                  log::level::level_enum requestsCallLogLevel, log::level::level_enum requestsAnswerLogLevel,
                  bool multiTradeAllowedByDefault, bool validateDepositAddressesInFile, bool placeSimulateRealOrder,
-                 bool validateApiKey, TradeConfig tradeConfig);
+                 bool validateApiKey, TradeConfig tradeConfig, HttpConfig httpConfig);
 
   /// Get a reference to the list of statically excluded currency codes to consider for the exchange,
   /// In both trading and withdrawal.
@@ -96,7 +98,13 @@ class ExchangeConfig {
 
   bool multiTradeAllowedByDefault() const { return _multiTradeAllowedByDefault; }
 
+  const HttpConfig &httpConfig() const { return _httpConfig; }
+
   const TradeConfig &tradeConfig() const { return _tradeConfig; }
+
+  enum class Api : int8_t { kPublic, kPrivate };
+
+  PermanentCurlOptions::Builder curlOptionsBuilderBase(Api api) const;
 
  private:
   CurrencyCodeSet _excludedCurrenciesAll;             // Currencies will be completely ignored by the exchange
@@ -111,6 +119,7 @@ class ExchangeConfig {
   MonetaryAmount _generalMakerRatio;
   MonetaryAmount _generalTakerRatio;
   TradeConfig _tradeConfig;
+  HttpConfig _httpConfig;
   int16_t _dustSweeperMaxNbTrades;  // max number of trades of a dust sweeper attempt per currency
   int8_t _requestsCallLogLevel;
   int8_t _requestsAnswerLogLevel;
