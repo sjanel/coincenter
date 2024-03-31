@@ -3,9 +3,11 @@ cmake_minimum_required(VERSION 3.15)
 # cmake does not currently support version suffixes (for dev / rc releases for instance.)
 # Github actions will detect if version has 'tweak' value (3 '.' in version) 
 # in order to avoid pushing Docker image for versions in development.
-project(coincenter VERSION 3.23.0
+project(coincenter VERSION 3.24.0.0
   DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
   LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
 
 # Use ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -45,8 +47,6 @@ if(EXISTS ${CCT_DATA_DIR})
 else()
   message(NOTICE "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container")
 endif()
-
-set(CMAKE_CXX_STANDARD 20)
 
 # openssl for requests
 find_package(OpenSSL REQUIRED)
