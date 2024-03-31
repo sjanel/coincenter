@@ -33,6 +33,18 @@
 #include "timedef.hpp"
 #include "unreachable.hpp"
 
+extern "C" size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *userp) {
+  try {
+    reinterpret_cast<cct::string *>(userp)->append(contents, size * nmemb);
+  } catch (const std::bad_alloc &e) {
+    // Do not throw exceptions in a function passed to a C library
+    // Returning 0 is a magic number that will cause CURL to raise an error
+    cct::log::error("Bad alloc caught in curl write call back action, returning 0: {}", e.what());
+    return 0;
+  }
+  return size * nmemb;
+}
+
 namespace cct {
 
 namespace {
@@ -40,18 +52,6 @@ namespace {
 /// According to RFC3986 (https://www.rfc-editor.org/rfc/rfc3986#section-2)
 /// '"' cannot be used in a URI (not percent encoded), so it's a fine delimiter for our FlatQueryResponse map
 using FlatQueryResponseMap = FlatKeyValueString<'\0', '"'>;
-
-size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *userp) {
-  try {
-    reinterpret_cast<string *>(userp)->append(contents, size * nmemb);
-  } catch (const std::bad_alloc &e) {
-    // Do not throw exceptions in a function passed to a C library
-    // Returning 0 is a magic number that will cause CURL to raise an error
-    log::error("Bad alloc caught in curl write call back action, returning 0: {}", e.what());
-    return 0;
-  }
-  return size * nmemb;
-}
 
 template <class T>
 void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
@@ -259,8 +259,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
         _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                              CurlMetrics::kNbRequestErrorKeys.find(opts.requestType())->second);
       }
-      log::error("Got curl error ({}), retry {}/{} after {}", static_cast<int>(res), retryPos, _nbMaxRetries,
-                 DurationToString(sleepingTime));
+      log::error("Got curl error {} for {}, retry {}/{} after {}", static_cast<int>(res), modifiedURL, retryPos,
+                 _nbMaxRetries, DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime *= 2;
     }
@@ -283,7 +283,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
 
     // Periodic memory release to avoid memory leak for a very large number of requests
-    static constexpr int kReleaseMemoryRequestsFrequency = 1000;
+    static constexpr int kReleaseMemoryRequestsFrequency = 10000;
     if ((_bestURLPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
       _queryData.shrink_to_fit();
     }
