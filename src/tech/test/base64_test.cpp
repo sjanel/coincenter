@@ -1,4 +1,4 @@
-#include "codec.hpp"
+#include "base64.hpp"
 
 #include <gtest/gtest.h>
 
@@ -6,23 +6,6 @@
 #include <string_view>
 
 namespace cct {
-
-namespace {
-std::span<const unsigned char> StringToBytes(std::string_view str) {
-  return {reinterpret_cast<const unsigned char *>(str.data()), str.length()};
-}
-}  // namespace
-
-TEST(Base64, BinToHexEmpty) { EXPECT_EQ(BinToHex(StringToBytes("")), ""); }
-TEST(Base64, BinToHex1) { EXPECT_EQ(BinToHex(StringToBytes("f")), "66"); }
-TEST(Base64, BinToHex2) { EXPECT_EQ(BinToHex(StringToBytes("fo")), "666f"); }
-TEST(Base64, BinToHex3) { EXPECT_EQ(BinToHex(StringToBytes("foo")), "666f6f"); }
-TEST(Base64, BinToHex4) { EXPECT_EQ(BinToHex(StringToBytes("foob")), "666f6f62"); }
-TEST(Base64, BinToHex5) { EXPECT_EQ(BinToHex(StringToBytes("fooba")), "666f6f6261"); }
-TEST(Base64, BinToHex6) { EXPECT_EQ(BinToHex(StringToBytes("foobar")), "666f6f626172"); }
-TEST(Base64, BinToHex7) { EXPECT_EQ(BinToHex(StringToBytes("foobarz")), "666f6f6261727a"); }
-TEST(Base64, BinToHex8) { EXPECT_EQ(BinToHex(StringToBytes("foobarzY")), "666f6f6261727a59"); }
-TEST(Base64, BinToHex9) { EXPECT_EQ(BinToHex(StringToBytes("foobarzYg")), "666f6f6261727a5967"); }
 
 TEST(Base64, EncodeEmpty) { EXPECT_EQ(B64Encode(std::string_view("")), ""); }
 TEST(Base64, Encode1) { EXPECT_EQ(B64Encode(std::string_view("f")), "Zg=="); }

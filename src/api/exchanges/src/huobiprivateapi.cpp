@@ -12,13 +12,13 @@
 #include "apiquerytypeenum.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
-#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -96,12 +96,11 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
 
   static constexpr std::string_view kSignatureKey = "Signature";
 
-  signaturePostData.set_back(
-      kSignatureKey, URLEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256,
-                                                     BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint,
-                                                                   signaturePostData.str()),
-                                                     apiKey.privateKey())),
-                               isNotEncoded));
+  signaturePostData.set_back(kSignatureKey,
+                             URLEncode(B64Encode(ssl::Sha256Bin(BuildParamStr(requestType, curlHandle.getNextBaseUrl(),
+                                                                              endpoint, signaturePostData.str()),
+                                                                apiKey.privateKey())),
+                                       isNotEncoded));
 }
 
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,

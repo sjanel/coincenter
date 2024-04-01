@@ -35,9 +35,9 @@ add_unit_test(
 )
 
 add_unit_test(
-    codec_test
-    src/codec.cpp
-    test/codec_test.cpp
+    base64_test
+    src/base64.cpp
+    test/base64_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )

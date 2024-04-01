@@ -1,50 +1,12 @@
-#include "codec.hpp"
+#include "base64.hpp"
 
-#include <cstddef>
 #include <span>
 
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
-#include "char-hexadecimal-converter.hpp"
 
 namespace cct {
-
-string BinToHex(std::span<const unsigned char> binData) {
-  string ret(2 * binData.size(), '\0');
-
-  auto out = ret.data();
-
-  for (auto beg = binData.data(), end = beg + binData.size(); beg != end; ++beg) {
-    out = to_lower_hex(*beg, out);
-  }
-  return ret;
-}
-
-string B64Encode(std::span<const char> binData) {
-  const auto binLen = binData.size();
-  // Use = signs so the end is properly padded.
-  string ret((((binLen + 2) / 3) * 4), '=');
-  std::size_t outPos = 0;
-  int bitsCollected = 0;
-  unsigned int accumulator = 0;
-
-  static constexpr const char* const kB64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-  for (char ch : binData) {
-    accumulator = (accumulator << 8) | (ch & 0xFFU);
-    bitsCollected += 8;
-    while (bitsCollected >= 6) {
-      bitsCollected -= 6;
-      ret[outPos++] = kB64Table[(accumulator >> bitsCollected) & 0x3FU];
-    }
-  }
-  if (bitsCollected > 0) {  // Any trailing bits that are missing.
-    accumulator <<= 6 - bitsCollected;
-    ret[outPos++] = kB64Table[accumulator & 0x3FU];
-  }
-  return ret;
-}
 
 string B64Decode(std::span<const char> ascData) {
   string ret;
@@ -64,7 +26,7 @@ string B64Decode(std::span<const char> ascData) {
       continue;
     }
     if (ch < 0 || kReverseTable[static_cast<unsigned char>(ch)] > 63) {
-      throw invalid_argument("This contains characters not legal in a base64 encoded string.");
+      throw invalid_argument("Illegal character '{}' detected for a base 64 encoded string", ch);
     }
     accumulator = (accumulator << 6) | kReverseTable[static_cast<unsigned char>(ch)];
     bitsCollected += 6;

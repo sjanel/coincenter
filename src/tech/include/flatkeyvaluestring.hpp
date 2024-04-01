@@ -92,6 +92,11 @@ class FlatKeyValueString {
   ///       "val1,val2,": value is an array of two values val1 and val2
   void emplace_back(std::string_view key, std::string_view value);
 
+  template <std::size_t N>
+  void emplace_back(std::string_view key, const std::array<char, N> &value) {
+    emplace_back(key, std::string_view(value.data(), N));
+  }
+
   void emplace_back(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
     std::array<char, std::numeric_limits<decltype(val)>::digits10 + 2> buf;
@@ -110,6 +115,11 @@ class FlatKeyValueString {
   /// Pushes a new {key, value} entry at the front of this buffer.
   void emplace_front(std::string_view key, std::string_view value);
 
+  template <std::size_t N>
+  void emplace_front(std::string_view key, const std::array<char, N> &value) {
+    emplace_front(key, std::string_view(value.data(), N));
+  }
+
   void emplace_front(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
     std::array<char, std::numeric_limits<decltype(val)>::digits10 + 2> buf;
@@ -124,15 +134,26 @@ class FlatKeyValueString {
   /// Updates the value for given key, or append if not existing.
   void set(std::string_view key, std::string_view value);
 
-  void set(std::string_view key, std::integral auto i) {
+  template <std::size_t N>
+  void set(std::string_view key, const std::array<char, N> &value) {
+    set(key, std::string_view(value.data(), N));
+  }
+
+  void set(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
-    char buf[std::numeric_limits<decltype(i)>::digits10 + 2];
-    auto ret = std::to_chars(buf, std::end(buf), i);
+    char buf[std::numeric_limits<decltype(val)>::digits10 + 2];
+    auto ret = std::to_chars(buf, std::end(buf), val);
+
     set(key, std::string_view(buf, ret.ptr));
   }
 
   /// Like emplace_back, but removes last entry if it has same key as given one.
   void set_back(std::string_view key, std::string_view value);
+
+  template <std::size_t N>
+  void set_back(std::string_view key, const std::array<char, N> &value) {
+    set_back(key, std::string_view(value.data(), N));
+  }
 
   /// Erases given key if present.
   void erase(std::string_view key);

@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include "cct_string.hpp"
-
 namespace cct::ssl {
 TEST(SSLTest, Version) { EXPECT_NE(GetOpenSSLVersion(), ""); }
 
@@ -21,7 +19,7 @@ TEST(SSLTest, Sha256) {
 }
 
 TEST(SSLTest, ShaBin256) {
-  auto actual = ShaBin(ShaType::kSha256, "data1234", "secret1234");
+  auto actual = Sha256Bin("data1234", "secret1234");
   static constexpr char kExpectedData[] = {11,  -51, -56,  -21,  -101, 61,   35,  28, 86,  97,  -50,
                                            -8,  47,  -113, -13,  -107, -100, -93, 27, 71,  101, -128,
                                            -65, 101, -110, -123, 38,   73,   77,  73, -10, -39};
@@ -29,7 +27,7 @@ TEST(SSLTest, ShaBin256) {
 }
 
 TEST(SSLTest, ShaBin512) {
-  auto actual = ShaBin(ShaType::kSha512, "data1234", "secret1234");
+  auto actual = Sha512Bin("data1234", "secret1234");
   static constexpr char kExpectedData[] = {-22, 39,  95,   -39, -44,  39,  97,   -40, 29,   -120, -125, 84,  -112,
                                            -5,  69,  -111, 3,   -109, 86,  54,   -31, 44,   -55,  56,   111, 85,
                                            87,  22,  -61,  82,  89,   52,  105,  2,   -89,  -76,  63,   4,   95,
@@ -39,7 +37,7 @@ TEST(SSLTest, ShaBin512) {
 }
 
 TEST(SSLTest, ShaHex256) {
-  auto actual = ShaHex(ShaType::kSha256, "data1234", "secret1234");
+  auto actual = Sha256Hex("data1234", "secret1234");
   static constexpr char kExpectedData[] = {48, 98, 99, 100, 99, 56,  101, 98, 57, 98,  51, 100, 50,  51,  49,  99,
                                            53, 54, 54, 49,  99, 101, 102, 56, 50, 102, 56, 102, 102, 51,  57,  53,
                                            57, 99, 97, 51,  49, 98,  52,  55, 54, 53,  56, 48,  98,  102, 54,  53,
@@ -48,7 +46,7 @@ TEST(SSLTest, ShaHex256) {
 }
 
 TEST(SSLTest, ShaHex512) {
-  auto actual = ShaHex(ShaType::kSha512, "data1234", "secret1234");
+  auto actual = Sha512Hex("data1234", "secret1234");
   static constexpr char kExpectedData[] = {
       101, 97,  50, 55, 53,  102, 100, 57,  100, 52,  50,  55,  54, 49,  100, 56,  49, 100, 56,  56, 56, 51,
       53,  52,  57, 48, 102, 98,  52,  53,  57,  49,  48,  51,  57, 51,  53,  54,  51, 54,  101, 49, 50, 99,
@@ -60,7 +58,7 @@ TEST(SSLTest, ShaHex512) {
 }
 
 TEST(SSLTest, ShaDigest256) {
-  auto actual = ShaDigest(ShaType::kSha256, "data1234");
+  auto actual = Sha256Digest("data1234");
   static constexpr char kExpectedData[] = {102, 50, 102, 100, 97,  57, 98, 98,  53, 49,  49,  56,  100, 100, 53, 97,
                                            51,  50, 57,  55,  100, 50, 56, 97,  52, 55,  50,  57,  51,  102, 49, 50,
                                            51,  97, 49,  51,  50,  54, 50, 57,  48, 101, 102, 51,  100, 55,  48, 49,
@@ -69,7 +67,7 @@ TEST(SSLTest, ShaDigest256) {
 }
 
 TEST(SSLTest, ShaDigest512) {
-  auto actual = ShaDigest(ShaType::kSha512, "data1234");
+  auto actual = Sha512Digest("data1234");
   static constexpr char kExpectedData[] = {
       99,  97,  97,  48,  50,  55, 54,  50,  57, 52,  98,  54,  49, 53,  48,  50,  51, 100, 57,  55,  50, 54,
       48,  52,  55,  53,  50,  54, 98,  49,  50, 52,  102, 100, 99, 100, 51,  49,  98, 100, 97,  101, 97, 56,
@@ -81,9 +79,9 @@ TEST(SSLTest, ShaDigest512) {
 }
 
 TEST(SSLTest, ShaDigest256Multiple) {
-  static const string kData[] = {"data1234", "anotherString5_-", "5_0(7)fbBBBb334G;"};
+  static constexpr std::string_view kData[] = {"data1234", "anotherString5_-", "5_0(7)fbBBBb334G;"};
 
-  auto actual = ShaDigest(ShaType::kSha256, kData);
+  auto actual = Sha256Digest(kData);
   static constexpr char kExpectedData[] = {53,  53, 100, 98, 52,  97,  49, 97,  50,  99, 52, 52, 52, 99,  97, 57,
                                            100, 57, 97,  52, 48,  99,  51, 52,  101, 97, 50, 99, 53, 98,  97, 51,
                                            100, 54, 55,  50, 102, 100, 51, 102, 100, 98, 51, 54, 52, 100, 98, 50,
@@ -92,9 +90,9 @@ TEST(SSLTest, ShaDigest256Multiple) {
 }
 
 TEST(SSLTest, ShaDigest512Multiple) {
-  static const string kData[] = {"data1234", "anotherString5_-", "5_0(7)fbBBBb334G;"};
+  static constexpr std::string_view kData[] = {"data1234", "anotherString5_-", "5_0(7)fbBBBb334G;"};
 
-  auto actual = ShaDigest(ShaType::kSha512, kData);
+  auto actual = Sha512Digest(kData);
   static constexpr char kExpectedData[] = {
       101, 56,  101, 55,  54,  98,  100, 56, 57, 53, 100, 53, 54, 99,  50,  54,  48, 56,  50, 57,  53,  97,
       100, 98,  100, 48,  55,  102, 51,  56, 49, 54, 99,  55, 99, 101, 101, 98,  54, 48,  53, 52,  100, 98,
