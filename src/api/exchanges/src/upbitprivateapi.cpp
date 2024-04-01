@@ -77,9 +77,9 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
                           .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpochInMs())));
 
   if (!opts.postData().empty()) {
-    string queryHash = ssl::ShaDigest(ssl::ShaType::kSha512, opts.postData().str());
+    const auto queryHash = ssl::Sha512Digest(opts.postData().str());
 
-    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash)))
+    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash.data(), queryHash.size())))
         .set_payload_claim("query_hash_alg", jwt::claim(std::string("SHA512")));
   }
 

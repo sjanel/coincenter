@@ -16,6 +16,7 @@
 #include "apiquerytypeenum.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "base64.hpp"
 #include "bithumbpublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
@@ -25,7 +26,6 @@
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
-#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -43,6 +43,7 @@
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
+#include "mathhelpers.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
 #include "orderid.hpp"
@@ -98,22 +99,35 @@ auto GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   return std::make_pair(std::move(strData), std::move(nonce));
 }
 
-void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, std::string_view signature, const Nonce& nonce) {
-  auto& httpHeaders = opts.mutableHttpHeaders();
+void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, const auto& signature, const Nonce& nonce) {
+  static constexpr std::string_view kApiKey = "API-Key";
+  static constexpr std::string_view kApiSign = "API-Sign";
+  static constexpr std::string_view kApiNonce = "API-Nonce";
+  static constexpr std::string_view kApiClientType = "api-client-type";
 
+  static constexpr auto kApiClientTypeValue = 1;
+
+  static constexpr std::size_t kNbHeaders = 4;
+
+  static constexpr auto kFixedSizePart = kApiKey.size() + kApiSign.size() + kApiNonce.size() + kApiClientType.size() +
+                                         ndigits(kApiClientTypeValue) + (kNbHeaders * 2) - 1U;
+
+  auto& httpHeaders = opts.mutableHttpHeaders();
   httpHeaders.clear();
-  httpHeaders.emplace_back("API-Key", apiKey.key());
-  httpHeaders.emplace_back("API-Sign", signature);
-  httpHeaders.emplace_back("API-Nonce", nonce);
-  httpHeaders.emplace_back("api-client-type", 1);
+  httpHeaders.underlyingBufferReserve(kFixedSizePart + apiKey.key().size() + signature.size() + nonce.size());
+
+  httpHeaders.emplace_back(kApiKey, apiKey.key());
+  httpHeaders.emplace_back(kApiSign, signature);
+  httpHeaders.emplace_back(kApiNonce, nonce);
+  httpHeaders.emplace_back(kApiClientType, kApiClientTypeValue);
 }
 
 template <class ValueType>
 bool LoadCurrencyInfoField(const json& currencyOrderInfoJson, std::string_view keyStr, ValueType& val, TimePoint& ts) {
-  auto subPartIt = currencyOrderInfoJson.find(keyStr);
+  const auto subPartIt = currencyOrderInfoJson.find(keyStr);
   if (subPartIt != currencyOrderInfoJson.end()) {
-    auto valIt = subPartIt->find(kValueKeyStr);
-    auto tsIt = subPartIt->find(kTimestampKeyStr);
+    const auto valIt = subPartIt->find(kValueKeyStr);
+    const auto tsIt = subPartIt->find(kTimestampKeyStr);
     if (valIt == subPartIt->end() || tsIt == subPartIt->end()) {
       log::warn("Unexpected format of Bithumb cache detected - do not use (will be automatically updated)");
       return false;
@@ -287,7 +301,7 @@ json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey
       [endpoint, &apiKey](CurlOptions& opts) {
         auto [strData, nonce] = GetStrData(endpoint, opts.postData().str());
 
-        auto signature = B64Encode(ssl::ShaHex(ssl::ShaType::kSha512, strData, apiKey.privateKey()));
+        auto signature = B64Encode(ssl::Sha512Hex(strData, apiKey.privateKey()));
 
         SetHttpHeaders(opts, apiKey, signature, nonce);
       });

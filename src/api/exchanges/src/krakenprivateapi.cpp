@@ -12,13 +12,13 @@
 #include "apiquerytypeenum.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
-#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -115,8 +115,8 @@ std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIK
         static constexpr std::string_view kSignatureKey = "API-Sign";
 
         // and compute HMAC
-        opts.mutableHttpHeaders().set_back(
-            kSignatureKey, B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, path, B64Decode(apiKey.privateKey()))));
+        opts.mutableHttpHeaders().set_back(kSignatureKey,
+                                           B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
       });
 
   auto resultIt = ret.find("result");

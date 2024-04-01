@@ -12,13 +12,13 @@
 #include "apiquerytypeenum.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
-#include "codec.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -78,8 +78,8 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     }
   }
 
-  string signature = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, strToSign, apiKey.privateKey()));
-  string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
+  auto signature = B64Encode(ssl::Sha256Bin(strToSign, apiKey.privateKey()));
+  auto passphrase = B64Encode(ssl::Sha256Bin(apiKey.passphrase(), apiKey.privateKey()));
 
   CurlOptions opts(requestType, std::move(postData), postDataFormat);
 

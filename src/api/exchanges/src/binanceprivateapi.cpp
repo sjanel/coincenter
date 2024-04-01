@@ -103,7 +103,9 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
 
   static constexpr std::string_view kSignatureKey = "signature";
 
-  postData.set_back(kSignatureKey, ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
+  auto sha256Hex = ssl::Sha256Hex(postData.str(), apiKey.privateKey());
+
+  postData.set_back(kSignatureKey, std::string_view(sha256Hex));
 }
 
 bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
