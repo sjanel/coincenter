@@ -99,11 +99,13 @@ auto GetStrData(std::string_view endpoint, std::string_view postDataStr) {
 }
 
 void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, std::string_view signature, const Nonce& nonce) {
-  opts.clearHttpHeaders();
-  opts.appendHttpHeader("API-Key", apiKey.key());
-  opts.appendHttpHeader("API-Sign", signature);
-  opts.appendHttpHeader("API-Nonce", nonce);
-  opts.appendHttpHeader("api-client-type", 1);
+  auto& httpHeaders = opts.mutableHttpHeaders();
+
+  httpHeaders.clear();
+  httpHeaders.emplace_back("API-Key", apiKey.key());
+  httpHeaders.emplace_back("API-Sign", signature);
+  httpHeaders.emplace_back("API-Nonce", nonce);
+  httpHeaders.emplace_back("api-client-type", 1);
 }
 
 template <class ValueType>

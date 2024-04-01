@@ -96,12 +96,7 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
 
   static constexpr std::string_view kSignatureKey = "Signature";
 
-  /// Erase signature if present
-  if (signaturePostData.back().key() == kSignatureKey) {
-    signaturePostData.pop_back();
-  }
-
-  signaturePostData.emplace_back(
+  signaturePostData.set_back(
       kSignatureKey, URLEncode(B64Encode(ssl::ShaBin(ssl::ShaType::kSha256,
                                                      BuildParamStr(requestType, curlHandle.getNextBaseUrl(), endpoint,
                                                                    signaturePostData.str()),

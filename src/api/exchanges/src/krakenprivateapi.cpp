@@ -3,10 +3,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string_view>
-#include <thread>
 #include <tuple>
 #include <utility>
 
@@ -31,7 +29,6 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "durationstring.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
@@ -45,6 +42,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"
 #include "timedef.hpp"
@@ -62,74 +60,71 @@
 namespace cct::api {
 namespace {
 
-string PrivateSignature(const APIKey& apiKey, string data, const Nonce& nonce, std::string_view postdata) {
-  // concatenate nonce and postdata and compute SHA256
-  string noncePostData(nonce.begin(), nonce.end());
-  noncePostData.append(postdata);
-
-  // concatenate path and nonce_postdata (path + ComputeSha256(nonce + postdata))
-  ssl::AppendSha256(noncePostData, data);
-
-  // and compute HMAC
-  return B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, data, B64Decode(apiKey.privateKey())));
-}
-
 enum class KrakenErrorEnum : int8_t { kExpiredOrder, kUnknownWithdrawKey, kUnknownError, kNoError };
 
 template <class CurlPostDataT = CurlPostData>
 std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view method,
                                               CurlPostDataT&& curlPostData = CurlPostData()) {
-  string path(KrakenPublic::kVersion);
-  path.append(method);
-
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
+  opts.mutableHttpHeaders().emplace_back("API-Key", apiKey.key());
 
-  Nonce nonce = Nonce_TimeSinceEpochInMs();
-  opts.mutablePostData().emplace_back("nonce", nonce);
-  opts.appendHttpHeader("API-Key", apiKey.key());
-  opts.appendHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.postData().str()));
-
-  json response = json::parse(curlHandle.query(method, opts));
-  Duration sleepingTime = curlHandle.minDurationBetweenQueries();
+  RequestRetry requestRetry(curlHandle, std::move(opts),
+                            QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
 
   static constexpr std::string_view kErrorKey = "error";
 
-  auto errorIt = response.find(kErrorKey);
-  for (; errorIt != response.end() && !errorIt->empty() &&
-         errorIt->front().get<std::string_view>() == "EAPI:Rate limit exceeded";
-       errorIt = response.find(kErrorKey)) {
-    log::error("Kraken private API rate limit exceeded");
-    sleepingTime *= 2;
-    log::debug("Wait {}", DurationToString(sleepingTime));
-    std::this_thread::sleep_for(sleepingTime);
-
-    // We need to update the nonce
-    nonce = Nonce_TimeSinceEpochInMs();
-    opts.mutablePostData().set("nonce", nonce);
-    opts.setHttpHeader("API-Sign", PrivateSignature(apiKey, path, nonce, opts.postData().str()));
-    response = json::parse(curlHandle.query(method, opts));
-  }
   KrakenErrorEnum err = KrakenErrorEnum::kNoError;
-  if (errorIt != response.end() && !errorIt->empty()) {
-    std::string_view msg = errorIt->front().get<std::string_view>();
-    if (msg.ends_with("Unknown order")) {
-      err = KrakenErrorEnum::kExpiredOrder;
-    } else if (msg.ends_with("Unknown withdraw key")) {
-      err = KrakenErrorEnum::kUnknownWithdrawKey;
-    } else {
-      log::error("Full Kraken json error: '{}'", response.dump());
-      err = KrakenErrorEnum::kUnknownError;
-    }
+
+  json ret = requestRetry.queryJson(
+      method,
+      [&err](const json& jsonResponse) {
+        const auto errorIt = jsonResponse.find(kErrorKey);
+        if (errorIt != jsonResponse.end() && !errorIt->empty()) {
+          std::string_view msg = errorIt->front().get<std::string_view>();
+          if (msg == "EAPI:Rate limit exceeded") {
+            log::warn("kraken private API rate limit exceeded");
+            return RequestRetry::Status::kResponseError;
+          }
+          if (msg.ends_with("Unknown order")) {
+            err = KrakenErrorEnum::kExpiredOrder;
+            return RequestRetry::Status::kResponseOK;
+          }
+          if (msg.ends_with("Unknown withdraw key")) {
+            err = KrakenErrorEnum::kUnknownWithdrawKey;
+            return RequestRetry::Status::kResponseOK;
+          }
+          log::error("kraken unknown error {}", msg);
+          return RequestRetry::Status::kResponseError;
+        }
+        return RequestRetry::Status::kResponseOK;
+      },
+      [&apiKey, method](CurlOptions& opts) {
+        Nonce noncePostData = Nonce_TimeSinceEpochInMs();
+        opts.mutablePostData().set("nonce", noncePostData);
+
+        // concatenate nonce and postdata and compute SHA256
+        noncePostData.append(opts.postData().str());
+
+        // concatenate path and nonce_postdata (path + ComputeSha256(nonce + postdata))
+        auto sha256 = ssl::Sha256(noncePostData);
+
+        string path;
+        path.reserve(KrakenPublic::kVersion.size() + method.size() + sha256.size());
+        path.append(KrakenPublic::kVersion).append(method).append(sha256.data(), sha256.data() + sha256.size());
+
+        static constexpr std::string_view kSignatureKey = "API-Sign";
+
+        // and compute HMAC
+        opts.mutableHttpHeaders().set_back(
+            kSignatureKey, B64Encode(ssl::ShaBin(ssl::ShaType::kSha512, path, B64Decode(apiKey.privateKey()))));
+      });
+
+  auto resultIt = ret.find("result");
+  std::pair<json, KrakenErrorEnum> retPair(json::object_t{}, err);
+  if (resultIt != ret.end()) {
+    retPair.first = std::move(*resultIt);
   }
-  auto resultIt = response.find("result");
-  const json* pResult;
-  if (resultIt == response.end()) {
-    static const json kEmptyJson{};
-    pResult = std::addressof(kEmptyJson);
-  } else {
-    pResult = std::addressof(*resultIt);
-  }
-  return std::make_pair(*pResult, err);
+  return retPair;
 }
 }  // namespace
 

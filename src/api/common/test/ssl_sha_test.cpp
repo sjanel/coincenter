@@ -11,14 +11,13 @@
 namespace cct::ssl {
 TEST(SSLTest, Version) { EXPECT_NE(GetOpenSSLVersion(), ""); }
 
-TEST(SSLTest, AppendSha256) {
-  string str("test");
-  AppendSha256("thisNonce0123456789Data", str);
+TEST(SSLTest, Sha256) {
+  auto sha256 = Sha256("thisNonce0123456789Data");
 
-  static constexpr char kExpectedData[] = {116,  101,  115, 116,  -98,  74,   -90, 56, -41, 61,   -33, 98,
-                                           -108, -110, -41, -82,  -110, -102, -80, 85, 127, -112, -55, -116,
-                                           38,   36,   10,  -104, -37,  93,   105, 14, 73,  99,   98,  95};
-  EXPECT_TRUE(std::equal(str.begin(), str.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  static constexpr char kExpectedData[] = {-98, 74,   -90,  56,  -41, 61,  -33,  98,  -108, -110, -41,
+                                           -82, -110, -102, -80, 85,  127, -112, -55, -116, 38,   36,
+                                           10,  -104, -37,  93,  105, 14,  73,   99,  98,   95};
+  EXPECT_TRUE(std::equal(sha256.begin(), sha256.end(), std::begin(kExpectedData), std::end(kExpectedData)));
 }
 
 TEST(SSLTest, ShaBin256) {

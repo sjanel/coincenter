@@ -82,11 +82,13 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   string passphrase = B64Encode(ssl::ShaBin(ssl::ShaType::kSha256, apiKey.passphrase(), apiKey.privateKey()));
 
   CurlOptions opts(requestType, std::move(postData), postDataFormat);
-  opts.appendHttpHeader("KC-API-KEY", apiKey.key());
-  opts.appendHttpHeader("KC-API-SIGN", signature);
-  opts.appendHttpHeader("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
-  opts.appendHttpHeader("KC-API-PASSPHRASE", passphrase);
-  opts.appendHttpHeader("KC-API-KEY-VERSION", 2);
+
+  auto& httpHeaders = opts.mutableHttpHeaders();
+  httpHeaders.emplace_back("KC-API-KEY", apiKey.key());
+  httpHeaders.emplace_back("KC-API-SIGN", signature);
+  httpHeaders.emplace_back("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
+  httpHeaders.emplace_back("KC-API-PASSPHRASE", passphrase);
+  httpHeaders.emplace_back("KC-API-KEY-VERSION", 2);
 
   json ret = json::parse(curlHandle.query(endpoint, opts));
   auto errCodeIt = ret.find("code");
