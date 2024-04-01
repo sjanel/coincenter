@@ -33,7 +33,7 @@ TEST_F(ExampleBaseCurlHandle, CurlVersion) { EXPECT_FALSE(GetCurlVersionInfo().e
 
 TEST_F(ExampleBaseCurlHandle, QueryJsonAndMoveConstruct) {
   CurlOptions opts = kVerboseHttpGetOptions;
-  opts.appendHttpHeader("MyHeaderIsVeryLongToAvoidSSO", "Val1");
+  opts.mutableHttpHeaders().emplace_back("MyHeaderIsVeryLongToAvoidSSO", "Val1");
 
   EXPECT_NE(handle.query("/json", opts).find("slideshow"), std::string_view::npos);
 

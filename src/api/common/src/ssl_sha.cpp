@@ -22,21 +22,22 @@ auto ShaDigestLen(ShaType shaType) { return static_cast<unsigned int>(shaType); 
 const EVP_MD* GetEVPMD(ShaType shaType) { return shaType == ShaType::kSha256 ? EVP_sha256() : EVP_sha512(); }
 }  // namespace
 
-void AppendSha256(std::string_view data, string& str) {
+Md256 Sha256(std::string_view data) {
   static_assert(SHA256_DIGEST_LENGTH == static_cast<unsigned int>(ShaType::kSha256));
 
-  str.resize(str.size() + static_cast<string::size_type>(SHA256_DIGEST_LENGTH));
+  Md256 ret(static_cast<string::size_type>(SHA256_DIGEST_LENGTH));
 
-  SHA256(
-      reinterpret_cast<const unsigned char*>(data.data()), data.size(),
-      reinterpret_cast<unsigned char*>(str.data() + str.size() - static_cast<string::size_type>(SHA256_DIGEST_LENGTH)));
+  SHA256(reinterpret_cast<const unsigned char*>(data.data()), data.size(),
+         reinterpret_cast<unsigned char*>(ret.data()));
+
+  return ret;
 }
 
 std::string_view GetOpenSSLVersion() { return OPENSSL_VERSION_TEXT; }
 
-Md ShaBin(ShaType shaType, std::string_view data, std::string_view secret) {
+Md512 ShaBin(ShaType shaType, std::string_view data, std::string_view secret) {
   unsigned int len = ShaDigestLen(shaType);
-  Md binData(static_cast<Md::size_type>(len), 0);
+  Md512 binData(static_cast<Md512::size_type>(len));
 
   HMAC(GetEVPMD(shaType), secret.data(), static_cast<int>(secret.size()),
        reinterpret_cast<const unsigned char*>(data.data()), data.size(),

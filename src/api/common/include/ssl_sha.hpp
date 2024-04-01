@@ -12,15 +12,16 @@ namespace cct::ssl {
 
 std::string_view GetOpenSSLVersion();
 
-/// @brief Append Sha256 computed from 'data' to 'str'
-void AppendSha256(std::string_view data, string &str);
-
 /// @brief Helper type containing the number of bytes of the SHA
 enum class ShaType : int16_t { kSha256 = 256 / CHAR_BIT, kSha512 = 512 / CHAR_BIT };
 
-using Md = FixedCapacityVector<char, static_cast<int16_t>(ShaType::kSha512)>;
+using Md256 = FixedCapacityVector<char, static_cast<int16_t>(ShaType::kSha256)>;
+using Md512 = FixedCapacityVector<char, static_cast<int16_t>(ShaType::kSha512)>;
 
-Md ShaBin(ShaType shaType, std::string_view data, std::string_view secret);
+/// @brief Compute Sha256 from 'data'
+Md256 Sha256(std::string_view data);
+
+Md512 ShaBin(ShaType shaType, std::string_view data, std::string_view secret);
 
 string ShaHex(ShaType shaType, std::string_view data, std::string_view secret);
 

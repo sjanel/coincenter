@@ -31,6 +31,7 @@ class CurlOptions {
     }
   }
 
+  HttpHeaders &mutableHttpHeaders() { return _httpHeaders; }
   const HttpHeaders &httpHeaders() const { return _httpHeaders; }
 
   const char *proxyUrl() const { return _proxyUrl; }
@@ -50,14 +51,6 @@ class CurlOptions {
   bool isPostDataInJsonFormat() const { return _postdataInJsonFormat; }
 
   HttpRequestType requestType() const { return _requestType; }
-
-  void clearHttpHeaders() { _httpHeaders.clear(); }
-
-  void appendHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.emplace_back(key, value); }
-  void appendHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.emplace_back(key, value); }
-
-  void setHttpHeader(std::string_view key, std::string_view value) { _httpHeaders.set(key, value); }
-  void setHttpHeader(std::string_view key, std::integral auto value) { _httpHeaders.set(key, value); }
 
   using trivially_relocatable =
       std::bool_constant<is_trivially_relocatable_v<HttpHeaders> && is_trivially_relocatable_v<CurlPostData>>::type;

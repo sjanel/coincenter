@@ -88,7 +88,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   string authStr("Bearer ");
   authStr.append(token.begin(), token.end());
 
-  opts.appendHttpHeader("Authorization", authStr);
+  opts.mutableHttpHeaders().emplace_back("Authorization", authStr);
 
   json ret = json::parse(curlHandle.query(endpoint, opts));
   if (ifError == IfError::kThrow) {

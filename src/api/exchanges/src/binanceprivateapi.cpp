@@ -103,12 +103,7 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
 
   static constexpr std::string_view kSignatureKey = "signature";
 
-  /// Erase signature if present
-  if (postData.back().key() == kSignatureKey) {
-    postData.pop_back();
-  }
-
-  postData.emplace_back(kSignatureKey, ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
+  postData.set_back(kSignatureKey, ssl::ShaHex(ssl::ShaType::kSha256, postData.str(), apiKey.privateKey()));
 }
 
 bool CheckErrorDoRetry(int statusCode, const json& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
@@ -175,7 +170,7 @@ template <class CurlPostDataT = CurlPostData>
 json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                   Duration& queryDelay, CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
-  opts.appendHttpHeader("X-MBX-APIKEY", apiKey.key());
+  opts.mutableHttpHeaders().emplace_back("X-MBX-APIKEY", apiKey.key());
 
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
   int statusCode{};

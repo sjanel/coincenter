@@ -31,6 +31,12 @@ TEST(FlatKeyValueStringTest, SetEmpty) {
   EXPECT_EQ(kvPairs.str(), "timestamp=1621785125200");
 }
 
+TEST(FlatKeyValueStringTest, SetBackEmpty) {
+  KvPairs kvPairs;
+  kvPairs.set_back("timestamp", "1621785125200");
+  EXPECT_EQ(kvPairs.str(), "timestamp=1621785125200");
+}
+
 TEST(FlatKeyValueStringTest, SetAndAppend) {
   KvPairs kvPairs;
   kvPairs.emplace_back("abc", "666");
@@ -91,6 +97,14 @@ TEST(FlatKeyValueStringTest, Erase) {
   EXPECT_EQ(kvPairs.str(), "tata=abc");
   kvPairs.erase("tata");
   EXPECT_TRUE(kvPairs.empty());
+}
+
+TEST(FlatKeyValueStringTest, SetBack) {
+  KvPairs kvPairs{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
+  kvPairs.set_back("abc", "678");
+  EXPECT_EQ(kvPairs.str(), "abc=354&tata=abc&rm=xX&huhu=haha&abc=678");
+  kvPairs.set_back("abc", "9012");
+  EXPECT_EQ(kvPairs.str(), "abc=354&tata=abc&rm=xX&huhu=haha&abc=9012");
 }
 
 TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
