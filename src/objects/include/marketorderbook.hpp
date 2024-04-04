@@ -26,15 +26,18 @@ class MarketOrderBook {
 
   using AmountPerPriceVec = SmallVector<AmountPrice, 4>;
 
-  /// Constructs an empty MarketOrderBook
+  /// Constructs an empty (and invalid) MarketOrderBook.
   MarketOrderBook() noexcept = default;
 
   /// Constructs a new MarketOrderBook given a market and a list of amounts and prices.
+  /// The order book may be created with invalid data, in this case, 'isValid' will return false for this object.
   /// @param volAndPriNbDecimals optional to force number of decimals of amounts
   explicit MarketOrderBook(TimePoint timeStamp, Market market, const MarketOrderBookLines& orderLines,
                            VolAndPriNbDecimals volAndPriNbDecimals = VolAndPriNbDecimals());
 
   /// Constructs a MarketOrderBook based on simple ticker information and price / amount precision
+  /// The order book may be created with invalid data, in this case, no exception will be raised but 'isValid' will
+  /// return false for this object.
   MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, MonetaryAmount askVolume, MonetaryAmount bidPrice,
                   MonetaryAmount bidVolume, VolAndPriNbDecimals volAndPriNbDecimals, int depth = kDefaultDepth);
 
@@ -43,7 +46,11 @@ class MarketOrderBook {
   Market market() const { return _market; }
 
   bool empty() const { return _orders.empty(); }
+
   int size() const { return _orders.size(); }
+
+  /// Check if data stored in this MarketOrderBook is valid.
+  bool isValid() const;
 
   bool isArtificiallyExtended() const { return _isArtificiallyExtended; }
 

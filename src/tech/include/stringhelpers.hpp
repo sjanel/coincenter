@@ -5,9 +5,11 @@
 #include <cstring>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
 #include "mathhelpers.hpp"
 
@@ -27,6 +29,21 @@ inline string ToString(std::integral auto val) {
   string str(nbDigitsInt, '0');
   details::ToChars(str.data(), nbDigitsInt, val);
   return str;
+}
+
+inline auto ToCharVector(std::integral auto val) {
+  // +1 for minus, +1 for additional partial ranges coverage
+  using Int = decltype(val);
+  static constexpr auto kMaxSize = std::numeric_limits<Int>::digits10 + 1 + (std::is_signed_v<Int> ? 1 : 0);
+
+  FixedCapacityVector<char, kMaxSize> ret(nchars(val));
+
+  auto [ptr, errc] = std::to_chars(ret.data(), ret.data() + ret.size(), val);
+  if (errc != std::errc()) {
+    throw exception("Unable to decode integral {} into string", val);
+  }
+
+  return ret;
 }
 
 template <std::integral Integral>

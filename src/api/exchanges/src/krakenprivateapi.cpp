@@ -63,8 +63,8 @@ namespace {
 enum class KrakenErrorEnum : int8_t { kExpiredOrder, kUnknownWithdrawKey, kUnknownError, kNoError };
 
 template <class CurlPostDataT = CurlPostData>
-std::pair<json, KrakenErrorEnum> PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view method,
-                                              CurlPostDataT&& curlPostData = CurlPostData()) {
+auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view method,
+                  CurlPostDataT&& curlPostData = CurlPostData()) {
   CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
   opts.mutableHttpHeaders().emplace_back("API-Key", apiKey.key());
 
