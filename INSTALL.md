@@ -89,14 +89,14 @@ You can refer to the provided [Dockerfile](alpine.Dockerfile) for more informati
 
 ### Windows
 
-On Windows, the easiest method is to use [vcpkg](https://chocolatey.org/install) as package manager to install **curl** and **OpenSSL**:
+On Windows, the easiest method is to use [vcpkg](https://chocolatey.org/install) as package manager to install dependencies.
+The vcpkg manifest [vcpkg.json](vcpkg.json) defines needed dependencies. You can install them manually with (optional, it will be done automatically by **cmake** at configure time):
 
 ```bash
-vcpkg install openssl curl
-vcpkg integrate install
+vcpkg install
 ```
 
-From this step, **curl** and **OpenSSL** can be found by `cmake` with `find_package` by giving the toolchain file of `vcpkg` at configure time:
+From this step, the dependencies can be found by `cmake` with `find_package` by giving the toolchain file of `vcpkg` at configure time:
 
 ```bash
 cmake -DCMAKE_TOOLCHAIN_FILE="<vcpkg-root-dir>/scripts/buildsystems/vcpkg.cmake" ...

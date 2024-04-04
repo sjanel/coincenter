@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "openssl",
+    "curl",
+    "zlib",
+    "vcpkg-tool-ninja"
+  ]
+}

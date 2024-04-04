@@ -1,6 +1,5 @@
 #include "timestring.hpp"
 
-#include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
@@ -17,7 +16,7 @@ namespace cct {
 string ToString(TimePoint timePoint, const char* format) {
   const std::time_t time = Clock::to_time_t(timePoint);
   std::tm utc{};
-#ifdef CCT_MSVC
+#ifdef _WIN32
   if (gmtime_s(&utc, &time)) {
     throw exception("Issue in gmtime_s");
   }
@@ -57,7 +56,7 @@ TimePoint FromString(std::string_view timeStr, const char* format) {
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
   const auto nowTime = Clock::now();
-  return ToString(std::chrono::duration_cast<milliseconds>(nowTime.time_since_epoch() + delay).count());
+  return ToString(TimestampToMillisecondsSinceEpoch(nowTime + delay));
 }
 
 }  // namespace cct

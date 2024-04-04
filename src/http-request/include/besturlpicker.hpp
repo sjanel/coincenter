@@ -8,6 +8,7 @@
 #include "cct_string.hpp"
 
 namespace cct {
+
 /// Utility class that holds the logic to pick the most interesting URL for each query based on response time
 /// statistics (average and standard deviation) stored over requests.
 /// The maximum number of base URLs it can work with is known at compile time, and should stay small as data is stored
@@ -53,8 +54,7 @@ class BestURLPicker {
   int nbRequestsDone() const;
 
  private:
-  explicit BestURLPicker(std::span<const std::string_view> baseUrls)
-      : _pBaseUrls(baseUrls.data()), _responseTimeStatsPerBaseUrl(baseUrls.size()) {}
+  explicit BestURLPicker(std::span<const std::string_view> baseUrls);
 
   struct ResponseTimeStats {
     constexpr bool operator==(const ResponseTimeStats &) const noexcept = default;
@@ -72,4 +72,5 @@ class BestURLPicker {
   const std::string_view *_pBaseUrls{};
   ResponseTimeStatsPerBaseUrl _responseTimeStatsPerBaseUrl;
 };
+
 }  // namespace cct
