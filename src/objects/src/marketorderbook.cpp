@@ -34,6 +34,7 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, Market market, const Marke
     : _time(timeStamp), _market(market), _volAndPriNbDecimals(volAndPriNbDecimals) {
   const auto nbPrices = orderLines.size();
   if (nbPrices == 0) {
+    log::error("Creating an empty order book - it is invalid");
     return;
   }
   if (_volAndPriNbDecimals == VolAndPriNbDecimals()) {
@@ -123,12 +124,8 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
     throw exception("Invalid bid volume {}{}", bidVolume, kErrNegVolumeMsg);
   }
 
-  static constexpr MonetaryAmount::RoundType roundType = MonetaryAmount::RoundType::kNearest;
-
-  askPrice.round(_volAndPriNbDecimals.priNbDecimals, roundType);
-  bidPrice.round(_volAndPriNbDecimals.priNbDecimals, roundType);
-  askVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
-  bidVolume.round(_volAndPriNbDecimals.volNbDecimals, roundType);
+  askVolume.round(_volAndPriNbDecimals.volNbDecimals, MonetaryAmount::RoundType::kNearest);
+  bidVolume.round(_volAndPriNbDecimals.volNbDecimals, MonetaryAmount::RoundType::kNearest);
 
   if (askVolume == 0) {
     throw exception("Number of decimals {} is too small for given start volume {}", _volAndPriNbDecimals.volNbDecimals,
@@ -137,6 +134,37 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
   if (bidVolume == 0) {
     throw exception("Number of decimals {} is too small for given start volume {}", _volAndPriNbDecimals.volNbDecimals,
                     bidVolume);
+  }
+
+  if (askPrice <= bidPrice) {
+    throw exception(
+        "Invalid ask price {} and bid price {} for MarketOrderbook creation. Ask price should be larger than Bid "
+        "price",
+        askPrice, bidPrice);
+  }
+
+  const auto inputAskPrice = askPrice;
+  const auto inputBidPrice = bidPrice;
+
+  askPrice.round(_volAndPriNbDecimals.priNbDecimals, MonetaryAmount::RoundType::kNearest);
+  bidPrice.round(_volAndPriNbDecimals.priNbDecimals, MonetaryAmount::RoundType::kNearest);
+
+  if (askPrice == bidPrice) {
+    // This is rare but can happen with inaccurate number of decimals / prices
+    // This is almost a hack but necessary to fix some incorrect data sometimes sent from Kucoin ticker.
+    // Let's fix it manually for at most one decimal difference (if it's more, data is really incorrect, better to
+    // throw)
+    const auto diffNbDecimalsAsk = inputAskPrice.nbDecimals() - _volAndPriNbDecimals.priNbDecimals;
+    const auto diffNbDecimalsBid = inputBidPrice.nbDecimals() - _volAndPriNbDecimals.priNbDecimals;
+    if (diffNbDecimalsAsk == 1) {
+      _volAndPriNbDecimals.priNbDecimals = inputAskPrice.nbDecimals();
+      askPrice = inputAskPrice;
+    } else if (diffNbDecimalsBid == 1) {
+      _volAndPriNbDecimals.priNbDecimals = inputBidPrice.nbDecimals();
+      bidPrice = inputBidPrice;
+    } else {
+      // do nothing, will throw just below
+    }
   }
 
   std::optional<AmountType> optStepPrice = (askPrice - bidPrice).amount(_volAndPriNbDecimals.priNbDecimals);
@@ -205,6 +233,26 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
     }
     _orders[depth + currentDepth] = std::move(amountPrice);
   }
+}
+
+bool MarketOrderBook::isValid() const {
+  if (_orders.size() < 2U) {
+    log::error("Market order book is invalid as size is {}", _orders.size());
+    return false;
+  }
+  if (!std::ranges::is_sorted(_orders, [](auto lhs, auto rhs) { return lhs.price < rhs.price; })) {
+    log::error("Market order book is invalid because orders are not sorted by price");
+    return false;
+  }
+  if (std::ranges::adjacent_find(_orders, [](auto lhs, auto rhs) { return lhs.price == rhs.price; }) != _orders.end()) {
+    log::error("Market order book is invalid because of duplicate prices");
+    return false;
+  }
+  if (!std::ranges::is_partitioned(_orders, [](auto amountPrice) { return amountPrice.amount > 0; })) {
+    log::error("Market order book is invalid because lines are not partitioned by asks / bids");
+    return false;
+  }
+  return true;
 }
 
 std::optional<MonetaryAmount> MarketOrderBook::averagePrice() const {

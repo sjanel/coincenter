@@ -142,9 +142,9 @@ class FlatKeyValueString {
   void set(std::string_view key, std::integral auto val) {
     // + 1 for minus, +1 for additional partial ranges coverage
     char buf[std::numeric_limits<decltype(val)>::digits10 + 2];
-    auto ret = std::to_chars(buf, std::end(buf), val);
+    auto [ptr, errc] = std::to_chars(buf, std::end(buf), val);
 
-    set(key, std::string_view(buf, ret.ptr));
+    set(key, std::string_view(buf, ptr));
   }
 
   /// Like emplace_back, but removes last entry if it has same key as given one.

@@ -157,7 +157,6 @@ TEST_F(SimpleTableTest, EmptyCellShouldBePossible) {
 | 12            |          | Nothing here          |
 | -4            |          |                       |
 +---------------+----------+-----------------------+)";
-
   EXPECT_EQ(ss.view(), kExpected);
 }
 

@@ -165,6 +165,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
     CurrencyCode base(baseAsset);
     CurrencyCode quote(quoteAsset);
     Market mk(base, quote);
+
     markets.insert(mk);
 
     MarketInfo& marketInfo = marketInfoMap[std::move(mk)];
@@ -177,7 +178,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
     marketInfo.priceIncrement = MonetaryAmount(marketDetails["priceIncrement"].get<std::string_view>(), quote);
     marketInfo.feeCurrency = CurrencyCode(marketDetails["feeCurrency"].get<std::string_view>());
   }
-  log::info("Retrieved Kucoin {} markets", markets.size());
+  log::debug("Retrieved {} markets for kucoin", markets.size());
   return {std::move(markets), std::move(marketInfoMap)};
 }
 

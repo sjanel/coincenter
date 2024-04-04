@@ -382,7 +382,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     // Kucoin does not provide any transaction id, let's generate it from currency and timestamp...
     string id = currencyCode.str();
     id.push_back('-');
-    id.append(ToString(millisecondsSinceEpoch));
+    id.append(std::string_view(ToCharVector(millisecondsSinceEpoch)));
 
     deposits.emplace_back(std::move(id), timestamp, amount, status);
   }

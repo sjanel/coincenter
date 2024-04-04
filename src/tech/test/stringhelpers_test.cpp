@@ -50,6 +50,20 @@ TEST(ToChar, UnsignedValue) {
   EXPECT_EQ(ToString(630195439576U), "630195439576");
 }
 
+TEST(ToCharVector, PositiveValueInt8) { EXPECT_EQ(std::string_view(ToCharVector(static_cast<int8_t>(3))), "3"); }
+
+TEST(ToCharVector, NegativeValueInt8) { EXPECT_EQ(std::string_view(ToCharVector(static_cast<int8_t>(-11))), "-11"); }
+
+TEST(ToCharVector, PositiveValueInt) { EXPECT_EQ(std::string_view(ToCharVector(34)), "34"); }
+
+TEST(ToCharVector, NegativeValueInt16) {
+  EXPECT_EQ(std::string_view(ToCharVector(static_cast<int16_t>(-31678))), "-31678");
+}
+
+TEST(ToCharVector, PositiveValueUint64) {
+  EXPECT_EQ(std::string_view(ToCharVector(std::numeric_limits<uint64_t>::max())), "18446744073709551615");
+}
+
 TEST(FromString, PositiveValue) {
   EXPECT_EQ(FromString<int>("0"), 0);
   EXPECT_EQ(FromString<int>("00"), 0);
