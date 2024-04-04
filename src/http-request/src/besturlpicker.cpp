@@ -10,6 +10,10 @@
 #include "mathhelpers.hpp"
 
 namespace cct {
+BestURLPicker::BestURLPicker(std::span<const std::string_view> baseUrls)
+    : _pBaseUrls(baseUrls.data()),
+      _responseTimeStatsPerBaseUrl(static_cast<ResponseTimeStatsPerBaseUrl::size_type>(baseUrls.size())) {}
+
 int8_t BestURLPicker::nextBaseURLPos() const {
   // First, pick the base url which has less than 'kNbRequestMinBeforeCompare' if any
   auto minNbIt = std::ranges::find_if(_responseTimeStatsPerBaseUrl, [](ResponseTimeStats lhs) {

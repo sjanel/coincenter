@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <string_view>
 #include <thread>
+#include <utility>
 
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
@@ -10,7 +10,6 @@
 #include "cct_type_traits.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
-#include "curlpostdata.hpp"
 #include "durationstring.hpp"
 #include "query-retry-policy.hpp"
 #include "timedef.hpp"

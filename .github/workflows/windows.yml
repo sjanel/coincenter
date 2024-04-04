@@ -13,25 +13,19 @@ jobs:
     strategy:
       matrix:
         buildmode: [Debug]
+        generator: [Visual Studio 17 2022]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          vcpkg install curl
-
-      - name: End vcpkg install
-        run: |
-          vcpkg integrate install
-
-      - name: Configure CMake
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -S . -B build
+      - name: Configure CMake with vcpkg
+        run: cmake -S . -B build -G "${{matrix.generator}}"
+        env:
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
+          CMAKE_TOOLCHAIN_FILE: "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config ${{matrix.buildmode}} --parallel 4
+        run: cmake --build build --parallel 4
 
       - name: Tests
         working-directory: ${{github.workspace}}/build

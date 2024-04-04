@@ -67,3 +67,5 @@ data/secret
 data/static/exchangeconfig.json
 data/static/generalconfig.json
 monitoring/data/grafana/*
+
+vcpkg_installed/
