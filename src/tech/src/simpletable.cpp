@@ -53,7 +53,7 @@ CellLine::size_type CellLine::width() const {
         if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view>) {
           return val.length();
         } else if constexpr (std::is_same_v<T, bool>) {
-          return val ? kBoolValueTrue.length() : kBoolValueFalse.length();
+          return static_cast<CellLine::size_type>(val ? kBoolValueTrue.length() : kBoolValueFalse.length());
         } else if constexpr (std::is_integral_v<T>) {
           return nchars(val);
         } else {

@@ -44,7 +44,8 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
 
   const json &activityTrackingPart = generalConfigJsonLogPart["activityTracking"];
   const json &commandTypes = activityTrackingPart["commandTypes"];
-  _trackedCommandTypes.reserve(commandTypes.size());
+
+  _trackedCommandTypes.reserve(static_cast<decltype(_trackedCommandTypes)::size_type>(commandTypes.size()));
   std::ranges::transform(
       commandTypes, std::inserter(_trackedCommandTypes, _trackedCommandTypes.end()),
       [](const json &elem) { return CoincenterCommandTypeFromString(elem.get<std::string_view>()); });

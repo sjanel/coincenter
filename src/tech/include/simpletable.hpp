@@ -3,7 +3,6 @@
 #include <compare>
 #include <cstdint>
 #include <ostream>
-#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -48,6 +47,8 @@ namespace table {
 
 /// Cell in a SimpleTable on a single line.
 /// Can currently hold only 4 types of values: a string, a string_view, a int64_t and a bool.
+/// Note: if you pass a const char * or a string_view, a string_view will be stored in the cell.
+/// Make sure that the lifetime of the data it points to extends the lifetime of this cell.
 class CellLine {
  public:
 #ifdef CCT_MSVC

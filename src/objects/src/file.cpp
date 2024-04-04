@@ -77,12 +77,12 @@ int File::write(const json& data, Writer::Mode mode) const {
     if (data.empty()) {
       static constexpr std::string_view kEmptyJsonStr = "{}";
       fileOfStream << kEmptyJsonStr << '\n';
-      return kEmptyJsonStr.length() + 1;
+      return static_cast<int>(kEmptyJsonStr.length()) + 1;
     }
     const int indent = mode == Writer::Mode::FromStart ? 2 : -1;
     string outStr = data.dump(indent);
     fileOfStream << outStr << '\n';
-    return outStr.length() + 1;
+    return static_cast<int>(outStr.length()) + 1;
   } catch (const std::exception& e) {
     if (_ifError == IfError::kThrow) {
       throw e;
