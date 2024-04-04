@@ -1,12 +1,12 @@
 #pragma once
 
-#include "cct_config.hpp"
 #include "cct_string.hpp"
 
 namespace cct {
+
 class HostNameGetter {
  public:
-#ifdef CCT_MSVC
+#ifdef _WIN32
   HostNameGetter();
 #else
   HostNameGetter() noexcept = default;
@@ -17,14 +17,14 @@ class HostNameGetter {
   HostNameGetter(HostNameGetter &&) = delete;
   HostNameGetter &operator=(HostNameGetter &&) = delete;
 
-#ifdef CCT_MSVC
+#ifdef _WIN32
   ~HostNameGetter();
 #else
   ~HostNameGetter() = default;
 #endif
 
   /// Safe version of gethostname, working in POSIX and Windows with similar behavior.
-  string getHostName() const;
+  [[nodiscard]] string getHostName() const;
 };
 
 }  // namespace cct

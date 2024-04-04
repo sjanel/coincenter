@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "cct_cctype.hpp"
@@ -39,10 +39,10 @@ Duration ParseDuration(std::string_view durationStr) {
       "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
       "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
 
-  const std::size_t sz = durationStr.size();
+  const auto sz = durationStr.size();
   Duration ret{};
-  for (std::size_t charPos = 0; charPos < sz;) {
-    const std::size_t intFirst = charPos;
+  for (std::remove_const_t<decltype(sz)> charPos = 0; charPos < sz;) {
+    const auto intFirst = charPos;
 
     while (charPos < sz && isdigit(durationStr[charPos])) {
       ++charPos;
@@ -56,7 +56,7 @@ Duration ParseDuration(std::string_view durationStr) {
     while (charPos < sz && isspace(durationStr[charPos])) {
       ++charPos;
     }
-    const std::size_t unitFirst = charPos;
+    const auto unitFirst = charPos;
     while (charPos < sz && islower(durationStr[charPos])) {
       ++charPos;
     }

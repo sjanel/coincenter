@@ -6,6 +6,7 @@
 #include "timedef.hpp"
 
 namespace cct {
+
 /// Parse given string representation of a duration and return the duration.
 /// Amounts and units may be separated by spaces. For example:
 /// "1h45min" is allowed, as well as "1h 45min" and "1 h 45      min "

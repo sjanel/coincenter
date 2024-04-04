@@ -107,7 +107,7 @@ class TopLevelOption {
     }
 
     vector<ValueType> ret;
-    ret.reserve(optValIt->size());
+    ret.reserve(static_cast<vector<ValueType>::size_type>(optValIt->size()));
     for (const auto& val : *optValIt) {
       ret.emplace_back(val.get<std::string_view>());
     }

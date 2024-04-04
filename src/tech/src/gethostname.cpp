@@ -1,10 +1,8 @@
 #include "gethostname.hpp"
 
-// NOLINTNEXTLINE(misc-include-cleaner)
-#include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
-#ifdef CCT_MSVC
+#ifdef _WIN32
 #include <Winsock2.h>
 #include <winsock.h>
 #else
@@ -14,7 +12,7 @@
 #endif
 
 namespace cct {
-#ifdef CCT_MSVC
+#ifdef _WIN32
 HostNameGetter::HostNameGetter() {
   WSADATA wsaData;
   WORD wVersionRequested = MAKEWORD(2, 2);
@@ -36,7 +34,7 @@ string HostNameGetter::getHostName() const {
   do {
     auto errorCode = ::gethostname(hostname.data(), hostname.size() - 1U);
     if (errorCode != 0) {
-#ifdef CCT_MSVC
+#ifdef _WIN32
       // In Windows, too small buffer returns an error WSAEFAULT
       if (WSAGetLastError() == WSAEFAULT) {
 #else
@@ -49,7 +47,7 @@ string HostNameGetter::getHostName() const {
       }
       throw exception("Error {} in gethostname", errorCode);
     }
-#ifndef CCT_MSVC
+#ifndef _WIN32
     if (hostname.back() != '\0') {
       // In POSIX, if the null-terminated hostname is too large to fit, then the name is truncated, and no error is
       // returned, meaning that last char has necessarily been written to
