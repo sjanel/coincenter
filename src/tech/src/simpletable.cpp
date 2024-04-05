@@ -47,15 +47,15 @@ constexpr bool always_false_v = false;
 
 CellLine::size_type CellLine::width() const {
   return std::visit(
-      [](auto &&val) -> size_type {
+      [](auto &&val) {
         using T = std::decay_t<decltype(val)>;
 
         if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view>) {
-          return val.length();
+          return static_cast<size_type>(val.length());
         } else if constexpr (std::is_same_v<T, bool>) {
-          return static_cast<CellLine::size_type>(val ? kBoolValueTrue.length() : kBoolValueFalse.length());
+          return static_cast<size_type>(val ? kBoolValueTrue.length() : kBoolValueFalse.length());
         } else if constexpr (std::is_integral_v<T>) {
-          return nchars(val);
+          return static_cast<size_type>(nchars(val));
         } else {
           // Note: can be replaced with 'static_assert(false);' in C++23
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
@@ -147,13 +147,14 @@ auto ComputeMaxWidthPerColumn(const SimpleTable &table) {
 
 auto ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector, char cellFiller, char columnSep) {
   using size_type = SimpleTable::size_type;
+  using string_type = SimpleTable::value_type::value_type::value_type::string_type;
 
   const auto sumWidths = std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), size_type{});
 
   // 3 as one space before, one space after the field name and column separator. +1 for the first column separator
-  const size_type tableWidth = sumWidths + maxWidthPerColumnVector.size() * 3 + 1;
+  const auto tableWidth = sumWidths + static_cast<size_type>(maxWidthPerColumnVector.size()) * 3 + 1;
 
-  SimpleTable::value_type::value_type::value_type::string_type lineSep(tableWidth, cellFiller);
+  string_type lineSep(tableWidth, cellFiller);
 
   size_type curWidth{};
   lineSep[curWidth] = columnSep;
