@@ -18,7 +18,7 @@
 namespace cct {
 
 CoincenterCommands::CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan) {
-  _commands.reserve(cmdLineOptionsSpan.size());
+  _commands.reserve(static_cast<Commands::size_type>(cmdLineOptionsSpan.size()));
   const CoincenterCommand *pPreviousCommand = nullptr;
   for (const CoincenterCmdLineOptions &cmdLineOptions : cmdLineOptionsSpan) {
     addOption(cmdLineOptions, pPreviousCommand);

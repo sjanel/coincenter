@@ -22,7 +22,6 @@
 #include "cct_json.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
@@ -40,6 +39,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "opened-order.hpp"
@@ -606,7 +606,7 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
 
 MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay);
-  vector<MonetaryAmount> fees;
+  MonetaryAmountVector fees;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
     if (withdrawFeeDetails["withdrawStatus"].get<bool>()) {
       CurrencyCode cur(curCodeStr);

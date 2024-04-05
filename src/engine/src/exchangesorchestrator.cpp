@@ -530,7 +530,8 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
 TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAmountMarketsPathVector::iterator first,
                                               ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
                                               const TradeOptions &tradeOptions) {
-  TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
+  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(last - first));
+
   threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(),
                                [toCurrency, &tradeOptions](ExchangeAmountMarkets &exchangeAmountMarketsPath) {
                                  Exchange *exchange = exchangeAmountMarketsPath.exchange;
@@ -548,7 +549,8 @@ TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAm
 template <class Iterator>
 TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, Iterator first, Iterator last,
                                               const TradeOptions &tradeOptions) {
-  TradeResultPerExchange tradeResultPerExchange(std::distance(first, last));
+  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(last - first));
+
   using ObjType = decltype(*first);
   threadPool.parallelTransform(
       first, last, tradeResultPerExchange.begin(), [&tradeOptions](ObjType &exchangeAmountMarketsPath) {

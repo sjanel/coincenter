@@ -19,7 +19,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -36,6 +35,7 @@
 #include "market-vector.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
@@ -259,7 +259,7 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json
 }  // namespace
 
 MonetaryAmountByCurrencySet BinancePublic::queryWithdrawalFees() {
-  vector<MonetaryAmount> fees;
+  MonetaryAmountVector fees;
   for (const json& coinJson : _globalInfosCache.get()) {
     std::string_view coinStr = coinJson["coin"].get<std::string_view>();
     if (coinStr.size() > CurrencyCode::kMaxLen) {

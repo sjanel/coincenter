@@ -15,7 +15,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -31,6 +30,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
@@ -168,7 +168,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
 }
 
 MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
-  vector<MonetaryAmount> fees;
+  MonetaryAmountVector fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
   json jsonData = withdrawFeesFile.readAllJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
