@@ -30,6 +30,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
@@ -183,7 +184,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
 }
 
 MonetaryAmountByCurrencySet KucoinPublic::queryWithdrawalFees() {
-  vector<MonetaryAmount> fees;
+  MonetaryAmountVector fees;
   const auto& tradableCurrencies = _tradableCurrenciesCache.get();
   fees.reserve(tradableCurrencies.size());
   for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : tradableCurrencies) {

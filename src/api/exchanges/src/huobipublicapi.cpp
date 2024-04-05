@@ -15,7 +15,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -31,6 +30,7 @@
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
@@ -273,7 +273,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
 }
 
 MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
-  vector<MonetaryAmount> fees;
+  MonetaryAmountVector fees;
   for (const json& curDetail : _tradableCurrenciesCache.get()) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));

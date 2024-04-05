@@ -18,7 +18,6 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "curlhandle.hpp"
@@ -37,6 +36,7 @@
 #include "httprequesttype.hpp"
 #include "krakenpublicapi.hpp"
 #include "market.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
 #include "orderid.hpp"
@@ -146,8 +146,8 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
   BalancePortfolio balancePortfolio;
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/Balance");
   // Kraken returns an empty array in case of account with no balance at all
-  vector<MonetaryAmount> balanceAmounts;
-  balanceAmounts.reserve(res.size());
+  MonetaryAmountVector balanceAmounts;
+  balanceAmounts.reserve(static_cast<MonetaryAmountVector::size_type>(res.size()));
   for (const auto& [curCode, amountStr] : res.items()) {
     CurrencyCode currencyCode(_coincenterInfo.standardizeCurrencyCode(curCode));
 

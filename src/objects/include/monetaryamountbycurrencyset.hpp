@@ -3,13 +3,10 @@
 #include <initializer_list>
 
 #include "cct_flatset.hpp"
-#include "cct_vector.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 
 namespace cct {
-
-/// Helper type that can be used as input buffer for CurrencyExchangeFlatSet.
-using MonetaryAmountVector = vector<MonetaryAmount>;
 
 class MonetaryAmountByCurrencySet {
  private:

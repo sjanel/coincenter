@@ -3,7 +3,6 @@
 #include <jwt-cpp/jwt.h>
 
 #include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -175,7 +174,7 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
   json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
 
-  balancePortfolio.reserve(ret.size());
+  balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(ret.size()));
 
   for (const json& accountDetail : ret) {
     const CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
@@ -264,20 +263,20 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
     }
   }
 
-  static constexpr int kLimitNbOrdersPerPage = 100;
-  static constexpr int kNbMaxPagesToRetrieve = 10;
+  static constexpr auto kMaxNbOrdersPerPage = 100;
+  static constexpr auto kNbMaxPagesToRetrieve = 10;
 
-  for (int nbOrdersRetrieved = kLimitNbOrdersPerPage;
-       nbOrdersRetrieved == kLimitNbOrdersPerPage && page < kNbMaxPagesToRetrieve;) {
+  for (auto nbOrdersRetrieved = kMaxNbOrdersPerPage;
+       nbOrdersRetrieved == kMaxNbOrdersPerPage && page < kNbMaxPagesToRetrieve;) {
     params.set("page", ++page);
 
     json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/v1/orders", params);
 
-    nbOrdersRetrieved = data.size();
+    nbOrdersRetrieved = static_cast<decltype(nbOrdersRetrieved)>(data.size());
 
     for (json& orderDetails : data) {
       std::string_view marketStr = orderDetails["market"].get<std::string_view>();
-      std::size_t dashPos = marketStr.find('-');
+      auto dashPos = marketStr.find('-');
       if (dashPos == std::string_view::npos) {
         throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
       }
@@ -398,7 +397,7 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
     options.set("page", page);
     json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
     if (deposits.empty()) {
-      deposits.reserve(result.size());
+      deposits.reserve(static_cast<Deposits::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
     for (json& trx : result) {
@@ -471,7 +470,7 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
     options.set("page", page);
     json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options);
     if (withdraws.empty()) {
-      withdraws.reserve(result.size());
+      withdraws.reserve(static_cast<Withdraws::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
     for (json& trx : result) {
