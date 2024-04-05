@@ -67,6 +67,7 @@ else()
     amadeusamc
     GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
     GIT_TAG v2.5.0
+    GIT_SHALLOW true
   )
 
   FetchContent_MakeAvailable(amadeusamc)
@@ -80,6 +81,7 @@ if(CCT_ENABLE_TESTS)
       googletest
       GIT_REPOSITORY https://github.com/google/googletest.git
       GIT_TAG v1.14.0
+      GIT_SHALLOW true
     )
 
     FetchContent_MakeAvailable(googletest)
@@ -95,6 +97,7 @@ if(NOT nlohmann_json_FOUND)
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.11.3
+    GIT_SHALLOW true
   )
 
   FetchContent_MakeAvailable(nlohmann_json)
@@ -112,6 +115,7 @@ if(CCT_BUILD_PROMETHEUS_FROM_SRC)
     prometheus-cpp
     GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
     GIT_TAG v1.2.4
+    GIT_SHALLOW true
   )
 
   FetchContent_MakeAvailable(prometheus-cpp)
@@ -136,6 +140,7 @@ if(NOT spdlog_FOUND)
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.13.0
+    GIT_SHALLOW true
   )
 
   FetchContent_MakeAvailable(spdlog)
