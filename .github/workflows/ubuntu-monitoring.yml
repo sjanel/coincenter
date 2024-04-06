@@ -32,29 +32,28 @@ jobs:
           git submodule init
           git submodule update
 
-          mkdir _build
-          cd _build
+          cmake -S . -B _build -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF -GNinja
+          cmake --build _build
 
-          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -GNinja
-          cmake --build .
-
-          sudo cmake --install .
+          sudo cmake --install _build
+        env:
+          CXX: ${{matrix.compiler}}
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
         if: matrix.build-prometheus-from-source == 0
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
       - name: Configure CMake
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{matrix.buildmode}} -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
+        run: cmake -S . -B build -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-prometheus-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
+        env:
+          CXX: ${{matrix.compiler}}
+          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build .
+        run: cmake --build build
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        shell: bash
         run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure
+
+      - name: Sanity check main executable
+        working-directory: ${{github.workspace}}/build
+        run: ./coincenter --help

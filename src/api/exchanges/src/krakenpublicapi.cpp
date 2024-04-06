@@ -343,7 +343,8 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
 
   if (!result.empty()) {
     const auto& lastTrades = result.front();
-    ret.reserve(lastTrades.size());
+
+    ret.reserve(static_cast<PublicTradeVector::size_type>(lastTrades.size()));
     for (const json& det : lastTrades) {
       const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
       const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());

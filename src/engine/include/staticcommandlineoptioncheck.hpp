@@ -68,7 +68,7 @@ consteval auto ComputeAllCommandLineOptions(std::array<T, N>... ar) {
   const T* arr[kNbArrays] = {&ar[0]...};
   constexpr std::size_t lengths[kNbArrays] = {ar.size()...};
 
-  constexpr std::size_t kSumLen = std::accumulate(lengths, lengths + kNbArrays, 0);
+  constexpr auto kSumLen = std::accumulate(lengths, lengths + kNbArrays, std::size_t{});
 
   std::array<CommandLineOption, kSumLen> all;
 

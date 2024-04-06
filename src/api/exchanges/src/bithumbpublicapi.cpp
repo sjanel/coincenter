@@ -321,8 +321,8 @@ PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
   json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote(), urlOpts);
 
   PublicTradeVector ret;
-  ret.reserve(result.size());
 
+  ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
   for (const json& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
