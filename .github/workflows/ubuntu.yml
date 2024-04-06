@@ -41,18 +41,18 @@ jobs:
         if: startsWith(matrix.compiler, 'clang++')
 
       - name: Configure CMake
-        shell: bash
         run: cmake -S . -B build -GNinja
         env:
           CXX: ${{matrix.compiler}}
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build .
+        run: cmake --build build
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        shell: bash
         run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure
+
+      - name: Sanity check main executable
+        working-directory: ${{github.workspace}}/build
+        run: ./coincenter --help

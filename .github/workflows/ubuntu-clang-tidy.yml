@@ -33,7 +33,6 @@ jobs:
           sudo ln -s /usr/bin/clang-tidy-${{matrix.clang-version}} /usr/local/bin/clang-tidy
 
       - name: Configure CMake
-        shell: bash
         run: |
           clang-tidy --dump-config
           cmake -S . -B build -DCCT_ENABLE_CLANG_TIDY=ON -DCCT_ENABLE_ASAN=OFF -GNinja
@@ -42,6 +41,4 @@ jobs:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: cmake --build .
+        run: cmake --build build

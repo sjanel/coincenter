@@ -30,3 +30,7 @@ jobs:
       - name: Tests
         working-directory: ${{github.workspace}}/build
         run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure
+
+      - name: Sanity check main executable
+        working-directory: ${{github.workspace}}/build/${{matrix.buildmode}}
+        run: .\coincenter.exe --help

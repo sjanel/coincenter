@@ -9,7 +9,7 @@ ARG BUILD_WITH_PROMETHEUS=1
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apt update && \
     apt upgrade -y && \
-    apt install build-essential ninja-build libssl-dev libcurl4-gnutls-dev cmake git ca-certificates gzip -y --no-install-recommends
+    apt install build-essential ninja-build libssl-dev libcurl4-gnutls-dev cmake git ca-certificates -y --no-install-recommends
 
 # Copy source files
 WORKDIR /app/src

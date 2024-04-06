@@ -118,7 +118,7 @@ ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetrie
 ExchangesOrchestrator::ExchangesOrchestrator(const RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan)
     : _exchangeRetriever(exchangesSpan),
       _threadPool(requestsConfig.nbMaxParallelRequests(static_cast<int>(exchangesSpan.size()))) {
-  log::info("Created a thread pool with {} workers for exchange requests", _threadPool.nbWorkers());
+  log::debug("Created a thread pool with {} workers for exchange requests", _threadPool.nbWorkers());
 }
 
 ExchangeHealthCheckStatus ExchangesOrchestrator::healthCheck(ExchangeNameSpan exchangeNames) {

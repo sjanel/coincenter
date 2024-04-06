@@ -184,8 +184,7 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
   const std::string_view amountKey = withBalanceInUse ? "balance" : "available";
 
-  balancePortfolio.reserve(result.size());
-
+  balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(result.size()));
   for (const json& balanceDetail : result) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(
@@ -318,7 +317,7 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     if (dataIt != res.end()) {
       auto cancelledOrderIdsIt = dataIt->find("cancelledOrderIds");
       if (cancelledOrderIdsIt != dataIt->end()) {
-        nbCancelledOrders = cancelledOrderIdsIt->size();
+        nbCancelledOrders = static_cast<int>(cancelledOrderIdsIt->size());
       }
     }
     return nbCancelledOrders;
@@ -367,8 +366,10 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
   if (itemsIt == depositJson.end()) {
     throw exception("Unexpected result from Kucoin deposit API");
   }
+
   Deposits deposits;
-  deposits.reserve(itemsIt->size());
+
+  deposits.reserve(static_cast<Deposits::size_type>(itemsIt->size()));
   for (const json& depositDetail : *itemsIt) {
     CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
@@ -443,8 +444,10 @@ WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& wit
   if (itemsIt == withdrawJson.end()) {
     throw exception("Unexpected result from Kucoin withdraw API");
   }
+
   Withdraws withdraws;
-  withdraws.reserve(itemsIt->size());
+
+  withdraws.reserve(static_cast<Withdraws::size_type>(itemsIt->size()));
   for (const json& withdrawDetail : *itemsIt) {
     CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
     MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);

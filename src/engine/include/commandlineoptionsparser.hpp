@@ -131,8 +131,7 @@ class CommandLineOptionsParser {
 
  private:
   static constexpr std::string_view kEmptyLine =
-      "                                                                                                              "
-      "  "
+      "                                                                                                                "
       "        ";
   static constexpr int kMaxCharLine = kEmptyLine.length();
 
@@ -226,7 +225,7 @@ class CommandLineOptionsParser {
 
   static std::ostream& RowPrefix(const CommandLineOption& opt, int lenFirstRows, std::ostream& stream) {
     stream << "  ";
-    int nbPrintedChars = opt.fullName().size();
+    auto nbPrintedChars = opt.fullName().size();
     stream << opt.fullName();
     if (opt.hasShortName()) {
       static constexpr std::string_view kShortNameSep = ", -";
@@ -237,7 +236,7 @@ class CommandLineOptionsParser {
     stream << ' ';
     stream << opt.valueDescription();
     nbPrintedChars += opt.valueDescription().size();
-    return Spaces(lenFirstRows - nbPrintedChars - 3, stream);
+    return Spaces(lenFirstRows - static_cast<int>(nbPrintedChars) - 3, stream);
   }
 
   static std::ostream& Spaces(int nbSpaces, std::ostream& stream) {

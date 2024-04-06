@@ -262,8 +262,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
     return balancePortfolio;
   }
 
-  balancePortfolio.reserve(dataIt->size());
-
+  balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(dataIt->size()));
   for (const json& balance : *dataIt) {
     CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
     MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
