@@ -25,7 +25,7 @@ jobs:
           CMAKE_TOOLCHAIN_FILE: "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
-        run: cmake --build build --parallel 4
+        run: cmake --build build --config ${{matrix.buildmode}} --parallel 4
 
       - name: Tests
         working-directory: ${{github.workspace}}/build

@@ -159,9 +159,13 @@ else()
   add_compile_options(-Wall -Wextra -pedantic)
 
   if(CCT_ENABLE_ASAN)
-    add_compile_options(-fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
-    add_link_options(-fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
-    message(STATUS "Activate asan")
+    if (NOT CCT_ASAN_OPTIONS)
+      set(CCT_ASAN_OPTIONS -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
+    endif()
+    add_compile_options(${CCT_ASAN_OPTIONS})
+    add_link_options(${CCT_ASAN_OPTIONS})
+
+    message(STATUS "Activate asan with options ${CCT_ASAN_OPTIONS}")
   endif()
 
   if(CCT_ENABLE_CLANG_TIDY)
