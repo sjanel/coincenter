@@ -3,6 +3,7 @@
 #include <charconv>
 #include <concepts>
 #include <cstring>
+#include <limits>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
@@ -32,14 +33,17 @@ inline string ToString(std::integral auto val) {
 }
 
 inline auto ToCharVector(std::integral auto val) {
-  // +1 for minus, +1 for additional partial ranges coverage
   using Int = decltype(val);
+
+  // +1 for minus, +1 for additional partial ranges coverage
   static constexpr auto kMaxSize = std::numeric_limits<Int>::digits10 + 1 + (std::is_signed_v<Int> ? 1 : 0);
 
-  FixedCapacityVector<char, kMaxSize> ret(nchars(val));
+  using CharVector = FixedCapacityVector<char, kMaxSize>;
 
-  auto [ptr, errc] = std::to_chars(ret.data(), ret.data() + ret.size(), val);
-  if (errc != std::errc()) {
+  CharVector ret(static_cast<CharVector::size_type>(nchars(val)));
+
+  const auto [ptr, errc] = std::to_chars(ret.data(), ret.data() + ret.size(), val);
+  if (CCT_UNLIKELY(errc != std::errc())) {
     throw exception("Unable to decode integral {} into string", val);
   }
 
