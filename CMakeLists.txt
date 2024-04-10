@@ -51,11 +51,16 @@ endif()
 # openssl for requests
 find_package(OpenSSL REQUIRED)
 
+# ZLIB - required for serialization data compression
+find_package(ZLIB REQUIRED)
+
 # curl - request library
 find_package(CURL REQUIRED)
 
 # External dependencies (linked with FetchContent)
 include(FetchContent)
+
+set(fetchContentPackagesToMakeAvailable "")
 
 find_package(amc CONFIG)
 if(amc_FOUND)
@@ -65,12 +70,11 @@ else()
 
   FetchContent_Declare(
     amadeusamc
-    GIT_REPOSITORY https://github.com/AmadeusITGroup/amc.git
-    GIT_TAG v2.5.0
-    GIT_SHALLOW true
+    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.5.0.tar.gz
+    URL_HASH SHA256=07d792906bfee1a51f3e3b8bf5a5ac8db0a6488eb36a1265c216edb60e98d378
   )
 
-  FetchContent_MakeAvailable(amadeusamc)
+  list(APPEND fetchContentPackagesToMakeAvailable amadeusamc)
 endif()
 
 if(CCT_ENABLE_TESTS)
@@ -79,12 +83,11 @@ if(CCT_ENABLE_TESTS)
   if(NOT GTest_FOUND)
     FetchContent_Declare(
       googletest
-      GIT_REPOSITORY https://github.com/google/googletest.git
-      GIT_TAG v1.14.0
-      GIT_SHALLOW true
+      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+      URL_HASH SHA256=8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7
     )
 
-    FetchContent_MakeAvailable(googletest)
+    list(APPEND fetchContentPackagesToMakeAvailable googletest)
   endif()
 
   enable_testing()
@@ -95,30 +98,28 @@ find_package(nlohmann_json CONFIG)
 if(NOT nlohmann_json_FOUND)
   FetchContent_Declare(
     nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-    GIT_SHALLOW true
+    URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+    URL_HASH SHA256=0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406
   )
 
-  FetchContent_MakeAvailable(nlohmann_json)
+  list(APPEND fetchContentPackagesToMakeAvailable nlohmann_json)
 endif()
 
 # prometheus for monitoring support
 if(CCT_BUILD_PROMETHEUS_FROM_SRC)
+  FetchContent_Declare(
+    prometheus-cpp
+    URL https://github.com/jupp0r/prometheus-cpp/archive/refs/tags/v1.2.4.tar.gz
+    URL_HASH SHA256=48dbad454d314b836cc667ec4def93ec4a6e4255fc8387c20cacb3b8b6faee30
+  )
+
   # Disable Prometheus testing
   set(ENABLE_TESTING OFF)
 
   # Pull mode not used for the moment
   set(ENABLE_PULL OFF)
 
-  FetchContent_Declare(
-    prometheus-cpp
-    GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
-    GIT_TAG v1.2.4
-    GIT_SHALLOW true
-  )
-
-  FetchContent_MakeAvailable(prometheus-cpp)
+  list(APPEND fetchContentPackagesToMakeAvailable prometheus-cpp)
 
   set(CCT_ENABLE_PROMETHEUS ON)
 else()
@@ -138,26 +139,36 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.13.0
-    GIT_SHALLOW true
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz
+    URL_HASH SHA256=534f2ee1a4dcbeb22249856edfb2be76a1cf4f708a20b0ac2ed090ee24cfdbc9
   )
 
-  FetchContent_MakeAvailable(spdlog)
+  list(APPEND fetchContentPackagesToMakeAvailable spdlog)
+endif()
+
+# Make fetch content available
+if(fetchContentPackagesToMakeAvailable)
+  message(STATUS "Configuring packages ${fetchContentPackagesToMakeAvailable}")
+  FetchContent_MakeAvailable("${fetchContentPackagesToMakeAvailable}")
 endif()
 
 # Unit Tests
 include(cmake/AddUnitTest.cmake)
 
-if(MSVC)
-  add_compile_options(/W3)
+# Compiler warnings (only in Debug mode)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if(MSVC)
+    add_compile_options(/W3)
+  else()
+    add_compile_options(-Wall -Wextra -pedantic)
+  endif()
+endif()
 
+if(MSVC)
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
   add_compile_definitions(NOMINMAX)
   add_compile_definitions(_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 else()
-  add_compile_options(-Wall -Wextra -pedantic)
-
   if(CCT_ENABLE_ASAN)
     if (NOT CCT_ASAN_OPTIONS)
       set(CCT_ASAN_OPTIONS -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
