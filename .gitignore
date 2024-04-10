@@ -69,3 +69,4 @@ data/static/generalconfig.json
 monitoring/data/grafana/*
 
 vcpkg_installed/
+CMakeUserPresets.json

@@ -9,7 +9,9 @@
     - [Linux](#linux)
       - [Debian / Ubuntu](#debian--ubuntu)
       - [Alpine](#alpine)
-    - [Windows](#windows)
+    - [With a package manager on any platform (easiest solution on Windows)](#with-a-package-manager-on-any-platform-easiest-solution-on-windows)
+      - [vcpkg](#vcpkg)
+      - [conan](#conan)
   - [Build](#build)
     - [External libraries](#external-libraries)
     - [With cmake](#with-cmake)
@@ -72,7 +74,7 @@ Otherwise you can still force it:
 
 ```bash
 sudo apt update
-sudo apt install build-essential ninja-build libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
+sudo apt install build-essential ninja-build zlib1g-dev libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
 ```
 
 You can refer to the provided [Dockerfile](Dockerfile) for more information.
@@ -82,14 +84,15 @@ You can refer to the provided [Dockerfile](Dockerfile) for more information.
 With `ninja` generator for instance:
 
 ```bash
-sudo apk add --update --upgrade g++ libc-dev openssl-dev curl-dev cmake ninja git ca-certificates
+sudo apk add --update --upgrade g++ libc-dev zlib-dev openssl-dev curl-dev cmake ninja git ca-certificates
 ```
 
 You can refer to the provided [Dockerfile](alpine.Dockerfile) for more information.
 
-### Windows
+### With a package manager on any platform (easiest solution on Windows)
 
-On Windows, the easiest method is to use [vcpkg](https://chocolatey.org/install) as package manager to install dependencies.
+#### [vcpkg](https://vcpkg.io/en/)
+
 The vcpkg manifest [vcpkg.json](vcpkg.json) defines needed dependencies. You can install them manually with (optional, it will be done automatically by **cmake** at configure time):
 
 ```bash
@@ -99,10 +102,29 @@ vcpkg install
 From this step, the dependencies can be found by `cmake` with `find_package` by giving the toolchain file of `vcpkg` at configure time:
 
 ```bash
-cmake -DCMAKE_TOOLCHAIN_FILE="<vcpkg-root-dir>/scripts/buildsystems/vcpkg.cmake" ...
+cmake -DCMAKE_TOOLCHAIN_FILE="<vcpkg-root-dir>/scripts/buildsystems/vcpkg.cmake" <usual-cmake-arguments>
 ```
 
 You can refer to the [Windows workflow](.github/workflows/windows.yml) and the [vcpkg install page](https://vcpkg.io/en/getting-started?platform=windows) for more information.
+
+#### [conan](https://conan.io/)
+
+It's very similar than with vcpkg. The build process is described in details in [this page](https://docs.conan.io/2/tutorial/consuming_packages/build_simple_cmake_project.html).
+
+```bash
+# If not already done - add profile to your system
+conan profile detect --force
+
+# install libraries defined in conanfile.txt
+conan install . --output-folder=build --build=missing
+```
+
+If your **cmake** version is >= 3.23, then simply run:
+
+```bash
+cmake --preset conan-release
+cmake --build build
+```
 
 ## Build
 
