@@ -36,7 +36,7 @@ class KucoinPublic : public ExchangePublic {
   CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode standardCode) override {
-    return *queryTradableCurrencies().find(standardCode);
+    return queryTradableCurrencies().getOrThrow(standardCode);
   }
 
   MarketSet queryTradableMarkets() override { return _marketsCache.get().first; }
