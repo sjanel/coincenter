@@ -319,41 +319,55 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
   return MarketOrderBook(nowTime, mk, orderBookLines, volAndPriNbDecimals);
 }
 
-KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market mk) {
-  const Market krakenMarket(_tradableCurrenciesCache.get().getOrThrow(mk.base()).altCode(),
-                            _tradableCurrenciesCache.get().getOrThrow(mk.quote()).altCode());
-  const json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
-  for (const auto& [krakenAssetPair, details] : result.items()) {
-    std::string_view last24hVol = details["v"][1].get<std::string_view>();
-    std::string_view lastTickerPrice = details["c"][0].get<std::string_view>();
-    return {MonetaryAmount(last24hVol, mk.base()), MonetaryAmount(lastTickerPrice, mk.quote())};
+namespace {
+Market GetKrakenMarketOrDefault(const CurrencyExchangeFlatSet& currencies, Market mk) {
+  const auto krakenBaseIt = currencies.find(mk.base());
+  const auto krakenQuoteIt = currencies.find(mk.quote());
+  if (krakenBaseIt != currencies.end() && krakenQuoteIt != currencies.end()) {
+    return Market(krakenBaseIt->altCode(), krakenQuoteIt->altCode());
   }
-  throw exception("Invalid data retrieved from ticker information");
+  return Market{};
+}
+}  // namespace
+
+KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::TickerFunc::operator()(Market mk) {
+  const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
+
+  if (krakenMarket.isDefined()) {
+    const json result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
+    for (const auto& [krakenAssetPair, details] : result.items()) {
+      std::string_view last24hVol = details["v"][1].get<std::string_view>();
+      std::string_view lastTickerPrice = details["c"][0].get<std::string_view>();
+
+      return {MonetaryAmount(last24hVol, mk.base()), MonetaryAmount(lastTickerPrice, mk.quote())};
+    }
+  }
+
+  return {MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.quote())};
 }
 
 PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
-  const auto& currenciesCache = _tradableCurrenciesCache.get();
-  Market krakenMarket(currenciesCache.getOrThrow(mk.base()).altCode(),
-                      currenciesCache.getOrThrow(mk.quote()).altCode());
-
-  json result = PublicQuery(_curlHandle, "/public/Trades",
-                            {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
-
   PublicTradeVector ret;
 
-  if (!result.empty()) {
-    const auto& lastTrades = result.front();
+  const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
+  if (krakenMarket.isDefined()) {
+    json result = PublicQuery(_curlHandle, "/public/Trades",
+                              {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
 
-    ret.reserve(static_cast<PublicTradeVector::size_type>(lastTrades.size()));
-    for (const json& det : lastTrades) {
-      const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
-      const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
-      const auto millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
-      const TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
+    if (!result.empty()) {
+      const auto& lastTrades = result.front();
 
-      ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
+      ret.reserve(static_cast<PublicTradeVector::size_type>(lastTrades.size()));
+      for (const json& det : lastTrades) {
+        const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
+        const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
+        const auto millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
+        const TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
+
+        ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
+      }
+      std::ranges::sort(ret);
     }
-    std::ranges::sort(ret);
   }
 
   return ret;
