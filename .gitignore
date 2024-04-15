@@ -70,3 +70,4 @@ monitoring/data/grafana/*
 
 vcpkg_installed/
 CMakeUserPresets.json
+CMakePresets.json

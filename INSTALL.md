@@ -26,6 +26,8 @@
 </p>
 </details>
 
+Unless explicitly stated otherwise, all commands detailed in next sections are to be run from the top level directory of `coincenter` repository.
+
 ## Public docker image
 
 If you don't want to build `coincenter` locally, you can just download the public docker image, corresponding to the latest version of branch `main`.
@@ -74,7 +76,7 @@ Otherwise you can still force it:
 
 ```bash
 sudo apt update
-sudo apt install build-essential ninja-build zlib1g-dev libcurl4-gnutls-dev libssl-dev cmake git ca-certificates gzip
+sudo apt install build-essential ninja-build zlib1g-dev libcurl4-openssl-dev libssl-dev cmake git ca-certificates
 ```
 
 You can refer to the provided [Dockerfile](Dockerfile) for more information.
@@ -122,8 +124,7 @@ conan install . --output-folder=build --build=missing
 If your **cmake** version is >= 3.23, then simply run:
 
 ```bash
-cmake --preset conan-release
-cmake --build build
+cmake -S . -B build --preset conan-release
 ```
 
 ## Build
@@ -161,7 +162,10 @@ The minimum tested version is cmake `3.15`, but it's recommended that you use th
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 
 ```bash
-mkdir -p build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && ninja
+mkdir -p build
+cd build
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+ninja
 ```
 
 On Windows, you can use your preferred IDE to build `coincenter` (**Visual Studio Code**, **Visual Studio 2022**, etc), or build it from command line, with generator `-G "Visual Studio 17 2022"` for instance. Refer to the GitHub Windows workflow to have the detailed installation steps.

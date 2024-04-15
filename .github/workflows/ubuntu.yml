@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install cmake libssl-dev libcurl4-gnutls-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake libssl-dev libcurl4-openssl-dev ninja-build -y --no-install-recommends
 
       - name: Install gcc
         run: |
