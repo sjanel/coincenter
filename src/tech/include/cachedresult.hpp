@@ -37,13 +37,22 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
   using ResultType = std::remove_cvref_t<decltype(std::declval<T>()(std::declval<FuncTArgs>()...))>;
   using TimePoint = ClockT::time_point;
   using Duration = ClockT::duration;
-  using ResPtrTimePair = std::pair<const ResultType *, TimePoint>;
   using State = CachedResultBase<Duration>::State;
 
  private:
   using TKey = std::tuple<std::remove_cvref_t<FuncTArgs>...>;
-  using TValue = std::pair<ResultType, TimePoint>;
-  using MapType = std::unordered_map<TKey, TValue, HashTuple>;
+
+  struct Value {
+    template <class R>
+    Value(R &&result, TimePoint lastUpdatedTs) : result(std::forward<R>(result)), lastUpdatedTs(lastUpdatedTs) {}
+
+    template <class F, class K>
+    Value(F &func, K &&key, TimePoint lastUpdatedTs)
+        : result(std::apply(func, std::forward<K>(key))), lastUpdatedTs(lastUpdatedTs) {}
+
+    ResultType result;
+    TimePoint lastUpdatedTs;
+  };
 
  public:
   template <class... TArgs>
@@ -56,12 +65,16 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
 
   /// Sets given value associated to the key built with given parameters,
   /// if given timestamp is more recent than the one associated to the value already present at this key (if any)
+  /// refresh period is not checked, if given timestamp is more recent than the one associated to given value, cache
+  /// will be updated.
   template <class ResultTypeT, class... Args>
   void set(ResultTypeT &&val, TimePoint timePoint, Args &&...funcArgs) {
-    auto [it, inserted] = _cachedResultsMap.try_emplace(TKey(std::forward<Args &&>(funcArgs)...),
-                                                        std::forward<ResultTypeT>(val), timePoint);
-    if (!inserted && it->second.second < timePoint) {
-      it->second = TValue(std::forward<ResultTypeT>(val), timePoint);
+    checkPeriodicRehash();
+
+    auto [it, isInserted] = _cachedResultsMap.try_emplace(TKey(std::forward<Args &&>(funcArgs)...),
+                                                          std::forward<ResultTypeT>(val), timePoint);
+    if (!isInserted && it->second.lastUpdatedTs < timePoint) {
+      it->second = Value(std::forward<ResultTypeT>(val), timePoint);
     }
   }
 
@@ -69,38 +82,61 @@ class CachedResultT : public CachedResultBase<typename ClockT::duration> {
   /// If the value is too old according to refresh period, it will be recomputed automatically.
   template <class... Args>
   const ResultType &get(Args &&...funcArgs) {
-    TKey key(std::forward<Args &&>(funcArgs)...);
-
-    auto nowTime = ClockT::now();
-
-    auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
+    const auto nowTime = ClockT::now();
 
     if (this->_state == State::kForceUniqueRefresh) {
       _cachedResultsMap.clear();
       this->_state = State::kForceCache;
+    } else {
+      checkPeriodicRehash();
     }
 
-    auto it = _cachedResultsMap.find(key);
-    if (it == _cachedResultsMap.end()) {
-      TValue val(std::apply(flattenTuple, key), nowTime);
-      it = _cachedResultsMap.insert_or_assign(std::move(key), std::move(val)).first;
-    } else if (this->_state != State::kForceCache && this->_refreshPeriod < nowTime - it->second.second) {
-      it->second = TValue(std::apply(flattenTuple, std::move(key)), nowTime);
-    }
+    const auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
 
-    return it->second.first;
+    TKey key(std::forward<Args &&>(funcArgs)...);
+    auto [it, isInserted] = _cachedResultsMap.try_emplace(key, flattenTuple, key, nowTime);
+    if (!isInserted && this->_state != State::kForceCache &&
+        this->_refreshPeriod < nowTime - it->second.lastUpdatedTs) {
+      it->second = Value(flattenTuple, std::move(key), nowTime);
+    }
+    return it->second.result;
   }
 
   /// Retrieve a {pointer, lastUpdateTime} to latest value associated to the key built with given parameters.
   /// If no value has been computed for this key, returns a nullptr.
   template <class... Args>
-  ResPtrTimePair retrieve(Args &&...funcArgs) const {
+  std::pair<const ResultType *, TimePoint> retrieve(Args &&...funcArgs) const {
     auto it = _cachedResultsMap.find(TKey(std::forward<Args &&>(funcArgs)...));
-    return it == _cachedResultsMap.end() ? ResPtrTimePair()
-                                         : ResPtrTimePair(std::addressof(it->second.first), it->second.second);
+    if (it == _cachedResultsMap.end()) {
+      return {};
+    }
+    return {std::addressof(it->second.result), it->second.lastUpdatedTs};
   }
 
  private:
+  void checkPeriodicRehash() {
+    static constexpr decltype(this->_flushCounter) kFlushCheckCounter = 20000;
+    if (++this->_flushCounter < kFlushCheckCounter) {
+      return;
+    }
+    this->_flushCounter = 0;
+
+    const auto nowTime = ClockT::now();
+
+    for (auto it = _cachedResultsMap.begin(); it != _cachedResultsMap.end();) {
+      if (this->_refreshPeriod < nowTime - it->second.lastUpdatedTs) {
+        // Data has expired, remove it
+        it = _cachedResultsMap.erase(it);
+      } else {
+        ++it;
+      }
+    }
+
+    _cachedResultsMap.rehash(_cachedResultsMap.size());
+  }
+
+  using MapType = std::unordered_map<TKey, Value, HashTuple>;
+
   T _func;
   MapType _cachedResultsMap;
 };

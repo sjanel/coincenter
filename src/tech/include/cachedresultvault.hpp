@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 #include "cct_type_traits.hpp"
@@ -13,7 +14,7 @@ class CachedResultBase {
   template <class>
   friend class CachedResultVaultT;
 
-  enum class State { kStandardRefresh, kForceUniqueRefresh, kForceCache };
+  enum class State : int8_t { kStandardRefresh, kForceUniqueRefresh, kForceCache };
 
   explicit CachedResultBase(DurationT refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
@@ -22,6 +23,7 @@ class CachedResultBase {
   void unfreeze() noexcept { _state = State::kStandardRefresh; }
 
   DurationT _refreshPeriod;
+  uint32_t _flushCounter{};
   State _state = State::kStandardRefresh;
 };
 

@@ -217,11 +217,11 @@ Input commands accepting previous commands' output are:
 For example:
 
 ```bash
-               1st command                  3rd command
-           /                 \                 /  \
-coincenter buy 1500XLM,binance withdraw kraken sell
-                               \             /
-                                 2nd command
+               1st command                        3rd command
+           /                 \                       /  \
+coincenter buy 1500XLM,binance withdraw-apply kraken sell
+                               \                  /
+                                    2nd command
 ```
 
 The 1500XLM will be considered for withdraw from Binance if the buy is completed, and the XLM arrived on Kraken considered for selling when the withdraw completes.
