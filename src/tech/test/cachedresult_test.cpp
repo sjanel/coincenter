@@ -31,22 +31,25 @@ class Incr {
 
 // We use std::chrono::steady_clock for unit test as it is monotonic (system_clock is not)
 // Picking a number that is not too small to avoid issues with slow systems
-constexpr std::chrono::steady_clock::duration kCacheTime = milliseconds(10);
+using SteadyClock = std::chrono::steady_clock;
+
+constexpr SteadyClock::duration kCacheTime = milliseconds(10);
 constexpr auto kCacheExpireTime = kCacheTime + milliseconds(2);
 
 template <class T, class... FuncTArgs>
-using CachedResultSteadyClock = CachedResultT<std::chrono::steady_clock, T, FuncTArgs...>;
+using CachedResultSteadyClock = CachedResultT<SteadyClock, T, FuncTArgs...>;
 
-using CachedResultOptionsSteadyClock = CachedResultOptionsT<std::chrono::steady_clock::duration>;
+using CachedResultOptionsSteadyClock = CachedResultOptionsT<SteadyClock::duration>;
 
-using CachedResultVaultSteadyClock = CachedResultVaultT<std::chrono::steady_clock::duration>;
+using CachedResultVaultSteadyClock = CachedResultVaultT<SteadyClock::duration>;
 
 }  // namespace
 
 class CachedResultTestBasic : public ::testing::Test {
  protected:
   CachedResultVaultSteadyClock vault;
-  CachedResultSteadyClock<Incr> cachedResult{CachedResultOptionsSteadyClock(kCacheTime, vault)};
+  SteadyClock::duration refreshTime{kCacheTime};
+  CachedResultSteadyClock<Incr> cachedResult{CachedResultOptionsSteadyClock(refreshTime, vault)};
 };
 
 TEST_F(CachedResultTestBasic, GetCache) {
@@ -56,6 +59,8 @@ TEST_F(CachedResultTestBasic, GetCache) {
   std::this_thread::sleep_for(kCacheExpireTime);
   EXPECT_EQ(cachedResult.get(), 2);
   EXPECT_EQ(cachedResult.get(), 2);
+  std::this_thread::sleep_for(kCacheExpireTime);
+  EXPECT_EQ(cachedResult.get(), 3);
 }
 
 TEST_F(CachedResultTestBasic, Freeze) {
@@ -74,7 +79,8 @@ class CachedResultTest : public ::testing::Test {
  protected:
   using CachedResType = CachedResultSteadyClock<Incr, int, int>;
 
-  CachedResType cachedResult{CachedResultOptionsSteadyClock(kCacheTime)};
+  SteadyClock::duration refreshTime{kCacheTime};
+  CachedResType cachedResult{CachedResultOptionsSteadyClock(refreshTime)};
 };
 
 TEST_F(CachedResultTest, GetCache) {
@@ -86,25 +92,67 @@ TEST_F(CachedResultTest, GetCache) {
 }
 
 TEST_F(CachedResultTest, SetInCache) {
-  auto nowTime = std::chrono::steady_clock::now();
+  auto nowTime = SteadyClock::now();
   cachedResult.set(42, nowTime, 3, 4);
+
   EXPECT_EQ(cachedResult.get(3, 4), 42);
   EXPECT_EQ(cachedResult.get(3, 4), 42);
   std::this_thread::sleep_for(kCacheExpireTime);
   EXPECT_EQ(cachedResult.get(3, 4), 7);
   cachedResult.set(42, nowTime, 3, 4);  // timestamp too old, should not be set
   EXPECT_EQ(cachedResult.get(3, 4), 7);
+
+  cachedResult.set(42, nowTime + 2 * kCacheExpireTime, 3, 4);  // should be set
+  EXPECT_EQ(cachedResult.get(3, 4), 42);
 }
 
 TEST_F(CachedResultTest, RetrieveFromCache) {
-  using RetrieveRetType = CachedResType::ResPtrTimePair;
+  auto [ptr, ts] = cachedResult.retrieve(-5, 3);
 
-  EXPECT_EQ(cachedResult.retrieve(-5, 3), RetrieveRetType());
+  EXPECT_EQ(ptr, nullptr);
+  EXPECT_EQ(ts, SteadyClock::time_point{});
+
   EXPECT_EQ(cachedResult.get(-5, 3), -2);
-  RetrieveRetType ret = cachedResult.retrieve(-5, 3);
-  ASSERT_NE(ret.first, nullptr);
-  EXPECT_EQ(*ret.first, -2);
-  EXPECT_GT(ret.second, std::chrono::steady_clock::time_point());
-  EXPECT_EQ(cachedResult.retrieve(-4, 3), RetrieveRetType());
+  std::tie(ptr, ts) = cachedResult.retrieve(-5, 3);
+  ASSERT_NE(ptr, nullptr);
+  EXPECT_EQ(*ptr, -2);
+  EXPECT_GT(ts, SteadyClock::time_point());
+
+  std::tie(ptr, ts) = cachedResult.retrieve(-4, 3);
+  EXPECT_EQ(ptr, nullptr);
+  EXPECT_EQ(ts, SteadyClock::time_point{});
 }
+
+class CachedResultTestZeroRefreshTime : public ::testing::Test {
+ protected:
+  using CachedResType = CachedResultSteadyClock<Incr, int, int>;
+
+  SteadyClock::duration refreshTime{};
+  CachedResType cachedResult{CachedResultOptionsSteadyClock(refreshTime)};
+};
+
+TEST_F(CachedResultTestZeroRefreshTime, GetNoCache) {
+  EXPECT_EQ(cachedResult.get(3, 4), 7);
+  EXPECT_EQ(cachedResult.get(3, 4), 14);
+  EXPECT_EQ(cachedResult.get(3, 4), 21);
+  std::this_thread::sleep_for(kCacheExpireTime);
+  EXPECT_EQ(cachedResult.get(3, 2), 26);
+}
+
+class CachedResultTestMaxRefreshTime : public ::testing::Test {
+ protected:
+  using CachedResType = CachedResultSteadyClock<Incr, int, int>;
+
+  SteadyClock::duration refreshTime{SteadyClock::duration::max()};
+  CachedResType cachedResult{CachedResultOptionsSteadyClock(refreshTime)};
+};
+
+TEST_F(CachedResultTestMaxRefreshTime, GetCache) {
+  EXPECT_EQ(cachedResult.get(3, 4), 7);
+  EXPECT_EQ(cachedResult.get(3, 4), 7);
+  EXPECT_EQ(cachedResult.get(3, 4), 7);
+  std::this_thread::sleep_for(kCacheExpireTime);
+  EXPECT_EQ(cachedResult.get(3, 4), 7);
+}
+
 }  // namespace cct
