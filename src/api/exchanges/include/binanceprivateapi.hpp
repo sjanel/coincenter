@@ -93,7 +93,7 @@ class BinancePrivate : public ExchangePrivate {
     Duration& _queryDelay;
   };
 
-  static_assert(std::is_trivially_destructible_v<BinanceContext>, "BinanceContext destructor should be virtual");
+  static_assert(std::is_trivially_destructible_v<BinanceContext>, "BinanceContext destructor should be trivial");
 
   struct TradableCurrenciesCache : public BinanceContext {
     TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic,

@@ -140,12 +140,7 @@ bool KrakenPublic::healthCheck() {
 }
 
 std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  const MonetaryAmountByCurrencySet& withdrawalFees = _commonApi.queryWithdrawalFees(kExchangeName).first;
-  auto foundIt = withdrawalFees.find(currencyCode);
-  if (foundIt == withdrawalFees.end()) {
-    return {};
-  }
-  return *foundIt;
+  return _commonApi.tryQueryWithdrawalFee(kExchangeName, currencyCode);
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {

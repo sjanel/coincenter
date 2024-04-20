@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <iterator>
@@ -14,6 +13,7 @@
 #include <utility>
 
 #include "apiquerytypeenum.hpp"
+#include "binance-common-api.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
@@ -93,10 +93,6 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
       _exchangeConfigCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
           _commonInfo),
-      _globalInfosCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
-          coincenterInfo.metricGatewayPtr(),
-          _exchangeConfig.curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), coincenterInfo.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._exchangeConfig),
       _allOrderBooksCache(
@@ -115,7 +111,7 @@ bool BinancePublic::healthCheck() {
   json result = json::parse(_commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr,
                             kAllowExceptions);
   if (result.is_discarded()) {
-    log::error("{} health check response is badly formatted", _name, result.dump());
+    log::error("{} health check response is badly formatted: {}", _name, result.dump());
     return false;
   }
   if (!result.empty()) {
@@ -124,48 +120,27 @@ bool BinancePublic::healthCheck() {
   return result.empty();
 }
 
+CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies() {
+  return commonAPI().getBinanceGlobalInfos().queryTradableCurrencies(_exchangeConfig.excludedCurrenciesAll());
+}
+
+MonetaryAmountByCurrencySet BinancePublic::queryWithdrawalFees() {
+  return commonAPI().getBinanceGlobalInfos().queryWithdrawalFees();
+}
+
+std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
+  MonetaryAmount withdrawFee = commonAPI().getBinanceGlobalInfos().queryWithdrawalFee(currencyCode);
+  if (withdrawFee.isDefault()) {
+    return {};
+  }
+  return withdrawFee;
+}
+
 BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeConfig& exchangeConfig,
                                       settings::RunMode runMode)
     : _exchangeConfig(exchangeConfig),
       _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(),
                   _exchangeConfig.curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), runMode) {}
-
-CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies(const json& data) const {
-  CurrencyExchangeVector currencies;
-  const CurrencyCodeSet& excludedCurrencies = _commonInfo._exchangeConfig.excludedCurrenciesAll();
-  for (const json& coinJson : data) {
-    std::string_view coin = coinJson["coin"].get<std::string_view>();
-    if (coin.size() > CurrencyCode::kMaxLen) {
-      continue;
-    }
-    CurrencyCode cur(coin);
-    if (excludedCurrencies.contains(cur)) {
-      log::trace("Discard {} excluded by config", cur.str());
-      continue;
-    }
-    bool isFiat = coinJson["isLegalMoney"];
-    const auto& networkList = coinJson["networkList"];
-    if (networkList.size() > 1) {
-      log::debug("Several networks found for {}, considering only default network", cur.str());
-    }
-    for (const json& networkDetail : networkList) {
-      bool isDefault = networkDetail["isDefault"].get<bool>();
-      if (isDefault) {
-        bool withdrawEnable = networkDetail["withdrawEnable"].get<bool>();
-        bool depositEnable = networkDetail["depositEnable"].get<bool>();
-        currencies.emplace_back(
-            cur, cur, cur,
-            depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
-            withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable,
-            isFiat ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
-        break;
-      }
-    }
-  }
-  CurrencyExchangeFlatSet ret(std::move(currencies));
-  log::info("Retrieved {} {} currencies", _name, ret.size());
-  return ret;
-}
 
 MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeConfigCache.get();
@@ -219,71 +194,6 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
     ret.insert_or_assign(Market(baseAsset, quoteAsset), std::move(*it));
   }
   return ret;
-}
-
-namespace {
-constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com";
-}
-
-BinancePublic::GlobalInfosFunc::GlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
-                                                const PermanentCurlOptions& permanentCurlOptions,
-                                                settings::RunMode runMode)
-    : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
-
-json BinancePublic::GlobalInfosFunc::operator()() {
-  json ret = PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll");
-  auto dataIt = ret.find("data");
-  json dataRet;
-  if (dataIt == ret.end()) {
-    dataRet = json::array_t();
-  } else {
-    dataRet = std::move(*dataIt);
-  }
-  return dataRet;
-}
-
-namespace {
-MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json& networkList) {
-  MonetaryAmount withdrawFee(0, cur);
-  for (const json& networkListPart : networkList) {
-    MonetaryAmount fee(networkListPart["withdrawFee"].get<std::string_view>(), cur);
-    auto isDefaultIt = networkListPart.find("isDefault");
-    if (isDefaultIt != networkListPart.end() && isDefaultIt->get<bool>()) {
-      withdrawFee = fee;
-      break;
-    }
-    withdrawFee = std::max(withdrawFee, fee);
-  }
-  return withdrawFee;
-}
-}  // namespace
-
-MonetaryAmountByCurrencySet BinancePublic::queryWithdrawalFees() {
-  MonetaryAmountVector fees;
-  for (const json& coinJson : _globalInfosCache.get()) {
-    std::string_view coinStr = coinJson["coin"].get<std::string_view>();
-    if (coinStr.size() > CurrencyCode::kMaxLen) {
-      continue;
-    }
-    CurrencyCode cur(coinStr);
-    MonetaryAmount withdrawFee = ComputeWithdrawalFeesFromNetworkList(cur, coinJson["networkList"]);
-    log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
-    fees.push_back(std::move(withdrawFee));
-  }
-
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
-  assert(!fees.empty());
-  return MonetaryAmountByCurrencySet(std::move(fees));
-}
-
-std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  for (const json& el : _globalInfosCache.get()) {
-    CurrencyCode cur(el["coin"].get<std::string_view>());
-    if (cur == currencyCode) {
-      return ComputeWithdrawalFeesFromNetworkList(cur, el["networkList"]);
-    }
-  }
-  return {};
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {

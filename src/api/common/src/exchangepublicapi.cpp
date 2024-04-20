@@ -21,6 +21,7 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -41,7 +42,7 @@ ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConvert
       _exchangeConfig(coincenterInfo.exchangeConfig(name)) {}
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
-                                                      const MarketsPath &conversionPath, const Fiats &fiats,
+                                                      const MarketsPath &conversionPath, const CurrencyCodeSet &fiats,
                                                       MarketOrderBookMap &marketOrderBookMap,
                                                       const PriceOptions &priceOptions) {
   if (from.currencyCode() == toCurrency) {
@@ -159,7 +160,7 @@ class CurrencyDirFastestPathComparator {
 }  // namespace
 
 MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency, MarketSet &markets,
-                                            const Fiats &fiats, MarketPathMode marketsPathMode) {
+                                            const CurrencyCodeSet &fiats, MarketPathMode marketsPathMode) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
     return ret;

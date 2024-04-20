@@ -5,6 +5,7 @@
 
 #include "accountowner.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 
 namespace cct::api {
 
