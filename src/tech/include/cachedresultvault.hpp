@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 
@@ -38,18 +39,14 @@ class CachedResultVaultT {
 
   void freezeAll() {
     if (!_allFrozen) {
-      for (CachedResultBase<DurationT> *p : _cachedResults) {
-        p->freeze();
-      }
+      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT> *p) { p->freeze(); });
       _allFrozen = true;
     }
   }
 
   void unfreezeAll() noexcept {
     if (_allFrozen) {
-      for (CachedResultBase<DurationT> *p : _cachedResults) {
-        p->unfreeze();
-      }
+      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT> *p) { p->unfreeze(); });
       _allFrozen = false;
     }
   }
