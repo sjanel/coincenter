@@ -1,6 +1,7 @@
 #include "withdrawalfees-crawler.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -21,6 +22,7 @@
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
 #include "permanentcurloptions.hpp"
+#include "threadpool.hpp"
 #include "timedef.hpp"
 
 namespace cct {
@@ -87,11 +89,22 @@ WithdrawalFeesCrawler::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterIn
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::operator()(
     std::string_view exchangeName) {
-  auto [withdrawFees1, withdrawMinMap1] = get1(exchangeName);
-  auto [withdrawFees2, withdrawMinMap2] = get2(exchangeName);
+  static constexpr auto kNbSources = 2;
 
-  withdrawFees1.insert(withdrawFees2.begin(), withdrawFees2.end());
-  withdrawMinMap1.merge(std::move(withdrawMinMap2));
+  ThreadPool threadPool(kNbSources);
+
+  std::array results{
+      threadPool.enqueue([this](std::string_view exchangeName) { return get1(exchangeName); }, exchangeName),
+      threadPool.enqueue([this](std::string_view exchangeName) { return get2(exchangeName); }, exchangeName)};
+
+  auto [withdrawFees1, withdrawMinMap1] = results[0].get();
+
+  for (auto resPos = 1; resPos < kNbSources; ++resPos) {
+    auto [withdrawFees, withdrawMinMap] = results[resPos].get();
+
+    withdrawFees1.insert(withdrawFees.begin(), withdrawFees.end());
+    withdrawMinMap1.merge(std::move(withdrawMinMap));
+  }
 
   if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
     log::error("Unable to parse {} withdrawal fees", exchangeName);

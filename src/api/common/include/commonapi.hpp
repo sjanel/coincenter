@@ -3,14 +3,17 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string_view>
 
+#include "binance-common-api.hpp"
 #include "cachedresult.hpp"
-#include "cct_flatset.hpp"
-#include "cct_vector.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencycodevector.hpp"
 #include "exchangebase.hpp"
+#include "monetaryamount.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
 
@@ -20,36 +23,38 @@ namespace api {
 /// Public API connected to different exchanges, providing fast methods to retrieve huge amount of data.
 class CommonAPI : public ExchangeBase {
  public:
-  using Fiats = FlatSet<CurrencyCode>;
-
   enum class AtInit : int8_t { kLoadFromFileCache, kNoLoadFromFileCache };
 
-  explicit CommonAPI(const CoincenterInfo &coincenterInfo, Duration fiatsUpdateFrequency = std::chrono::hours(96),
-                     Duration withdrawalFeesUpdateFrequency = std::chrono::hours(96),
+  explicit CommonAPI(const CoincenterInfo &coincenterInfo, Duration fiatsUpdateFrequency = std::chrono::days(4),
+                     Duration withdrawalFeesUpdateFrequency = std::chrono::days(2),
                      AtInit atInit = AtInit::kLoadFromFileCache);
 
   /// Returns a new set of fiat currencies.
-  Fiats queryFiats();
+  CurrencyCodeSet queryFiats();
 
   /// Tells whether given currency code is a fiat currency or not.
   /// Fiat currencies are traditional currencies, such as EUR, USD, GBP, KRW, etc.
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
   bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode);
 
+  std::optional<MonetaryAmount> tryQueryWithdrawalFee(std::string_view exchangeName, CurrencyCode currencyCode);
+
   /// Query withdrawal fees from crawler sources. It's not guaranteed to work though.
-  const WithdrawalFeesCrawler::WithdrawalInfoMaps &queryWithdrawalFees(std::string_view exchangeName);
+  MonetaryAmountByCurrencySet tryQueryWithdrawalFees(std::string_view exchangeName);
+
+  BinanceGlobalInfos &getBinanceGlobalInfos() { return _binanceGlobalInfos; }
 
   void updateCacheFile() const override;
 
  private:
   class FiatsFunc {
    public:
-    FiatsFunc();
+    explicit FiatsFunc(const CoincenterInfo &coincenterInfo);
 
-    Fiats operator()();
+    CurrencyCodeSet operator()();
 
-    vector<CurrencyCode> retrieveFiatsSource1();
-    vector<CurrencyCode> retrieveFiatsSource2();
+    CurrencyCodeVector retrieveFiatsSource1();
+    CurrencyCodeVector retrieveFiatsSource2();
 
    private:
     CurlHandle _curlHandle1;
@@ -59,8 +64,9 @@ class CommonAPI : public ExchangeBase {
   CachedResultVault _cachedResultVault;
   const CoincenterInfo &_coincenterInfo;
   // A single mutex is needed as the cached result vault is shared
-  std::mutex _globalMutex;
+  std::recursive_mutex _globalMutex;
   CachedResult<FiatsFunc> _fiatsCache;
+  BinanceGlobalInfos _binanceGlobalInfos;
   WithdrawalFeesCrawler _withdrawalFeesCrawler;
 };
 }  // namespace api

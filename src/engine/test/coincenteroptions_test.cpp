@@ -37,7 +37,7 @@ class CoincenterCmdLineOptionsTest : public ::testing::Test {
 TEST_F(CoincenterCmdLineOptionsTest, DefaultConstructorShouldValueInitializeAll) {
   // This test makes sure that are fields are correctly initialized in the default constructor of
   // CoincenterCmdLineOptions
-  alignas(std::alignment_of_v<CoincenterCmdLineOptions>) std::uint8_t data[sizeof(CoincenterCmdLineOptions)];
+  alignas(CoincenterCmdLineOptions) std::uint8_t data[sizeof(CoincenterCmdLineOptions)];
 
   // fill memory with garbage
   std::iota(std::begin(data), std::end(data), static_cast<std::remove_reference_t<decltype(data[0])>>(0));

@@ -22,6 +22,7 @@
 #include "cct_type_traits.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
 #include "exchange-names.hpp"
@@ -452,8 +453,8 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingMarket(M
 namespace {
 using MarketSetsPerPublicExchange = FixedCapacityVector<MarketSet, kNbSupportedExchanges>;
 
-api::CommonAPI::Fiats QueryFiats(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
-  api::CommonAPI::Fiats fiats;
+auto QueryFiats(const ExchangeRetriever::PublicExchangesVec &publicExchanges) {
+  CurrencyCodeSet fiats;
   if (!publicExchanges.empty()) {
     fiats = publicExchanges.front()->queryFiats();
   }
@@ -482,8 +483,7 @@ using KeepExchangeBoolArray = std::array<bool, kNbSupportedExchanges>;
 ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVector &exchangeAmountPairVector,
                                                       CurrencyCode fromCurrency, CurrencyCode toCurrency,
                                                       MarketSetsPerPublicExchange &marketsPerPublicExchange,
-                                                      const api::CommonAPI::Fiats &fiats,
-                                                      const TradeOptions &tradeOptions) {
+                                                      const CurrencyCodeSet &fiats, const TradeOptions &tradeOptions) {
   ExchangeAmountMarketsPathVector ret;
 
   int publicExchangePos = -1;
@@ -578,7 +578,7 @@ ExchangeAmountMarketsPathVector CreateExchangeAmountMarketsPathVector(ExchangeRe
 
   MarketSetsPerPublicExchange marketsPerPublicExchange(publicExchanges.size());
 
-  api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
+  auto fiats = QueryFiats(publicExchanges);
 
   return FilterConversionPaths(exchangeAmountPairVector, fromCurrency, toCurrency, marketsPerPublicExchange, fiats,
                                tradeOptions);
@@ -658,7 +658,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
   FixedCapacityVector<MarketOrderBookMap, kNbSupportedExchanges> marketOrderBooksPerPublicExchange(
       publicExchanges.size());
 
-  api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
+  auto fiats = QueryFiats(publicExchanges);
 
   ExchangeAmountToCurrencyToAmountVector trades;
   MonetaryAmount remEndAmount = endAmount;
@@ -762,7 +762,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
     MarketSetsPtrPerExchange marketSetsPtrPerExchange =
         MapMarketSetsPtrInExchangesOrder(exchangeAmountPairVector, publicExchanges, marketsPerPublicExchange);
 
-    api::CommonAPI::Fiats fiats = QueryFiats(publicExchanges);
+    auto fiats = QueryFiats(publicExchanges);
 
     if (isPercentageTrade) {
       MonetaryAmount totalAvailableAmount = std::accumulate(

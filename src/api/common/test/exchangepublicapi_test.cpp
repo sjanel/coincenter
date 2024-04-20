@@ -10,6 +10,7 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -65,7 +66,6 @@ class ExchangePublicTest : public ::testing::Test {
 
 namespace {
 using CurrenciesPath = ExchangePublic::CurrenciesPath;
-using Fiats = ExchangePublic::Fiats;
 }  // namespace
 
 TEST_F(ExchangePublicTest, FindConversionPath) {
@@ -114,7 +114,7 @@ TEST_F(ExchangePublicTest, RetrieveMarket) {
 
 class ExchangePublicConvertTest : public ExchangePublicTest {
  protected:
-  Fiats fiats{"EUR", "USD", "KRW"};
+  CurrencyCodeSet fiats{"EUR", "USD", "KRW"};
 
   VolAndPriNbDecimals volAndPriDec1{2, 6};
   int depth = 10;

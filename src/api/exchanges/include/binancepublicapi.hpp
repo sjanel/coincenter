@@ -36,9 +36,7 @@ class BinancePublic : public ExchangePublic {
 
   bool healthCheck() override;
 
-  CurrencyExchangeFlatSet queryTradableCurrencies() override {
-    return queryTradableCurrencies(_globalInfosCache.get());
-  }
+  CurrencyExchangeFlatSet queryTradableCurrencies() override;
 
   CurrencyExchange convertStdCurrencyToCurrencyExchange(CurrencyCode standardCode) override {
     return queryTradableCurrencies().getOrThrow(standardCode);
@@ -75,8 +73,6 @@ class BinancePublic : public ExchangePublic {
  private:
   friend class BinancePrivate;
 
-  CurrencyExchangeFlatSet queryTradableCurrencies(const json& data) const;
-
   MonetaryAmount computePriceForNotional(Market mk, int avgPriceMins);
 
   struct CommonInfo {
@@ -92,15 +88,6 @@ class BinancePublic : public ExchangePublic {
     ExchangeInfoDataByMarket operator()();
 
     CommonInfo& _commonInfo;
-  };
-
-  struct GlobalInfosFunc {
-    GlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
-                    settings::RunMode runMode);
-
-    json operator()();
-
-    CurlHandle _curlHandle;
   };
 
   struct MarketsFunc {
@@ -139,7 +126,6 @@ class BinancePublic : public ExchangePublic {
 
   CommonInfo _commonInfo;
   CachedResult<ExchangeInfoFunc> _exchangeConfigCache;
-  CachedResult<GlobalInfosFunc> _globalInfosCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;

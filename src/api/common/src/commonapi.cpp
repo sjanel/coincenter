@@ -9,10 +9,10 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "permanentcurloptions.hpp"
@@ -31,15 +31,22 @@ File GetFiatCacheFile(std::string_view dataDir) {
 CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateFrequency,
                      Duration withdrawalFeesUpdateFrequency, AtInit atInit)
     : _coincenterInfo(coincenterInfo),
-      _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault)),
+      _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), coincenterInfo),
+      _binanceGlobalInfos(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault),
+                          coincenterInfo.metricGatewayPtr(),
+                          PermanentCurlOptions::Builder()
+                              .setFollowLocation()
+                              .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                              .build(),
+                          coincenterInfo.getRunMode()),
       _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
   if (atInit == AtInit::kLoadFromFileCache) {
     json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
     if (!data.empty()) {
       int64_t timeEpoch = data["timeepoch"].get<int64_t>();
       auto& fiatsFile = data["fiats"];
-      Fiats fiats;
-      fiats.reserve(static_cast<Fiats::size_type>(fiatsFile.size()));
+      CurrencyCodeSet fiats;
+      fiats.reserve(static_cast<CurrencyCodeSet::size_type>(fiatsFile.size()));
       for (json& val : fiatsFile) {
         log::trace("Reading fiat {} from cache file", val.get<std::string_view>());
         fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
@@ -50,16 +57,44 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
   }
 }
 
-CommonAPI::Fiats CommonAPI::queryFiats() {
-  std::lock_guard<std::mutex> guard(_globalMutex);
+CurrencyCodeSet CommonAPI::queryFiats() {
+  std::lock_guard<std::recursive_mutex> guard(_globalMutex);
   return _fiatsCache.get();
 }
 
 bool CommonAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return queryFiats().contains(currencyCode); }
 
-const WithdrawalFeesCrawler::WithdrawalInfoMaps& CommonAPI::queryWithdrawalFees(std::string_view exchangeName) {
-  std::lock_guard<std::mutex> guard(_globalMutex);
-  return _withdrawalFeesCrawler.get(exchangeName);
+MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(std::string_view exchangeName) {
+  MonetaryAmountByCurrencySet ret;
+  {
+    std::lock_guard<std::recursive_mutex> guard(_globalMutex);
+    ret = _withdrawalFeesCrawler.get(exchangeName).first;
+  }
+
+  if (ret.empty()) {
+    log::warn("Taking binance withdrawal fees for {} as crawler failed to retrieve data", exchangeName);
+    ret = _binanceGlobalInfos.queryWithdrawalFees();
+  }
+  return ret;
+}
+
+std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(std::string_view exchangeName,
+                                                               CurrencyCode currencyCode) {
+  {
+    std::lock_guard<std::recursive_mutex> guard(_globalMutex);
+    const auto& withdrawalFees = _withdrawalFeesCrawler.get(exchangeName).first;
+    auto it = withdrawalFees.find(currencyCode);
+    if (it != withdrawalFees.end()) {
+      return *it;
+    }
+  }
+  log::warn("Taking binance withdrawal fee for {} and currency {} as crawler failed to retrieve data", exchangeName,
+            currencyCode);
+  MonetaryAmount withdrawFee = _binanceGlobalInfos.queryWithdrawalFee(currencyCode);
+  if (withdrawFee.isDefault()) {
+    return {};
+  }
+  return withdrawFee;
 }
 
 namespace {
@@ -67,32 +102,32 @@ constexpr std::string_view kFiatsUrlSource1 = "https://datahub.io/core/currency-
 constexpr std::string_view kFiatsUrlSource2 = "https://www.iban.com/currency-codes";
 }  // namespace
 
-CommonAPI::FiatsFunc::FiatsFunc()
-    : _curlHandle1(kFiatsUrlSource1, nullptr,
+CommonAPI::FiatsFunc::FiatsFunc(const CoincenterInfo& coincenterInfo)
+    : _curlHandle1(kFiatsUrlSource1, coincenterInfo.metricGatewayPtr(),
                    PermanentCurlOptions::Builder()
                        .setFollowLocation()
                        .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
                        .build()),
-      _curlHandle2(kFiatsUrlSource2, nullptr,
+      _curlHandle2(kFiatsUrlSource2, coincenterInfo.metricGatewayPtr(),
                    PermanentCurlOptions::Builder()
                        .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
                        .build()) {}
 
-CommonAPI::Fiats CommonAPI::FiatsFunc::operator()() {
-  vector<CurrencyCode> fiatsVec = retrieveFiatsSource1();
-  Fiats fiats;
+CurrencyCodeSet CommonAPI::FiatsFunc::operator()() {
+  CurrencyCodeVector fiatsVec = retrieveFiatsSource1();
+  CurrencyCodeSet fiats;
   if (!fiatsVec.empty()) {
-    fiats = Fiats(std::move(fiatsVec));
+    fiats = CurrencyCodeSet(std::move(fiatsVec));
     log::info("Stored {} fiats from first source", fiats.size());
   } else {
-    fiats = Fiats(retrieveFiatsSource2());
+    fiats = CurrencyCodeSet(retrieveFiatsSource2());
     log::info("Stored {} fiats from second source", fiats.size());
   }
   return fiats;
 }
 
-vector<CurrencyCode> CommonAPI::FiatsFunc::retrieveFiatsSource1() {
-  vector<CurrencyCode> fiatsVec;
+CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
+  CurrencyCodeVector fiatsVec;
 
   std::string_view data = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
   if (data.empty()) {
@@ -121,8 +156,8 @@ vector<CurrencyCode> CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   return fiatsVec;
 }
 
-vector<CurrencyCode> CommonAPI::FiatsFunc::retrieveFiatsSource2() {
-  vector<CurrencyCode> fiatsVec;
+CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
+  CurrencyCodeVector fiatsVec;
   std::string_view data = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
   if (data.empty()) {
     log::error("Error parsing currency codes, no fiats found from second source");

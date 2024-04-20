@@ -6,6 +6,7 @@
 
 #include "commonapi.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangebase.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -39,8 +40,6 @@ class ExchangePublic : public ExchangeBase {
     kWithPossibleFiatConversionAtExtremity
   };
 
-  using Fiats = CommonAPI::Fiats;
-
   virtual ~ExchangePublic() = default;
 
   /// Check if public exchange is responding to basic health check, return true in this case.
@@ -65,7 +64,7 @@ class ExchangePublic : public ExchangeBase {
   std::optional<MonetaryAmount> estimatedConvert(MonetaryAmount from, CurrencyCode toCurrency,
                                                  const PriceOptions &priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
-    Fiats fiats = queryFiats();
+    CurrencyCodeSet fiats = queryFiats();
     MarketSet markets;
     MarketsPath conversionPath = findMarketsPath(from.currencyCode(), toCurrency, markets, fiats,
                                                  MarketPathMode::kWithPossibleFiatConversionAtExtremity);
@@ -76,7 +75,7 @@ class ExchangePublic : public ExchangeBase {
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
   /// No external calls is made with this version, it has all what it needs
   std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency, const MarketsPath &conversionPath,
-                                        const Fiats &fiats, MarketOrderBookMap &marketOrderBookMap,
+                                        const CurrencyCodeSet &fiats, MarketOrderBookMap &marketOrderBookMap,
                                         const PriceOptions &priceOptions = PriceOptions());
 
   /// Retrieve the fixed withdrawal fees per currency.
@@ -109,7 +108,7 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve the last price of given market.
   virtual MonetaryAmount queryLastPrice(Market mk) = 0;
 
-  Fiats queryFiats() { return _commonApi.queryFiats(); }
+  CurrencyCodeSet queryFiats() { return _commonApi.queryFiats(); }
 
   /// Get the name of the exchange in lower case.
   std::string_view name() const { return _name; }
@@ -122,7 +121,7 @@ class ExchangePublic : public ExchangeBase {
   ///   - XLM-USDT
   ///   - XRP-USDT
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet &markets,
-                              const Fiats &fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
+                              const CurrencyCodeSet &fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                               MarketPathMode marketsPathMode = MarketPathMode::kStrict) {

@@ -237,13 +237,14 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePubl
           _curlHandle, _apiKey, binancePublic, _queryDelay) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
-  json result =
+  json allCoins =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/config/getall", _queryDelay);
-  return _exchangePublic.queryTradableCurrencies(result);
+  return BinanceGlobalInfos::ExtractTradableCurrencies(allCoins,
+                                                       _exchangePublic.exchangeConfig().excludedCurrenciesAll());
 }
 
 bool BinancePrivate::validateApiKey() {
-  constexpr bool throwIfError = false;
+  static constexpr bool throwIfError = false;
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/account/status", _queryDelay,
                              CurlPostData(), throwIfError);
   return result.find("code") == result.end();

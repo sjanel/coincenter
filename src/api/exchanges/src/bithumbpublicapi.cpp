@@ -131,12 +131,7 @@ MarketSet BithumbPublic::queryTradableMarkets() {
 }
 
 std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  const auto& map = _commonApi.queryWithdrawalFees(kExchangeName).first;
-  auto it = map.find(currencyCode);
-  if (it == map.end()) {
-    return {};
-  }
-  return *it;
+  return _commonApi.tryQueryWithdrawalFee(kExchangeName, currencyCode);
 }
 
 MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
