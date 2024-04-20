@@ -37,9 +37,9 @@ constexpr SteadyClock::duration kCacheTime = milliseconds(10);
 constexpr auto kCacheExpireTime = kCacheTime + milliseconds(2);
 
 template <class T, class... FuncTArgs>
-using CachedResultSteadyClock = CachedResultT<SteadyClock, T, FuncTArgs...>;
+using CachedResultSteadyClock = details::CachedResultImpl<SteadyClock, T, FuncTArgs...>;
 
-using CachedResultOptionsSteadyClock = CachedResultOptionsT<SteadyClock::duration>;
+using CachedResultOptionsSteadyClock = details::CachedResultOptionsT<SteadyClock::duration>;
 
 using CachedResultVaultSteadyClock = CachedResultVaultT<SteadyClock::duration>;
 
