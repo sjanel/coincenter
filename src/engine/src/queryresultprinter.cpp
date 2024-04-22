@@ -659,7 +659,6 @@ json WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAm
   json in;
   json inOpt;
   inOpt.emplace("cur", grossAmount.currencyStr());
-  inOpt.emplace("grossAmount", grossAmount.amountStr());
   inOpt.emplace("isPercentage", isPercentageWithdraw);
   inOpt.emplace("syncPolicy", withdrawOptions.withdrawSyncPolicyStr());
   in.emplace("opt", std::move(inOpt));
@@ -667,21 +666,24 @@ json WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAm
   json from;
   from.emplace("exchange", fromExchange.name());
   from.emplace("account", fromExchange.keyName());
+  from.emplace("id", deliveredWithdrawInfo.withdrawId());
+  from.emplace("amount", grossAmount.amountStr());
+  from.emplace("time", ToString(deliveredWithdrawInfo.initiatedTime()));
 
   json to;
   to.emplace("exchange", toExchange.name());
   to.emplace("account", toExchange.keyName());
+  to.emplace("id", deliveredWithdrawInfo.depositId());
+  to.emplace("amount", deliveredWithdrawInfo.receivedAmount().amountStr());
   to.emplace("address", deliveredWithdrawInfo.receivingWallet().address());
   if (deliveredWithdrawInfo.receivingWallet().hasTag()) {
     to.emplace("tag", deliveredWithdrawInfo.receivingWallet().tag());
   }
+  to.emplace("time", ToString(deliveredWithdrawInfo.receivedTime()));
 
   json out;
   out.emplace("from", std::move(from));
   out.emplace("to", std::move(to));
-  out.emplace("initiatedTime", ToString(deliveredWithdrawInfo.initiatedTime()));
-  out.emplace("receivedTime", ToString(deliveredWithdrawInfo.receivedTime()));
-  out.emplace("netReceivedAmount", deliveredWithdrawInfo.receivedAmount().amountStr());
 
   return ToJson(CoincenterCommandType::kWithdrawApply, std::move(in), std::move(out));
 }
@@ -1393,12 +1395,16 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       SimpleTable table;
-      table.reserve(2U);
-      table.emplace_back("From Exchange", "From Account", "Gross withdraw amount", "Initiated time", "To Exchange",
-                         "To Account", "Net received amount", "Received time");
+      table.reserve(3U);
+
+      table.emplace_back("Exchange", "Account", "Sent -> Received amount", "Sent -> Received time",
+                         "Withdrawal -> Deposit id");
+
       table.emplace_back(fromExchange.name(), fromExchange.keyName(), grossAmount.str(),
-                         ToString(deliveredWithdrawInfo.initiatedTime()), toExchange.name(), toExchange.keyName(),
-                         deliveredWithdrawInfo.receivedAmount().str(), ToString(deliveredWithdrawInfo.receivedTime()));
+                         ToString(deliveredWithdrawInfo.initiatedTime()), deliveredWithdrawInfo.withdrawId());
+
+      table.emplace_back(toExchange.name(), toExchange.keyName(), deliveredWithdrawInfo.receivedAmount().str(),
+                         ToString(deliveredWithdrawInfo.receivedTime()), deliveredWithdrawInfo.depositId());
       printTable(table);
       break;
     }

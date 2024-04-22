@@ -15,6 +15,7 @@
 #include "apikey.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
@@ -251,40 +252,59 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   return totalTradedAmounts;
 }
 
+namespace {
+
+enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
+
+NextAction InitializeNextAction(WithdrawSyncPolicy withdrawSyncPolicy) {
+  switch (withdrawSyncPolicy) {
+    case WithdrawSyncPolicy::kSynchronous:
+      return NextAction::kCheckSender;
+    case WithdrawSyncPolicy::kAsynchronous:
+      log::info("Asynchronous mode, exit after withdraw initiated");
+      return NextAction::kTerminate;
+    default:
+      throw exception("Unexpected withdraw sync policy {}", static_cast<int>(withdrawSyncPolicy));
+  }
+}
+
+}  // namespace
+
 DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
                                                 const WithdrawOptions &withdrawOptions) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  InitiatedWithdrawInfo initiatedWithdrawInfo =
-      launchWithdraw(grossAmount, targetExchange.queryDepositWallet(currencyCode));
   const Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
+  const WithdrawOptions::Mode mode = withdrawOptions.mode();
 
-  log::info("Withdraw {} of {} to {} initiated from {} to {}, with a periodic refresh time of {}",
+  Wallet destinationWallet = targetExchange.queryDepositWallet(currencyCode);
+
+  InitiatedWithdrawInfo initiatedWithdrawInfo;
+
+  switch (mode) {
+    case WithdrawOptions::Mode::kReal:
+      initiatedWithdrawInfo = launchWithdraw(grossAmount, std::move(destinationWallet));
+      break;
+    case WithdrawOptions::Mode::kSimulation:
+      initiatedWithdrawInfo = InitiatedWithdrawInfo(std::move(destinationWallet), "<Simulated>", grossAmount);
+      break;
+    default:
+      throw exception("Unknown withdrawal mode {}", static_cast<int>(mode));
+  }
+
+  log::info("Withdraw '{}' of {} to {} initiated from {} to {}, with a periodic refresh time of {}",
             initiatedWithdrawInfo.withdrawId(), grossAmount, initiatedWithdrawInfo.receivingWallet(), exchangeName(),
             targetExchange.exchangeName(), DurationToString(withdrawRefreshTime));
 
-  SentWithdrawInfo sentWithdrawInfo(currencyCode);
-  MonetaryAmount netDeliveredAmount;
-
-  enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
-
-  NextAction nextAction;
-  switch (withdrawOptions.withdrawSyncPolicy()) {
-    case WithdrawSyncPolicy::kSynchronous:
-      nextAction = NextAction::kCheckSender;
-      break;
-    case WithdrawSyncPolicy::kAsynchronous:
-      log::info("Asynchronous mode, exit with withdraw {} initiated", initiatedWithdrawInfo.withdrawId());
-      nextAction = NextAction::kTerminate;
-      break;
-    default:
-      unreachable();
-  }
+  const auto isSimulatedMode = mode == WithdrawOptions::Mode::kSimulation;
 
   bool canLogAmountMismatchError = true;
+  SentWithdrawInfo sentWithdrawInfo(currencyCode);
+  ReceivedWithdrawInfo receivedWithdrawInfo;
 
   // When withdraw is in Check sender state, we alternatively check sender and then receiver.
   // It's possible that sender status is confirmed later than the receiver in some cases (this can happen for "fast"
   // coins such as Ripple for instance)
+  NextAction nextAction = InitializeNextAction(withdrawOptions.withdrawSyncPolicy());
   while (nextAction != NextAction::kTerminate) {
     switch (nextAction) {
       case NextAction::kCheckSender:
@@ -297,29 +317,34 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
               sentWithdrawInfo.netEmittedAmount(), sentWithdrawInfo.fee(), initiatedWithdrawInfo.grossEmittedAmount());
           log::info("Maybe because actual withdraw fee is different");
         }
-        if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::kSuccess) {
+        if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::kSuccess || isSimulatedMode) {
           nextAction = NextAction::kCheckReceiver;
           continue;  // to skip the sleep and immediately check receiver
         }
         std::this_thread::sleep_for(withdrawRefreshTime);
         [[fallthrough]];
       case NextAction::kCheckReceiver:
-        netDeliveredAmount = targetExchange.queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo);
-        if (!netDeliveredAmount.isDefault()) {
+        receivedWithdrawInfo = targetExchange.queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo);
+        if (isSimulatedMode) {
+          // we override the received withdraw info for simulation mode (we call anyway the queryWithdrawDelivery for
+          // test purposes)
+          receivedWithdrawInfo = ReceivedWithdrawInfo("<Simulated>", grossAmount);
+        }
+        if (!receivedWithdrawInfo.receivedAmount().isDefault()) {
           log::info("Withdraw successfully received at {}", targetExchange.exchangeName());
           nextAction = NextAction::kTerminate;
           continue;  // to skip the sleep and immediately terminate
         }
         std::this_thread::sleep_for(withdrawRefreshTime);
-        [[fallthrough]];
+        break;
       case NextAction::kTerminate:
         break;
       default:
         unreachable();
     }
   }
-  DeliveredWithdrawInfo deliveredWithdrawInfo(std::move(initiatedWithdrawInfo), netDeliveredAmount);
-  log::info("Confirmed withdrawal {}", deliveredWithdrawInfo);
+  DeliveredWithdrawInfo deliveredWithdrawInfo(std::move(initiatedWithdrawInfo), std::move(receivedWithdrawInfo));
+  log::info("Confirmed {} withdrawal {}", isSimulatedMode ? "simulated" : "real", deliveredWithdrawInfo);
   return deliveredWithdrawInfo;
 }
 
@@ -331,20 +356,13 @@ bool IsAboveDustAmountThreshold(const MonetaryAmountByCurrencySet &dustThreshold
 
 using PenaltyPerMarketMap = std::map<Market, int>;
 
-void IncrementPenalty(Market mk, PenaltyPerMarketMap &penaltyPerMarketMap) {
-  auto insertItInsertedPair = penaltyPerMarketMap.insert({mk, 1});
-  if (!insertItInsertedPair.second) {
-    ++insertItInsertedPair.first->second;
-  }
-}
-
 MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
                                                  const MonetaryAmountByCurrencySet &dustThresholds,
                                                  CurrencyCode currencyCode, const MarketSet &markets,
                                                  const PenaltyPerMarketMap &penaltyPerMarketMap) {
   MarketVector possibleMarkets;
   for (const auto [avAmount, _] : balance) {
-    CurrencyCode avCur = avAmount.currencyCode();
+    const CurrencyCode avCur = avAmount.currencyCode();
     const auto lbAvAmount = dustThresholds.find(MonetaryAmount(0, avCur));
     if (lbAvAmount == dustThresholds.end() || *lbAvAmount < avAmount) {
       Market mk(currencyCode, avCur);
@@ -356,15 +374,13 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
     }
   }
 
-  struct PenaltyMarketComparator {
-    explicit PenaltyMarketComparator(const PenaltyPerMarketMap &map) : penaltyPerMarketMap(map) {}
+  class PenaltyMarketComparator {
+   public:
+    explicit PenaltyMarketComparator(const PenaltyPerMarketMap &map) : _penaltyPerMarketMap(map) {}
 
     bool operator()(Market m1, Market m2) const {
-      auto m1It = penaltyPerMarketMap.find(m1);
-      auto m2It = penaltyPerMarketMap.find(m2);
-      // not present is equivalent to a weight of 0
-      int w1 = m1It == penaltyPerMarketMap.end() ? 0 : m1It->second;
-      int w2 = m2It == penaltyPerMarketMap.end() ? 0 : m2It->second;
+      const int w1 = weight(m1);
+      const int w2 = weight(m2);
 
       if (w1 != w2) {
         return w1 < w2;
@@ -372,7 +388,14 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
       return m1 < m2;
     }
 
-    const PenaltyPerMarketMap &penaltyPerMarketMap;
+   private:
+    int weight(Market mk) const {
+      // not present is equivalent to a weight of 0
+      const auto it = _penaltyPerMarketMap.find(mk);
+      return it == _penaltyPerMarketMap.end() ? 0 : it->second;
+    }
+
+    const PenaltyPerMarketMap &_penaltyPerMarketMap;
   };
 
   // Sort them according to the penalty (we favor markets on which we did not try any buy on them yet)
@@ -471,7 +494,6 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
   bool checkAmountBalanceAgainstDustThreshold = true;
   int dustSweeperTradePos;
   PenaltyPerMarketMap penaltyPerMarketMap;
-  Market tradedMarket;
   for (dustSweeperTradePos = 0; dustSweeperTradePos < dustSweeperMaxNbTrades; ++dustSweeperTradePos) {
     BalancePortfolio balance = queryAccountBalance();
     ret.finalAmount = balance.get(currencyCode);
@@ -504,11 +526,10 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
     log::info("Dust sweeper for {} - exploring {} markets", eName, possibleMarkets.size());
 
     // First pass - check if by chance on selected markets selling is possible in one shot
-    TradedAmounts tradedAmounts;
-    std::tie(tradedAmounts, tradedMarket) =
+    auto [tradedAmounts, tradedMarket] =
         isSellingPossibleOneShotDustSweeper(possibleMarkets, ret.finalAmount, tradeOptions);
     if (tradedAmounts.from != 0) {
-      IncrementPenalty(tradedMarket, penaltyPerMarketMap);
+      ++penaltyPerMarketMap[tradedMarket];
       ret.tradedAmountsVector.push_back(std::move(tradedAmounts));
       continue;
     }
@@ -570,20 +591,25 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   return placeOrderInfo;
 }
 
-MonetaryAmount ExchangePrivate::queryWithdrawDelivery(
+ReceivedWithdrawInfo ExchangePrivate::queryWithdrawDelivery(
     [[maybe_unused]] const InitiatedWithdrawInfo &initiatedWithdrawInfo, const SentWithdrawInfo &sentWithdrawInfo) {
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
   DepositsSet deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
 
   ClosestRecentDepositPicker closestRecentDepositPicker;
-
-  for (const Deposit &deposit : deposits) {
-    closestRecentDepositPicker.addDeposit(RecentDeposit(deposit.amount(), deposit.time()));
-  }
+  closestRecentDepositPicker.reserve(static_cast<ClosestRecentDepositPicker::size_type>(deposits.size()));
+  std::ranges::transform(deposits, std::back_inserter(closestRecentDepositPicker),
+                         [](const Deposit &deposit) { return RecentDeposit(deposit.amount(), deposit.time()); });
 
   RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
-  return closestRecentDepositPicker.pickClosestRecentDepositOrDefault(expectedDeposit).amount();
+
+  int closestDepositPos = closestRecentDepositPicker.pickClosestRecentDepositPos(expectedDeposit);
+  if (closestDepositPos == -1) {
+    return {};
+  }
+  const Deposit &deposit = deposits[closestDepositPos];
+  return ReceivedWithdrawInfo(string(deposit.id()), deposit.amount(), deposit.time());
 }
 
 SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) {

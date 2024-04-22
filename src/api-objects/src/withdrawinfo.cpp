@@ -19,10 +19,9 @@ InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, std::string
 }  // namespace api
 
 DeliveredWithdrawInfo::DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo,
-                                             MonetaryAmount receivedAmount, TimePoint receivedTime)
+                                             api::ReceivedWithdrawInfo &&receivedWithdrawInfo)
     : _initiatedWithdrawInfo(std::move(initiatedWithdrawInfo)),
-      _receivedTime(receivedTime),
-      _receivedAmount(receivedAmount) {}
+      _receivedWithdrawInfo(std::move(receivedWithdrawInfo)) {}
 
 std::string_view DeliveredWithdrawInfo::withdrawId() const {
   if (!hasBeenInitiated()) {

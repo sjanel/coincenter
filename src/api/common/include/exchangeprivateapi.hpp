@@ -159,8 +159,8 @@ class ExchangePrivate : public ExchangeBase {
 
   /// Check if withdraw has been received by 'this' exchange.
   /// If so, return a non-default MonetaryAmount with the net received amount
-  virtual MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                               const SentWithdrawInfo &sentWithdrawInfo);
+  virtual ReceivedWithdrawInfo queryWithdrawDelivery(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
+                                                     const SentWithdrawInfo &sentWithdrawInfo);
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
 

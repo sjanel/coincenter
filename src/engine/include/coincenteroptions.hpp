@@ -108,7 +108,7 @@ class CoincenterCmdLineOptions {
   bool forceSingleTrade = false;
   bool tradeTimeoutMatch = false;
   bool tradeTimeoutCancel = false;
-  bool tradeSim{TradeOptions().isSimulation()};
+  bool isSimulation = false;
   bool async = false;
   bool help = false;
   bool version = false;

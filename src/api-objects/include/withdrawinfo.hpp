@@ -59,37 +59,62 @@ class SentWithdrawInfo {
   Withdraw::Status _withdrawStatus = Withdraw::Status::kInitial;
 };
 
+class ReceivedWithdrawInfo {
+ public:
+  ReceivedWithdrawInfo() noexcept = default;
+
+  ReceivedWithdrawInfo(string depositId, MonetaryAmount receivedAmount, TimePoint receivedTime = Clock::now())
+      : _depositId(std::move(depositId)), _receivedAmount(receivedAmount), _receivedTime(receivedTime) {}
+
+  std::string_view depositId() const { return _depositId; }
+
+  MonetaryAmount receivedAmount() const { return _receivedAmount; }
+
+  TimePoint receivedTime() const { return _receivedTime; }
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+ private:
+  string _depositId;
+  MonetaryAmount _receivedAmount;
+  TimePoint _receivedTime;  // time at which destination provides received funds as available for trade
+};
+
 }  // namespace api
 
 class DeliveredWithdrawInfo {
  public:
   /// Empty withdraw info, when no withdrawal has been done
-  explicit DeliveredWithdrawInfo(string &&msg = string()) : _initiatedWithdrawInfo(std::move(msg)) {}
+  DeliveredWithdrawInfo() = default;
+
+  /// Empty withdraw info, when no withdrawal has been done
+  explicit DeliveredWithdrawInfo(string &&msg) : _initiatedWithdrawInfo(std::move(msg)) {}
 
   /// Constructs a withdraw info with all information
-  DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo, MonetaryAmount receivedAmount,
-                        TimePoint receivedTime = Clock::now());
+  DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo,
+                        api::ReceivedWithdrawInfo &&receivedWithdrawInfo);
 
   TimePoint initiatedTime() const { return _initiatedWithdrawInfo.initiatedTime(); }
 
   bool hasBeenInitiated() const { return initiatedTime() != TimePoint{}; }
 
-  TimePoint receivedTime() const { return _receivedTime; }
+  TimePoint receivedTime() const { return _receivedWithdrawInfo.receivedTime(); }
 
   const Wallet &receivingWallet() const { return _initiatedWithdrawInfo.receivingWallet(); }
 
   MonetaryAmount grossAmount() const { return _initiatedWithdrawInfo.grossEmittedAmount(); }
 
-  MonetaryAmount receivedAmount() const { return _receivedAmount; }
+  MonetaryAmount receivedAmount() const { return _receivedWithdrawInfo.receivedAmount(); }
 
   std::string_view withdrawId() const;
+
+  std::string_view depositId() const { return _receivedWithdrawInfo.depositId(); }
 
   using trivially_relocatable = is_trivially_relocatable<api::InitiatedWithdrawInfo>::type;
 
  private:
   api::InitiatedWithdrawInfo _initiatedWithdrawInfo;
-  TimePoint _receivedTime;         // time at which destination provides received funds as available for trade
-  MonetaryAmount _receivedAmount;  // fee deduced amount that destination will receive
+  api::ReceivedWithdrawInfo _receivedWithdrawInfo;
 };
 
 }  // namespace cct

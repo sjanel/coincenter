@@ -78,8 +78,8 @@ class BinancePrivate : public ExchangePrivate {
 
   InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) override;
 
-  MonetaryAmount queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                       const SentWithdrawInfo& sentWithdrawInfo) override;
+  ReceivedWithdrawInfo queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                             const SentWithdrawInfo& sentWithdrawInfo) override;
 
  private:
   OrderInfo queryOrder(OrderIdView orderId, const TradeContext& tradeContext, HttpRequestType requestType);

@@ -6,8 +6,8 @@
 #include "unreachable.hpp"
 
 namespace cct {
-WithdrawOptions::WithdrawOptions(Duration withdrawRefreshTime, WithdrawSyncPolicy withdrawSyncPolicy)
-    : _withdrawRefreshTime(withdrawRefreshTime), _withdrawSyncPolicy(withdrawSyncPolicy) {}
+WithdrawOptions::WithdrawOptions(Duration withdrawRefreshTime, WithdrawSyncPolicy withdrawSyncPolicy, Mode mode)
+    : _withdrawRefreshTime(withdrawRefreshTime), _withdrawSyncPolicy(withdrawSyncPolicy), _mode(mode) {}
 
 std::string_view WithdrawOptions::withdrawSyncPolicyStr() const {
   switch (_withdrawSyncPolicy) {
