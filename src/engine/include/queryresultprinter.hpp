@@ -112,7 +112,7 @@ class QueryResultPrinter {
 
   void printJson(const json &jsonData) const;
 
-  void logActivity(CoincenterCommandType commandType, const json &data) const;
+  void logActivity(CoincenterCommandType commandType, const json &data, bool isSimulationMode = false) const;
 
   const LoggingInfo &_loggingInfo;
   std::ostream *_pOs = nullptr;

@@ -51,6 +51,7 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
       [](const json &elem) { return CoincenterCommandTypeFromString(elem.get<std::string_view>()); });
 
   _dateFormatStrActivityFiles = activityTrackingPart["dateFileNameFormat"];
+  _alsoLogActivityForSimulatedCommands = activityTrackingPart["withSimulatedCommands"].get<bool>();
 }
 
 LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
@@ -61,7 +62,8 @@ LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
       _maxNbLogFiles(loggingInfo._maxNbLogFiles),
       _logLevelConsolePos(loggingInfo._logLevelConsolePos),
       _logLevelFilePos(loggingInfo._logLevelFilePos),
-      _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)) {}
+      _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)),
+      _alsoLogActivityForSimulatedCommands(loggingInfo._alsoLogActivityForSimulatedCommands) {}
 
 LoggingInfo::~LoggingInfo() {
   if (_destroyLoggers) {
