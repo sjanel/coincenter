@@ -51,6 +51,8 @@ class LoggingInfo {
 
   File getActivityFile() const;
 
+  bool alsoLogActivityForSimulatedCommands() const { return _alsoLogActivityForSimulatedCommands; }
+
  private:
   void createLoggers();
 
@@ -66,6 +68,7 @@ class LoggingInfo {
   int8_t _logLevelConsolePos = PosFromLevel(log::level::info);
   int8_t _logLevelFilePos = PosFromLevel(log::level::off);
   bool _destroyLoggers = false;
+  bool _alsoLogActivityForSimulatedCommands = false;
 };
 
 }  // namespace cct

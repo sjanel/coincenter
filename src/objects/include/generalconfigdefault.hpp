@@ -23,7 +23,8 @@ struct GeneralConfigDefault {
         "Withdraw",
         "DustSweeper"
       ],
-      "dateFileNameFormat": "%Y-%m"
+      "dateFileNameFormat": "%Y-%m",
+      "withSimulatedCommands": false
     },
     "consoleLevel": "info",
     "fileLevel": "debug",

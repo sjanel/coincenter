@@ -1008,7 +1008,7 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
     case ApiOutputType::kNoPrint:
       break;
   }
-  logActivity(commandType, jsonData);
+  logActivity(commandType, jsonData, tradeOptions.isSimulation());
 }
 
 void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
@@ -1414,7 +1414,8 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
     case ApiOutputType::kNoPrint:
       break;
   }
-  logActivity(CoincenterCommandType::kWithdrawApply, jsonData);
+  logActivity(CoincenterCommandType::kWithdrawApply, jsonData,
+              withdrawOptions.mode() == WithdrawOptions::Mode::kSimulation);
 }
 
 void QueryResultPrinter::printDustSweeper(
@@ -1474,8 +1475,10 @@ void QueryResultPrinter::printJson(const json &jsonData) const {
   }
 }
 
-void QueryResultPrinter::logActivity(CoincenterCommandType commandType, const json &jsonData) const {
-  if (_loggingInfo.isCommandTypeTracked(commandType)) {
+void QueryResultPrinter::logActivity(CoincenterCommandType commandType, const json &jsonData,
+                                     bool isSimulationMode) const {
+  if (_loggingInfo.isCommandTypeTracked(commandType) &&
+      (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
     File activityFile = _loggingInfo.getActivityFile();
     activityFile.write(jsonData, Writer::Mode::Append);
   }
