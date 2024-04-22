@@ -70,8 +70,8 @@ else()
 
   FetchContent_Declare(
     amadeusamc
-    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.5.0.tar.gz
-    URL_HASH SHA256=07d792906bfee1a51f3e3b8bf5a5ac8db0a6488eb36a1265c216edb60e98d378
+    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.5.1.tar.gz
+    URL_HASH SHA256=8358c2410d95c2d2653a11221ee0ffc7debaf10d5fa1edd154a7d85df52f8209
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable amadeusamc)
