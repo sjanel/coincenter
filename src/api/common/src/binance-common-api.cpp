@@ -1,18 +1,26 @@
 #include "binance-common-api.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <mutex>
 #include <string_view>
 #include <utility>
 
 #include "abstractmetricgateway.hpp"
+#include "cachedresult.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "curlpostdata.hpp"
 #include "currencycode.hpp"
+#include "currencycodeset.hpp"
+#include "currencyexchange.hpp"
+#include "currencyexchangeflatset.hpp"
+#include "httprequesttype.hpp"
+#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
 #include "request-retry.hpp"
 #include "runmodes.hpp"

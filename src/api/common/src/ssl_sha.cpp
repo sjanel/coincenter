@@ -6,6 +6,8 @@
 #include <openssl/sha.h>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <memory>
 #include <span>
 #include <string_view>

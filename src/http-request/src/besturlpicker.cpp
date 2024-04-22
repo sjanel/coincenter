@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <limits>
 #include <numeric>
+#include <span>
+#include <string_view>
 
 #include "cct_log.hpp"
 #include "mathhelpers.hpp"

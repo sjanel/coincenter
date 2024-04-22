@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <thread>
+#include <tuple>
 
 #include "cachedresultvault.hpp"
 #include "timedef.hpp"

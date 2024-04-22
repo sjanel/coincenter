@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <string_view>
+
 #include "cct_cctype.hpp"
 
 namespace cct {

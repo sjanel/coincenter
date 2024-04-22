@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <optional>
@@ -43,6 +44,7 @@
 #include "tradeoptions.hpp"
 #include "tradeside.hpp"
 #include "unreachable.hpp"
+#include "wallet.hpp"
 #include "withdraw.hpp"
 #include "withdrawinfo.hpp"
 #include "withdrawoptions.hpp"
@@ -609,7 +611,7 @@ ReceivedWithdrawInfo ExchangePrivate::queryWithdrawDelivery(
     return {};
   }
   const Deposit &deposit = deposits[closestDepositPos];
-  return ReceivedWithdrawInfo(string(deposit.id()), deposit.amount(), deposit.time());
+  return {string(deposit.id()), deposit.amount(), deposit.time()};
 }
 
 SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) {

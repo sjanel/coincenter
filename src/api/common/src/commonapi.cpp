@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -13,8 +14,10 @@
 #include "curloptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
+#include "currencycodevector.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
