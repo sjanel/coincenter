@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        clang-version: [18]
+        clang-version: [19]
         buildmode: [Debug]
 
     steps:
