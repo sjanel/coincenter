@@ -16,13 +16,17 @@ class WithdrawOptions {
  public:
   constexpr WithdrawOptions() noexcept = default;
 
-  WithdrawOptions(Duration withdrawRefreshTime, WithdrawSyncPolicy withdrawSyncPolicy);
+  enum class Mode : int8_t { kSimulation, kReal };
+
+  WithdrawOptions(Duration withdrawRefreshTime, WithdrawSyncPolicy withdrawSyncPolicy, Mode mode);
 
   constexpr Duration withdrawRefreshTime() const { return _withdrawRefreshTime; }
 
   constexpr WithdrawSyncPolicy withdrawSyncPolicy() const { return _withdrawSyncPolicy; }
 
   std::string_view withdrawSyncPolicyStr() const;
+
+  constexpr Mode mode() const { return _mode; }
 
   bool operator==(const WithdrawOptions &) const noexcept = default;
 
@@ -33,5 +37,6 @@ class WithdrawOptions {
 
   Duration _withdrawRefreshTime = kWithdrawRefreshTime;
   WithdrawSyncPolicy _withdrawSyncPolicy = WithdrawSyncPolicy::kSynchronous;
+  Mode _mode = Mode::kReal;
 };
 }  // namespace cct

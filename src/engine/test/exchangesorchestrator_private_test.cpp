@@ -36,7 +36,7 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
   ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
   BalanceOptions balanceOptions;
-  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous};
+  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous, WithdrawOptions::Mode::kReal};
 };
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
@@ -257,13 +257,17 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     api::InitiatedWithdrawInfo initiatedWithdrawInfo{receivingWallet, withdrawId, grossAmount};
     EXPECT_CALL(ExchangePrivate(exchange1), launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
+
     api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
     EXPECT_CALL(ExchangePrivate(exchange1), queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
             WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
+
+    api::ReceivedWithdrawInfo receivedWithdrawInfo{"deposit-id", netEmittedAmount};
     EXPECT_CALL(ExchangePrivate(exchange2), queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
-        .WillOnce(testing::Return(netEmittedAmount));
-    return {std::move(initiatedWithdrawInfo), netEmittedAmount};
+        .WillOnce(testing::Return(receivedWithdrawInfo));
+
+    return {std::move(initiatedWithdrawInfo), std::move(receivedWithdrawInfo)};
   }
 
   CurrencyCode cur{"XRP"};

@@ -1553,7 +1553,7 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   DeliveredWithdrawInfoWithExchanges deliveredWithdrawInfoWithExchanges{
       {&exchange1, &exchange4},
       DeliveredWithdrawInfo{api::InitiatedWithdrawInfo{receivingWallet, "WithdrawTest01", grossAmount, tp1},
-                            netEmittedAmount, tp2}};
+                            api::ReceivedWithdrawInfo{"depositTest01", netEmittedAmount, tp2}}};
   WithdrawOptions withdrawOptions;
 };
 
@@ -1566,11 +1566,12 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
-| From Exchange | From Account | Gross withdraw amount | Initiated time       | To Exchange | To Account | Net received amount | Received time        |
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
-| binance       | testuser1    | 76.55 XRP             | 1999-03-25T04:46:43Z | huobi       | testuser2  | 75.55 XRP           | 2002-06-23T07:58:35Z |
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
++----------+-----------+-------------------------+-----------------------+--------------------------+
+| Exchange | Account   | Sent -> Received amount | Sent -> Received time | Withdrawal -> Deposit id |
++----------+-----------+-------------------------+-----------------------+--------------------------+
+| binance  | testuser1 | 76.55 XRP               | 1999-03-25T04:46:43Z  | WithdrawTest01           |
+| huobi    | testuser2 | 75.55 XRP               | 2002-06-23T07:58:35Z  | depositTest01            |
++----------+-----------+-------------------------+-----------------------+--------------------------+
 )";
   expectStr(kExpected);
 }
@@ -1583,7 +1584,6 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
   "in": {
     "opt": {
       "cur": "XRP",
-      "grossAmount": "76.55",
       "isPercentage": false,
       "syncPolicy": "synchronous"
     },
@@ -1592,16 +1592,19 @@ TEST_F(QueryResultPrinterWithdrawAmountTest, Json) {
   "out": {
     "from": {
       "account": "testuser1",
-      "exchange": "binance"
+      "amount": "76.55",
+      "exchange": "binance",
+      "id": "WithdrawTest01",
+      "time": "1999-03-25T04:46:43Z"
     },
-    "initiatedTime": "1999-03-25T04:46:43Z",
-    "netReceivedAmount": "75.55",
-    "receivedTime": "2002-06-23T07:58:35Z",
     "to": {
       "account": "testuser2",
       "address": "xrpaddress666",
+      "amount": "75.55",
       "exchange": "huobi",
-      "tag": "xrptag2"
+      "id": "depositTest01",
+      "tag": "xrptag2",
+      "time": "2002-06-23T07:58:35Z"
     }
   }
 })";
@@ -1623,11 +1626,12 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
       .printWithdraw(deliveredWithdrawInfoWithExchanges, isPercentageWithdraw, withdrawOptions);
   static constexpr std::string_view kExpected = R"(
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
-| From Exchange | From Account | Gross withdraw amount | Initiated time       | To Exchange | To Account | Net received amount | Received time        |
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
-| binance       | testuser1    | 76.55 XRP             | 1999-03-25T04:46:43Z | huobi       | testuser2  | 75.55 XRP           | 2002-06-23T07:58:35Z |
-+---------------+--------------+-----------------------+----------------------+-------------+------------+---------------------+----------------------+
++----------+-----------+-------------------------+-----------------------+--------------------------+
+| Exchange | Account   | Sent -> Received amount | Sent -> Received time | Withdrawal -> Deposit id |
++----------+-----------+-------------------------+-----------------------+--------------------------+
+| binance  | testuser1 | 76.55 XRP               | 1999-03-25T04:46:43Z  | WithdrawTest01           |
+| huobi    | testuser2 | 75.55 XRP               | 2002-06-23T07:58:35Z  | depositTest01            |
++----------+-----------+-------------------------+-----------------------+--------------------------+
 )";
   expectStr(kExpected);
 }
@@ -1640,7 +1644,6 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
   "in": {
     "opt": {
       "cur": "XRP",
-      "grossAmount": "76.55",
       "isPercentage": true,
       "syncPolicy": "synchronous"
     },
@@ -1649,16 +1652,19 @@ TEST_F(QueryResultPrinterWithdrawPercentageTest, Json) {
   "out": {
     "from": {
       "account": "testuser1",
-      "exchange": "binance"
+      "amount": "76.55",
+      "exchange": "binance",
+      "id": "WithdrawTest01",
+      "time": "1999-03-25T04:46:43Z"
     },
-    "initiatedTime": "1999-03-25T04:46:43Z",
-    "netReceivedAmount": "75.55",
-    "receivedTime": "2002-06-23T07:58:35Z",
     "to": {
       "account": "testuser2",
       "address": "xrpaddress666",
+      "amount": "75.55",
       "exchange": "huobi",
-      "tag": "xrptag2"
+      "id": "depositTest01",
+      "tag": "xrptag2",
+      "time": "2002-06-23T07:58:35Z"
     }
   }
 })";

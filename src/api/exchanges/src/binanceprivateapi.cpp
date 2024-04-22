@@ -474,7 +474,6 @@ Deposit::Status DepositStatusFromCode(int statusInt) {
 }  // namespace
 
 DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
-  Deposits deposits;
   CurlPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("coin", depositsConstraints.currencyCode().str());
@@ -492,6 +491,8 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
   }
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
                                     _queryDelay, std::move(options));
+  Deposits deposits;
+  deposits.reserve(static_cast<Deposits::size_type>(depositStatus.size()));
   for (json& depositDetail : depositStatus) {
     int statusInt = depositDetail["status"].get<int>();
     Deposit::Status status = DepositStatusFromCode(statusInt);
@@ -785,31 +786,42 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   return {std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount};
 }
 
-MonetaryAmount BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
-                                                     const SentWithdrawInfo& sentWithdrawInfo) {
+ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                                           const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
   json depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec",
                                     _queryDelay, {{"coin", currencyCode.str()}});
   const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
 
+  auto newEndIt = std::remove_if(depositStatus.begin(), depositStatus.end(), [&wallet](const json& el) {
+    return el["status"].get<int>() != 1 || el["address"].get<std::string_view>() != wallet.address();
+  });
+
+  depositStatus.erase(newEndIt, depositStatus.end());
+
+  const auto recentDepositFromJsonEl = [currencyCode](const json& el) {
+    const MonetaryAmount amountReceived(el["amount"].get<double>(), currencyCode);
+    const TimePoint timestamp{milliseconds(el["insertTime"].get<int64_t>())};
+
+    return RecentDeposit(amountReceived, timestamp);
+  };
+
   ClosestRecentDepositPicker closestRecentDepositPicker;
+  closestRecentDepositPicker.reserve(static_cast<ClosestRecentDepositPicker::size_type>(depositStatus.size()));
+  std::ranges::transform(depositStatus, std::back_inserter(closestRecentDepositPicker), recentDepositFromJsonEl);
 
-  for (const json& depositDetail : depositStatus) {
-    std::string_view depositAddress(depositDetail["address"].get<std::string_view>());
-    int status = depositDetail["status"].get<int>();
-    if (status == 1) {  // success
-      if (depositAddress == wallet.address()) {
-        MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
-        int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
-
-        TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
-
-        closestRecentDepositPicker.addDeposit(RecentDeposit(amountReceived, timestamp));
-      }
-    }
-  }
   RecentDeposit expectedDeposit(sentWithdrawInfo.netEmittedAmount(), Clock::now());
-  return closestRecentDepositPicker.pickClosestRecentDepositOrDefault(expectedDeposit).amount();
+
+  int closestDepositPos = closestRecentDepositPicker.pickClosestRecentDepositPos(expectedDeposit);
+  if (closestDepositPos == -1) {
+    return {};
+  }
+
+  json& depositEl = depositStatus[closestDepositPos];
+  const RecentDeposit recentDeposit = recentDepositFromJsonEl(depositEl);
+
+  return ReceivedWithdrawInfo(std::move(depositEl["id"].get_ref<string&>()), recentDeposit.amount(),
+                              recentDeposit.timePoint());
 }
 
 }  // namespace cct::api

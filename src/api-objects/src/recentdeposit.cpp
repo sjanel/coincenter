@@ -8,16 +8,22 @@
 
 namespace cct::api {
 
-void ClosestRecentDepositPicker::addDeposit(const RecentDeposit &recentDeposit) {
+void ClosestRecentDepositPicker::push_back(const RecentDeposit &recentDeposit) {
   _recentDeposits.push_back(recentDeposit);
+  _recentDeposits.back()._originalPos = static_cast<int>(_recentDeposits.size()) - 1;
 }
 
-RecentDeposit ClosestRecentDepositPicker::pickClosestRecentDepositOrDefault(const RecentDeposit &expectedDeposit) {
+void ClosestRecentDepositPicker::push_back(RecentDeposit &&recentDeposit) {
+  recentDeposit._originalPos = static_cast<int>(_recentDeposits.size());
+  _recentDeposits.push_back(std::move(recentDeposit));
+}
+
+int ClosestRecentDepositPicker::pickClosestRecentDepositPos(const RecentDeposit &expectedDeposit) {
   const RecentDeposit *pClosestRecentDeposit = selectClosestRecentDeposit(expectedDeposit);
   if (pClosestRecentDeposit == nullptr) {
-    return {};
+    return -1;
   }
-  return *pClosestRecentDeposit;
+  return pClosestRecentDeposit->_originalPos;
 }
 
 const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(const RecentDeposit &expectedDeposit) {

@@ -17,24 +17,35 @@ class RecentDeposit {
   TimePoint timePoint() const { return _timePoint; }
 
  private:
+  friend class ClosestRecentDepositPicker;
+
   MonetaryAmount _amount;
   TimePoint _timePoint;
+  int _originalPos = -1;
 };
 
 class ClosestRecentDepositPicker {
- public:
-  ClosestRecentDepositPicker() noexcept = default;
-
-  void addDeposit(const RecentDeposit &recentDeposit);
-
-  /// Given deposit information in parameters, return a RecentDeposit corresponding to the closest
-  /// deposit. Otherwise, if no matching deposit is found (added previously thanks to 'addDeposit' method),
-  /// a default RecentDeposit is returned.
-  RecentDeposit pickClosestRecentDepositOrDefault(const RecentDeposit &expectedDeposit);
-
  private:
   using RecentDepositVector = SmallVector<RecentDeposit, 4>;
 
+ public:
+  using value_type = RecentDepositVector::value_type;
+  using size_type = RecentDepositVector::size_type;
+
+  ClosestRecentDepositPicker() noexcept = default;
+
+  void push_back(const RecentDeposit &recentDeposit);
+
+  void push_back(RecentDeposit &&recentDeposit);
+
+  void reserve(size_type sz) { _recentDeposits.reserve(sz); }
+
+  /// Given deposit information in parameters, return a position (0 indexed) corresponding to the closest
+  /// deposit that was pushed back. Otherwise, if no matching deposit is found (added previously thanks to 'push_back'
+  /// method), -1 is returned
+  int pickClosestRecentDepositPos(const RecentDeposit &expectedDeposit);
+
+ private:
   /// Select the RecentDeposit among given ones which is the closest to 'this' object.
   /// It may reorder the given vector but will not modify objects themselves.
   /// Returns nullptr if no matching deposit has been found

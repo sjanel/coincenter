@@ -83,7 +83,7 @@ void CoincenterCmdLineOptions::mergeGlobalWith(const CoincenterCmdLineOptions& r
 TradeOptions CoincenterCmdLineOptions::computeTradeOptions() const {
   const TradeTypePolicy tradeTypePolicy = computeTradeTypePolicy();
   const TradeTimeoutAction timeoutAction = computeTradeTimeoutAction();
-  const TradeMode tradeMode = tradeSim ? TradeMode::kSimulation : TradeMode::kReal;
+  const TradeMode tradeMode = isSimulation ? TradeMode::kSimulation : TradeMode::kReal;
   const TradeSyncPolicy tradeSyncPolicy = async ? TradeSyncPolicy::kAsynchronous : TradeSyncPolicy::kSynchronous;
 
   if (!tradeStrategy.empty()) {
@@ -141,7 +141,8 @@ TradeTimeoutAction CoincenterCmdLineOptions::computeTradeTimeoutAction() const {
 
 WithdrawOptions CoincenterCmdLineOptions::computeWithdrawOptions() const {
   const auto withdrawSyncPolicy = async ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
-  return {withdrawRefreshTime, withdrawSyncPolicy};
+  const auto mode = isSimulation ? WithdrawOptions::Mode::kSimulation : WithdrawOptions::Mode::kReal;
+  return {withdrawRefreshTime, withdrawSyncPolicy, mode};
 }
 
 std::pair<std::string_view, CoincenterCommandType> CoincenterCmdLineOptions::getTradeArgStr() const {

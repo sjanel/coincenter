@@ -102,6 +102,8 @@ Main features:
           - [Trade asynchronous mode](#trade-asynchronous-mode)
           - [Trade Price Strategy](#trade-price-strategy)
           - [Trade Price Picker](#trade-price-picker)
+          - [Absolute price](#absolute-price)
+          - [Relative price](#relative-price)
         - [Trade all](#trade-all)
         - [Examples with explanation](#examples-with-explanation)
       - [Multi Trade](#multi-trade)
@@ -124,6 +126,7 @@ Main features:
         - [Withdraw options](#withdraw-options)
           - [Withdraw refresh time](#withdraw-refresh-time)
           - [Withdraw asynchronous mode](#withdraw-asynchronous-mode)
+          - [Simulation mode](#simulation-mode)
       - [Dust sweeper](#dust-sweeper)
         - [Syntax](#syntax-2)
           - [Standard - full information](#standard---full-information-2)
@@ -678,7 +681,7 @@ Use command line option `trade` to make a trade from a departure amount.
 
 In order to control more precisely the price of the order, `coincenter` supports custom price as well thanks to `--price` option. Note that this is not compatible with above **trade price strategy** option.
 `--price` expects either an integer (!= 0) representing a **relative** price compared to the limit price, or a monetary amount representing an **absolute** fixed price (decimal amount with the price currency).
-In fact, parser will recognize a relative price if the amount is without any decimals and without any currency. The price currency will be overriden by the engine, but you can add it for readability and to remove ambiguity of an integer price for the parser.
+In fact, parser will recognize a relative price if the amount is without any decimals and without any currency. The price currency will be overridden by the engine, but you can add it for readability and to remove ambiguity of an integer price for the parser.
 
 | `--price` value examples | Explanation                                                                                                                       |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -687,7 +690,7 @@ In fact, parser will recognize a relative price if the amount is without any dec
 | `34.6`                   | *absolute* price (engine will take the currency from the market of the trade)                                                     |
 | `25 XXX`                 | *absolute* price (engine will override the currency from the market of the trade and not consider `XXX`, no error will be raised) |
 
-####### Absolute price
+###### Absolute price
 
 When requesting an absolute price, the order will be placed exactly at this price. Depending on the order book and the limit prices, order may or may not be matched instantly. Double check the price before launching your trade command!
 
@@ -696,7 +699,7 @@ When requesting an absolute price, the order will be placed exactly at this pric
 - Such an order will not be compatible with [multi trade](#multi-trade) because an absolute price makes sense only for a specific market. However, if you ask a multi trade with a fixed price, no error will be raised, and `coincenter` will simply launch a single trade.
 - Order price will not be continuously updated over time
 
-####### Relative price
+###### Relative price
 
 The **relative price** makes it possible to easily settle a price anywhere in the orderbook. The chosen price is **relative** to the order book limit price - it represents how far away the price is related to the 'center' prices. The higher (or lower) the value, the more difficult it will be for the order to be bought - or sold.
 
@@ -1029,6 +1032,16 @@ Defaults to 5 seconds.
 
 By default `coincenter` will exit withdraw process only once destination has received the funds.
 You can change the behavior to an **asynchronous** mode thanks to `--async` option, which is like a fire and forget mode. Once the withdraw is initiated, withdraw process is finished and the withdraw is not followed anymore.
+
+###### Simulation mode
+
+Like trade, it is possible to launch a simulated withdrawal with `--sim` option (to test deposit information retrieval and withdrawal status of currency at source exchange for instance).
+
+Example: Simulated withdrawal of 50 % of available BTC from account `user1` of Kraken to Upbit:
+
+```bash
+coincenter withdraw-apply 50%btc,kraken_user1-upbit --sim
+```
 
 #### Dust sweeper
 

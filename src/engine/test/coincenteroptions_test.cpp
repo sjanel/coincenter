@@ -93,7 +93,7 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeTimeoutActionInvalid) {
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradeStrategy) {
   opts.tradeStrategy = "nibble";
   opts.tradeTimeoutMatch = true;
-  opts.tradeSim = true;
+  opts.isSimulation = true;
   EXPECT_EQ(opts.computeTradeOptions(), TradeOptions(PriceOptions(opts.tradeStrategy), TradeTimeoutAction::kMatch,
                                                      TradeMode::kSimulation, opts.tradeTimeout, opts.tradeUpdatePrice,
                                                      TradeTypePolicy::kDefault, TradeSyncPolicy::kSynchronous));
