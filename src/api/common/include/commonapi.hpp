@@ -14,6 +14,7 @@
 #include "currencycodevector.hpp"
 #include "exchangebase.hpp"
 #include "monetaryamount.hpp"
+#include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
 

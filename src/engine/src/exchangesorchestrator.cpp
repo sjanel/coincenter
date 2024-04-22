@@ -20,7 +20,6 @@
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
-#include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"

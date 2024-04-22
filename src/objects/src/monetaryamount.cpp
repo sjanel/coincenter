@@ -134,7 +134,7 @@ inline auto AmountIntegralFromStr(std::string_view amountStr, bool heuristicRoun
       integerPart = 0;
     } else {
       integerPart =
-          FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.data(), amountStr.data() + dotPos));
+          FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.begin(), amountStr.begin() + dotPos));
     }
   }
 
