@@ -48,4 +48,16 @@ TEST(LoggingInfo, MoveConstructor) {
 
   log::info("test2");
 }
+
+TEST(LoggingInfo, MoveAssignment) {
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes);
+
+  log::info("test1");
+
+  LoggingInfo loggingInfo2;
+
+  loggingInfo2 = std::move(loggingInfo);
+
+  log::info("test2");
+}
 }  // namespace cct

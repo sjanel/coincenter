@@ -33,10 +33,10 @@ namespace cct {
 class ExchangeRetrieverTest : public ::testing::Test {
  protected:
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
+  CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
   ExchangeConfigMap exchangeConfigMap{
       ComputeExchangeConfigMap(loadConfiguration.exchangeConfigFileName(), LoadExchangeConfigData(loadConfiguration))};
 
-  CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
   api::CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
 
@@ -45,9 +45,6 @@ class ExchangeRetrieverTest : public ::testing::Test {
   api::MockExchangePublic exchangePublic3{"kucoin", fiatConverter, commonAPI, coincenterInfo};
   api::APIKey key1{"test1", "user1", "", "", ""};
   api::APIKey key2{"test2", "user2", "", "", ""};
-  api::APIKey key3{"test3", "user3", "", "", ""};
-  api::APIKey key4{"test4", "user4", "", "", ""};
-  api::APIKey key5{"test5", "user5", "", "", ""};
   Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
   Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2,

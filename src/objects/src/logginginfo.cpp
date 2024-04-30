@@ -54,19 +54,26 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
   _alsoLogActivityForSimulatedCommands = activityTrackingPart["withSimulatedCommands"].get<bool>();
 }
 
-LoggingInfo::LoggingInfo(LoggingInfo &&loggingInfo) noexcept
-    : _dataDir(loggingInfo._dataDir),
-      _dateFormatStrActivityFiles(std::move(loggingInfo._dateFormatStrActivityFiles)),
-      _trackedCommandTypes(std::move(loggingInfo._trackedCommandTypes)),
-      _maxFileSizeLogFileInBytes(loggingInfo._maxFileSizeLogFileInBytes),
-      _maxNbLogFiles(loggingInfo._maxNbLogFiles),
-      _logLevelConsolePos(loggingInfo._logLevelConsolePos),
-      _logLevelFilePos(loggingInfo._logLevelFilePos),
-      _destroyLoggers(std::exchange(loggingInfo._destroyLoggers, false)),
-      _alsoLogActivityForSimulatedCommands(loggingInfo._alsoLogActivityForSimulatedCommands) {}
+LoggingInfo::LoggingInfo(LoggingInfo &&rhs) noexcept
+    : _dataDir(std::move(rhs._dataDir)),
+      _dateFormatStrActivityFiles(std::move(rhs._dateFormatStrActivityFiles)),
+      _trackedCommandTypes(std::move(rhs._trackedCommandTypes)),
+      _maxFileSizeLogFileInBytes(rhs._maxFileSizeLogFileInBytes),
+      _maxNbLogFiles(rhs._maxNbLogFiles),
+      _logLevelConsolePos(rhs._logLevelConsolePos),
+      _logLevelFilePos(rhs._logLevelFilePos),
+      _destroyOutputLogger(std::exchange(rhs._destroyOutputLogger, false)),
+      _alsoLogActivityForSimulatedCommands(rhs._alsoLogActivityForSimulatedCommands) {}
+
+LoggingInfo &LoggingInfo::operator=(LoggingInfo &&rhs) noexcept {
+  if (&rhs != this) {
+    swap(rhs);
+  }
+  return *this;
+}
 
 LoggingInfo::~LoggingInfo() {
-  if (_destroyLoggers) {
+  if (_destroyOutputLogger) {
     log::drop(kOutputLoggerName);
   }
 }
@@ -87,36 +94,53 @@ void LoggingInfo::createLoggers() {
   }
 
   if (_logLevelFilePos != 0) {
-    auto logFileName = log::filename_t(_dataDir) + "/log/log.txt";
-    auto &rotatingSink = sinks.emplace_back(
-        std::make_shared<log::sinks::rotating_file_sink_mt>(logFileName, _maxFileSizeLogFileInBytes, _maxNbLogFiles));
+    log::filename_t logFileName = log::filename_t(_dataDir) + log::filename_t("/log/log.txt");
+    auto &rotatingSink = sinks.emplace_back(std::make_shared<log::sinks::rotating_file_sink_mt>(
+        std::move(logFileName), _maxFileSizeLogFileInBytes, _maxNbLogFiles));
+
     rotatingSink->set_level(LevelFromPos(_logLevelFilePos));
   }
 
-  constexpr int nbThreads = 1;  // only one logger thread is important to keep order between output logger and others
-  log::init_thread_pool(8192, nbThreads);
-  auto logger = std::make_shared<log::async_logger>("", sinks.begin(), sinks.end(), log::thread_pool(),
-                                                    log::async_overflow_policy::block);
+  if (!sinks.empty()) {
+    constexpr int nbThreads = 1;  // only one logger thread is important to keep order between output logger and others
+    log::init_thread_pool(8192, nbThreads);
+    auto logger = std::make_shared<log::async_logger>("", sinks.begin(), sinks.end(), log::thread_pool(),
+                                                      log::async_overflow_policy::block);
 
-  // spdlog level is present in sink context, and also logger context (why?)
-  // in addition of the levels of each sink, we need to set the main level of the logger based on the max log level of
-  // both
-  logger->set_level(LevelFromPos(std::max(_logLevelConsolePos, _logLevelFilePos)));
+    // spdlog level is present in sink context, and also logger context (why?)
+    // in addition of the levels of each sink, we need to set the main level of the logger based on the max log level of
+    // both
+    logger->set_level(LevelFromPos(std::max(_logLevelConsolePos, _logLevelFilePos)));
 
-  log::set_default_logger(logger);
+    log::set_default_logger(logger);
+  }
 
-  CreateOutputLogger();
-
-  _destroyLoggers = true;
+  createOutputLogger();
 }
 
-void LoggingInfo::CreateOutputLogger() {
+void LoggingInfo::swap(LoggingInfo &rhs) noexcept {
+  using std::swap;
+
+  _dataDir.swap(rhs._dataDir);
+  _dateFormatStrActivityFiles.swap(rhs._dateFormatStrActivityFiles);
+  _trackedCommandTypes.swap(rhs._trackedCommandTypes);
+  swap(_maxFileSizeLogFileInBytes, rhs._maxFileSizeLogFileInBytes);
+  swap(_maxNbLogFiles, rhs._maxNbLogFiles);
+  swap(_logLevelConsolePos, rhs._logLevelConsolePos);
+  swap(_logLevelFilePos, rhs._logLevelFilePos);
+  swap(_destroyOutputLogger, rhs._destroyOutputLogger);
+  swap(_alsoLogActivityForSimulatedCommands, rhs._alsoLogActivityForSimulatedCommands);
+}
+
+void LoggingInfo::createOutputLogger() {
   auto outputLogger =
       std::make_shared<log::async_logger>(kOutputLoggerName, std::make_shared<log::sinks::stdout_color_sink_mt>(),
                                           log::thread_pool(), log::async_overflow_policy::block);
   outputLogger->set_level(log::level::level_enum::info);
   outputLogger->set_pattern("%v");
+
   log::register_logger(outputLogger);
+  _destroyOutputLogger = true;
 }
 
 }  // namespace cct

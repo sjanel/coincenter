@@ -7,9 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#ifdef CCT_MSVC
-#include <string>
-#endif
 
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -29,6 +26,7 @@ namespace cct {
 /// before and after them.
 /// Empty rows are legal and will force the print of a divider line.
 /// See the unit test to have an overview of its usage and the look and feel of the print.
+///
 /// Example:
 ///
 /// +---------------+----------+-----------------------+
@@ -51,14 +49,7 @@ namespace table {
 /// Make sure that the lifetime of the data it points to extends the lifetime of this cell.
 class CellLine {
  public:
-#ifdef CCT_MSVC
-  // folly::string does not support operator<< correctly with alignments with MSVC. Hence we use std::string
-  // in SimpleTable to guarantee correct alignment of formatted table. Referenced in this issue:
-  // https://github.com/facebook/folly/issues/1681
-  using string_type = std::string;
-#else
   using string_type = string;
-#endif
   using value_type = std::variant<std::string_view, string_type, int64_t, uint64_t, bool>;
   using size_type = uint32_t;
 
@@ -66,13 +57,9 @@ class CellLine {
 
   explicit CellLine(const char *cstr) : _data(std::string_view(cstr)) {}
 
-#ifdef CCT_MSVC
-  explicit CellLine(const string &v) : _data(string_type(v.data(), v.size())) {}
-#else
   explicit CellLine(const string_type &str) : _data(str) {}
 
   explicit CellLine(string_type &&str) : _data(std::move(str)) {}
-#endif
 
   explicit CellLine(std::integral auto val) : _data(val) {}
 
@@ -92,6 +79,7 @@ class CellLine {
 };
 
 class Row;
+
 class Cell {
  public:
   using value_type = CellLine;

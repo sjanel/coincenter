@@ -151,4 +151,6 @@ add_unit_test(
 add_unit_test(
     url-encode_test.cpp
     test/url-encode_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
 )

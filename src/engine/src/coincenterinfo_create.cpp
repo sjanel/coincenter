@@ -53,6 +53,7 @@ MonitoringInfo MonitoringInfo_Create(std::string_view programName, const Coincen
 CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
                                      settings::RunMode runMode) {
   const auto dataDir = cmdLineOptions.getDataDir();
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kNo, dataDir);
 
   const json generalConfigData = LoadGeneralConfigAndOverrideOptionsFromCLI(cmdLineOptions);
 
@@ -64,7 +65,7 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
   // Create LoggingInfo first as it is a RAII structure re-initializing spdlog loggers.
   // It will be held by GeneralConfig and then itself by CoincenterInfo though.
   const auto &logConfigJsonPart = static_cast<const json &>(generalConfigData.at("log"));
-  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir, logConfigJsonPart);
+  loggingInfo = LoggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir, logConfigJsonPart);
 
   RequestsConfig requestsConfig(
       generalConfigData.at("requests").at("concurrency").at("nbMaxParallelRequests").get<int>());

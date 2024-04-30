@@ -48,6 +48,11 @@ else()
   message(NOTICE "No data directory found. Set it with CCT_DATA_DIR or if you use Docker mount it at start of the container")
 endif()
 
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 # openssl for requests
 find_package(OpenSSL REQUIRED)
 
@@ -139,8 +144,8 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.tar.gz
-    URL_HASH SHA256=534f2ee1a4dcbeb22249856edfb2be76a1cf4f708a20b0ac2ed090ee24cfdbc9
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz
+    URL_HASH SHA256=1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
