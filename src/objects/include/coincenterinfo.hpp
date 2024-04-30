@@ -17,6 +17,7 @@
 #include "monitoringinfo.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
@@ -37,7 +38,7 @@ class CoincenterInfo {
   ~CoincenterInfo();
 
   /// Sometimes, XBT is used instead of BTC for Bitcoin.
-  /// Use this function to standardize names
+  /// Use this method to standardize names
   CurrencyCode standardizeCurrencyCode(CurrencyCode currencyCode) const;
   CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const;
   CurrencyCode standardizeCurrencyCode(const char *currencyCode) const {

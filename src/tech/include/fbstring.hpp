@@ -31,6 +31,7 @@
 #include <type_traits>
 
 #include "cct_config.hpp"
+#include "cct_format.hpp"
 #include "cct_type_traits.hpp"
 #include "unreachable.hpp"
 
@@ -2747,39 +2748,7 @@ operator<<(
         typename basic_fbstring<E, T, A, S>::value_type,
         typename basic_fbstring<E, T, A, S>::traits_type>& os,
     const basic_fbstring<E, T, A, S>& str) {
-#ifdef _LIBCPP_VERSION
-  typedef std::basic_ostream<
-      typename basic_fbstring<E, T, A, S>::value_type,
-      typename basic_fbstring<E, T, A, S>::traits_type>
-      _ostream_type;
-  typename _ostream_type::sentry _s(os);
-  if (_s) {
-    typedef std::ostreambuf_iterator<
-        typename basic_fbstring<E, T, A, S>::value_type,
-        typename basic_fbstring<E, T, A, S>::traits_type>
-        _Ip;
-    size_t __len = str.size();
-    bool __left =
-        (os.flags() & _ostream_type::adjustfield) == _ostream_type::left;
-    if (__pad_and_output(
-            _Ip(os),
-            str.data(),
-            __left ? str.data() + __len : str.data(),
-            str.data() + __len,
-            os,
-            os.fill())
-            .failed()) {
-      os.setstate(_ostream_type::badbit | _ostream_type::failbit);
-    }
-  }
-#elif defined(_MSC_VER)
-  typedef decltype(os.precision()) streamsize;
-  // MSVC doesn't define __ostream_insert
-  os.write(str.data(), static_cast<streamsize>(str.size()));
-#else
-  std::__ostream_insert(os, str.data(), str.size());
-#endif
-  return os;
+  return os << std::basic_string_view<E, T>(str);
 }
 
 template <typename E1, class T, class A, class S>
@@ -2920,6 +2889,19 @@ FOLLY_POP_WARNING
 
 #undef FOLLY_SANITIZE_ADDRESS
 #undef FBSTRING_DISABLE_SSO
+
+#ifndef CCT_DISABLE_SPDLOG
+
+template <class E, class T, class A, class S>
+struct fmt::formatter<::folly::basic_fbstring<E, T, A, S>> : fmt::formatter<std::basic_string_view<E, T>> {
+  template <typename FormatContext>
+  auto format(const ::folly::basic_fbstring<E, T, A, S> &str, FormatContext &ctx) const -> decltype(ctx.out()) {
+    using SVType = std::basic_string_view<E, T>;
+    return fmt::formatter<SVType>::format(SVType(str), ctx);
+  }
+};
+
+#endif
 
 namespace folly {
 template <class T>

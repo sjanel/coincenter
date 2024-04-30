@@ -22,7 +22,7 @@ class exception : public std::exception {
  public:
   static constexpr int kMsgMaxLen = 80;
 
-  template <int N, std::enable_if_t<N <= kMsgMaxLen + 1, bool> = true>
+  template <int N, std::enable_if_t<N <= kMsgMaxLen, bool> = true>
   explicit exception(const char (&str)[N]) noexcept {
     // Hint: default constructor constructs a variant holding the value-initialized value of the first alternative
     // (index() is zero). In our case, it's a std::array, which is what we want here.

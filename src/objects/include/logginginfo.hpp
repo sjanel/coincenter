@@ -28,15 +28,16 @@ class LoggingInfo {
   enum class WithLoggersCreation : int8_t { kNo, kYes };
 
   /// Creates a default logging info, with level 'info' on standard output.
-  explicit LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir = kDefaultDataDir);
+  explicit LoggingInfo(WithLoggersCreation withLoggersCreation = WithLoggersCreation::kNo,
+                       std::string_view dataDir = kDefaultDataDir);
 
   /// Creates a logging info from general config json file.
   LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const json &generalConfigJsonLogPart);
 
   LoggingInfo(const LoggingInfo &) = delete;
-  LoggingInfo(LoggingInfo &&loggingInfo) noexcept;
+  LoggingInfo(LoggingInfo &&rhs) noexcept;
   LoggingInfo &operator=(const LoggingInfo &) = delete;
-  LoggingInfo &operator=(LoggingInfo &&) = delete;
+  LoggingInfo &operator=(LoggingInfo &&rhs) noexcept;
 
   ~LoggingInfo();
 
@@ -53,21 +54,23 @@ class LoggingInfo {
 
   bool alsoLogActivityForSimulatedCommands() const { return _alsoLogActivityForSimulatedCommands; }
 
+  void swap(LoggingInfo &rhs) noexcept;
+
  private:
   void createLoggers();
 
-  static void CreateOutputLogger();
+  void createOutputLogger();
 
   using TrackedCommandTypes = FlatSet<CoincenterCommandType>;
 
-  std::string_view _dataDir = kDefaultDataDir;
+  std::string_view _dataDir;
   string _dateFormatStrActivityFiles;
   TrackedCommandTypes _trackedCommandTypes;
   int64_t _maxFileSizeLogFileInBytes = kDefaultFileSizeInBytes;
   int32_t _maxNbLogFiles = kDefaultNbMaxFiles;
   int8_t _logLevelConsolePos = PosFromLevel(log::level::info);
   int8_t _logLevelFilePos = PosFromLevel(log::level::off);
-  bool _destroyLoggers = false;
+  bool _destroyOutputLogger = false;
   bool _alsoLogActivityForSimulatedCommands = false;
 };
 
