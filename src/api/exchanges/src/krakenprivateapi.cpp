@@ -42,6 +42,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "stringhelpers.hpp"

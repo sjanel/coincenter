@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string_view>
 
 #include "cct_string.hpp"
 

@@ -1,7 +1,6 @@
 #include "exchangeprivateapi.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <iterator>
 #include <limits>
@@ -391,7 +390,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
     }
 
    private:
-    int weight(Market mk) const {
+    [[nodiscard]] int weight(Market mk) const {
       // not present is equivalent to a weight of 0
       const auto it = _penaltyPerMarketMap.find(mk);
       return it == _penaltyPerMarketMap.end() ? 0 : it->second;

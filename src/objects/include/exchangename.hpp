@@ -64,8 +64,7 @@ class ExchangeName {
 
  private:
   static constexpr auto kMinExchangeNameLength =
-      std::ranges::min_element(kSupportedExchanges, [](auto lhs, auto rhs) { return lhs.size() < rhs.size(); })
-          -> size();
+      std::ranges::min_element(kSupportedExchanges, [](auto lhs, auto rhs) { return lhs.size() < rhs.size(); })->size();
 
   string::size_type underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
 

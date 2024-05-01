@@ -35,7 +35,6 @@
 #include "market-vector.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
-#include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"

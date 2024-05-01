@@ -13,6 +13,7 @@
 #include "cct_string.hpp"
 #include "currencycodevector.hpp"
 #include "durationstring.hpp"
+#include "http-config.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
