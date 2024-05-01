@@ -4,7 +4,7 @@ namespace cct {
 /// constexpr version of std::toupper with chars, as unfortunately for now (May 2021) std::toupper is not constexpr
 constexpr char toupper(char ch) noexcept {
   switch (ch) {
-    // clang-format off
+      // clang-format off
     case 'a': return 'A';
     case 'b': return 'B';
     case 'c': return 'C';
@@ -40,7 +40,7 @@ constexpr char toupper(char ch) noexcept {
 /// constexpr version of std::tolower with chars, as unfortunately for now (May 2021) std::tolower is not constexpr
 constexpr char tolower(char ch) noexcept {
   switch (ch) {
-    // clang-format off
+      // clang-format off
     case 'A': return 'a';
     case 'B': return 'b';
     case 'C': return 'c';

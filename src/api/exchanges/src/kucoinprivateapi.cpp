@@ -282,8 +282,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
       orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
     } else {
       // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
-      []<bool flag = false>() { static_assert(flag, "no match"); }
-      ();
+      []<bool flag = false>() { static_assert(flag, "no match"); }();
     }
   }
   std::ranges::sort(orderVector);

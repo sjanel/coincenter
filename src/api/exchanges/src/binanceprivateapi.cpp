@@ -16,6 +16,7 @@
 #include "apiquerytypeenum.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "binance-common-api.hpp"
 #include "binancepublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
@@ -357,8 +358,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json& ordersAr
       orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
     } else {
       // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
-      []<bool flag = false>() { static_assert(flag, "no match"); }
-      ();
+      []<bool flag = false>() { static_assert(flag, "no match"); }();
     }
   }
   std::ranges::sort(orderVector);
@@ -820,8 +820,7 @@ ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdr
   json& depositEl = depositStatus[closestDepositPos];
   const RecentDeposit recentDeposit = recentDepositFromJsonEl(depositEl);
 
-  return ReceivedWithdrawInfo(std::move(depositEl["id"].get_ref<string&>()), recentDeposit.amount(),
-                              recentDeposit.timePoint());
+  return {std::move(depositEl["id"].get_ref<string&>()), recentDeposit.amount(), recentDeposit.timePoint()};
 }
 
 }  // namespace cct::api

@@ -29,7 +29,6 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
-#include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
@@ -319,9 +318,9 @@ Market GetKrakenMarketOrDefault(const CurrencyExchangeFlatSet& currencies, Marke
   const auto krakenBaseIt = currencies.find(mk.base());
   const auto krakenQuoteIt = currencies.find(mk.quote());
   if (krakenBaseIt != currencies.end() && krakenQuoteIt != currencies.end()) {
-    return Market(krakenBaseIt->altCode(), krakenQuoteIt->altCode());
+    return {krakenBaseIt->altCode(), krakenQuoteIt->altCode()};
   }
-  return Market{};
+  return {};
 }
 }  // namespace
 

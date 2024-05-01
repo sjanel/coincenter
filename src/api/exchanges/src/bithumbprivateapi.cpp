@@ -565,8 +565,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
         orders.emplace_back(std::move(id), matchedVolume, price, placedTime, placedTime, side);
       } else {
         // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
-        []<bool flag = false>() { static_assert(flag, "no match"); }
-        ();
+        []<bool flag = false>() { static_assert(flag, "no match"); }();
       }
     }
   }
