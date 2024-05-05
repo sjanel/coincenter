@@ -239,7 +239,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     if (nowTime < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
       const Duration sleepingTime = _minDurationBetweenQueries - (nowTime - _lastQueryTime);
-      log::debug("Wait {} before performing query", DurationToString(sleepingTime));
+      log::trace("Wait {} before performing query", DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       _lastQueryTime = nowTime + sleepingTime;
     } else {
@@ -251,7 +251,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   log::log(_requestCallLogLevel, "{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?",
            optsStr);
 
-  // Actually make the query, with a fast retry mechanism
+  // Actually make the query, with a fast retry mechanism (to avoid random technical errors)
   Duration sleepingTime = milliseconds(100);
   int retryPos = 0;
   CURLcode res;

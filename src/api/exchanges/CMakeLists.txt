@@ -1,17 +1,6 @@
 
 include(FetchContent)
 
-FetchContent_Declare(
-  jwt-cpp
-  GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp
-  GIT_TAG        v0.7.0
-  GIT_SHALLOW true
-)
-
-set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(jwt-cpp)
-
 aux_source_directory(src API_EXCHANGES_SRC)
 
 add_library(coincenter_api-exchange STATIC ${API_EXCHANGES_SRC})

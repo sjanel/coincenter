@@ -151,6 +151,17 @@ if(NOT spdlog_FOUND)
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
 endif()
 
+# JWT library
+FetchContent_Declare(
+  jwt-cpp
+  URL https://github.com/Thalhammer/jwt-cpp/archive/refs/tags/v0.7.0.tar.gz
+  URL_HASH SHA256=b9eb270e3ba8221e4b2bc38723c9a1cb4fa6c241a42908b9a334daff31137406
+)
+
+set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+list(APPEND fetchContentPackagesToMakeAvailable jwt-cpp) 
+
 # Make fetch content available
 if(fetchContentPackagesToMakeAvailable)
   message(STATUS "Configuring packages ${fetchContentPackagesToMakeAvailable}")

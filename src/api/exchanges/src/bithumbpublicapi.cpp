@@ -247,7 +247,9 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
       }
     }
   }
-  log::info("Retrieved {} markets (+ order books) from Bithumb", ret.size());
+  if (ret.size() > 1) {
+    log::info("Retrieved {} markets (+ order books) from Bithumb", ret.size());
+  }
   return ret;
 }
 }  // namespace

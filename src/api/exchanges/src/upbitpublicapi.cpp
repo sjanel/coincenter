@@ -114,7 +114,6 @@ std::optional<MonetaryAmount> UpbitPublic::queryWithdrawalFee(CurrencyCode curre
 CurrencyExchangeFlatSet UpbitPublic::TradableCurrenciesFunc::operator()() {
   const MarketSet& markets = _marketsCache.get();
   CurrencyExchangeFlatSet currencies;
-  currencies.reserve(markets.size() / 2);
   for (Market mk : markets) {
     currencies.emplace(mk.base(), mk.base(), mk.base());
     currencies.emplace(mk.quote(), mk.quote(), mk.quote());
@@ -219,7 +218,9 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
     }
     ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
   }
-  log::info("Retrieved {} order books from Upbit", ret.size());
+  if (ret.size() > 1) {
+    log::info("Retrieved {} order books from Upbit", ret.size());
+  }
   return ret;
 }
 }  // namespace
