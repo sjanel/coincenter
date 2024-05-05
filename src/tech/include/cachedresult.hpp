@@ -113,7 +113,8 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
     TKey key(std::forward<Args &&>(funcArgs)...);
     auto [it, isInserted] = _data.try_emplace(key, flattenTuple, key, nowTime);
     if (!isInserted && this->_state != State::kForceCache &&
-        this->_refreshPeriod < nowTime - it->second.lastUpdatedTs) {
+        // less or equal to make sure value is always refreshed for a zero refresh period
+        this->_refreshPeriod <= nowTime - it->second.lastUpdatedTs) {
       it->second = Value(flattenTuple, std::move(key), nowTime);
     }
     return it->second.result;

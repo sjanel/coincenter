@@ -103,7 +103,7 @@ TEST_F(CachedResultTest, SetInCache) {
   cachedResult.set(42, nowTime, 3, 4);  // timestamp too old, should not be set
   EXPECT_EQ(cachedResult.get(3, 4), 7);
 
-  cachedResult.set(42, nowTime + 2 * kCacheExpireTime, 3, 4);  // should be set
+  cachedResult.set(42, SteadyClock::now(), 3, 4);  // should be set
   EXPECT_EQ(cachedResult.get(3, 4), 42);
 }
 
