@@ -43,41 +43,28 @@ std::ostream& CoincenterCmdLineOptions::PrintVersion(std::string_view programNam
 void CoincenterCmdLineOptions::mergeGlobalWith(const CoincenterCmdLineOptions& rhs) {
   static constexpr CoincenterCmdLineOptions kDefaultOpts;
 
-  if (rhs.dataDir != kDefaultOpts.dataDir) {
-    dataDir = rhs.dataDir;
-  }
-  if (rhs.logConsole != kDefaultOpts.logConsole) {
-    logConsole = rhs.logConsole;
-  }
-  if (rhs.logFile != kDefaultOpts.logFile) {
-    logFile = rhs.logFile;
-  }
-  if (rhs.noSecrets != kDefaultOpts.noSecrets) {
-    noSecrets = rhs.noSecrets;
-  }
-  if (rhs.repeatTime != kDefaultOpts.repeatTime) {
-    repeatTime = rhs.repeatTime;
-  }
-  if (rhs.monitoringAddress != kDefaultOpts.monitoringAddress) {
-    monitoringAddress = rhs.monitoringAddress;
-  }
-  if (rhs.monitoringUsername != kDefaultOpts.monitoringUsername) {
-    monitoringUsername = rhs.monitoringUsername;
-  }
-  if (rhs.monitoringPassword != kDefaultOpts.monitoringPassword) {
-    monitoringPassword = rhs.monitoringPassword;
-  }
+  // Yes, an ugly macro ! I find it appropriate here, to minimize risk of copy-pasting mistakes.
+  // It's also more readable.
+#define CCT_OPTIONS_MERGE_GLOBAL_WITH(field) \
+  do {                                       \
+    if (rhs.field != kDefaultOpts.field) {   \
+      (field) = rhs.field;                   \
+    }                                        \
+  } while (0)
 
-  if (rhs.repeats != kDefaultOpts.repeats) {
-    repeats = rhs.repeats;
-  }
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(dataDir);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(logConsole);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(logFile);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(noSecrets);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(repeatTime);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(monitoringAddress);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(monitoringUsername);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(monitoringPassword);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(repeats);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(monitoringPort);
+  CCT_OPTIONS_MERGE_GLOBAL_WITH(useMonitoring);
 
-  if (rhs.monitoringPort != kDefaultOpts.monitoringPort) {
-    monitoringPort = rhs.monitoringPort;
-  }
-  if (rhs.useMonitoring != kDefaultOpts.useMonitoring) {
-    useMonitoring = rhs.useMonitoring;
-  }
+#undef CCT_OPTIONS_MERGE_GLOBAL_WITH
 }
 
 TradeOptions CoincenterCmdLineOptions::computeTradeOptions() const {
