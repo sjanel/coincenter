@@ -91,8 +91,13 @@ else()
 endif()
 
 add_unit_test(
-    mathhelpers_test
-    test/mathhelpers_test.cpp
+    ndigits_test
+    test/ndigits_test.cpp
+)
+
+add_unit_test(
+    ipow_test
+    test/ipow_test.cpp
 )
 
 add_unit_test(

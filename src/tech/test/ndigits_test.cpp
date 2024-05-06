@@ -1,4 +1,4 @@
-#include "mathhelpers.hpp"
+#include "ndigits.hpp"
 
 #include <gtest/gtest.h>
 
@@ -6,25 +6,6 @@
 #include <limits>
 
 namespace cct {
-
-TEST(MathHelpers, Power) {
-  EXPECT_EQ(ipow(3, 2), 9);
-  EXPECT_EQ(ipow(4, 3), 64);
-  EXPECT_EQ(ipow(-3, 3), -27);
-  EXPECT_EQ(ipow(-2, 1), -2);
-  EXPECT_EQ(ipow(17, 5), 1419857);
-  EXPECT_EQ(ipow(10, 10), 10000000000);
-  static_assert(ipow(5, 3) == 125);
-  static_assert(ipow(-7, 0) == 1);
-}
-
-TEST(MathHelpers, Power10) {
-  EXPECT_EQ(ipow10(0), 1);
-  EXPECT_EQ(ipow10(1), 10);
-  EXPECT_EQ(ipow10(2), 100);
-  EXPECT_EQ(ipow10(10), 10000000000);
-  static_assert(ipow10(3) == 1000);
-}
 
 TEST(MathHelpers, NDigitsS8) {
   EXPECT_EQ(ndigits(static_cast<int8_t>(0)), 1);
@@ -37,6 +18,16 @@ TEST(MathHelpers, NDigitsS8) {
 
   static_assert(ndigits(std::numeric_limits<int8_t>::max()) == 3);
   static_assert(ndigits(std::numeric_limits<int8_t>::min()) == 3);
+}
+
+TEST(MathHelpers, NDigitsChar) {
+  EXPECT_EQ(ndigits(static_cast<char>(0)), 1);
+  EXPECT_EQ(ndigits(static_cast<char>(3)), 1);
+  EXPECT_EQ(ndigits(static_cast<char>(78)), 2);
+  EXPECT_EQ(ndigits(static_cast<char>(112)), 3);
+
+  static_assert(ndigits(std::numeric_limits<char>::max()) == 3);
+  static_assert(ndigits(std::numeric_limits<char>::min()) == 3);
 }
 
 TEST(MathHelpers, NDigitsS16) {

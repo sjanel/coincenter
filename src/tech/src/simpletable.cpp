@@ -12,7 +12,8 @@
 #include <variant>
 
 #include "cct_smallvector.hpp"
-#include "mathhelpers.hpp"
+#include "ipow.hpp"
+#include "nchars.hpp"
 
 namespace cct {
 

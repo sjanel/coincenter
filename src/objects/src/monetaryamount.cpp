@@ -23,7 +23,8 @@
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "currencycode.hpp"
-#include "mathhelpers.hpp"
+#include "ipow.hpp"
+#include "ndigits.hpp"
 #include "stringhelpers.hpp"
 
 namespace cct {

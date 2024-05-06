@@ -9,7 +9,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "mathhelpers.hpp"
+#include "ipow.hpp"
 
 namespace cct {
 

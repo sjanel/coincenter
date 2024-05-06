@@ -31,4 +31,5 @@ Nonce Nonce_TimeSinceEpochInMs(Duration delay = Duration{});
 /// Create a Nonce in literal format.
 /// Example: '2021-06-01T14:44:13'
 inline Nonce Nonce_LiteralDate(const char* format) { return ToString(Clock::now(), format); }
+
 }  // namespace cct

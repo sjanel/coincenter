@@ -6,13 +6,12 @@
 #include <limits>
 #include <string_view>
 #include <system_error>
-#include <type_traits>
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
-#include "mathhelpers.hpp"
+#include "nchars.hpp"
 
 namespace cct {
 
