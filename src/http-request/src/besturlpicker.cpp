@@ -9,7 +9,7 @@
 #include <string_view>
 
 #include "cct_log.hpp"
-#include "mathhelpers.hpp"
+#include "ipow.hpp"
 
 namespace cct {
 BestURLPicker::BestURLPicker(std::span<const std::string_view> baseUrls)

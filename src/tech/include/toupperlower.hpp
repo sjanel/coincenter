@@ -1,6 +1,7 @@
 #pragma once
 
 namespace cct {
+
 /// constexpr version of std::toupper with chars, as unfortunately for now (May 2021) std::toupper is not constexpr
 constexpr char toupper(char ch) noexcept {
   switch (ch) {

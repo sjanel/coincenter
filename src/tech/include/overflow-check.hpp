@@ -2,7 +2,6 @@
 
 #include <concepts>
 #include <limits>
-#include <type_traits>
 
 namespace cct {
 

@@ -32,7 +32,6 @@ string URLEncode(std::span<const char> data, IsNotEncodedFunc isNotEncodedFunc) 
 
 // const char * argument is deleted because it would construct into a span including the unwanted null
 // terminating character. Use span directly, or string / string_view instead.
-
 template <class IsNotEncodedFunc>
 string URLEncode(const char*, IsNotEncodedFunc) = delete;
 

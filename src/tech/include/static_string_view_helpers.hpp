@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include "mathhelpers.hpp"
+#include "nchars.hpp"
 
 namespace cct {
 

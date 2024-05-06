@@ -39,4 +39,5 @@ constexpr int64_t TimestampToMillisecondsSinceEpoch(TimePoint tp) {
 constexpr int64_t TimestampToUs(TimePoint tp) {
   return std::chrono::duration_cast<microseconds>(tp.time_since_epoch()).count();
 }
+
 }  // namespace cct

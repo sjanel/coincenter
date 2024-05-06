@@ -15,7 +15,8 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "mathhelpers.hpp"
+#include "ipow.hpp"
+#include "ndigits.hpp"
 
 namespace cct {
 
