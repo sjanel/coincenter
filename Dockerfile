@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 # Declare and set default values of following arguments
 ARG BUILD_MODE=Release
