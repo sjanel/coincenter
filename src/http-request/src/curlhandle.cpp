@@ -162,7 +162,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
 
-  const int8_t baseUrlPos = _bestURLPicker.nextBaseURLPos();
+  const auto baseUrlPos = _bestURLPicker.nextBaseURLPos();
   const std::string_view baseUrl = _bestURLPicker.getBaseURL(baseUrlPos);
   const std::string_view postDataStr = postData.str();
   string modifiedURL(baseUrl.size() + endpoint.size() + (appendParametersInQueryStr ? (1U + postDataStr.size()) : 0U),
@@ -194,6 +194,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
   CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr.data());
+  CurlSetLogIfError(curl, CURLOPT_POSTFIELDSIZE, optsStr.size());
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());
 
   // Important! We should reset ALL fields of curl object that may change for each call to query
