@@ -46,11 +46,14 @@
 namespace cct::api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
-                 CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
-  string methodUrl(endpoint);
+auto ComputeMethodUrl(std::string_view endpoint, CurrencyCode base, CurrencyCode quote, std::string_view urlOpts) {
+  string methodUrl;
+  methodUrl.reserve(endpoint.size() + base.size() +
+                    static_cast<string::size_type>(quote.isDefined()) * (quote.size() + 1U) +
+                    static_cast<string::size_type>(!urlOpts.empty()) * (urlOpts.size() + 1U));
+  methodUrl.append(endpoint);
   base.appendStrTo(methodUrl);
-  if (!quote.isNeutral()) {
+  if (quote.isDefined()) {
     methodUrl.push_back('_');
     quote.appendStrTo(methodUrl);
   }
@@ -58,17 +61,18 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode
     methodUrl.push_back('?');
     methodUrl.append(urlOpts);
   }
+  return methodUrl;
+}
 
+json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
+                 CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  json jsonResponse = requestRetry.queryJson(methodUrl, [](const json& jsonResponse) {
-    const auto errorIt = jsonResponse.find("status");
-    if (errorIt != jsonResponse.end()) {
-      const std::string_view statusCode = errorIt->get<std::string_view>();  // "5300" for instance
-      if (statusCode != BithumbPublic::kStatusOKStr) {                       // "0000" stands for: request OK
-        log::warn("Full Bithumb json error ({}): '{}'", statusCode, jsonResponse.dump());
-        return RequestRetry::Status::kResponseError;
-      }
+  json jsonResponse = requestRetry.queryJson(ComputeMethodUrl(endpoint, base, quote, urlOpts), [](const json& data) {
+    const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(data);
+    if (statusCode != BithumbPublic::kStatusOK) {
+      log::warn("Full Bithumb json error ({}): '{}'", statusCode, data.dump());
+      return RequestRetry::Status::kResponseError;
     }
     return RequestRetry::Status::kResponseOK;
   });
@@ -99,22 +103,33 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
 
+int64_t BithumbPublic::StatusCodeFromJsonResponse(const json& jsonResponse) {
+  const auto statusIt = jsonResponse.find("status");
+  if (statusIt == jsonResponse.end()) {
+    return kStatusNotPresentError;
+  }
+  if (statusIt->is_string()) {
+    return FromString<int64_t>(statusIt->get<std::string_view>());
+  }
+  if (statusIt->is_number_integer()) {
+    return statusIt->get<int64_t>();
+  }
+  log::error("Unexpected 'status' value type - not a number nor a string");
+  return kStatusUnexpectedError;
+}
+
 bool BithumbPublic::healthCheck() {
   static constexpr bool kAllowExceptions = false;
-  json result = json::parse(_curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)), nullptr,
-                            kAllowExceptions);
-  if (result.is_discarded()) {
+
+  const json jsonResponse = json::parse(
+      _curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
+  if (jsonResponse.is_discarded()) {
     log::error("{} health check response is badly formatted", _name);
     return false;
   }
-  auto statusIt = result.find("status");
-  if (statusIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", _name, result.dump());
-    return false;
-  }
-  std::string_view statusStr = statusIt->get<std::string_view>();
-  log::info("{} status: {}", _name, statusStr);
-  return statusStr == kStatusOKStr;
+  const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
+  log::info("{} status code: {}", _name, statusCode);
+  return statusCode == kStatusOK;
 }
 
 MarketSet BithumbPublic::queryTradableMarkets() {
@@ -175,7 +190,7 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
                                  std::optional<int> optDepth = std::nullopt) {
   MarketOrderBookMap ret;
   // 'all' seems to work as default for all public methods
-  CurrencyCode base("all");
+  CurrencyCode base("ALL");
   CurrencyCode quote;
   const bool singleMarketQuote = optM.has_value();
   if (optM) {

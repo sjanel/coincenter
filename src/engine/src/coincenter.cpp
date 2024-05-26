@@ -103,6 +103,7 @@ int Coincenter::process(const CoincenterCommands &coincenterCommands) {
   TimePoint lastCommandTime;
   for (int repeatPos = 0; repeatPos != nbRepeats && g_signalStatus == 0; ++repeatPos) {
     const auto earliestTimeNextCommand = lastCommandTime + repeatTime;
+
     lastCommandTime = Clock::now();
 
     if (earliestTimeNextCommand > lastCommandTime) {
