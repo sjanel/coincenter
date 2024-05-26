@@ -259,14 +259,6 @@ bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json& dat
   return false;
 }
 
-int64_t ErrCodeFromQueryResponse(const json& queryResponse) {
-  auto statusCodeIt = queryResponse.find("status");
-  if (statusCodeIt != queryResponse.end()) {
-    return FromString<int64_t>(statusCodeIt->get<std::string_view>());
-  }
-  return 0;
-}
-
 json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                                     CurlOptions&& opts) {
   RequestRetry requestRetry(curlHandle, std::move(opts));
@@ -274,12 +266,11 @@ json PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey
   json ret = requestRetry.queryJson(
       endpoint,
       [endpoint](json& ret) {
-        int64_t errorCode = ErrCodeFromQueryResponse(ret);
-        if (errorCode == 0) {
+        const auto errorCode = BithumbPublic::StatusCodeFromJsonResponse(ret);
+        if (errorCode == 0 || errorCode == BithumbPublic::kStatusNotPresentError) {
           return RequestRetry::Status::kResponseOK;
         }
 
-        // "5300" for instance. "0000" stands for: request OK
         std::string_view msg;
         auto messageIt = ret.find("message");
         if (messageIt != ret.end()) {
@@ -354,12 +345,13 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
 }
 
 bool BithumbPrivate::validateApiKey() {
-  json result = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData());
-  if (result.is_discarded()) {
+  const json jsonResponse = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData());
+  if (jsonResponse.is_discarded()) {
     return false;
   }
-  auto statusIt = result.find("status");
-  return statusIt != result.end() && statusIt->get<std::string_view>() == BithumbPublic::kStatusOKStr;
+  const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
+  log::info("{} status code: {}", exchangeName(), statusCode);
+  return statusCode == BithumbPublic::kStatusOK;
 }
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {

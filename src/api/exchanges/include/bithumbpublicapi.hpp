@@ -26,7 +26,11 @@ class CommonAPI;
 class BithumbPublic : public ExchangePublic {
  public:
   static constexpr std::string_view kExchangeName = "bithumb";
-  static constexpr std::string_view kStatusOKStr = "0000";
+  static constexpr auto kStatusOK = 0;
+  static constexpr auto kStatusUnexpectedError = -1;
+  static constexpr auto kStatusNotPresentError = -2;
+
+  static int64_t StatusCodeFromJsonResponse(const json& jsonResponse);
 
   BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
