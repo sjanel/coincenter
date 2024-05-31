@@ -8,12 +8,13 @@
 
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
+#include "strnlen.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 
-string ToString(TimePoint timePoint, const char* format) {
+string TimeToString(TimePoint timePoint, const char* format) {
   const std::time_t time = Clock::to_time_t(timePoint);
   std::tm utc{};
 #ifdef _WIN32
@@ -46,7 +47,7 @@ string ToString(TimePoint timePoint, const char* format) {
   return buf;
 }
 
-TimePoint FromString(std::string_view timeStr, const char* format) {
+TimePoint StringToTime(std::string_view timeStr, const char* format) {
   std::tm utc{};
   std::istringstream ss{std::string(timeStr)};
   ss >> std::get_time(&utc, format);
@@ -56,7 +57,7 @@ TimePoint FromString(std::string_view timeStr, const char* format) {
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
   const auto nowTime = Clock::now();
-  return ToString(TimestampToMillisecondsSinceEpoch(nowTime + delay));
+  return IntegralToString(TimestampToMillisecondsSinceEpoch(nowTime + delay));
 }
 
 }  // namespace cct

@@ -25,7 +25,7 @@
 #include "currencycode.hpp"
 #include "ipow.hpp"
 #include "ndigits.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 
 namespace cct {
 namespace {
@@ -88,7 +88,7 @@ inline auto AmountIntegralFromStr(std::string_view amountStr, bool heuristicRoun
   MonetaryAmount::AmountType integerPart;
   if (dotPos == std::string_view::npos) {
     decPart = 0;
-    integerPart = FromString<MonetaryAmount::AmountType>(amountStr);
+    integerPart = StringToIntegral<MonetaryAmount::AmountType>(amountStr);
   } else {
     RemoveTrailingSpaces(amountStr);
     RemoveTrailingZeros(amountStr);
@@ -130,12 +130,12 @@ inline auto AmountIntegralFromStr(std::string_view amountStr, bool heuristicRoun
       ret.second -= nbDigitsToRemove;
     }
     std::string_view decPartStr = amountStr.substr(dotPos + 1);
-    decPart = decPartStr.empty() ? 0 : FromString<MonetaryAmount::AmountType>(decPartStr);
+    decPart = decPartStr.empty() ? 0 : StringToIntegral<MonetaryAmount::AmountType>(decPartStr);
     if (dotPos == 0) {
       integerPart = 0;
     } else {
       integerPart =
-          FromString<MonetaryAmount::AmountType>(std::string_view(amountStr.begin(), amountStr.begin() + dotPos));
+          StringToIntegral<MonetaryAmount::AmountType>(std::string_view(amountStr.begin(), amountStr.begin() + dotPos));
     }
   }
 

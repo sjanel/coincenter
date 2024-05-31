@@ -16,5 +16,5 @@ Order::Order(string id, MonetaryAmount matchedVolume, MonetaryAmount price, Time
 
 std::string_view Order::sideStr() const { return SideStr(_side); }
 
-string Order::placedTimeStr() const { return ToString(_placedTime); }
+string Order::placedTimeStr() const { return TimeToString(_placedTime); }
 }  // namespace cct

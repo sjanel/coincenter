@@ -16,7 +16,7 @@ ClosedOrder::ClosedOrder(OrderId id, MonetaryAmount matchedVolume, MonetaryAmoun
                          TimePoint matchedTime, TradeSide side)
     : Order(std::move(id), matchedVolume, price, placedTime, side), _matchedTime(matchedTime) {}
 
-string ClosedOrder::matchedTimeStr() const { return ToString(_matchedTime); }
+string ClosedOrder::matchedTimeStr() const { return TimeToString(_matchedTime); }
 
 ClosedOrder ClosedOrder::mergeWith(const ClosedOrder &closedOrder) const {
   const MonetaryAmount totalMatchedVolume = closedOrder.matchedVolume() + matchedVolume();

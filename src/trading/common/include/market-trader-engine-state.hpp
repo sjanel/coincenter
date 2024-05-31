@@ -10,7 +10,7 @@
 #include "exchangeprivateapitypes.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "trader-command.hpp"
 
 namespace cct {
@@ -43,7 +43,7 @@ class MarketTraderEngineState {
   void placeSellOrder(const ExchangeConfig &exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
                       MonetaryAmount price, MonetaryAmount matchedVolume, ExchangeConfig::FeeType feeType);
 
-  auto nextOrderId() { return ToString(++_nextOrderId); }
+  auto nextOrderId() { return IntegralToString(++_nextOrderId); }
 
   void adjustOpenedOrderRemainingVolume(const OpenedOrder &matchedOrder, MonetaryAmount newMatchedVolume);
 

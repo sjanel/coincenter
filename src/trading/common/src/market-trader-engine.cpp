@@ -118,7 +118,7 @@ TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector &&marketOrd
   }
 
   log::info("[{}] at {} on {} replaying {} order books and {} trades", _marketTrader->name(),
-            ToString(marketOrderBooks.front().time()), _market, marketOrderBooks.size(), publicTrades.size());
+            TimeToString(marketOrderBooks.front().time()), _market, marketOrderBooks.size(), publicTrades.size());
 
   // Rolling window of data provided to underlying market trader with data up to latest market order book.
   MarketDataView marketDataView(marketOrderBooks.data(), publicTrades.data(),

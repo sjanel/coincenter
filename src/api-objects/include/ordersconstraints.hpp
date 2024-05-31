@@ -147,10 +147,10 @@ struct fmt::formatter<cct::OrdersConstraints> {
 
     ctx.out() = fmt::format_to(ctx.out(), " currencies");
     if (ordersConstraints.placedBefore() != cct::TimePoint::max()) {
-      ctx.out() = fmt::format_to(ctx.out(), " before {}", cct::ToString(ordersConstraints.placedBefore()));
+      ctx.out() = fmt::format_to(ctx.out(), " before {}", cct::TimeToString(ordersConstraints.placedBefore()));
     }
     if (ordersConstraints.placedAfter() != cct::TimePoint::min()) {
-      ctx.out() = fmt::format_to(ctx.out(), " after {}", cct::ToString(ordersConstraints.placedAfter()));
+      ctx.out() = fmt::format_to(ctx.out(), " after {}", cct::TimeToString(ordersConstraints.placedAfter()));
     }
     if (ordersConstraints.isOrderIdDefined()) {
       ctx.out() = fmt::format_to(ctx.out(), " matching Ids [{}]", fmt::join(ordersConstraints.orderIdSet(), ", "));

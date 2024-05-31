@@ -17,7 +17,7 @@
 #include "market.hpp"
 #include "proto-multiple-messages-handler.hpp"
 #include "serialization-tools.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
 
@@ -104,7 +104,7 @@ class ProtobufObjectsDeserializer {
 
     for (ContinuousIterator yearIt = CreateIt(fromYear, toYear, actionType); yearIt.hasNext();) {
       const auto year = yearIt.next();
-      const auto yearPath = marketPath / std::string_view(ToCharVector(year));
+      const auto yearPath = marketPath / std::string_view(IntegralToCharVector(year));
       if (!std::filesystem::is_directory(yearPath)) {
         continue;
       }

@@ -45,7 +45,7 @@
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "toupperlower.hpp"
@@ -249,7 +249,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
           throw exception("Tag already set / unknown key information for {}", currencyCode);
         }
         if (valueStr.is_number_integer()) {
-          SetString(tag, static_cast<long>(valueStr));
+          tag = IntegralToString(static_cast<long>(valueStr));
         } else {
           tag = valueStr.get<string>();
         }

@@ -249,8 +249,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
   }
 
-  log::log(_requestCallLogLevel, "{} {}{}{}", ToString(opts.requestType()), modifiedURL, optsStr.empty() ? "" : "?",
-           optsStr);
+  log::log(_requestCallLogLevel, "{} {}{}{}", IntegralToString(opts.requestType()), modifiedURL,
+           optsStr.empty() ? "" : "?", optsStr);
 
   // Actually make the query, with a fast retry mechanism (to avoid random technical errors)
   Duration sleepingTime = milliseconds(100);

@@ -37,7 +37,7 @@
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 #include "volumeandpricenbdecimals.hpp"
@@ -268,7 +268,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
   }
 
   string endpoint("/api/v1/market/orderbook/level2_");
-  AppendString(endpoint, *lb);
+  AppendIntegralToString(endpoint, *lb);
 
   MarketOrderBookLines orderBookLines;
 

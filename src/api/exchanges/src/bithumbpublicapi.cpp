@@ -38,7 +38,7 @@
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradeside.hpp"
@@ -109,7 +109,7 @@ int64_t BithumbPublic::StatusCodeFromJsonResponse(const json& jsonResponse) {
     return kStatusNotPresentError;
   }
   if (statusIt->is_string()) {
-    return FromString<int64_t>(statusIt->get<std::string_view>());
+    return StringToIntegral<int64_t>(statusIt->get<std::string_view>());
   }
   if (statusIt->is_number_integer()) {
     return statusIt->get<int64_t>();
@@ -200,7 +200,7 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
   string urlOpts;
   if (optDepth) {
     urlOpts.append("count=");
-    AppendString(urlOpts, *optDepth);
+    AppendIntegralToString(urlOpts, *optDepth);
   }
 
   json result = PublicQuery(curlHandle, "/public/orderbook/", base, quote, urlOpts);
@@ -291,7 +291,7 @@ MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
     std::string_view bithumbTimestamp = dateIt->get<std::string_view>();
 
     last24hVol = result["units_traded_24H"].get<std::string_view>();
-    int64_t bithumbTimeMs = FromString<int64_t>(bithumbTimestamp);
+    int64_t bithumbTimeMs = StringToIntegral<int64_t>(bithumbTimestamp);
     int64_t t1Ms = TimestampToMillisecondsSinceEpoch(t1);
     int64_t t2Ms = TimestampToMillisecondsSinceEpoch(Clock::now());
     if (t1Ms < bithumbTimeMs && bithumbTimeMs < t2Ms) {
@@ -328,7 +328,7 @@ PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
   }
 
   string urlOpts("count=");
-  AppendString(urlOpts, nbTrades);
+  AppendIntegralToString(urlOpts, nbTrades);
 
   json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote(), urlOpts);
 

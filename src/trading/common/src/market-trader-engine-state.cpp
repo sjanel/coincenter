@@ -97,7 +97,7 @@ void MarketTraderEngineState::cancelOpenedOrder(int32_t orderId) {
 
 OpenedOrderVector::const_iterator MarketTraderEngineState::findOpenedOrder(int32_t orderId) {
   const auto orderIdIt = std::ranges::find_if(_openedOrders, [orderId](const OpenedOrder &openedOrder) {
-    return FromString<int32_t>(openedOrder.id()) == orderId;
+    return StringToIntegral<int32_t>(openedOrder.id()) == orderId;
   });
   if (orderIdIt == _openedOrders.end()) {
     throw exception("Unable to find opened order id {}", orderId);

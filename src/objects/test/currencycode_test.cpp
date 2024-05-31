@@ -49,7 +49,7 @@ TEST(CurrencyCodeTest, IsValid) {
   EXPECT_FALSE(CurrencyCode::IsValid("inv "));
 }
 
-TEST(CurrencyCodeTest, AppendString) {
+TEST(CurrencyCodeTest, AppendIntegralToString) {
   {
     string str("");
     CurrencyCode("").appendStrTo(str);

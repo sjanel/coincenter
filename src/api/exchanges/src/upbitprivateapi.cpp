@@ -289,7 +289,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
       // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
       TimePoint placedTime =
-          FromString(orderDetails["created_at"].get_ref<const string&>().c_str(), kTimeYearToSecondTSeparatedFormat);
+          StringToTime(orderDetails["created_at"].get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!ordersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
@@ -409,7 +409,7 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
         timeIt = trx.find("created_at");
       }
 
-      TimePoint timestamp = FromString(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      TimePoint timestamp = StringToTime(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
@@ -482,7 +482,7 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
         // It can be the case for withdraws that failed - take the start time instead of the end time in this case
         timeIt = trx.find("created_at");
       }
-      TimePoint timestamp = FromString(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      TimePoint timestamp = StringToTime(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!withdrawsConstraints.validateTime(timestamp)) {
         continue;
       }

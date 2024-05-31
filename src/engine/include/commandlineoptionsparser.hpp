@@ -17,7 +17,7 @@
 #include "commandlineoption.hpp"
 #include "durationstring.hpp"
 #include "levenshteindistancecalculator.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 
 namespace cct {
 
@@ -170,7 +170,7 @@ class CommandLineOptionsParser {
                          if (idx + 1U < argv.size()) {
                            std::string_view opt(argv[idx + 1]);
                            if (IsOptionInt(opt)) {
-                             data.*arg = FromString<IntType>(opt);
+                             data.*arg = StringToIntegral<IntType>(opt);
                              ++idx;
                              return;
                            }
@@ -185,7 +185,7 @@ class CommandLineOptionsParser {
                        if (idx + 1U < argv.size()) {
                          std::string_view opt(argv[idx + 1]);
                          if (IsOptionInt(opt)) {
-                           data.*arg = FromString<int32_t>(opt);
+                           data.*arg = StringToIntegral<int32_t>(opt);
                            ++idx;
                          }
                        }

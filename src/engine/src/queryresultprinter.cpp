@@ -40,7 +40,7 @@
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "time-window.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
@@ -144,7 +144,7 @@ json MarketsForReplayJson(TimeWindow timeWindow, const MarketTimestampSetsPerExc
       json marketTimestampJson;
 
       marketTimestampJson.emplace("market", marketTimestamp.market.str());
-      marketTimestampJson.emplace("lastTimestamp", ToString(marketTimestamp.timePoint));
+      marketTimestampJson.emplace("lastTimestamp", TimeToString(marketTimestamp.timePoint));
 
       orderBookMarketsPerExchange.emplace_back(std::move(marketTimestampJson));
     }
@@ -154,7 +154,7 @@ json MarketsForReplayJson(TimeWindow timeWindow, const MarketTimestampSetsPerExc
       json marketTimestampJson;
 
       marketTimestampJson.emplace("market", marketTimestamp.market.str());
-      marketTimestampJson.emplace("lastTimestamp", ToString(marketTimestamp.timePoint));
+      marketTimestampJson.emplace("lastTimestamp", TimeToString(marketTimestamp.timePoint));
 
       tradesMarketsPerExchange.emplace_back(std::move(marketTimestampJson));
     }
@@ -228,7 +228,7 @@ json MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, std::optiona
     json bidsForExchange;
     json asksForExchange;
 
-    marketOrderBookForExchange.emplace("time", ToString(marketOrderBook.time()));
+    marketOrderBookForExchange.emplace("time", TimeToString(marketOrderBook.time()));
     for (int bidPos = 1; bidPos <= marketOrderBook.nbBidPrices(); ++bidPos) {
       AppendOrderbookLine(marketOrderBook, -bidPos, optConversionRate, bidsForExchange);
     }
@@ -366,10 +366,10 @@ json OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
     ret.emplace("cur2", ordersConstraints.curStr2());
   }
   if (ordersConstraints.isPlacedTimeBeforeDefined()) {
-    ret.emplace("placedBefore", ToString(ordersConstraints.placedBefore()));
+    ret.emplace("placedBefore", TimeToString(ordersConstraints.placedBefore()));
   }
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
-    ret.emplace("placedAfter", ToString(ordersConstraints.placedAfter()));
+    ret.emplace("placedAfter", TimeToString(ordersConstraints.placedAfter()));
   }
   if (ordersConstraints.isOrderIdDefined()) {
     json orderIds = json::array();
@@ -468,11 +468,11 @@ json DepositsConstraintsToJson(const WithdrawsOrDepositsConstraints &constraints
   }
   if (constraints.isTimeBeforeDefined()) {
     ret.emplace(depositOrWithdraw == DepositOrWithdrawEnum::kDeposit ? "receivedBefore" : "sentBefore",
-                ToString(constraints.timeBefore()));
+                TimeToString(constraints.timeBefore()));
   }
   if (constraints.isTimeAfterDefined()) {
     ret.emplace(depositOrWithdraw == DepositOrWithdrawEnum::kDeposit ? "receivedAfter" : "sentAfter",
-                ToString(constraints.timeAfter()));
+                TimeToString(constraints.timeAfter()));
   }
   if (constraints.isIdDefined()) {
     json depositIds = json::array();
@@ -712,7 +712,7 @@ json WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAm
   from.emplace("account", fromExchange.keyName());
   from.emplace("id", deliveredWithdrawInfo.withdrawId());
   from.emplace("amount", grossAmount.amountStr());
-  from.emplace("time", ToString(deliveredWithdrawInfo.initiatedTime()));
+  from.emplace("time", TimeToString(deliveredWithdrawInfo.initiatedTime()));
 
   json to;
   to.emplace("exchange", toExchange.name());
@@ -723,7 +723,7 @@ json WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAm
   if (deliveredWithdrawInfo.receivingWallet().hasTag()) {
     to.emplace("tag", deliveredWithdrawInfo.receivingWallet().tag());
   }
-  to.emplace("time", ToString(deliveredWithdrawInfo.receivedTime()));
+  to.emplace("time", TimeToString(deliveredWithdrawInfo.receivedTime()));
 
   json out;
   out.emplace("from", std::move(from));
@@ -1432,7 +1432,7 @@ void QueryResultPrinter::printLastTrades(Market mk, std::optional<int> nbLastTra
           for (int buyOrSell = 0; buyOrSell < 2; ++buyOrSell) {
             summary[buyOrSell].append(totalAmounts[buyOrSell].str());
             summary[buyOrSell].append(" (");
-            AppendString(summary[buyOrSell], nb[buyOrSell]);
+            AppendIntegralToString(summary[buyOrSell], nb[buyOrSell]);
             summary[buyOrSell].push_back(' ');
             summary[buyOrSell].append(buyOrSell == 0 ? "buys" : "sells");
             summary[buyOrSell].push_back(')');
@@ -1496,10 +1496,10 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
                          "Withdrawal -> Deposit id");
 
       table.emplace_back(fromExchange.name(), fromExchange.keyName(), grossAmount.str(),
-                         ToString(deliveredWithdrawInfo.initiatedTime()), deliveredWithdrawInfo.withdrawId());
+                         TimeToString(deliveredWithdrawInfo.initiatedTime()), deliveredWithdrawInfo.withdrawId());
 
       table.emplace_back(toExchange.name(), toExchange.keyName(), deliveredWithdrawInfo.receivedAmount().str(),
-                         ToString(deliveredWithdrawInfo.receivedTime()), deliveredWithdrawInfo.depositId());
+                         TimeToString(deliveredWithdrawInfo.receivedTime()), deliveredWithdrawInfo.depositId());
       printTable(table);
       break;
     }
@@ -1571,7 +1571,7 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
           const auto tradesIt = std::ranges::partition_point(tradesMarkets, marketPartitionPred);
 
           if (orderBooksIt != orderBooksMarkets.end() && orderBooksIt->market == market) {
-            string str = ToString(orderBooksIt->timePoint);
+            string str = TimeToString(orderBooksIt->timePoint);
             str.append(" @ ");
             str.append(e->name());
 
@@ -1579,7 +1579,7 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
           }
 
           if (tradesIt != tradesMarkets.end() && tradesIt->market == market) {
-            string str = ToString(tradesIt->timePoint);
+            string str = TimeToString(tradesIt->timePoint);
             str.append(" @ ");
             str.append(e->name());
 
@@ -1628,25 +1628,25 @@ void QueryResultPrinter::printMarketTradingResults(
         }
 
         string orderBookStats("order books: ");
-        orderBookStats.append(std::string_view(ToCharVector(stats.marketOrderBookStats.nbSuccessful)));
+        orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbSuccessful)));
         orderBookStats.append(" OK");
         if (stats.marketOrderBookStats.nbError != 0) {
           orderBookStats.append(", ");
-          orderBookStats.append(std::string_view(ToCharVector(stats.marketOrderBookStats.nbError)));
+          orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbError)));
           orderBookStats.append(" KO");
         }
 
         string tradesStats("trades: ");
-        tradesStats.append(std::string_view(ToCharVector(stats.publicTradeStats.nbSuccessful)));
+        tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbSuccessful)));
         tradesStats.append(" OK");
         if (stats.publicTradeStats.nbError != 0) {
           tradesStats.append(", ");
-          tradesStats.append(std::string_view(ToCharVector(stats.publicTradeStats.nbError)));
+          tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbError)));
           tradesStats.append(" KO");
         }
 
         table.emplace_back(
-            exchangePtr->name(), table::Cell{ToString(timeWindow.from()), ToString(timeWindow.to())},
+            exchangePtr->name(), table::Cell{TimeToString(timeWindow.from()), TimeToString(timeWindow.to())},
             marketTradingResults.market().str(), marketTradingResults.algorithmName(),
             table::Cell{marketTradingResults.startBaseAmount().str(), marketTradingResults.startQuoteAmount().str()},
             marketTradingResults.quoteAmountDelta().str(), std::move(trades),

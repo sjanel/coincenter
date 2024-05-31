@@ -53,7 +53,7 @@
 #include "request-retry.hpp"
 #include "runmodes.hpp"
 #include "ssl_sha.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
@@ -176,7 +176,7 @@ bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::str
     log::warn("Bithumb told us that {} is {}", logStr, valueStr);
     ValueType val;
     if constexpr (std::is_integral_v<ValueType>) {
-      val = FromString<ValueType>(valueStr);
+      val = StringToIntegral<ValueType>(valueStr);
     } else {
       val = ValueType(valueStr);
     }
@@ -217,8 +217,8 @@ void CheckAndLogSynchronizedTime(std::string_view msg) {
         std::string_view reqTimeStr(msg.begin() + reqTimePos, msg.begin() + reqTimeEndPos);
         std::string_view nowTimeStr(msg.begin() + nowTimePos, msg.begin() + nowTimeEndPos);
 
-        int64_t reqTimeInt = FromString<int64_t>(reqTimeStr);
-        int64_t nowTimeInt = FromString<int64_t>(nowTimeStr);
+        int64_t reqTimeInt = StringToIntegral<int64_t>(reqTimeStr);
+        int64_t nowTimeInt = StringToIntegral<int64_t>(nowTimeStr);
 
         log::error("Bithumb time is not synchronized with us (difference of {} s)", (reqTimeInt - nowTimeInt) / 1000);
         log::error("It can sometimes come from a Bithumb bug, retry");
@@ -429,7 +429,7 @@ TimePoint RetrieveTimePointFromTrxJson(const json& trx, std::string_view fieldNa
   }
   int64_t microsecondsSinceEpoch;
   if (fieldIt->is_string()) {
-    microsecondsSinceEpoch = FromString<int64_t>(fieldIt->get<std::string_view>());
+    microsecondsSinceEpoch = StringToIntegral<int64_t>(fieldIt->get<std::string_view>());
   } else if (fieldIt->is_number_integer()) {
     microsecondsSinceEpoch = fieldIt->get<int64_t>();
   } else {
@@ -579,7 +579,7 @@ string GenerateDepositIdFromTrx(TimePoint timestamp, const json& trx) {
   // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
   string id{trx[kOrderCurrencyParamStr].get<std::string_view>()};
   id.push_back('-');
-  AppendString(id, TimestampToMillisecondsSinceEpoch(timestamp));
+  AppendIntegralToString(id, TimestampToMillisecondsSinceEpoch(timestamp));
   return id;
 }
 
@@ -627,7 +627,7 @@ MonetaryAmount RetrieveNetEmittedAmountFromTrxJson(const json& trx) {
 }
 
 Withdraw::Status RetrieveWithdrawStatusFromTrxJson(const json& trx) {
-  const int searchGb = FromString<int>(trx["search"].get<std::string_view>());
+  const auto searchGb = StringToIntegral(trx["search"].get<std::string_view>());
 
   return searchGb == kSearchGbOnGoingWithdrawals ? Withdraw::Status::kProcessing : Withdraw::Status::kSuccess;
 }
@@ -746,7 +746,7 @@ json QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
             continue;
           }
         } else if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
-          const auto searchGb = FromString<int>(trx["search"].get<std::string_view>());
+          const auto searchGb = StringToIntegral<int>(trx["search"].get<std::string_view>());
           if (searchGb != kSearchGbBuy && searchGb != kSearchGbSell) {
             continue;
           }
@@ -779,7 +779,7 @@ ClosedOrderVector BithumbPrivate::queryClosedOrders(const OrdersConstraints& clo
     MonetaryAmount matchedVolume(trx["units"].get<std::string_view>(), volumeCur);
     MonetaryAmount price(trx["price"].get<std::string_view>(), priceCur);
 
-    const int searchGb = FromString<int>(trx["search"].get<std::string_view>());
+    const auto searchGb = StringToIntegral(trx["search"].get<std::string_view>());
 
     TradeSide side = searchGb == kSearchGbBuy ? TradeSide::kBuy : TradeSide::kSell;
 

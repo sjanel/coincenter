@@ -31,7 +31,7 @@
 #include "priceoptionsdef.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "tradedamounts.hpp"
 #include "tradedefinitions.hpp"
@@ -604,7 +604,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     }
 
     OrderId orderId{"OrderId # "};
-    AppendString(orderId, orderIdInt++);
+    AppendIntegralToString(orderId, orderIdInt++);
 
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo))
         .WillOnce(testing::Return(PlaceOrderInfo(OrderInfo(tradedAmounts, true), orderId)));
@@ -624,7 +624,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
                                 success ? vol : MonetaryAmount{0, vol.currencyCode()});
 
     OrderId orderId{"OrderId # "};
-    AppendString(orderId, orderIdInt++);
+    AppendIntegralToString(orderId, orderIdInt++);
 
     EXPECT_CALL(exchangePrivate, placeOrder(from, vol, askPri, tradeInfo))
         .WillOnce(testing::Return(PlaceOrderInfo(OrderInfo(tradedAmounts, true), orderId)));
