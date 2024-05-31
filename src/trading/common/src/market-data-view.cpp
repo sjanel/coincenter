@@ -2,7 +2,9 @@
 
 #include <algorithm>
 
+#include "marketorderbook.hpp"
 #include "publictrade.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 

@@ -2,10 +2,14 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <iterator>
 #include <map>
+#include <string_view>
 #include <thread>
 
 #include "market-timestamp-set.hpp"
@@ -13,13 +17,16 @@
 #include "monetaryamount.hpp"
 #include "proto-deserializer.hpp"
 #include "proto-public-trade-compare.hpp"
+#include "proto-public-trade-converter.hpp"
 #include "proto-serializer.hpp"
 #include "proto-test-data.hpp"
 #include "public-trade-vector.hpp"
 #include "public-trade.pb.h"
 #include "publictrade.hpp"
+#include "serialization-tools.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 
@@ -33,7 +40,7 @@ constexpr auto RandStr() {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
     static constexpr size_t kMaxIdx = (sizeof(kCharSet) - 1);
-    return kCharSet[rand() % kMaxIdx];
+    return kCharSet[std::rand() % kMaxIdx];
   });
 
   return str;

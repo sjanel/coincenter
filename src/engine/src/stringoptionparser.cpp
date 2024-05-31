@@ -44,8 +44,8 @@ Duration StringOptionParser::parseDuration(FieldIs fieldIs) {
   auto dur = kUndefinedDuration;
   const std::string_view currentToken(_opt.begin() + _pos, _opt.end());
   const auto durationLen = DurationLen(currentToken);
-  if (durationLen > 0) {
-    const std::string_view durationStr(_opt.data() + _pos, static_cast<std::string_view::size_type>(durationLen));
+  if (durationLen != 0) {
+    const std::string_view durationStr(_opt.data() + _pos, durationLen);
 
     dur = ParseDuration(durationStr);
   } else if (fieldIs == FieldIs::kMandatory) {

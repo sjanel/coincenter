@@ -1,8 +1,10 @@
 #include "time-window.hpp"
 
+#include "cct_string.hpp"
 #include "timestring.hpp"
 
 namespace cct {
+
 string TimeWindow::str() const {
   string ret;
   ret.push_back('[');
@@ -12,4 +14,5 @@ string TimeWindow::str() const {
   ret.push_back(')');
   return ret;
 }
+
 }  // namespace cct

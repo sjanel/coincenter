@@ -160,7 +160,7 @@ ReplayOptions CoincenterCmdLineOptions::computeReplayOptions(Duration dur) const
     timeWindow = TimeWindow(nowTime - dur, nowTime);
   }
 
-  return ReplayOptions(timeWindow, algorithmNames, replayMode);
+  return {timeWindow, algorithmNames, replayMode};
 }
 
 std::pair<std::string_view, CoincenterCommandType> CoincenterCmdLineOptions::getTradeArgStr() const {

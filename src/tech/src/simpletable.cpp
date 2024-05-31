@@ -12,7 +12,6 @@
 #include <variant>
 
 #include "cct_smallvector.hpp"
-#include "ipow.hpp"
 #include "nchars.hpp"
 
 namespace cct {
@@ -153,7 +152,7 @@ auto ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector, char cell
   const auto sumWidths = std::accumulate(maxWidthPerColumnVector.begin(), maxWidthPerColumnVector.end(), size_type{});
 
   // 3 as one space before, one space after the field name and column separator. +1 for the first column separator
-  const auto tableWidth = sumWidths + static_cast<size_type>(maxWidthPerColumnVector.size()) * 3 + 1;
+  const auto tableWidth = sumWidths + (static_cast<size_type>(maxWidthPerColumnVector.size()) * 3) + 1;
 
   string_type lineSep(tableWidth, cellFiller);
 

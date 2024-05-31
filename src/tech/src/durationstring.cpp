@@ -1,6 +1,7 @@
 #include "durationstring.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <cstdint>
 #include <string_view>
@@ -25,38 +26,46 @@ constexpr std::pair<std::string_view, Duration> kDurationUnits[] = {
 }
 
 std::string_view::size_type DurationLen(std::string_view str) {
-  const auto sz = str.size();
-  if (sz == 0) {
-    return 0;
-  }
-  std::string_view::size_type charPos{};
-  while (charPos < sz && isspace(str[charPos])) {
-    ++charPos;
-  }
-  int value{};
-  const auto [ptr, err] = std::from_chars(str.data() + charPos, str.data() + str.size(), value);
-  if (err != std::errc() || value <= 0) {
-    return 0;
-  }
-  charPos = ptr - str.data();
+  std::string_view::size_type ret{};
 
-  while (charPos < sz && isspace(str[charPos])) {
-    ++charPos;
-  }
-  const auto first = charPos;
-  while (charPos < sz && islower(str[charPos])) {
-    ++charPos;
-  }
-  const std::string_view timeUnitStr(str.begin() + first, str.begin() + charPos);
+  while (!str.empty()) {
+    const auto sz = str.size();
 
-  const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
-    return durationUnitWithDuration.first == timeUnitStr;
-  });
-  if (it == std::end(kDurationUnits)) {
-    return 0;
+    std::string_view::size_type charPos{};
+    while (charPos < sz && isspace(str[charPos])) {
+      ++charPos;
+    }
+
+    int value{};
+    const auto [ptr, err] = std::from_chars(str.data() + charPos, str.data() + sz, value);
+    if (err != std::errc() || value <= 0) {
+      break;
+    }
+
+    charPos = ptr - str.data();
+
+    while (charPos < sz && isspace(str[charPos])) {
+      ++charPos;
+    }
+    const auto first = charPos;
+    while (charPos < sz && islower(str[charPos])) {
+      ++charPos;
+    }
+    const std::string_view timeUnitStr(str.begin() + first, str.begin() + charPos);
+
+    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
+      return durationUnitWithDuration.first == timeUnitStr;
+    });
+    if (it == std::end(kDurationUnits)) {
+      break;
+    }
+
+    // There is a substring with size 'charPos' that represents a duration
+    ret += charPos;
+    str.remove_prefix(charPos);
   }
-  // There is a substring with size 'charPos' that represents a duration
-  return charPos + DurationLen(str.substr(charPos));
+
+  return ret;
 }
 
 Duration ParseDuration(std::string_view durationStr) {

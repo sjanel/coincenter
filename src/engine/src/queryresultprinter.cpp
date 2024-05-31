@@ -25,6 +25,7 @@
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
 #include "exchange.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "file.hpp"
 #include "logginginfo.hpp"
 #include "market-timestamp.hpp"

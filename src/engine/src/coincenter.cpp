@@ -5,6 +5,7 @@
 #include <csignal>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <thread>
 #include <utility>
 
@@ -24,6 +25,7 @@
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"
+#include "exchangepublicapitypes.hpp"
 #include "exchangeretriever.hpp"
 #include "exchangesecretsinfo.hpp"
 #include "market-timestamp-set.hpp"

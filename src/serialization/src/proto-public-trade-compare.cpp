@@ -7,11 +7,11 @@
 namespace cct {
 
 namespace {
-MonetaryAmount PriceMonetaryAmount(const ::proto::PublicTrade& obj) {
+auto PriceMonetaryAmount(const ::proto::PublicTrade& obj) {
   return MonetaryAmount(obj.priceamount(), CurrencyCode{}, obj.pricenbdecimals());
 }
 
-MonetaryAmount VolumeMonetaryAmount(const ::proto::PublicTrade& obj) {
+auto VolumeMonetaryAmount(const ::proto::PublicTrade& obj) {
   return MonetaryAmount(obj.volumeamount(), CurrencyCode{}, obj.volumenbdecimals());
 }
 }  // namespace

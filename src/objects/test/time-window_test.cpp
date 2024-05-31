@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <limits>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "timedef.hpp"

@@ -112,6 +112,30 @@ TEST_F(ExchangePublicTest, RetrieveMarket) {
   EXPECT_FALSE(ExchangePublic::RetrieveMarket("EUR", "EOS", markets).has_value());
 }
 
+TEST_F(ExchangePublicTest, DetermineMarketFromMarketStrFilter) {
+  MarketSet emptyMarkets;
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("btcusdt", emptyMarkets, "btc").value_or(Market()),
+            Market("BTC", "USDT"));
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("btcusdt", emptyMarkets, "usdt").value_or(Market()),
+            Market("BTC", "USDT"));
+}
+
+TEST_F(ExchangePublicTest, DetermineMarketFromMarketStrNoFilter) {
+  EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(::testing::Return(markets));
+
+  MarketSet emptyMarkets;
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("btcusdt", emptyMarkets).value_or(Market()), Market());
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("avaxicp", emptyMarkets).value_or(Market()),
+            Market("AVAX", "ICP"));
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("icpavax", emptyMarkets).value_or(Market()),
+            Market("AVAX", "ICP"));
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("btckrw", emptyMarkets).value_or(Market()),
+            Market("BTC", "KRW"));
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("krwbtc", emptyMarkets).value_or(Market()),
+            Market("BTC", "KRW"));
+  EXPECT_EQ(exchangePublic.determineMarketFromMarketStr("ethusd", emptyMarkets).value_or(Market()), Market());
+}
+
 class ExchangePublicConvertTest : public ExchangePublicTest {
  protected:
   CurrencyCodeSet fiats{"EUR", "USD", "KRW"};

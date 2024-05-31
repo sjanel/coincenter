@@ -1,21 +1,31 @@
 #include "market-trader-engine.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <span>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 
 #include "abstract-market-trader.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "exchangeconfig.hpp"
 #include "market-data-view.hpp"
+#include "market-order-book-vector.hpp"
+#include "market-trading-result.hpp"
+#include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptionsdef.hpp"
 #include "public-trade-vector.hpp"
 #include "publictrade.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 #include "trade-range-stats.hpp"
 #include "trader-command.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 
@@ -199,8 +209,8 @@ MarketTradingResult MarketTraderEngine::finalizeAndComputeResult() {
 
   const auto closedOrdersSpan = _marketTraderEngineState.closedOrders();
 
-  return MarketTradingResult(_marketTrader->name(), _startAmountBase, _startAmountQuote, quoteAmountDelta,
-                             ClosedOrderVector(closedOrdersSpan.begin(), closedOrdersSpan.end()));
+  return {_marketTrader->name(), _startAmountBase, _startAmountQuote, quoteAmountDelta,
+          ClosedOrderVector(closedOrdersSpan.begin(), closedOrdersSpan.end())};
 }
 
 void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmount from, PriceStrategy priceStrategy) {

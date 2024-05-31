@@ -1,16 +1,21 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cstdint>
+#include <limits>
 #include <string_view>
 
 #include "apioutputtype.hpp"
 #include "cct_const.hpp"
+#include "closed-order.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "market-timestamp-set.hpp"
+#include "market-timestamp.hpp"
 #include "market-trading-global-result.hpp"
 #include "market-trading-result.hpp"
 #include "market.hpp"

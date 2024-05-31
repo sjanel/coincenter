@@ -3,6 +3,7 @@
 #include <bitset>
 
 #include "cct_const.hpp"
+#include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
 #include "exchangename.hpp"
 
