@@ -22,5 +22,5 @@ std::string_view WithdrawOrDeposit::statusStr() const {
   }
 }
 
-string WithdrawOrDeposit::timeStr() const { return ToString(_time); }
+string WithdrawOrDeposit::timeStr() const { return TimeToString(_time); }
 }  // namespace cct

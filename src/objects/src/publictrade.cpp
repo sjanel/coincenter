@@ -8,7 +8,7 @@
 
 namespace cct {
 
-string PublicTrade::timeStr() const { return ToString(_time); }
+string PublicTrade::timeStr() const { return TimeToString(_time); }
 
 bool PublicTrade::isValid() const {
   if (time() == TimePoint{}) {

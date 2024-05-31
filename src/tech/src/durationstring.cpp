@@ -11,7 +11,7 @@
 #include "cct_cctype.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 
 namespace cct {
@@ -87,7 +87,7 @@ Duration ParseDuration(std::string_view durationStr) {
       throw invalid_argument(kInvalidTimeDurationUnitMsg);
     }
     const std::string_view timeAmountStr(durationStr.begin() + intFirst, durationStr.begin() + charPos);
-    const int64_t timeAmount = FromString<int64_t>(timeAmountStr);
+    const int64_t timeAmount = StringToIntegral<int64_t>(timeAmountStr);
 
     while (charPos < sz && isspace(durationStr[charPos])) {
       ++charPos;
@@ -117,7 +117,7 @@ void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
   if (dur >= TimeUnitT(1)) {
     const auto nU = std::chrono::duration_cast<TimeUnitT>(dur).count();
 
-    AppendString(ret, nU);
+    AppendIntegralToString(ret, nU);
     ret += unitStr;
     dur -= TimeUnitT(nU);
   }

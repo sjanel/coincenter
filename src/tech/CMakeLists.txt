@@ -67,8 +67,6 @@ add_unit_test(
     nlohmann_json::nlohmann_json
 )
 
-
-
 if(MSVC)
     add_unit_test(
         gethostname_test
@@ -119,10 +117,15 @@ add_unit_test(
 )
 
 add_unit_test(
-    stringhelpers_test
-    test/stringhelpers_test.cpp
+    stringconv_test
+    test/stringconv_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    strnlen_test
+    test/strnlen_test.cpp
 )
 
 add_unit_test(

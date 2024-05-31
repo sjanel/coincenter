@@ -42,7 +42,7 @@
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "toupperlower-string.hpp"
@@ -62,7 +62,7 @@ namespace {
 string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std::string_view method,
                      std::string_view postDataStr) {
   std::string_view urlBaseWithoutHttps(baseUrl.begin() + std::string_view("https://").size(), baseUrl.end());
-  std::string_view requestTypeStr = ToString(requestType);
+  std::string_view requestTypeStr = IntegralToString(requestType);
   string paramsStr(requestTypeStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U, '\n');
 
   auto it = paramsStr.begin();
@@ -162,7 +162,7 @@ bool HuobiPrivate::validateApiKey() {
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   string method = "/v1/account/accounts/";
-  AppendString(method, _accountIdCache.get());
+  AppendIntegralToString(method, _accountIdCache.get());
   method.append("/balance");
   json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   BalancePortfolio balancePortfolio;
@@ -282,7 +282,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
 
     TimePoint placedTime{milliseconds(orderDetails["created-at"].get<int64_t>())};
 
-    string idStr = ToString(orderDetails["id"].get<int64_t>());
+    string idStr = IntegralToString(orderDetails["id"].get<int64_t>());
 
     if (!closedOrdersConstraints.validateId(idStr)) {
       continue;
@@ -355,7 +355,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
     }
 
     int64_t idInt = orderDetails["id"].get<int64_t>();
-    string id = ToString(idInt);
+    string id = IntegralToString(idInt);
     if (!openedOrdersConstraints.validateId(id)) {
       continue;
     }
@@ -426,7 +426,7 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
       if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
-      string idStr = ToString(id);
+      string idStr = IntegralToString(id);
       if (!depositsConstraints.validateId(idStr)) {
         continue;
       }
@@ -555,7 +555,7 @@ WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
       if (!withdrawsConstraints.validateTime(timestamp)) {
         continue;
       }
-      string idStr = ToString(id);
+      string idStr = IntegralToString(id);
       if (!withdrawsConstraints.validateId(idStr)) {
         continue;
       }
@@ -770,7 +770,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   if (createDataIt == result.end()) {
     throw exception("Unexpected response from withdraw create for {}", huobiPublic.name());
   }
-  string withdrawIdStr = ToString(createDataIt->get<int64_t>());
+  string withdrawIdStr = IntegralToString(createDataIt->get<int64_t>());
   return {std::move(destinationWallet), std::move(withdrawIdStr), grossAmount};
 }
 

@@ -42,7 +42,7 @@
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
 #include "ssl_sha.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
@@ -64,7 +64,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
                   CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
   string strToSign(Nonce_TimeSinceEpochInMs());
   auto nonceSize = strToSign.size();
-  strToSign.append(ToString(requestType));
+  strToSign.append(IntegralToString(requestType));
   strToSign.append(endpoint);
 
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
@@ -382,7 +382,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     // Kucoin does not provide any transaction id, let's generate it from currency and timestamp...
     string id = currencyCode.str();
     id.push_back('-');
-    id.append(std::string_view(ToCharVector(millisecondsSinceEpoch)));
+    id.append(std::string_view(IntegralToCharVector(millisecondsSinceEpoch)));
 
     deposits.emplace_back(std::move(id), timestamp, amount, status);
   }

@@ -9,7 +9,7 @@ namespace {
 MetricKeyPerRequestType DefineTypes(MetricKey &requestCountKey) {
   MetricKeyPerRequestType ret;
   for (HttpRequestType requestType : kHttpRequestTypes) {
-    requestCountKey.set("type", ToString(requestType));
+    requestCountKey.set("type", IntegralToString(requestType));
     ret.insert_or_assign(requestType, requestCountKey);
   }
   return ret;

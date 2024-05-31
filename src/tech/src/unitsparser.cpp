@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "cct_exception.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 
 namespace cct {
 
@@ -13,7 +13,7 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
   if (endPos == std::string_view::npos) {
     endPos = sizeStr.size();
   }
-  int64_t nbBytes = FromString<int64_t>(std::string_view(sizeStr.begin(), sizeStr.begin() + endPos));
+  int64_t nbBytes = StringToIntegral<int64_t>(std::string_view(sizeStr.begin(), sizeStr.begin() + endPos));
   if (nbBytes < 0) {
     throw exception("Number of bytes cannot be negative");
   }

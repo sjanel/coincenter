@@ -11,7 +11,7 @@ enum class HttpRequestType : int8_t { kGet, kPut, kPost, kDelete };
 static constexpr HttpRequestType kHttpRequestTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
                                                         HttpRequestType::kPut, HttpRequestType::kDelete};
 
-constexpr std::string_view ToString(HttpRequestType requestType) {
+constexpr std::string_view IntegralToString(HttpRequestType requestType) {
   switch (requestType) {
     case HttpRequestType::kGet:
       return "GET";

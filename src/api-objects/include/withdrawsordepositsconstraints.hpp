@@ -83,10 +83,10 @@ struct fmt::formatter<cct::WithdrawsOrDepositsConstraints> {
     }
 
     if (constraints.timeBefore() != cct::TimePoint::max()) {
-      ctx.out() = fmt::format_to(ctx.out(), " before {}", cct::ToString(constraints.timeBefore()));
+      ctx.out() = fmt::format_to(ctx.out(), " before {}", cct::TimeToString(constraints.timeBefore()));
     }
     if (constraints.timeAfter() != cct::TimePoint::min()) {
-      ctx.out() = fmt::format_to(ctx.out(), " after {}", cct::ToString(constraints.timeAfter()));
+      ctx.out() = fmt::format_to(ctx.out(), " after {}", cct::TimeToString(constraints.timeAfter()));
     }
     if (constraints.isIdDefined()) {
       ctx.out() = fmt::format_to(ctx.out(), " matching Ids [{}]", fmt::join(constraints.idSet(), ", "));

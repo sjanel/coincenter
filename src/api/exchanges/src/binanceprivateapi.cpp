@@ -49,7 +49,7 @@
 #include "permanentcurloptions.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
@@ -335,7 +335,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json& ordersAr
     const CurrencyCode volumeCur = optMarket->base();
     const CurrencyCode priceCur = optMarket->quote();
     const int64_t orderId = orderDetails["orderId"].get<int64_t>();
-    string id = ToString(orderId);
+    string id = IntegralToString(orderId);
     if (!ordersConstraints.validateId(id)) {
       continue;
     }
@@ -694,7 +694,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
         throw exception("Unexpected dust transfer result");
       }
       const json& res = transferResultIt->front();
-      SetString(placeOrderInfo.orderId, res["tranId"].get<std::size_t>());
+      placeOrderInfo.orderId = IntegralToString(res["tranId"].get<std::size_t>());
       // 'transfered' is misspelled (against 'transferred') but the field is really named like this in Binance REST API
       MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
@@ -723,7 +723,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
-  SetString(placeOrderInfo.orderId, result["orderId"].get<std::size_t>());
+  placeOrderInfo.orderId = IntegralToString(result["orderId"].get<std::size_t>());
   std::string_view status = result["status"].get<std::string_view>();
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {
@@ -764,7 +764,7 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
       myTradesOpts.emplace_back("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
     }
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
-    int64_t integralOrderId = FromString<int64_t>(orderId);
+    int64_t integralOrderId = StringToIntegral<int64_t>(orderId);
     for (const json& tradeDetails : result) {
       if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
         orderInfo.tradedAmounts += ParseTrades(mk, fromCurrencyCode, tradeDetails);

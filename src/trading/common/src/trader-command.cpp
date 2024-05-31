@@ -4,7 +4,7 @@
 
 #include "cct_exception.hpp"
 #include "priceoptionsdef.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "tradeside.hpp"
 
 namespace cct {
@@ -37,7 +37,7 @@ TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPe
 TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
   int32_t orderIdInt;
   if (!orderId.empty()) {
-    orderIdInt = FromString<int32_t>(orderId);
+    orderIdInt = StringToIntegral<int32_t>(orderId);
   } else {
     orderIdInt = kAllOrdersId;
   }
@@ -45,7 +45,7 @@ TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
 }
 
 TraderCommand TraderCommand::UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy) {
-  return TraderCommand(Type::kUpdatePrice, FromString<int32_t>(orderId), 100, priceStrategy);
+  return TraderCommand(Type::kUpdatePrice, StringToIntegral<int32_t>(orderId), 100, priceStrategy);
 }
 
 TradeSide TraderCommand::tradeSide() const {

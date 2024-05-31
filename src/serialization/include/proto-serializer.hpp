@@ -21,7 +21,7 @@
 #include "market.hpp"
 #include "proto-multiple-messages-handler.hpp"
 #include "serialization-tools.hpp"
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 
 namespace cct {
@@ -248,7 +248,7 @@ class ProtobufObjectsSerializer {
     const std::chrono::year_month_day ymd{dp};
 
     path = _subPath / marketStr;
-    path /= std::string_view(ToCharVector(static_cast<int>(ymd.year())));
+    path /= std::string_view(IntegralToCharVector(static_cast<int>(ymd.year())));
     path /= MonthStr(static_cast<unsigned int>(ymd.month()));
     path /= DayOfMonthStr(static_cast<unsigned int>(ymd.day()));
   }

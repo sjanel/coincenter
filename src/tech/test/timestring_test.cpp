@@ -7,7 +7,7 @@
 #include <regex>
 #include <thread>
 
-#include "stringhelpers.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 
 namespace cct {
@@ -17,7 +17,7 @@ TEST(TimeStringTest, TimeSinceEpoch) {
   std::this_thread::sleep_for(milliseconds(2));
   Nonce n2 = Nonce_TimeSinceEpochInMs();
   EXPECT_LT(n1, n2);
-  EXPECT_LT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
+  EXPECT_LT(StringToIntegral<uint64_t>(n1), StringToIntegral<uint64_t>(n2));
 }
 
 TEST(TimeStringTest, TimeSinceEpochDelay) {
@@ -25,7 +25,7 @@ TEST(TimeStringTest, TimeSinceEpochDelay) {
   std::this_thread::sleep_for(milliseconds(2));
   Nonce n2 = Nonce_TimeSinceEpochInMs();
   EXPECT_GT(n1, n2);
-  EXPECT_GT(FromString<uint64_t>(n1), FromString<uint64_t>(n2));
+  EXPECT_GT(StringToIntegral<uint64_t>(n1), StringToIntegral<uint64_t>(n2));
 }
 
 TEST(TimeStringTest, LiteralDate) {
@@ -39,27 +39,27 @@ TEST(TimeStringTest, LiteralDate) {
   EXPECT_TRUE(std::regex_match(n2.begin(), n2.end(), dateRegex));
 }
 
-TEST(TimeStringTest, ToString) {
+TEST(TimeStringTest, TimeToString) {
   TimePoint tp;
   tp += std::chrono::years(15);
   tp += std::chrono::months(9);
   tp += std::chrono::days(25);
 
-  EXPECT_EQ(ToString(tp, "%Y"), "1985");
-  EXPECT_EQ(ToString(tp, "%Y-%m"), "1985-10");
-  EXPECT_EQ(ToString(tp, "%Y-%m-%d"), "1985-10-26");
-  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H"), "1985-10-26 13");
-  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H:%M"), "1985-10-26 13:39");
-  EXPECT_EQ(ToString(tp, "%Y-%m-%d %H:%M:%S"), "1985-10-26 13:39:54");
-  EXPECT_EQ(ToString(tp, "%Y-%m-%d W%U %H:%M:%S"), "1985-10-26 W42 13:39:54");
+  EXPECT_EQ(TimeToString(tp, "%Y"), "1985");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m"), "1985-10");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m-%d"), "1985-10-26");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m-%d %H"), "1985-10-26 13");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m-%d %H:%M"), "1985-10-26 13:39");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m-%d %H:%M:%S"), "1985-10-26 13:39:54");
+  EXPECT_EQ(TimeToString(tp, "%Y-%m-%d W%U %H:%M:%S"), "1985-10-26 W42 13:39:54");
 
-  EXPECT_EQ(ToString(tp, "%D - %T"), "10/26/85 - 13:39:54");
-  EXPECT_EQ(ToString(tp, "%D custom string %T"), "10/26/85 custom string 13:39:54");
+  EXPECT_EQ(TimeToString(tp, "%D - %T"), "10/26/85 - 13:39:54");
+  EXPECT_EQ(TimeToString(tp, "%D custom string %T"), "10/26/85 custom string 13:39:54");
 }
 
 TEST(TimeStringTest, FromToString) {
   // TODO: below lines should be uncommented
   // std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-  // EXPECT_STREQ(ToString(now).c_str(), ToString(FromString(ToString(now).c_str())).c_str());
+  // EXPECT_STREQ(TimeToString(now).c_str(), TimeToString(StringToTime(TimeToString(now).c_str())).c_str());
 }
 }  // namespace cct

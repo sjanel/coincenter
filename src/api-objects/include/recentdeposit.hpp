@@ -70,7 +70,7 @@ struct fmt::formatter<cct::api::RecentDeposit> {
 
   template <typename FormatContext>
   auto format(const cct::api::RecentDeposit &v, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{} at {}", v.amount(), cct::ToString(v.timePoint()));
+    return fmt::format_to(ctx.out(), "{} at {}", v.amount(), cct::TimeToString(v.timePoint()));
   }
 };
 #endif

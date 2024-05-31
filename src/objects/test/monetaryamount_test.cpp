@@ -651,7 +651,7 @@ TEST(MonetaryAmountTest, AppendAmountStr) {
   }
 }
 
-TEST(MonetaryAmountTest, AppendString) {
+TEST(MonetaryAmountTest, AppendIntegralToString) {
   {
     string str("");
     MonetaryAmount().appendStrTo(str);

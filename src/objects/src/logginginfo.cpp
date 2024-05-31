@@ -80,7 +80,7 @@ LoggingInfo::~LoggingInfo() {
 
 File LoggingInfo::getActivityFile() const {
   string activityFileName("activity_history_");
-  activityFileName.append(ToString(Clock::now(), _dateFormatStrActivityFiles.data()));
+  activityFileName.append(TimeToString(Clock::now(), _dateFormatStrActivityFiles.data()));
   activityFileName.append(".txt");
   return {_dataDir, File::Type::kLog, activityFileName, File::IfError::kThrow};
 }
