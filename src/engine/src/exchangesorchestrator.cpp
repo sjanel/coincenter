@@ -983,8 +983,15 @@ MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<
         }
         // Call order book and last trades sequentially for this exchange
         Market market = marketPerPublicExchange[exchange->publicExchangePos()];
-        return std::make_pair(exchange,
-                              std::make_pair(exchange->getOrderBook(market), exchange->getLastTrades(market)));
+
+        // Use local variables to ensure deterministic order of api calls (orderbook then last trades).
+        // The order of api calls itself is not important, but we want to keep the same order for repetitive calls.
+        // Indeed in C++, the order of parameter evaluation is undefined, and we don't want that it changes between two
+        // calls even if it's very unlikely.
+        auto orderBook = exchange->getOrderBook(market);
+        auto lastTrades = exchange->getLastTrades(market);
+
+        return std::make_pair(exchange, std::make_pair(std::move(orderBook), std::move(lastTrades)));
       });
   return ret;
 }
@@ -997,10 +1004,13 @@ MarketTimestampSetsPerExchange ExchangesOrchestrator::pullAvailableMarketsForRep
   MarketTimestampSetsPerExchange marketTimestampSetsPerExchange(selectedExchanges.size());
   _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(),
                                 marketTimestampSetsPerExchange.begin(), [timeWindow](Exchange *exchange) {
-                                  return std::make_pair(
-                                      exchange,
-                                      MarketTimestampSets{exchange->apiPublic().pullMarketOrderBooksMarkets(timeWindow),
-                                                          exchange->apiPublic().pullTradeMarkets(timeWindow)});
+                                  auto &apiPublic = exchange->apiPublic();
+
+                                  auto orderBooks = apiPublic.pullMarketOrderBooksMarkets(timeWindow);
+                                  auto trades = apiPublic.pullTradeMarkets(timeWindow);
+
+                                  return std::make_pair(exchange,
+                                                        MarketTimestampSets{std::move(orderBooks), std::move(trades)});
                                 });
   return marketTimestampSetsPerExchange;
 }
@@ -1018,6 +1028,7 @@ MarketTradeRangeStatsPerExchange ExchangesOrchestrator::traderConsumeRange(
       [subTimeWindow, &replayOptions](Exchange *exchange, MarketTraderEngine &marketTraderEngine) {
         Market market = marketTraderEngine.market();
         auto &apiPublic = exchange->apiPublic();
+
         auto marketOrderBooks = apiPublic.pullMarketOrderBooksForReplay(market, subTimeWindow);
         auto publicTrades = apiPublic.pullTradesForReplay(market, subTimeWindow);
 
