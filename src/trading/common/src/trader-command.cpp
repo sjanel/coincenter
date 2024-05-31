@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "cct_exception.hpp"
+#include "orderid.hpp"
 #include "priceoptionsdef.hpp"
 #include "stringconv.hpp"
 #include "tradeside.hpp"
@@ -14,7 +15,7 @@ TraderCommand::TraderCommand(Type type, int32_t orderId, int8_t amountIntensityP
       _amountIntensityPercentage(amountIntensityPercentage),
       _priceStrategy(priceStrategy) {}
 
-TraderCommand TraderCommand::Wait() { return TraderCommand(Type::kWait, kAllOrdersId, 0, PriceStrategy::kMaker); }
+TraderCommand TraderCommand::Wait() { return {Type::kWait, kAllOrdersId, 0, PriceStrategy::kMaker}; }
 
 TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPercentage, PriceStrategy priceStrategy) {
   if (amountIntensityPercentage > 100 || amountIntensityPercentage <= 0) {
@@ -31,7 +32,7 @@ TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPe
     default:
       throw exception("Unexpected trade side");
   }
-  return TraderCommand(type, kAllOrdersId, amountIntensityPercentage, priceStrategy);
+  return {type, kAllOrdersId, amountIntensityPercentage, priceStrategy};
 }
 
 TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
@@ -41,11 +42,11 @@ TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
   } else {
     orderIdInt = kAllOrdersId;
   }
-  return TraderCommand(Type::kCancel, orderIdInt, 0, PriceStrategy::kMaker);
+  return {Type::kCancel, orderIdInt, 0, PriceStrategy::kMaker};
 }
 
 TraderCommand TraderCommand::UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy) {
-  return TraderCommand(Type::kUpdatePrice, StringToIntegral<int32_t>(orderId), 100, priceStrategy);
+  return {Type::kUpdatePrice, StringToIntegral<int32_t>(orderId), 100, priceStrategy};
 }
 
 TradeSide TraderCommand::tradeSide() const {

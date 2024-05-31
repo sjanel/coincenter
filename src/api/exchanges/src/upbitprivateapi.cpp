@@ -275,20 +275,22 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
     nbOrdersRetrieved = static_cast<decltype(nbOrdersRetrieved)>(data.size());
 
     for (json& orderDetails : data) {
-      std::string_view marketStr = orderDetails["market"].get<std::string_view>();
-      auto dashPos = marketStr.find('-');
+      const auto marketStr = orderDetails["market"].get<std::string_view>();
+      const auto dashPos = marketStr.find('-');
+
       if (dashPos == std::string_view::npos) {
         throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
       }
-      CurrencyCode priceCur(std::string_view(marketStr.data(), dashPos));
-      CurrencyCode volumeCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+
+      const CurrencyCode priceCur = marketStr.substr(0U, dashPos);
+      const CurrencyCode volumeCur = marketStr.substr(dashPos + 1U);
 
       if (!ordersConstraints.validateCur(volumeCur, priceCur)) {
         continue;
       }
 
       // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      TimePoint placedTime =
+      const auto placedTime =
           StringToTime(orderDetails["created_at"].get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
       if (!ordersConstraints.validatePlacedTime(placedTime)) {
         continue;
@@ -299,23 +301,23 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
         continue;
       }
 
-      auto priceIt = orderDetails.find("price");
+      const auto priceIt = orderDetails.find("price");
       if (priceIt == orderDetails.end()) {
         // Some old orders may have no price field set. In this case, just return what we have as the older orders will
         // probably not be filled as well.
         break;
       }
 
-      MonetaryAmount matchedVolume(orderDetails["executed_volume"].get<std::string_view>(), volumeCur);
-      MonetaryAmount price(priceIt->get<std::string_view>(), priceCur);
-      TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+      const MonetaryAmount matchedVolume(orderDetails["executed_volume"].get<std::string_view>(), volumeCur);
+      const MonetaryAmount price(priceIt->get<std::string_view>(), priceCur);
+      const TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
       if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
-        MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
+        const MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
 
         orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
       } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
-        const TimePoint matchedTime = placedTime;
+        const auto matchedTime = placedTime;
 
         orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
       } else {
@@ -331,6 +333,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
   }
 
   std::ranges::sort(orderVector);
+
   orderVector.shrink_to_fit();
 }
 }  // namespace

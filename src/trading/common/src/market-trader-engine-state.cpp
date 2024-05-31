@@ -1,6 +1,7 @@
 #include "market-trader-engine-state.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 
 #include "cct_exception.hpp"

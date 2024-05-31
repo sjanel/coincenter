@@ -212,7 +212,7 @@ std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecima
 
 constexpr MonetaryAmount::AmountType MonetaryAmount::decimalPart() const {
   const auto div = ipow10(static_cast<uint8_t>(nbDecimals()));
-  return _amount - (_amount / div) * div;
+  return _amount - ((_amount / div) * div);
 }
 
 namespace {

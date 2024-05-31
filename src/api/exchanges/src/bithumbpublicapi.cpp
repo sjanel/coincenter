@@ -48,19 +48,24 @@ namespace {
 
 auto ComputeMethodUrl(std::string_view endpoint, CurrencyCode base, CurrencyCode quote, std::string_view urlOpts) {
   string methodUrl;
+
   methodUrl.reserve(endpoint.size() + base.size() +
-                    static_cast<string::size_type>(quote.isDefined()) * (quote.size() + 1U) +
-                    static_cast<string::size_type>(!urlOpts.empty()) * (urlOpts.size() + 1U));
+                    (static_cast<string::size_type>(quote.isDefined()) * (quote.size() + 1U)) +
+                    (static_cast<string::size_type>(!urlOpts.empty()) * (urlOpts.size() + 1U)));
+
   methodUrl.append(endpoint);
+
   base.appendStrTo(methodUrl);
   if (quote.isDefined()) {
     methodUrl.push_back('_');
     quote.appendStrTo(methodUrl);
   }
+
   if (!urlOpts.empty()) {
     methodUrl.push_back('?');
     methodUrl.append(urlOpts);
   }
+
   return methodUrl;
 }
 

@@ -248,32 +248,34 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
   json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
 
   for (json& orderDetails : data["items"]) {
-    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();
-    std::size_t dashPos = marketStr.find('-');
+    const auto marketStr = orderDetails["symbol"].get<std::string_view>();
+    const auto dashPos = marketStr.find('-');
+
     if (dashPos == std::string_view::npos) {
       throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
     }
-    CurrencyCode volumeCur(std::string_view(marketStr.data(), dashPos));
-    CurrencyCode priceCur(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+
+    const CurrencyCode priceCur = marketStr.substr(0U, dashPos);
+    const CurrencyCode volumeCur = marketStr.substr(dashPos + 1U);
 
     if (!ordersConstraints.validateCur(volumeCur, priceCur)) {
       continue;
     }
 
-    TimePoint placedTime{milliseconds(orderDetails["createdAt"].get<int64_t>())};
+    const TimePoint placedTime{milliseconds(orderDetails["createdAt"].get<int64_t>())};
 
     string id = std::move(orderDetails["id"].get_ref<string&>());
     if (!ordersConstraints.validateId(id)) {
       continue;
     }
 
-    MonetaryAmount matchedVolume(orderDetails["dealSize"].get<std::string_view>(), volumeCur);
-    MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
-    TradeSide side = orderDetails["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+    const MonetaryAmount matchedVolume(orderDetails["dealSize"].get<std::string_view>(), volumeCur);
+    const MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+    const TradeSide side = orderDetails["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
 
     if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
-      MonetaryAmount originalVolume(orderDetails["size"].get<std::string_view>(), volumeCur);
-      MonetaryAmount remainingVolume = originalVolume - matchedVolume;
+      const MonetaryAmount originalVolume(orderDetails["size"].get<std::string_view>(), volumeCur);
+      const MonetaryAmount remainingVolume = originalVolume - matchedVolume;
 
       orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
     } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {

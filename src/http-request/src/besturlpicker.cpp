@@ -75,7 +75,7 @@ void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t resp
 
   // Update moving average
   const uint64_t sumResponseTime =
-      static_cast<uint64_t>(stats.avgResponseTimeInMs) * (nbRequestsToConsider - 1) + responseTimeInMs;
+      (static_cast<uint64_t>(stats.avgResponseTimeInMs) * (nbRequestsToConsider - 1)) + responseTimeInMs;
   const uint64_t newAverageResponseTime = sumResponseTime / nbRequestsToConsider;
   using RTType = decltype(stats.avgResponseTimeInMs);
   if (newAverageResponseTime > static_cast<uint64_t>(std::numeric_limits<RTType>::max())) {
@@ -87,7 +87,7 @@ void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t resp
 
   // Update moving deviation
   const uint64_t sumDeviation =
-      static_cast<uint64_t>(ipow(stats.avgDeviationInMs, 2)) * (nbRequestsToConsider - 1) +
+      (static_cast<uint64_t>(ipow(stats.avgDeviationInMs, 2)) * (nbRequestsToConsider - 1)) +
       static_cast<uint64_t>(
           ipow(static_cast<int64_t>(stats.avgResponseTimeInMs) - static_cast<int64_t>(responseTimeInMs), 2));
   const auto newDeviationResponseTime = static_cast<uint64_t>(std::sqrt(sumDeviation / nbRequestsToConsider));

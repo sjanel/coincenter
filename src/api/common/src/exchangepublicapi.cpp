@@ -26,14 +26,17 @@
 #include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "market-order-book-vector.hpp"
 #include "market-timestamp-set.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
+#include "public-trade-vector.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
+#include "toupperlower.hpp"
 #include "unreachable.hpp"
 
 #ifdef CCT_ENABLE_PROTO
@@ -351,57 +354,64 @@ MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const Market
 std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
                                                                    CurrencyCode filterCur) {
   if (!filterCur.isNeutral()) {
-    std::size_t firstCurLen;
-    auto curStr = filterCur.str();
-    std::size_t curPos = marketStr.find(curStr);
-    if (curPos == 0) {
-      firstCurLen = curStr.size();
-    } else {
-      firstCurLen = marketStr.size() - curStr.size();
+    const auto curSize = filterCur.size();
+
+    if (curSize >= marketStr.size()) {
+      log::error("Unexpected filter currency {} which is longer than market {}", filterCur, marketStr);
+      return {};
     }
-    return Market(
-        _coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), firstCurLen)),
-        _coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.begin() + firstCurLen, marketStr.end())));
+
+    std::size_t charPos;
+    for (charPos = 0; charPos < curSize; ++charPos) {
+      if (toupper(marketStr[charPos]) != filterCur[charPos]) {
+        break;
+      }
+    }
+
+    std::size_t firstCurLen;
+    if (charPos == curSize) {
+      firstCurLen = charPos;
+    } else {
+      firstCurLen = marketStr.size() - curSize;
+    }
+
+    const auto baseStr = marketStr.substr(0U, firstCurLen);
+    const auto quoteStr = marketStr.substr(firstCurLen);
+
+    return Market(_coincenterInfo.standardizeCurrencyCode(baseStr), _coincenterInfo.standardizeCurrencyCode(quoteStr));
   }
 
-  static constexpr std::string_view::size_type kMinimalCryptoAcronymLen = 3;
+  static constexpr std::string_view::size_type kMinimalCryptoAcronymLen = 1;
 
-  if (markets.empty() && marketStr.size() == 2 * kMinimalCryptoAcronymLen) {
-    // optim (to avoid possible queryTradableMarkets): assuming there is no crypto currency acronym shorter than 3 chars
-    // - we can split the "symbol" string currencies with 3 chars each
-    return Market(_coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), kMinimalCryptoAcronymLen)),
-                  _coincenterInfo.standardizeCurrencyCode(
-                      std::string_view(marketStr.data() + kMinimalCryptoAcronymLen, kMinimalCryptoAcronymLen)));
-  }
-
-  std::optional<Market> ret;
-
-  // General case, we need to query the markets
+  // From now, we need to query the markets
   if (markets.empty()) {
     // Without any currency, and because "marketStr" is returned without hyphen, there is no easy way to guess the
     // currencies so we need to compare with the markets that exist
     std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
     markets = queryTradableMarkets();
   }
+
   const auto symbolStrSize = marketStr.size();
   for (auto splitCurPos = kMinimalCryptoAcronymLen; splitCurPos < symbolStrSize; ++splitCurPos) {
-    ret = Market(_coincenterInfo.standardizeCurrencyCode(std::string_view(marketStr.data(), splitCurPos)),
-                 _coincenterInfo.standardizeCurrencyCode(
-                     std::string_view(marketStr.data() + splitCurPos, symbolStrSize - splitCurPos)));
-    if (markets.contains(*ret)) {
-      break;
+    const auto baseStr = marketStr.substr(0U, splitCurPos);
+    const auto quoteStr = marketStr.substr(splitCurPos);
+
+    Market market(_coincenterInfo.standardizeCurrencyCode(baseStr), _coincenterInfo.standardizeCurrencyCode(quoteStr));
+
+    if (markets.contains(market)) {
+      return market;
     }
-    ret = ret->reverse();
-    if (markets.contains(*ret)) {
-      break;
+
+    // we also need to test the reverse
+    market = market.reverse();
+    if (markets.contains(market)) {
+      return market;
     }
-  }
-  if (!ret || ret->quote().size() < kMinimalCryptoAcronymLen) {
-    log::error("Cannot determine market for {}, skipping", marketStr);
-    ret = std::nullopt;
   }
 
-  return ret;
+  log::error("Cannot determine market for {}, skipping", marketStr);
+
+  return std::nullopt;
 }
 
 Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,

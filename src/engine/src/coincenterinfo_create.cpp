@@ -15,6 +15,7 @@
 #include "generalconfig.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"
+#include "monetaryamount.hpp"
 #include "monitoringinfo.hpp"
 #include "requestsconfig.hpp"
 #include "runmodes.hpp"
