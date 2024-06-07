@@ -61,20 +61,22 @@ namespace {
 
 string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std::string_view method,
                      std::string_view postDataStr) {
-  std::string_view urlBaseWithoutHttps(baseUrl.begin() + std::string_view("https://").size(), baseUrl.end());
-  std::string_view requestTypeStr = IntegralToString(requestType);
+  const std::string_view urlBaseWithoutHttps(baseUrl.begin() + std::string_view("https://").size(), baseUrl.end());
+  const auto requestTypeStr = HttpRequestTypeToString(requestType);
+
   string paramsStr(requestTypeStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U, '\n');
 
   auto it = paramsStr.begin();
   it = std::ranges::copy(requestTypeStr, it).out;
   it = std::ranges::copy(urlBaseWithoutHttps, it + 1).out;
   it = std::ranges::copy(method, it + 1).out;
+
   std::ranges::copy(postDataStr, it + 1);
 
   return paramsStr;
 }
 
-CurlOptions::PostDataFormat ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
+auto ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postData.empty() && requestType != HttpRequestType::kGet) {
     postDataFormat = CurlOptions::PostDataFormat::kJson;

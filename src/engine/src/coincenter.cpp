@@ -105,6 +105,7 @@ int Coincenter::process(const CoincenterCommands &coincenterCommands) {
   TimePoint lastCommandTime;
   for (int repeatPos = 0; repeatPos != nbRepeats && g_signalStatus == 0; ++repeatPos) {
     const auto earliestTimeNextCommand = lastCommandTime + repeatTime;
+    const bool doLog = nbRepeats != 1 && (repeatPos < 100 || repeatPos % 100 == 0);
 
     lastCommandTime = Clock::now();
 
@@ -113,10 +114,12 @@ int Coincenter::process(const CoincenterCommands &coincenterCommands) {
 
       lastCommandTime += waitingDuration;
 
-      log::debug("Sleep for {} before next command", DurationToString(waitingDuration));
+      if (doLog) {
+        log::debug("Sleep for {} before next command", DurationToString(waitingDuration));
+      }
       std::this_thread::sleep_for(waitingDuration);
     }
-    if (nbRepeats != 1 && (repeatPos < 100 || repeatPos % 100 == 0)) {
+    if (doLog) {
       if (nbRepeats == -1) {
         log::info("Process request {}", repeatPos + 1);
       } else {
