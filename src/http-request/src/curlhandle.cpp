@@ -65,6 +65,25 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
     }
   }
 }
+
+curl_slist *ComputeCurlSListPtr(const CurlOptions::HttpHeaders &httpHeaders) {
+  curl_slist *curlListPtr = nullptr;
+  curl_slist *oldCurlListPtr = nullptr;
+  for (const auto &httpHeader : httpHeaders) {
+    // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
+    // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
+    // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
+    // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
+    // guaranteed to be null-terminated since C++11)
+    curlListPtr = curl_slist_append(curlListPtr, httpHeader.key().data());
+    if (curlListPtr == nullptr) {
+      curl_slist_free_all(oldCurlListPtr);
+      throw std::bad_alloc();
+    }
+    oldCurlListPtr = curlListPtr;
+  }
+  return curlListPtr;
+}
 }  // namespace
 
 string GetCurlVersionInfo() {
@@ -165,6 +184,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   const auto baseUrlPos = _bestURLPicker.nextBaseURLPos();
   const std::string_view baseUrl = _bestURLPicker.getBaseURL(baseUrlPos);
   const std::string_view postDataStr = postData.str();
+
   string modifiedURL(baseUrl.size() + endpoint.size() + (appendParametersInQueryStr ? (1U + postDataStr.size()) : 0U),
                      '?');
 
@@ -209,21 +229,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
 
-  curl_slist *curlListPtr = nullptr;
-  curl_slist *oldCurlListPtr = nullptr;
-  for (const auto &httpHeader : opts.httpHeaders()) {
-    // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
-    // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
-    // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
-    // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
-    // guaranteed to be null-terminated since C++11)
-    curlListPtr = curl_slist_append(curlListPtr, httpHeader.key().data());
-    if (curlListPtr == nullptr) {
-      curl_slist_free_all(oldCurlListPtr);
-      throw std::bad_alloc();
-    }
-    oldCurlListPtr = curlListPtr;
-  }
+  curl_slist *curlListPtr = ComputeCurlSListPtr(opts.httpHeaders());
 
   using CurlSlistDeleter = decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); });
   using CurlListUniquePtr = std::unique_ptr<curl_slist, CurlSlistDeleter>;
@@ -249,8 +255,16 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     }
   }
 
-  log::log(_requestCallLogLevel, "{} {}{}{}", IntegralToString(opts.requestType()), modifiedURL,
-           optsStr.empty() ? "" : "?", optsStr);
+  auto nbRequestsDone = _bestURLPicker.nbRequestsDone();
+  static constexpr auto kLogRequestsThreshold = 100;
+
+  if (opts.requestType() != HttpRequestType::kGet || nbRequestsDone % kLogRequestsThreshold == 0) {
+    const auto httpRequestStr = HttpRequestTypeToString(opts.requestType());
+    log::log(_requestCallLogLevel, "{} {}{}{}", httpRequestStr, modifiedURL, optsStr.empty() ? "" : "?", optsStr);
+    if (nbRequestsDone == 0 && opts.requestType() == HttpRequestType::kGet) {
+      log::log(_requestCallLogLevel, "Will only log {} requests every {} calls", httpRequestStr, kLogRequestsThreshold);
+    }
+  }
 
   // Actually make the query, with a fast retry mechanism (to avoid random technical errors)
   Duration sleepingTime = milliseconds(100);
@@ -290,9 +304,11 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
     // Periodic memory release to avoid memory leak for a very large number of requests
     static constexpr int kReleaseMemoryRequestsFrequency = 10000;
-    if ((_bestURLPicker.nbRequestsDone() % kReleaseMemoryRequestsFrequency) == 0) {
+    if ((nbRequestsDone % kReleaseMemoryRequestsFrequency) == 0) {
       _queryData.shrink_to_fit();
     }
+
+    ++nbRequestsDone;
 
   } while (res != CURLE_OK && ++retryPos <= _nbMaxRetries);
   if (retryPos > _nbMaxRetries) {

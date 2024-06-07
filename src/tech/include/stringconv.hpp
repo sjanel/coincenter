@@ -71,7 +71,7 @@ Integral StringToIntegral(std::string_view str) {
   }
 
   if (ptr != endPtr) {
-    throw exception("Only {} out of {} chars decoded into integral {}", ptr - begPtr, str.size(), ret);
+    throw exception("Only {} chars from {} decoded into integral {}", ptr - begPtr, str, ret);
   }
   return ret;
 }

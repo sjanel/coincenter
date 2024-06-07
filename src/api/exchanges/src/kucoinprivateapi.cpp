@@ -64,7 +64,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
                   CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
   string strToSign(Nonce_TimeSinceEpochInMs());
   auto nonceSize = strToSign.size();
-  strToSign.append(IntegralToString(requestType));
+  strToSign.append(HttpRequestTypeToString(requestType));
   strToSign.append(endpoint);
 
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
@@ -78,16 +78,14 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
     }
   }
 
-  auto signature = B64Encode(ssl::Sha256Bin(strToSign, apiKey.privateKey()));
-  auto passphrase = B64Encode(ssl::Sha256Bin(apiKey.passphrase(), apiKey.privateKey()));
-
   CurlOptions opts(requestType, std::move(postData), postDataFormat);
 
   auto& httpHeaders = opts.mutableHttpHeaders();
+
   httpHeaders.emplace_back("KC-API-KEY", apiKey.key());
-  httpHeaders.emplace_back("KC-API-SIGN", signature);
+  httpHeaders.emplace_back("KC-API-SIGN", B64Encode(ssl::Sha256Bin(strToSign, apiKey.privateKey())));
   httpHeaders.emplace_back("KC-API-TIMESTAMP", std::string_view(strToSign.data(), nonceSize));
-  httpHeaders.emplace_back("KC-API-PASSPHRASE", passphrase);
+  httpHeaders.emplace_back("KC-API-PASSPHRASE", B64Encode(ssl::Sha256Bin(apiKey.passphrase(), apiKey.privateKey())));
   httpHeaders.emplace_back("KC-API-KEY-VERSION", 2);
 
   json ret = json::parse(curlHandle.query(endpoint, opts));
@@ -111,6 +109,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount amount, std::string_view fromStr,
                    std::string_view toStr) {
   log::info("Perform inner transfer of {} to {} account", amount, toStr);
+
   PrivateQuery(curlHandle, apiKey, HttpRequestType::kPost, "/api/v2/accounts/inner-transfer",
                {{"clientOid", Nonce_TimeSinceEpochInMs()},  // Not really needed, but it's mandatory apparently
                 {"currency", amount.currencyStr()},
