@@ -9,7 +9,7 @@ on:
 jobs:
   ubuntu-build:
     name: Build on Ubuntu
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         compiler: [g++-11, clang++-18]

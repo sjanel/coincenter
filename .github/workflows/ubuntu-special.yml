@@ -9,7 +9,7 @@ on:
 jobs:
   ubuntu-special-build:
     name: Build on Ubuntu with monitoring / protobuf support
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         compiler: [g++-11]

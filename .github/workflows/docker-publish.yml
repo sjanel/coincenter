@@ -15,16 +15,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push latest
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           file: Dockerfile
           context: .
@@ -32,7 +32,7 @@ jobs:
           tags: sjanel/coincenter:latest
 
       - name: Build and push alpine
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           file: alpine.Dockerfile
           context: .
