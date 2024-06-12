@@ -152,9 +152,10 @@ TEST(MonetaryAmountTest, OverflowProtectionDecimalPart) {
   EXPECT_LT(MonetaryAmount("94729475.1434000003456523423654", "EUR") - MonetaryAmount("94729475.1434", "EUR"),
             MonetaryAmount("0.0001", "EUR"));
   EXPECT_EQ(MonetaryAmount("123454562433254326.435324", "EUR"), MonetaryAmount("123454562433254326", "EUR"));
+  EXPECT_EQ(MonetaryAmount("1234545624332543260.435324", "EUR"), MonetaryAmount("123454562433254326", "EUR"));
 
   // Should not accept truncation on integral part
-  EXPECT_ANY_THROW(MonetaryAmount("1234545624332543260.435324", "EUR"));
+  EXPECT_ANY_THROW(MonetaryAmount("12345456243325432600.435324", "EUR"));
 }
 
 TEST(MonetaryAmountTest, OverflowProtectionSum) {
@@ -181,7 +182,7 @@ TEST(MonetaryAmountTest, Multiply) {
 }
 
 TEST(MonetaryAmountTest, MultiplyDouble) {
-  EXPECT_EQ(MonetaryAmount("-4.98", CurrencyCode("ETH")) * 1.2, MonetaryAmount("-5.976", CurrencyCode("ETH")));
+  EXPECT_EQ(MonetaryAmount("-4.98", CurrencyCode("ETH")) * 1.3, MonetaryAmount("-6.474", CurrencyCode("ETH")));
   EXPECT_EQ(15.98 * MonetaryAmount("0.2547"), MonetaryAmount("4.070106"));
 }
 
@@ -268,7 +269,7 @@ TEST(MonetaryAmountTest, StringConstructor) {
   EXPECT_EQ(MonetaryAmount("", "EUR"), MonetaryAmount(0, "EUR"));
 
   EXPECT_THROW(MonetaryAmount("usdt"), invalid_argument);
-  EXPECT_NO_THROW(MonetaryAmount("usdt", MonetaryAmount::IfNoAmount::kNoThrow));
+  EXPECT_NO_THROW(MonetaryAmount("usdt", MonetaryAmount::ParsingMode::kAmountOptional));
 }
 
 TEST(MonetaryAmountTest, StringConstructorAmbiguity) {
@@ -620,7 +621,7 @@ TEST(MonetaryAmountTest, NegativeAmountStr) {
 
 TEST(MonetaryAmountTest, AppendAmountStr) {
   {
-    string str("");
+    string str;
     MonetaryAmount().appendAmountStr(str);
 
     EXPECT_EQ("0", str);
@@ -653,7 +654,7 @@ TEST(MonetaryAmountTest, AppendAmountStr) {
 
 TEST(MonetaryAmountTest, AppendIntegralToString) {
   {
-    string str("");
+    string str;
     MonetaryAmount().appendStrTo(str);
 
     EXPECT_EQ("0", str);
@@ -702,6 +703,26 @@ TEST(MonetaryAmountTest, NegativeStringRepresentation) {
   EXPECT_EQ(MonetaryAmount("-22337203685477.5808 MAGIC4LIFE").str(), "-22337203685477.5808 MAGIC4LIFE");
   EXPECT_EQ(MonetaryAmount("-0.000001573004009 MAGIC4LIFE").str(), "-0.000001573004009 MAGIC4LIFE");
   EXPECT_EQ(MonetaryAmount("-764.00000000000001 MAGIC4LIFE").str(), "-764.00000000000001 MAGIC4LIFE");
+}
+
+TEST(MonetaryAmountTest, ScientificNotation) {
+  EXPECT_EQ(MonetaryAmount("8.6E7", "BTC"), MonetaryAmount("86000000", "BTC"));
+  EXPECT_EQ(MonetaryAmount("-3.054e2", "BTC"), MonetaryAmount("-305.4", "BTC"));
+
+  EXPECT_EQ(MonetaryAmount("8.06E-2", "BTC"), MonetaryAmount("0.0806", "BTC"));
+  EXPECT_EQ(MonetaryAmount("-3.054e-3", "BTC"), MonetaryAmount("-0.003054", "BTC"));
+
+  EXPECT_EQ(MonetaryAmount("65E-2", "BTC"), MonetaryAmount("0.65", "BTC"));
+  EXPECT_EQ(MonetaryAmount("-94e3", "BTC"), MonetaryAmount("-94000", "BTC"));
+
+  EXPECT_EQ(MonetaryAmount("5.9999999999999999999999E-2", "BTC"), MonetaryAmount("0.05999999999999999", "BTC"));
+
+  // Not standard scientific notation, but it works
+  EXPECT_EQ(MonetaryAmount("11.78E-4", "BTC"), MonetaryAmount("0.001178", "BTC"));
+}
+
+TEST(MonetaryAmountTest, ScientificNotationAmbiguityCurrencyCode) {
+  EXPECT_EQ(MonetaryAmount("1.204E2"), MonetaryAmount("1.204", "E2"));
 }
 
 TEST(MonetaryAmountTest, ExoticInput) {

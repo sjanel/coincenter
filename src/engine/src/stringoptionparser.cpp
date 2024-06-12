@@ -127,7 +127,7 @@ std::pair<MonetaryAmount, StringOptionParser::AmountType> StringOptionParser::pa
     _pos = originalPos;
     return ret;
   }
-  MonetaryAmount amount(amountStr, MonetaryAmount::IfNoAmount::kNoThrow);
+  MonetaryAmount amount(amountStr, MonetaryAmount::ParsingMode::kAmountOptional);
   if (amount == 0) {
     if (fieldIs == FieldIs::kMandatory) {
       throw invalid_argument("Expected a non-zero amount");
