@@ -16,7 +16,6 @@
 namespace cct {
 namespace {
 using AmountAtPriceVec = MarketOrderBook::AmountPerPriceVec;
-}  // namespace
 
 MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookLine> init) {
   MarketOrderBookLines marketOrderBookLines;
@@ -32,6 +31,7 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
 
   return marketOrderBookLines;
 }
+}  // namespace
 
 constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;

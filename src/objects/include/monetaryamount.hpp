@@ -45,18 +45,17 @@ class MonetaryAmount {
   using AmountType = int64_t;
 
   enum class RoundType : int8_t { kDown, kUp, kNearest };
-  enum class IfNoAmount : int8_t { kThrow, kNoThrow };
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0) {}
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a neutral currency
-  constexpr explicit MonetaryAmount(std::integral auto amount) noexcept : _amount(amount) { sanitizeIntegralPart(); }
+  constexpr explicit MonetaryAmount(std::integral auto amount) noexcept : _amount(amount) { sanitizeIntegralPart(0); }
 
   /// Constructs a MonetaryAmount representing the integer 'amount' with a currency
   constexpr explicit MonetaryAmount(std::integral auto amount, CurrencyCode currencyCode) noexcept
       : _amount(amount), _curWithDecimals(currencyCode) {
-    sanitizeIntegralPart();
+    sanitizeIntegralPart(0);
   }
 
   /// Construct a new MonetaryAmount from a double.
@@ -70,14 +69,15 @@ class MonetaryAmount {
   /// number of decimals
   constexpr MonetaryAmount(AmountType amount, CurrencyCode currencyCode, int8_t nbDecimals) noexcept
       : _amount(amount), _curWithDecimals(currencyCode) {
-    sanitizeDecimals(nbDecimals, maxNbDecimals());
-    sanitizeIntegralPart();
+    sanitize(nbDecimals);
   }
 
-  /// Constructs a new MonetaryAmount from a string, containing an optional CurrencyCode.
+  enum class ParsingMode : int8_t { kAmountMandatory, kAmountOptional };
+
+  /// Constructs a new MonetaryAmount from a string containing up to {amount, currency} and a parsing mode.
   /// - If a currency is not present, assume default CurrencyCode
   /// - If the currency is too long to fit in a CurrencyCode, exception will be raised
-  /// - If only a currency is given, invalid_argument exception will be raised when ifNoAmount == IfNoAmount::kThrow
+  /// - If only a currency is given, invalid_argument exception will be raised when parsingMode is kAmountMandatory
   /// - If given string is empty, it is equivalent to a default constructor
   ///
   /// A space can be present or not between the amount and the currency code.
@@ -89,7 +89,7 @@ class MonetaryAmount {
   ///           "-345.8909" -> -345.8909 units of no currency
   ///           "36.61INCH" -> 36.63 units of currency INCH
   ///           "36.6 1INCH" -> 36.6 units of currency 1INCH
-  explicit MonetaryAmount(std::string_view amountCurrencyStr, IfNoAmount ifNoAmount = IfNoAmount::kThrow);
+  explicit MonetaryAmount(std::string_view amountCurrencyStr, ParsingMode parsingMode = ParsingMode::kAmountMandatory);
 
   /// Constructs a new MonetaryAmount from a string representing the amount only and a currency code.
   /// Precision is calculated automatically.
@@ -250,7 +250,9 @@ class MonetaryAmount {
 
   /// Truncate the MonetaryAmount such that it will contain at most maxNbDecimals.
   /// Does nothing if maxNbDecimals is larger than current number of decimals
-  constexpr void truncate(int8_t maxNbDecimals) noexcept { sanitizeDecimals(nbDecimals(), maxNbDecimals); }
+  constexpr void truncate(int8_t maxNbDecimals) noexcept {
+    setNbDecimals(sanitizeDecimals(nbDecimals(), maxNbDecimals));
+  }
 
   /// Get a string on the currency of this amount
   [[nodiscard]] string currencyStr() const { return _curWithDecimals.str(); }
@@ -356,33 +358,37 @@ class MonetaryAmount {
   constexpr MonetaryAmount(bool, AmountType amount, CurrencyCode curWithDecimals) noexcept
       : _amount(amount), _curWithDecimals(curWithDecimals) {}
 
-  constexpr void sanitizeDecimals(int8_t nowNbDecimals, int8_t maxNbDecimals) noexcept {
+  constexpr int8_t sanitizeDecimals(int8_t nowNbDecimals, int8_t maxNbDecimals) noexcept {
     const int8_t nbDecimalsToTruncate = nowNbDecimals - maxNbDecimals;
     if (nbDecimalsToTruncate > 0) {
       _amount /= ipow10(static_cast<uint8_t>(nbDecimalsToTruncate));
       nowNbDecimals -= nbDecimalsToTruncate;
     }
-    simplifyDecimals(nowNbDecimals);
-  }
-
-  constexpr void simplifyDecimals(int8_t nbDecs) noexcept {
     if (_amount == 0) {
-      nbDecs = 0;
+      nowNbDecimals = 0;
     } else {
-      for (; nbDecs > 0 && _amount % 10 == 0; --nbDecs) {
+      for (; nowNbDecimals > 0 && _amount % 10 == 0; --nowNbDecimals) {
         _amount /= 10;
       }
     }
-    setNbDecimals(nbDecs);
+    return nowNbDecimals;
   }
 
-  constexpr void sanitizeIntegralPart() {
+  constexpr int8_t sanitizeIntegralPart(int8_t nbDecs) noexcept {
     if (_amount >= kMaxAmountFullNDigits) {
       if (!std::is_constant_evaluated()) {
         log::warn("Truncating last digit of integral part {} which is too big", _amount);
       }
       _amount /= 10;
+      if (nbDecs > 0) {
+        --nbDecs;
+      }
     }
+    return nbDecs;
+  }
+
+  constexpr void sanitize(int8_t nbDecimals) {
+    setNbDecimals(sanitizeIntegralPart(sanitizeDecimals(nbDecimals, maxNbDecimals())));
   }
 
   constexpr void setNbDecimals(int8_t nbDecs) { _curWithDecimals.uncheckedSetAdditionalBits(nbDecs); }
