@@ -9,10 +9,6 @@
 
 namespace cct::api {
 
-inline bool operator==(const RecentDeposit &lhs, const RecentDeposit &rhs) {
-  return lhs.amount() == rhs.amount() && lhs.timePoint() == rhs.timePoint();
-}
-
 class RecentDepositTest : public ::testing::Test {
  protected:
   void expectNotFound(MonetaryAmount ma) {

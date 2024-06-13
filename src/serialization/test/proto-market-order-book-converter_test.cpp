@@ -5,16 +5,17 @@
 #include <initializer_list>
 
 #include "amount-price.hpp"
+#include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
+#include "timedef.hpp"
 
 namespace cct {
 
 // TODO: factorize duplicated code from marketorderbook_test
 namespace {
 using AmountAtPriceVec = MarketOrderBook::AmountPerPriceVec;
-}  // namespace
 
 MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookLine> init) {
   MarketOrderBookLines marketOrderBookLines;
@@ -34,6 +35,7 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
 constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;
 }
+}  // namespace
 
 class ProtoMarketOrderBookTest : public ::testing::Test {
  protected:

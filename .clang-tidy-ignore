@@ -1,3 +1,6 @@
 **/json.hpp
 
+# Ignore all protobuf/gRPC generated source files
+*.pb.cc
+
 */_deps/*

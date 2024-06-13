@@ -75,6 +75,7 @@ curl_slist *ComputeCurlSListPtr(const CurlOptions::HttpHeaders &httpHeaders) {
     // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
     // (either there is at least one more key / value pair, either it's the last one and it's also fine as string is
     // guaranteed to be null-terminated since C++11)
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     curlListPtr = curl_slist_append(curlListPtr, httpHeader.key().data());
     if (curlListPtr == nullptr) {
       curl_slist_free_all(oldCurlListPtr);
@@ -213,6 +214,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   CURL *curl = reinterpret_cast<CURL *>(_handle);
 
+  // Note on below clang-tidy warning: we specify the size of the buffer thanks to CURLOPT_POSTFIELDSIZE
+  // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
   CurlSetLogIfError(curl, CURLOPT_POSTFIELDS, optsStr.data());
   CurlSetLogIfError(curl, CURLOPT_POSTFIELDSIZE, optsStr.size());
   CurlSetLogIfError(curl, CURLOPT_URL, modifiedURL.c_str());

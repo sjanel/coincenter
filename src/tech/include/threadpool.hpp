@@ -1,12 +1,15 @@
 #pragma once
 
+#include <concepts>
 #include <condition_variable>
 #include <exception>
 #include <functional>
 #include <future>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <ranges>
 #include <thread>
 #include <type_traits>
 
@@ -48,16 +51,23 @@ class ThreadPool {
   // Parallel version of std::transform with unary operation.
   // This function will first enqueue all the tasks at one, using waiting threads of the thread pool,
   // and then retrieves and moves the results to 'out', as for std::transform.
-  // Note: the objects passed in argument from InputIt are not copied and passed by reference (through
+  // Note: the objects passed in argument from input range are not copied and passed by reference (through
   // std::reference_wrapper)
-  template <class InputIt, class OutputIt, class UnaryOperation>
-  OutputIt parallelTransform(InputIt first, InputIt last, OutputIt out, UnaryOperation unary_op);
+  template <std::ranges::input_range InputRange, std::weakly_incrementable OutputIt,
+            std::copy_constructible UnaryOperation>
+    requires std::indirectly_writable<OutputIt,
+                                      std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>
+  OutputIt parallelTransform(InputRange&& r, OutputIt result, UnaryOperation op);
 
   // Parallel version of std::transform with binary operation.
-  // Note: the objects passed in argument from InputIt are not copied and passed by reference (through
+  // Note: the objects passed in argument from input ranges are not copied and passed by reference (through
   // std::reference_wrapper)
-  template <class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
-  OutputIt parallelTransform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out, BinaryOperation binary_op);
+  template <std::ranges::input_range InputRange1, std::ranges::input_range InputRange2,
+            std::weakly_incrementable OutputIt, std::copy_constructible BinaryOperation>
+    requires std::indirectly_writable<OutputIt,
+                                      std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
+                                                           std::ranges::range_reference_t<InputRange2>>>
+  OutputIt parallelTransform(InputRange1&& r1, InputRange2&& r2, OutputIt result, BinaryOperation op);
 
  private:
   using TasksQueue = std::queue<std::function<void()>>;
@@ -133,25 +143,40 @@ inline std::future<std::invoke_result_t<Func, Args...>> ThreadPool::enqueue(Func
   return res;
 }
 
-template <class InputIt, class OutputIt, class UnaryOperation>
-inline OutputIt ThreadPool::parallelTransform(InputIt first, InputIt last, OutputIt out, UnaryOperation unary_op) {
-  using FutureT = std::future<std::invoke_result_t<UnaryOperation, decltype(*first)>>;
+template <std::ranges::input_range InputRange, std::weakly_incrementable OutputIt,
+          std::copy_constructible UnaryOperation>
+  requires std::indirectly_writable<OutputIt,
+                                    std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>
+inline OutputIt ThreadPool::parallelTransform(InputRange&& r, OutputIt result, UnaryOperation op) {
+  using FutureT = std::future<std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
-  for (; first != last; ++first) {
-    futures.emplace_back(enqueue(unary_op, std::ref(*first)));
+  if constexpr (std::ranges::sized_range<InputRange>) {
+    futures.reserve(std::ranges::size(r));
   }
-  return retrieveAllResults(futures, out);
+  for (auto& v : r) {
+    futures.emplace_back(enqueue(op, std::ref(v)));
+  }
+  return retrieveAllResults(futures, result);
 }
 
-template <class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
-inline OutputIt ThreadPool::parallelTransform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt out,
-                                              BinaryOperation binary_op) {
-  using FutureT = std::future<std::invoke_result_t<BinaryOperation, decltype(*first1), decltype(*first2)>>;
+template <std::ranges::input_range InputRange1, std::ranges::input_range InputRange2,
+          std::weakly_incrementable OutputIt, std::copy_constructible BinaryOperation>
+  requires std::indirectly_writable<OutputIt,
+                                    std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
+                                                         std::ranges::range_reference_t<InputRange2>>>
+inline OutputIt ThreadPool::parallelTransform(InputRange1&& r1, InputRange2&& r2, OutputIt result, BinaryOperation op) {
+  using FutureT = std::future<std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
+                                                   std::ranges::range_reference_t<InputRange2>>>;
   SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
-  for (; first1 != last1; ++first1, ++first2) {
-    futures.emplace_back(enqueue(binary_op, std::ref(*first1), std::ref(*first2)));
+  if constexpr (std::ranges::sized_range<InputRange1>) {
+    futures.reserve(std::ranges::size(r1));
   }
-  return retrieveAllResults(futures, out);
+
+  auto it2 = std::ranges::begin(r2);
+  for (auto it1 = std::ranges::begin(r1), endIt1 = std::ranges::end(r1); it1 != endIt1; ++it1, ++it2) {
+    futures.emplace_back(enqueue(op, std::ref(*it1), std::ref(*it2)));
+  }
+  return retrieveAllResults(futures, result);
 }
 
 template <class Futures, class OutputIt>

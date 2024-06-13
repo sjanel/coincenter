@@ -121,6 +121,7 @@ Duration ParseDuration(std::string_view durationStr) {
   return ret;
 }
 
+namespace {
 template <class TimeUnitT>
 void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
   if (dur >= TimeUnitT(1)) {
@@ -131,6 +132,7 @@ void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
     dur -= TimeUnitT(nU);
   }
 }
+}  // namespace
 
 string DurationToString(Duration dur) {
   string ret;

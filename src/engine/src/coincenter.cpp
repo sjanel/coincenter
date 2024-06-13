@@ -63,9 +63,9 @@ void FillConversionTransferableCommandResults(const MonetaryAmountPerExchange &m
   }
 }
 
-}  // namespace
-
 volatile sig_atomic_t g_signalStatus = 0;
+
+}  // namespace
 
 // According to the standard, 'SignalHandler' function should have C linkage:
 // https://en.cppreference.com/w/cpp/utility/program/signal

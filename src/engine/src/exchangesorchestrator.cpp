@@ -31,7 +31,9 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "exchangeretriever.hpp"
+#include "market-timestamp-set.hpp"
 #include "market-trader-engine.hpp"
+#include "market-trading-global-result.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
@@ -40,6 +42,7 @@
 #include "replay-options.hpp"
 #include "requestsconfig.hpp"
 #include "threadpool.hpp"
+#include "time-window.hpp"
 #include "trade-range-stats.hpp"
 #include "tradedamounts.hpp"
 #include "tradeoptions.hpp"
@@ -130,7 +133,7 @@ ExchangeHealthCheckStatus ExchangesOrchestrator::healthCheck(ExchangeNameSpan ex
 
   ExchangeHealthCheckStatus ret(selectedExchanges.size());
 
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(),
                                 [](Exchange *exchange) { return std::make_pair(exchange, exchange->healthCheck()); });
 
   return ret;
@@ -142,9 +145,9 @@ ExchangeTickerMaps ExchangesOrchestrator::getTickerInformation(ExchangeNameSpan 
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
 
   ExchangeTickerMaps ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
-      [](Exchange *exchange) { return std::make_pair(exchange, exchange->queryAllApproximatedOrderBooks(1)); });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->queryAllApproximatedOrderBooks(1));
+  });
 
   return ret;
 }
@@ -159,7 +162,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
             equiCurrencyCode.isNeutral() ? "" : equiCurrencyCode);
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
+  _threadPool.parallelTransform(selectedExchanges, isMarketTradable.begin(),
                                 [mk](Exchange *exchange) { return exchange->queryTradableMarkets().contains(mk); });
 
   FilterVector(selectedExchanges, isMarketTradable);
@@ -175,7 +178,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
     }
     return std::make_tuple(exchange->name(), exchange->getOrderBook(mk, actualDepth), optConversionRate);
   };
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), marketOrderBooksFunc);
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), marketOrderBooksFunc);
   return ret;
 }
 
@@ -192,9 +195,9 @@ BalancePerExchange ExchangesOrchestrator::getBalance(ExchangeNameSpan privateExc
 
   SmallVector<BalancePortfolio, kTypicalNbPrivateAccounts> balancePortfolios(selectedExchanges.size());
 
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), balancePortfolios.begin(),
-      [&balanceOptions](Exchange *exchange) { return exchange->apiPrivate().getAccountBalance(balanceOptions); });
+  _threadPool.parallelTransform(selectedExchanges, balancePortfolios.begin(), [&balanceOptions](Exchange *exchange) {
+    return exchange->apiPrivate().getAccountBalance(balanceOptions);
+  });
 
   BalancePerExchange ret;
   ret.reserve(selectedExchanges.size());
@@ -237,9 +240,9 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(ExchangeNameSpan private
   FilterVector(depositInfoExchanges, canDepositCurrency);
 
   SmallVector<Wallet, kTypicalNbPrivateAccounts> walletPerExchange(depositInfoExchanges.size());
-  _threadPool.parallelTransform(
-      depositInfoExchanges.begin(), depositInfoExchanges.end(), walletPerExchange.begin(),
-      [depositCurrency](Exchange *exchange) { return exchange->apiPrivate().queryDepositWallet(depositCurrency); });
+  _threadPool.parallelTransform(depositInfoExchanges, walletPerExchange.begin(), [depositCurrency](Exchange *exchange) {
+    return exchange->apiPrivate().queryDepositWallet(depositCurrency);
+  });
   WalletPerExchange ret;
   ret.reserve(depositInfoExchanges.size());
   std::transform(depositInfoExchanges.begin(), depositInfoExchanges.end(),
@@ -256,11 +259,9 @@ ClosedOrdersPerExchange ExchangesOrchestrator::getClosedOrders(ExchangeNameSpan 
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   ClosedOrdersPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange,
-                              ClosedOrderSet(exchange->apiPrivate().queryClosedOrders(closedOrdersConstraints)));
-      });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&](Exchange *exchange) {
+    return std::make_pair(exchange, ClosedOrderSet(exchange->apiPrivate().queryClosedOrders(closedOrdersConstraints)));
+  });
 
   return ret;
 }
@@ -273,11 +274,9 @@ OpenedOrdersPerExchange ExchangesOrchestrator::getOpenedOrders(ExchangeNameSpan 
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   OpenedOrdersPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange,
-                              OpenedOrderSet(exchange->apiPrivate().queryOpenedOrders(openedOrdersConstraints)));
-      });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&](Exchange *exchange) {
+    return std::make_pair(exchange, OpenedOrderSet(exchange->apiPrivate().queryOpenedOrders(openedOrdersConstraints)));
+  });
 
   return ret;
 }
@@ -289,10 +288,9 @@ NbCancelledOrdersPerExchange ExchangesOrchestrator::cancelOrders(ExchangeNameSpa
   ExchangeRetriever::SelectedExchanges selectedExchanges = _exchangeRetriever.select(
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
   NbCancelledOrdersPerExchange nbOrdersCancelled(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), nbOrdersCancelled.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange, exchange->apiPrivate().cancelOpenedOrders(ordersConstraints));
-      });
+  _threadPool.parallelTransform(selectedExchanges, nbOrdersCancelled.begin(), [&](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->apiPrivate().cancelOpenedOrders(ordersConstraints));
+  });
 
   return nbOrdersCancelled;
 }
@@ -305,10 +303,9 @@ DepositsPerExchange ExchangesOrchestrator::getRecentDeposits(ExchangeNameSpan pr
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   DepositsPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange, exchange->apiPrivate().queryRecentDeposits(depositsConstraints));
-      });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->apiPrivate().queryRecentDeposits(depositsConstraints));
+  });
 
   return ret;
 }
@@ -321,10 +318,9 @@ WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(ExchangeNameSpan 
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   WithdrawsPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&](Exchange *exchange) {
-        return std::make_pair(exchange, exchange->apiPrivate().queryRecentWithdraws(withdrawsConstraints));
-      });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->apiPrivate().queryRecentWithdraws(withdrawsConstraints));
+  });
 
   return ret;
 }
@@ -335,12 +331,11 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(MonetaryAmount am
             ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MonetaryAmountPerExchange convertedAmountPerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), convertedAmountPerExchange.begin(),
-                                [amount, targetCurrencyCode](Exchange *exchange) {
-                                  const auto optConvertedAmount =
-                                      exchange->apiPublic().estimatedConvert(amount, targetCurrencyCode);
-                                  return std::make_pair(exchange, optConvertedAmount.value_or(MonetaryAmount{}));
-                                });
+  _threadPool.parallelTransform(
+      selectedExchanges, convertedAmountPerExchange.begin(), [amount, targetCurrencyCode](Exchange *exchange) {
+        const auto optConvertedAmount = exchange->apiPublic().estimatedConvert(amount, targetCurrencyCode);
+        return std::make_pair(exchange, optConvertedAmount.value_or(MonetaryAmount{}));
+      });
 
   return convertedAmountPerExchange;
 }
@@ -353,7 +348,7 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MonetaryAmountPerExchange convertedAmountPerExchange(selectedExchanges.size());
   _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), convertedAmountPerExchange.begin(),
+      selectedExchanges, convertedAmountPerExchange.begin(),
       [monetaryAmountPerExchangeToConvert, targetCurrencyCode](Exchange *exchange) {
         const auto startAmount = monetaryAmountPerExchangeToConvert[exchange->publicExchangePos()];
         const auto optConvertedAmount = startAmount.isDefault()
@@ -369,10 +364,9 @@ ConversionPathPerExchange ExchangesOrchestrator::getConversionPaths(Market mk, E
   log::info("Query {} conversion path from {}", mk, ConstructAccumulatedExchangeNames(exchangeNames));
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   ConversionPathPerExchange conversionPathPerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), conversionPathPerExchange.begin(), [mk](Exchange *exchange) {
-        return std::make_pair(exchange, exchange->apiPublic().findMarketsPath(mk.base(), mk.quote()));
-      });
+  _threadPool.parallelTransform(selectedExchanges, conversionPathPerExchange.begin(), [mk](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->apiPublic().findMarketsPath(mk.base(), mk.quote()));
+  });
 
   return conversionPathPerExchange;
 }
@@ -383,9 +377,9 @@ CurrenciesPerExchange ExchangesOrchestrator::getCurrenciesPerExchange(ExchangeNa
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
 
   CurrenciesPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(),
-      [](Exchange *exchange) { return std::make_pair(exchange, exchange->queryTradableCurrencies()); });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->queryTradableCurrencies());
+  });
 
   return ret;
 }
@@ -413,8 +407,7 @@ MarketsPerExchange ExchangesOrchestrator::getMarketsPerExchange(CurrencyCode cur
     });
     return std::make_pair(exchange, std::move(ret));
   };
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), marketsPerExchange.begin(),
-                                marketsWithCur);
+  _threadPool.parallelTransform(selectedExchanges, marketsPerExchange.begin(), marketsWithCur);
   return marketsPerExchange;
 }
 
@@ -423,16 +416,16 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingCurrency
                                                                                  bool shouldBeWithdrawable) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isCurrencyTradablePerExchange;
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), isCurrencyTradablePerExchange.begin(),
-      [currencyCode, shouldBeWithdrawable](Exchange *exchange) {
-        if (currencyCode.isNeutral()) {
-          return true;
-        }
-        CurrencyExchangeFlatSet currencies = exchange->queryTradableCurrencies();
-        auto foundIt = currencies.find(currencyCode);
-        return foundIt != currencies.end() && (!shouldBeWithdrawable || foundIt->canWithdraw());
-      });
+  _threadPool.parallelTransform(selectedExchanges, isCurrencyTradablePerExchange.begin(),
+                                [currencyCode, shouldBeWithdrawable](Exchange *exchange) {
+                                  if (currencyCode.isNeutral()) {
+                                    return true;
+                                  }
+                                  CurrencyExchangeFlatSet currencies = exchange->queryTradableCurrencies();
+                                  auto foundIt = currencies.find(currencyCode);
+                                  return foundIt != currencies.end() &&
+                                         (!shouldBeWithdrawable || foundIt->canWithdraw());
+                                });
 
   // Erases Exchanges which do not propose asked currency
   FilterVector(selectedExchanges, isCurrencyTradablePerExchange);
@@ -443,7 +436,7 @@ UniquePublicSelectedExchanges ExchangesOrchestrator::getExchangesTradingMarket(M
                                                                                ExchangeNameSpan exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   std::array<bool, kNbSupportedExchanges> isMarketTradablePerExchange;
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), isMarketTradablePerExchange.begin(),
+  _threadPool.parallelTransform(selectedExchanges, isMarketTradablePerExchange.begin(),
                                 [mk](Exchange *exchange) { return exchange->queryTradableMarkets().contains(mk); });
 
   // Erases Exchanges which do not propose asked market
@@ -529,12 +522,11 @@ ExchangeAmountPairVector ComputeExchangeAmountPairVector(CurrencyCode fromCurren
   return exchangeAmountPairVector;
 }
 
-TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAmountMarketsPathVector::iterator first,
-                                              ExchangeAmountMarketsPathVector::iterator last, CurrencyCode toCurrency,
-                                              const TradeOptions &tradeOptions) {
-  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(last - first));
+TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, std::span<ExchangeAmountMarkets> input,
+                                              CurrencyCode toCurrency, const TradeOptions &tradeOptions) {
+  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(input.size()));
 
-  threadPool.parallelTransform(first, last, tradeResultPerExchange.begin(),
+  threadPool.parallelTransform(input, tradeResultPerExchange.begin(),
                                [toCurrency, &tradeOptions](ExchangeAmountMarkets &exchangeAmountMarketsPath) {
                                  Exchange *exchange = exchangeAmountMarketsPath.exchange;
                                  const MonetaryAmount from = exchangeAmountMarketsPath.amount;
@@ -548,14 +540,13 @@ TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, ExchangeAm
   return tradeResultPerExchange;
 }
 
-template <class Iterator>
-TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, Iterator first, Iterator last,
-                                              const TradeOptions &tradeOptions) {
-  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(last - first));
+TradeResultPerExchange LaunchAndCollectTrades(ThreadPool &threadPool, auto &trades, const TradeOptions &tradeOptions) {
+  TradeResultPerExchange tradeResultPerExchange(static_cast<TradeResultPerExchange::size_type>(trades.size()));
 
-  using ObjType = decltype(*first);
+  using ObjType = std::ranges::range_value_t<decltype(trades)>;
+
   threadPool.parallelTransform(
-      first, last, tradeResultPerExchange.begin(), [&tradeOptions](ObjType &exchangeAmountMarketsPath) {
+      trades, tradeResultPerExchange.begin(), [&tradeOptions](ObjType &exchangeAmountMarketsPath) {
         Exchange *exchange = exchangeAmountMarketsPath.exchange;
         const MonetaryAmount from = exchangeAmountMarketsPath.amount;
         const CurrencyCode toCurrency = exchangeAmountMarketsPath.currency;
@@ -635,7 +626,9 @@ TradeResultPerExchange ExchangesOrchestrator::trade(MonetaryAmount from, bool is
   }
 
   /// We have enough total available amount. Launch all trades in parallel
-  return LaunchAndCollectTrades(_threadPool, exchangeAmountMarketsPathVector.begin(), it, toCurrency, tradeOptions);
+  return LaunchAndCollectTrades(_threadPool,
+                                std::span<ExchangeAmountMarkets>(exchangeAmountMarketsPathVector.begin(), it),
+                                toCurrency, tradeOptions);
 }
 
 TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount, ExchangeNameSpan privateExchangeNames,
@@ -736,7 +729,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
     log::warn("Will trade {} < {} amount", endAmount - remEndAmount, endAmount);
   }
 
-  return LaunchAndCollectTrades(_threadPool, trades.begin(), trades.end(), tradeOptions);
+  return LaunchAndCollectTrades(_threadPool, trades, tradeOptions);
 }
 
 TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
@@ -751,8 +744,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
   MonetaryAmount remStartAmount = startAmount;
   if (!exchangeAmountPairVector.empty()) {
     // Sort exchanges from largest to lowest available amount
-    std::ranges::stable_sort(exchangeAmountPairVector,
-                             [](const auto &lhs, const auto &rhs) { return lhs.second > rhs.second; });
+    std::ranges::stable_sort(exchangeAmountPairVector, std::greater{}, [](const auto &p) { return p.second; });
 
     ExchangeRetriever::PublicExchangesVec publicExchanges =
         SelectUniquePublicExchanges(_exchangeRetriever, exchangeAmountPairVector, false);  // unsorted
@@ -824,7 +816,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
     log::warn("Will trade {} < {} amount", startAmount - remStartAmount, startAmount);
   }
 
-  return LaunchAndCollectTrades(_threadPool, trades.begin(), trades.end(), tradeOptions);
+  return LaunchAndCollectTrades(_threadPool, trades, tradeOptions);
 }
 
 TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper(ExchangeNameSpan privateExchangeNames,
@@ -835,11 +827,10 @@ TradedAmountsVectorWithFinalAmountPerExchange ExchangesOrchestrator::dustSweeper
       ExchangeRetriever::Order::kInitial, privateExchangeNames, ExchangeRetriever::Filter::kWithAccountWhenEmpty);
 
   TradedAmountsVectorWithFinalAmountPerExchange ret(selExchanges.size());
-  _threadPool.parallelTransform(selExchanges.begin(), selExchanges.end(), ret.begin(),
-                                [currencyCode](Exchange *exchange) {
-                                  return std::make_pair(static_cast<const Exchange *>(exchange),
-                                                        exchange->apiPrivate().queryDustSweeper(currencyCode));
-                                });
+  _threadPool.parallelTransform(selExchanges, ret.begin(), [currencyCode](Exchange *exchange) {
+    return std::make_pair(static_cast<const Exchange *>(exchange),
+                          exchange->apiPrivate().queryDustSweeper(currencyCode));
+  });
 
   return ret;
 }
@@ -859,12 +850,13 @@ DeliveredWithdrawInfoWithExchanges ExchangesOrchestrator::withdraw(MonetaryAmoun
 
   Exchange &fromExchange = _exchangeRetriever.retrieveUniqueCandidate(fromPrivateExchangeName);
   Exchange &toExchange = _exchangeRetriever.retrieveUniqueCandidate(toPrivateExchangeName);
-  const std::array<Exchange *, 2> exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
+  const std::array exchangePair = {std::addressof(fromExchange), std::addressof(toExchange)};
   if (exchangePair.front() == exchangePair.back()) {
     throw exception("Cannot withdraw to the same account");
   }
+
   std::array<CurrencyExchangeFlatSet, 2> currencyExchangeSets;
-  _threadPool.parallelTransform(exchangePair.begin(), exchangePair.end(), currencyExchangeSets.begin(),
+  _threadPool.parallelTransform(exchangePair, currencyExchangeSets.begin(),
                                 [](Exchange *exchange) { return exchange->queryTradableCurrencies(); });
 
   DeliveredWithdrawInfoWithExchanges ret{{&fromExchange, &toExchange}, DeliveredWithdrawInfo{}};
@@ -905,20 +897,18 @@ MonetaryAmountByCurrencySetPerExchange ExchangesOrchestrator::getWithdrawFees(Cu
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingCurrency(currencyCode, exchangeNames, true);
 
   MonetaryAmountByCurrencySetPerExchange withdrawFeesPerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), withdrawFeesPerExchange.begin(),
-                                [currencyCode](Exchange *exchange) {
-                                  MonetaryAmountByCurrencySet withdrawFees;
-                                  if (currencyCode.isNeutral()) {
-                                    withdrawFees = exchange->queryWithdrawalFees();
-                                  } else {
-                                    std::optional<MonetaryAmount> optWithdrawFee =
-                                        exchange->queryWithdrawalFee(currencyCode);
-                                    if (optWithdrawFee) {
-                                      withdrawFees.insert(*optWithdrawFee);
-                                    }
-                                  }
-                                  return std::make_pair(exchange, std::move(withdrawFees));
-                                });
+  _threadPool.parallelTransform(selectedExchanges, withdrawFeesPerExchange.begin(), [currencyCode](Exchange *exchange) {
+    MonetaryAmountByCurrencySet withdrawFees;
+    if (currencyCode.isNeutral()) {
+      withdrawFees = exchange->queryWithdrawalFees();
+    } else {
+      std::optional<MonetaryAmount> optWithdrawFee = exchange->queryWithdrawalFee(currencyCode);
+      if (optWithdrawFee) {
+        withdrawFees.insert(*optWithdrawFee);
+      }
+    }
+    return std::make_pair(exchange, std::move(withdrawFees));
+  });
   return withdrawFeesPerExchange;
 }
 
@@ -928,9 +918,9 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLast24hTradedVolumePerExchan
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(mk, exchangeNames);
 
   MonetaryAmountPerExchange tradedVolumePerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), tradedVolumePerExchange.begin(),
-      [mk](Exchange *exchange) { return std::make_pair(exchange, exchange->queryLast24hVolume(mk)); });
+  _threadPool.parallelTransform(selectedExchanges, tradedVolumePerExchange.begin(), [mk](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->queryLast24hVolume(mk));
+  });
   return tradedVolumePerExchange;
 }
 
@@ -942,10 +932,9 @@ TradesPerExchange ExchangesOrchestrator::getLastTradesPerExchange(Market mk, Exc
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(mk, exchangeNames);
 
   TradesPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [mk, nbLastTrades](Exchange *exchange) {
-        return std::make_pair(static_cast<const Exchange *>(exchange), exchange->getLastTrades(mk, nbLastTrades));
-      });
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [mk, nbLastTrades](Exchange *exchange) {
+    return std::make_pair(static_cast<const Exchange *>(exchange), exchange->getLastTrades(mk, nbLastTrades));
+  });
 
   return ret;
 }
@@ -955,9 +944,9 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLastPricePerExchange(Market 
   UniquePublicSelectedExchanges selectedExchanges = getExchangesTradingMarket(mk, exchangeNames);
 
   MonetaryAmountPerExchange lastPricePerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), lastPricePerExchange.begin(),
-      [mk](Exchange *exchange) { return std::make_pair(exchange, exchange->queryLastPrice(mk)); });
+  _threadPool.parallelTransform(selectedExchanges, lastPricePerExchange.begin(), [mk](Exchange *exchange) {
+    return std::make_pair(exchange, exchange->queryLastPrice(mk));
+  });
   return lastPricePerExchange;
 }
 
@@ -967,7 +956,7 @@ MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<
 
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
 
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), isMarketTradable.begin(),
+  _threadPool.parallelTransform(selectedExchanges, isMarketTradable.begin(),
                                 [&marketPerPublicExchange](Exchange *exchange) {
                                   Market market = marketPerPublicExchange[exchange->publicExchangePos()];
                                   return market.isDefined() && exchange->queryTradableMarkets().contains(market);
@@ -976,23 +965,22 @@ MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<
   FilterVector(selectedExchanges, isMarketTradable);
 
   MarketDataPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), ret.begin(), [&marketPerPublicExchange](Exchange *exchange) {
-        if (!exchange->exchangeConfig().withMarketDataSerialization()) {
-          log::warn("Calling market-data on {} with data serialization disabled", exchange->name());
-        }
-        // Call order book and last trades sequentially for this exchange
-        Market market = marketPerPublicExchange[exchange->publicExchangePos()];
+  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&marketPerPublicExchange](Exchange *exchange) {
+    if (!exchange->exchangeConfig().withMarketDataSerialization()) {
+      log::warn("Calling market-data on {} with data serialization disabled", exchange->name());
+    }
+    // Call order book and last trades sequentially for this exchange
+    Market market = marketPerPublicExchange[exchange->publicExchangePos()];
 
-        // Use local variables to ensure deterministic order of api calls (orderbook then last trades).
-        // The order of api calls itself is not important, but we want to keep the same order for repetitive calls.
-        // Indeed in C++, the order of parameter evaluation is undefined, and we don't want that it changes between two
-        // calls even if it's very unlikely.
-        auto orderBook = exchange->getOrderBook(market);
-        auto lastTrades = exchange->getLastTrades(market);
+    // Use local variables to ensure deterministic order of api calls (orderbook then last trades).
+    // The order of api calls itself is not important, but we want to keep the same order for repetitive calls.
+    // Indeed in C++, the order of parameter evaluation is undefined, and we don't want that it changes between two
+    // calls even if it's very unlikely.
+    auto orderBook = exchange->getOrderBook(market);
+    auto lastTrades = exchange->getLastTrades(market);
 
-        return std::make_pair(exchange, std::make_pair(std::move(orderBook), std::move(lastTrades)));
-      });
+    return std::make_pair(exchange, std::make_pair(std::move(orderBook), std::move(lastTrades)));
+  });
   return ret;
 }
 
@@ -1002,16 +990,15 @@ MarketTimestampSetsPerExchange ExchangesOrchestrator::pullAvailableMarketsForRep
             timeWindow);
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
   MarketTimestampSetsPerExchange marketTimestampSetsPerExchange(selectedExchanges.size());
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(),
-                                marketTimestampSetsPerExchange.begin(), [timeWindow](Exchange *exchange) {
-                                  auto &apiPublic = exchange->apiPublic();
+  _threadPool.parallelTransform(
+      selectedExchanges, marketTimestampSetsPerExchange.begin(), [timeWindow](Exchange *exchange) {
+        auto &apiPublic = exchange->apiPublic();
 
-                                  auto orderBooks = apiPublic.pullMarketOrderBooksMarkets(timeWindow);
-                                  auto trades = apiPublic.pullTradeMarkets(timeWindow);
+        auto orderBooks = apiPublic.pullMarketOrderBooksMarkets(timeWindow);
+        auto trades = apiPublic.pullTradeMarkets(timeWindow);
 
-                                  return std::make_pair(exchange,
-                                                        MarketTimestampSets{std::move(orderBooks), std::move(trades)});
-                                });
+        return std::make_pair(exchange, MarketTimestampSets{std::move(orderBooks), std::move(trades)});
+      });
   return marketTimestampSetsPerExchange;
 }
 
@@ -1023,8 +1010,7 @@ MarketTradeRangeStatsPerExchange ExchangesOrchestrator::traderConsumeRange(
   MarketTradeRangeStatsPerExchange tradeRangeResultsPerExchange(selectedExchanges.size());
 
   _threadPool.parallelTransform(
-      selectedExchanges.begin(), selectedExchanges.end(), marketTraderEngines.begin(),
-      tradeRangeResultsPerExchange.begin(),
+      selectedExchanges, marketTraderEngines, tradeRangeResultsPerExchange.begin(),
       [subTimeWindow, &replayOptions](Exchange *exchange, MarketTraderEngine &marketTraderEngine) {
         Market market = marketTraderEngine.market();
         auto &apiPublic = exchange->apiPublic();
@@ -1066,20 +1052,19 @@ MarketTradingGlobalResultPerExchange ExchangesOrchestrator::getMarketTraderResul
 
   MarketTradingResultPerExchange marketTradingResultPerExchange(selectedExchanges.size());
 
-  _threadPool.parallelTransform(selectedExchanges.begin(), selectedExchanges.end(), marketTraderEngines.begin(),
-                                marketTradingResultPerExchange.begin(),
+  _threadPool.parallelTransform(selectedExchanges, marketTraderEngines, marketTradingResultPerExchange.begin(),
                                 [](const Exchange *exchange, MarketTraderEngine &marketTraderEngine) {
                                   return std::make_pair(exchange, marketTraderEngine.finalizeAndComputeResult());
                                 });
 
   MarketTradingGlobalResultPerExchange marketTradingGlobalResultPerExchange(selectedExchanges.size());
-  std::transform(marketTradingResultPerExchange.begin(), marketTradingResultPerExchange.end(),
-                 tradeRangeStatsPerExchange.begin(), marketTradingGlobalResultPerExchange.begin(),
-                 [](auto &exchangeMarketTradingResult, auto &exchangeTradeRangeStats) {
-                   return std::make_pair(exchangeMarketTradingResult.first,
-                                         MarketTradingGlobalResult{std::move(exchangeMarketTradingResult.second),
-                                                                   std::move(exchangeTradeRangeStats.second)});
-                 });
+  std::ranges::transform(
+      marketTradingResultPerExchange, tradeRangeStatsPerExchange, marketTradingGlobalResultPerExchange.begin(),
+      [](auto &exchangeMarketTradingResult, auto &exchangeTradeRangeStats) {
+        return std::make_pair(exchangeMarketTradingResult.first,
+                              MarketTradingGlobalResult{std::move(exchangeMarketTradingResult.second),
+                                                        std::move(exchangeTradeRangeStats.second)});
+      });
 
   return marketTradingGlobalResultPerExchange;
 }

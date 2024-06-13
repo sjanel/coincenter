@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <span>
 #include <utility>
 
 #include "cct_exception.hpp"
@@ -9,6 +10,7 @@
 #include "exchangeconfig.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
+#include "stringconv.hpp"
 #include "timedef.hpp"
 #include "trader-command.hpp"
 #include "tradeside.hpp"
