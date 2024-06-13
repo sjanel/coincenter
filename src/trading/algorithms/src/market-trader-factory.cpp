@@ -4,6 +4,7 @@
 #include <span>
 #include <string_view>
 
+#include "abstract-market-trader.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "dummy-market-trader.hpp"
 #include "example-market-trader.hpp"

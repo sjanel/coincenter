@@ -86,7 +86,7 @@ TEST(ThreadPoolTest, ParallelTransformRandomInputIt) {
   std::iota(data.begin(), data.end(), 0);
   vector<int> res(data.size());
 
-  threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
+  threadPool.parallelTransform(data, res.begin(), SlowDouble);
 
   for (int elem = 0; elem < kNbElems; ++elem) {
     EXPECT_EQ(2 * data[elem], res[elem]);
@@ -100,7 +100,7 @@ TEST(ThreadPoolTest, ParallelTransformForwardInputIt) {
   std::iota(data.begin(), data.end(), 0);
 
   std::forward_list<int> res(kNbElems);
-  threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
+  threadPool.parallelTransform(data, res.begin(), SlowDouble);
 
   for (auto dataIt = data.begin(), resIt = res.begin(); dataIt != data.end(); ++dataIt, ++resIt) {
     EXPECT_EQ(2 * *dataIt, *resIt);
@@ -117,7 +117,7 @@ TEST(ThreadPoolTest, ParallelTransformException) {
   bool exceptionThrown = false;
 
   try {
-    threadPool.parallelTransform(data.begin(), data.end(), res.begin(), SlowDouble);
+    threadPool.parallelTransform(data, res.begin(), SlowDouble);
   } catch (...) {
     exceptionThrown = true;
   }
@@ -137,7 +137,7 @@ TEST(ThreadPoolTest, ParallelTransformBinaryOperation) {
   std::iota(data2.begin(), data2.end(), 3);
 
   vector<int> res(kNbElems);
-  threadPool.parallelTransform(data1.begin(), data1.end(), data2.begin(), res.begin(), SlowAdd);
+  threadPool.parallelTransform(data1, data2, res.begin(), SlowAdd);
 
   auto resIt = res.begin();
   auto data1It = data1.begin();

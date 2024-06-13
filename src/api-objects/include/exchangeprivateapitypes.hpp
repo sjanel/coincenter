@@ -9,6 +9,7 @@
 #include "withdraw.hpp"
 
 namespace cct {
+
 using Deposits = vector<Deposit>;
 using DepositsSet = FlatSet<Deposit>;
 
@@ -27,4 +28,5 @@ struct TradedAmountsVectorWithFinalAmount {
   TradedAmountsVector tradedAmountsVector;
   MonetaryAmount finalAmount;
 };
+
 }  // namespace cct

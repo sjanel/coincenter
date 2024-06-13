@@ -26,7 +26,6 @@
 #include "curlpostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
-#include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"

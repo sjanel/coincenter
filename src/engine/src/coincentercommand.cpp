@@ -12,7 +12,6 @@
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
 #include "replay-options.hpp"
-#include "timedef.hpp"
 #include "tradeoptions.hpp"
 #include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"

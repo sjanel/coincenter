@@ -42,7 +42,6 @@
 #include "exchangepublicapitypes.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
-#include "ipow.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ndigits.hpp"

@@ -46,31 +46,32 @@
 #include "withdrawordeposit.hpp"
 
 namespace cct {
-inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
-  return lhs.withdrawId() == rhs.withdrawId();
-}
 
-inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
+static inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
   BalancePortfolio ret = balancePortfolio;
   ret += tradedAmounts.to;
   ret += -tradedAmounts.from;
   return ret;
 }
 
-inline bool operator==(const TradedAmountsVectorWithFinalAmount &lhs, const TradedAmountsVectorWithFinalAmount &rhs) {
+static inline bool operator==(const TradedAmountsVectorWithFinalAmount &lhs,
+                              const TradedAmountsVectorWithFinalAmount &rhs) {
   return lhs.finalAmount == rhs.finalAmount && lhs.tradedAmountsVector == rhs.tradedAmountsVector;
 }
 
+static inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
+  return lhs.withdrawId() == rhs.withdrawId();
+}
 }  // namespace cct
 
 namespace cct::api {
 
-inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
+static inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
   // We don't compare on value userRef which is set from a timestamp
   return lhs.mk == rhs.mk && lhs.side == rhs.side;
 }
 
-inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
+static inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
   return lhs.tradeContext == rhs.tradeContext && lhs.options == rhs.options;
 }
 
@@ -442,11 +443,11 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
   EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), partialMatchedTradedAmounts);
 }
 
-inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+static inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+static inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 

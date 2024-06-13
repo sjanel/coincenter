@@ -4,6 +4,7 @@
 #include "market-data-view.hpp"
 #include "market-trader-engine-state.hpp"
 #include "trader-command.hpp"
+#include "tradeside.hpp"
 
 namespace cct {
 
