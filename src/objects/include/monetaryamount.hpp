@@ -376,12 +376,11 @@ class MonetaryAmount {
 
   constexpr int8_t sanitizeIntegralPart(int8_t nbDecs) noexcept {
     if (_amount >= kMaxAmountFullNDigits) {
-      if (!std::is_constant_evaluated()) {
-        log::warn("Truncating last digit of integral part {} which is too big", _amount);
-      }
       _amount /= 10;
       if (nbDecs > 0) {
         --nbDecs;
+      } else if (!std::is_constant_evaluated()) {
+        log::warn("Truncating last digit of integral part {} which is too big", _amount);
       }
     }
     return nbDecs;
