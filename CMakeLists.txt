@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 # cmake does not currently support version suffixes (for dev / rc releases for instance.)
 # Github actions will detect if version has 'tweak' value (3 '.' in version) 
 # in order to avoid pushing Docker image for versions in development.
-project(coincenter VERSION 3.24.0
+project(coincenter VERSION 3.25.0.0
   DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
   LANGUAGES CXX)
 
