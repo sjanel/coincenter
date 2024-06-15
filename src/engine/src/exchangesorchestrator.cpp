@@ -744,7 +744,8 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
   MonetaryAmount remStartAmount = startAmount;
   if (!exchangeAmountPairVector.empty()) {
     // Sort exchanges from largest to lowest available amount
-    std::ranges::stable_sort(exchangeAmountPairVector, std::greater{}, [](const auto &p) { return p.second; });
+    std::ranges::stable_sort(exchangeAmountPairVector, std::greater{},
+                             [](const auto &exchangeAmount) { return exchangeAmount.second; });
 
     ExchangeRetriever::PublicExchangesVec publicExchanges =
         SelectUniquePublicExchanges(_exchangeRetriever, exchangeAmountPairVector, false);  // unsorted

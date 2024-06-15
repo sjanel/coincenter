@@ -209,16 +209,16 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
   EXPECT_FALSE(deliveredWithdrawInfo.hasBeenInitiated());
 }
 
-inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
+static inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
 namespace api {
-inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+static inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+static inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 }  // namespace api

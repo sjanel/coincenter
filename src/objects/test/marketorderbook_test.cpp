@@ -31,9 +31,10 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
 
   return marketOrderBookLines;
 }
+
 }  // namespace
 
-constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
+static constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
   return lhs.amount == rhs.amount && lhs.price == rhs.price;
 }
 
