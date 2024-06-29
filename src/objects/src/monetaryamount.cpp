@@ -69,11 +69,13 @@ inline int ParseNegativeChar(std::string_view &amountStr) {
 }
 
 inline MonetaryAmount::AmountType HeuristicRounding(std::size_t dotPos, std::string_view &amountStr) {
+  static constexpr std::string_view kHeuristicRoundingPatterns[] = {"000", "999"};
+
   std::size_t bestFindPos = 0;
-  for (std::string_view pattern : {"000", "999"}) {
+  for (std::string_view pattern : kHeuristicRoundingPatterns) {
     std::size_t findPos = amountStr.rfind(pattern);
     if (findPos != std::string_view::npos && findPos > dotPos) {
-      while (amountStr[findPos - 1] == pattern.front()) {
+      while (amountStr[findPos - 1] == amountStr[findPos]) {
         --findPos;
       }
       if (amountStr[findPos - 1] == '.') {
@@ -84,7 +86,6 @@ inline MonetaryAmount::AmountType HeuristicRounding(std::size_t dotPos, std::str
   }
   if (bestFindPos != 0) {
     const bool roundingUp = amountStr[bestFindPos] == '9';
-    log::trace("Heuristic rounding {} for {}", roundingUp ? "up" : "down", amountStr);
     amountStr.remove_suffix(amountStr.size() - bestFindPos);
     if (roundingUp) {
       return 1;

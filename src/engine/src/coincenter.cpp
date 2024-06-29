@@ -9,6 +9,7 @@
 #include <thread>
 #include <utility>
 
+#include "algorithm-name-iterator.hpp"
 #include "balanceoptions.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
@@ -37,7 +38,6 @@
 #include "query-result-type-helpers.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
-#include "replay-algorithm-name-iterator.hpp"
 #include "replay-options.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
@@ -618,8 +618,8 @@ void Coincenter::replay(const AbstractMarketTraderFactory &marketTraderFactory, 
 
   MarketSet allMarkets = ComputeAllMarkets(marketTimestampSetsPerExchange);
 
-  ReplayAlgorithmNameIterator replayAlgorithmNameIterator(replayOptions.algorithmNames(),
-                                                          marketTraderFactory.allSupportedAlgorithms());
+  AlgorithmNameIterator replayAlgorithmNameIterator(replayOptions.algorithmNames(),
+                                                    marketTraderFactory.allSupportedAlgorithms());
 
   while (replayAlgorithmNameIterator.hasNext()) {
     std::string_view algorithmName = replayAlgorithmNameIterator.next();
@@ -629,8 +629,7 @@ void Coincenter::replay(const AbstractMarketTraderFactory &marketTraderFactory, 
 
       // Create the MarketTraderEngines based on this market, filtering out exchanges without available amount to
       // trade
-      MarketTraderEngineVector marketTraderEngines =
-          createMarketTraderEngines(replayOptions, replayMarket, exchangesWithThisMarketData);
+      auto marketTraderEngines = createMarketTraderEngines(replayOptions, replayMarket, exchangesWithThisMarketData);
 
       replayAlgorithm(marketTraderFactory, algorithmName, replayOptions, marketTraderEngines,
                       exchangesWithThisMarketData);
@@ -688,10 +687,10 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
 
   MarketTraderEngineVector marketTraderEngines;
   for (decltype(nbExchanges) exchangePos = 0; exchangePos < nbExchanges; ++exchangePos) {
-    const MonetaryAmount startBaseAmount =
+    const auto startBaseAmount =
         isValidateOnly ? MonetaryAmount{0, market.base()}
                        : ComputeStartAmount(market.base(), convertedBaseAmountPerExchange[exchangePos].second);
-    const MonetaryAmount startQuoteAmount =
+    const auto startQuoteAmount =
         isValidateOnly ? MonetaryAmount{0, market.quote()}
                        : ComputeStartAmount(market.quote(), convertedQuoteAmountPerExchange[exchangePos].second);
 

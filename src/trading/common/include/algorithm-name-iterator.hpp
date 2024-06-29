@@ -8,9 +8,9 @@ namespace cct {
 
 /// Convenient class to iterate on the algorithm names, comma separated.
 /// If 'algorithmNames' is empty, it will loop on all available ones (given by 'allAlgorithms')
-class ReplayAlgorithmNameIterator {
+class AlgorithmNameIterator {
  public:
-  ReplayAlgorithmNameIterator(std::string_view algorithmNames, std::span<const std::string_view> allAlgorithms);
+  AlgorithmNameIterator(std::string_view algorithmNames, std::span<const std::string_view> allAlgorithms);
 
   /// Returns true if and only if there is at least one additional algorithm name to iterate on.
   bool hasNext() const;

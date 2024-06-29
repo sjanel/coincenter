@@ -1,4 +1,4 @@
-#include "replay-algorithm-name-iterator.hpp"
+#include "algorithm-name-iterator.hpp"
 
 #include <gtest/gtest.h>
 
@@ -7,20 +7,20 @@
 #include "cct_exception.hpp"
 
 namespace cct {
-class ReplayAlgorithmNameIteratorTest : public ::testing::Test {
+class AlgorithmNameIteratorTest : public ::testing::Test {
  protected:
   static constexpr std::string_view kInvalidAlgorithmNames[] = {"any", "so-what,"};
   static constexpr std::string_view kAlgorithmNames[] = {"any",  "so-what", "angry",
                                                          "bird", "Jack",    "a-more-complex algorithm Name"};
 };
 
-TEST_F(ReplayAlgorithmNameIteratorTest, AlgorithmNamesValidity) {
-  EXPECT_THROW(ReplayAlgorithmNameIterator("", kInvalidAlgorithmNames), exception);
-  EXPECT_NO_THROW(ReplayAlgorithmNameIterator("", kAlgorithmNames));
+TEST_F(AlgorithmNameIteratorTest, AlgorithmNamesValidity) {
+  EXPECT_THROW(AlgorithmNameIterator("", kInvalidAlgorithmNames), exception);
+  EXPECT_NO_THROW(AlgorithmNameIterator("", kAlgorithmNames));
 }
 
-TEST_F(ReplayAlgorithmNameIteratorTest, IteratorWithAll) {
-  ReplayAlgorithmNameIterator it("", kAlgorithmNames);
+TEST_F(AlgorithmNameIteratorTest, IteratorWithAll) {
+  AlgorithmNameIterator it("", kAlgorithmNames);
 
   int algorithmPos = 0;
   while (it.hasNext()) {
@@ -50,8 +50,8 @@ TEST_F(ReplayAlgorithmNameIteratorTest, IteratorWithAll) {
   EXPECT_EQ(algorithmPos, 6);
 }
 
-TEST_F(ReplayAlgorithmNameIteratorTest, IteratorWithUniqueAlgorithmSpecified) {
-  ReplayAlgorithmNameIterator it("so-What", kAlgorithmNames);
+TEST_F(AlgorithmNameIteratorTest, IteratorWithUniqueAlgorithmSpecified) {
+  AlgorithmNameIterator it("so-What", kAlgorithmNames);
 
   int algorithmPos = 0;
   while (it.hasNext()) {
@@ -71,8 +71,8 @@ TEST_F(ReplayAlgorithmNameIteratorTest, IteratorWithUniqueAlgorithmSpecified) {
   EXPECT_EQ(algorithmPos, 1);
 }
 
-TEST_F(ReplayAlgorithmNameIteratorTest, IteratorWithSpecifiedList) {
-  ReplayAlgorithmNameIterator it("Jack,whatever,so-what,some-algorithmNameThatIsNotInAll,with spaces", kAlgorithmNames);
+TEST_F(AlgorithmNameIteratorTest, IteratorWithSpecifiedList) {
+  AlgorithmNameIterator it("Jack,whatever,so-what,some-algorithmNameThatIsNotInAll,with spaces", kAlgorithmNames);
 
   int algorithmPos = 0;
   while (it.hasNext()) {

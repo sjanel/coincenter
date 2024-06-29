@@ -1,4 +1,4 @@
-#include "replay-algorithm-name-iterator.hpp"
+#include "algorithm-name-iterator.hpp"
 
 #include <algorithm>
 #include <span>
@@ -20,8 +20,8 @@ auto FindNextSeparatorPos(std::string_view str, std::string_view::size_type pos 
 }
 }  // namespace
 
-ReplayAlgorithmNameIterator::ReplayAlgorithmNameIterator(std::string_view algorithmNames,
-                                                         std::span<const std::string_view> allAlgorithms)
+AlgorithmNameIterator::AlgorithmNameIterator(std::string_view algorithmNames,
+                                             std::span<const std::string_view> allAlgorithms)
     : _allAlgorithms(allAlgorithms),
       _algorithmNames(algorithmNames),
       _begPos(0),
@@ -33,7 +33,7 @@ ReplayAlgorithmNameIterator::ReplayAlgorithmNameIterator(std::string_view algori
   }
 }
 
-bool ReplayAlgorithmNameIterator::hasNext() const {
+bool AlgorithmNameIterator::hasNext() const {
   using PosT = decltype(_begPos);
 
   if (_algorithmNames.empty()) {
@@ -43,7 +43,7 @@ bool ReplayAlgorithmNameIterator::hasNext() const {
   return _begPos != static_cast<PosT>(_algorithmNames.length());
 }
 
-std::string_view ReplayAlgorithmNameIterator::next() {
+std::string_view AlgorithmNameIterator::next() {
   if (_algorithmNames.empty()) {
     return _allAlgorithms[_begPos++];
   }

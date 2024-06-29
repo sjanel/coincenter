@@ -84,13 +84,6 @@ add_unit_test(
 )
 
 add_unit_test(
-  replay-algorithm-name-iterator_test
-  test/replay-algorithm-name-iterator_test.cpp
-  LIBRARIES
-  coincenter_engine
-)
-
-add_unit_test(
   stringoptionparser_test
   test/stringoptionparser_test.cpp
   LIBRARIES

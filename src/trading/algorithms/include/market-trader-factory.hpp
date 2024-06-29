@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <string_view>
 
 #include "abstract-market-trader-factory.hpp"

@@ -10,7 +10,7 @@ ARG BUILD_WITH_PROTOBUF=1
 # Install base & build dependencies, needed certificates for curl to work with https
 RUN apt update && \
     apt upgrade -y && \
-    apt install build-essential ninja-build libssl-dev zlib1g-dev libcurl4-openssl-dev cmake git ca-certificates -y --no-install-recommends
+    apt install -y --no-install-recommends build-essential ninja-build libssl-dev zlib1g-dev libcurl4-openssl-dev cmake git ca-certificates
 
 # Copy source files
 WORKDIR /app/src
@@ -38,12 +38,14 @@ COPY data/cache/fiatcache.json ./
 WORKDIR /app/bin
 
 # Configure
-RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
+RUN cmake \
+    -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
     -DCCT_ENABLE_TESTS=${BUILD_TEST} \
     -DCCT_ENABLE_ASAN=${BUILD_ASAN} \
     -DCCT_BUILD_PROMETHEUS_FROM_SRC=${BUILD_WITH_PROMETHEUS} \
     -DCCT_ENABLE_PROTO=${BUILD_WITH_PROTOBUF} \
-    -GNinja ..
+    -GNinja \
+    ..
 
 # Build
 RUN cmake --build .
