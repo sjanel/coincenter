@@ -161,7 +161,7 @@ FetchContent_Declare(
 
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-list(APPEND fetchContentPackagesToMakeAvailable jwt-cpp) 
+list(APPEND fetchContentPackagesToMakeAvailable jwt-cpp)
 
 # protobuf - serialization / deserialization library
 set(PROTOBUF_FETCHED_CONTENT OFF)
@@ -172,7 +172,7 @@ if(CCT_ENABLE_PROTO)
   else()
     # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
     if (NOT PROTOBUF_VERSION)
-      set(PROTOBUF_VERSION v5.27.1)
+      set(PROTOBUF_VERSION v5.27.2)
     endif()
 
     message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")
