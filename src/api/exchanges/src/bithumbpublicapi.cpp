@@ -190,10 +190,11 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 }
 
 namespace {
-MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config,
-                                 const ExchangeConfig& exchangeConfig, std::optional<Market> optM = std::nullopt,
-                                 std::optional<int> optDepth = std::nullopt) {
-  MarketOrderBookMap ret;
+
+template <class OutputType>
+OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, const ExchangeConfig& exchangeConfig,
+                         std::optional<Market> optM = std::nullopt, std::optional<int> optDepth = std::nullopt) {
+  OutputType ret;
   // 'all' seems to work as default for all public methods
   CurrencyCode base("ALL");
   CurrencyCode quote;
@@ -219,6 +220,9 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
     }
     CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
     const CurrencyCodeSet& excludedCurrencies = exchangeConfig.excludedCurrenciesAll();
+
+    MarketOrderBookLines orderBookLines;
+
     for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
       if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
         const json* asksBids[2];
@@ -248,7 +252,7 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
           "asks": [{"quantity" : "2.67575", "price" : "506000"},
                    {"quantity" : "3.54343","price" : "507000"}]
         */
-        MarketOrderBookLines orderBookLines;
+        orderBookLines.clear();
         orderBookLines.reserve(asksBids[0]->size() + asksBids[1]->size());
         for (const json* asksOrBids : asksBids) {
           const auto type = asksOrBids == asksBids[0] ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
@@ -260,31 +264,32 @@ MarketOrderBookMap GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& c
           }
         }
         Market market(baseCurrencyCode, quoteCurrencyCode);
-        ret.insert_or_assign(market, MarketOrderBook(nowTime, market, orderBookLines));
+        if constexpr (std::is_same_v<OutputType, MarketOrderBookMap>) {
+          ret.insert_or_assign(market, MarketOrderBook(nowTime, market, orderBookLines));
+        } else {
+          ret = MarketOrderBook(nowTime, market, orderBookLines);
+        }
         if (singleMarketQuote) {
           break;
         }
       }
     }
   }
-  if (ret.size() > 1) {
-    log::info("Retrieved {} markets (+ order books) from Bithumb", ret.size());
+  if constexpr (std::is_same_v<OutputType, MarketOrderBookMap>) {
+    if (ret.size() > 1) {
+      log::info("Retrieved {} markets (+ order books) from Bithumb", ret.size());
+    }
   }
   return ret;
 }
 }  // namespace
 
 MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
-  return GetOrderBooks(_curlHandle, _coincenterInfo, _exchangeConfig);
+  return GetOrderBooks<MarketOrderBookMap>(_curlHandle, _coincenterInfo, _exchangeConfig);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
-  MarketOrderBookMap marketOrderBookMap = GetOrderBooks(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
-  auto it = marketOrderBookMap.find(mk);
-  if (it == marketOrderBookMap.end()) {
-    throw exception("Cannot find {} in market order book map", mk);
-  }
-  return it->second;
+  return GetOrderBooks<MarketOrderBook>(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
 }
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {

@@ -181,9 +181,14 @@ MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
 }
 
 namespace {
-MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
-  MarketOrderBookMap ret;
+
+template <class OutputType>
+OutputType ParseOrderBooks(const json& result, int depth) {
+  OutputType ret;
   const auto time = Clock::now();
+
+  MarketOrderBookLines orderBookLines;
+
   for (const json& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
@@ -193,14 +198,13 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
     }
 
     /// Remember, Upbit markets are inverted, quote first then base
-    CurrencyCode quote(std::string_view(marketStr.begin(), marketStr.begin() + dashPos));
-    CurrencyCode base(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
+    CurrencyCode quote(marketStr.substr(0, dashPos));
+    CurrencyCode base(marketStr.substr(dashPos + 1));
     Market market(base, quote);
 
     const auto& orderBookLinesJson = marketDetails["orderbook_units"];
 
-    MarketOrderBookLines orderBookLines;
-
+    orderBookLines.clear();
     orderBookLines.reserve(orderBookLinesJson.size() * 2U);
 
     for (const json& orderbookDetails : orderBookLinesJson | std::ranges::views::take(depth)) {
@@ -216,11 +220,18 @@ MarketOrderBookMap ParseOrderBooks(const json& result, int depth) {
     if (static_cast<int>(orderBookLines.size() / 2) < depth) {
       log::warn("Upbit does not support orderbook depth larger than {}", orderBookLines.size() / 2);
     }
-    ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
+    if constexpr (std::is_same_v<OutputType, MarketOrderBookMap>) {
+      ret.insert_or_assign(market, MarketOrderBook(time, market, orderBookLines));
+    } else {
+      ret = MarketOrderBook(time, market, orderBookLines);
+    }
   }
-  if (ret.size() > 1) {
-    log::info("Retrieved {} order books from Upbit", ret.size());
+  if constexpr (std::is_same_v<OutputType, MarketOrderBookMap>) {
+    if (ret.size() > 1) {
+      log::info("Retrieved {} order books from Upbit", ret.size());
+    }
   }
+
   return ret;
 }
 }  // namespace
@@ -235,17 +246,13 @@ MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
     }
     marketsStr.append(ReverseMarketStr(mk));
   }
-  return ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", marketsStr}}), depth);
+  return ParseOrderBooks<MarketOrderBookMap>(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", marketsStr}}),
+                                             depth);
 }
 
 MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market mk, int depth) {
-  MarketOrderBookMap marketOrderBookMap =
-      ParseOrderBooks(PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(mk)}}), depth);
-  auto it = marketOrderBookMap.find(mk);
-  if (it == marketOrderBookMap.end()) {
-    throw exception("Unexpected answer from get OrderBooks");
-  }
-  return it->second;
+  return ParseOrderBooks<MarketOrderBook>(
+      PublicQuery(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(mk)}}), depth);
 }
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
