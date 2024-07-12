@@ -163,7 +163,7 @@ struct from<JSON, ::cct::Market> {
   static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
-    value = std::string_view(it, endIt);
+    value = ::cct::Market(std::string_view(it, endIt));
     it = ++endIt;
   }
 };

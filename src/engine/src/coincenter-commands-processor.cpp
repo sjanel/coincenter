@@ -6,6 +6,7 @@
 #include <thread>
 #include <utility>
 
+#include "auto-trade-options.hpp"
 #include "balanceoptions.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
@@ -22,11 +23,13 @@
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"
+#include "file.hpp"
 #include "market-trader-factory.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
+#include "read-json.hpp"
 #include "replay-options.hpp"
 #include "signal-handler.hpp"
 #include "timedef.hpp"
@@ -294,18 +297,18 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       break;
     }
     case CoincenterCommandType::MarketData: {
-      std::array<Market, kNbSupportedExchanges> marketPerPublicExchange;
+      std::array<Market, kNbSupportedExchanges> marketPerPublicExchangePos;
       for (const auto &cmd : groupedCommands) {
         if (cmd.exchangeNames().empty()) {
-          std::ranges::fill(marketPerPublicExchange, cmd.market());
+          std::ranges::fill(marketPerPublicExchangePos, cmd.market());
         } else {
           for (const auto &exchangeName : cmd.exchangeNames()) {
-            marketPerPublicExchange[exchangeName.publicExchangePos()] = cmd.market();
+            marketPerPublicExchangePos[exchangeName.publicExchangePos()] = cmd.market();
           }
         }
       }
-      // No return value here, this command is made only for storing purposes.
-      _coincenter.queryMarketDataPerExchange(marketPerPublicExchange);
+      // No need to retrieve the returned value here, this command is made only for storing purposes.
+      _coincenter.queryMarketDataPerExchange(marketPerPublicExchangePos);
       break;
     }
     case CoincenterCommandType::Replay: {
@@ -327,6 +330,15 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       const auto marketTimestampSetsPerExchange =
           _coincenter.getMarketsAvailableForReplay(firstCmd.replayOptions(), firstCmd.exchangeNames());
       _queryResultPrinter.printMarketsForReplay(firstCmd.replayOptions().timeWindow(), marketTimestampSetsPerExchange);
+      break;
+    }
+    case CoincenterCommandType::AutoTrade: {
+      const File configFile(firstCmd.getJsonConfigFile(), File::IfError::kThrow);
+      schema::AutoTradeConfig autoTradeConfig;
+      ReadJsonOrThrow(configFile.readAll(), autoTradeConfig);
+      const AutoTradeOptions autoTradeOptions(std::move(autoTradeConfig));
+
+      _coincenter.autoTrade(autoTradeOptions);
       break;
     }
     default:

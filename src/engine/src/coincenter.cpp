@@ -1,6 +1,7 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <csignal>
 #include <optional>
 #include <span>
@@ -9,6 +10,7 @@
 
 #include "abstract-market-trader-factory.hpp"
 #include "algorithm-name-iterator.hpp"
+#include "auto-trade-processor.hpp"
 #include "balanceoptions.hpp"
 #include "cct_const.hpp"
 #include "cct_log.hpp"
@@ -29,6 +31,7 @@
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
+#include "signal-handler.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
 #include "withdrawsconstraints.hpp"
@@ -336,6 +339,29 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
   }
 
   return replayResults;
+}
+
+void Coincenter::autoTrade(const AutoTradeOptions &autoTradeOptions) {
+  AutoTradeProcessor autoTradeProcessor(autoTradeOptions);
+
+  while (!IsStopRequested()) {
+    // 1: select exchanges positions for which we are allowed to send a request.
+    AutoTradeProcessor::SelectedMarketVector selectedMarkets = autoTradeProcessor.computeSelectedMarkets();
+    if (selectedMarkets.empty()) {
+      break;
+    }
+
+    // 2: Query order books for those exchanges
+    std::array<Market, kNbSupportedExchanges> selectedMarketsPerPublicExchangePos;
+    for (const AutoTradeProcessor::SelectedMarket &selectedMarket : selectedMarkets) {
+      selectedMarketsPerPublicExchangePos[selectedMarket.privateExchangeNames.front().publicExchangePos()] =
+          selectedMarket.market;
+    }
+    MarketDataPerExchange marketDataPerExchange = queryMarketDataPerExchange(selectedMarketsPerPublicExchangePos);
+
+    // 3: call algorithms and retrieve their actions
+    // 4: perform actual actions (Trades, cancel, exit criteria)
+  }
 }
 
 MarketTradingGlobalResultPerExchange Coincenter::replayAlgorithm(
