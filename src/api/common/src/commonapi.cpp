@@ -131,6 +131,7 @@ CurrencyCodeSet CommonAPI::FiatsFunc::operator()() {
   }
   return fiats;
 }
+
 struct CurrencyCSV {
   vector<string> Entity;
   vector<string> Currency;
@@ -149,7 +150,7 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
     return fiatsVec;
   }
 
-  // data is UTF-8 encoded - but the relevant data that we will parse is ASCII normally
+  // data is UTF-8 encoded - but the relevant data that we will parse is ASCII
 
   CurrencyCSV currencies;
   auto ec = json::read<json::opts_csv{.format = json::CSV, .layout = json::colwise}>(currencies, data);
@@ -182,6 +183,7 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
 
   static constexpr std::string_view kTheadColumnStart = "<th class=\"head\">";
   static constexpr std::string_view kCodeStrName = "Code";
+
   auto pos = data.find("<thead>");
   int codePos = 0;
   for (pos = data.find(kTheadColumnStart, pos + 1U); pos != std::string_view::npos;
@@ -215,8 +217,10 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
 void CommonAPI::updateCacheFile() const {
   const auto fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
   auto fiatsDataStr = fiatsCacheFile.readAll();
+
   schema::FiatsCache fiatsData;
   ReadExactJsonOrThrow(fiatsDataStr, fiatsData);
+
   const auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
   if (TimePoint(seconds(fiatsData.timeepoch)) < fiatsPtrLastUpdatedTimePair.second) {
     // update fiats cache file
