@@ -13,7 +13,7 @@ namespace cct {
       Balance, DepositInfo, OrdersClosed, OrdersOpened, OrdersCancel, RecentDeposits, RecentWithdraws, Trade, Buy, \
       Sell, Withdraw, DustSweeper,                                                                                 \
                                                                                                                    \
-      MarketData, Replay, ReplayMarkets
+      MarketData, Replay, ReplayMarkets, AutoTrade
 
 enum class CoincenterCommandType : int8_t { CCT_COINCENTER_COMMAND_TYPES };
 
