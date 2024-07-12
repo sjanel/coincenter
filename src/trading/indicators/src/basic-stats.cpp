@@ -128,7 +128,69 @@ MonetaryAmount BasicStats::standardDeviationFromMarketOrderBooks(TimePoint oldes
     return MonetaryAmount{0, priceCur};
   }
 
-  return MonetaryAmount{std::sqrt(squareDiffsSum), priceCur};
+  // Population standard deviation: sqrt(mean of squared deviations) - the sum must be divided by the
+  // number of points before taking the square root.
+  return MonetaryAmount{std::sqrt(squareDiffsSum / nbPoints), priceCur};
+}
+
+double BasicStats::relativeStrengthIndexFromMarketOrderBooks(TimePoint oldestTime, Duration samplingPeriod) const {
+  const auto lastOrderBooks = _marketDataView.pastMarketOrderBooks();
+
+  double sumGain = 0.0;
+  double sumLoss = 0.0;
+  int nbDeltas = 0;
+
+  // Walk newest -> oldest, keeping at most one sample per 'samplingPeriod' bucket, and accumulate the
+  // gains / losses between consecutive samples.
+  bool hasNewer = false;
+  double newerPrice = 0.0;
+  TimePoint lastSampledTime = TimePoint::max();
+
+  for (auto it = lastOrderBooks.end(); it != lastOrderBooks.begin();) {
+    const MarketOrderBook &marketOrderBook = *(--it);
+    const auto ts = marketOrderBook.time();
+
+    if (ts < oldestTime) {
+      break;
+    }
+    if (lastSampledTime != TimePoint::max() && lastSampledTime - ts < samplingPeriod) {
+      continue;
+    }
+
+    const auto optPrice = marketOrderBook.averagePrice();
+    if (!optPrice) {
+      continue;
+    }
+    const double price = optPrice->toDouble();
+
+    if (hasNewer) {
+      const double delta = newerPrice - price;  // change from this (older) sample to the newer one
+      if (delta > 0.0) {
+        sumGain += delta;
+      } else {
+        sumLoss += -delta;
+      }
+      ++nbDeltas;
+    }
+
+    newerPrice = price;
+    hasNewer = true;
+    lastSampledTime = ts;
+  }
+
+  if (nbDeltas == 0) {
+    return -1.0;  // not enough data
+  }
+
+  const double avgGain = sumGain / nbDeltas;
+  const double avgLoss = sumLoss / nbDeltas;
+
+  if (avgLoss == 0.0) {
+    return 100.0;
+  }
+
+  const double rs = avgGain / avgLoss;
+  return 100.0 - (100.0 / (1.0 + rs));
 }
 
 }  // namespace cct

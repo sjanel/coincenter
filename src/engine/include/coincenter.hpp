@@ -4,6 +4,7 @@
 #include <span>
 
 #include "apikeysprovider.hpp"
+#include "auto-trade-options.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
@@ -149,6 +150,9 @@ class Coincenter {
   ReplayResults replay(const AbstractMarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions,
                        Market market, ExchangeNameSpan exchangeNames);
 
+  /// Run auto trade.
+  void autoTrade(const AutoTradeOptions &autoTradeOptions);
+
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
 
@@ -173,8 +177,8 @@ class Coincenter {
                                                        const ExchangeNameEnumVector &exchangesWithThisMarketData);
 
   // TODO: may be moved somewhere else?
-  MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions &replayOptions, Market market,
-                                                     ExchangeNameEnumVector &exchangesWithThisMarketData);
+  MarketTraderEngineVector createMarketTraderEnginesForReplay(const ReplayOptions &replayOptions, Market market,
+                                                              ExchangeNameEnumVector &exchangesWithThisMarketData);
 
   MarketTradeRangeStatsPerExchange tradingProcess(const ReplayOptions &replayOptions,
                                                   std::span<MarketTraderEngine> marketTraderEngines,

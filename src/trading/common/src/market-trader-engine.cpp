@@ -244,12 +244,17 @@ void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmo
       break;
     }
     case PriceStrategy::taker: {
-      const auto [totalMatchedAmount, avgPrice] = marketOrderBook.avgPriceAndMatchedAmountTaker(from);
-      if (totalMatchedAmount != 0) {
+      // For a buy, 'from' is a quote amount: avgPriceAndMatchedAmountTaker then returns the matched quote
+      // amount (what we actually spend) along with the average price. The base volume effectively bought is
+      // therefore matchedQuoteAmount / avgPrice. We must add base (not quote) to the available base amount,
+      // and only debit the quote actually spent (this also handles partial fills on a shallow order book).
+      const auto [matchedQuoteAmount, avgPrice] = marketOrderBook.avgPriceAndMatchedAmountTaker(from);
+      if (matchedQuoteAmount != 0) {
         constexpr MonetaryAmount remainingVolume;
+        const MonetaryAmount matchedVolume(matchedQuoteAmount / avgPrice, _market.base());
 
-        _marketTraderEngineState.placeBuyOrder(_exchangeConfig, ts, remainingVolume, avgPrice, totalMatchedAmount, from,
-                                               schema::ExchangeTradeFeesConfig::FeeType::Taker);
+        _marketTraderEngineState.placeBuyOrder(_exchangeConfig, ts, remainingVolume, avgPrice, matchedVolume,
+                                               matchedQuoteAmount, schema::ExchangeTradeFeesConfig::FeeType::Taker);
       }
       break;
     }
