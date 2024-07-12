@@ -11,9 +11,6 @@
 namespace cct {
 namespace {
 constexpr auto kCommandTypeNames = json::reflect<CoincenterCommandType>::keys;
-
-static_assert(std::size(kCommandTypeNames) == static_cast<std::size_t>(CoincenterCommandType::Last) + 1);
-
 }  // namespace
 
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {

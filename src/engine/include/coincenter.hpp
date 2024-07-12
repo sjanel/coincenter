@@ -4,6 +4,7 @@
 #include <span>
 
 #include "apikeysprovider.hpp"
+#include "auto-trade-options.hpp"
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "coincenterinfo.hpp"
@@ -148,6 +149,9 @@ class Coincenter {
   /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
   ReplayResults replay(const AbstractMarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions,
                        Market market, ExchangeNameSpan exchangeNames);
+
+  /// Run auto trade.
+  void autoTrade(const AutoTradeOptions &autoTradeOptions);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
