@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 #include <variant>
 
@@ -47,6 +48,8 @@ class CoincenterCommand {
 
   CoincenterCommand& setReplayOptions(ReplayOptions replayOptions);
 
+  CoincenterCommand& setJsonConfigFile(std::string_view jsonConfigFile);
+
   CoincenterCommand& setPercentageAmount(bool value = true);
   CoincenterCommand& withBalanceInUse(bool value = true);
 
@@ -89,7 +92,7 @@ class CoincenterCommand {
 
  private:
   using SpecialOptions = std::variant<std::monostate, OrdersConstraints, WithdrawsOrDepositsConstraints, TradeOptions,
-                                      WithdrawOptions, ReplayOptions>;
+                                      WithdrawOptions, ReplayOptions, std::string_view>;
 
   ExchangeNames _exchangeNames;
   SpecialOptions _specialOptions;

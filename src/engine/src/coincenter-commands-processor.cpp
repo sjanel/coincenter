@@ -346,6 +346,9 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       _queryResultPrinter.printMarketsForReplay(firstCmd.replayOptions().timeWindow(), marketTimestampSetsPerExchange);
       break;
     }
+    case CoincenterCommandType::kAutoTrade: {
+      break;
+    }
     default:
       throw exception("Unknown command type");
   }

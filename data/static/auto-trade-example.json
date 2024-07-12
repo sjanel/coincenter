@@ -1,0 +1,59 @@
+{
+    "kraken": {
+        "BTC-EUR": {
+            "algorithm": "example-trader",
+            "repeatTime": "3s",
+            "startAmounts": [
+                "0.5BTC",
+                "50%EUR"
+            ],
+            "stopCriteria": [
+                {
+                    "type": "duration",
+                    "value": "4h"
+                },
+                {
+                    "type": "protectLoss",
+                    "value": "30%"
+                },
+                {
+                    "type": "secureProfit",
+                    "value": "80%"
+                }
+            ]
+        },
+        "ETH-EUR": {
+            "algorithm": "example-trader",
+            "repeatTime": "3s",
+            "startAmounts": [
+                "45ETH",
+                "50%EUR"
+            ],
+            "stopCriteria": [
+                {
+                    "type": "duration",
+                    "value": "4h"
+                },
+                {
+                    "type": "protectLoss",
+                    "value": "30%"
+                },
+                {
+                    "type": "secureProfit",
+                    "value": "80%"
+                }
+            ]
+        }
+    },
+    "binance_user1": {
+        "XRP-USDT": {
+            "algorithm": "example-trader",
+            "repeatTime": "1s",
+            "startAmounts": [
+                "50000.56XRP",
+                "100%USDT"
+            ],
+            "stopCriteria": []
+        }
+    }
+}
