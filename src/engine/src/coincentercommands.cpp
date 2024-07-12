@@ -257,6 +257,10 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
         .setExchangeNames(optionParser.parseExchanges());
   }
 
+  if (!cmdLineOptions.autoTrade.empty()) {
+    _commands.emplace_back(CoincenterCommandType::AutoTrade).setJsonConfigFile(cmdLineOptions.autoTrade);
+  }
+
   optionParser.checkEndParsing();  // No more option part should be remaining
 }
 

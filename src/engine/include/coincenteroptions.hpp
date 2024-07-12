@@ -104,6 +104,8 @@ class CoincenterCmdLineOptions {
 
   std::string_view marketData;
 
+  std::string_view autoTrade;
+
   std::optional<std::string_view> replay;
   std::string_view algorithmNames;
   std::string_view market;

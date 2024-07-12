@@ -478,6 +478,22 @@ struct CoincenterAllowedOptions : private CoincenterCmdLineOptionsDefinitions {
         "\nNominal replay will not validate input data to optimize performance, use this option to validate data once "
         "and for all."},
        &OptValueType::validateOnly},
+      {{{"Automation", 8004},
+        "auto-trade",
+        "<path/to/json.conf>",
+        "Automatic live trading mode. Once you have validated on historical market-data the performance of an "
+        "algorithm, it's time to try it for real!\n"
+        "This command has some particularities:\n"
+        "- next commands will never be executed\n"
+        "- repeat is ignored (the auto trade will continue until one of terminating signals defined in the "
+        "configuration file is reached)\n"
+        "Configuration will be loaded from given json file, with following options (check README to get full "
+        "configuration schema):\n"
+        "- 'algorithm' : algorithm name to use\n"
+        "- 'market' : the market to trade onto\n"
+        "- 'startAmount' : the starting amount in base currency (can be a percentage of available amount)\n"
+        "- 'exchange' : exchange with account key (not needed if not ambiguous)"},
+       &OptValueType::autoTrade},
       {{{"Monitoring", 9000},
         "--monitoring",
         "",
