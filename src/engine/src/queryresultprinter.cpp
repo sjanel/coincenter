@@ -44,6 +44,7 @@
 #include "stringconv.hpp"
 #include "time-window.hpp"
 #include "timestring.hpp"
+#include "trade-range-stats.hpp"
 #include "tradedamounts.hpp"
 #include "tradedefinitions.hpp"
 #include "tradeside.hpp"
@@ -767,52 +768,78 @@ json DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &traded
   return ToJson(CoincenterCommandType::kDustSweeper, std::move(in), std::move(out));
 }
 
-json MarketTradingResultsJson(TimeWindow timeWindow,
-                              const MarketTradingGlobalResultPerExchange &marketTradingResultPerExchange,
+json MarketTradingResultsJson(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
                               CoincenterCommandType commandType) {
-  json in;
   json inOpt;
-  inOpt.emplace("time-window", timeWindow.str());
+
+  json timeStats;
+  timeStats.emplace("from", TimeToString(inputTimeWindow.from()));
+  timeStats.emplace("to", TimeToString(inputTimeWindow.to()));
+
+  inOpt.emplace("time", std::move(timeStats));
+
+  json in;
   in.emplace("opt", std::move(inOpt));
 
   json out = json::object();
 
-  for (const auto &[exchangePtr, marketGlobalTradingResult] : marketTradingResultPerExchange) {
-    const auto &marketTradingResult = marketGlobalTradingResult.result;
-    const auto &stats = marketGlobalTradingResult.stats;
+  for (const auto &[algorithmName, marketTradingResultPerExchangeVector] : replayResults) {
+    json algorithmNameResults = json::array_t();
+    for (const auto &marketTradingResultPerExchange : marketTradingResultPerExchangeVector) {
+      json allResults = json::array_t();
+      for (const auto &[exchangePtr, marketGlobalTradingResult] : marketTradingResultPerExchange) {
+        const auto &marketTradingResult = marketGlobalTradingResult.result;
+        const auto &stats = marketGlobalTradingResult.stats;
 
-    json startAmounts;
-    startAmounts.emplace("base", marketTradingResult.startBaseAmount().str());
-    startAmounts.emplace("quote", marketTradingResult.startQuoteAmount().str());
+        const auto computeTradeRangeResultsStats = [](const TradeRangeResultsStats &tradeRangeResultsStats) {
+          json stats;
+          stats.emplace("nb-successful", tradeRangeResultsStats.nbSuccessful);
+          stats.emplace("nb-error", tradeRangeResultsStats.nbError);
 
-    json orderBookStats;
-    orderBookStats.emplace("nb-successful", stats.marketOrderBookStats.nbSuccessful);
-    orderBookStats.emplace("nb-error", stats.marketOrderBookStats.nbError);
+          json timeStats;
+          timeStats.emplace("from", TimeToString(tradeRangeResultsStats.timeWindow.from()));
+          timeStats.emplace("to", TimeToString(tradeRangeResultsStats.timeWindow.to()));
 
-    json tradeStats;
-    tradeStats.emplace("nb-successful", stats.publicTradeStats.nbSuccessful);
-    tradeStats.emplace("nb-error", stats.publicTradeStats.nbError);
+          stats.emplace("time", std::move(timeStats));
+          return stats;
+        };
 
-    json jsonStats;
-    jsonStats.emplace("order-books", std::move(orderBookStats));
-    jsonStats.emplace("trades", std::move(tradeStats));
+        json startAmounts;
+        startAmounts.emplace("base", marketTradingResult.startBaseAmount().str());
+        startAmounts.emplace("quote", marketTradingResult.startQuoteAmount().str());
 
-    json marketTradingResultJson;
-    marketTradingResultJson.emplace("algorithm", marketTradingResult.algorithmName());
-    marketTradingResultJson.emplace("market", marketTradingResult.market().str());
-    marketTradingResultJson.emplace("start-amounts", std::move(startAmounts));
-    marketTradingResultJson.emplace("profit-and-loss", marketTradingResult.quoteAmountDelta().str());
-    marketTradingResultJson.emplace("stats", std::move(jsonStats));
+        json orderBookStats = computeTradeRangeResultsStats(stats.marketOrderBookStats);
 
-    json closedOrdersArray = json::array_t();
+        json tradeStats = computeTradeRangeResultsStats(stats.publicTradeStats);
 
-    for (const ClosedOrder &closedOrder : marketTradingResult.matchedOrders()) {
-      closedOrdersArray.push_back(OrderJson(closedOrder));
+        json jsonStats;
+        jsonStats.emplace("order-books", std::move(orderBookStats));
+        jsonStats.emplace("trades", std::move(tradeStats));
+
+        json marketTradingResultJson;
+        marketTradingResultJson.emplace("algorithm", marketTradingResult.algorithmName());
+        marketTradingResultJson.emplace("market", marketTradingResult.market().str());
+        marketTradingResultJson.emplace("start-amounts", std::move(startAmounts));
+        marketTradingResultJson.emplace("profit-and-loss", marketTradingResult.quoteAmountDelta().str());
+        marketTradingResultJson.emplace("stats", std::move(jsonStats));
+
+        json closedOrdersArray = json::array_t();
+
+        for (const ClosedOrder &closedOrder : marketTradingResult.matchedOrders()) {
+          closedOrdersArray.push_back(OrderJson(closedOrder));
+        }
+
+        marketTradingResultJson.emplace("matched-orders", std::move(closedOrdersArray));
+
+        json exchangeMarketResults;
+        exchangeMarketResults.emplace(exchangePtr->name(), std::move(marketTradingResultJson));
+
+        allResults.push_back(std::move(exchangeMarketResults));
+      }
+      algorithmNameResults.push_back(std::move(allResults));
     }
 
-    marketTradingResultJson.emplace("matched-orders", std::move(closedOrdersArray));
-
-    out.emplace(exchangePtr->name(), std::move(marketTradingResultJson));
+    out.emplace(algorithmName, std::move(algorithmNameResults));
   }
 
   return ToJson(commandType, std::move(in), std::move(out));
@@ -1602,56 +1629,61 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
   logActivity(CoincenterCommandType::kReplayMarkets, jsonData);
 }
 
-void QueryResultPrinter::printMarketTradingResults(
-    TimeWindow timeWindow, const MarketTradingGlobalResultPerExchange &marketTradingResultPerExchange,
-    CoincenterCommandType commandType) const {
-  json jsonData = MarketTradingResultsJson(timeWindow, marketTradingResultPerExchange, commandType);
+void QueryResultPrinter::printMarketTradingResults(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
+                                                   CoincenterCommandType commandType) const {
+  json jsonData = MarketTradingResultsJson(inputTimeWindow, replayResults, commandType);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       SimpleTable table;
-      table.reserve(1U + marketTradingResultPerExchange.size());
-      table.emplace_back("Exchange", "Time window", "Market", "Algorithm", "Start amounts", "Profit / Loss",
+      table.emplace_back("Algorithm", "Exchange", "Time window", "Market", "Start amounts", "Profit / Loss",
                          "Matched orders", "Stats");
-      for (const auto &[exchangePtr, marketGlobalTradingResults] : marketTradingResultPerExchange) {
-        const auto &marketTradingResults = marketGlobalTradingResults.result;
-        const auto &stats = marketGlobalTradingResults.stats;
+      for (const auto &[algorithmName, marketTradingResultPerExchangeVector] : replayResults) {
+        for (const auto &marketTradingResultPerExchange : marketTradingResultPerExchangeVector) {
+          for (const auto &[exchangePtr, marketGlobalTradingResults] : marketTradingResultPerExchange) {
+            const auto &marketTradingResults = marketGlobalTradingResults.result;
+            const auto &stats = marketGlobalTradingResults.stats;
 
-        table::Cell trades;
-        for (const ClosedOrder &closedOrder : marketTradingResults.matchedOrders()) {
-          string orderStr = closedOrder.placedTimeStr();
-          orderStr.append(" - ");
-          orderStr.append(closedOrder.sideStr());
-          orderStr.append(" - ");
-          orderStr.append(closedOrder.matchedVolume().str());
-          orderStr.append(" @ ");
-          orderStr.append(closedOrder.price().str());
-          trades.emplace_back(std::move(orderStr));
+            table::Cell trades;
+            for (const ClosedOrder &closedOrder : marketTradingResults.matchedOrders()) {
+              string orderStr = closedOrder.placedTimeStr();
+              orderStr.append(" - ");
+              orderStr.append(closedOrder.sideStr());
+              orderStr.append(" - ");
+              orderStr.append(closedOrder.matchedVolume().str());
+              orderStr.append(" @ ");
+              orderStr.append(closedOrder.price().str());
+              trades.emplace_back(std::move(orderStr));
+            }
+
+            string orderBookStats("order books: ");
+            orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbSuccessful)));
+            orderBookStats.append(" OK");
+            if (stats.marketOrderBookStats.nbError != 0) {
+              orderBookStats.append(", ");
+              orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbError)));
+              orderBookStats.append(" KO");
+            }
+
+            string tradesStats("trades: ");
+            tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbSuccessful)));
+            tradesStats.append(" OK");
+            if (stats.publicTradeStats.nbError != 0) {
+              tradesStats.append(", ");
+              tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbError)));
+              tradesStats.append(" KO");
+            }
+
+            const TimeWindow marketTimeWindow = stats.marketOrderBookStats.timeWindow;
+
+            table.emplace_back(marketTradingResults.algorithmName(), exchangePtr->name(),
+                               table::Cell{TimeToString(marketTimeWindow.from()), TimeToString(marketTimeWindow.to())},
+                               marketTradingResults.market().str(),
+                               table::Cell{marketTradingResults.startBaseAmount().str(),
+                                           marketTradingResults.startQuoteAmount().str()},
+                               marketTradingResults.quoteAmountDelta().str(), std::move(trades),
+                               table::Cell{std::move(orderBookStats), std::move(tradesStats)});
+          }
         }
-
-        string orderBookStats("order books: ");
-        orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbSuccessful)));
-        orderBookStats.append(" OK");
-        if (stats.marketOrderBookStats.nbError != 0) {
-          orderBookStats.append(", ");
-          orderBookStats.append(std::string_view(IntegralToCharVector(stats.marketOrderBookStats.nbError)));
-          orderBookStats.append(" KO");
-        }
-
-        string tradesStats("trades: ");
-        tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbSuccessful)));
-        tradesStats.append(" OK");
-        if (stats.publicTradeStats.nbError != 0) {
-          tradesStats.append(", ");
-          tradesStats.append(std::string_view(IntegralToCharVector(stats.publicTradeStats.nbError)));
-          tradesStats.append(" KO");
-        }
-
-        table.emplace_back(
-            exchangePtr->name(), table::Cell{TimeToString(timeWindow.from()), TimeToString(timeWindow.to())},
-            marketTradingResults.market().str(), marketTradingResults.algorithmName(),
-            table::Cell{marketTradingResults.startBaseAmount().str(), marketTradingResults.startQuoteAmount().str()},
-            marketTradingResults.quoteAmountDelta().str(), std::move(trades),
-            table::Cell{std::move(orderBookStats), std::move(tradesStats)});
       }
       printTable(table);
       break;

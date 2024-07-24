@@ -138,4 +138,30 @@ TEST_F(TimeWindowTest, NoOverlapEqual) {
   EXPECT_FALSE(tw2.contains(tw1));
 }
 
+TEST_F(TimeWindowTest, OperatorPlus) {
+  TimeWindow tw1(tp1, tp2);
+  const TimeWindow expected(tp1 + dur1, tp2 + dur1);
+
+  EXPECT_EQ(tw1 + dur1, expected);
+
+  tw1 += dur1;
+
+  EXPECT_EQ(tw1, expected);
+}
+
+TEST_F(TimeWindowTest, AggregateMinMax) {
+  TimeWindow tw1(tp1, tp2);
+  TimeWindow tw2(tp3, tp4);
+
+  EXPECT_EQ(tw1.aggregateMinMax(tw2), TimeWindow(tp1, tp4));
+}
+
+TEST_F(TimeWindowTest, AggregateMinMaxWithNeutral) {
+  TimeWindow tw1(tp1, tp2);
+  TimeWindow tw2;
+
+  EXPECT_EQ(tw1.aggregateMinMax(tw2), tw1);
+  EXPECT_EQ(tw2.aggregateMinMax(tw1), tw1);
+}
+
 }  // namespace cct

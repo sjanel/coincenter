@@ -77,10 +77,14 @@ TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossible
     earliestPossibleTime = obj.time();
     return false;
   });
+
   if (nbUnsortedObjectsRemoved != 0) {
     log::error("{} {}(s) are not in chronological order", nbUnsortedObjectsRemoved, kObjName);
   }
 
+  if (!vec.empty()) {
+    stats.timeWindow = TimeWindow(vec.front().time(), vec.back().time());
+  }
   stats.nbError = nbInvalidObjects + nbUnsortedObjectsRemoved;
   stats.nbSuccessful -= stats.nbError;
 
@@ -116,19 +120,26 @@ TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector &&market
 
 TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector &&marketOrderBooks,
                                                PublicTradeVector &&publicTrades) {
-  if (!_marketTrader) {
-    throw exception("registerMarketTrader should have been called before launching the trade engine");
-  }
-
-  TradeRangeStats tradeRangeStats{{TradeRangeResultsStats{static_cast<int32_t>(marketOrderBooks.size()), 0}},
-                                  TradeRangeResultsStats{static_cast<int32_t>(publicTrades.size()), 0}};
+  // errors set to 0 here as it is for unchecked launch
+  TradeRangeStats tradeRangeStats{
+      {TradeRangeResultsStats{TimeWindow{}, static_cast<int32_t>(marketOrderBooks.size()), 0}},
+      TradeRangeResultsStats{TimeWindow{}, static_cast<int32_t>(publicTrades.size()), 0}};
 
   if (marketOrderBooks.empty()) {
     return tradeRangeStats;
   }
 
+  const auto fromOrderBooksTime = marketOrderBooks.front().time();
+  const auto toOrderBooksTime = marketOrderBooks.back().time();
+
+  tradeRangeStats.marketOrderBookStats.timeWindow = TimeWindow(fromOrderBooksTime, toOrderBooksTime);
+
+  if (!publicTrades.empty()) {
+    tradeRangeStats.publicTradeStats.timeWindow = TimeWindow(publicTrades.front().time(), publicTrades.back().time());
+  }
+
   log::info("[{}] at {} on {} replaying {} order books and {} trades", _marketTrader->name(),
-            TimeToString(marketOrderBooks.front().time()), _market, marketOrderBooks.size(), publicTrades.size());
+            TimeToString(fromOrderBooksTime), _market, marketOrderBooks.size(), publicTrades.size());
 
   // Rolling window of data provided to underlying market trader with data up to latest market order book.
   MarketDataView marketDataView(marketOrderBooks.data(), publicTrades.data(),
@@ -183,10 +194,6 @@ TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector &&marketOrd
 }
 
 MarketTradingResult MarketTraderEngine::finalizeAndComputeResult() {
-  if (!_marketTrader) {
-    throw exception("registerMarketTrader should have been called before computing results");
-  }
-
   _marketTraderEngineState.cancelAllOpenedOrders();
 
   // How to compute gain / losses ?

@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "cct_exception.hpp"
+#include "coincenter-commands-processor.hpp"
 #include "coincenter.hpp"
 #include "coincenterinfo.hpp"
 #include "coincenterinfo_create.hpp"
@@ -21,8 +22,9 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
 
   try {
     Coincenter coincenter(coincenterInfo, ExchangeSecretsInfo_Create(generalOptions));
+    CoincenterCommandsProcessor coincenterCommandsProcessor(coincenter);
 
-    const auto nbCommandsProcessed = coincenter.process(coincenterCommands);
+    const auto nbCommandsProcessed = coincenterCommandsProcessor.process(coincenterCommands);
 
     if (nbCommandsProcessed != 0) {
       // Write potentially updated cache data on disk at end of program

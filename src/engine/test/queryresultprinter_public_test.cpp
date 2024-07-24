@@ -1334,152 +1334,459 @@ TEST_F(QueryResultPrinterReplayMarketsTest, NoPrint) {
 
 class QueryResultPrinterReplayTest : public QueryResultPrinterReplayBaseTest {
  protected:
-  ClosedOrder closedOrder1{"1", MonetaryAmount(15, "BTC", 1), MonetaryAmount(35000, "USDT"), tp1, tp1, TradeSide::kBuy};
-  ClosedOrder closedOrder2{"2", MonetaryAmount(25, "BTC", 1), MonetaryAmount(45000, "USDT"), tp2, tp2, TradeSide::kBuy};
-  ClosedOrder closedOrder3{"3", MonetaryAmount(5, "BTC", 2), MonetaryAmount(35000, "USDT"), tp3, tp4, TradeSide::kSell};
-  ClosedOrder closedOrder4{
-      "4", MonetaryAmount(17, "BTC", 1), MonetaryAmount(50000, "USDT"), tp3, tp4, TradeSide::kSell};
-  ClosedOrder closedOrder5{
-      "5", MonetaryAmount(36, "BTC", 3), MonetaryAmount(47899, "USDT"), tp4, tp5, TradeSide::kSell};
+  CurrencyCode base{"BTC"};
+  CurrencyCode quote{"USDT"};
+  ClosedOrder closedOrder1{"1", MonetaryAmount(15, base, 1), MonetaryAmount(35000, quote), tp1, tp1, TradeSide::kBuy};
+  ClosedOrder closedOrder2{"2", MonetaryAmount(25, base, 1), MonetaryAmount(45000, quote), tp2, tp2, TradeSide::kBuy};
+  ClosedOrder closedOrder3{"3", MonetaryAmount(5, base, 2), MonetaryAmount(35000, quote), tp3, tp4, TradeSide::kSell};
+  ClosedOrder closedOrder4{"4", MonetaryAmount(17, base, 1), MonetaryAmount(50000, quote), tp3, tp4, TradeSide::kSell};
+  ClosedOrder closedOrder5{"5", MonetaryAmount(36, base, 3), MonetaryAmount(47899, quote), tp4, tp5, TradeSide::kSell};
 
-  std::string_view algorithmName = "test-algo";
-  MonetaryAmount startBaseAmount{1, "BTC"};
-  MonetaryAmount startQuoteAmount{1000, "EUR"};
+  MonetaryAmount startBaseAmount{1, base};
+  MonetaryAmount startQuoteAmount{1000, quote};
 
-  MarketTradingResult marketTradingResult1{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{0, "EUR"},
+  std::string_view alg1Name{"first-alg"};
+  std::string_view alg2Name{"second-alg"};
+
+  MarketTradingResult marketTradingResult1{alg1Name, startBaseAmount, startQuoteAmount, MonetaryAmount{0, quote},
                                            ClosedOrderVector{}};
-  MarketTradingResult marketTradingResult3{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{500, "EUR"},
+  MarketTradingResult marketTradingResult2{alg1Name, startBaseAmount, startQuoteAmount, MonetaryAmount{-334, quote},
+                                           ClosedOrderVector{closedOrder1, closedOrder3}};
+  MarketTradingResult marketTradingResult3{alg2Name, startBaseAmount, startQuoteAmount, MonetaryAmount{500, quote},
                                            ClosedOrderVector{closedOrder1, closedOrder5}};
-  MarketTradingResult marketTradingResult4{algorithmName, startBaseAmount, startQuoteAmount, MonetaryAmount{780, "EUR"},
+  MarketTradingResult marketTradingResult4{alg2Name, startBaseAmount, startQuoteAmount, MonetaryAmount{780, quote},
                                            ClosedOrderVector{closedOrder2, closedOrder3, closedOrder4}};
 
-  TradeRangeStats tradeRangeStats1{TradeRangeResultsStats{42, 0}, TradeRangeResultsStats{3, 10}};
-  TradeRangeStats tradeRangeStats3{TradeRangeResultsStats{500000, 2}, TradeRangeResultsStats{0, 0}};
-  TradeRangeStats tradeRangeStats4{TradeRangeResultsStats{79009, 0}, TradeRangeResultsStats{1555555555, 45}};
+  TradeRangeStats tradeRangeStats1{TradeRangeResultsStats{TimeWindow{tp1, tp1}, 42, 0},
+                                   TradeRangeResultsStats{TimeWindow{tp1, tp2}, 3, 10}};
+  TradeRangeStats tradeRangeStats2{TradeRangeResultsStats{TimeWindow{tp1, tp1}, 23, 1},
+                                   TradeRangeResultsStats{TimeWindow{tp1, tp5}, 0, 10}};
+  TradeRangeStats tradeRangeStats3{TradeRangeResultsStats{TimeWindow{tp1, tp2}, 500000, 2},
+                                   TradeRangeResultsStats{TimeWindow{tp1, tp3}, 0, 0}};
+  TradeRangeStats tradeRangeStats4{TradeRangeResultsStats{TimeWindow{tp1, tp3}, 79009, 0},
+                                   TradeRangeResultsStats{TimeWindow{tp2, tp4}, 1555555555, 45}};
 
-  MarketTradingGlobalResultPerExchange marketTradingResultPerExchange{
+  MarketTradingGlobalResultPerExchange marketTradingResultPerExchange1{
       {&exchange1, MarketTradingGlobalResult{marketTradingResult1, tradeRangeStats1}},
       {&exchange3, MarketTradingGlobalResult{marketTradingResult3, tradeRangeStats3}},
       {&exchange4, MarketTradingGlobalResult{marketTradingResult4, tradeRangeStats4}}};
+
+  MarketTradingGlobalResultPerExchange marketTradingResultPerExchange2{
+      {&exchange2, MarketTradingGlobalResult{marketTradingResult2, tradeRangeStats2}}};
+
+  ReplayResults replayResults{{alg1Name, {marketTradingResultPerExchange1}},
+                              {alg2Name, {marketTradingResultPerExchange1, marketTradingResultPerExchange2}}};
+
   CoincenterCommandType commandType{CoincenterCommandType::kReplay};
 };
 
 TEST_F(QueryResultPrinterReplayTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::kFormattedTable)
-      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
+      .printMarketTradingResults(timeWindow, replayResults, commandType);
   static constexpr std::string_view kExpected = R"(
-+----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
-| Exchange | Time window          | Market  | Algorithm | Start amounts | Profit / Loss | Matched orders                                       | Stats                        |
-+----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
-| binance  | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 0 EUR         |                                                      | order books: 42 OK           |
-|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               |                                                      | trades: 3 OK, 10 KO          |
-|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~|~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| huobi    | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 500 EUR       | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
-|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
-|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~|~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| huobi    | 1999-03-25T04:46:43Z | BTC-EUR | test-algo | 1 BTC         | 780 EUR       | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
-|          | 2000-10-07T01:14:27Z |         |           | 1000 EUR      |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
-|          |                      |         |           |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
-+----------+----------------------+---------+-----------+---------------+---------------+------------------------------------------------------+------------------------------+
++------------+----------+----------------------+----------+---------------+---------------+------------------------------------------------------+------------------------------+
+| Algorithm  | Exchange | Time window          | Market   | Start amounts | Profit / Loss | Matched orders                                       | Stats                        |
++------------+----------+----------------------+----------+---------------+---------------+------------------------------------------------------+------------------------------+
+| first-alg  | binance  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 0 USDT        |                                                      | order books: 42 OK           |
+|            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               |                                                      | trades: 3 OK, 10 KO          |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
+|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
+|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
+|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| first-alg  | binance  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 0 USDT        |                                                      | order books: 42 OK           |
+|            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               |                                                      | trades: 3 OK, 10 KO          |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
+|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
+|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
+|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
+|~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+| first-alg  | bithumb  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | -334 USDT     | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 23 OK, 1 KO     |
+|            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 0 OK, 10 KO          |
++------------+----------+----------------------+----------+---------------+---------------+------------------------------------------------------+------------------------------+
 )";
   expectStr(kExpected);
 }
 
 TEST_F(QueryResultPrinterReplayTest, EmptyJson) {
-  basicQueryResultPrinter(ApiOutputType::kJson)
-      .printMarketTradingResults(timeWindow, MarketTradingGlobalResultPerExchange{}, commandType);
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarketTradingResults(timeWindow, ReplayResults{}, commandType);
   static constexpr std::string_view kExpected = R"json(
 {
   "in": {
     "opt": {
-      "time-window": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "time": {
+        "from": "1999-03-25T04:46:43Z",
+        "to": "2000-10-07T01:14:27Z"
+      }
     },
     "req": "Replay"
   },
   "out": {}
 })json";
+
   expectJson(kExpected);
 }
 
 TEST_F(QueryResultPrinterReplayTest, Json) {
-  basicQueryResultPrinter(ApiOutputType::kJson)
-      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
+  basicQueryResultPrinter(ApiOutputType::kJson).printMarketTradingResults(timeWindow, replayResults, commandType);
   static constexpr std::string_view kExpected = R"json(
 {
   "in": {
     "opt": {
-      "time-window": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "time": {
+        "from": "1999-03-25T04:46:43Z",
+        "to": "2000-10-07T01:14:27Z"
+      }
     },
     "req": "Replay"
   },
   "out": {
-    "binance": {
-      "algorithm": "test-algo",
-      "market": "BTC-EUR",
-      "matched-orders": [],
-      "profit-and-loss": "0 EUR",
-      "start-amounts": {
-        "base": "1 BTC",
-        "quote": "1000 EUR"
-      },
-      "stats": {
-        "order-books": {
-          "nb-error": 0,
-          "nb-successful": 42
+    "first-alg": [
+      [
+        {
+          "binance": {
+            "algorithm": "first-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [],
+            "profit-and-loss": "0 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 0,
+                "nb-successful": 42,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-03-25T04:46:43Z"
+                }
+              },
+              "trades": {
+                "nb-error": 10,
+                "nb-successful": 3,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-07-11T00:42:21Z"
+                }
+              }
+            }
+          }
         },
-        "trades": {
-          "nb-error": 10,
-          "nb-successful": 3
+        {
+          "huobi": {
+            "algorithm": "second-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [
+              {
+                "id": "1",
+                "matched": "1.5",
+                "matchedTime": "1999-03-25T04:46:43Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-03-25T04:46:43Z",
+                "price": "35000",
+                "side": "Buy"
+              },
+              {
+                "id": "5",
+                "matched": "0.036",
+                "matchedTime": "2000-10-07T01:14:27Z",
+                "pair": "BTC-USDT",
+                "placedTime": "2000-06-11T23:58:40Z",
+                "price": "47899",
+                "side": "Sell"
+              }
+            ],
+            "profit-and-loss": "500 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 2,
+                "nb-successful": 500000,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-07-11T00:42:21Z"
+                }
+              },
+              "trades": {
+                "nb-error": 0,
+                "nb-successful": 0,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-10-29T01:26:51Z"
+                }
+              }
+            }
+          }
+        },
+        {
+          "huobi": {
+            "algorithm": "second-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [
+              {
+                "id": "2",
+                "matched": "2.5",
+                "matchedTime": "1999-07-11T00:42:21Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-07-11T00:42:21Z",
+                "price": "45000",
+                "side": "Buy"
+              },
+              {
+                "id": "3",
+                "matched": "0.05",
+                "matchedTime": "2000-06-11T23:58:40Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-10-29T01:26:51Z",
+                "price": "35000",
+                "side": "Sell"
+              },
+              {
+                "id": "4",
+                "matched": "1.7",
+                "matchedTime": "2000-06-11T23:58:40Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-10-29T01:26:51Z",
+                "price": "50000",
+                "side": "Sell"
+              }
+            ],
+            "profit-and-loss": "780 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 0,
+                "nb-successful": 79009,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-10-29T01:26:51Z"
+                }
+              },
+              "trades": {
+                "nb-error": 45,
+                "nb-successful": 1555555555,
+                "time": {
+                  "from": "1999-07-11T00:42:21Z",
+                  "to": "2000-06-11T23:58:40Z"
+                }
+              }
+            }
+          }
         }
-      }
-    },
-    "huobi": {
-      "algorithm": "test-algo",
-      "market": "BTC-EUR",
-      "matched-orders": [
+      ]
+    ],
+    "second-alg": [
+      [
         {
-          "id": "1",
-          "matched": "1.5",
-          "matchedTime": "1999-03-25T04:46:43Z",
-          "pair": "BTC-USDT",
-          "placedTime": "1999-03-25T04:46:43Z",
-          "price": "35000",
-          "side": "Buy"
+          "binance": {
+            "algorithm": "first-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [],
+            "profit-and-loss": "0 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 0,
+                "nb-successful": 42,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-03-25T04:46:43Z"
+                }
+              },
+              "trades": {
+                "nb-error": 10,
+                "nb-successful": 3,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-07-11T00:42:21Z"
+                }
+              }
+            }
+          }
         },
         {
-          "id": "5",
-          "matched": "0.036",
-          "matchedTime": "2000-10-07T01:14:27Z",
-          "pair": "BTC-USDT",
-          "placedTime": "2000-06-11T23:58:40Z",
-          "price": "47899",
-          "side": "Sell"
+          "huobi": {
+            "algorithm": "second-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [
+              {
+                "id": "1",
+                "matched": "1.5",
+                "matchedTime": "1999-03-25T04:46:43Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-03-25T04:46:43Z",
+                "price": "35000",
+                "side": "Buy"
+              },
+              {
+                "id": "5",
+                "matched": "0.036",
+                "matchedTime": "2000-10-07T01:14:27Z",
+                "pair": "BTC-USDT",
+                "placedTime": "2000-06-11T23:58:40Z",
+                "price": "47899",
+                "side": "Sell"
+              }
+            ],
+            "profit-and-loss": "500 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 2,
+                "nb-successful": 500000,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-07-11T00:42:21Z"
+                }
+              },
+              "trades": {
+                "nb-error": 0,
+                "nb-successful": 0,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-10-29T01:26:51Z"
+                }
+              }
+            }
+          }
+        },
+        {
+          "huobi": {
+            "algorithm": "second-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [
+              {
+                "id": "2",
+                "matched": "2.5",
+                "matchedTime": "1999-07-11T00:42:21Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-07-11T00:42:21Z",
+                "price": "45000",
+                "side": "Buy"
+              },
+              {
+                "id": "3",
+                "matched": "0.05",
+                "matchedTime": "2000-06-11T23:58:40Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-10-29T01:26:51Z",
+                "price": "35000",
+                "side": "Sell"
+              },
+              {
+                "id": "4",
+                "matched": "1.7",
+                "matchedTime": "2000-06-11T23:58:40Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-10-29T01:26:51Z",
+                "price": "50000",
+                "side": "Sell"
+              }
+            ],
+            "profit-and-loss": "780 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 0,
+                "nb-successful": 79009,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-10-29T01:26:51Z"
+                }
+              },
+              "trades": {
+                "nb-error": 45,
+                "nb-successful": 1555555555,
+                "time": {
+                  "from": "1999-07-11T00:42:21Z",
+                  "to": "2000-06-11T23:58:40Z"
+                }
+              }
+            }
+          }
         }
       ],
-      "profit-and-loss": "500 EUR",
-      "start-amounts": {
-        "base": "1 BTC",
-        "quote": "1000 EUR"
-      },
-      "stats": {
-        "order-books": {
-          "nb-error": 2,
-          "nb-successful": 500000
-        },
-        "trades": {
-          "nb-error": 0,
-          "nb-successful": 0
+      [
+        {
+          "bithumb": {
+            "algorithm": "first-alg",
+            "market": "BTC-USDT",
+            "matched-orders": [
+              {
+                "id": "1",
+                "matched": "1.5",
+                "matchedTime": "1999-03-25T04:46:43Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-03-25T04:46:43Z",
+                "price": "35000",
+                "side": "Buy"
+              },
+              {
+                "id": "3",
+                "matched": "0.05",
+                "matchedTime": "2000-06-11T23:58:40Z",
+                "pair": "BTC-USDT",
+                "placedTime": "1999-10-29T01:26:51Z",
+                "price": "35000",
+                "side": "Sell"
+              }
+            ],
+            "profit-and-loss": "-334 USDT",
+            "start-amounts": {
+              "base": "1 BTC",
+              "quote": "1000 USDT"
+            },
+            "stats": {
+              "order-books": {
+                "nb-error": 1,
+                "nb-successful": 23,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "1999-03-25T04:46:43Z"
+                }
+              },
+              "trades": {
+                "nb-error": 10,
+                "nb-successful": 0,
+                "time": {
+                  "from": "1999-03-25T04:46:43Z",
+                  "to": "2000-10-07T01:14:27Z"
+                }
+              }
+            }
+          }
         }
-      }
-    }
+      ]
+    ]
   }
 })json";
   expectJson(kExpected);
 }
 
 TEST_F(QueryResultPrinterReplayTest, NoPrint) {
-  basicQueryResultPrinter(ApiOutputType::kNoPrint)
-      .printMarketTradingResults(timeWindow, marketTradingResultPerExchange, commandType);
+  basicQueryResultPrinter(ApiOutputType::kNoPrint).printMarketTradingResults(timeWindow, replayResults, commandType);
   expectNoStr();
 }
 

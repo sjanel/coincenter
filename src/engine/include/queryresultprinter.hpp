@@ -108,8 +108,7 @@ class QueryResultPrinter {
   void printMarketsForReplay(TimeWindow timeWindow,
                              const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange);
 
-  void printMarketTradingResults(TimeWindow timeWindow,
-                                 const MarketTradingGlobalResultPerExchange &marketTradingResultPerExchange,
+  void printMarketTradingResults(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
                                  CoincenterCommandType commandType) const;
 
  private:
