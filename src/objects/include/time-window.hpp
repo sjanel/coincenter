@@ -40,6 +40,13 @@ class TimeWindow {
 
   bool overlaps(TimeWindow rhs) const { return _from < rhs._to && rhs._from < _to; }
 
+  /// Returns a new time window with maximum boundaries of both.
+  TimeWindow aggregateMinMax(TimeWindow rhs) const;
+
+  TimeWindow operator+(Duration dur) const { return TimeWindow(_from + dur, _to + dur); }
+
+  TimeWindow& operator+=(Duration dur) { return *this = *this + dur; }
+
   string str() const;
 
   bool operator==(const TimeWindow&) const noexcept = default;

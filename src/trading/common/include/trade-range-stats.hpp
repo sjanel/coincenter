@@ -2,28 +2,31 @@
 
 #include <cstdint>
 
+#include "time-window.hpp"
+
 namespace cct {
 
 struct TradeRangeResultsStats {
-  int32_t nbSuccessful{};
-  int32_t nbError{};
-
   TradeRangeResultsStats operator+(const TradeRangeResultsStats &rhs) const {
-    return TradeRangeResultsStats{nbSuccessful + rhs.nbSuccessful, nbError + rhs.nbError};
+    return {timeWindow.aggregateMinMax(rhs.timeWindow), nbSuccessful + rhs.nbSuccessful, nbError + rhs.nbError};
   }
 
   TradeRangeResultsStats &operator+=(const TradeRangeResultsStats &rhs) { return *this = *this + rhs; }
+
+  TimeWindow timeWindow;
+  int32_t nbSuccessful{};
+  int32_t nbError{};
 };
 
 struct TradeRangeStats {
-  TradeRangeResultsStats marketOrderBookStats;
-  TradeRangeResultsStats publicTradeStats;
-
   TradeRangeStats operator+(const TradeRangeStats &rhs) const {
-    return TradeRangeStats{marketOrderBookStats + rhs.marketOrderBookStats, publicTradeStats + rhs.publicTradeStats};
+    return {marketOrderBookStats + rhs.marketOrderBookStats, publicTradeStats + rhs.publicTradeStats};
   }
 
   TradeRangeStats &operator+=(const TradeRangeStats &rhs) { return *this = *this + rhs; }
+
+  TradeRangeResultsStats marketOrderBookStats;
+  TradeRangeResultsStats publicTradeStats;
 };
 
 }  // namespace cct

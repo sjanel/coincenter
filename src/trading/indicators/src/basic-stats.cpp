@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "currencycode.hpp"
 #include "market-data-view.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"

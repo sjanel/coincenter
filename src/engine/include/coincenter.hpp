@@ -17,7 +17,6 @@
 #include "market.hpp"
 #include "metricsexporter.hpp"
 #include "ordersconstraints.hpp"
-#include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
 #include "transferablecommandresult.hpp"
@@ -35,9 +34,6 @@ class Coincenter {
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
   Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
-
-  /// Launch given commands and return the number of processed commands.
-  int process(const CoincenterCommands &coincenterCommands);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
@@ -150,8 +146,8 @@ class Coincenter {
 
   /// Replay all markets for exchanges selection that has some data during the last
   /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
-  void replay(const AbstractMarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions, Market market,
-              ExchangeNameSpan exchangeNames);
+  ReplayResults replay(const AbstractMarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions,
+                       Market market, ExchangeNameSpan exchangeNames);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
@@ -168,15 +164,13 @@ class Coincenter {
   const FiatConverter &fiatConverter() const { return _fiatConverter; }
 
  private:
-  TransferableCommandResultVector processGroupedCommands(
-      std::span<const CoincenterCommand> groupedCommands,
-      std::span<const TransferableCommandResult> previousTransferableResults);
-
   using MarketTraderEngineVector = FixedCapacityVector<MarketTraderEngine, kNbSupportedExchanges>;
 
-  void replayAlgorithm(const AbstractMarketTraderFactory &marketTraderFactory, std::string_view algorithmName,
-                       const ReplayOptions &replayOptions, std::span<MarketTraderEngine> marketTraderEngines,
-                       const PublicExchangeNameVector &exchangesWithThisMarketData);
+  MarketTradingGlobalResultPerExchange replayAlgorithm(const AbstractMarketTraderFactory &marketTraderFactory,
+                                                       std::string_view algorithmName,
+                                                       const ReplayOptions &replayOptions,
+                                                       std::span<MarketTraderEngine> marketTraderEngines,
+                                                       const PublicExchangeNameVector &exchangesWithThisMarketData);
 
   // TODO: may be moved somewhere else?
   MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions &replayOptions, Market market,
@@ -195,6 +189,5 @@ class Coincenter {
 
   ExchangePool _exchangePool;
   ExchangesOrchestrator _exchangesOrchestrator;
-  QueryResultPrinter _queryResultPrinter;
 };
 }  // namespace cct

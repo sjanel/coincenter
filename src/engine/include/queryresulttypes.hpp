@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <map>
 #include <optional>
 #include <string_view>
 #include <tuple>
@@ -10,6 +11,7 @@
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
+#include "cct_vector.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -86,5 +88,7 @@ using MarketTradingResultPerExchange = FixedCapacityVector<ExchangeWith<MarketTr
 
 using MarketTradingGlobalResultPerExchange =
     FixedCapacityVector<ExchangeWith<MarketTradingGlobalResult>, kNbSupportedExchanges>;
+
+using ReplayResults = std::map<std::string_view, vector<MarketTradingGlobalResultPerExchange>>;
 
 }  // namespace cct
