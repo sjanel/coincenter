@@ -172,7 +172,7 @@ if(CCT_ENABLE_PROTO)
   else()
     # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
     if (NOT PROTOBUF_VERSION)
-      set(PROTOBUF_VERSION v5.27.2)
+      set(PROTOBUF_VERSION v5.27.3)
     endif()
 
     message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")
