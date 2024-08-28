@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <csignal>
 #include <span>
 #include <thread>
 #include <utility>
@@ -29,6 +28,7 @@
 #include "queryresultprinter.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
+#include "signal-handler.hpp"
 #include "timedef.hpp"
 #include "transferablecommandresult.hpp"
 
@@ -51,30 +51,11 @@ void FillConversionTransferableCommandResults(const MonetaryAmountPerExchange &m
   }
 }
 
-volatile sig_atomic_t g_signalStatus = 0;
-
 }  // namespace
-
-// According to the standard, 'SignalHandler' function should have C linkage:
-// https://en.cppreference.com/w/cpp/utility/program/signal
-// Thus it's not possible to use a lambda and pass some
-// objects to it. This is why for this rare occasion we will rely on a static variable. This solution has been inspired
-// by: https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC54-CPP.+A+signal+handler+must+be+a+plain+old+function
-extern "C" void SignalHandler(int sigNum) {
-  log::warn("Signal {} received, will stop after current request", sigNum);
-  g_signalStatus = sigNum;
-
-  // Revert to standard signal handler (to allow for standard kill in case program does not react)
-  std::signal(sigNum, SIG_DFL);
-}
 
 CoincenterCommandsProcessor::CoincenterCommandsProcessor(Coincenter &coincenter)
     : _coincenter(coincenter),
-      _queryResultPrinter(coincenter.coincenterInfo().apiOutputType(), coincenter.coincenterInfo().loggingInfo()) {
-  // Register the signal handler to gracefully shutdown the main loop for repeated requests.
-  std::signal(SIGINT, SignalHandler);
-  std::signal(SIGTERM, SignalHandler);
-}
+      _queryResultPrinter(coincenter.coincenterInfo().apiOutputType(), coincenter.coincenterInfo().loggingInfo()) {}
 
 int CoincenterCommandsProcessor::process(const CoincenterCommands &coincenterCommands) {
   const auto commands = coincenterCommands.commands();
@@ -83,7 +64,7 @@ int CoincenterCommandsProcessor::process(const CoincenterCommands &coincenterCom
 
   int nbCommandsProcessed{};
   TimePoint lastCommandTime;
-  for (int repeatPos{}; repeatPos != nbRepeats && g_signalStatus == 0; ++repeatPos) {
+  for (int repeatPos{}; repeatPos != nbRepeats && !IsStopRequested(); ++repeatPos) {
     const auto earliestTimeNextCommand = lastCommandTime + repeatTime;
     const bool doLog = nbRepeats != 1 && (repeatPos < 100 || repeatPos % 100 == 0);
 
