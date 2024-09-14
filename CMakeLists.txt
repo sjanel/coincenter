@@ -89,8 +89,8 @@ if(CCT_ENABLE_TESTS)
   if(NOT GTest_FOUND)
     FetchContent_Declare(
       googletest
-      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
-      URL_HASH SHA256=8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7
+      URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz
+      URL_HASH SHA256=7b42b4d6ed48810c5362c265a17faebe90dc2373c885e5216439d37927f02926
     )
 
     list(APPEND fetchContentPackagesToMakeAvailable googletest)
@@ -172,7 +172,7 @@ if(CCT_ENABLE_PROTO)
   else()
     # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
     if (NOT PROTOBUF_VERSION)
-      set(PROTOBUF_VERSION v5.27.3)
+      set(PROTOBUF_VERSION v5.28.1)
     endif()
 
     message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")
