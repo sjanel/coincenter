@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -19,14 +20,15 @@ class JoinStringView {
   // Join all strings into a single std::array of chars
   static constexpr auto impl() noexcept {
     constexpr std::string_view::size_type len = (Strs.size() + ... + 0);
-    std::array<char, len + 1U> arr;  // +1 for null terminated char
+    std::array<char, len + 1U> a;  // +1 for null terminated char
     if constexpr (len > 0) {
-      auto append = [it = arr.begin()](auto const& s) mutable { it = std::copy(s.begin(), s.end(), it); };
+      auto append = [it = a.begin()](auto const& s) mutable { it = std::ranges::copy(s, it).out; };
       (append(Strs), ...);
     }
-    arr.back() = '\0';
-    return arr;
+    a.back() = '\0';
+    return a;
   }
+
   // Give the joined string static storage
   static constexpr auto arr = impl();
 
@@ -52,18 +54,18 @@ class JoinStringViewWithSep {
     constexpr auto nbSv = sizeof...(Strs);
     std::array<char, std::max(len + 1U + ((nbSv == 0U ? 0U : (nbSv - 1U)) * Sep.size()),
                               static_cast<std::string_view::size_type>(1))>
-        arr;
+        a;
     if constexpr (len > 0) {
-      auto append = [it = arr.begin(), &arr](auto const& s) mutable {
-        if (it != arr.begin()) {
-          it = std::copy(Sep.begin(), Sep.end(), it);
+      auto append = [it = a.begin(), &a](auto const& s) mutable {
+        if (it != a.begin()) {
+          it = std::ranges::copy(Sep, it).out;
         }
-        it = std::copy(s.begin(), s.end(), it);
+        it = std::ranges::copy(s, it).out;
       };
       (append(Strs), ...);
     }
-    arr.back() = '\0';
-    return arr;
+    a.back() = '\0';
+    return a;
   }
   // Give the joined string static storage
   static constexpr auto arr = impl();
@@ -101,22 +103,22 @@ template <int64_t intVal>
 class IntToStringView {
  private:
   static constexpr auto impl() noexcept {
-    std::array<char, nchars(intVal)> arr;
+    std::array<char, nchars(intVal)> a;
     if constexpr (intVal == 0) {
-      arr[0] = '0';
-      return arr;
+      a[0] = '0';
+      return a;
     }
-    auto endIt = arr.end();
+    auto endIt = a.end();
     int64_t val = intVal;
     if constexpr (intVal < 0) {
-      arr[0] = '-';
+      a[0] = '-';
       val = -val;
     }
     do {
       *--endIt = (val % 10) + '0';
       val /= 10;
     } while (val != 0);
-    return arr;
+    return a;
   }
 
   static constexpr auto arr = impl();

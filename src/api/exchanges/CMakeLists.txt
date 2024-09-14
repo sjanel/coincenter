@@ -3,13 +3,12 @@ include(FetchContent)
 
 aux_source_directory(src API_EXCHANGES_SRC)
 
-add_library(coincenter_api-exchange STATIC ${API_EXCHANGES_SRC})
+add_coincenter_library(api-exchange STATIC ${API_EXCHANGES_SRC})
+
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_api-common)
 target_link_libraries(coincenter_api-exchange PRIVATE coincenter_monitoring)
 target_link_libraries(coincenter_api-exchange PRIVATE jwt-cpp)
-
-target_include_directories(coincenter_api-exchange PUBLIC include)
 
 function(add_exchange_test name)
    set(oneValueArgs)

@@ -1,6 +1,6 @@
 aux_source_directory(src TRADING-ALGORITHMS_SRC)
 
-add_library(coincenter_trading-algorithms STATIC ${TRADING-ALGORITHMS_SRC})
+add_coincenter_library(trading-algorithms STATIC ${TRADING-ALGORITHMS_SRC})
 
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_api-objects)
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_objects)
@@ -8,5 +8,3 @@ target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_tech)
 
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_trading-common)
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_trading-indicators)
-
-target_include_directories(coincenter_trading-algorithms PUBLIC include)

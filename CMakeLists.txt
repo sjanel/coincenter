@@ -226,14 +226,8 @@ endif()
 # Unit Tests
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/AddUnitTest.cmake)
 
-# Compiler warnings (only in Debug mode)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if(MSVC)
-    add_compile_options(/W3)
-  else()
-    add_compile_options(-Wall -Wextra -pedantic)
-  endif()
-endif()
+# coincenter library factorization of target options
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/CoincenterUtils.cmake)
 
 if(MSVC)
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
@@ -260,19 +254,6 @@ else()
       message(FATAL_ERROR "clang-tidy executable cannot be found")
     endif()
   endif()
-endif()
-
-# Definition of project constants
-add_compile_definitions("CCT_DATA_DIR=\"${CCT_DATA_DIR}\"")
-add_compile_definitions("CCT_VERSION=\"${PROJECT_VERSION}\"")
-
-if(CCT_ENABLE_PROMETHEUS)
-  add_compile_definitions(CCT_ENABLE_PROMETHEUS)
-endif()
-
-if(CCT_ENABLE_PROTO)
-  add_compile_definitions(CCT_ENABLE_PROTO)
-  add_compile_definitions("CCT_PROTOBUF_VERSION=\"${PROTOBUF_VERSION}\"")
 endif()
 
 # Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation

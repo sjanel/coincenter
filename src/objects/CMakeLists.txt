@@ -1,11 +1,11 @@
 # Create objects lib
 aux_source_directory(src OBJECTS_SRC)
 
-add_library(coincenter_objects STATIC ${OBJECTS_SRC})
+add_coincenter_library(objects STATIC ${OBJECTS_SRC})
+
 target_link_libraries(coincenter_objects PUBLIC coincenter_monitoring)
 target_link_libraries(coincenter_objects PUBLIC coincenter_tech)
 target_link_libraries(coincenter_objects PUBLIC coincenter_http-request)
-target_include_directories(coincenter_objects PUBLIC include)
 
 add_unit_test(
     balanceportfolio_test
