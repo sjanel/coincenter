@@ -20,8 +20,8 @@ inline void B64EncodeImpl(std::span<const char> binData, char *out, char *endOut
   static constexpr auto kB64NbBits = 6;
   static constexpr decltype(accumulator) kMask6 = (1U << kB64NbBits) - 1U;
 
-  for (uint8_t ch : binData) {
-    accumulator = (accumulator << CHAR_BIT) | ch;
+  for (char ch : binData) {
+    accumulator = (accumulator << CHAR_BIT) | static_cast<uint8_t>(ch);
     bitsCollected += CHAR_BIT;
     while (bitsCollected >= kB64NbBits) {
       bitsCollected -= kB64NbBits;

@@ -1,15 +1,13 @@
 
 aux_source_directory(src API_COMMON_SRC)
 
-add_library(coincenter_api-common STATIC ${API_COMMON_SRC})
+add_coincenter_library(api-common STATIC ${API_COMMON_SRC})
 
 target_link_libraries(coincenter_api-common PUBLIC coincenter_api-objects)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_http-request)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_serialization)
 target_link_libraries(coincenter_api-common PRIVATE OpenSSL::SSL)
-
-target_include_directories(coincenter_api-common PUBLIC include)
 
 function(add_common_test name)
    set(oneValueArgs)

@@ -1,10 +1,10 @@
 aux_source_directory(src API_IO_TOOLS_SRC)
 
-add_library(coincenter_http-request STATIC ${API_IO_TOOLS_SRC})
+add_coincenter_library(http-request STATIC ${API_IO_TOOLS_SRC})
+
 target_link_libraries(coincenter_http-request PUBLIC coincenter_tech)
 target_link_libraries(coincenter_http-request PRIVATE coincenter_monitoring)
 target_link_libraries(coincenter_http-request PRIVATE CURL::libcurl)
-target_include_directories(coincenter_http-request PUBLIC include)
 
 add_unit_test(
     besturlpicker_test

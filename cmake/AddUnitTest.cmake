@@ -1,3 +1,6 @@
+
+include(${CMAKE_CURRENT_LIST_DIR}/CoincenterUtils.cmake)
+
 #[[ Create a unit test
 Syntax:
 add_unit_test(<name> src1 [src2 ...] [LIBRARIES lib1 lib2 ...] [DEFINITIONS def1 def2])
@@ -22,7 +25,6 @@ function(add_unit_test name)
       target_link_libraries(${name} PRIVATE amc::amc)
     endif()
 
-    target_include_directories(${name} PRIVATE include)
     target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src/http-request/include)
 
     add_test(NAME ${name} COMMAND ${name})
@@ -72,10 +74,14 @@ function(add_exe name)
   endforeach()
 
   add_executable(${name} ${exe_sources})
+
   set_target_properties(${name} PROPERTIES
     COMPILE_DEFINITIONS "${exe_definitions}"
-    BUILD_RPATH "${runtime_path}")
+    BUILD_RPATH "${runtime_path}"
+  )
   target_link_libraries(${name} PRIVATE ${exe_libraries})
   list(REMOVE_DUPLICATES exe_include_dirs)
   target_include_directories(${name} PRIVATE ${exe_include_dirs} ${exe_directories})
+
+  target_set_coincenter_options(${name})
 endfunction()

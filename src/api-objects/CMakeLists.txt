@@ -1,10 +1,9 @@
 aux_source_directory(src API_OBJECTS_SRC)
 
-add_library(coincenter_api-objects STATIC ${API_OBJECTS_SRC})
+add_coincenter_library(api-objects STATIC ${API_OBJECTS_SRC})
+
 target_link_libraries(coincenter_api-objects PUBLIC coincenter_tech)
 target_link_libraries(coincenter_api-objects PUBLIC coincenter_objects)
-
-target_include_directories(coincenter_api-objects PUBLIC include)
 
 add_unit_test(
     baseconstraints_test

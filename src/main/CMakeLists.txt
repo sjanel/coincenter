@@ -3,7 +3,7 @@ aux_source_directory(src MAIN_SRC)
 include(CheckIPOSupported)
 
 if(CCT_BUILD_EXEC)
-  add_executable(coincenter ${MAIN_SRC})
+  add_coincenter_executable(coincenter ${MAIN_SRC})
 
   check_ipo_supported(RESULT result OUTPUT output LANGUAGES CXX)
 
@@ -19,7 +19,7 @@ if(CCT_BUILD_EXEC)
 
 else()
   list(REMOVE_ITEM ENGINE_SRC "src/main.cpp")
-  add_library(coincenter STATIC ${MAIN_SRC})
+  add_coincenter_library(coincenter STATIC ${MAIN_SRC})
 endif()
 
 target_link_libraries(coincenter PUBLIC coincenter_engine)
