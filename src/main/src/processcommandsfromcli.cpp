@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "cct_exception.hpp"
+#include "cct_log.hpp"
 #include "coincenter-commands-processor.hpp"
 #include "coincenter.hpp"
 #include "coincenterinfo.hpp"

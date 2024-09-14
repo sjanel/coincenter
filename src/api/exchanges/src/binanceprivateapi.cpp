@@ -21,6 +21,7 @@
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"

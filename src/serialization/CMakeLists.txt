@@ -29,7 +29,15 @@ if(CCT_ENABLE_PROTO)
     TARGET coincenter_serialization
     IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}/proto"
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}"
+    OUT_VAR PROTO_GENERATED_FILES
   )
+
+  if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.27.0")
+    set_source_files_properties(${PROTO_GENERATED_FILES}
+      PROPERTIES
+      SKIP_LINTING ON
+    )
+  endif()
 
   add_unit_test(
     continuous-iterator_test
