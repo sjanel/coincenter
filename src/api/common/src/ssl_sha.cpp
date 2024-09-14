@@ -4,6 +4,7 @@
 #include <openssl/hmac.h>
 #include <openssl/opensslv.h>
 #include <openssl/sha.h>
+#include <openssl/types.h>
 
 #include <algorithm>
 #include <array>

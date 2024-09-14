@@ -16,6 +16,7 @@
 #include "cct_allocator.hpp"
 #include "cct_exception.hpp"
 #include "cct_flatset.hpp"
+#include "cct_log.hpp"
 #include "cct_smallset.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_vector.hpp"

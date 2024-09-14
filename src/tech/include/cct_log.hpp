@@ -5,7 +5,7 @@
 #ifdef CCT_DISABLE_SPDLOG
 #include <string_view>
 #else
-#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>  // IWYU pragma: export
 #endif
 
 namespace cct {

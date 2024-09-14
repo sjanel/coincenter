@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"

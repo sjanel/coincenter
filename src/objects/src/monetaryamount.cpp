@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cmath>
 #include <compare>
-#include <concepts>
 #include <cstdint>
 #include <cstdlib>
 #include <iomanip>
@@ -15,13 +14,13 @@
 #include <ranges>
 #include <sstream>
 #include <string_view>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
 #include "cct_config.hpp"
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_log.hpp"
 #include "currencycode.hpp"
 #include "ipow.hpp"
 #include "ndigits.hpp"
