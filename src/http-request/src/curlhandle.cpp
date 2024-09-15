@@ -1,6 +1,7 @@
 #include "curlhandle.hpp"
 
 #include <curl/curl.h>
+#include <curl/easy.h>
 
 #include <algorithm>
 #include <chrono>

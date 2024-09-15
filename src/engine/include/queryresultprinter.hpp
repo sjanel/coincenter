@@ -89,7 +89,8 @@ class QueryResultPrinter {
 
   void printConversionPath(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) const;
 
-  void printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange, CurrencyCode cur) const;
+  void printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange,
+                         CurrencyCode currencyCode) const;
 
   void printLast24hTradedVolume(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) const;
 

@@ -71,6 +71,9 @@ class CurrencyCodeIterator {
   using pointer = const char *;
   using reference = const char &;
 
+  // Public default constructor needed for an iterator in C++20
+  CurrencyCodeIterator() noexcept = default;
+
   constexpr std::strong_ordering operator<=>(const CurrencyCodeIterator &) const noexcept = default;
 
   constexpr bool operator==(const CurrencyCodeIterator &) const noexcept = default;
@@ -103,11 +106,10 @@ class CurrencyCodeIterator {
  private:
   friend class CurrencyCode;
 
-  // Default constructor needed for an iterator in C++20
-  constexpr explicit CurrencyCodeIterator(uint64_t data = 0, uint64_t pos = 0) noexcept : _data(data), _pos(pos) {}
+  constexpr explicit CurrencyCodeIterator(uint64_t data, uint64_t pos = 0) noexcept : _data(data), _pos(pos) {}
 
-  uint64_t _data;
-  uint64_t _pos;
+  uint64_t _data{};
+  uint64_t _pos{};
 };
 
 /// Lightweight object representing a currency code with its acronym.
@@ -277,6 +279,8 @@ class CurrencyCode {
     append(str.end() - len);
   }
 };
+
+static_assert(std::ranges::bidirectional_range<CurrencyCode>);
 
 }  // namespace cct
 

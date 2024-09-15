@@ -1352,8 +1352,8 @@ void QueryResultPrinter::printConversionPath(Market mk,
 }
 
 void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange,
-                                           CurrencyCode cur) const {
-  json jsonData = WithdrawFeesJson(withdrawFeesPerExchange, cur);
+                                           CurrencyCode currencyCode) const {
+  json jsonData = WithdrawFeesJson(withdrawFeesPerExchange, currencyCode);
   switch (_apiOutputType) {
     case ApiOutputType::kFormattedTable: {
       table::Row header("Withdraw fee currency");
