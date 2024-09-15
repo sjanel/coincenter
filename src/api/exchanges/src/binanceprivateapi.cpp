@@ -794,9 +794,9 @@ ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdr
                                     _queryDelay, {{"coin", currencyCode.str()}});
   const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
 
-  auto newEndIt = std::remove_if(depositStatus.begin(), depositStatus.end(), [&wallet](const json& el) {
-    return el["status"].get<int>() != 1 || el["address"].get<std::string_view>() != wallet.address();
-  });
+  auto newEndIt = std::ranges::remove_if(depositStatus, [&wallet](const json& el) {
+                    return el["status"].get<int>() != 1 || el["address"].get<std::string_view>() != wallet.address();
+                  }).begin();
 
   depositStatus.erase(newEndIt, depositStatus.end());
 

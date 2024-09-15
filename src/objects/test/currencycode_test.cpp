@@ -170,7 +170,7 @@ TEST(CurrencyCodeTest, UpperConversion) {
 
 namespace {
 constexpr bool HasZ(CurrencyCode cur) {
-  return std::any_of(cur.begin(), cur.end(), [](char ch) { return ch == 'Z'; });
+  return std::ranges::any_of(cur, [](char ch) { return ch == 'Z'; });
 }
 }  // namespace
 

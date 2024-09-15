@@ -745,8 +745,8 @@ json QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
             continue;
           }
         } else if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
-          const auto searchGb = StringToIntegral<int>(trx["search"].get<std::string_view>());
-          if (searchGb != kSearchGbBuy && searchGb != kSearchGbSell) {
+          const auto searchValue = StringToIntegral<int>(trx["search"].get<std::string_view>());
+          if (searchValue != kSearchGbBuy && searchValue != kSearchGbSell) {
             continue;
           }
         }

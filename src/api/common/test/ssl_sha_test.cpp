@@ -15,7 +15,7 @@ TEST(SSLTest, Sha256) {
   static constexpr char kExpectedData[] = {-98, 74,   -90,  56,  -41, 61,  -33,  98,  -108, -110, -41,
                                            -82, -110, -102, -80, 85,  127, -112, -55, -116, 38,   36,
                                            10,  -104, -37,  93,  105, 14,  73,   99,  98,   95};
-  EXPECT_TRUE(std::equal(sha256.begin(), sha256.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(sha256, kExpectedData));
 }
 
 TEST(SSLTest, ShaBin256) {
@@ -23,7 +23,7 @@ TEST(SSLTest, ShaBin256) {
   static constexpr char kExpectedData[] = {11,  -51, -56,  -21,  -101, 61,   35,  28, 86,  97,  -50,
                                            -8,  47,  -113, -13,  -107, -100, -93, 27, 71,  101, -128,
                                            -65, 101, -110, -123, 38,   73,   77,  73, -10, -39};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaBin512) {
@@ -33,7 +33,7 @@ TEST(SSLTest, ShaBin512) {
                                            87,  22,  -61,  82,  89,   52,  105,  2,   -89,  -76,  63,   4,   95,
                                            124, -24, 93,   -46, -104, -87, -110, -80, -77,  -66,  -43,  26,  126,
                                            114, 101, -68,  -66, 75,   -62, -93,  -77, -124, 78,   -121, -96};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaHex256) {
@@ -42,7 +42,7 @@ TEST(SSLTest, ShaHex256) {
                                            53, 54, 54, 49,  99, 101, 102, 56, 50, 102, 56, 102, 102, 51,  57,  53,
                                            57, 99, 97, 51,  49, 98,  52,  55, 54, 53,  56, 48,  98,  102, 54,  53,
                                            57, 50, 56, 53,  50, 54,  52,  57, 52, 100, 52, 57,  102, 54,  100, 57};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaHex512) {
@@ -54,7 +54,7 @@ TEST(SSLTest, ShaHex512) {
       48,  50,  97, 55, 98,  52,  51,  102, 48,  52,  53,  102, 55, 99,  101, 56,  53, 100, 100, 50, 57, 56,
       97,  57,  57, 50, 98,  48,  98,  51,  98,  101, 100, 53,  49, 97,  55,  101, 55, 50,  54,  53, 98, 99,
       98,  101, 52, 98, 99,  50,  97,  51,  98,  51,  56,  52,  52, 101, 56,  55,  97, 48};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaDigest256) {
@@ -63,7 +63,7 @@ TEST(SSLTest, ShaDigest256) {
                                            51,  50, 57,  55,  100, 50, 56, 97,  52, 55,  50,  57,  51,  102, 49, 50,
                                            51,  97, 49,  51,  50,  54, 50, 57,  48, 101, 102, 51,  100, 55,  48, 49,
                                            53,  57, 55,  101, 57,  51, 56, 102, 99, 53,  48,  102, 48,  57,  57, 57};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaDigest512) {
@@ -75,7 +75,7 @@ TEST(SSLTest, ShaDigest512) {
       50,  49,  99,  100, 100, 57, 54,  102, 50, 52,  48,  54,  48, 102, 101, 49,  56, 102, 52,  52,  50, 100,
       54,  57,  100, 98,  54,  99, 56,  53,  56, 49,  53,  51,  52, 57,  102, 50,  52, 101, 99,  100, 99, 48,
       100, 97,  51,  51,  51,  53, 48,  49,  56, 51,  53,  98,  53, 52,  51,  102, 54, 53};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaDigest256Multiple) {
@@ -86,7 +86,7 @@ TEST(SSLTest, ShaDigest256Multiple) {
                                            100, 57, 97,  52, 48,  99,  51, 52,  101, 97, 50, 99, 53, 98,  97, 51,
                                            100, 54, 55,  50, 102, 100, 51, 102, 100, 98, 51, 54, 52, 100, 98, 50,
                                            101, 49, 97,  56, 53,  54,  99, 48,  100, 53, 52, 98, 49, 101, 51, 50};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 
 TEST(SSLTest, ShaDigest512Multiple) {
@@ -100,6 +100,6 @@ TEST(SSLTest, ShaDigest512Multiple) {
       48,  56,  54,  49,  100, 57,  49,  51, 98, 97, 57,  53, 56, 54,  54,  54,  52, 53,  53, 48,  57,  98,
       100, 99,  102, 57,  54,  52,  55,  55, 49, 55, 48,  56, 97, 55,  50,  102, 52, 54,  52, 101, 56,  50,
       51,  102, 57,  54,  98,  53,  50,  51, 52, 99, 98,  48, 51, 56,  100, 53,  55, 56};
-  EXPECT_TRUE(std::equal(actual.begin(), actual.end(), std::begin(kExpectedData), std::end(kExpectedData)));
+  EXPECT_TRUE(std::ranges::equal(actual, kExpectedData));
 }
 }  // namespace cct::ssl
