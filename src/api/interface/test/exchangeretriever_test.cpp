@@ -159,7 +159,7 @@ TEST_F(ExchangeRetrieverTest, RetrieveSelectedExchangesSelectedOrder) {
     EXPECT_EQ(selectedExchanges[1]->name(), "bithumb");
     EXPECT_EQ(selectedExchanges[2]->name(), "bithumb");
 
-    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
+    std::ranges::rotate(kAllExchanges, std::begin(kAllExchanges) + 2);
   }
 }
 
@@ -182,7 +182,7 @@ TEST_F(ExchangeRetrieverTest, RetrieveAtMostOneAccountSelectedExchanges) {
     EXPECT_EQ(exchangesInitialOrder.front()->name(), "bithumb");
     EXPECT_EQ(exchangesInitialOrder.back()->name(), "kraken");
 
-    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
+    std::ranges::rotate(kAllExchanges, std::begin(kAllExchanges) + 2);
   }
 }
 
@@ -198,7 +198,7 @@ TEST_F(ExchangeRetrieverTest, RetrieveUniquePublicExchange) {
     EXPECT_EQ(selectedExchanges.front()->name(), "kraken");
     EXPECT_EQ(selectedExchanges.back()->name(), "bithumb");
 
-    std::rotate(std::begin(kAllExchanges), std::begin(kAllExchanges) + 2, std::end(kAllExchanges));
+    std::ranges::rotate(kAllExchanges, std::begin(kAllExchanges) + 2);
   }
 }
 }  // namespace cct
