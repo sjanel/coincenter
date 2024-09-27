@@ -18,12 +18,19 @@
 namespace cct {
 
 namespace {
-constexpr std::pair<std::string_view, Duration> kDurationUnits[] = {
+using UnitDuration = std::pair<std::string_view, Duration>;
+
+constexpr UnitDuration kDurationUnits[] = {
     {"y", std::chrono::years(1)},   {"mon", std::chrono::months(1)},      {"w", std::chrono::weeks(1)},
     {"d", std::chrono::days(1)},    {"h", std::chrono::hours(1)},         {"min", std::chrono::minutes(1)},
     {"s", std::chrono::seconds(1)}, {"ms", std::chrono::milliseconds(1)}, {"us", std::chrono::microseconds(1)},
 };
-}
+
+constexpr char kInvalidTimeDurationUnitMsg[] =
+    "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
+    "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
+
+}  // namespace
 
 std::string_view::size_type DurationLen(std::string_view str) {
   std::string_view::size_type ret{};
@@ -80,10 +87,6 @@ Duration ParseDuration(std::string_view durationStr) {
     throw invalid_argument("Time amount should be an integral value");
   }
 
-  static constexpr char kInvalidTimeDurationUnitMsg[] =
-      "Cannot parse time duration. Accepted time units are 'y (years), mon (months), w (weeks), d (days), h (hours), "
-      "min (minutes), s (seconds), ms (milliseconds) and us (microseconds)'";
-
   const auto sz = durationStr.size();
   Duration ret{};
   for (std::remove_const_t<decltype(sz)> charPos = 0; charPos < sz;) {
@@ -122,33 +125,33 @@ Duration ParseDuration(std::string_view durationStr) {
 }
 
 namespace {
-template <class TimeUnitT>
-void AdjustWithUnit(std::string_view unitStr, Duration &dur, string &ret) {
-  if (dur >= TimeUnitT(1)) {
-    const auto nU = std::chrono::duration_cast<TimeUnitT>(dur).count();
 
-    AppendIntegralToString(ret, nU);
-    ret += unitStr;
-    dur -= TimeUnitT(nU);
+bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificantUnits, string &ret) {
+  if (dur >= unitDuration.second) {
+    const auto countInThisDurationUnit =
+        std::chrono::duration_cast<decltype(unitDuration.second)>(dur).count() / unitDuration.second.count();
+    AppendIntegralToString(ret, countInThisDurationUnit);
+
+    ret += unitDuration.first;
+    dur -= countInThisDurationUnit * unitDuration.second;
+    if (--nbSignificantUnits == 0) {
+      return true;
+    }
   }
+  return false;
 }
+
 }  // namespace
 
-string DurationToString(Duration dur) {
+string DurationToString(Duration dur, int nbSignificantUnits) {
   string ret;
 
   if (dur == kUndefinedDuration) {
     ret.append("<undef>");
   } else {
-    AdjustWithUnit<std::chrono::years>("y", dur, ret);
-    AdjustWithUnit<std::chrono::months>("mon", dur, ret);
-    AdjustWithUnit<std::chrono::weeks>("w", dur, ret);
-    AdjustWithUnit<std::chrono::days>("d", dur, ret);
-    AdjustWithUnit<std::chrono::hours>("h", dur, ret);
-    AdjustWithUnit<std::chrono::minutes>("min", dur, ret);
-    AdjustWithUnit<seconds>("s", dur, ret);
-    AdjustWithUnit<milliseconds>("ms", dur, ret);
-    AdjustWithUnit<microseconds>("us", dur, ret);
+    std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto &unitDuration) {
+      return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, ret);
+    });
   }
 
   return ret;
