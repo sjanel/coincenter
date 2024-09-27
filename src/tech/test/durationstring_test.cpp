@@ -59,14 +59,17 @@ TEST(DurationString, DurationToStringDaysAndHours) {
   EXPECT_EQ(DurationToString(std::chrono::days(3) + std::chrono::hours(12)), "3d12h");
 }
 TEST(DurationString, DurationToStringWeeksDaysMinutes) {
-  EXPECT_EQ(DurationToString(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57)), "2w6d57min");
+  EXPECT_EQ(DurationToString(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57), 3), "2w6d57min");
 }
 TEST(DurationString, DurationToStringYearsHoursSecondsMilliseconds) {
-  EXPECT_EQ(DurationToString(std::chrono::years(50) + std::chrono::hours(2) + seconds(13) + milliseconds(556)),
+  EXPECT_EQ(DurationToString(std::chrono::years(50) + std::chrono::hours(2) + seconds(13) + milliseconds(556), 10),
             "50y2h13s556ms");
 }
 TEST(DurationString, DurationToStringMicroseconds) {
-  EXPECT_EQ(DurationToString(microseconds(31736913078454L)), "1y2d1h59min21s78ms454us");
+  EXPECT_EQ(DurationToString(microseconds(31736913078454L), 20), "1y2d1h59min21s78ms454us");
+}
+TEST(DurationString, DurationToStringMicrosecondsTruncated) {
+  EXPECT_EQ(DurationToString(microseconds(31736913078454L), 2), "1y2d");
 }
 
 }  // namespace cct
