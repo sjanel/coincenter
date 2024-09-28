@@ -49,8 +49,9 @@ TEST_F(CoincenterCmdLineOptionsTest, DefaultConstructorShouldValueInitializeAll)
 
   EXPECT_EQ(opts, *pRhs);
 
-  static_assert(std::is_trivially_destructible_v<CoincenterCmdLineOptions>,
-                "then destructor should be called (but ideally this type should stay trivially destructible)");
+  if constexpr (!std::is_trivially_destructible_v<CoincenterCmdLineOptions>) {
+    std::destroy_at(pRhs);
+  }
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, MergeGlobal) {

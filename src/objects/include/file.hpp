@@ -15,6 +15,11 @@ class File : public Reader, public Writer {
   enum class Type : int8_t { kCache, kSecret, kStatic, kLog };
   enum class IfError : int8_t { kThrow, kNoThrow };
 
+  /// Creates a File directly from a file path.
+  File(std::string_view filePath, IfError ifError);
+
+  /// Creates a File from the coincenter data directory, with the type of the file and its name in the main data
+  /// directory.
   File(std::string_view dataDir, Type type, std::string_view name, IfError ifError);
 
   [[nodiscard]] string readAll() const override;
