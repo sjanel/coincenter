@@ -968,9 +968,6 @@ MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<
 
   MarketDataPerExchange ret(selectedExchanges.size());
   _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&marketPerPublicExchange](Exchange *exchange) {
-    if (!exchange->exchangeConfig().withMarketDataSerialization()) {
-      log::warn("Calling market-data on {} with data serialization disabled", exchange->name());
-    }
     // Call order book and last trades sequentially for this exchange
     Market market = marketPerPublicExchange[exchange->publicExchangePos()];
 

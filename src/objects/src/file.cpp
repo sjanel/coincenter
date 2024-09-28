@@ -37,6 +37,8 @@ string FullFileName(std::string_view dataDir, std::string_view fileName, File::T
 }
 }  // namespace
 
+File::File(std::string_view filePath, IfError ifError) : _filePath(filePath), _ifError(ifError) {}
+
 File::File(std::string_view dataDir, Type type, std::string_view name, IfError ifError)
     : _filePath(FullFileName(dataDir, name, type)), _ifError(ifError) {}
 
@@ -49,7 +51,7 @@ string File::readAll() const {
       throw exception("Unable to open {} for reading", _filePath);
     }
     try {
-      data = string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+      data = string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     } catch (const std::exception& e) {
       if (_ifError == IfError::kThrow) {
         throw e;

@@ -53,9 +53,9 @@ class Coincenter {
                                                      CurrencyCode equiCurrencyCode,
                                                      std::optional<int> depth = std::nullopt);
 
-  /// Query market data without returning it.
+  /// Query market data (order books and last trades).
   /// This method is especially useful for serialization and metric exports.
-  void queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchange);
+  MarketDataPerExchange queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);

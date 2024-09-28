@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <iterator>
 #include <string_view>
 
@@ -17,6 +18,8 @@ static constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
 static constexpr std::string_view kDepositAddressesFileName = "depositaddresses.json";
 
 static constexpr std::string_view kSupportedExchanges[] = {"binance", "bithumb", "huobi", "kraken", "kucoin", "upbit"};
+
+static_assert(std::ranges::is_sorted(kSupportedExchanges));
 
 static constexpr int kNbSupportedExchanges = static_cast<int>(std::size(kSupportedExchanges));
 
