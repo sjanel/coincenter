@@ -228,6 +228,16 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundTy
   round(nbDecimals, roundType);
 }
 
+[[nodiscard]] uint32_t MonetaryAmount::strLen(WithSpace withSpace) const {
+  const auto nbDigitsAmount = ndigits(_amount);
+  const auto szCurrencyCode = _curWithDecimals.size();
+  const auto nbDec = nbDecimals();
+  return static_cast<uint32_t>(static_cast<uint32_t>(_amount < 0) + nbDigitsAmount + static_cast<uint32_t>(nbDec != 0) +
+                               static_cast<uint32_t>(nbDec >= nbDigitsAmount) +
+                               static_cast<uint32_t>(withSpace == WithSpace::kYes && szCurrencyCode != 0) +
+                               szCurrencyCode);
+}
+
 std::optional<MonetaryAmount::AmountType> MonetaryAmount::amount(int8_t nbDecimals) const {
   AmountType integralAmount = _amount;
   const int8_t ourNbDecimals = this->nbDecimals();

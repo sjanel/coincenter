@@ -6,7 +6,6 @@
 #include <string_view>
 
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
 #include "cct_string.hpp"
 
 namespace cct {
@@ -112,15 +111,15 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
 
   using ExoticKeyValuePair = FlatKeyValueString<'\0', ':'>;
   ExoticKeyValuePair kvPairs{{"abc", "354"}, {"tata", "abc"}, {"rm", "xX"}, {"huhu", "haha"}};
-  EXPECT_EQ(kvPairs.str(), std::string_view("abc:354\0tata:abc\0rm:xX\0huhu:haha"sv));
+  EXPECT_EQ(kvPairs.str(), "abc:354\0tata:abc\0rm:xX\0huhu:haha"sv);
   kvPairs.set("rm", "Yy3");
-  EXPECT_EQ(kvPairs.str(), std::string_view("abc:354\0tata:abc\0rm:Yy3\0huhu:haha"sv));
+  EXPECT_EQ(kvPairs.str(), "abc:354\0tata:abc\0rm:Yy3\0huhu:haha"sv);
   kvPairs.erase("abc");
-  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0rm:Yy3\0huhu:haha"sv));
+  EXPECT_EQ(kvPairs.str(), "tata:abc\0rm:Yy3\0huhu:haha"sv);
   kvPairs.erase("rm");
-  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha"sv));
+  EXPECT_EQ(kvPairs.str(), "tata:abc\0huhu:haha"sv);
   kvPairs.emplace_back("&newField", "&&newValue&&");
-  EXPECT_EQ(kvPairs.str(), std::string_view("tata:abc\0huhu:haha\0&newField:&&newValue&&"sv));
+  EXPECT_EQ(kvPairs.str(), "tata:abc\0huhu:haha\0&newField:&&newValue&&"sv);
 
   int kvPairPos = 0;
   for (const auto &kv : kvPairs) {
@@ -143,7 +142,7 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairPos, 3);
 }
 
-TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJson(), json()); }
+TEST(FlatKeyValueStringTest, EmptyConvertToJson) { EXPECT_EQ(KvPairs().toJsonStr(), "{}"); }
 
 class FlatKeyValueStringCase1 : public ::testing::Test {
  protected:
@@ -346,37 +345,10 @@ TEST_F(FlatKeyValueStringCase1, EraseIncrementDecrement) {
   EXPECT_EQ(itPos, 5);
 }
 
-TEST_F(FlatKeyValueStringCase1, ConvertToJson) {
-  json jsonData = kvPairs.toJson();
-
-  EXPECT_EQ(jsonData["units"].get<std::string_view>(), "0.11176");
-  EXPECT_EQ(jsonData["price"].get<std::string_view>(), "357.78");
-  EXPECT_EQ(jsonData["777"].get<std::string_view>(), "encoredutravail?");
-  EXPECT_EQ(jsonData["hola"].get<std::string_view>(), "quetal");
-  EXPECT_FALSE(jsonData["hola"].is_array());
-
-  auto arrayIt = jsonData.find("array1");
-  EXPECT_NE(arrayIt, jsonData.end());
-  EXPECT_TRUE(arrayIt->is_array());
-  EXPECT_EQ(arrayIt->size(), 2U);
-
-  EXPECT_EQ((*arrayIt)[0], "val1");
-  EXPECT_EQ((*arrayIt)[1], "");
-
-  arrayIt = jsonData.find("array2");
-  EXPECT_NE(arrayIt, jsonData.end());
-  EXPECT_TRUE(arrayIt->is_array());
-  EXPECT_EQ(arrayIt->size(), 4U);
-
-  EXPECT_EQ((*arrayIt)[0], "");
-  EXPECT_EQ((*arrayIt)[1], "val1");
-  EXPECT_EQ((*arrayIt)[2], "val2");
-  EXPECT_EQ((*arrayIt)[3], "value");
-
-  arrayIt = jsonData.find("emptyArray");
-  EXPECT_NE(arrayIt, jsonData.end());
-  EXPECT_TRUE(arrayIt->is_array());
-  EXPECT_TRUE(arrayIt->empty());
+TEST_F(FlatKeyValueStringCase1, ConvertToJsonStr) {
+  EXPECT_EQ(
+      kvPairs.toJsonStr(),
+      R"({"units":"0.11176","price":"357.78","777":"encoredutravail?","hola":"quetal","k":"v","array1":["val1",""],"array2":["","val1","val2","value"],"emptyArray":[]})");
 }
 
 TEST_F(FlatKeyValueStringCase1, AppendIntegralValues) {

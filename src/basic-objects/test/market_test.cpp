@@ -54,4 +54,15 @@ TEST(MarketTest, StringRepresentationFiatConversionMarket) {
   EXPECT_EQ(market.assetsPairStrUpper('('), "*USDT(EUR");
   EXPECT_EQ(market.assetsPairStrLower(')'), "*usdt)eur");
 }
+
+TEST(MarketTest, StrLen) {
+  Market market("shib", "btc");
+
+  EXPECT_EQ(market.strLen(), 8);
+  EXPECT_EQ(market.strLen(false), 7);
+  EXPECT_EQ(market.strLen(true), 8);
+
+  market = Market("1INCH", "EUR", Market::Type::kFiatConversionMarket);
+  EXPECT_EQ(market.strLen(), 10);
+}
 }  // namespace cct

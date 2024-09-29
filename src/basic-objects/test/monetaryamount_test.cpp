@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <limits>
+#include <map>
 #include <optional>
 
 #include "cct_exception.hpp"
@@ -270,6 +271,29 @@ TEST(MonetaryAmountTest, StringConstructor) {
 
   EXPECT_THROW(MonetaryAmount("usdt"), invalid_argument);
   EXPECT_NO_THROW(MonetaryAmount("usdt", MonetaryAmount::ParsingMode::kAmountOptional));
+}
+
+TEST(MonetaryAmountTest, SizeAsStrWithSpaces) {
+  EXPECT_EQ(MonetaryAmount("804.62EUR").strLen(), 10);
+  EXPECT_EQ(MonetaryAmount("-210.50 CAKE").strLen(), 11);
+  EXPECT_EQ(MonetaryAmount("-210.501 BTC").strLen(), 12);
+  EXPECT_EQ(MonetaryAmount("05AUD").strLen(), 5);
+  EXPECT_EQ(MonetaryAmount("746REPV2").strLen(), 9);
+  EXPECT_EQ(MonetaryAmount("0").strLen(), 1);
+  EXPECT_EQ(MonetaryAmount("35").strLen(), 2);
+  EXPECT_EQ(MonetaryAmount("-42").strLen(), 3);
+  EXPECT_EQ(MonetaryAmount("-42.7009").strLen(), 8);
+}
+
+TEST(MonetaryAmountTest, SizeAsStrWithoutSpaces) {
+  EXPECT_EQ(MonetaryAmount("804.62EUR").strLen(MonetaryAmount::WithSpace::kNo), 9);
+  EXPECT_EQ(MonetaryAmount("-210.50 CAKE").strLen(MonetaryAmount::WithSpace::kNo), 10);
+  EXPECT_EQ(MonetaryAmount("05AUD").strLen(MonetaryAmount::WithSpace::kNo), 4);
+  EXPECT_EQ(MonetaryAmount("746REPV2").strLen(MonetaryAmount::WithSpace::kNo), 8);
+  EXPECT_EQ(MonetaryAmount("0").strLen(MonetaryAmount::WithSpace::kNo), 1);
+  EXPECT_EQ(MonetaryAmount("35").strLen(MonetaryAmount::WithSpace::kNo), 2);
+  EXPECT_EQ(MonetaryAmount("-42").strLen(MonetaryAmount::WithSpace::kNo), 3);
+  EXPECT_EQ(MonetaryAmount("-42.7009").strLen(MonetaryAmount::WithSpace::kNo), 8);
 }
 
 TEST(MonetaryAmountTest, StringConstructorAmbiguity) {
@@ -772,4 +796,42 @@ TEST(MonetaryAmountTest, CurrentMaxNbDecimals) {
   EXPECT_EQ(ma3.amount(ma3.currentMaxNbDecimals()), 389087900000000000L);
 }
 
+struct Foo {
+  bool operator==(const Foo &) const noexcept = default;
+
+  MonetaryAmount amount;
+};
+
+TEST(MonetaryAmountTest, JsonSerialization) {
+  Foo foo{MonetaryAmount("15.5DOGE")};
+
+  string buffer;
+  auto res = write_json(foo, buffer);
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"amount":"15.5 DOGE"})");
+}
+
+TEST(MonetaryAmountTest, JsonDeserializationValue) {
+  Foo foo;
+  auto ec = read<glz::opts{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
+
+  ASSERT_FALSE(ec);
+
+  EXPECT_EQ(foo, Foo{MonetaryAmount("15.5 DOGE")});
+}
+
+using MonetaryAmountMap = std::map<MonetaryAmount, bool>;
+
+TEST(MonetaryAmountTest, JsonSerializationKey) {
+  MonetaryAmountMap map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
+
+  string buffer;
+  auto res = write<glz::opts{.raw_string = true}>(map, buffer);
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"-0.5605 DOGE":false,"15 DOGE":true})");
+}
 }  // namespace cct
