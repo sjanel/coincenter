@@ -16,10 +16,8 @@
 #include <variant>
 
 #include "cct_cctype.hpp"
-#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
-#include "cct_vector.hpp"
 #include "flat-key-value-string-iterator.hpp"
 #include "unreachable.hpp"
 #include "url-encode.hpp"
@@ -187,11 +185,11 @@ class FlatKeyValueString {
   /// The returned string_view is guaranteed to be null-terminated.
   std::string_view str() const noexcept { return _data; }
 
-  /// Converts to a json document.
+  /// Converts to a json document string.
   /// Values ending with a ',' will be considered as arrays.
   /// In this case, sub array values are comma separated values.
   /// Limitation: all json values will be decoded as strings.
-  json toJson() const;
+  string toJsonStr() const;
 
   /// Returns a new FlatKeyValueString URL encoded except delimiters.
   FlatKeyValueString urlEncodeExceptDelimiters() const;
@@ -390,24 +388,44 @@ std::string_view FlatKeyValueString<KeyValuePairSep, AssignmentChar>::Get(std::s
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-json FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJson() const {
-  json ret;
+string FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJsonStr() const {
+  string ret;
+  ret.reserve(2 * (_data.size() + 1U));
+  ret.push_back('{');
+
+  const auto appendStr = [&ret](std::string_view str) {
+    ret.push_back('"');
+    ret.append(str);
+    ret.push_back('"');
+  };
+
   for (const auto &kv : *this) {
     const auto key = kv.key();
     const auto val = kv.val();
 
+    if (ret.size() != 1U) {
+      ret.push_back(',');
+    }
+    appendStr(key);
+    ret.push_back(':');
+
     auto valSize = val.size();
     if (valSize == 0 || val.back() != kArrayElemSepChar) {
-      ret.emplace(key, val);
+      // standard field case
+      appendStr(val);
       continue;
     }
 
-    vector<string> arrayValues;
+    // array case
+    ret.push_back('[');
 
     if (valSize != 1U) {  // Check empty array case
       for (std::size_t arrayValBeg = 0;;) {
         std::size_t arrayValSepPos = val.find(kArrayElemSepChar, arrayValBeg);
-        arrayValues.emplace_back(std::string_view(val.begin() + arrayValBeg, val.begin() + arrayValSepPos));
+        if (arrayValBeg != 0) {
+          ret.push_back(',');
+        }
+        appendStr(std::string_view(val.begin() + arrayValBeg, val.begin() + arrayValSepPos));
         if (arrayValSepPos + 1U == valSize) {
           break;
         }
@@ -415,8 +433,9 @@ json FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJson() const {
       }
     }
 
-    ret.emplace(key, std::move(arrayValues));
+    ret.push_back(']');
   }
+  ret.push_back('}');
   return ret;
 }
 

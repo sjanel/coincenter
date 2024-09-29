@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <map>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
@@ -122,6 +123,37 @@ TEST(CurrencyCodeTest, Size) {
   EXPECT_EQ(10U, CurrencyCode("Magic4Life").size());
 }
 
+TEST(CurrencyCodeTest, ResizeSameSize) {
+  CurrencyCode cur = "EUR";
+
+  cur.resize(3, 'A');
+
+  EXPECT_EQ("EUR", cur.str());
+}
+
+TEST(CurrencyCodeTest, ResizeBigger) {
+  CurrencyCode cur(1, 'D');
+  EXPECT_EQ("D", cur.str());
+
+  cur = "DOGE";
+
+  cur.resize(7, 'X');
+
+  EXPECT_EQ("DOGEXXX", cur.str());
+}
+
+TEST(CurrencyCodeTest, ResizeSmaller) {
+  CurrencyCode cur = "MAGIC4LIFE";
+
+  cur.resize(2, 'J');
+
+  EXPECT_EQ("MA", cur.str());
+
+  cur.resize(0, 'J');
+
+  EXPECT_EQ("", cur.str());
+}
+
 TEST(CurrencyCodeTest, Code) {
   CurrencyCode eur = "EUR";
   CurrencyCode krw = "KRW";
@@ -192,6 +224,45 @@ TEST(CurrencyCodeTest, Iterator) {
     str.push_back(ch);
   }
   EXPECT_EQ("TEST", str);
+}
+
+struct Foo {
+  bool operator==(const Foo &) const noexcept = default;
+
+  CurrencyCode currencyCode;
+};
+
+TEST(CurrencyCodeTest, JsonSerializationValue) {
+  Foo foo{"DOGE"};
+
+  string buffer;
+  auto res = write<glz::opts{.raw_string = true}>(foo, buffer);
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"currencyCode":"DOGE"})");
+}
+
+using CurrencyCodeMap = std::map<CurrencyCode, bool>;
+
+TEST(CurrencyCodeTest, JsonSerializationKey) {
+  CurrencyCodeMap map{{"DOGE", true}, {"BTC", false}};
+
+  string buffer;
+  auto res = write<glz::opts{.raw_string = true}>(map, buffer);
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"BTC":false,"DOGE":true})");
+}
+
+TEST(CurrencyCodeTest, JsonDeserialization) {
+  Foo foo;
+  auto ec = read<glz::opts{.raw_string = true}>(foo, R"({"currencyCode":"DOGE"})");
+
+  ASSERT_FALSE(ec);
+
+  EXPECT_EQ(foo, Foo{"DOGE"});
 }
 
 }  // namespace cct

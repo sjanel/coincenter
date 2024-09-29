@@ -9,10 +9,9 @@ on:
 jobs:
   ubuntu-special-build:
     name: Build on Ubuntu with monitoring / protobuf support
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        compiler: [g++-11]
         buildmode: [Debug]
         build-special-from-source: [0, 1]
         prometheus-options: ["-DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF"]
@@ -25,7 +24,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install cmake libssl-dev git libcurl4-openssl-dev ninja-build -y --no-install-recommends
-          echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
 
       - name: Install prometheus-cpp
         run: |
@@ -39,14 +37,12 @@ jobs:
 
           sudo cmake --install _build
         env:
-          CXX: ${{matrix.compiler}}
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
         if: matrix.build-special-from-source == 0
 
       - name: Configure CMake
         run: cmake -S . -B build -DCCT_BUILD_PROMETHEUS_FROM_SRC=${{matrix.build-special-from-source}} -DCCT_ENABLE_PROTO=${{matrix.build-special-from-source}} -DCCT_ENABLE_ASAN=OFF -GNinja
         env:
-          CXX: ${{matrix.compiler}}
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build

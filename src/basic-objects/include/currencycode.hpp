@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
@@ -11,13 +13,14 @@
 #include "cct_format.hpp"
 #include "cct_hash.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {
 
 struct CurrencyCodeBase {
-  static constexpr int kMaxLen = 10;
+  static constexpr uint32_t kMaxLen = 10;
 
   static constexpr uint64_t kNbBitsChar = 6;
   static constexpr uint64_t kNbBitsNbDecimals = 4;
@@ -25,19 +28,51 @@ struct CurrencyCodeBase {
   static constexpr uint64_t kNbDecimals4Mask = (1ULL << kNbBitsNbDecimals) - 1ULL;
   static constexpr uint64_t kNbDecimals6Mask = (1ULL << 6ULL) - 1ULL;
 
-  static constexpr uint64_t kFirstCharMask = ~((1ULL << (kNbBitsNbDecimals + (kMaxLen - 1) * kNbBitsChar)) - 1ULL);
+  static constexpr uint64_t kFirstCharMask = ~((1ULL << (kNbBitsNbDecimals + (kMaxLen - 1U) * kNbBitsChar)) - 1ULL);
 
-  static constexpr uint64_t kBeforeLastCharMask = kFirstCharMask >> (kNbBitsChar * (kMaxLen - 2));
+  static constexpr uint64_t NCharMask(uint64_t n) noexcept {
+    if (n == 1) {
+      return kFirstCharMask;
+    }
+    return NCharMask(n - 1) + (kFirstCharMask >> (kNbBitsChar * (n - 1)));
+  }
+
+  static constexpr auto ComputeAllCharMasks() {
+    std::array<uint64_t, kMaxLen + 1U> allCharMasks;
+    allCharMasks[0] = 0;
+    for (std::remove_const_t<decltype(kMaxLen)> sz = 1; sz <= kMaxLen; ++sz) {
+      allCharMasks[sz] = NCharMask(sz);
+    }
+    return allCharMasks;
+  }
+
+  static constexpr uint64_t kBeforeLastCharMask = kFirstCharMask >> (kNbBitsChar * (kMaxLen - 2U));
 
   static constexpr int64_t kMaxNbDecimalsLongCurrencyCode = 15;  // 2^4 - 1
 
   static constexpr char kFirstAuthorizedLetter = 32;  // ' '
   static constexpr char kLastAuthorizedLetter = 95;   // '_'
 
-  static constexpr char CharAt(uint64_t data, int pos) noexcept {
-    return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1))) &
+  static constexpr char CharAt(uint64_t data, uint32_t pos) noexcept {
+    return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1U))) &
                              ((1ULL << kNbBitsChar) - 1ULL)) +
            kFirstAuthorizedLetter;
+  }
+
+  static constexpr void ValidateChar(char &ch) {
+    if (ch >= 'a') {
+      if (ch > 'z') {
+        throw invalid_argument("Unexpected char '{}' in currency acronym", ch);
+      }
+      ch -= 'a' - 'A';
+    } else if (ch <= kFirstAuthorizedLetter || ch > kLastAuthorizedLetter) {
+      throw invalid_argument("Unexpected char '{}' in currency acronym", ch);
+    }
+  }
+
+  static constexpr uint64_t GetCharAtPosBmp(char ch, uint32_t charPos) {
+    return static_cast<uint64_t>(ch - kFirstAuthorizedLetter)
+           << (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - 1U - charPos));
   }
 
   static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) noexcept {
@@ -45,19 +80,12 @@ struct CurrencyCodeBase {
   }
 
   static constexpr uint64_t StrToBmp(std::string_view acronym) {
-    uint64_t ret = 0;
-    uint32_t charPos = kMaxLen;
+    uint64_t ret{};
+    uint32_t charPos{};
     for (char ch : acronym) {
-      if (ch >= 'a') {
-        if (ch > 'z') {
-          throw invalid_argument("Unexpected char '{}' in acronym '{}'", ch, acronym);
-        }
-        ch -= 'a' - 'A';
-      } else if (ch <= kFirstAuthorizedLetter || ch > kLastAuthorizedLetter) {
-        throw invalid_argument("Unexpected char '{}' in acronym '{}'", ch, acronym);
-      }
-
-      ret |= static_cast<uint64_t>(ch - kFirstAuthorizedLetter) << (kNbBitsNbDecimals + kNbBitsChar * --charPos);
+      ValidateChar(ch);
+      ret |= GetCharAtPosBmp(ch, charPos);
+      ++charPos;
     }
     return ret;
   }
@@ -122,8 +150,9 @@ class CurrencyCode {
  public:
   using iterator = CurrencyCodeIterator;
   using const_iterator = iterator;
+  using size_type = uint32_t;
 
-  static constexpr auto kMaxLen = CurrencyCodeBase::kMaxLen;
+  static constexpr size_type kMaxLen = CurrencyCodeBase::kMaxLen;
 
   /// Returns true if and only if a CurrencyCode can be constructed from 'curStr'.
   /// Note that an empty string is a valid representation of a CurrencyCode.
@@ -138,7 +167,7 @@ class CurrencyCode {
   constexpr CurrencyCode() noexcept : _data() {}
 
   /// Constructs a currency code from a char array.
-  template <unsigned N, std::enable_if_t<N <= kMaxLen + 1, bool> = true>
+  template <unsigned N, std::enable_if_t<N <= kMaxLen + 1U, bool> = true>
   constexpr CurrencyCode(const char (&acronym)[N]) : _data(CurrencyCodeBase::StrToBmp(acronym)) {}
 
   /// Constructs a currency code from given string.
@@ -151,19 +180,56 @@ class CurrencyCode {
     _data = CurrencyCodeBase::StrToBmp(acronym);
   }
 
-  constexpr const_iterator begin() const { return const_iterator(_data); }
-  constexpr const_iterator end() const { return const_iterator(_data, size()); }
+  /// Constructs a currency code from 'sz' chars, all set to 'ch'.
+  constexpr CurrencyCode(size_type sz, char ch) : _data() { resize(sz, ch); }
 
-  constexpr uint64_t size() const {
-    uint64_t sz = 0;
-    while (static_cast<int>(sz) < kMaxLen &&
-           (_data & (CurrencyCodeBase::kFirstCharMask >> (CurrencyCodeBase::kNbBitsChar * sz)))) {
-      ++sz;
+  constexpr const_iterator begin() const noexcept { return const_iterator(_data); }
+  constexpr const_iterator end() const noexcept { return const_iterator(_data, size()); }
+
+  constexpr const_iterator cbegin() const noexcept { return begin(); }
+  constexpr const_iterator cend() const noexcept { return end(); }
+
+  constexpr size_type size() const noexcept {
+    size_type count = kMaxLen;
+    size_type first{};
+    while (count != 0) {
+      size_type step = count / 2;
+      size_type pos = first + step;
+      if ((_data & (CurrencyCodeBase::kFirstCharMask >> (CurrencyCodeBase::kNbBitsChar * pos))) != 0) {
+        // char is present at position 'step', so the size is at least 'pos'
+        first = pos + 1;
+        count -= step + 1;
+      } else {
+        count = step;
+      }
     }
-    return sz;
+    return first;
   }
 
-  constexpr uint64_t length() const { return size(); }
+  /// Resizes the currency code to a length of 'newSize'.
+  /// If 'newSize' is greater than 'kMaxLen', exception will be raised.
+  /// If 'newSize' is greater than current size, 'newSize' - 'oldSize' 'ch' will be appended to the code.
+  /// If 'newSize' is smaller than current size, the code will be truncated to a length of 'newSize'.
+  constexpr void resize(size_type newSize, char ch) {
+    auto sz = size();
+    if (sz < newSize) {
+      if (newSize > kMaxLen) {
+        throw invalid_argument("Cannot resize CurrencyCode to size {} > {}", newSize, kMaxLen);
+      }
+
+      CurrencyCodeBase::ValidateChar(ch);
+
+      for (size_type charPos = sz; charPos < newSize; ++charPos) {
+        _data |= CurrencyCodeBase::GetCharAtPosBmp(ch, charPos);
+      }
+    } else if (sz > newSize) {
+      _data &= kCharMaskArrayByLen[newSize] + CurrencyCodeBase::DecimalsMask(isLongCurrencyCode());
+    }
+  }
+
+  constexpr void assign(const char *buf, size_type sz) { *this = CurrencyCode(std::string_view(buf, sz)); }
+
+  constexpr size_type length() const noexcept { return size(); }
 
   /// Get a string of this CurrencyCode, trimmed.
   string str() const {
@@ -178,7 +244,7 @@ class CurrencyCode {
     if (curStr.size() > kMaxLen) {
       return false;
     }
-    for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
+    for (size_type charPos = 0; charPos < kMaxLen; ++charPos) {
       const char ch = (*this)[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         return curStr.size() == charPos;
@@ -191,16 +257,17 @@ class CurrencyCode {
   }
 
   /// Append currency string representation to given string.
-  void appendStrTo(string &str) const {
+  template <class StringT>
+  void appendStrTo(StringT &str) const {
     const auto len = size();
     str.append(len, '\0');
-    append(str.end() - len);
+    appendTo(str.end() - len);
   }
 
   /// Append currency string representation to given output iterator
   template <class OutputIt>
-  constexpr OutputIt append(OutputIt it) const {
-    for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
+  constexpr OutputIt appendTo(OutputIt it) const {
+    for (size_type charPos = 0; charPos < kMaxLen; ++charPos) {
       const char ch = (*this)[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
@@ -214,11 +281,13 @@ class CurrencyCode {
   /// Returns a 64 bits code
   constexpr uint64_t code() const noexcept { return _data; }
 
-  constexpr bool isDefined() const noexcept { return static_cast<bool>(_data & CurrencyCodeBase::kFirstCharMask); }
+  constexpr bool isDefined() const noexcept { return (_data & CurrencyCodeBase::kFirstCharMask) != 0; }
 
   constexpr bool isNeutral() const noexcept { return !isDefined(); }
 
-  constexpr char operator[](uint32_t pos) const { return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos)); }
+  constexpr char operator[](uint32_t pos) const noexcept {
+    return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos));
+  }
 
   /// Note that this respects the lexicographical order - chars are encoded from the most significant bits first
   constexpr std::strong_ordering operator<=>(const CurrencyCode &) const noexcept = default;
@@ -226,7 +295,7 @@ class CurrencyCode {
   constexpr bool operator==(const CurrencyCode &) const noexcept = default;
 
   friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
-    for (uint32_t charPos = 0; charPos < kMaxLen; ++charPos) {
+    for (size_type charPos = 0; charPos < kMaxLen; ++charPos) {
       const char ch = cur[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
         break;
@@ -239,6 +308,8 @@ class CurrencyCode {
  private:
   friend class Market;
   friend class MonetaryAmount;
+
+  static constexpr auto kCharMaskArrayByLen = CurrencyCodeBase::ComputeAllCharMasks();
 
   // bitmap with 10 words of 6 bits (from ascii [33, 95]) + 4 extra bits that will be used by
   // MonetaryAmount to hold number of decimals (max 15)
@@ -276,7 +347,7 @@ class CurrencyCode {
   void appendStrWithSpaceTo(string &str) const {
     const auto len = size();
     str.append(len + 1UL, ' ');
-    append(str.end() - len);
+    appendTo(str.end() - len);
   }
 };
 
@@ -298,7 +369,7 @@ struct fmt::formatter<cct::CurrencyCode> {
 
   template <typename FormatContext>
   auto format(const cct::CurrencyCode &cur, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return cur.append(ctx.out());
+    return cur.appendTo(ctx.out());
   }
 };
 #endif
@@ -306,7 +377,43 @@ struct fmt::formatter<cct::CurrencyCode> {
 // Specialize std::hash<CurrencyCode> for easy usage of CurrencyCode as unordered_map key
 namespace std {
 template <>
-struct hash<cct::CurrencyCode> {
-  auto operator()(const cct::CurrencyCode &currencyCode) const { return cct::HashValue64(currencyCode.code()); }
+struct hash<::cct::CurrencyCode> {
+  auto operator()(const ::cct::CurrencyCode &currencyCode) const { return ::cct::HashValue64(currencyCode.code()); }
 };
 }  // namespace std
+
+namespace glz::detail {
+template <>
+struct from<JSON, ::cct::CurrencyCode> {
+  template <auto Opts, class It, class End>
+  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+    // used as a value. As a key, the first quote will not be present.
+    auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
+    value = std::string_view(it, endIt);
+    it = ++endIt;
+  }
+};
+
+template <>
+struct to<JSON, ::cct::CurrencyCode> {
+  template <auto Opts, is_context Ctx, class B, class IX>
+  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+    auto valueLen = value.size();
+    bool inQuotes = ix != 0 && b[ix - 1] == ':';
+    int64_t additionalSize = (inQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
+                             static_cast<int64_t>(b.size());
+    if (additionalSize > 0) {
+      b.append(additionalSize, ' ');
+    }
+
+    if (inQuotes) {
+      b[ix++] = '"';
+    }
+    value.appendTo(b.data() + ix);
+    ix += valueLen;
+    if (inQuotes) {
+      b[ix++] = '"';
+    }
+  }
+};
+}  // namespace glz::detail

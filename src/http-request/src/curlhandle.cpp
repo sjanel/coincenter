@@ -197,7 +197,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   if (appendParametersInQueryStr) {
     modifiedUrlOutIt = std::ranges::copy(postDataStr, modifiedUrlOutIt + 1).out;
   } else if (opts.isPostDataInJsonFormat() && !postData.empty()) {
-    jsonStr = postData.toJson().dump();
+    jsonStr = postData.toJsonStr();
     optsStr = jsonStr;
   } else {
     optsStr = postData.str();

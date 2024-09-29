@@ -12,6 +12,7 @@
 
 #include "cct_format.hpp"
 #include "cct_hash.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -45,6 +46,8 @@ class MonetaryAmount {
   using AmountType = int64_t;
 
   enum class RoundType : int8_t { kDown, kUp, kNearest };
+
+  static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0) {}
@@ -106,6 +109,13 @@ class MonetaryAmount {
   /// Get an integral representation of this MonetaryAmount multiplied by current number of decimals.
   /// Example: "5.6235" with 6 decimals will return 5623500
   [[nodiscard]] AmountType amount() const { return _amount; }
+
+  enum class WithSpace : int8_t { kNo, kYes };
+
+  // Get the size of the string representation of this MonetaryAmount.
+  // If withSpace is set to kYes, a space will be added between the amount and the currency code (if there is a currency
+  // code).
+  [[nodiscard]] uint32_t strLen(WithSpace withSpace = WithSpace::kYes) const;
 
   /// Get an integral representation of this MonetaryAmount multiplied by given number of decimals.
   /// If an overflow would occur for the resulting amount, return std::nullopt
@@ -300,11 +310,11 @@ class MonetaryAmount {
   ///           kMaxNbCharsAmount for the amount (explanation above)
   ///            + CurrencyCodeBase::kMaxLen + 1 for the currency and the space separator
   template <class OutputIt>
-  OutputIt append(OutputIt it) const {
+  OutputIt appendTo(OutputIt it) const {
     it = appendAmount(it);
     if (!_curWithDecimals.isNeutral()) {
       *it = ' ';
-      it = _curWithDecimals.append(++it);
+      it = _curWithDecimals.appendTo(++it);
     }
     return it;
   }
@@ -334,7 +344,7 @@ class MonetaryAmount {
     appendCurrencyStr(str);
   }
 
-  [[nodiscard]] uint64_t code() const noexcept {
+  [[nodiscard]] uint64_t hashCode() const noexcept {
     return HashCombine(static_cast<std::size_t>(_amount), static_cast<std::size_t>(_curWithDecimals.code()));
   }
 
@@ -344,7 +354,6 @@ class MonetaryAmount {
   using UnsignedAmountType = uint64_t;
 
   static constexpr AmountType kMaxAmountFullNDigits = ipow10(std::numeric_limits<AmountType>::digits10);
-  static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
 
   void appendCurrencyStr(string &str) const {
     if (!_curWithDecimals.isNeutral()) {
@@ -415,14 +424,51 @@ struct fmt::formatter<cct::MonetaryAmount> {
 
   template <typename FormatContext>
   auto format(const cct::MonetaryAmount &ma, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return ma.append(ctx.out());
+    return ma.appendTo(ctx.out());
   }
 };
 #endif
 
+// Specialize std::hash<MonetaryAmount> for easy usage of MonetaryAmount as unordered_map key
 namespace std {
 template <>
-struct hash<cct::MonetaryAmount> {
-  auto operator()(const cct::MonetaryAmount &monetaryAmount) const { return monetaryAmount.code(); }
+struct hash<::cct::MonetaryAmount> {
+  auto operator()(const ::cct::MonetaryAmount &monetaryAmount) const { return monetaryAmount.hashCode(); }
 };
 }  // namespace std
+
+namespace glz::detail {
+template <>
+struct from<JSON, ::cct::MonetaryAmount> {
+  template <auto Opts, class It, class End>
+  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+    // used as a value. As a key, the first quote will not be present.
+    auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
+    value = ::cct::MonetaryAmount(std::string_view(it, endIt));
+    it = ++endIt;
+  }
+};
+
+template <>
+struct to<JSON, ::cct::MonetaryAmount> {
+  template <auto Opts, is_context Ctx, class B, class IX>
+  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+    auto valueLen = value.strLen();
+    bool inQuotes = ix != 0 && b[ix - 1] == ':';
+    int64_t additionalSize = (inQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
+                             static_cast<int64_t>(b.size());
+    if (additionalSize > 0) {
+      b.append(additionalSize, ' ');
+    }
+
+    if (inQuotes) {
+      b[ix++] = '"';
+    }
+    value.appendTo(b.data() + ix);
+    ix += valueLen;
+    if (inQuotes) {
+      b[ix++] = '"';
+    }
+  }
+};
+}  // namespace glz::detail
