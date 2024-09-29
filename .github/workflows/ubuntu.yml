@@ -9,10 +9,10 @@ on:
 jobs:
   ubuntu-build:
     name: Build on Ubuntu
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        compiler: [g++-11, clang++-18]
+        compiler: [g++-13, clang++-18]
         buildmode: [Debug, Release]
 
     steps:
@@ -24,14 +24,6 @@ jobs:
           sudo apt update
           sudo apt install cmake libssl-dev libcurl4-openssl-dev ninja-build -y --no-install-recommends
           echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
-
-      - name: Install gcc
-        run: |
-          sudo apt install ${{matrix.compiler}} -y --no-install-recommends
-
-          # Temporary workaround for libasan bug stated here: https://github.com/google/sanitizers/issues/1716
-          sudo sysctl vm.mmap_rnd_bits=28
-        if: startsWith(matrix.compiler, 'g')
 
       - name: Install clang
         run: |

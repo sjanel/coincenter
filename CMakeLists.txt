@@ -99,7 +99,7 @@ if(CCT_ENABLE_TESTS)
   enable_testing()
 endif()
 
-# nlohmann_json - json library
+# nlohmann_json - json container library
 find_package(nlohmann_json CONFIG)
 if(NOT nlohmann_json_FOUND)
   FetchContent_Declare(
@@ -109,6 +109,18 @@ if(NOT nlohmann_json_FOUND)
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable nlohmann_json)
+endif()
+
+# Glaze - fast json serialization library
+find_package(glaze CONFIG)
+if(NOT glaze)
+  FetchContent_Declare(
+    glaze
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v3.6.2.tar.gz
+    URL_HASH SHA256=74b14656b7a47c0a03d0a857adf5059e8c2351a7a84623593be0dd16b293216c
+  )
+
+  list(APPEND fetchContentPackagesToMakeAvailable glaze)
 endif()
 
 # prometheus for monitoring support
@@ -259,6 +271,8 @@ endif()
 # Link to sub folders CMakeLists.txt, from the lowest level to the highest level for documentation
 # (beware of cyclic dependencies)
 add_subdirectory(src/tech)
+add_subdirectory(src/basic-objects)
+add_subdirectory(src/schema)
 add_subdirectory(src/monitoring)
 add_subdirectory(src/http-request)
 add_subdirectory(src/objects)

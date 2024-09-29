@@ -25,28 +25,6 @@ Market::Market(std::string_view marketStrRep, char currencyCodeSep, Type type) {
   setType(type);
 }
 
-string Market::assetsPairStr(char sep, bool lowerCase) const {
-  string ret;
-  switch (type()) {
-    case Type::kRegularExchangeMarket:
-      break;
-    case Type::kFiatConversionMarket:
-      ret.push_back('*');
-      break;
-    default:
-      unreachable();
-  }
-  base().appendStrTo(ret);
-  if (sep != 0) {
-    ret.push_back(sep);
-  }
-  quote().appendStrTo(ret);
-  if (lowerCase) {
-    std::ranges::transform(ret, ret.begin(), tolower);
-  }
-  return ret;
-}
-
 std::ostream& operator<<(std::ostream& os, const Market& mk) {
   os << mk.str();
   return os;
