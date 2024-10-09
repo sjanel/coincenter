@@ -54,7 +54,7 @@ But they have partial support which is sufficient to build `coincenter`.
 
 The following compilers are known to compile `coincenter` (and are tested in the CI):
 
-- **GCC** version >= 11
+- **GCC** version >= 12
 - **Clang** version >= 18
 - **MSVC** version >= 19.39
 
@@ -135,14 +135,15 @@ cmake -S . -B build --preset conan-release
 In all cases, they do not need to be installed. If they are not found at configure time, `cmake` will fetch sources and compile them automatically.
 If you are building frequently `coincenter` you can install them to speed up its compilation.
 
-| Library                                                        | Description                                        | License              |
-| -------------------------------------------------------------- | -------------------------------------------------- | -------------------- |
-| [amc](https://github.com/AmadeusITGroup/amc.git)               | High performance C++ containers (maintained by me) | MIT                  |
-| [googletest](https://github.com/google/googletest.git)         | Google Testing and Mocking Framework               | BSD-3-Clause License |
-| [json](https://github.com/nlohmann/json)                       | JSON for Modern C++                                | MIT                  |
-| [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                           | MIT                  |
-| [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++           | MIT                  |
-| [jwt-cpp](https://github.com/Thalhammer/jwt-cpp)               | Creating and validating json web tokens in C++     | MIT                  |
+| Library                                                        | Description                                                          | License              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------- |
+| [amc](https://github.com/AmadeusITGroup/amc.git)               | High performance C++ containers (maintained by me)                   | MIT                  |
+| [googletest](https://github.com/google/googletest.git)         | Google Testing and Mocking Framework                                 | BSD-3-Clause License |
+| [json container](https://github.com/nlohmann/json)             | JSON for Modern C++                                                  | MIT                  |
+| [json serialization](https://github.com/stephenberry/glaze)    | Extremely fast, in memory, JSON and interface library for modern C++ | MIT                  |
+| [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                                             | MIT                  |
+| [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++                             | MIT                  |
+| [jwt-cpp](https://github.com/Thalhammer/jwt-cpp)               | Creating and validating json web tokens in C++                       | MIT                  |
 
 ### With cmake
 
