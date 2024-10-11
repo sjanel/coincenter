@@ -34,6 +34,7 @@ enum class CoincenterCommandType : int8_t {
   kMarketData,
   kReplay,
   kReplayMarkets,
+  kAutoTrade,
 
   kLast
 };
