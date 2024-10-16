@@ -3,7 +3,7 @@
 #include <utility>
 
 #include "balanceportfolio.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchange.hpp"
@@ -76,10 +76,10 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
 }
 
 namespace {
-json JsonForBalancePortfolio(const BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency) {
-  json ret = json::object();
+json::container JsonForBalancePortfolio(const BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency) {
+  json::container ret = json::container::object();
   for (const auto &[amount, equiAmount] : balancePortfolio) {
-    json curData;
+    json::container curData;
     curData.emplace("a", amount.amountStr());
     if (!equiCurrency.isNeutral()) {
       curData.emplace("eq", equiAmount.amountStr());
@@ -90,12 +90,12 @@ json JsonForBalancePortfolio(const BalancePortfolio &balancePortfolio, CurrencyC
 }
 }  // namespace
 
-json BalancePerExchangePortfolio::printJson(CurrencyCode equiCurrency) const {
-  json exchangePart = json::object();
+json::container BalancePerExchangePortfolio::printJson(CurrencyCode equiCurrency) const {
+  json::container exchangePart = json::container::object();
   for (const auto &[exchangePtr, balancePortfolio] : _balancePerExchange) {
     auto it = exchangePart.find(exchangePtr->name());
     if (it == exchangePart.end()) {
-      json balancePerExchangeData;
+      json::container balancePerExchangeData;
       balancePerExchangeData.emplace(exchangePtr->keyName(), JsonForBalancePortfolio(balancePortfolio, equiCurrency));
       exchangePart.emplace(exchangePtr->name(), std::move(balancePerExchangeData));
     } else {
@@ -104,12 +104,12 @@ json BalancePerExchangePortfolio::printJson(CurrencyCode equiCurrency) const {
   }
 
   BalancePortfolio total = computeTotal();
-  json totalPart;
+  json::container totalPart;
   totalPart.emplace("cur", JsonForBalancePortfolio(total, equiCurrency));
   if (!equiCurrency.isNeutral()) {
     totalPart.emplace("eq", ComputeTotalSum(total).amountStr());
   }
-  json out;
+  json::container out;
   out.emplace("exchange", std::move(exchangePart));
   out.emplace("total", std::move(totalPart));
   return out;

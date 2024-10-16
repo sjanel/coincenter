@@ -6,25 +6,20 @@
 #include <type_traits>
 
 #include "cct_exception.hpp"
+#include "cct_json-serialization.hpp"
 
 namespace cct {
 namespace {
-constexpr std::string_view kCommandTypeNames[] = {
-    "HealthCheck",    "Currencies",      "Markets",      "Conversion",   "ConversionPath",
-    "LastPrice",      "Ticker",          "Orderbook",    "LastTrades",   "Last24hTradedVolume",
-    "WithdrawFees",
+constexpr auto kCommandTypeNames = json::reflect<CoincenterCommandType>::keys;
 
-    "Balance",        "DepositInfo",     "OrdersClosed", "OrdersOpened", "OrdersCancel",
-    "RecentDeposits", "RecentWithdraws", "Trade",        "Buy",          "Sell",
-    "Withdraw",       "DustSweeper",     "MarketData",   "Replay",       "ReplayMarkets"};
+static_assert(std::size(kCommandTypeNames) == static_cast<std::size_t>(CoincenterCommandType::Last) + 1);
 
-static_assert(std::size(kCommandTypeNames) == static_cast<std::size_t>(CoincenterCommandType::kLast));
 }  // namespace
 
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type) {
   const auto intValue = static_cast<std::underlying_type_t<CoincenterCommandType>>(type);
   if (intValue < decltype(intValue){} ||
-      intValue >= static_cast<std::underlying_type_t<CoincenterCommandType>>(CoincenterCommandType::kLast)) {
+      intValue >= static_cast<std::underlying_type_t<CoincenterCommandType>>(CoincenterCommandType::Last)) {
     throw exception("Unknown command type {}", intValue);
   }
   return kCommandTypeNames[intValue];
@@ -40,11 +35,11 @@ CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str) {
 
 bool IsAnyTrade(CoincenterCommandType type) {
   switch (type) {
-    case CoincenterCommandType::kTrade:
+    case CoincenterCommandType::Trade:
       [[fallthrough]];
-    case CoincenterCommandType::kBuy:
+    case CoincenterCommandType::Buy:
       [[fallthrough]];
-    case CoincenterCommandType::kSell:
+    case CoincenterCommandType::Sell:
       return true;
     default:
       return false;

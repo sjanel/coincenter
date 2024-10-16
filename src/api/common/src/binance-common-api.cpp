@@ -8,7 +8,7 @@
 
 #include "abstractmetricgateway.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
@@ -27,15 +27,15 @@ namespace cct::api {
 
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view method) {
+json::container PublicQuery(CurlHandle& curlHandle, std::string_view method) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  return requestRetry.queryJson(method, [](const json& jsonResponse) {
+  return requestRetry.queryJson(method, [](const json::container& jsonResponse) {
     const auto foundErrorIt = jsonResponse.find("code");
     const auto foundMsgIt = jsonResponse.find("msg");
     if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
       const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
-      log::warn("Binance error ({}), full json: '{}'", statusCode, jsonResponse.dump());
+      log::warn("Binance error ({}), full: '{}'", statusCode, jsonResponse.dump());
       return RequestRetry::Status::kResponseError;
     }
     return RequestRetry::Status::kResponseOK;
@@ -50,18 +50,18 @@ BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGat
                                                settings::RunMode runMode)
     : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
-json BinanceGlobalInfosFunc::operator()() {
-  json ret = PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll");
+json::container BinanceGlobalInfosFunc::operator()() {
+  json::container ret = PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll");
   auto dataIt = ret.find("data");
-  json dataRet;
+  json::container dataRet;
   if (dataIt == ret.end() || !dataIt->is_array()) {
     log::error("Unexpected reply from binance getNetworkCoinAll, no data array");
-    dataRet = json::array_t();
+    dataRet = json::container::array_t();
   } else {
     dataRet = std::move(*dataIt);
   }
 
-  const auto endIt = std::remove_if(dataRet.begin(), dataRet.end(), [](const json& el) {
+  const auto endIt = std::remove_if(dataRet.begin(), dataRet.end(), [](const json::container& el) {
     return el["coin"].get<std::string_view>().size() > CurrencyCode::kMaxLen;
   });
 
@@ -70,21 +70,21 @@ json BinanceGlobalInfosFunc::operator()() {
     dataRet.erase(endIt, dataRet.end());
   }
 
-  std::sort(dataRet.begin(), dataRet.end(), [](const json& lhs, const json& rhs) {
+  std::sort(dataRet.begin(), dataRet.end(), [](const json::container& lhs, const json::container& rhs) {
     return lhs["coin"].get<std::string_view>() < rhs["coin"].get<std::string_view>();
   });
   return dataRet;
 }
 
 namespace {
-MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json& coinElem) {
+MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json::container& coinElem) {
   MonetaryAmount withdrawFee(0, cur);
   auto networkListIt = coinElem.find("networkList");
   if (networkListIt == coinElem.end()) {
     log::error("Unexpected Binance public coin data format, returning 0 monetary amount");
     return withdrawFee;
   }
-  for (const json& networkListPart : *networkListIt) {
+  for (const json::container& networkListPart : *networkListIt) {
     MonetaryAmount fee(networkListPart["withdrawFee"].get<std::string_view>(), cur);
     auto isDefaultIt = networkListPart.find("isDefault");
     if (isDefaultIt != networkListPart.end() && isDefaultIt->get<bool>()) {
@@ -109,7 +109,7 @@ MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {
 
   fees.reserve(allCoins.size());
 
-  std::transform(allCoins.begin(), allCoins.end(), std::back_inserter(fees), [](const json& el) {
+  std::transform(allCoins.begin(), allCoins.end(), std::back_inserter(fees), [](const json::container& el) {
     CurrencyCode cur(el["coin"].get<std::string_view>());
     return ComputeWithdrawalFeesFromNetworkList(cur, el);
   });
@@ -123,7 +123,7 @@ MonetaryAmount BinanceGlobalInfos::queryWithdrawalFee(CurrencyCode currencyCode)
   const auto& allCoins = _globalInfosCache.get();
   const auto curStr = currencyCode.str();
 
-  const auto it = std::partition_point(allCoins.begin(), allCoins.end(), [&curStr](const json& el) {
+  const auto it = std::partition_point(allCoins.begin(), allCoins.end(), [&curStr](const json::container& el) {
     return el["coin"].get<std::string_view>() < curStr;
   });
   if (it != allCoins.end() && (*it)["coin"].get<std::string_view>() == curStr) {
@@ -137,10 +137,10 @@ CurrencyExchangeFlatSet BinanceGlobalInfos::queryTradableCurrencies(const Curren
   return ExtractTradableCurrencies(_globalInfosCache.get(), excludedCurrencies);
 }
 
-CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(const json& allCoins,
+CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(const json::container& allCoins,
                                                                       const CurrencyCodeSet& excludedCurrencies) {
   CurrencyExchangeVector currencies;
-  for (const json& coinJson : allCoins) {
+  for (const json::container& coinJson : allCoins) {
     CurrencyCode cur(coinJson["coin"].get<std::string_view>());
     if (excludedCurrencies.contains(cur)) {
       log::trace("Discard {} excluded by config", cur.str());
@@ -152,7 +152,7 @@ CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(const json
       log::debug("Several networks found for {}, considering only default network", cur.str());
     }
     const auto it = std::find_if(networkList.begin(), networkList.end(),
-                                 [](const json& el) { return el["isDefault"].get<bool>(); });
+                                 [](const json::container& el) { return el["isDefault"].get<bool>(); });
     if (it != networkList.end()) {
       auto deposit = (*it)["depositEnable"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
                                                         : CurrencyExchange::Deposit::kUnavailable;

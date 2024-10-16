@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string_view>
 
-#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "reader.hpp"
 #include "writer.hpp"
@@ -24,7 +23,9 @@ class File : public Reader, public Writer {
 
   [[nodiscard]] string readAll() const override;
 
-  int write(const json &data, Writer::Mode mode = Writer::Mode::FromStart) const override;
+  int write(std::string_view data, Writer::Mode mode = Writer::Mode::FromStart) const override;
+
+  bool exists() const;
 
  private:
   string _filePath;

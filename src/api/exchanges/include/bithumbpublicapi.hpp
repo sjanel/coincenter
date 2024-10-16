@@ -30,7 +30,7 @@ class BithumbPublic : public ExchangePublic {
   static constexpr auto kStatusUnexpectedError = -1;
   static constexpr auto kStatusNotPresentError = -2;
 
-  static int64_t StatusCodeFromJsonResponse(const json& jsonResponse);
+  static int64_t StatusCodeFromJsonResponse(const json::container& jsonResponse);
 
   BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 

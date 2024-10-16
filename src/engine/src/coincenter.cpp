@@ -44,7 +44,7 @@ Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecre
       _apiKeyProvider(coincenterInfo.dataDir(), exchangeSecretsInfo, coincenterInfo.getRunMode()),
       _metricsExporter(coincenterInfo.metricGatewayPtr()),
       _exchangePool(coincenterInfo, _fiatConverter, _commonAPI, _apiKeyProvider),
-      _exchangesOrchestrator(coincenterInfo.requestsConfig(), _exchangePool.exchanges()) {}
+      _exchangesOrchestrator(coincenterInfo.generalConfig().requests, _exchangePool.exchanges()) {}
 
 ExchangeHealthCheckStatus Coincenter::healthCheck(ExchangeNameSpan exchangeNames) {
   const auto ret = _exchangesOrchestrator.healthCheck(exchangeNames);
@@ -364,9 +364,9 @@ MonetaryAmount ComputeStartAmount(CurrencyCode currencyCode, MonetaryAmount conv
 
 Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
     const ReplayOptions &replayOptions, Market market, PublicExchangeNameVector &exchangesWithThisMarketData) {
-  const auto &automationConfig = _coincenterInfo.generalConfig().tradingConfig().automationConfig();
-  const auto startBaseAmountEquivalent = automationConfig.startBaseAmountEquivalent();
-  const auto startQuoteAmountEquivalent = automationConfig.startQuoteAmountEquivalent();
+  const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
+  const auto startBaseAmountEquivalent = automationConfig.startingContext.startBaseAmountEquivalent;
+  const auto startQuoteAmountEquivalent = automationConfig.startingContext.startQuoteAmountEquivalent;
   const bool isValidateOnly = replayOptions.replayMode() == ReplayOptions::ReplayMode::kValidateOnly;
 
   auto convertedBaseAmountPerExchange =
@@ -407,8 +407,8 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
 MarketTradeRangeStatsPerExchange Coincenter::tradingProcess(const ReplayOptions &replayOptions,
                                                             std::span<MarketTraderEngine> marketTraderEngines,
                                                             ExchangeNameSpan exchangesWithThisMarketData) {
-  const auto &automationConfig = _coincenterInfo.generalConfig().tradingConfig().automationConfig();
-  const auto loadChunkDuration = automationConfig.loadChunkDuration();
+  const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
+  const auto loadChunkDuration = automationConfig.deserialization.loadChunkDuration.duration;
   const auto timeWindow = replayOptions.timeWindow();
 
   MarketTradeRangeStatsPerExchange tradeRangeResultsPerExchange;

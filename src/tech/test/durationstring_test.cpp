@@ -3,7 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <span>
+#include <string_view>
 
+#include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "timedef.hpp"
 
@@ -70,6 +73,40 @@ TEST(DurationString, DurationToStringMicroseconds) {
 }
 TEST(DurationString, DurationToStringMicrosecondsTruncated) {
   EXPECT_EQ(DurationToString(microseconds(31736913078454L), 2), "1y2d");
+}
+
+TEST(DurationString, DurationToBufferUndefEnoughBuffer) {
+  char buffer[10];
+  std::span<char> bufSpan(buffer);
+
+  auto actualBuf = DurationToBuffer(kUndefinedDuration, bufSpan);
+
+  EXPECT_EQ(std::string_view(buffer, actualBuf.size()), "<undef>");
+}
+
+TEST(DurationString, DurationToBufferUndefNotEnoughBuffer) {
+  char buffer[6];
+  std::span<char> bufSpan(buffer);
+
+  EXPECT_THROW(DurationToBuffer(kUndefinedDuration, bufSpan), exception);
+}
+
+TEST(DurationString, DurationToBufferNotEnoughBuffer) {
+  char buffer[7];
+  std::span<char> bufSpan(buffer);
+
+  EXPECT_THROW(DurationToBuffer(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57), bufSpan, 3),
+               exception);
+}
+
+TEST(DurationString, DurationToBufferNominal) {
+  char buffer[100];
+  std::span<char> bufSpan(buffer);
+
+  auto actualBuf =
+      DurationToBuffer(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57), bufSpan, 3);
+
+  EXPECT_EQ(std::string_view(buffer, actualBuf.size()), "2w6d57min");
 }
 
 }  // namespace cct

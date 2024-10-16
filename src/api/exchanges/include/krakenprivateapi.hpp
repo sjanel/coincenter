@@ -3,7 +3,7 @@
 #include <span>
 
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
@@ -66,7 +66,7 @@ class KrakenPrivate : public ExchangePrivate {
     KrakenPublic& _exchangePublic;
   };
 
-  json queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder);
+  json::container queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder);
 
   OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext, QueryOrder queryOrder);
 

@@ -15,6 +15,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
+#include "generic-object-json.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {
@@ -205,6 +206,8 @@ class CurrencyCode {
     }
     return first;
   }
+
+  constexpr size_type strLen() const noexcept { return size(); }
 
   /// Resizes the currency code to a length of 'newSize'.
   /// If 'newSize' is greater than 'kMaxLen', exception will be raised.
@@ -398,22 +401,7 @@ template <>
 struct to<JSON, ::cct::CurrencyCode> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    auto valueLen = value.size();
-    bool inQuotes = ix != 0 && b[ix - 1] == ':';
-    int64_t additionalSize = (inQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
-                             static_cast<int64_t>(b.size());
-    if (additionalSize > 0) {
-      b.append(additionalSize, ' ');
-    }
-
-    if (inQuotes) {
-      b[ix++] = '"';
-    }
-    value.appendTo(b.data() + ix);
-    ix += valueLen;
-    if (inQuotes) {
-      b[ix++] = '"';
-    }
+    ::cct::details::ToJson<Opts>(value, b, ix);
   }
 };
 }  // namespace glz::detail

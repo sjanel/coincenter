@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchangepublicapi.hpp"
@@ -74,7 +74,7 @@ class HuobiPublic : public ExchangePublic {
   friend class HuobiPrivate;
 
   struct TradableCurrenciesFunc {
-    json operator()();
+    json::container operator()();
 
     CurlHandle& _curlHandle;
   };
@@ -138,7 +138,7 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
-  static bool ShouldDiscardChain(CurrencyCode cur, const json& chainDetail);
+  static bool ShouldDiscardChain(CurrencyCode cur, const json::container& chainDetail);
 
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;

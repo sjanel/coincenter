@@ -4,7 +4,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
@@ -16,7 +16,7 @@
 namespace cct {
 class LoadConfiguration;
 
-json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration);
+json::container LoadExchangeConfigData(const LoadConfiguration& loadConfiguration);
 
 /// Represents a top level option in the exchange config file
 class TopLevelOption {
@@ -31,7 +31,8 @@ class TopLevelOption {
   /// @param optionName top level option name
   /// @param defaultJsonData the json containing the personal exchange config data
   /// @param personalJsonData the json containing the personal exchange config data
-  TopLevelOption(std::string_view optionName, const json& defaultJsonData, const json& personalJsonData);
+  TopLevelOption(std::string_view optionName, const json::container& defaultJsonData,
+                 const json::container& personalJsonData);
 
   /// Get the first defined string of given sub option name, traversing the config options from bottom to up.
   std::string_view getStr(std::string_view exchangeName, std::string_view subOptionName1,
@@ -70,10 +71,10 @@ class TopLevelOption {
     return getArray<MonetaryAmount>(exchangeName, subOptionName1, subOptionName2);
   }
 
-  const json& getReadValues() const { return _readValues; }
+  const json::container& getReadValues() const { return _readValues; }
 
  private:
-  using JsonIt = json::const_iterator;
+  using JsonIt = json::container::const_iterator;
 
   struct DataSource {
     JsonIt exchangeIt(std::string_view exchangeName) const {
@@ -114,7 +115,7 @@ class TopLevelOption {
     return ret;
   }
 
-  json _readValues;
+  json::container _readValues;
   FixedCapacityVector<DataSource, 4> _orderedDataSource;
 };
 }  // namespace cct

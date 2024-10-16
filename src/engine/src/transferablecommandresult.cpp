@@ -15,10 +15,10 @@
 namespace cct {
 namespace {
 struct AmountExchangeNames {
+  bool operator==(const AmountExchangeNames &) const noexcept = default;
+
   MonetaryAmount amount;
   ExchangeNames exchangeNames;
-
-  bool operator==(const AmountExchangeNames &) const noexcept = default;
 };
 
 std::optional<AmountExchangeNames> AccumulateAmount(

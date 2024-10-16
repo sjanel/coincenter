@@ -11,7 +11,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -42,17 +42,18 @@
 namespace cct::api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
+json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
+                            CurlPostData&& postData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
 
-  return requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
+  return requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
     const auto foundErrorIt = jsonResponse.find("error");
     if (foundErrorIt != jsonResponse.end()) {
       const auto statusCodeIt = jsonResponse.find("name");
       const long statusCode = statusCodeIt == jsonResponse.end() ? -1 : statusCodeIt->get<long>();
       const auto msgIt = jsonResponse.find("message");
       const std::string_view msg = msgIt == jsonResponse.end() ? "Unknown" : msgIt->get<std::string_view>();
-      log::warn("Upbit error ({}, '{}'), full json: '{}'", statusCode, msg, jsonResponse.dump());
+      log::warn("Upbit error ({}, '{}'), full: '{}'", statusCode, msg, jsonResponse.dump());
       return RequestRetry::Status::kResponseError;
     }
     return RequestRetry::Status::kResponseOK;
@@ -86,9 +87,9 @@ UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConver
 
 bool UpbitPublic::healthCheck() {
   static constexpr auto kAllowExceptions = false;
-  json result =
-      json::parse(_curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})),
-                  nullptr, kAllowExceptions);
+  json::container result = json::container::parse(
+      _curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})), nullptr,
+      kAllowExceptions);
   if (result.is_discarded()) {
     log::error("{} health check response badly formatted", _name);
     return false;
@@ -133,11 +134,11 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCod
 }
 
 MarketSet UpbitPublic::MarketsFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
+  json::container result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
   const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
-  for (const json& marketDetails : result) {
+  for (const json::container& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::string_view marketWarningStr = marketDetails["market_warning"].get<std::string_view>();
     if (marketWarningStr != "NONE") {
@@ -168,7 +169,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
 MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
   MonetaryAmountVector fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
-  json jsonData = withdrawFeesFile.readAllJson();
+  json::container jsonData = withdrawFeesFile.readAllJson();
   for (const auto& [coin, value] : jsonData[_name].items()) {
     CurrencyCode coinAcro(coin);
     MonetaryAmount ma(value.get<std::string_view>(), coinAcro);
@@ -182,13 +183,13 @@ MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
 namespace {
 
 template <class OutputType>
-OutputType ParseOrderBooks(const json& result, int depth) {
+OutputType ParseOrderBooks(const json::container& result, int depth) {
   OutputType ret;
   const auto time = Clock::now();
 
   MarketOrderBookLines orderBookLines;
 
-  for (const json& marketDetails : result) {
+  for (const json::container& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
     std::size_t dashPos = marketStr.find('-');
     if (dashPos == std::string_view::npos) {
@@ -206,7 +207,7 @@ OutputType ParseOrderBooks(const json& result, int depth) {
     orderBookLines.clear();
     orderBookLines.reserve(orderBookLinesJson.size() * 2U);
 
-    for (const json& orderbookDetails : orderBookLinesJson | std::ranges::views::take(depth)) {
+    for (const json::container& orderbookDetails : orderBookLinesJson | std::ranges::views::take(depth)) {
       // Amounts are not strings, but doubles
       MonetaryAmount askPri(orderbookDetails["ask_price"].get<double>(), quote);
       MonetaryAmount bidPri(orderbookDetails["bid_price"].get<double>(), quote);
@@ -255,18 +256,20 @@ MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market mk, int depth) {
 }
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
-  json result = PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
+  json::container result =
+      PublicQuery(_curlHandle, "/v1/candles/days", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double last24hVol = result.empty() ? 0 : result.front()["candle_acc_trade_volume"].get<double>();
   return MonetaryAmount(last24hVol, mk.base());
 }
 
 PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
-  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
+  json::container result =
+      PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
 
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
 
-  for (const json& detail : result) {
+  for (const json::container& detail : result) {
     MonetaryAmount amount(detail["trade_volume"].get<double>(), mk.base());
     MonetaryAmount price(detail["trade_price"].get<double>(), mk.quote());
     int64_t millisecondsSinceEpoch = detail["timestamp"].get<int64_t>();
@@ -279,7 +282,8 @@ PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market mk) {
-  json result = PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
+  json::container result =
+      PublicQuery(_curlHandle, "/v1/trades/ticks", {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double lastPrice = result.empty() ? 0 : result.front()["trade_price"].get<double>();
   return MonetaryAmount(lastPrice, mk.quote());
 }

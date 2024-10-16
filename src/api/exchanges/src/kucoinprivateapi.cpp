@@ -14,7 +14,7 @@
 #include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
@@ -59,8 +59,9 @@ namespace {
 
 constexpr std::string_view kStatusCodeOK = "200000";
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postData = CurlPostData(), bool throwIfError = true) {
+json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
+                             std::string_view endpoint, CurlPostData&& postData = CurlPostData(),
+                             bool throwIfError = true) {
   string strToSign(Nonce_TimeSinceEpochInMs());
   auto nonceSize = strToSign.size();
   strToSign.append(HttpRequestTypeToString(requestType));
@@ -73,7 +74,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       strToSign.append(postData.str());
     } else {
       strToSign.append(postData.toJsonStr());
-      postDataFormat = CurlOptions::PostDataFormat::kJson;
+      postDataFormat = CurlOptions::PostDataFormat::json;
     }
   }
 
@@ -87,7 +88,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   httpHeaders.emplace_back("KC-API-PASSPHRASE", B64Encode(ssl::Sha256Bin(apiKey.passphrase(), apiKey.privateKey())));
   httpHeaders.emplace_back("KC-API-KEY-VERSION", 2);
 
-  json ret = json::parse(curlHandle.query(endpoint, opts));
+  json::container ret = json::container::parse(curlHandle.query(endpoint, opts));
   auto errCodeIt = ret.find("code");
   if (errCodeIt != ret.end() && errCodeIt->get<std::string_view>() != kStatusCodeOK) {
     auto msgIt = ret.find("msg");
@@ -98,7 +99,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       return ret;
     }
     if (throwIfError) {
-      log::error("Full Kucoin json error: '{}'", ret.dump());
+      log::error("Full Kucoin error: '{}'", ret.dump());
       throw exception("Kucoin error: {}, msg: {}", errCodeIt->get<std::string_view>(), msg);
     }
   }
@@ -121,11 +122,11 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
                           std::string_view accountName) {
   // Check if enough balance in the 'accountName' account of Kucoin
   CurrencyCode cur = expectedAmount.currencyCode();
-  json res =
+  json::container res =
       PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/accounts", {{"currency", cur.str()}})["data"];
   MonetaryAmount totalAvailableAmount(0, cur);
   MonetaryAmount amountInTargetAccount = totalAvailableAmount;
-  for (const json& balanceDetail : res) {
+  for (const json::container& balanceDetail : res) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     MonetaryAmount av(balanceDetail["available"].get<std::string_view>(), cur);
     totalAvailableAmount += av;
@@ -138,7 +139,7 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
     return false;
   }
   if (amountInTargetAccount < expectedAmount) {
-    for (const json& balanceDetail : res) {
+    for (const json::container& balanceDetail : res) {
       std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
       MonetaryAmount av(balanceDetail["available"].get<std::string_view>(), cur);
       if (typeStr != accountName && av != 0) {
@@ -169,21 +170,21 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic&
 
 bool KucoinPrivate::validateApiKey() {
   constexpr bool throwIfError = false;
-  json ret =
+  json::container ret =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts", CurlPostData(), throwIfError);
   auto errCodeIt = ret.find("code");
   return errCodeIt == ret.end() || errCodeIt->get<std::string_view>() == kStatusCodeOK;
 }
 
 BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts")["data"];
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts")["data"];
   BalancePortfolio balancePortfolio;
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
   const std::string_view amountKey = withBalanceInUse ? "balance" : "available";
 
   balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(result.size()));
-  for (const json& balanceDetail : result) {
+  for (const json::container& balanceDetail : result) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(
         _coincenterInfo.standardizeCurrencyCode(balanceDetail["currency"].get<std::string_view>()));
@@ -196,8 +197,8 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
 }
 
 Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v2/deposit-addresses",
-                             {{"currency", currencyCode.str()}})["data"];
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v2/deposit-addresses",
+                                        {{"currency", currencyCode.str()}})["data"];
   ExchangeName exchangeName(_kucoinPublic.name(), _apiKey.name());
   if (result.empty()) {
     log::info("No deposit address for {} in {}, creating one", currencyCode, exchangeName);
@@ -243,9 +244,10 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
   if (ordersConstraints.isPlacedTimeBeforeDefined()) {
     params.emplace_back("endAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedBefore()));
   }
-  json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
+  json::container data =
+      PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders", std::move(params))["data"];
 
-  for (json& orderDetails : data["items"]) {
+  for (json::container& orderDetails : data["items"]) {
     const auto marketStr = orderDetails["symbol"].get<std::string_view>();
     const auto dashPos = marketStr.find('-');
 
@@ -310,7 +312,8 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
     if (openedOrdersConstraints.isMarketDefined()) {
       params.emplace_back("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
     }
-    json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
+    json::container res =
+        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v1/orders", std::move(params));
     int nbCancelledOrders = 0;
     auto dataIt = res.find("data");
     if (dataIt != res.end()) {
@@ -359,7 +362,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
       options.emplace_back("txId", depositsConstraints.idSet().front());
     }
   }
-  json depositJson =
+  json::container depositJson =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/deposits", std::move(options))["data"];
   auto itemsIt = depositJson.find("items");
   if (itemsIt == depositJson.end()) {
@@ -369,7 +372,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
   Deposits deposits;
 
   deposits.reserve(static_cast<Deposits::size_type>(itemsIt->size()));
-  for (const json& depositDetail : *itemsIt) {
+  for (const json::container& depositDetail : *itemsIt) {
     CurrencyCode currencyCode(depositDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(depositDetail["amount"].get<std::string_view>(), currencyCode);
     int64_t millisecondsSinceEpoch = depositDetail["updatedAt"].get<int64_t>();
@@ -437,8 +440,8 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 }  // namespace
 
 WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
-  json withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
-                                   CreateOptionsFromWithdrawConstraints(withdrawsConstraints))["data"];
+  json::container withdrawJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
+                                              CreateOptionsFromWithdrawConstraints(withdrawsConstraints))["data"];
   auto itemsIt = withdrawJson.find("items");
   if (itemsIt == withdrawJson.end()) {
     throw exception("Unexpected result from Kucoin withdraw API");
@@ -447,7 +450,7 @@ WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& wit
   Withdraws withdraws;
 
   withdraws.reserve(static_cast<Withdraws::size_type>(itemsIt->size()));
-  for (const json& withdrawDetail : *itemsIt) {
+  for (const json::container& withdrawDetail : *itemsIt) {
     CurrencyCode currencyCode(withdrawDetail["currency"].get<std::string_view>());
     MonetaryAmount netEmittedAmount(withdrawDetail["amount"].get<std::string_view>(), currencyCode);
     MonetaryAmount fee(withdrawDetail["fee"].get<std::string_view>(), currencyCode);
@@ -518,7 +521,8 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   params.emplace_back("timeInForce", "GTT");  // Good until cancelled or time expires
   params.emplace_back("cancelAfter", std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count() + 1);
 
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params))["data"];
+  json::container result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/orders", std::move(params))["data"];
   placeOrderInfo.orderId = std::move(result["orderId"].get_ref<string&>());
   return placeOrderInfo;
 }
@@ -540,7 +544,7 @@ OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
   string endpoint("/api/v1/orders/");
   endpoint.append(orderId);
 
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint)["data"];
+  json::container data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint)["data"];
 
   MonetaryAmount size(data["size"].get<std::string_view>(), mk.base());
   MonetaryAmount matchedSize(data["dealSize"].get<std::string_view>(), mk.base());
@@ -578,7 +582,7 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
     opts.emplace_back("memo", destinationWallet.tag());
   }
 
-  json result =
+  json::container result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/withdrawals", std::move(opts))["data"];
   return {std::move(destinationWallet), std::move(result["withdrawalId"].get_ref<string&>()), grossAmount};
 }

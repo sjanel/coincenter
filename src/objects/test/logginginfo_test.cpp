@@ -6,7 +6,7 @@
 
 #include "cct_const.hpp"
 #include "cct_log.hpp"
-#include "generalconfigdefault.hpp"
+#include "log-config.hpp"
 
 namespace cct {
 TEST(LoggingInfo, SimpleConstructor) {
@@ -20,7 +20,7 @@ TEST(LoggingInfo, SimpleConstructor) {
 }
 
 TEST(LoggingInfo, ConstructorFromJson) {
-  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, kDefaultDataDir, GeneralConfigDefault::Prod()["log"]);
+  LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kYes, kDefaultDataDir, schema::LogConfig());
 
   log::info("test");
 }

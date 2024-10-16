@@ -9,13 +9,13 @@ namespace cct {
 ApiOutputType ApiOutputTypeFromString(std::string_view str) {
   auto lowerStr = ToLower(str);
   if (lowerStr == kApiOutputTypeNoPrintStr) {
-    return ApiOutputType::kNoPrint;
+    return ApiOutputType::off;
   }
   if (lowerStr == kApiOutputTypeTableStr) {
-    return ApiOutputType::kFormattedTable;
+    return ApiOutputType::table;
   }
   if (lowerStr == kApiOutputTypeJsonStr) {
-    return ApiOutputType::kJson;
+    return ApiOutputType::json;
   }
   throw invalid_argument("Unrecognized api output type {}", str);
 }

@@ -20,6 +20,7 @@
 #include "opened-order.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
+#include "requests-config.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 #include "wallet.hpp"
@@ -34,7 +35,7 @@ using Type = CurrencyExchange::Type;
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{schema::RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
   BalanceOptions balanceOptions;
   WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous, WithdrawOptions::Mode::kReal};
 };

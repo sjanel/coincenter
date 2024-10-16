@@ -12,7 +12,7 @@
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -40,7 +40,7 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
                                              CachedResultVault& cachedResultVault)
     : _coincenterInfo(coincenterInfo),
       _withdrawalFeesCache(CachedResultOptions(minDurationBetweenQueries, cachedResultVault), coincenterInfo) {
-  json data = GetWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
+  json::container data = GetWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
   if (!data.empty()) {
     const auto nowTime = Clock::now();
     for (const auto& [exchangeName, exchangeData] : data.items()) {
@@ -114,13 +114,13 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 }
 
 void WithdrawalFeesCrawler::updateCacheFile() const {
-  json data;
+  json::container data;
   for (const std::string_view exchangeName : kSupportedExchanges) {
     const auto [withdrawalInfoMapsPtr, latestUpdate] = _withdrawalFeesCache.retrieve(exchangeName);
     if (withdrawalInfoMapsPtr != nullptr) {
       const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
 
-      json exchangeData;
+      json::container exchangeData;
       exchangeData["timeepoch"] = TimestampToSecondsSinceEpoch(latestUpdate);
       for (const auto withdrawFee : withdrawalInfoMaps.first) {
         string curCodeStr = withdrawFee.currencyCode().str();
@@ -132,7 +132,7 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
       data.emplace(exchangeName, std::move(exchangeData));
     }
   }
-  GetWithdrawInfoFile(_coincenterInfo.dataDir()).write(data);
+  GetWithdrawInfoFile(_coincenterInfo.dataDir()).writeJson(data);
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
@@ -145,7 +145,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 
   if (!withdrawalFeesCsv.empty()) {
     static constexpr bool kAllowExceptions = false;
-    const json jsonData = json::parse(withdrawalFeesCsv, nullptr, kAllowExceptions);
+    const json::container jsonData = json::container::parse(withdrawalFeesCsv, nullptr, kAllowExceptions);
     const auto exchangesIt = jsonData.find("exchange");
     if (jsonData.is_discarded() || exchangesIt == jsonData.end()) {
       log::error("no exchange data found in source 1 - either site information unavailable or code to be updated");
@@ -157,7 +157,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
       return ret;
     }
 
-    for (const json& feeJson : *feesIt) {
+    for (const json::container& feeJson : *feesIt) {
       const auto amountIt = feeJson.find("amount");
       if (amountIt == feeJson.end() || !amountIt->is_number_float()) {
         continue;

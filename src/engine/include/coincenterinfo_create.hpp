@@ -8,6 +8,7 @@
 #include "runmodes.hpp"
 
 namespace cct {
+
 CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
                                      settings::RunMode runMode);
 

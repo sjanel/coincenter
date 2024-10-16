@@ -6,7 +6,7 @@
 #include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "generalconfig.hpp"
+#include "general-config.hpp"
 #include "loadconfiguration.hpp"
 #include "monitoringinfo.hpp"
 #include "reader_mock.hpp"
@@ -36,8 +36,9 @@ class CoincenterInfoTest : public ::testing::Test {
   MockReader currencyPrefixesReader;
 
   CoincenterInfo createCoincenterInfo() const {
-    return CoincenterInfo(settings::RunMode::kTestKeysWithProxy, loadConfiguration, GeneralConfig(), MonitoringInfo(),
-                          currencyAcronymsReader, stableCoinsReader, currencyPrefixesReader);
+    return CoincenterInfo(settings::RunMode::kTestKeysWithProxy, loadConfiguration, schema::GeneralConfig(),
+                          LoggingInfo(), MonitoringInfo(), currencyAcronymsReader, stableCoinsReader,
+                          currencyPrefixesReader);
   }
 };
 

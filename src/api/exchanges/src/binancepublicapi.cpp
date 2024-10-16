@@ -16,7 +16,7 @@
 #include "binance-common-api.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -48,7 +48,8 @@
 namespace cct::api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
+json::container PublicQuery(CurlHandle& curlHandle, std::string_view method,
+                            const CurlPostData& curlPostData = CurlPostData()) {
   string endpoint(method);
   if (!curlPostData.empty()) {
     endpoint.push_back('?');
@@ -56,12 +57,12 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
   }
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  return requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
+  return requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
     const auto foundErrorIt = jsonResponse.find("code");
     const auto foundMsgIt = jsonResponse.find("msg");
     if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
       const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
-      log::warn("Binance error ({}), full json: '{}'", statusCode, jsonResponse.dump());
+      log::warn("Binance error ({}), full: '{}'", statusCode, jsonResponse.dump());
       return RequestRetry::Status::kResponseError;
     }
     return RequestRetry::Status::kResponseOK;
@@ -69,7 +70,7 @@ json PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPost
 }
 
 template <class ExchangeInfoDataByMarket>
-const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
+const json::container& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
   auto it = exchangeInfoData.find(mk);
   if (it == exchangeInfoData.end()) {
     throw exception("Unable to retrieve {} data", mk);
@@ -79,7 +80,7 @@ const json& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData,
 
 template <class ExchangeInfoDataByMarket>
 VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
-  const json& marketData = RetrieveMarketData(exchangeInfoData, mk);
+  const json::container& marketData = RetrieveMarketData(exchangeInfoData, mk);
   return {marketData["baseAssetPrecision"].get<int8_t>(), marketData["quoteAssetPrecision"].get<int8_t>()};
 }
 }  // namespace
@@ -106,8 +107,8 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
 
 bool BinancePublic::healthCheck() {
   static constexpr bool kAllowExceptions = false;
-  json result = json::parse(_commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr,
-                            kAllowExceptions);
+  json::container result = json::container::parse(
+      _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
   if (result.is_discarded()) {
     log::error("{} health check response is badly formatted: {}", _name, result.dump());
     return false;
@@ -148,7 +149,7 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
   markets.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
 
   for (const auto& marketJsonPair : exchangeInfoData) {
-    const json& symbol = marketJsonPair.second;
+    const json::container& symbol = marketJsonPair.second;
     std::string_view baseAsset = symbol["baseAsset"].get<std::string_view>();
     std::string_view quoteAsset = symbol["quoteAsset"].get<std::string_view>();
     CurrencyCode base(baseAsset);
@@ -165,7 +166,7 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
 
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
-  json exchangeInfoData = PublicQuery(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
+  json::container exchangeInfoData = PublicQuery(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
   auto symbolsIt = exchangeInfoData.find("symbols");
   if (symbolsIt == exchangeInfoData.end()) {
     return ret;
@@ -195,11 +196,11 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
-  const json& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
+  const json::container& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
 
-  const json* pPriceFilter = nullptr;
+  const json::container* pPriceFilter = nullptr;
   MonetaryAmount ret(pri);
-  for (const json& filter : marketData["filters"]) {
+  for (const json::container& filter : marketData["filters"]) {
     const std::string_view filterType = filter["filterType"].get<std::string_view>();
     if (filterType == "PRICE_FILTER") {
       pPriceFilter = std::addressof(filter);
@@ -244,7 +245,8 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
     log::error("Unable to retrieve last trades from {}, use average price instead for notional", mk);
   }
 
-  const json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
+  const json::container result =
+      PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
   const auto priceIt = result.find("price");
   const std::string_view priceStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
 
@@ -253,15 +255,15 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,
                                              bool isTakerOrder) {
-  const json& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
+  const json::container& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
   MonetaryAmount ret(vol);
 
-  const json* pMinNotionalFilter = nullptr;
-  const json* pNotionalFilter = nullptr;
-  const json* pLotSizeFilter = nullptr;
-  const json* pMarketLotSizeFilter = nullptr;
+  const json::container* pMinNotionalFilter = nullptr;
+  const json::container* pNotionalFilter = nullptr;
+  const json::container* pLotSizeFilter = nullptr;
+  const json::container* pMarketLotSizeFilter = nullptr;
 
-  for (const json& filter : marketData["filters"]) {
+  for (const json::container& filter : marketData["filters"]) {
     const std::string_view filterType = filter["filterType"].get<std::string_view>();
     if (filterType == "LOT_SIZE") {
       pLotSizeFilter = std::addressof(filter);
@@ -328,7 +330,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
     }
   }
 
-  for (const json* pLotFilterPtr : {pMarketLotSizeFilter, pLotSizeFilter}) {
+  for (const json::container* pLotFilterPtr : {pMarketLotSizeFilter, pLotSizeFilter}) {
     if (pLotFilterPtr != nullptr) {
       // "maxQty": "9000000.00000000",
       // "minQty": "1.00000000",
@@ -366,7 +368,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
 MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
-  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
+  json::container result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
   using BinanceAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
@@ -374,7 +376,7 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
     binanceAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
   const auto time = Clock::now();
-  for (const json& tickerDetails : result) {
+  for (const json::container& tickerDetails : result) {
     string assetsPairStr = tickerDetails["symbol"];
     auto it = binanceAssetPairToStdMarketMap.find(assetsPairStr);
     if (it == binanceAssetPairToStdMarketMap.end()) {
@@ -406,7 +408,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
   MarketOrderBookLines orderBookLines;
 
   const CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
-  const json asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
+  const json::container asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
   const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
@@ -429,7 +431,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
-  const json result =
+  const json::container result =
       PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", mk.assetsPairStrUpper()}});
   const auto volumeIt = result.find("volume");
   const std::string_view last24hVol = volumeIt == result.end() ? std::string_view() : volumeIt->get<std::string_view>();
@@ -445,13 +447,13 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
     nbTrades = kMaxNbLastTrades;
   }
 
-  json result = PublicQuery(_commonInfo._curlHandle, "/api/v3/trades",
-                            {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
+  json::container result = PublicQuery(_commonInfo._curlHandle, "/api/v3/trades",
+                                       {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
 
-  for (const json& detail : result) {
+  for (const json::container& detail : result) {
     MonetaryAmount amount(detail["qty"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
@@ -464,7 +466,8 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market mk) {
-  const json data = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
+  const json::container data =
+      PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
   const auto priceIt = data.find("price");
   const std::string_view lastPrice = priceIt == data.end() ? std::string_view() : priceIt->get<std::string_view>();
   return {lastPrice, mk.quote()};

@@ -37,7 +37,7 @@ bool CommandTypeCanBeGrouped(CoincenterCommandType type) {
   // Compatible command types need to be explicitly set
   // For now, only market data is compatible
   switch (type) {
-    case CoincenterCommandType::kMarketData:
+    case CoincenterCommandType::MarketData:
       return true;
     default:
       return false;

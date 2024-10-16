@@ -8,7 +8,7 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
-#include "cct_json.hpp"
+#include "cct_json-serialization.hpp"
 #include "exchangedata_test.hpp"
 #include "queryresultprinter.hpp"
 #include "timedef.hpp"
@@ -37,7 +37,14 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
   void expectJson(std::string_view expected) const {
     ASSERT_FALSE(expected.empty());
     expected.remove_prefix(1);  // skip first newline char of expected string
-    EXPECT_EQ(json::parse(ss.view()), json::parse(expected));
+
+    glz::json_t lhs;
+    glz::json_t rhs;
+
+    ASSERT_FALSE(glz::read_json(lhs, ss.view()));
+    ASSERT_FALSE(glz::read_json(rhs, expected));
+
+    EXPECT_EQ(lhs.dump(), rhs.dump());
   }
 
   QueryResultPrinter basicQueryResultPrinter(ApiOutputType apiOutputType) {

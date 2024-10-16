@@ -8,6 +8,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "ipow.hpp"
@@ -806,16 +807,33 @@ TEST(MonetaryAmountTest, JsonSerialization) {
   Foo foo{MonetaryAmount("15.5DOGE")};
 
   string buffer;
-  auto res = write_json(foo, buffer);
+  auto ec = json::write<json::opts{}>(foo, buffer);
 
-  EXPECT_FALSE(res);
+  EXPECT_FALSE(ec);
 
   EXPECT_EQ(buffer, R"({"amount":"15.5 DOGE"})");
 }
 
+TEST(MonetaryAmountTest, JsonSerializationFormatted) {
+  Foo foo{MonetaryAmount("43593.78 GLAZE")};
+
+  string buffer;
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  auto ec = json::write<json::opts{.prettify = true, .indentation_width = 2}>(foo, buffer);
+
+  EXPECT_FALSE(ec);
+
+  EXPECT_EQ(buffer, R"({
+  "amount": "43593.78 GLAZE"
+})");
+}
+
 TEST(MonetaryAmountTest, JsonDeserializationValue) {
   Foo foo;
-  auto ec = read<glz::opts{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
 
   ASSERT_FALSE(ec);
 
@@ -828,7 +846,7 @@ TEST(MonetaryAmountTest, JsonSerializationKey) {
   MonetaryAmountMap map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
 
   string buffer;
-  auto res = write<glz::opts{.raw_string = true}>(map, buffer);
+  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 

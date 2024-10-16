@@ -1,14 +1,14 @@
 #pragma once
 
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 
 namespace cct {
 struct ExchangeConfigDefault {
-  static json Prod() {
+  static json::container Prod() {
     // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
     // fiasco' problem.
 
-    static const json kProd = R"(
+    static const json::container kProd = R"(
 {
   "asset": {
     "default": {
@@ -148,11 +148,11 @@ struct ExchangeConfigDefault {
   }
 
   /// ExchangeInfos for tests only. Some tests rely on provided values so changing them may make them fail.
-  static json Test() {
+  static json::container Test() {
     // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
     // fiasco' problem.
 
-    static const json kTest = R"(
+    static const json::container kTest = R"(
 {
   "asset": {
     "default": {

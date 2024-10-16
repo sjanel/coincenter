@@ -51,12 +51,12 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (cmdLineOptions.healthCheck) {
     optionParser = StringOptionParser(*cmdLineOptions.healthCheck);
-    _commands.emplace_back(CoincenterCommandType::kHealthCheck).setExchangeNames(optionParser.parseExchanges());
+    _commands.emplace_back(CoincenterCommandType::HealthCheck).setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.currencies) {
     optionParser = StringOptionParser(*cmdLineOptions.currencies);
-    _commands.emplace_back(CoincenterCommandType::kCurrencies).setExchangeNames(optionParser.parseExchanges());
+    _commands.emplace_back(CoincenterCommandType::Currencies).setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.markets) {
@@ -66,7 +66,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.orderbook.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.orderbook);
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::kOrderbook)
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::Orderbook)
                     .setMarket(optionParser.parseMarket())
                     .setExchangeNames(optionParser.parseExchanges())
                     .setCur1(cmdLineOptions.orderbookCur);
@@ -77,7 +77,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (cmdLineOptions.ticker) {
     optionParser = StringOptionParser(*cmdLineOptions.ticker);
-    _commands.emplace_back(CoincenterCommandType::kTicker).setExchangeNames(optionParser.parseExchanges());
+    _commands.emplace_back(CoincenterCommandType::Ticker).setExchangeNames(optionParser.parseExchanges());
   }
 
   if (!cmdLineOptions.conversion.empty()) {
@@ -87,7 +87,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
     if (amountType == StringOptionParser::AmountType::kPercentage) {
       throw invalid_argument("conversion should start with an absolute amount");
     }
-    _commands.emplace_back(CoincenterCommandType::kConversion)
+    _commands.emplace_back(CoincenterCommandType::Conversion)
         .setAmount(amount)
         .setCur1(optionParser.parseCurrency())
         .setExchangeNames(optionParser.parseExchanges());
@@ -95,14 +95,14 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.conversionPath.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.conversionPath);
-    _commands.emplace_back(CoincenterCommandType::kConversionPath)
+    _commands.emplace_back(CoincenterCommandType::ConversionPath)
         .setMarket(optionParser.parseMarket())
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.balance) {
     optionParser = StringOptionParser(*cmdLineOptions.balance);
-    _commands.emplace_back(CoincenterCommandType::kBalance)
+    _commands.emplace_back(CoincenterCommandType::Balance)
         .setCur1(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional))
         .withBalanceInUse(cmdLineOptions.withBalanceInUse)
         .setExchangeNames(optionParser.parseExchanges());
@@ -116,29 +116,29 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.depositInfo.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.depositInfo);
-    _commands.emplace_back(CoincenterCommandType::kDepositInfo)
+    _commands.emplace_back(CoincenterCommandType::DepositInfo)
         .setCur1(optionParser.parseCurrency())
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.closedOrdersInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.closedOrdersInfo);
-    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::kOrdersClosed, optionParser));
+    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::OrdersClosed, optionParser));
   }
 
   if (cmdLineOptions.openedOrdersInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.openedOrdersInfo);
-    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::kOrdersOpened, optionParser));
+    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::OrdersOpened, optionParser));
   }
 
   if (cmdLineOptions.cancelOpenedOrders) {
     optionParser = StringOptionParser(*cmdLineOptions.cancelOpenedOrders);
-    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::kOrdersCancel, optionParser));
+    _commands.push_back(commandFactory.createOrderCommand(CoincenterCommandType::OrdersCancel, optionParser));
   }
 
   if (cmdLineOptions.recentDepositsInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.recentDepositsInfo);
-    _commands.emplace_back(CoincenterCommandType::kRecentDeposits)
+    _commands.emplace_back(CoincenterCommandType::RecentDeposits)
         .setDepositsConstraints(DepositsConstraints(
             optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), cmdLineOptions.minAge,
             cmdLineOptions.maxAge, DepositsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
@@ -147,7 +147,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (cmdLineOptions.recentWithdrawsInfo) {
     optionParser = StringOptionParser(*cmdLineOptions.recentWithdrawsInfo);
-    _commands.emplace_back(CoincenterCommandType::kRecentWithdraws)
+    _commands.emplace_back(CoincenterCommandType::RecentWithdraws)
         .setWithdrawsConstraints(WithdrawsConstraints(
             optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), cmdLineOptions.minAge,
             cmdLineOptions.maxAge, WithdrawsConstraints::IdSet(StringOptionParser(cmdLineOptions.ids).getCSVValues())))
@@ -166,28 +166,28 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.dustSweeper.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.dustSweeper);
-    _commands.emplace_back(CoincenterCommandType::kDustSweeper)
+    _commands.emplace_back(CoincenterCommandType::DustSweeper)
         .setCur1(optionParser.parseCurrency())
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (cmdLineOptions.withdrawFees) {
     optionParser = StringOptionParser(*cmdLineOptions.withdrawFees);
-    _commands.emplace_back(CoincenterCommandType::kWithdrawFees)
+    _commands.emplace_back(CoincenterCommandType::WithdrawFees)
         .setCur1(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional))
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (!cmdLineOptions.last24hTradedVolume.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.last24hTradedVolume);
-    _commands.emplace_back(CoincenterCommandType::kLast24hTradedVolume)
+    _commands.emplace_back(CoincenterCommandType::Last24hTradedVolume)
         .setMarket(optionParser.parseMarket())
         .setExchangeNames(optionParser.parseExchanges());
   }
 
   if (!cmdLineOptions.lastTrades.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.lastTrades);
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::kLastTrades)
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::LastTrades)
                     .setMarket(optionParser.parseMarket())
                     .setExchangeNames(optionParser.parseExchanges());
     if (cmdLineOptions.depth != CoincenterCmdLineOptions::kUndefinedDepth) {
@@ -197,7 +197,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.lastPrice.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.lastPrice);
-    _commands.emplace_back(CoincenterCommandType::kLastPrice)
+    _commands.emplace_back(CoincenterCommandType::LastPrice)
         .setMarket(optionParser.parseMarket())
         .setExchangeNames(optionParser.parseExchanges());
   }
@@ -205,7 +205,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (!cmdLineOptions.marketData.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.marketData);
 
-    _commands.emplace_back(CoincenterCommandType::kMarketData)
+    _commands.emplace_back(CoincenterCommandType::MarketData)
         .setMarket(optionParser.parseMarket())
         .setExchangeNames(optionParser.parseExchanges());
   }
@@ -215,7 +215,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
     auto dur = optionParser.parseDuration(StringOptionParser::FieldIs::kOptional);
 
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::kReplay)
+    auto &cmd = _commands.emplace_back(CoincenterCommandType::Replay)
                     .setReplayOptions(cmdLineOptions.computeReplayOptions(dur))
                     .setExchangeNames(optionParser.parseExchanges());
 
@@ -236,7 +236,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
       timeWindow = TimeWindow(nowTime - dur, nowTime);
     }
 
-    _commands.emplace_back(CoincenterCommandType::kReplayMarkets)
+    _commands.emplace_back(CoincenterCommandType::ReplayMarkets)
         .setReplayOptions(
             ReplayOptions(timeWindow, cmdLineOptions.algorithmNames, ReplayOptions::ReplayMode::kValidateOnly))
         .setExchangeNames(optionParser.parseExchanges());

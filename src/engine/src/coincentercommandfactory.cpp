@@ -20,7 +20,7 @@ CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionPars
   if (market.isNeutral()) {
     market = Market(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
   }
-  CoincenterCommand ret(CoincenterCommandType::kMarkets);
+  CoincenterCommand ret(CoincenterCommandType::Markets);
   ret.setCur1(market.base());
   ret.setCur2(market.quote());
   ret.setExchangeNames(optionParser.parseExchanges());
@@ -102,7 +102,7 @@ CoincenterCommand CoincenterCommandFactory::createWithdrawApplyCommand(StringOpt
   } else if (exchanges.size() != 2U) {
     throw invalid_argument("Exactly 2 exchanges 'from-to' should be provided for withdraw");
   }
-  CoincenterCommand command(CoincenterCommandType::kWithdrawApply);
+  CoincenterCommand command(CoincenterCommandType::Withdraw);
   command.setPercentageAmount(amountType == StringOptionParser::AmountType::kPercentage)
       .setWithdrawOptions(_cmdLineOptions.computeWithdrawOptions())
       .setExchangeNames(std::move(exchanges));
@@ -118,7 +118,7 @@ CoincenterCommand CoincenterCommandFactory::createWithdrawApplyAllCommand(String
   if (exchanges.size() != 2U || cur.isNeutral()) {
     throw invalid_argument("Withdraw all expects a currency with a from-to pair of exchanges");
   }
-  CoincenterCommand command(CoincenterCommandType::kWithdrawApply);
+  CoincenterCommand command(CoincenterCommandType::Withdraw);
   command.setPercentageAmount(true)
       .setExchangeNames(std::move(exchanges))
       .setWithdrawOptions(_cmdLineOptions.computeWithdrawOptions())

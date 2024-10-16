@@ -1,7 +1,6 @@
 #include "wallet.hpp"
 
 #include <algorithm>
-#include <cstddef>
 #include <string_view>
 #include <utility>
 
@@ -23,13 +22,13 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
     log::debug("No wallet validation from file, consider OK");
     return true;
   }
-  DepositAddresses depositAddresses = ReadDepositAddresses(walletCheck.dataDir());
+  auto depositAddresses = ReadDepositAddresses(walletCheck.dataDir());
   auto exchangeNameIt = depositAddresses.find(exchangeName.name());
   if (exchangeNameIt == depositAddresses.end()) {
     log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, exchangeName);
     return false;
   }
-  const ExchangeDepositAddresses &exchangeDepositAddresses = exchangeNameIt->second;
+  const auto &exchangeDepositAddresses = exchangeNameIt->second;
   bool uniqueKeyName = true;
   for (const auto &[privateExchangeKeyName, accountDepositAddresses] : exchangeDepositAddresses) {
     if (exchangeName.keyName().empty()) {

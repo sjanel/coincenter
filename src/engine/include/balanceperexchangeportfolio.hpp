@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
 
@@ -15,7 +15,7 @@ class BalancePerExchangePortfolio {
   SimpleTable getTable(bool wide) const;
 
   /// Print in json format.
-  json printJson(CurrencyCode equiCurrency) const;
+  json::container printJson(CurrencyCode equiCurrency) const;
 
  private:
   BalancePortfolio computeTotal() const;

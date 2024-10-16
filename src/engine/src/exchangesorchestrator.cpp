@@ -41,7 +41,7 @@
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
-#include "requestsconfig.hpp"
+#include "requests-config.hpp"
 #include "threadpool.hpp"
 #include "time-window.hpp"
 #include "trade-range-stats.hpp"
@@ -122,9 +122,10 @@ ExchangeRetriever::PublicExchangesVec SelectUniquePublicExchanges(ExchangeRetrie
 
 }  // namespace
 
-ExchangesOrchestrator::ExchangesOrchestrator(const RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan)
+ExchangesOrchestrator::ExchangesOrchestrator(const schema::RequestsConfig &requestsConfig,
+                                             std::span<Exchange> exchangesSpan)
     : _exchangeRetriever(exchangesSpan),
-      _threadPool(requestsConfig.nbMaxParallelRequests(static_cast<int>(exchangesSpan.size()))) {
+      _threadPool(std::min(requestsConfig.concurrency.nbMaxParallelRequests, static_cast<int>(exchangesSpan.size()))) {
   log::debug("Created a thread pool with {} workers for exchange requests", _threadPool.nbWorkers());
 }
 

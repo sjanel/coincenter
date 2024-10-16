@@ -3,7 +3,7 @@
 #include <map>
 #include <string_view>
 
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "exchangeconfig.hpp"
 
 namespace cct {
@@ -15,5 +15,5 @@ static constexpr std::string_view kPreferredPaymentCurrenciesOptName = "preferre
 using ExchangeConfigMap = std::map<std::string_view, ExchangeConfig, std::less<>>;
 
 /// @brief Builds the exchange info map based on given json
-ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json &jsonData);
+ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json::container &jsonData);
 }  // namespace cct

@@ -7,7 +7,7 @@
 #include <string_view>
 
 #include "besturlpicker.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
@@ -38,7 +38,7 @@ CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, const CurlOptions &opts) {
-  json jsonData;
+  json::container jsonData;
 
   // Rates
   std::string_view marketStr = opts.postData().get("q");

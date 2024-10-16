@@ -5,11 +5,11 @@
 
 #include "cct_const.hpp"
 #include "cct_flatset.hpp"
-#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincentercommandtype.hpp"
 #include "file.hpp"
+#include "log-config.hpp"
 
 namespace cct {
 
@@ -32,7 +32,7 @@ class LoggingInfo {
                        std::string_view dataDir = kDefaultDataDir);
 
   /// Creates a logging info from general config json file.
-  LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const json &generalConfigJsonLogPart);
+  LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const schema::LogConfig &logConfig);
 
   LoggingInfo(const LoggingInfo &) = delete;
   LoggingInfo(LoggingInfo &&rhs) noexcept;
