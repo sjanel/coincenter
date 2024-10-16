@@ -6,6 +6,7 @@
 #include "reader.hpp"
 
 namespace cct::schema {
+
 TEST(DepositAddressesTest, NominalCase) {
   class NominalCase : public Reader {
     [[nodiscard]] string readAll() const override {
@@ -47,4 +48,5 @@ TEST(DepositAddressesTest, NominalCase) {
   EXPECT_EQ(depositAddresses.at("kraken").at("user2").at("EUR"), "0x1234567890abcdef3");
   EXPECT_EQ(depositAddresses.at("kraken").at("user2").at("ETH"), "0xETHaddress");
 }
+
 }  // namespace cct::schema

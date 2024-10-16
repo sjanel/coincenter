@@ -86,7 +86,7 @@ void FiatConverter::updateCacheFile() const {
     data[marketPairStr]["rate"] = priceTimeValue.rate;
     data[marketPairStr]["timeepoch"] = TimestampToSecondsSinceEpoch(priceTimeValue.lastUpdatedTime);
   }
-  GetRatesCacheFile(_dataDir).write(data);
+  GetRatesCacheFile(_dataDir).writeJson(data);
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {

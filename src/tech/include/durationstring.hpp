@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string_view>
 
 #include "cct_string.hpp"
@@ -21,5 +22,8 @@ Duration ParseDuration(std::string_view durationStr);
 /// "1y6mon" instead of "1y 6mon" will be returned
 /// The 'nbSignificantUnits' parameter allows to specify the number of units to display.
 string DurationToString(Duration dur, int nbSignificantUnits = 2);
+
+/// Write the duration to given buffer instead of building a string. Returns the actual size of the result buffer.
+std::span<char> DurationToBuffer(Duration dur, std::span<char> buffer, int nbSignificantUnits = 2);
 
 }  // namespace cct

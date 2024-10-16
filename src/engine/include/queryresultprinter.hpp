@@ -52,18 +52,18 @@ class QueryResultPrinter {
   void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions) const {
     printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions,
-                CoincenterCommandType::kTrade);
+                CoincenterCommandType::Trade);
   }
 
   void printBuyTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount endAmount,
                       const TradeOptions &tradeOptions) const {
-    printTrades(tradeResultPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::kBuy);
+    printTrades(tradeResultPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::Buy);
   }
 
   void printSellTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                        bool isPercentageTrade, const TradeOptions &tradeOptions) const {
     printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, CurrencyCode(), tradeOptions,
-                CoincenterCommandType::kSell);
+                CoincenterCommandType::Sell);
   }
 
   void printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,

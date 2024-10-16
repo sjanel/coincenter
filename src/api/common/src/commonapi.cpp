@@ -216,7 +216,7 @@ void CommonAPI::updateCacheFile() const {
       data["fiats"].emplace_back(fiatCode.str());
     }
     data["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
-    fiatsCacheFile.write(data);
+    fiatsCacheFile.writeJson(data);
   }
 
   _withdrawalFeesCrawler.updateCacheFile();

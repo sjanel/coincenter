@@ -105,23 +105,23 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
   const auto &firstCmd = groupedCommands.front();
   // All grouped commands have same type - logic to handle multiple commands in a group should be handled per use case
   switch (firstCmd.type()) {
-    case CoincenterCommandType::kHealthCheck: {
+    case CoincenterCommandType::HealthCheck: {
       const auto healthCheckStatus = _coincenter.healthCheck(firstCmd.exchangeNames());
       _queryResultPrinter.printHealthCheck(healthCheckStatus);
       break;
     }
-    case CoincenterCommandType::kCurrencies: {
+    case CoincenterCommandType::Currencies: {
       const auto currenciesPerExchange = _coincenter.getCurrenciesPerExchange(firstCmd.exchangeNames());
       _queryResultPrinter.printCurrencies(currenciesPerExchange);
       break;
     }
-    case CoincenterCommandType::kMarkets: {
+    case CoincenterCommandType::Markets: {
       const auto marketsPerExchange =
           _coincenter.getMarketsPerExchange(firstCmd.cur1(), firstCmd.cur2(), firstCmd.exchangeNames());
       _queryResultPrinter.printMarkets(firstCmd.cur1(), firstCmd.cur2(), marketsPerExchange, firstCmd.type());
       break;
     }
-    case CoincenterCommandType::kConversion: {
+    case CoincenterCommandType::Conversion: {
       if (firstCmd.amount().isDefault()) {
         std::array<MonetaryAmount, kNbSupportedExchanges> startAmountsPerExchangePos;
         bool oneSet = false;
@@ -151,49 +151,49 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       }
       break;
     }
-    case CoincenterCommandType::kConversionPath: {
+    case CoincenterCommandType::ConversionPath: {
       const auto conversionPathPerExchange =
           _coincenter.getConversionPaths(firstCmd.market(), firstCmd.exchangeNames());
       _queryResultPrinter.printConversionPath(firstCmd.market(), conversionPathPerExchange);
       break;
     }
-    case CoincenterCommandType::kLastPrice: {
+    case CoincenterCommandType::LastPrice: {
       const auto lastPricePerExchange =
           _coincenter.getLastPricePerExchange(firstCmd.market(), firstCmd.exchangeNames());
       _queryResultPrinter.printLastPrice(firstCmd.market(), lastPricePerExchange);
       break;
     }
-    case CoincenterCommandType::kTicker: {
+    case CoincenterCommandType::Ticker: {
       const auto exchangeTickerMaps = _coincenter.getTickerInformation(firstCmd.exchangeNames());
       _queryResultPrinter.printTickerInformation(exchangeTickerMaps);
       break;
     }
-    case CoincenterCommandType::kOrderbook: {
+    case CoincenterCommandType::Orderbook: {
       const auto marketOrderBooksConversionRates = _coincenter.getMarketOrderBooks(
           firstCmd.market(), firstCmd.exchangeNames(), firstCmd.cur1(), firstCmd.optDepth());
       _queryResultPrinter.printMarketOrderBooks(firstCmd.market(), firstCmd.cur1(), firstCmd.optDepth(),
                                                 marketOrderBooksConversionRates);
       break;
     }
-    case CoincenterCommandType::kLastTrades: {
+    case CoincenterCommandType::LastTrades: {
       const auto lastTradesPerExchange =
           _coincenter.getLastTradesPerExchange(firstCmd.market(), firstCmd.exchangeNames(), firstCmd.optDepth());
       _queryResultPrinter.printLastTrades(firstCmd.market(), firstCmd.optDepth(), lastTradesPerExchange);
       break;
     }
-    case CoincenterCommandType::kLast24hTradedVolume: {
+    case CoincenterCommandType::Last24hTradedVolume: {
       const auto tradedVolumePerExchange =
           _coincenter.getLast24hTradedVolumePerExchange(firstCmd.market(), firstCmd.exchangeNames());
       _queryResultPrinter.printLast24hTradedVolume(firstCmd.market(), tradedVolumePerExchange);
       break;
     }
-    case CoincenterCommandType::kWithdrawFees: {
+    case CoincenterCommandType::WithdrawFees: {
       const auto withdrawFeesPerExchange = _coincenter.getWithdrawFees(firstCmd.cur1(), firstCmd.exchangeNames());
       _queryResultPrinter.printWithdrawFees(withdrawFeesPerExchange, firstCmd.cur1());
       break;
     }
 
-    case CoincenterCommandType::kBalance: {
+    case CoincenterCommandType::Balance: {
       const auto amountIncludePolicy = firstCmd.withBalanceInUse()
                                            ? BalanceOptions::AmountIncludePolicy::kWithBalanceInUse
                                            : BalanceOptions::AmountIncludePolicy::kOnlyAvailable;
@@ -202,42 +202,42 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       _queryResultPrinter.printBalance(balancePerExchange, firstCmd.cur1());
       break;
     }
-    case CoincenterCommandType::kDepositInfo: {
+    case CoincenterCommandType::DepositInfo: {
       const auto walletPerExchange = _coincenter.getDepositInfo(firstCmd.exchangeNames(), firstCmd.cur1());
       _queryResultPrinter.printDepositInfo(firstCmd.cur1(), walletPerExchange);
       break;
     }
-    case CoincenterCommandType::kOrdersClosed: {
+    case CoincenterCommandType::OrdersClosed: {
       const auto closedOrdersPerExchange =
           _coincenter.getClosedOrders(firstCmd.exchangeNames(), firstCmd.ordersConstraints());
       _queryResultPrinter.printClosedOrders(closedOrdersPerExchange, firstCmd.ordersConstraints());
       break;
     }
-    case CoincenterCommandType::kOrdersOpened: {
+    case CoincenterCommandType::OrdersOpened: {
       const auto openedOrdersPerExchange =
           _coincenter.getOpenedOrders(firstCmd.exchangeNames(), firstCmd.ordersConstraints());
       _queryResultPrinter.printOpenedOrders(openedOrdersPerExchange, firstCmd.ordersConstraints());
       break;
     }
-    case CoincenterCommandType::kOrdersCancel: {
+    case CoincenterCommandType::OrdersCancel: {
       const auto nbCancelledOrdersPerExchange =
           _coincenter.cancelOrders(firstCmd.exchangeNames(), firstCmd.ordersConstraints());
       _queryResultPrinter.printCancelledOrders(nbCancelledOrdersPerExchange, firstCmd.ordersConstraints());
       break;
     }
-    case CoincenterCommandType::kRecentDeposits: {
+    case CoincenterCommandType::RecentDeposits: {
       const auto depositsPerExchange =
           _coincenter.getRecentDeposits(firstCmd.exchangeNames(), firstCmd.withdrawsOrDepositsConstraints());
       _queryResultPrinter.printRecentDeposits(depositsPerExchange, firstCmd.withdrawsOrDepositsConstraints());
       break;
     }
-    case CoincenterCommandType::kRecentWithdraws: {
+    case CoincenterCommandType::RecentWithdraws: {
       const auto withdrawsPerExchange =
           _coincenter.getRecentWithdraws(firstCmd.exchangeNames(), firstCmd.withdrawsOrDepositsConstraints());
       _queryResultPrinter.printRecentWithdraws(withdrawsPerExchange, firstCmd.withdrawsOrDepositsConstraints());
       break;
     }
-    case CoincenterCommandType::kTrade: {
+    case CoincenterCommandType::Trade: {
       // 2 input styles are possible:
       //  - standard full information with an amount to trade, a destination currency and an optional list of exchanges
       //  where to trade
@@ -253,14 +253,14 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
-    case CoincenterCommandType::kBuy: {
+    case CoincenterCommandType::Buy: {
       const auto tradeResultPerExchange =
           _coincenter.smartBuy(firstCmd.amount(), firstCmd.exchangeNames(), firstCmd.tradeOptions());
       _queryResultPrinter.printBuyTrades(tradeResultPerExchange, firstCmd.amount(), firstCmd.tradeOptions());
       FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
-    case CoincenterCommandType::kSell: {
+    case CoincenterCommandType::Sell: {
       auto [startAmount, exchangeNames] = ComputeTradeAmountAndExchanges(firstCmd, previousTransferableResults);
       if (startAmount.isDefault()) {
         break;
@@ -272,7 +272,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       FillTradeTransferableCommandResults(tradeResultPerExchange, transferableResults);
       break;
     }
-    case CoincenterCommandType::kWithdrawApply: {
+    case CoincenterCommandType::Withdraw: {
       const auto [grossAmount, exchangeName] = ComputeWithdrawAmount(firstCmd, previousTransferableResults);
       if (grossAmount.isDefault()) {
         break;
@@ -286,12 +286,12 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
                                        deliveredWithdrawInfoWithExchanges.second.receivedAmount());
       break;
     }
-    case CoincenterCommandType::kDustSweeper: {
+    case CoincenterCommandType::DustSweeper: {
       const auto res = _coincenter.dustSweeper(firstCmd.exchangeNames(), firstCmd.cur1());
       _queryResultPrinter.printDustSweeper(res, firstCmd.cur1());
       break;
     }
-    case CoincenterCommandType::kMarketData: {
+    case CoincenterCommandType::MarketData: {
       std::array<Market, kNbSupportedExchanges> marketPerPublicExchange;
       for (const auto &cmd : groupedCommands) {
         if (cmd.exchangeNames().empty()) {
@@ -306,7 +306,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       _coincenter.queryMarketDataPerExchange(marketPerPublicExchange);
       break;
     }
-    case CoincenterCommandType::kReplay: {
+    case CoincenterCommandType::Replay: {
       /// This implementation of AbstractMarketTraderFactory is only provided as an example.
       /// You can extend coincenter library and:
       ///  - Provide your own algorithms by implementing your own MarketTraderFactory will all your algorithms.
@@ -317,11 +317,11 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
                                                     firstCmd.exchangeNames());
 
       _queryResultPrinter.printMarketTradingResults(firstCmd.replayOptions().timeWindow(), replayResults,
-                                                    CoincenterCommandType::kReplay);
+                                                    CoincenterCommandType::Replay);
 
       break;
     }
-    case CoincenterCommandType::kReplayMarkets: {
+    case CoincenterCommandType::ReplayMarkets: {
       const auto marketTimestampSetsPerExchange =
           _coincenter.getMarketsAvailableForReplay(firstCmd.replayOptions(), firstCmd.exchangeNames());
       _queryResultPrinter.printMarketsForReplay(firstCmd.replayOptions().timeWindow(), marketTimestampSetsPerExchange);

@@ -1219,7 +1219,7 @@ void BithumbPrivate::updateCacheFile() const {
 
     data.emplace(currencyCode.str(), std::move(curData));
   }
-  GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).write(data);
+  GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).writeJson(data);
 }
 
 }  // namespace cct::api

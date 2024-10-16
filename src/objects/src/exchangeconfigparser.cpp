@@ -31,7 +31,7 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
       if (exchangeConfigJsonData.empty()) {
         // Create a file with default values. User can then update them as he wishes.
         log::warn("No {} file found. Creating a default one which can be updated freely at your convenience", filename);
-        exchangeConfigFile.write(jsonData);
+        exchangeConfigFile.writeJson(jsonData);
         return jsonData;
       }
       for (std::string_view optName : {TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr,

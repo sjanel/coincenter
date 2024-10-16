@@ -5,6 +5,7 @@
 namespace cct {
 
 using glz::format_error;
+using glz::meta;
 using glz::opts;
 using glz::read;
 using glz::read_json;

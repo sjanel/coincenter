@@ -18,7 +18,7 @@ class CurlOptions {
   using HttpHeaders = FlatKeyValueString<'\0', ':'>;
 
   enum class Verbose : int8_t { kOff, kOn };
-  enum class PostDataFormat : int8_t { kString, kJson };
+  enum class PostDataFormat : int8_t { kString, json };
 
   explicit CurlOptions(HttpRequestType requestType, Verbose verbose = Verbose::kOff)
       : _verbose(verbose == Verbose::kOn), _requestType(requestType) {}
@@ -26,7 +26,7 @@ class CurlOptions {
   CurlOptions(HttpRequestType requestType, CurlPostData postData,
               PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
       : _postdata(std::move(postData)), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
-    if (postDataFormat == PostDataFormat::kJson) {
+    if (postDataFormat == PostDataFormat::json) {
       setPostDataInJsonFormat();
     }
   }

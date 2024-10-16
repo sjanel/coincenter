@@ -132,7 +132,7 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
       data.emplace(exchangeName, std::move(exchangeData));
     }
   }
-  GetWithdrawInfoFile(_coincenterInfo.dataDir()).write(data);
+  GetWithdrawInfoFile(_coincenterInfo.dataDir()).writeJson(data);
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(

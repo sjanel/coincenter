@@ -12,8 +12,8 @@ File GetDepositAddressesFile(std::string_view dataDir) {
 }
 }  // namespace
 
-DepositAddresses ReadDepositAddresses(std::string_view dataDir) {
-  return ReadJsonOrThrow<DepositAddresses>(GetDepositAddressesFile(dataDir));
+schema::DepositAddresses ReadDepositAddresses(std::string_view dataDir) {
+  return ReadJsonOrThrow<schema::DepositAddresses>(GetDepositAddressesFile(dataDir));
 }
 
 }  // namespace cct
