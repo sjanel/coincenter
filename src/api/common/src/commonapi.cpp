@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -44,13 +44,13 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
                           coincenterInfo.getRunMode()),
       _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
   if (atInit == AtInit::kLoadFromFileCache) {
-    json data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
+    json::container data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
     if (!data.empty()) {
       int64_t timeEpoch = data["timeepoch"].get<int64_t>();
       auto& fiatsFile = data["fiats"];
       CurrencyCodeSet fiats;
       fiats.reserve(static_cast<CurrencyCodeSet::size_type>(fiatsFile.size()));
-      for (json& val : fiatsFile) {
+      for (json::container& val : fiatsFile) {
         log::trace("Reading fiat {} from cache file", val.get<std::string_view>());
         fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
       }
@@ -138,12 +138,12 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
     return fiatsVec;
   }
   static constexpr bool kAllowExceptions = false;
-  json dataCSV = json::parse(data, nullptr, kAllowExceptions);
+  json::container dataCSV = json::container::parse(data, nullptr, kAllowExceptions);
   if (dataCSV.is_discarded()) {
     log::warn("Error parsing json data of currency codes from source 1");
     return fiatsVec;
   }
-  for (const json& fiatData : dataCSV) {
+  for (const json::container& fiatData : dataCSV) {
     static constexpr std::string_view kCodeKey = "AlphabeticCode";
     static constexpr std::string_view kWithdrawalDateKey = "WithdrawalDate";
 
@@ -216,7 +216,7 @@ void CommonAPI::updateCacheFile() const {
       data["fiats"].emplace_back(fiatCode.str());
     }
     data["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
-    fiatsCacheFile.write(data);
+    fiatsCacheFile.writeJson(data);
   }
 
   _withdrawalFeesCrawler.updateCacheFile();

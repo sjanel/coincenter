@@ -7,14 +7,14 @@
 #include <map>
 
 #include "cct_invalid_argument_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
 
 namespace cct {
 
 TEST(CurrencyCodeTest, Neutral) {
-  CurrencyCode neutral;
-  EXPECT_EQ("", neutral.str());
-  EXPECT_EQ(0U, neutral.size());
+  EXPECT_EQ("", CurrencyCode().str());
+  EXPECT_EQ(0U, CurrencyCode().size());
 }
 
 TEST(CurrencyCodeTest, BracketsOperator) {
@@ -50,37 +50,39 @@ TEST(CurrencyCodeTest, IsValid) {
   EXPECT_FALSE(CurrencyCode::IsValid("inv "));
 }
 
-TEST(CurrencyCodeTest, AppendIntegralToString) {
-  {
-    string str("");
-    CurrencyCode("").appendStrTo(str);
+TEST(CurrencyCodeTest, AppendIntegralToStringEmpty) {
+  string str;
+  CurrencyCode("").appendStrTo(str);
 
-    EXPECT_EQ("", str);
-  }
-  {
-    string str("init");
-    CurrencyCode("").appendStrTo(str);
+  EXPECT_TRUE(str.empty());
+}
 
-    EXPECT_EQ("init", str);
-  }
-  {
-    string str("init");
-    CurrencyCode("a").appendStrTo(str);
+TEST(CurrencyCodeTest, AppendIntegralToStringInitEmpty) {
+  string str("init");
+  CurrencyCode("").appendStrTo(str);
 
-    EXPECT_EQ("initA", str);
-  }
-  {
-    string str("init2");
-    CurrencyCode("67").appendStrTo(str);
+  EXPECT_EQ("init", str);
+}
 
-    EXPECT_EQ("init267", str);
-  }
-  {
-    string str("");
-    CurrencyCode("EUR").appendStrTo(str);
+TEST(CurrencyCodeTest, AppendIntegralToStringInit1) {
+  string str("init");
+  CurrencyCode("a").appendStrTo(str);
 
-    EXPECT_EQ("EUR", str);
-  }
+  EXPECT_EQ("initA", str);
+}
+
+TEST(CurrencyCodeTest, AppendIntegralToStringInit2) {
+  string str("init2");
+  CurrencyCode("67").appendStrTo(str);
+
+  EXPECT_EQ("init267", str);
+}
+
+TEST(CurrencyCodeTest, AppendIntegralToEmptyString) {
+  string str;
+  CurrencyCode("EUR").appendStrTo(str);
+
+  EXPECT_EQ("EUR", str);
 }
 
 TEST(CurrencyCodeTest, ExoticString) {
@@ -236,7 +238,7 @@ TEST(CurrencyCodeTest, JsonSerializationValue) {
   Foo foo{"DOGE"};
 
   string buffer;
-  auto res = write<glz::opts{.raw_string = true}>(foo, buffer);
+  auto res = json::write<json::opts{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -249,7 +251,7 @@ TEST(CurrencyCodeTest, JsonSerializationKey) {
   CurrencyCodeMap map{{"DOGE", true}, {"BTC", false}};
 
   string buffer;
-  auto res = write<glz::opts{.raw_string = true}>(map, buffer);
+  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -258,7 +260,9 @@ TEST(CurrencyCodeTest, JsonSerializationKey) {
 
 TEST(CurrencyCodeTest, JsonDeserialization) {
   Foo foo;
-  auto ec = read<glz::opts{.raw_string = true}>(foo, R"({"currencyCode":"DOGE"})");
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"currencyCode":"DOGE"})");
 
   ASSERT_FALSE(ec);
 

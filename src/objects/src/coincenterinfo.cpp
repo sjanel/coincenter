@@ -6,15 +6,16 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangeconfigmap.hpp"
 #include "exchangeconfigparser.hpp"
-#include "generalconfig.hpp"
+#include "general-config.hpp"
 #include "loadconfiguration.hpp"
+#include "logginginfo.hpp"
 #include "monitoringinfo.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
@@ -32,7 +33,7 @@ namespace cct {
 namespace {
 CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(
     const Reader& currencyAcronymsTranslatorReader) {
-  json jsonData = currencyAcronymsTranslatorReader.readAllJson();
+  json::container jsonData = currencyAcronymsTranslatorReader.readAllJson();
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
   map.reserve(jsonData.size());
   for (const auto& [key, value] : jsonData.items()) {
@@ -43,7 +44,7 @@ CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap
 }
 
 CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(const Reader& stableCoinsReader) {
-  json jsonData = stableCoinsReader.readAllJson();
+  json::container jsonData = stableCoinsReader.readAllJson();
   CoincenterInfo::StableCoinsMap ret;
   for (const auto& [key, value] : jsonData.items()) {
     log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
@@ -61,9 +62,9 @@ using MetricGatewayType = VoidMetricGateway;
 }  // namespace
 
 CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguration& loadConfiguration,
-                               GeneralConfig&& generalConfig, MonitoringInfo&& monitoringInfo,
-                               const Reader& currencyAcronymsReader, const Reader& stableCoinsReader,
-                               const Reader& currencyPrefixesReader)
+                               schema::GeneralConfig&& generalConfig, LoggingInfo&& loggingInfo,
+                               MonitoringInfo&& monitoringInfo, const Reader& currencyAcronymsReader,
+                               const Reader& stableCoinsReader, const Reader& currencyPrefixesReader)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(currencyAcronymsReader)),
       _stableCoinsMap(ComputeStableCoinsMap(stableCoinsReader)),
       _exchangeConfigMap(ComputeExchangeConfigMap(loadConfiguration.exchangeConfigFileName(),
@@ -71,11 +72,12 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
       _generalConfig(std::move(generalConfig)),
+      _loggingInfo(std::move(loggingInfo)),
       _metricGatewayPtr(_runMode == settings::RunMode::kProd && monitoringInfo.useMonitoring()
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
       _monitoringInfo(std::move(monitoringInfo)) {
-  json jsonData = currencyPrefixesReader.readAllJson();
+  json::container jsonData = currencyPrefixesReader.readAllJson();
   for (auto& [prefix, acronym_prefix] : jsonData.items()) {
     log::trace("Currency prefix {} <=> {}", prefix, acronym_prefix.get<std::string_view>());
     _minPrefixLen = std::min(_minPrefixLen, static_cast<int>(prefix.length()));

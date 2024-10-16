@@ -40,21 +40,21 @@ class TransferableCommandResultTest : public ::testing::Test {
 
 TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesUniqueAmount) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade), previousResults),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade), previousResults),
             std::make_pair(MonetaryAmount{50, "DOGE"}, ExchangeNames({exchangeName11})));
 }
 
 TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesDoubleAmountsSameExchange) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName11, amount12}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade), previousResults),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade), previousResults),
             std::make_pair(MonetaryAmount{60, "DOGE"}, ExchangeNames({exchangeName11})));
 }
 
 TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesDoubleAmountsDifferentExchanges) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName22, amount12}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade), previousResults),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade), previousResults),
             std::make_pair(MonetaryAmount{60, "DOGE"}, ExchangeNames({exchangeName11, exchangeName22})));
 }
 
@@ -62,21 +62,21 @@ TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesTripleAmount
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName11, amount12},
                                                        TransferableCommandResult{exchangeName21, amount13}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade), previousResults),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade), previousResults),
             std::make_pair(MonetaryAmount{65, "DOGE"}, ExchangeNames({exchangeName11, exchangeName21})));
 }
 
 TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesDoubleAmountsInvalid) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName22, amount21}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade), previousResults),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade), previousResults),
             std::make_pair(MonetaryAmount(), ExchangeNames()));
 }
 
 TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesWithFullInformation) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName22, amount21}};
-  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade, MonetaryAmount(100, "DOGE")),
+  EXPECT_EQ(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade, MonetaryAmount(100, "DOGE")),
                                            previousResults),
             std::make_pair(MonetaryAmount(100, "DOGE"), ExchangeNames()));
 }
@@ -85,10 +85,10 @@ TEST_F(TransferableCommandResultTest, ComputeTradeAmountAndExchangesUnexpectedSi
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11},
                                                        TransferableCommandResult{exchangeName22, amount21}};
 
-  EXPECT_THROW(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade, MonetaryAmount(), true),
+  EXPECT_THROW(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade, MonetaryAmount(), true),
                                               previousResults),
                exception);
-  EXPECT_THROW(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::kTrade, MonetaryAmount(), false,
+  EXPECT_THROW(ComputeTradeAmountAndExchanges(createCommand(CoincenterCommandType::Trade, MonetaryAmount(), false,
                                                             ExchangeNames({exchangeName11})),
                                               previousResults),
                exception);
@@ -98,7 +98,7 @@ TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidSingleExchange
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
 
   EXPECT_THROW(ComputeWithdrawAmount(
-                   createCommand(CoincenterCommandType::kTrade, amount12, false, ExchangeNames({exchangeName11})),
+                   createCommand(CoincenterCommandType::Trade, amount12, false, ExchangeNames({exchangeName11})),
                    previousResults),
                exception);
 }
@@ -107,7 +107,7 @@ TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountValidSingleExchange) 
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
 
   EXPECT_EQ(ComputeWithdrawAmount(
-                createCommand(CoincenterCommandType::kTrade, MonetaryAmount(), false, ExchangeNames({exchangeName12})),
+                createCommand(CoincenterCommandType::Trade, MonetaryAmount(), false, ExchangeNames({exchangeName12})),
                 previousResults),
             std::make_pair(amount11, exchangeName11));
 }
@@ -117,7 +117,7 @@ TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidSingleExchange
                                                        TransferableCommandResult{exchangeName21, amount12}};
 
   EXPECT_EQ(ComputeWithdrawAmount(
-                createCommand(CoincenterCommandType::kTrade, MonetaryAmount(), false, ExchangeNames({exchangeName12})),
+                createCommand(CoincenterCommandType::Trade, MonetaryAmount(), false, ExchangeNames({exchangeName12})),
                 previousResults),
             std::make_pair(MonetaryAmount(), ExchangeName()));
 }
@@ -125,7 +125,7 @@ TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidSingleExchange
 TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidTooManyExchanges) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
 
-  EXPECT_THROW(ComputeWithdrawAmount(createCommand(CoincenterCommandType::kTrade, amount12, false,
+  EXPECT_THROW(ComputeWithdrawAmount(createCommand(CoincenterCommandType::Trade, amount12, false,
                                                    ExchangeNames({exchangeName11, exchangeName12, exchangeName22})),
                                      previousResults),
                exception);
@@ -134,13 +134,13 @@ TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidTooManyExchang
 TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountInvalidNoExchange) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
 
-  EXPECT_THROW(ComputeWithdrawAmount(createCommand(CoincenterCommandType::kTrade), previousResults), exception);
+  EXPECT_THROW(ComputeWithdrawAmount(createCommand(CoincenterCommandType::Trade), previousResults), exception);
 }
 
 TEST_F(TransferableCommandResultTest, ComputeWithdrawAmountValidDoubleExchange) {
   const TransferableCommandResult previousResults[] = {TransferableCommandResult{exchangeName11, amount11}};
 
-  EXPECT_EQ(ComputeWithdrawAmount(createCommand(CoincenterCommandType::kTrade, amount22, false,
+  EXPECT_EQ(ComputeWithdrawAmount(createCommand(CoincenterCommandType::Trade, amount22, false,
                                                 ExchangeNames({exchangeName12, exchangeName21})),
                                   previousResults),
             std::make_pair(amount22, exchangeName12));

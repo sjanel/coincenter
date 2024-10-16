@@ -22,6 +22,7 @@
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "queryresulttypes.hpp"
+#include "requests-config.hpp"
 #include "timedef.hpp"
 #include "tradedamounts.hpp"
 #include "tradedefinitions.hpp"
@@ -37,7 +38,7 @@ using PlaceOrderInfo = api::PlaceOrderInfo;
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{schema::RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
 };
 
 /// For the trade tests, 'exchangeprivateapi_test' already tests a lot of complex trade options.

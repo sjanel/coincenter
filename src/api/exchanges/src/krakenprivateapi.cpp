@@ -15,7 +15,7 @@
 #include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -76,9 +76,9 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
   KrakenErrorEnum err = KrakenErrorEnum::kNoError;
 
-  json ret = requestRetry.queryJson(
+  json::container ret = requestRetry.queryJson(
       method,
-      [&err](const json& jsonResponse) {
+      [&err](const json::container& jsonResponse) {
         const auto errorIt = jsonResponse.find(kErrorKey);
         if (errorIt != jsonResponse.end() && !errorIt->empty()) {
           std::string_view msg = errorIt->front().get<std::string_view>();
@@ -121,7 +121,7 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
       });
 
   auto resultIt = ret.find("result");
-  std::pair<json, KrakenErrorEnum> retPair(json::object_t{}, err);
+  std::pair<json::container, KrakenErrorEnum> retPair(json::container::object_t{}, err);
   if (resultIt != ret.end()) {
     retPair.first = std::move(*resultIt);
   }
@@ -222,7 +222,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   string address;
   string tag;
-  for (const json& depositDetail : res) {
+  for (const json::container& depositDetail : res) {
     for (const auto& [keyStr, valueStr] : depositDetail.items()) {
       if (keyStr == "address") {
         address = valueStr;
@@ -313,7 +313,7 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
       if (!closedOrdersConstraints.validateId(orderId)) {
         continue;
       }
-      const json& descrPart = orderDetails["descr"];
+      const json::container& descrPart = orderDetails["descr"];
       std::string_view marketStr = descrPart["pair"].get<std::string_view>();
 
       std::optional<Market> optMarket =
@@ -366,7 +366,7 @@ OpenedOrderVector KrakenPrivate::queryOpenedOrders(const OrdersConstraints& open
     MarketSet markets;
 
     for (const auto& [id, orderDetails] : openedPartIt->items()) {
-      const json& descrPart = orderDetails["descr"];
+      const json::container& descrPart = orderDetails["descr"];
       std::string_view marketStr = descrPart["pair"].get<std::string_view>();
 
       std::optional<Market> optMarket =
@@ -439,7 +439,7 @@ DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& deposi
     options.emplace_back("asset", depositsConstraints.currencyCode().str());
   }
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/DepositStatus", options);
-  for (const json& trx : res) {
+  for (const json::container& trx : res) {
     auto additionalNoteIt = trx.find("status-prop");
     if (additionalNoteIt != trx.end()) {
       std::string_view statusNote(additionalNoteIt->get<std::string_view>());
@@ -500,7 +500,7 @@ WithdrawsSet KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& wit
   Withdraws withdraws;
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/WithdrawStatus",
                                  CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
-  for (const json& trx : res) {
+  for (const json::container& trx : res) {
     int64_t secondsSinceEpoch = trx["time"].get<int64_t>();
     TimePoint timestamp{seconds(secondsSinceEpoch)};
     if (!withdrawsConstraints.validateTime(timestamp)) {
@@ -624,10 +624,10 @@ OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
   const Market mk = tradeContext.mk;
 
-  json ordersRes = queryOrdersData(tradeContext.userRef, orderId, queryOrder);
+  json::container ordersRes = queryOrdersData(tradeContext.userRef, orderId, queryOrder);
   auto openIt = ordersRes.find("open");
   const bool orderInOpenedPart = openIt != ordersRes.end() && openIt->contains(orderId);
-  const json& orderJson = orderInOpenedPart ? (*openIt)[orderId] : ordersRes["closed"][orderId];
+  const json::container& orderJson = orderInOpenedPart ? (*openIt)[orderId] : ordersRes["closed"][orderId];
   MonetaryAmount vol(orderJson["vol"].get<std::string_view>(), mk.base());             // always in base currency
   MonetaryAmount tradedVol(orderJson["vol_exec"].get<std::string_view>(), mk.base());  // always in base currency
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode), !orderInOpenedPart);
@@ -649,7 +649,7 @@ OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
   return orderInfo;
 }
 
-json KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder) {
+json::container KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryOrder queryOrder) {
   static constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
   CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};
@@ -657,12 +657,12 @@ json KrakenPrivate::queryOrdersData(int64_t userRef, OrderIdView orderId, QueryO
   const std::string_view firstQueryFullName = isOpenedFirst ? "/private/OpenOrders" : "/private/ClosedOrders";
   do {
     auto [data, err] = PrivateQuery(_curlHandle, _apiKey, firstQueryFullName, ordersPostData);
-    const json& firstOrders = data[isOpenedFirst ? "open" : "closed"];
+    const json::container& firstOrders = data[isOpenedFirst ? "open" : "closed"];
     bool foundOrder = firstOrders.contains(orderId);
     if (!foundOrder) {
       const std::string_view secondQueryFullName = isOpenedFirst ? "/private/ClosedOrders" : "/private/OpenOrders";
       data.update(PrivateQuery(_curlHandle, _apiKey, secondQueryFullName, ordersPostData).first);
-      const json& secondOrders = data[isOpenedFirst ? "closed" : "open"];
+      const json::container& secondOrders = data[isOpenedFirst ? "closed" : "open"];
       foundOrder = secondOrders.contains(orderId);
     }
 

@@ -16,13 +16,16 @@
 namespace cct {
 
 class ReplayOptions;
-class RequestsConfig;
+
+namespace schema {
+struct RequestsConfig;
+}
 
 class ExchangesOrchestrator {
  public:
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-  explicit ExchangesOrchestrator(const RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan);
+  explicit ExchangesOrchestrator(const schema::RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 

@@ -11,7 +11,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -45,18 +45,19 @@
 namespace cct::api {
 namespace {
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
+json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
+                            const CurlPostData& curlPostData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, curlPostData));
 
-  json jsonResponse = requestRetry.queryJson(endpoint, [](const json& jsonResponse) {
+  json::container jsonResponse = requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
     const auto errorIt = jsonResponse.find("code");
     if (errorIt != jsonResponse.end() && errorIt->get<std::string_view>() != "200000") {
-      log::warn("Full Kucoin json error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
+      log::warn("Full Kucoin error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
       return RequestRetry::Status::kResponseError;
     }
     return RequestRetry::Status::kResponseOK;
   });
-  json ret;
+  json::container ret;
   const auto dataIt = jsonResponse.find("data");
   if (dataIt != jsonResponse.end()) {
     ret.swap(*dataIt);
@@ -87,7 +88,8 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                    _curlHandle) {}
 
 bool KucoinPublic::healthCheck() {
-  json result = json::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet)));
+  json::container result =
+      json::container::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet)));
   auto dataIt = result.find("data");
   if (dataIt == result.end()) {
     log::error("Unexpected answer from {} status: {}", _name, result.dump());
@@ -104,10 +106,10 @@ bool KucoinPublic::healthCheck() {
 }
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "/api/v1/currencies");
+  json::container result = PublicQuery(_curlHandle, "/api/v1/currencies");
   vector<CurrencyInfo> currencyInfos;
   currencyInfos.reserve(static_cast<uint32_t>(result.size()));
-  for (const json& curDetail : result) {
+  for (const json::container& curDetail : result) {
     std::string_view curStr = curDetail["currency"].get<std::string_view>();
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     CurrencyExchange currencyExchange(
@@ -137,7 +139,7 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
 }
 
 std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "/api/v1/symbols");
+  json::container result = PublicQuery(_curlHandle, "/api/v1/symbols");
 
   MarketSet markets;
   MarketInfoMap marketInfoMap;
@@ -146,7 +148,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
 
   const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
 
-  for (const json& marketDetails : result) {
+  for (const json::container& marketDetails : result) {
     const std::string_view baseAsset = marketDetails["baseCurrency"].get<std::string_view>();
     const std::string_view quoteAsset = marketDetails["quoteCurrency"].get<std::string_view>();
     const bool isEnabled = marketDetails["enableTrading"].get<bool>();
@@ -208,13 +210,13 @@ std::optional<MonetaryAmount> KucoinPublic::queryWithdrawalFee(CurrencyCode curr
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  const json data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
+  const json::container data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
   const auto time = Clock::now();
   const auto tickerIt = data.find("ticker");
   if (tickerIt == data.end()) {
     return ret;
   }
-  for (const json& tickerDetails : *tickerIt) {
+  for (const json::container& tickerDetails : *tickerIt) {
     Market mk(tickerDetails["symbol"].get<std::string_view>(), '-');
     if (!markets.contains(mk)) {
       log::debug("Market {} is not present", mk);
@@ -272,7 +274,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
   MarketOrderBookLines orderBookLines;
 
-  const json asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const json::container asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
   const auto nowTime = Clock::now();
   const auto asksIt = asksAndBids.find("asks");
   const auto bidsIt = asksAndBids.find("bids");
@@ -333,7 +335,7 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
 }
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
-  const json result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
+  const json::container result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
   const auto volIt = result.find("vol");
   const std::string_view amountStr = volIt == result.end() ? std::string_view() : volIt->get<std::string_view>();
   return {amountStr, mk.base()};
@@ -345,13 +347,13 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
     log::warn("Maximum number of last trades to query from {} is {}", name(), kMaxNbLastTrades);
   }
 
-  json result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
+  json::container result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
 
   PublicTradeVector ret;
   ret.reserve(std::min(static_cast<PublicTradeVector::size_type>(result.size()),
                        static_cast<PublicTradeVector::size_type>(nbTrades)));
 
-  for (const json& detail : result | std::ranges::views::take(nbTrades)) {
+  for (const json::container& detail : result | std::ranges::views::take(nbTrades)) {
     const MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
     const MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // time is in nanoseconds
@@ -365,7 +367,7 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
-  const json result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
+  const json::container result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
   const auto priceIt = result.find("price");
   const std::string_view amountStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
   return {amountStr, mk.quote()};

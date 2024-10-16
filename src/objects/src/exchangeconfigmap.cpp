@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "cct_const.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "exchangeconfig.hpp"
@@ -21,10 +21,10 @@
 
 namespace cct {
 
-ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json &jsonData) {
+ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json::container &jsonData) {
   ExchangeConfigMap map;
 
-  const json &prodDefault = ExchangeConfigDefault::Prod();
+  const json::container &prodDefault = ExchangeConfigDefault::Prod();
 
   TopLevelOption assetTopLevelOption(TopLevelOption::kAssetsOptionStr, prodDefault, jsonData);
   TopLevelOption queryTopLevelOption(TopLevelOption::kQueryOptionStr, prodDefault, jsonData);
@@ -98,16 +98,16 @@ ExchangeConfigMap ComputeExchangeConfigMap(std::string_view fileName, const json
   }  // namespace cct
 
   // Print json unused values
-  json readValues;
+  json::container readValues;
 
   readValues.emplace(TopLevelOption::kAssetsOptionStr, assetTopLevelOption.getReadValues());
   readValues.emplace(TopLevelOption::kQueryOptionStr, queryTopLevelOption.getReadValues());
   readValues.emplace(TopLevelOption::kTradeFeesOptionStr, tradeFeesTopLevelOption.getReadValues());
   readValues.emplace(TopLevelOption::kWithdrawOptionStr, withdrawTopLevelOption.getReadValues());
 
-  json diffJson = json::diff(jsonData, readValues);
+  json::container diffJson = json::container::diff(jsonData, readValues);
 
-  for (json &diffElem : diffJson) {
+  for (json::container &diffElem : diffJson) {
     std::string_view diffType = diffElem["op"].get<std::string_view>();
     string jsonPath = std::move(diffElem["path"].get_ref<string &>());
 

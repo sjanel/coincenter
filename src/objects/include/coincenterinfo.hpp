@@ -12,8 +12,9 @@
 #include "currencycode.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangeconfigmap.hpp"
-#include "generalconfig.hpp"
+#include "general-config.hpp"
 #include "loadconfiguration.hpp"
+#include "logginginfo.hpp"
 #include "monitoringinfo.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
@@ -30,8 +31,8 @@ class CoincenterInfo {
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
   explicit CoincenterInfo(settings::RunMode runMode, const LoadConfiguration &loadConfiguration = LoadConfiguration(),
-                          GeneralConfig &&generalConfig = GeneralConfig(),
-                          MonitoringInfo &&monitoringInfo = MonitoringInfo(),
+                          schema::GeneralConfig &&generalConfig = schema::GeneralConfig(),
+                          LoggingInfo &&loggingInfo = LoggingInfo(), MonitoringInfo &&monitoringInfo = MonitoringInfo(),
                           const Reader &currencyAcronymsReader = Reader(), const Reader &stableCoinsReader = Reader(),
                           const Reader &currencyPrefixesReader = Reader());
 
@@ -61,15 +62,13 @@ class CoincenterInfo {
 
   AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
-  const GeneralConfig &generalConfig() const { return _generalConfig; }
+  const schema::GeneralConfig &generalConfig() const { return _generalConfig; }
 
-  const LoggingInfo &loggingInfo() const { return _generalConfig.loggingInfo(); }
+  const LoggingInfo &loggingInfo() const { return _loggingInfo; }
 
-  const RequestsConfig &requestsConfig() const { return _generalConfig.requestsConfig(); }
+  ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType; }
 
-  ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType(); }
-
-  Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversionQueryRate(); }
+  Duration fiatConversionQueryRate() const { return _generalConfig.fiatConversion.rate.duration; }
 
  private:
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
@@ -78,7 +77,8 @@ class CoincenterInfo {
   ExchangeConfigMap _exchangeConfigMap;
   settings::RunMode _runMode;
   string _dataDir;
-  GeneralConfig _generalConfig;
+  schema::GeneralConfig _generalConfig;
+  LoggingInfo _loggingInfo;
   std::unique_ptr<AbstractMetricGateway> _metricGatewayPtr;
   MonitoringInfo _monitoringInfo;
   int _minPrefixLen = std::numeric_limits<int>::max();

@@ -15,7 +15,7 @@
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
-#include "generalconfig.hpp"
+#include "general-config.hpp"
 #include "loadconfiguration.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
@@ -54,7 +54,7 @@ class ExchangePublicTest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
-  CoincenterInfo coincenterInfo{runMode,          loadConfiguration, GeneralConfig(),
+  CoincenterInfo coincenterInfo{runMode,          loadConfiguration, schema::GeneralConfig(), LoggingInfo(),
                                 MonitoringInfo(), Reader(),          StableCoinReader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), FiatConverterReader()};

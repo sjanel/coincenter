@@ -4,6 +4,7 @@
 #include <charconv>
 #include <chrono>
 #include <cstdint>
+#include <span>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
@@ -141,13 +142,37 @@ bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificant
   return false;
 }
 
+bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificantUnits, std::span<char> &ret) {
+  if (dur >= unitDuration.second) {
+    const auto countInThisDurationUnit =
+        std::chrono::duration_cast<decltype(unitDuration.second)>(dur).count() / unitDuration.second.count();
+    auto actualBuf = IntegralToCharBuffer(ret, countInThisDurationUnit);
+    ret = ret.subspan(actualBuf.size());
+
+    if (ret.size() < unitDuration.first.size()) {
+      throw invalid_argument("Buffer is too small to store unit");
+    }
+
+    std::ranges::copy(unitDuration.first, ret.begin());
+    ret = ret.subspan(unitDuration.first.size());
+
+    dur -= countInThisDurationUnit * unitDuration.second;
+    if (--nbSignificantUnits == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+constexpr std::string_view kUndefStr = "<undef>";
+
 }  // namespace
 
 string DurationToString(Duration dur, int nbSignificantUnits) {
   string ret;
 
   if (dur == kUndefinedDuration) {
-    ret.append("<undef>");
+    ret.append(kUndefStr);
   } else {
     std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto &unitDuration) {
       return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, ret);
@@ -155,6 +180,24 @@ string DurationToString(Duration dur, int nbSignificantUnits) {
   }
 
   return ret;
+}
+
+std::span<char> DurationToBuffer(Duration dur, std::span<char> buffer, int nbSignificantUnits) {
+  if (dur == kUndefinedDuration) {
+    if (buffer.size() < kUndefStr.size()) {
+      throw invalid_argument("Buffer is too small to store '<undef>'");
+    }
+    auto inOutRes = std::ranges::copy(kUndefStr, buffer.begin());
+    return {buffer.begin(), inOutRes.out};
+  }
+
+  auto begBuf = buffer.data();
+
+  std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto &unitDuration) {
+    return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, buffer);
+  });
+
+  return {begBuf, buffer.data()};
 }
 
 }  // namespace cct

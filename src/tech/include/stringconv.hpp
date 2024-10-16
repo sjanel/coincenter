@@ -3,6 +3,7 @@
 #include <charconv>
 #include <concepts>
 #include <limits>
+#include <span>
 #include <string_view>
 #include <system_error>
 
@@ -82,6 +83,18 @@ inline void AppendIntegralToString(string &str, std::integral auto val) {
   str.append(nbDigitsInt, '0');
 
   details::ToChars(str.data() + static_cast<decltype(nbDigitsInt)>(str.size()) - nbDigitsInt, nbDigitsInt, val);
+}
+
+constexpr std::span<char> IntegralToCharBuffer(std::span<char> buf, std::integral auto val) {
+  const auto nbDigitsInt = nchars(val);
+
+  if (buf.size() < static_cast<std::size_t>(nbDigitsInt)) {
+    throw exception("Buffer size {} is too small to hold {} digits for integral {}", buf.size(), nbDigitsInt, val);
+  }
+
+  details::ToChars(buf.data(), nbDigitsInt, val);
+
+  return buf.subspan(0, nbDigitsInt);
 }
 
 }  // namespace cct

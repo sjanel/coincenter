@@ -17,6 +17,7 @@
 #include "exchangesorchestrator.hpp"
 #include "market.hpp"
 #include "queryresulttypes.hpp"
+#include "requests-config.hpp"
 
 namespace cct {
 
@@ -25,7 +26,7 @@ using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExc
 
 class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
-  ExchangesOrchestrator exchangesOrchestrator{RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
+  ExchangesOrchestrator exchangesOrchestrator{schema::RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
 };
 
 TEST_F(ExchangeOrchestratorTest, HealthCheck) {

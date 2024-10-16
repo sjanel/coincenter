@@ -8,12 +8,16 @@
 
 namespace cct {
 
+namespace schema {
+
 using AccountDepositAddresses = std::map<CurrencyCode, string, std::less<>>;
 
 using ExchangeDepositAddresses = std::map<string, AccountDepositAddresses, std::less<>>;
 
 using DepositAddresses = std::map<string, ExchangeDepositAddresses, std::less<>>;
 
-DepositAddresses ReadDepositAddresses(std::string_view dataDir);
+}  // namespace schema
+
+schema::DepositAddresses ReadDepositAddresses(std::string_view dataDir);
 
 }  // namespace cct

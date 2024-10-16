@@ -15,7 +15,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -68,21 +68,22 @@ auto ComputeMethodUrl(std::string_view endpoint, CurrencyCode base, CurrencyCode
   return methodUrl;
 }
 
-json PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
-                 CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
+json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurrencyCode base,
+                            CurrencyCode quote = CurrencyCode(), std::string_view urlOpts = "") {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  json jsonResponse = requestRetry.queryJson(ComputeMethodUrl(endpoint, base, quote, urlOpts), [](const json& data) {
-    const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(data);
-    if (statusCode != BithumbPublic::kStatusOK) {
-      log::warn("Full Bithumb json error ({}): '{}'", statusCode, data.dump());
-      return RequestRetry::Status::kResponseError;
-    }
-    return RequestRetry::Status::kResponseOK;
-  });
+  json::container jsonResponse =
+      requestRetry.queryJson(ComputeMethodUrl(endpoint, base, quote, urlOpts), [](const json::container& data) {
+        const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(data);
+        if (statusCode != BithumbPublic::kStatusOK) {
+          log::warn("Full Bithumb error ({}): '{}'", statusCode, data.dump());
+          return RequestRetry::Status::kResponseError;
+        }
+        return RequestRetry::Status::kResponseOK;
+      });
 
   const auto dataIt = jsonResponse.find("data");
-  json ret;
+  json::container ret;
   if (dataIt != jsonResponse.end()) {
     ret.swap(*dataIt);
   }
@@ -107,7 +108,7 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
           _curlHandle) {}
 
-int64_t BithumbPublic::StatusCodeFromJsonResponse(const json& jsonResponse) {
+int64_t BithumbPublic::StatusCodeFromJsonResponse(const json::container& jsonResponse) {
   const auto statusIt = jsonResponse.find("status");
   if (statusIt == jsonResponse.end()) {
     return kStatusNotPresentError;
@@ -125,7 +126,7 @@ int64_t BithumbPublic::StatusCodeFromJsonResponse(const json& jsonResponse) {
 bool BithumbPublic::healthCheck() {
   static constexpr bool kAllowExceptions = false;
 
-  const json jsonResponse = json::parse(
+  const json::container jsonResponse = json::container::parse(
       _curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
   if (jsonResponse.is_discarded()) {
     log::error("{} health check response is badly formatted", _name);
@@ -164,7 +165,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
-  json result = PublicQuery(_curlHandle, "/public/assetsstatus/", "all");
+  json::container result = PublicQuery(_curlHandle, "/public/assetsstatus/", "all");
   CurrencyExchangeVector currencies;
   currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.size() + 1));
   for (const auto& [asset, withdrawalDeposit] : result.items()) {
@@ -208,7 +209,7 @@ OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, c
     AppendIntegralToString(urlOpts, *optDepth);
   }
 
-  json result = PublicQuery(curlHandle, "/public/orderbook/", base, quote, urlOpts);
+  json::container result = PublicQuery(curlHandle, "/public/orderbook/", base, quote, urlOpts);
   if (!result.empty()) {
     //  Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
     //  anymore
@@ -224,7 +225,7 @@ OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, c
 
     for (const auto& [baseOrSpecial, asksAndBids] : result.items()) {
       if (baseOrSpecial != "payment_currency" && baseOrSpecial != "timestamp") {
-        const json* asksBids[2];
+        const json::container* asksBids[2];
         CurrencyCode baseCurrencyCode;
         if (singleMarketQuote && baseOrSpecial == "order_currency") {
           // single market quote
@@ -253,9 +254,9 @@ OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, c
         */
         orderBookLines.clear();
         orderBookLines.reserve(asksBids[0]->size() + asksBids[1]->size());
-        for (const json* asksOrBids : asksBids) {
+        for (const json::container* asksOrBids : asksBids) {
           const auto type = asksOrBids == asksBids[0] ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
-          for (const json& priceQuantityPair : *asksOrBids) {
+          for (const json::container& priceQuantityPair : *asksOrBids) {
             MonetaryAmount amount(priceQuantityPair["quantity"].get<std::string_view>(), baseCurrencyCode);
             MonetaryAmount price(priceQuantityPair["price"].get<std::string_view>(), quoteCurrencyCode);
 
@@ -293,7 +294,7 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
   TimePoint t1 = Clock::now();
-  json result = PublicQuery(_curlHandle, "/public/ticker/", mk.base(), mk.quote());
+  json::container result = PublicQuery(_curlHandle, "/public/ticker/", mk.base(), mk.quote());
   std::string_view last24hVol;
   const auto dateIt = result.find("date");
   if (dateIt != result.end()) {
@@ -339,12 +340,12 @@ PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
   string urlOpts("count=");
   AppendIntegralToString(urlOpts, nbTrades);
 
-  json result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote(), urlOpts);
+  json::container result = PublicQuery(_curlHandle, "/public/transaction_history/", mk.base(), mk.quote(), urlOpts);
 
   PublicTradeVector ret;
 
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
-  for (const json& detail : result) {
+  for (const json::container& detail : result) {
     MonetaryAmount amount(detail["units_traded"].get<std::string_view>(), mk.base());
     MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
     // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"

@@ -1,14 +1,14 @@
 #pragma once
 
-#include <glaze/glaze.hpp>
+#include <glaze/glaze.hpp>  // IWYU pragma: export
 
-namespace cct {
+namespace cct::json {
 
 using glz::format_error;
+using glz::meta;
 using glz::opts;
 using glz::read;
-using glz::read_json;
+using glz::reflect;
 using glz::write;
-using glz::write_json;
 
-}  // namespace cct
+}  // namespace cct::json

@@ -17,7 +17,7 @@
 #include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
@@ -66,8 +66,9 @@ namespace {
 enum class IfError : int8_t { kThrow, kNoThrow };
 
 template <class CurlPostDataT = CurlPostData>
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostDataT&& curlPostData = CurlPostData(), IfError ifError = IfError::kThrow) {
+json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
+                             std::string_view endpoint, CurlPostDataT&& curlPostData = CurlPostData(),
+                             IfError ifError = IfError::kThrow) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
 
   auto jsonWebToken = jwt::create()
@@ -89,11 +90,11 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
 
   opts.mutableHttpHeaders().emplace_back("Authorization", authStr);
 
-  json ret = json::parse(curlHandle.query(endpoint, opts));
+  json::container ret = json::container::parse(curlHandle.query(endpoint, opts));
   if (ifError == IfError::kThrow) {
     auto errorIt = ret.find("error");
     if (errorIt != ret.end()) {
-      log::error("Full Upbit json error: '{}'", ret.dump());
+      log::error("Full Upbit error: '{}'", ret.dump());
       if (errorIt->contains("name")) {
         throw exception(std::move((*errorIt)["name"].get_ref<string&>()));
       }
@@ -122,7 +123,7 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
-  json ret =
+  json::container ret =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), IfError::kNoThrow);
   return !ret.empty() && ret.find("error") == ret.end();
 }
@@ -130,8 +131,8 @@ bool UpbitPrivate::validateApiKey() {
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
   CurrencyExchangeVector currencies;
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
-  for (const json& curDetails : result) {
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
+  for (const json::container& curDetails : result) {
     CurrencyCode cur(curDetails["currency"].get<std::string_view>());
     CurrencyCode networkName(curDetails["net_type"].get<std::string_view>());
     if (cur != networkName) {
@@ -172,11 +173,11 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
   BalancePortfolio balancePortfolio;
 
-  json ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
+  json::container ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
 
   balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(ret.size()));
 
-  for (const json& accountDetail : ret) {
+  for (const json::container& accountDetail : ret) {
     const CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
     MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
 
@@ -191,8 +192,8 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurlPostData postData{{"currency", currencyCode.str()}, {"net_type", currencyCode.str()}};
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData,
-                             IfError::kNoThrow);
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address",
+                                        postData, IfError::kNoThrow);
   bool generateDepositAddressNeeded = false;
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
@@ -206,7 +207,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
     }
   }
   if (generateDepositAddressNeeded) {
-    json genCoinAddressResult =
+    json::container genCoinAddressResult =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/deposits/generate_coin_address", postData);
     if (genCoinAddressResult.contains("success")) {
       log::info("Successfully generated address");
@@ -270,11 +271,11 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
        nbOrdersRetrieved == kMaxNbOrdersPerPage && page < kNbMaxPagesToRetrieve;) {
     params.set("page", ++page);
 
-    json data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/v1/orders", params);
+    json::container data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/v1/orders", params);
 
     nbOrdersRetrieved = static_cast<decltype(nbOrdersRetrieved)>(data.size());
 
-    for (json& orderDetails : data) {
+    for (json::container& orderDetails : data) {
       const auto marketStr = orderDetails["market"].get<std::string_view>();
       const auto dashPos = marketStr.find('-');
 
@@ -397,12 +398,12 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
-    json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
+    json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
     if (deposits.empty()) {
       deposits.reserve(static_cast<Deposits::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
-    for (json& trx : result) {
+    for (json::container& trx : result) {
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
@@ -470,12 +471,12 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
-    json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options);
+    json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options);
     if (withdraws.empty()) {
       withdraws.reserve(static_cast<Withdraws::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
-    for (json& trx : result) {
+    for (json::container& trx : result) {
       CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
       MonetaryAmount netEmittedAmount(trx["amount"].get<std::string_view>(), currencyCode);
       MonetaryAmount withdrawFee(trx["fee"].get<std::string_view>(), currencyCode);
@@ -503,7 +504,7 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
 }
 
 namespace {
-bool IsOrderClosed(const json& orderJson) {
+bool IsOrderClosed(const json::container& orderJson) {
   std::string_view state = orderJson["state"].get<std::string_view>();
   if (state == "done" || state == "cancel") {
     return true;
@@ -515,7 +516,7 @@ bool IsOrderClosed(const json& orderJson) {
   return true;
 }
 
-OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, Market mk) {
+OrderInfo ParseOrderJson(const json::container& orderJson, CurrencyCode fromCurrencyCode, Market mk) {
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == mk.base() ? mk.quote() : mk.base()),
                       IsOrderClosed(orderJson));
 
@@ -524,7 +525,7 @@ OrderInfo ParseOrderJson(const json& orderJson, CurrencyCode fromCurrencyCode, M
     CurrencyCode feeCurrencyCode(mk.quote());
     MonetaryAmount fee(orderJson["paid_fee"].get<std::string_view>(), feeCurrencyCode);
 
-    for (const json& orderDetails : orderJson["trades"]) {
+    for (const json::container& orderDetails : orderJson["trades"]) {
       MonetaryAmount tradedVol(orderDetails["volume"].get<std::string_view>(), mk.base());  // always in base currency
       MonetaryAmount price(orderDetails["price"].get<std::string_view>(), mk.quote());      // always in quote currency
       MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), mk.quote());
@@ -606,7 +607,8 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
     placePostData.emplace_back("price", price.amountStr());
   }
 
-  json placeOrderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
+  json::container placeOrderRes =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
 
   placeOrderInfo.orderInfo = ParseOrderJson(placeOrderRes, fromCurrencyCode, mk);
   placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
@@ -614,7 +616,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   // Upbit takes some time to match the market order - We should wait that it has been matched
   bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
   while (takerOrderNotClosed) {
-    json orderRes =
+    json::container orderRes =
         PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", placeOrderInfo.orderId}});
 
     placeOrderInfo.orderInfo = ParseOrderJson(orderRes, fromCurrencyCode, mk);
@@ -626,7 +628,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
 OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
   CurlPostData postData{{"uuid", orderId}};
-  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
+  json::container orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
   bool cancelledOrderClosed = IsOrderClosed(orderRes);
   while (!cancelledOrderClosed) {
     orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
@@ -636,15 +638,17 @@ OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
 }
 
 OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
-  json orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
+  json::container orderRes =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
   return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.mk);
 }
 
 std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   auto curStr = currencyCode.str();
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
-                             {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}});
+  json::container result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
+                   {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}});
   std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
   return MonetaryAmount(amountStr, currencyCode);
 }
@@ -661,7 +665,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     withdrawPostData.emplace_back("secondary_address", destinationWallet.tag());
   }
 
-  json result =
+  json::container result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
   return {std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount};
 }

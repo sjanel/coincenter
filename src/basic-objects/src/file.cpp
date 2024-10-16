@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "writer.hpp"
@@ -62,7 +61,10 @@ string File::readAll() const {
   return data;
 }
 
-int File::write(const json& data, Writer::Mode mode) const {
+int File::write(std::string_view data, Writer::Mode mode) const {
+  if (data.empty()) {
+    return 0;
+  }
   log::debug("Opening file {} for writing", _filePath);
   auto openMode = mode == Writer::Mode::FromStart ? std::ios_base::out : std::ios_base::app;
   std::ofstream fileOfStream(_filePath.c_str(), openMode);
@@ -76,15 +78,8 @@ int File::write(const json& data, Writer::Mode mode) const {
     return 0;
   }
   try {
-    if (data.empty()) {
-      static constexpr std::string_view kEmptyJsonStr = "{}";
-      fileOfStream << kEmptyJsonStr << '\n';
-      return static_cast<int>(kEmptyJsonStr.length()) + 1;
-    }
-    const int indent = mode == Writer::Mode::FromStart ? 2 : -1;
-    string outStr = data.dump(indent);
-    fileOfStream << outStr << '\n';
-    return static_cast<int>(outStr.length()) + 1;
+    fileOfStream << data << '\n';
+    return static_cast<int>(data.length()) + 1;
   } catch (const std::exception& e) {
     if (_ifError == IfError::kThrow) {
       throw e;
@@ -93,5 +88,7 @@ int File::write(const json& data, Writer::Mode mode) const {
   }
   return 0;
 }
+
+bool File::exists() const { return std::filesystem::exists(std::filesystem::path(std::string_view(_filePath))); }
 
 }  // namespace cct

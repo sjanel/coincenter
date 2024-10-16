@@ -3,7 +3,7 @@
 #include <mutex>
 
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -25,7 +25,7 @@ class BinanceGlobalInfosFunc {
   BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
                          settings::RunMode runMode);
 
-  json operator()();
+  json::container operator()();
 
  private:
   CurlHandle _curlHandle;
@@ -45,7 +45,7 @@ class BinanceGlobalInfos {
  private:
   friend class BinancePrivate;
 
-  static CurrencyExchangeFlatSet ExtractTradableCurrencies(const json& allCoins,
+  static CurrencyExchangeFlatSet ExtractTradableCurrencies(const json::container& allCoins,
                                                            const CurrencyCodeSet& excludedCurrencies);
 
   std::mutex _mutex;

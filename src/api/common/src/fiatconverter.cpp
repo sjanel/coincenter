@@ -6,7 +6,7 @@
 #include <string_view>
 #include <utility>
 
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -33,7 +33,7 @@ string LoadCurrencyConverterAPIKey(std::string_view dataDir) {
   static constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
 
   const File thirdPartySecret(dataDir, File::Type::kSecret, kThirdPartySecretFileName, File::IfError::kNoThrow);
-  json data = thirdPartySecret.readAllJson();
+  json::container data = thirdPartySecret.readAllJson();
   auto freeConverterIt = data.find("freecurrencyconverter");
   if (freeConverterIt == data.end() || freeConverterIt->get<std::string_view>() == kDefaultCommunityKey) {
     log::warn("Unable to find custom Free Currency Converter key in {}", kThirdPartySecretFileName);
@@ -61,7 +61,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _apiKey(LoadCurrencyConverterAPIKey(coincenterInfo.dataDir())),
       _dataDir(coincenterInfo.dataDir()) {
-  const json data = fiatsCacheReader.readAllJson();
+  const json::container data = fiatsCacheReader.readAllJson();
 
   _pricesMap.reserve(data.size());
   for (const auto& [marketStr, rateAndTimeData] : data.items()) {
@@ -79,14 +79,14 @@ File FiatConverter::GetRatesCacheFile(std::string_view dataDir) {
 }
 
 void FiatConverter::updateCacheFile() const {
-  json data;
+  json::container data;
   for (const auto& [market, priceTimeValue] : _pricesMap) {
     const string marketPairStr = market.assetsPairStrUpper('-');
 
     data[marketPairStr]["rate"] = priceTimeValue.rate;
     data[marketPairStr]["timeepoch"] = TimestampToSecondsSinceEpoch(priceTimeValue.lastUpdatedTime);
   }
-  GetRatesCacheFile(_dataDir).write(data);
+  GetRatesCacheFile(_dataDir).writeJson(data);
 }
 
 std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
@@ -106,7 +106,7 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
   const auto dataStr = _curlHandle1.query("/api/v7/convert", opts);
 
   static constexpr bool kAllowExceptions = false;
-  const auto data = json::parse(dataStr, nullptr, kAllowExceptions);
+  const auto data = json::container::parse(dataStr, nullptr, kAllowExceptions);
 
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   const auto resultsIt = data.find("results");
@@ -124,7 +124,7 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
 std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
   const auto dataStr = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
   static constexpr bool kAllowExceptions = false;
-  const json jsonData = json::parse(dataStr, nullptr, kAllowExceptions);
+  const json::container jsonData = json::container::parse(dataStr, nullptr, kAllowExceptions);
   if (jsonData.is_discarded()) {
     log::error("Invalid response received from fiat currency converter service's second source");
     return {};

@@ -11,15 +11,13 @@
 #include <utility>
 
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
-#include "coincentercommandtype.hpp"
 #include "file.hpp"
+#include "log-config.hpp"
 #include "parseloglevel.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
-#include "unitsparser.hpp"
 
 namespace cct {
 
@@ -30,28 +28,25 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
 }
 
 LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir,
-                         const json &generalConfigJsonLogPart)
+                         const schema::LogConfig &logConfig)
     : _dataDir(dataDir),
-      _maxFileSizeLogFileInBytes(ParseNumberOfBytes(generalConfigJsonLogPart["maxFileSize"].get<std::string_view>())),
-      _maxNbLogFiles(generalConfigJsonLogPart["maxNbFiles"].get<int>()),
-      _logLevelConsolePos(
-          LogPosFromLogStr(generalConfigJsonLogPart[LoggingInfo::kJsonFieldConsoleLevelName].get<std::string_view>())),
-      _logLevelFilePos(
-          LogPosFromLogStr(generalConfigJsonLogPart[LoggingInfo::kJsonFieldFileLevelName].get<std::string_view>())) {
+      _maxFileSizeLogFileInBytes(logConfig.maxFileSize.sizeInBytes),
+      _maxNbLogFiles(logConfig.maxNbFiles),
+      _logLevelConsolePos(LogPosFromLogStr(logConfig.consoleLevel)),
+      _logLevelFilePos(LogPosFromLogStr(logConfig.fileLevel)) {
   if (withLoggersCreation == WithLoggersCreation::kYes) {
     createLoggers();
   }
 
-  const json &activityTrackingPart = generalConfigJsonLogPart["activityTracking"];
-  const json &commandTypes = activityTrackingPart["commandTypes"];
+  const schema::ActivityTrackingConfig &activityTrackingConfig = logConfig.activityTracking;
 
-  _trackedCommandTypes.reserve(static_cast<decltype(_trackedCommandTypes)::size_type>(commandTypes.size()));
-  std::ranges::transform(
-      commandTypes, std::inserter(_trackedCommandTypes, _trackedCommandTypes.end()),
-      [](const json &elem) { return CoincenterCommandTypeFromString(elem.get<std::string_view>()); });
+  _trackedCommandTypes.reserve(
+      static_cast<decltype(_trackedCommandTypes)::size_type>(activityTrackingConfig.commandTypes.size()));
+  std::ranges::copy(activityTrackingConfig.commandTypes,
+                    std::inserter(_trackedCommandTypes, _trackedCommandTypes.end()));
 
-  _dateFormatStrActivityFiles = activityTrackingPart["dateFileNameFormat"];
-  _alsoLogActivityForSimulatedCommands = activityTrackingPart["withSimulatedCommands"].get<bool>();
+  _dateFormatStrActivityFiles = activityTrackingConfig.dateFileNameFormat;
+  _alsoLogActivityForSimulatedCommands = activityTrackingConfig.withSimulatedCommands;
 }
 
 LoggingInfo::LoggingInfo(LoggingInfo &&rhs) noexcept

@@ -10,3 +10,24 @@ add_unit_test(
     LIBRARIES
     coincenter_schema
 )
+
+add_unit_test(
+    duration-schema_test
+    test/duration-schema_test.cpp
+    LIBRARIES
+    coincenter_schema
+)
+
+add_unit_test(
+    general-config_test
+    test/general-config_test.cpp
+    LIBRARIES
+    coincenter_schema
+)
+
+add_unit_test(
+    size-bytes-schema_test
+    test/size-bytes-schema_test.cpp
+    LIBRARIES
+    coincenter_schema
+)

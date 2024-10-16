@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <iterator>
 
 namespace cct::ssl {
 TEST(SSLTest, Version) { EXPECT_NE(GetOpenSSLVersion(), ""); }

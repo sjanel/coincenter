@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_type_traits.hpp"
 #include "curlhandle.hpp"
@@ -31,7 +31,7 @@ class RequestRetry {
   /// responseStatus should be a functor taking a single json by const reference argument, returning Status::kResponseOK
   /// if success, Status::kResponseError in case of error.
   template <class StringType, class ResponseStatusT>
-  json queryJson(const StringType &endpoint, ResponseStatusT responseStatus) {
+  json::container queryJson(const StringType &endpoint, ResponseStatusT responseStatus) {
     return queryJson(endpoint, responseStatus, [](CurlOptions &) {});
   }
 
@@ -42,10 +42,11 @@ class RequestRetry {
   /// postDataUpdateFunc is a functor that takes the embedded CurlOptions's reference as single argument and updates it
   /// before each query
   template <class StringType, class ResponseStatusT, class PostDataFuncT>
-  json queryJson(const StringType &endpoint, ResponseStatusT responseStatus, PostDataFuncT postDataUpdateFunc) {
+  json::container queryJson(const StringType &endpoint, ResponseStatusT responseStatus,
+                            PostDataFuncT postDataUpdateFunc) {
     decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
-    json ret;
+    json::container ret;
 
     do {
       if (nbRetries != 0) {
@@ -58,7 +59,7 @@ class RequestRetry {
       postDataUpdateFunc(_curlOptions);
 
       static constexpr bool kAllowExceptions = false;
-      ret = json::parse(_curlHandle.query(endpoint, _curlOptions), nullptr, kAllowExceptions);
+      ret = json::container::parse(_curlHandle.query(endpoint, _curlOptions), nullptr, kAllowExceptions);
 
     } while ((ret.is_discarded() || responseStatus(ret) == Status::kResponseError) &&
              ++nbRetries <= _queryRetryPolicy.nbMaxRetries);
@@ -67,7 +68,7 @@ class RequestRetry {
       switch (_queryRetryPolicy.tooManyFailuresPolicy) {
         case QueryRetryPolicy::TooManyFailuresPolicy::kReturnEmpty:
           log::error("Too many query errors, returning empty result");
-          ret = json::object();
+          ret = json::container::object();
           break;
         case QueryRetryPolicy::TooManyFailuresPolicy::kThrowException:
           throw exception("Too many query errors");

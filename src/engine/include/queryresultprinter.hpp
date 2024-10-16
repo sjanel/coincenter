@@ -6,7 +6,7 @@
 #include <span>
 
 #include "apioutputtype.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
@@ -52,18 +52,18 @@ class QueryResultPrinter {
   void printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                    bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions) const {
     printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, toCurrency, tradeOptions,
-                CoincenterCommandType::kTrade);
+                CoincenterCommandType::Trade);
   }
 
   void printBuyTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount endAmount,
                       const TradeOptions &tradeOptions) const {
-    printTrades(tradeResultPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::kBuy);
+    printTrades(tradeResultPerExchange, endAmount, false, CurrencyCode(), tradeOptions, CoincenterCommandType::Buy);
   }
 
   void printSellTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount startAmount,
                        bool isPercentageTrade, const TradeOptions &tradeOptions) const {
     printTrades(tradeResultPerExchange, startAmount, isPercentageTrade, CurrencyCode(), tradeOptions,
-                CoincenterCommandType::kSell);
+                CoincenterCommandType::Sell);
   }
 
   void printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
@@ -118,9 +118,9 @@ class QueryResultPrinter {
 
   void printTable(const SimpleTable &table) const;
 
-  void printJson(const json &jsonData) const;
+  void printJson(const json::container &jsonData) const;
 
-  void logActivity(CoincenterCommandType commandType, const json &data, bool isSimulationMode = false) const;
+  void logActivity(CoincenterCommandType commandType, const json::container &data, bool isSimulationMode = false) const;
 
   const LoggingInfo &_loggingInfo;
   std::ostream *_pOs = nullptr;

@@ -8,7 +8,7 @@
 #include "accountowner.hpp"
 #include "apikey.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "exchangename.hpp"
@@ -81,7 +81,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     std::string_view secretFileName = GetSecretFileName(runMode);
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
                      settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
-    json jsonData = secretsFile.readAllJson();
+    json::container jsonData = secretsFile.readAllJson();
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
       if (std::ranges::find(exchangesWithoutSecrets, ExchangeName(publicExchangeName)) !=

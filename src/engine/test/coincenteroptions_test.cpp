@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <numeric>
 #include <sstream>
 #include <string_view>
@@ -131,26 +132,26 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrInvalid) {
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrTrade) {
   opts.trade = "some value";
-  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.trade, CoincenterCommandType::kTrade));
+  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.trade, CoincenterCommandType::Trade));
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrTradeAll) {
   opts.tradeAll = "some value";
-  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.tradeAll, CoincenterCommandType::kTrade));
+  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.tradeAll, CoincenterCommandType::Trade));
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrSellAll) {
   opts.sellAll = "some value";
-  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.sellAll, CoincenterCommandType::kSell));
+  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.sellAll, CoincenterCommandType::Sell));
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrSell) {
   opts.sell = "some value";
-  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.sell, CoincenterCommandType::kSell));
+  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.sell, CoincenterCommandType::Sell));
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrBuy) {
   opts.buy = "some value";
-  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.buy, CoincenterCommandType::kBuy));
+  EXPECT_EQ(opts.getTradeArgStr(), std::make_pair(opts.buy, CoincenterCommandType::Buy));
 }
 }  // namespace cct

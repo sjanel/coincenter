@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_string.hpp"
 
 namespace cct {
@@ -15,7 +15,7 @@ class Reader {
   [[nodiscard]] virtual string readAll() const { return {}; }
 
   // Read all content, and constructs a json object from it.
-  json readAllJson() const;
+  json::container readAllJson() const;
 };
 
 }  // namespace cct

@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycodevector.hpp"
@@ -21,17 +21,17 @@ constexpr std::string_view kDefaultPart = "default";
 constexpr std::string_view kExchangePart = "exchange";
 }  // namespace
 
-json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
+json::container LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {
     case LoadConfiguration::ExchangeConfigFileType::kProd: {
       std::string_view filename = loadConfiguration.exchangeConfigFileName();
       File exchangeConfigFile(loadConfiguration.dataDir(), File::Type::kStatic, filename, File::IfError::kNoThrow);
-      json jsonData = ExchangeConfigDefault::Prod();
-      json exchangeConfigJsonData = exchangeConfigFile.readAllJson();
+      json::container jsonData = ExchangeConfigDefault::Prod();
+      json::container exchangeConfigJsonData = exchangeConfigFile.readAllJson();
       if (exchangeConfigJsonData.empty()) {
         // Create a file with default values. User can then update them as he wishes.
         log::warn("No {} file found. Creating a default one which can be updated freely at your convenience", filename);
-        exchangeConfigFile.write(jsonData);
+        exchangeConfigFile.writeJson(jsonData);
         return jsonData;
       }
       for (std::string_view optName : {TopLevelOption::kAssetsOptionStr, TopLevelOption::kQueryOptionStr,
@@ -51,8 +51,9 @@ json LoadExchangeConfigData(const LoadConfiguration& loadConfiguration) {
   }
 }
 
-TopLevelOption::TopLevelOption(std::string_view optionName, const json& defaultJsonData, const json& personalJsonData) {
-  for (const json* jsonData : {std::addressof(personalJsonData), std::addressof(defaultJsonData)}) {
+TopLevelOption::TopLevelOption(std::string_view optionName, const json::container& defaultJsonData,
+                               const json::container& personalJsonData) {
+  for (const json::container* jsonData : {std::addressof(personalJsonData), std::addressof(defaultJsonData)}) {
     JsonIt optIt = jsonData->find(optionName);
     if (optIt != jsonData->end()) {
       bool isPersonal = jsonData == std::addressof(personalJsonData);
@@ -103,7 +104,7 @@ TopLevelOption::JsonIt TopLevelOption::get(std::string_view exchangeName, std::s
 
 void TopLevelOption::setReadValue(const DataSource& dataSource, std::string_view exchangeName,
                                   std::string_view subOptionName1, std::string_view subOptionName2, JsonIt valueIt) {
-  json emptyJson;
+  json::container emptyJson;
   bool isExchange = dataSource.isExchange;
   auto readValuesExchangePartIt = _readValues.emplace(isExchange ? kExchangePart : kDefaultPart, emptyJson).first;
   if (isExchange) {

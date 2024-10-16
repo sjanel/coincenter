@@ -16,7 +16,7 @@
 #include "cachedresult.hpp"
 #include "cct_cctype.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
+#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -79,7 +79,7 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 auto ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postData.empty() && requestType != HttpRequestType::kGet) {
-    postDataFormat = CurlOptions::PostDataFormat::kJson;
+    postDataFormat = CurlOptions::PostDataFormat::json;
   }
   return postDataFormat;
 }
@@ -107,8 +107,8 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
                                        isNotEncoded));
 }
 
-json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-                  CurlPostData&& postData = CurlPostData()) {
+json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
+                             std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
   CurlPostData signaturePostData{
       {"AccessKeyId", apiKey.key()}, {"SignatureMethod", "HmacSHA256"}, {"SignatureVersion", 2}};
 
@@ -120,12 +120,12 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
   RequestRetry requestRetry(curlHandle, CurlOptions(requestType, std::move(postData), postDataFormat),
                             QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
 
-  json ret = requestRetry.queryJson(
+  json::container ret = requestRetry.queryJson(
       method,
-      [](const json& jsonResponse) {
+      [](const json::container& jsonResponse) {
         const auto statusIt = jsonResponse.find("status");
         if (statusIt != jsonResponse.end() && statusIt->get<std::string_view>() != "ok") {
-          log::warn("Full Huobi json error: '{}'", jsonResponse.dump());
+          log::warn("Full Huobi error: '{}'", jsonResponse.dump());
           return RequestRetry::Status::kResponseError;
         }
         return RequestRetry::Status::kResponseOK;
@@ -154,7 +154,8 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
           _curlHandle, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts", CurlPostData());
+  json::container result =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts", CurlPostData());
   if (result.empty()) {
     return false;
   }
@@ -166,7 +167,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
   string method = "/v1/account/accounts/";
   AppendIntegralToString(method, _accountIdCache.get());
   method.append("/balance");
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   BalancePortfolio balancePortfolio;
   if (result.empty()) {
     return balancePortfolio;
@@ -174,7 +175,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
-  for (const json& balanceDetail : result["data"]["list"]) {
+  for (const json::container& balanceDetail : result["data"]["list"]) {
     std::string_view typeStr = balanceDetail["type"].get<std::string_view>();
     CurrencyCode currencyCode(balanceDetail["currency"].get<std::string_view>());
     MonetaryAmount amount(balanceDetail["balance"].get<std::string_view>(), currencyCode);
@@ -189,8 +190,8 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = ToLower(currencyCode.str());
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
-                           {{"currency", lowerCaseCur}});
+  json::container data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address",
+                                      {{"currency", lowerCaseCur}});
 
   string address;
   std::string_view tag;
@@ -201,7 +202,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
   auto dataIt = data.find("data");
   if (dataIt != data.end()) {
-    for (json& depositDetail : *dataIt) {
+    for (json::container& depositDetail : *dataIt) {
       tag = depositDetail["addressTag"].get<std::string_view>();
 
       std::string_view addressView = depositDetail["address"].get<std::string_view>();
@@ -258,7 +259,8 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
   const std::string_view closedOrdersEndpoint =
       closedOrdersConstraints.isMarketDefined() ? "/v1/order/orders" : "/v1/order/history";
 
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, closedOrdersEndpoint, std::move(params));
+  json::container data =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, closedOrdersEndpoint, std::move(params));
 
   const auto dataIt = data.find("data");
   if (dataIt == data.end()) {
@@ -268,7 +270,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
 
   MarketSet markets;
 
-  for (json& orderDetails : *dataIt) {
+  for (json::container& orderDetails : *dataIt) {
     string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
 
     std::optional<Market> optMarket =
@@ -324,7 +326,8 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
     }
   }
 
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
+  json::container data =
+      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order/openOrders", std::move(params));
   OpenedOrderVector openedOrders;
   const auto dataIt = data.find("data");
   if (dataIt == data.end()) {
@@ -332,7 +335,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
     return openedOrders;
   }
 
-  for (const json& orderDetails : *dataIt) {
+  for (const json::container& orderDetails : *dataIt) {
     string marketStr = ToUpper(orderDetails["symbol"].get<std::string_view>());
 
     std::optional<Market> optMarket =
@@ -412,11 +415,11 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   }
   options.emplace_back("size", 500);
   options.emplace_back("type", "deposit");
-  json data =
+  json::container data =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw", std::move(options));
   const auto dataIt = data.find("data");
   if (dataIt != data.end()) {
-    for (const json& depositDetail : *dataIt) {
+    for (const json::container& depositDetail : *dataIt) {
       std::string_view statusStr = depositDetail["state"].get<std::string_view>();
       int64_t id = depositDetail["id"].get<int64_t>();
       Deposit::Status status = DepositStatusFromStatusStr(statusStr);
@@ -540,11 +543,11 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 
 WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
-  json data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
-                           CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
+  json::container data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
+                                      CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   const auto dataIt = data.find("data");
   if (dataIt != data.end()) {
-    for (const json& withdrawDetail : *dataIt) {
+    for (const json::container& withdrawDetail : *dataIt) {
       std::string_view statusStr = withdrawDetail["state"].get<std::string_view>();
       int64_t id = withdrawDetail["id"].get<int64_t>();
       Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr, withdrawsConstraints.isCurDefined());
@@ -642,7 +645,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   placePostData.emplace_back("symbol", lowerCaseMarket);
   placePostData.emplace_back("type", type);
 
-  json result =
+  json::container result =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/order/orders/place", std::move(placePostData));
 
   auto dataIt = result.find("data");
@@ -675,7 +678,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
   string endpoint(kBaseUrlOrders);
   endpoint.append(orderId);
 
-  const json res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
+  const json::container res = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
   const auto dataIt = res.find("data");
 
   // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is
@@ -716,14 +719,14 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   string lowerCaseCur = ToLower(currencyCode.str());
   HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
 
-  json queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
-                                               "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
+  json::container queryWithdrawAddressJson = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                          "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
   const auto addressDataIt = queryWithdrawAddressJson.find("data");
   if (addressDataIt == queryWithdrawAddressJson.end()) {
     throw exception("Unexpected reply from Huobi withdraw address");
   }
   std::string_view huobiWithdrawAddressName;
-  for (const json& withdrawAddress : *addressDataIt) {
+  for (const json::container& withdrawAddress : *addressDataIt) {
     std::string_view address(withdrawAddress["address"].get<std::string_view>());
     std::string_view addressTag(withdrawAddress["addressTag"].get<std::string_view>());
     if (address == destinationWallet.address() && addressTag == destinationWallet.tag()) {
@@ -766,8 +769,8 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   // Strange to have the fee as input parameter of a withdraw...
   withdrawPostData.emplace_back("fee", withdrawFee.amountStr());
 
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
-                             std::move(withdrawPostData));
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create",
+                                        std::move(withdrawPostData));
   const auto createDataIt = result.find("data");
   if (createDataIt == result.end()) {
     throw exception("Unexpected response from withdraw create for {}", huobiPublic.name());
@@ -777,12 +780,12 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 }
 
 int HuobiPrivate::AccountIdFunc::operator()() {
-  json result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts");
+  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/account/accounts");
   const auto dataIt = result.find("data");
   if (dataIt == result.end()) {
     throw exception("Unexpected reply from account id query for Huobi");
   }
-  for (const json& accDetails : *dataIt) {
+  for (const json::container& accDetails : *dataIt) {
     std::string_view state = accDetails["state"].get<std::string_view>();
     if (state == "working") {
       return accDetails["id"].get<int>();
