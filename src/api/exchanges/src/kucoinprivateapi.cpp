@@ -73,7 +73,7 @@ json PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType 
       strToSign.append(postData.str());
     } else {
       strToSign.append(postData.toJsonStr());
-      postDataFormat = CurlOptions::PostDataFormat::kJson;
+      postDataFormat = CurlOptions::PostDataFormat::json;
     }
   }
 

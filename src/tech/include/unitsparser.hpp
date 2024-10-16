@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 namespace cct {
@@ -12,5 +13,10 @@ namespace cct {
 /// Note: it is a simplified version of the syntax used by Kubernetes:
 /// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 int64_t ParseNumberOfBytes(std::string_view sizeStr);
+
+/// Writes to 'buf' the string representation of the number of bytes.
+/// If given buffer is too small, it will throw an exception.
+/// Returns a span of the buffer containing the string representation.
+std::span<char> BytesToStr(int64_t numberOfBytes, std::span<char> buf);
 
 }  // namespace cct

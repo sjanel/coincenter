@@ -37,7 +37,7 @@ class GeneralConfig {
   RequestsConfig _requestsConfig;
   TradingConfig _tradingConfig;
   Duration _fiatConversionQueryRate = std::chrono::hours(8);
-  ApiOutputType _apiOutputType = ApiOutputType::kFormattedTable;
+  ApiOutputType _apiOutputType = ApiOutputType::table;
 };
 
 }  // namespace cct

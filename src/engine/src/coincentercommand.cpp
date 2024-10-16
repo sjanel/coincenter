@@ -20,11 +20,11 @@ namespace cct {
 namespace {
 bool IsOrderCommand(CoincenterCommandType cmd) {
   switch (cmd) {
-    case CoincenterCommandType::kOrdersCancel:  // NOLINT(bugprone-branch-clone)
+    case CoincenterCommandType::OrdersCancel:  // NOLINT(bugprone-branch-clone)
       [[fallthrough]];
-    case CoincenterCommandType::kOrdersClosed:
+    case CoincenterCommandType::OrdersClosed:
       [[fallthrough]];
-    case CoincenterCommandType::kOrdersOpened:
+    case CoincenterCommandType::OrdersOpened:
       return true;
     default:
       return false;
@@ -46,7 +46,7 @@ CoincenterCommand& CoincenterCommand::setOrdersConstraints(OrdersConstraints ord
 }
 
 CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints depositsConstraints) {
-  if (_type != CoincenterCommandType::kRecentDeposits) {
+  if (_type != CoincenterCommandType::RecentDeposits) {
     throw exception("Deposit constraints can only be used for deposits related commands");
   }
   _specialOptions = std::move(depositsConstraints);
@@ -54,7 +54,7 @@ CoincenterCommand& CoincenterCommand::setDepositsConstraints(DepositsConstraints
 }
 
 CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstraints withdrawsConstraints) {
-  if (_type != CoincenterCommandType::kRecentWithdraws) {
+  if (_type != CoincenterCommandType::RecentWithdraws) {
     throw exception("Withdraw constraints can only be used for withdraws related commands");
   }
   _specialOptions = std::move(withdrawsConstraints);
@@ -62,8 +62,8 @@ CoincenterCommand& CoincenterCommand::setWithdrawsConstraints(WithdrawsConstrain
 }
 
 CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions tradeOptions) {
-  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
-      _type != CoincenterCommandType::kTrade) {
+  if (_type != CoincenterCommandType::Buy && _type != CoincenterCommandType::Sell &&
+      _type != CoincenterCommandType::Trade) {
     throw exception("Trade options can only be used for trade related commands");
   }
   _specialOptions = std::move(tradeOptions);
@@ -71,7 +71,7 @@ CoincenterCommand& CoincenterCommand::setTradeOptions(TradeOptions tradeOptions)
 }
 
 CoincenterCommand& CoincenterCommand::setWithdrawOptions(WithdrawOptions withdrawOptions) {
-  if (_type != CoincenterCommandType::kWithdrawApply) {
+  if (_type != CoincenterCommandType::Withdraw) {
     throw exception("Withdraw options can only be used for withdraws");
   }
   _specialOptions = std::move(withdrawOptions);
@@ -110,8 +110,8 @@ CoincenterCommand& CoincenterCommand::setCur2(CurrencyCode cur2) {
 }
 
 CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
-  if (_type != CoincenterCommandType::kBuy && _type != CoincenterCommandType::kSell &&
-      _type != CoincenterCommandType::kTrade && _type != CoincenterCommandType::kWithdrawApply) {
+  if (_type != CoincenterCommandType::Buy && _type != CoincenterCommandType::Sell &&
+      _type != CoincenterCommandType::Trade && _type != CoincenterCommandType::Withdraw) {
     throw exception("Percentage trade can only be set for trade / buy / sell or withdraw command");
   }
   _isPercentageAmount = value;
@@ -119,7 +119,7 @@ CoincenterCommand& CoincenterCommand::setPercentageAmount(bool value) {
 }
 
 CoincenterCommand& CoincenterCommand::withBalanceInUse(bool value) {
-  if (_type != CoincenterCommandType::kBalance) {
+  if (_type != CoincenterCommandType::Balance) {
     throw exception("With balance in use can only be set for Balance command");
   }
   _withBalanceInUse = value;

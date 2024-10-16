@@ -79,7 +79,7 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 auto ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
   if (!postData.empty() && requestType != HttpRequestType::kGet) {
-    postDataFormat = CurlOptions::PostDataFormat::kJson;
+    postDataFormat = CurlOptions::PostDataFormat::json;
   }
   return postDataFormat;
 }

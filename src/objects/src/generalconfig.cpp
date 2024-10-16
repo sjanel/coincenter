@@ -31,12 +31,12 @@ json GeneralConfig::LoadFile(std::string_view dataDir) {
     // Create a file with default values. User can then update them as he wishes.
     log::warn("No {} file found. Creating a default one which can be updated freely at your convenience",
               GeneralConfig::kFilename);
-    generalConfigFile.write(jsonData);
+    generalConfigFile.writeJson(jsonData);
   } else {
     jsonData.update(generalConfigJsonData, true);
     if (jsonData != generalConfigJsonData) {
       log::warn("File {} updated with default values of all supported options", GeneralConfig::kFilename);
-      generalConfigFile.write(jsonData);
+      generalConfigFile.writeJson(jsonData);
     }
   }
   return jsonData;

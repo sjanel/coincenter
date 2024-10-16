@@ -168,17 +168,17 @@ std::pair<std::string_view, CoincenterCommandType> CoincenterCmdLineOptions::get
     throw invalid_argument("Trade price and trade strategy cannot be set together");
   }
   if (!buy.empty()) {
-    return {buy, CoincenterCommandType::kBuy};
+    return {buy, CoincenterCommandType::Buy};
   }
   if (!sell.empty()) {
-    return {sell, CoincenterCommandType::kSell};
+    return {sell, CoincenterCommandType::Sell};
   }
   if (!sellAll.empty()) {
-    return {sellAll, CoincenterCommandType::kSell};
+    return {sellAll, CoincenterCommandType::Sell};
   }
   if (!tradeAll.empty()) {
-    return {tradeAll, CoincenterCommandType::kTrade};
+    return {tradeAll, CoincenterCommandType::Trade};
   }
-  return {trade, CoincenterCommandType::kTrade};
+  return {trade, CoincenterCommandType::Trade};
 }
 }  // namespace cct
