@@ -12,6 +12,7 @@
 #include <tuple>
 #include <utility>
 
+#include "auto-trade-processor.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cct_const.hpp"

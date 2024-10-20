@@ -36,6 +36,7 @@ enum class CoincenterCommandType : int8_t {
   MarketData,
   Replay,
   ReplayMarkets,
+  AutoTrade,
 
   Last
 };
@@ -56,7 +57,7 @@ struct glz::meta<::cct::CoincenterCommandType> {
                                           Balance, DepositInfo, OrdersClosed, OrdersOpened, OrdersCancel,
                                           RecentDeposits, RecentWithdraws, Trade, Buy, Sell, Withdraw, DustSweeper,
 
-                                          MarketData, Replay, ReplayMarkets,
+                                          MarketData, Replay, ReplayMarkets, AutoTrade,
 
                                           Last);
 };
