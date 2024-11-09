@@ -13,11 +13,9 @@
 #include <thread>
 #include <type_traits>
 
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
-#include "cct_smallvector.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
@@ -149,7 +147,7 @@ template <std::ranges::input_range InputRange, std::weakly_incrementable OutputI
                                     std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>
 inline OutputIt ThreadPool::parallelTransform(InputRange&& r, OutputIt result, UnaryOperation op) {
   using FutureT = std::future<std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>;
-  SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
+  vector<FutureT> futures;
   if constexpr (std::ranges::sized_range<InputRange>) {
     futures.reserve(std::ranges::size(r));
   }
@@ -167,7 +165,7 @@ template <std::ranges::input_range InputRange1, std::ranges::input_range InputRa
 inline OutputIt ThreadPool::parallelTransform(InputRange1&& r1, InputRange2&& r2, OutputIt result, BinaryOperation op) {
   using FutureT = std::future<std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
                                                    std::ranges::range_reference_t<InputRange2>>>;
-  SmallVector<FutureT, kTypicalNbPrivateAccounts> futures;
+  vector<FutureT> futures;
   if constexpr (std::ranges::sized_range<InputRange1>) {
     futures.reserve(std::ranges::size(r1));
   }
