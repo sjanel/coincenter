@@ -69,8 +69,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic("kucoin", fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _coincenterInfo, commonAPI),

@@ -24,6 +24,7 @@
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
+#include "exchange-permanent-curl-options.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -525,6 +526,10 @@ AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
       std::make_unique<MarketDataSerializer>(_coincenterInfo.dataDir(), marketTimestampSets, name());
 
   return *_marketDataSerializerPtr;
+}
+
+PermanentCurlOptions::Builder ExchangePublic::permanentCurlOptionsBuilder() const {
+  return ExchangePermanentCurlOptions(exchangeConfig()).builderBase(ExchangePermanentCurlOptions::Api::Public);
 }
 
 }  // namespace cct::api

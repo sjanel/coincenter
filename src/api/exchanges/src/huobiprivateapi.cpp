@@ -145,8 +145,7 @@ constexpr std::string_view kBaseUrlOrders = "/v1/order/orders/";
 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
-      _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(),
+      _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(

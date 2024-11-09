@@ -99,8 +99,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
           commonAPI, _curlHandle, exchangeConfig()),

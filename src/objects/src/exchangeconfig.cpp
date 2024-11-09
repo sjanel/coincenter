@@ -16,7 +16,6 @@
 #include "http-config.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
-#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeconfig.hpp"
 
@@ -123,29 +122,6 @@ ExchangeConfig::ExchangeConfig(
   if (_dustAmountsThreshold.empty()) {
     log::warn("{} set of dust amounts threshold is empty, dust sweeper is not possible", exchangeNameStr);
   }
-}
-
-PermanentCurlOptions::Builder ExchangeConfig::curlOptionsBuilderBase(Api api) const {
-  PermanentCurlOptions::Builder builder;
-
-  builder.setAcceptedEncoding(acceptEncoding())
-      .setRequestCallLogLevel(requestsCallLogLevel())
-      .setRequestAnswerLogLevel(requestsAnswerLogLevel())
-      .setTimeout(httpConfig().timeout());
-
-  switch (api) {
-    case Api::kPrivate:
-      builder.setMinDurationBetweenQueries(privateAPIRate());
-      break;
-    case Api::kPublic:
-      builder.setMinDurationBetweenQueries(publicAPIRate())
-          .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse);
-      break;
-    default:
-      break;
-  }
-
-  return builder;
 }
 
 }  // namespace cct

@@ -161,8 +161,7 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
-      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(),
+      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

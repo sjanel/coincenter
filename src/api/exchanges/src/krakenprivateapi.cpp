@@ -131,8 +131,8 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(config, krakenPublic, apiKey),
-      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(), config.getRunMode()),
+      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+                  config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}

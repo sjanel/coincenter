@@ -64,8 +64,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic("upbit", fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
+      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _curlHandle, exchangeConfig()),
       _tradableCurrenciesCache(

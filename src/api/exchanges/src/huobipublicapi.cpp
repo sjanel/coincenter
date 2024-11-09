@@ -85,8 +85,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic("huobi", fiatConverter, commonAPI, config),
-      _curlHandle(kURLBases, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), config.getRunMode()),
+      _curlHandle(kURLBases, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _healthCheckCurlHandle(
           kHealthCheckBaseUrl, config.metricGatewayPtr(),
           PermanentCurlOptions::Builder().setMinDurationBetweenQueries(exchangeConfig().publicAPIRate()).build(),

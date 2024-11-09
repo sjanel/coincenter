@@ -6,11 +6,11 @@
 #include "apikey.hpp"
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
+#include "cache-file-updator-interface.hpp"
 #include "cachedresultvault.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
-#include "exchangebase.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
@@ -20,6 +20,7 @@
 #include "monetaryamountbycurrencyset.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
+#include "permanentcurloptions.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
@@ -35,7 +36,7 @@ class WithdrawOptions;
 namespace api {
 class APIKey;
 
-class ExchangePrivate : public ExchangeBase {
+class ExchangePrivate : public CacheFileUpdatorInterface {
  public:
   virtual ~ExchangePrivate() = default;
 
@@ -163,6 +164,8 @@ class ExchangePrivate : public ExchangeBase {
                                                      const SentWithdrawInfo &sentWithdrawInfo);
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
+
+  PermanentCurlOptions::Builder permanentCurlOptionsBuilder() const;
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault{_exchangePublic._cachedResultVault};

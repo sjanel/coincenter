@@ -76,10 +76,10 @@ class BinancePublic : public ExchangePublic {
   MonetaryAmount computePriceForNotional(Market mk, int avgPriceMins);
 
   struct CommonInfo {
-    CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeConfig& exchangeConfig, settings::RunMode runMode);
+    CommonInfo(CurlHandle& curlHandle, const ExchangeConfig& exchangeConfig);
 
     const ExchangeConfig& _exchangeConfig;
-    CurlHandle _curlHandle;
+    CurlHandle& _curlHandle;
   };
 
   struct ExchangeInfoFunc {
@@ -124,6 +124,7 @@ class BinancePublic : public ExchangePublic {
     CommonInfo& _commonInfo;
   };
 
+  CurlHandle _curlHandle;
   CommonInfo _commonInfo;
   CachedResult<ExchangeInfoFunc> _exchangeConfigCache;
   CachedResult<MarketsFunc> _marketsCache;
