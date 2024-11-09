@@ -4,7 +4,7 @@
 
 #include "cct_string.hpp"
 #include "durationstring.hpp"
-#include "exchangeconfig.hpp"
+#include "exchange-query-config.hpp"
 #include "priceoptions.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"
@@ -23,15 +23,14 @@ TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction 
       _tradeTypePolicy(tradeTypePolicy),
       _tradeSyncPolicy(tradeSyncPolicy) {}
 
-TradeOptions::TradeOptions(const TradeOptions &rhs, const ExchangeConfig &exchangeConfig)
-    : _maxTradeTime(rhs._maxTradeTime == kUndefinedDuration ? exchangeConfig.tradeConfig().timeout()
-                                                            : rhs._maxTradeTime),
+TradeOptions::TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryTradeConfig &exchangeTradeConfig)
+    : _maxTradeTime(rhs._maxTradeTime == kUndefinedDuration ? exchangeTradeConfig.timeout.duration : rhs._maxTradeTime),
       _minTimeBetweenPriceUpdates(rhs._minTimeBetweenPriceUpdates == kUndefinedDuration
-                                      ? exchangeConfig.tradeConfig().minPriceUpdateDuration()
+                                      ? exchangeTradeConfig.minPriceUpdateDuration.duration
                                       : rhs._minTimeBetweenPriceUpdates),
-      _priceOptions(rhs._priceOptions.isDefault() ? PriceOptions(exchangeConfig.tradeConfig()) : rhs._priceOptions),
+      _priceOptions(rhs._priceOptions.isDefault() ? PriceOptions(exchangeTradeConfig) : rhs._priceOptions),
       _timeoutAction(rhs._timeoutAction == TradeTimeoutAction::kDefault
-                         ? exchangeConfig.tradeConfig().tradeTimeoutAction()
+                         ? (exchangeTradeConfig.timeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel)
                          : rhs._timeoutAction),
       _tradeMode(rhs._tradeMode),
       _tradeTypePolicy(rhs._tradeTypePolicy),

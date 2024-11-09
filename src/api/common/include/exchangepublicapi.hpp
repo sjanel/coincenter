@@ -29,8 +29,11 @@ namespace cct {
 class AbstractMarketDataDeserializer;
 class AbstractMarketDataSerializer;
 class CoincenterInfo;
-class ExchangeConfig;
 class FiatConverter;
+
+namespace schema {
+struct ExchangeConfig;
+}
 
 namespace api {
 
@@ -179,7 +182,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
 
   const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
 
-  const ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
+  const schema::ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
 
   CommonAPI &commonAPI() { return _commonApi; }
 
@@ -215,7 +218,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   FiatConverter &_fiatConverter;
   CommonAPI &_commonApi;
   const CoincenterInfo &_coincenterInfo;
-  const ExchangeConfig &_exchangeConfig;
+  const schema::ExchangeConfig &_exchangeConfig;
   std::unique_ptr<AbstractMarketDataDeserializer> _marketDataDeserializerPtr;
   std::unique_ptr<AbstractMarketDataSerializer> _marketDataSerializerPtr;
   std::recursive_mutex _publicRequestsMutex;

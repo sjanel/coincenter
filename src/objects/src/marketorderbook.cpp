@@ -682,12 +682,12 @@ std::optional<MonetaryAmount> MarketOrderBook::computeLimitPrice(CurrencyCode fr
   }
   CurrencyCode marketCode = _market.base();
   switch (priceOptions.priceStrategy()) {
-    case PriceStrategy::kTaker:
+    case PriceStrategy::taker:
       [[fallthrough]];
-    case PriceStrategy::kNibble:
+    case PriceStrategy::nibble:
       marketCode = _market.quote();
       [[fallthrough]];
-    case PriceStrategy::kMaker:
+    case PriceStrategy::maker:
       return fromCurrencyCode == marketCode ? lowestAskPrice() : highestBidPrice();
     default:
       unreachable();
@@ -708,7 +708,7 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
   }
   CurrencyCode marketCode = _market.base();
   switch (priceOptions.priceStrategy()) {
-    case PriceStrategy::kTaker: {
+    case PriceStrategy::taker: {
       auto [avgMatchedFrom, avgPri] = avgPriceAndMatchedAmountTaker(from);
       if (avgMatchedFrom < from) {
         log::warn(
@@ -718,10 +718,10 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
       }
       return avgPri;
     }
-    case PriceStrategy::kNibble:
+    case PriceStrategy::nibble:
       marketCode = _market.quote();
       [[fallthrough]];
-    case PriceStrategy::kMaker:
+    case PriceStrategy::maker:
       return from.currencyCode() == marketCode ? lowestAskPrice() : highestBidPrice();
     default:
       unreachable();

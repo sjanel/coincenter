@@ -54,7 +54,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
     }
 
     const bool canUsePrivateExchange = _apiKeyProvider.hasAtLeastOneKey(exchangeNameEnum);
-    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(kSupportedExchanges[exchangePos]);
+    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum);
     if (canUsePrivateExchange) {
       for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeNameEnum)) {
         std::unique_ptr<api::ExchangePrivate> exchangePrivate;
@@ -76,7 +76,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
           throw exception("Should not happen");
         }
 
-        if (exchangeConfig.shouldValidateApiKey()) {
+        if (exchangeConfig.query.validateApiKey) {
           if (exchangePrivate->validateApiKey()) {
             log::info("{} api key is valid", exchangeName);
           } else {

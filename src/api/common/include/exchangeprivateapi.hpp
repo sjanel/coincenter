@@ -11,7 +11,6 @@
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"

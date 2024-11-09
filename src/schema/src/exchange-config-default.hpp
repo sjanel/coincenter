@@ -1,14 +1,11 @@
 #pragma once
 
-#include "cct_json-container.hpp"
+#include <string_view>
 
 namespace cct {
-struct ExchangeConfigDefault {
-  static json::container Prod() {
-    // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
-    // fiasco' problem.
 
-    static const json::container kProd = R"(
+struct ExchangeConfigDefault {
+  static constexpr std::string_view kProd = R"(
 {
   "asset": {
     "default": {
@@ -72,8 +69,8 @@ struct ExchangeConfigDefault {
         "currencies": "8h",
         "markets": "8h",
         "withdrawalFees": "4d",
-        "allOrderbooks": "3s",
-        "orderbook": "1s",
+        "allOrderBooks": "3s",
+        "orderBook": "1s",
         "tradedVolume": "1h",
         "lastPrice": "1s",
         "depositWallet": "1min",
@@ -109,7 +106,7 @@ struct ExchangeConfigDefault {
       }
     }
   },
-  "tradefees": {
+  "tradeFees": {
     "exchange": {
       "binance": {
         "maker": "0.1",
@@ -142,17 +139,11 @@ struct ExchangeConfigDefault {
       "validateDepositAddressesInFile": true
     }
   }
-} 
-)"_json;
-    return kProd;
-  }
+}
+)";
 
   /// ExchangeInfos for tests only. Some tests rely on provided values so changing them may make them fail.
-  static json::container Test() {
-    // Use a static method instead of an inline static const variable to avoid the infamous 'static initialization order
-    // fiasco' problem.
-
-    static const json::container kTest = R"(
+  static constexpr std::string_view kTest = R"(
 {
   "asset": {
     "default": {
@@ -202,17 +193,17 @@ struct ExchangeConfigDefault {
         "currencies": "8h",
         "markets": "8h",
         "withdrawalFees": "4d",
-        "allOrderbooks": "3s",
-        "orderbook": "1s",
+        "allOrderBooks": "3s",
+        "orderBook": "1s",
         "tradedVolume": "1h",
         "lastPrice": "1s",
         "depositWallet": "1min",
         "currencyInfo": "4d"
       },
-      "validateApiKey": true
+      "validateApiKey": false
     }
   },
-  "tradefees": { 
+  "tradeFees": { 
     "default": {
       "maker": "0.1",
       "taker": "0.2"
@@ -224,8 +215,6 @@ struct ExchangeConfigDefault {
     }
   }
 }
-)"_json;
-    return kTest;
-  }
+)";
 };
 }  // namespace cct

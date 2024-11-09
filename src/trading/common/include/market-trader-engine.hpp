@@ -6,7 +6,7 @@
 
 #include "abstract-market-trader.hpp"
 #include "cct_type_traits.hpp"
-#include "exchangeconfig.hpp"
+#include "exchange-config.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "market-order-book-vector.hpp"
 #include "market-trader-engine-state.hpp"
@@ -22,7 +22,7 @@ namespace cct {
 
 class MarketTraderEngine {
  public:
-  MarketTraderEngine(const ExchangeConfig &exchangeConfig, Market market, MonetaryAmount startAmountBase,
+  MarketTraderEngine(const schema::ExchangeConfig &exchangeConfig, Market market, MonetaryAmount startAmountBase,
                      MonetaryAmount startAmountQuote);
 
   Market market() const { return {_startAmountBase.currencyCode(), _startAmountQuote.currencyCode()}; }
@@ -55,7 +55,7 @@ class MarketTraderEngine {
 
   MonetaryAmount _startAmountBase;
   MonetaryAmount _startAmountQuote;
-  const ExchangeConfig &_exchangeConfig;
+  const schema::ExchangeConfig &_exchangeConfig;
   std::unique_ptr<AbstractMarketTrader> _marketTrader;
   Market _market;
   MarketTraderEngineState _marketTraderEngineState;

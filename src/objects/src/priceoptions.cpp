@@ -4,9 +4,9 @@
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
+#include "exchange-query-config.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptionsdef.hpp"
-#include "tradeconfig.hpp"
 
 namespace cct {
 
@@ -19,8 +19,8 @@ PriceOptions::PriceOptions(RelativePrice relativePrice) : _relativePrice(relativ
   }
 }
 
-PriceOptions::PriceOptions(const TradeConfig &tradeConfig)
-    : _priceStrategy(tradeConfig.tradeStrategy()), _isDefault(false) {}
+PriceOptions::PriceOptions(const schema::ExchangeQueryTradeConfig &tradeConfig)
+    : _priceStrategy(tradeConfig.strategy), _isDefault(false) {}
 
 PriceOptions::PriceOptions(MonetaryAmount fixedPrice) : _fixedPrice(fixedPrice), _isDefault(false) {}
 

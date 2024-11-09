@@ -27,6 +27,7 @@
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -97,15 +98,19 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
     : ExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
-          commonAPI, _curlHandle),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
+          config, commonAPI, _curlHandle),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault), config,
-          _curlHandle, exchangeConfig()),
-      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      config, _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
+                              _cachedResultVault),
+          config, _curlHandle, exchangeConfig().asset),
+      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
+                                          _cachedResultVault),
+                      config, _curlHandle, exchangeConfig().asset),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
+                              _cachedResultVault),
           _curlHandle) {}
 
 int64_t BithumbPublic::StatusCodeFromJsonResponse(const json::container& jsonResponse) {
@@ -140,7 +145,7 @@ bool BithumbPublic::healthCheck() {
 MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
   if (pMarketOrderbookMap == nullptr ||
-      lastUpdatedTime + exchangeConfig().getAPICallUpdateFrequency(kMarkets) < Clock::now()) {
+      lastUpdatedTime + exchangeConfig().query.updateFrequency.at(QueryType::markets).duration < Clock::now()) {
     pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
   }
   MarketSet markets;
@@ -192,8 +197,9 @@ CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
 namespace {
 
 template <class OutputType>
-OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, const ExchangeConfig& exchangeConfig,
-                         std::optional<Market> optM = std::nullopt, std::optional<int> optDepth = std::nullopt) {
+OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config,
+                         const schema::ExchangeAssetConfig& assetConfig, std::optional<Market> optM = std::nullopt,
+                         std::optional<int> optDepth = std::nullopt) {
   OutputType ret;
   // 'all' seems to work as default for all public methods
   CurrencyCode base("ALL");
@@ -219,7 +225,7 @@ OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, c
       log::error("Unexpected Bithumb reply for orderbook. May require code api update");
     }
     CurrencyCode quoteCurrencyCode(config.standardizeCurrencyCode(quoteCurrency));
-    const CurrencyCodeSet& excludedCurrencies = exchangeConfig.excludedCurrenciesAll();
+    const CurrencyCodeSet& excludedCurrencies = assetConfig.allExclude;
 
     MarketOrderBookLines orderBookLines;
 
@@ -285,11 +291,11 @@ OutputType GetOrderBooks(CurlHandle& curlHandle, const CoincenterInfo& config, c
 }  // namespace
 
 MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
-  return GetOrderBooks<MarketOrderBookMap>(_curlHandle, _coincenterInfo, _exchangeConfig);
+  return GetOrderBooks<MarketOrderBookMap>(_curlHandle, _coincenterInfo, _assetConfig);
 }
 
 MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
-  return GetOrderBooks<MarketOrderBook>(_curlHandle, _coincenterInfo, _exchangeConfig, mk, depth);
+  return GetOrderBooks<MarketOrderBook>(_curlHandle, _coincenterInfo, _assetConfig, mk, depth);
 }
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {

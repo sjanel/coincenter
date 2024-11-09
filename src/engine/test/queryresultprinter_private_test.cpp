@@ -666,8 +666,8 @@ class QueryResultPrinterTradesPercentageTest : public QueryResultPrinterTest {
   MonetaryAmount startAmount{"25.6EUR"};
   bool isPercentageTrade{true};
   CurrencyCode toCurrency{"SHIB"};
-  TradeOptions tradeOptions{TradeOptions{PriceOptions{PriceStrategy::kTaker}},
-                            coincenterInfo.exchangeConfig(exchangePublic1.name())};
+  TradeOptions tradeOptions{TradeOptions{PriceOptions{PriceStrategy::taker}},
+                            coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()).query.trade};
   TradedAmounts tradedAmounts{MonetaryAmount("15000.56EUR"), MonetaryAmount("885475102SHIB")};
   TradeResultPerExchange tradeResultPerExchange{{&exchange2, TradeResult{tradedAmounts, tradedAmounts.from * 2}}};
 };

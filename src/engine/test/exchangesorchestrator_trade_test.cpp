@@ -307,7 +307,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     markets = {Market("DU1", "DU2"), Market("DU3", "DU2"), Market("DU4", "DU5")};
   }
 
-  PriceOptions priceOptions{PriceStrategy::kTaker};
+  PriceOptions priceOptions{PriceStrategy::taker};
   TradeOptions tradeOptions{priceOptions,     TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
                             Duration::zero(), TradeTypePolicy::kDefault};
   bool isPercentageTrade = false;
@@ -577,7 +577,7 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
 
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
   // Fee is automatically applied on buy
-  MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeConfig().tradeFees.taker;
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
 
@@ -596,8 +596,8 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
 
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuyTwoSteps) {
   // Fee is automatically applied on buy
-  MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeConfig().getTakerFeeRatio() *
-                             exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(1000, "XRP") * exchangePublic1.exchangeConfig().tradeFees.taker *
+                             exchangePublic1.exchangeConfig().tradeFees.taker;
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
 
@@ -615,7 +615,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuyTwoSteps) {
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
-  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().tradeFees.taker;
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
 
@@ -643,7 +643,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange) {
-  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().tradeFees.taker;
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
 
@@ -666,7 +666,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange)
 }
 
 TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
-  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(10000, "XLM") * exchangePublic1.exchangeConfig().tradeFees.taker;
   CurrencyCode toCurrency = endAmount.currencyCode();
   TradeSide side = TradeSide::kBuy;
 
@@ -704,7 +704,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
 
 TEST_F(ExchangeOrchestratorTradeTest, SmartBuyAllExchanges) {
   CurrencyCode toCurrency("XLM");
-  MonetaryAmount endAmount = MonetaryAmount(18800, toCurrency) * exchangePublic1.exchangeConfig().getTakerFeeRatio();
+  MonetaryAmount endAmount = MonetaryAmount(18800, toCurrency) * exchangePublic1.exchangeConfig().tradeFees.taker;
   TradeSide side = TradeSide::kBuy;
 
   MonetaryAmount from1 = MonetaryAmount(5000, "USDT");

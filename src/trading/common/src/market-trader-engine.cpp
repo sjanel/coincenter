@@ -11,7 +11,6 @@
 #include "abstract-market-trader.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
-#include "exchangeconfig.hpp"
 #include "market-data-view.hpp"
 #include "market-order-book-vector.hpp"
 #include "market-trading-result.hpp"
@@ -29,7 +28,7 @@
 
 namespace cct {
 
-MarketTraderEngine::MarketTraderEngine(const ExchangeConfig &exchangeConfig, Market market,
+MarketTraderEngine::MarketTraderEngine(const schema::ExchangeConfig &exchangeConfig, Market market,
                                        MonetaryAmount startAmountBase, MonetaryAmount startAmountQuote)
     : _startAmountBase(startAmountBase),
       _startAmountQuote(startAmountQuote),
@@ -224,32 +223,32 @@ void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmo
   const auto ts = marketOrderBook.time();
 
   switch (priceStrategy) {
-    case PriceStrategy::kMaker: {
+    case PriceStrategy::maker: {
       const MonetaryAmount price = marketOrderBook.highestBidPrice();
       const MonetaryAmount remainingVolume(from / price, _market.base());
       constexpr MonetaryAmount matchedVolume;
 
       _marketTraderEngineState.placeBuyOrder(_exchangeConfig, ts, remainingVolume, price, matchedVolume, from,
-                                             ExchangeConfig::FeeType::kMaker);
+                                             schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
     }
-    case PriceStrategy::kNibble: {
+    case PriceStrategy::nibble: {
       const MonetaryAmount price = marketOrderBook.lowestAskPrice();
       const MonetaryAmount volume(from / price, _market.base());
       const MonetaryAmount matchedVolume = std::min(marketOrderBook.amountAtAskPrice(), volume);
       const MonetaryAmount remainingVolume = volume - matchedVolume;
 
       _marketTraderEngineState.placeBuyOrder(_exchangeConfig, ts, remainingVolume, price, matchedVolume, from,
-                                             ExchangeConfig::FeeType::kTaker);
+                                             schema::ExchangeTradeFeesConfig::FeeType::Taker);
       break;
     }
-    case PriceStrategy::kTaker: {
+    case PriceStrategy::taker: {
       const auto [totalMatchedAmount, avgPrice] = marketOrderBook.avgPriceAndMatchedAmountTaker(from);
       if (totalMatchedAmount != 0) {
         constexpr MonetaryAmount remainingVolume;
 
         _marketTraderEngineState.placeBuyOrder(_exchangeConfig, ts, remainingVolume, avgPrice, totalMatchedAmount, from,
-                                               ExchangeConfig::FeeType::kTaker);
+                                               schema::ExchangeTradeFeesConfig::FeeType::Taker);
       }
       break;
     }
@@ -261,30 +260,30 @@ void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmo
 void MarketTraderEngine::sell(const MarketOrderBook &marketOrderBook, MonetaryAmount volume,
                               PriceStrategy priceStrategy) {
   switch (priceStrategy) {
-    case PriceStrategy::kMaker: {
+    case PriceStrategy::maker: {
       const MonetaryAmount price = marketOrderBook.lowestAskPrice();
       constexpr MonetaryAmount matchedVolume;
 
       _marketTraderEngineState.placeSellOrder(_exchangeConfig, marketOrderBook.time(), volume, price, matchedVolume,
-                                              ExchangeConfig::FeeType::kMaker);
+                                              schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
     }
-    case PriceStrategy::kNibble: {
+    case PriceStrategy::nibble: {
       const MonetaryAmount price = marketOrderBook.highestBidPrice();
       const MonetaryAmount matchedVolume = std::min(marketOrderBook.amountAtBidPrice(), volume);
 
       _marketTraderEngineState.placeSellOrder(_exchangeConfig, marketOrderBook.time(), volume - matchedVolume, price,
-                                              matchedVolume, ExchangeConfig::FeeType::kTaker);
+                                              matchedVolume, schema::ExchangeTradeFeesConfig::FeeType::Taker);
       break;
     }
-    case PriceStrategy::kTaker: {
+    case PriceStrategy::taker: {
       const auto [totalMatchedAmount, avgPrice] = marketOrderBook.avgPriceAndMatchedAmountTaker(volume);
 
       if (totalMatchedAmount != 0) {
         constexpr MonetaryAmount remainingVolume;
 
         _marketTraderEngineState.placeSellOrder(_exchangeConfig, marketOrderBook.time(), remainingVolume, avgPrice,
-                                                totalMatchedAmount, ExchangeConfig::FeeType::kTaker);
+                                                totalMatchedAmount, schema::ExchangeTradeFeesConfig::FeeType::Taker);
       }
       break;
     }

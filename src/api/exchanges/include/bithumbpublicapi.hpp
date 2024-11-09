@@ -6,6 +6,7 @@
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "currencyexchange.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
@@ -17,7 +18,6 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -83,7 +83,7 @@ class BithumbPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct OrderBookFunc {
@@ -91,7 +91,7 @@ class BithumbPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct TradedVolumeFunc {

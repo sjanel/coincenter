@@ -19,6 +19,13 @@ add_unit_test(
 )
 
 add_unit_test(
+    exchange-config_test
+    test/exchange-config_test.cpp
+    LIBRARIES
+    coincenter_schema
+)
+
+add_unit_test(
     general-config_test
     test/general-config_test.cpp
     LIBRARIES

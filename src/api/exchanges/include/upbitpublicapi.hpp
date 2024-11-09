@@ -7,6 +7,7 @@
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycodeset.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "public-trade-vector.hpp"
@@ -14,7 +15,6 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -71,7 +71,7 @@ class UpbitPublic : public ExchangePublic {
     MarketSet operator()();
 
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct TradableCurrenciesFunc {
@@ -92,7 +92,6 @@ class UpbitPublic : public ExchangePublic {
     MarketOrderBookMap operator()(int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
     CachedResult<MarketsFunc>& _marketsCache;
   };
 
@@ -100,7 +99,6 @@ class UpbitPublic : public ExchangePublic {
     MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradedVolumeFunc {

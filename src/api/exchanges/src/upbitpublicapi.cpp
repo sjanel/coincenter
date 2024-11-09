@@ -22,7 +22,6 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -66,23 +65,30 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::upbit, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
-      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _curlHandle, exchangeConfig()),
+      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
+                                        _cachedResultVault),
+                    _curlHandle, exchangeConfig().asset),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
-          _marketsCache),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
+          _curlHandle, _marketsCache),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), name(),
-          config.dataDir()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
+                              _cachedResultVault),
+          name(), config.dataDir()),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
-          _curlHandle, exchangeConfig(), _marketsCache),
-      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
+                              _cachedResultVault),
+          _curlHandle, _marketsCache),
+      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
+                                          _cachedResultVault),
+                      _curlHandle),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
+                              _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
+                                       _cachedResultVault),
                    _curlHandle) {}
 
 bool UpbitPublic::healthCheck() {
@@ -135,7 +141,7 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCod
 
 MarketSet UpbitPublic::MarketsFunc::operator()() {
   json::container result = PublicQuery(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
   for (const json::container& marketDetails : result) {

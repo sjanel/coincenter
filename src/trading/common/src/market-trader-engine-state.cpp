@@ -7,7 +7,6 @@
 
 #include "cct_exception.hpp"
 #include "closed-order.hpp"
-#include "exchangeconfig.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
 #include "stringconv.hpp"
@@ -27,11 +26,11 @@ MonetaryAmount MarketTraderEngineState::computeSellVolume(TraderCommand traderCo
   return (_availableBaseAmount * traderCommand.amountIntensityPercentage()) / 100;
 }
 
-void MarketTraderEngineState::placeBuyOrder(const ExchangeConfig &exchangeConfig, TimePoint placedTime,
+void MarketTraderEngineState::placeBuyOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
                                             MonetaryAmount remainingVolume, MonetaryAmount price,
                                             MonetaryAmount matchedVolume, MonetaryAmount from,
-                                            ExchangeConfig::FeeType feeType) {
-  _availableBaseAmount += exchangeConfig.applyFee(matchedVolume, feeType);
+                                            schema::ExchangeTradeFeesConfig::FeeType feeType) {
+  _availableBaseAmount += exchangeConfig.tradeFees.applyFee(matchedVolume, feeType);
   _availableQuoteAmount -= from;
 
   if (remainingVolume == 0) {
@@ -41,11 +40,12 @@ void MarketTraderEngineState::placeBuyOrder(const ExchangeConfig &exchangeConfig
   }
 }
 
-void MarketTraderEngineState::placeSellOrder(const ExchangeConfig &exchangeConfig, TimePoint placedTime,
+void MarketTraderEngineState::placeSellOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
                                              MonetaryAmount remainingVolume, MonetaryAmount price,
-                                             MonetaryAmount matchedVolume, ExchangeConfig::FeeType feeType) {
+                                             MonetaryAmount matchedVolume,
+                                             schema::ExchangeTradeFeesConfig::FeeType feeType) {
   _availableBaseAmount -= (remainingVolume + matchedVolume);
-  _availableQuoteAmount += exchangeConfig.applyFee(matchedVolume.toNeutral() * price, feeType);
+  _availableQuoteAmount += exchangeConfig.tradeFees.applyFee(matchedVolume.toNeutral() * price, feeType);
 
   if (remainingVolume == 0) {
     _closedOrders.emplace_back(nextOrderId(), matchedVolume, price, placedTime, placedTime, TradeSide::kSell);
@@ -64,16 +64,17 @@ void MarketTraderEngineState::adjustOpenedOrderRemainingVolume(const OpenedOrder
                                matchedOrder.placedTime(), matchedOrder.side());
 }
 
-void MarketTraderEngineState::countMatchedPart(const ExchangeConfig &exchangeConfig, const OpenedOrder &matchedOrder,
-                                               MonetaryAmount price, MonetaryAmount newMatchedVolume,
-                                               TimePoint matchedTime) {
+void MarketTraderEngineState::countMatchedPart(const schema::ExchangeConfig &exchangeConfig,
+                                               const OpenedOrder &matchedOrder, MonetaryAmount price,
+                                               MonetaryAmount newMatchedVolume, TimePoint matchedTime) {
   switch (matchedOrder.side()) {
     case TradeSide::kBuy:
-      _availableBaseAmount += exchangeConfig.applyFee(newMatchedVolume, ExchangeConfig::FeeType::kMaker);
+      _availableBaseAmount +=
+          exchangeConfig.tradeFees.applyFee(newMatchedVolume, schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
     case TradeSide::kSell:
-      _availableQuoteAmount +=
-          exchangeConfig.applyFee(newMatchedVolume.toNeutral() * price, ExchangeConfig::FeeType::kMaker);
+      _availableQuoteAmount += exchangeConfig.tradeFees.applyFee(newMatchedVolume.toNeutral() * price,
+                                                                 schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
     default:
       throw exception("Unknown trade side {}", static_cast<int>(matchedOrder.side()));

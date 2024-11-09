@@ -6,7 +6,7 @@
 
 namespace cct {
 LoadConfiguration::LoadConfiguration() noexcept
-    : _dataDir(kDefaultDataDir), _exchangeConfigFileType(ExchangeConfigFileType::kProd) {}
+    : _dataDir(kDefaultDataDir), _exchangeConfigFileType(ExchangeConfigFileType::kTest) {}
 
 LoadConfiguration::LoadConfiguration(std::string_view dataDir, ExchangeConfigFileType exchangeConfigFileType)
     : _dataDir(dataDir), _exchangeConfigFileType(exchangeConfigFileType) {}

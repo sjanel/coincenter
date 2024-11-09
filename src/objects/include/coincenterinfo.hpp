@@ -10,8 +10,7 @@
 #include "apioutputtype.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "exchangeconfig.hpp"
-#include "exchangeconfigmap.hpp"
+#include "exchange-config.hpp"
 #include "general-config.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"
@@ -50,7 +49,9 @@ class CoincenterInfo {
   /// Otherwise, return a default currency code
   CurrencyCode tryConvertStableCoinToFiat(CurrencyCode maybeStableCoin) const;
 
-  const ExchangeConfig &exchangeConfig(std::string_view exchangeName) const;
+  const schema::ExchangeConfig &exchangeConfig(ExchangeNameEnum exchangeNameEnum) const {
+    return _allExchangeConfigs[exchangeNameEnum];
+  }
 
   settings::RunMode getRunMode() const { return _runMode; }
 
@@ -74,7 +75,7 @@ class CoincenterInfo {
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
   CurrencyPrefixAcronymMap _currencyPrefixAcronymMap;
   StableCoinsMap _stableCoinsMap;
-  ExchangeConfigMap _exchangeConfigMap;
+  schema::AllExchangeConfigs _allExchangeConfigs;
   settings::RunMode _runMode;
   string _dataDir;
   schema::GeneralConfig _generalConfig;

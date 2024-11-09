@@ -22,7 +22,8 @@ class QueryResultPrinterTest : public ExchangesBaseTest {
   TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
   TimePoint tp4{milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
 
-  TradeOptions defaultTradeOptions{TradeOptions{}, coincenterInfo.exchangeConfig(exchangePublic1.name())};
+  TradeOptions defaultTradeOptions{TradeOptions{},
+                                   coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()).query.trade};
 
   void SetUp() override { ss.clear(); }
 
