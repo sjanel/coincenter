@@ -42,7 +42,7 @@ namespace {
 json::container PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
 
-  json::container jsonResponse = requestRetry.queryJson(method, [](const json::container& jsonResponse) {
+  json::container baseRet = requestRetry.queryJson(method, [](const json::container& jsonResponse) {
     const auto errorIt = jsonResponse.find("error");
     if (errorIt != jsonResponse.end() && !errorIt->empty()) {
       log::warn("Full Kraken error: '{}'", jsonResponse.dump());
@@ -51,9 +51,9 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view method, Cur
     return RequestRetry::Status::kResponseOK;
   });
 
-  const auto resultIt = jsonResponse.find("result");
+  const auto resultIt = baseRet.find("result");
   json::container ret;
-  if (resultIt != jsonResponse.end()) {
+  if (resultIt != baseRet.end()) {
     ret.swap(*resultIt);
   }
   return ret;

@@ -1,6 +1,7 @@
 #include "exchange-permanent-curl-options.hpp"
 
 #include "exchangeconfig.hpp"
+#include "permanentcurloptions.hpp"
 
 namespace cct::api {
 

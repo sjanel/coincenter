@@ -89,17 +89,17 @@ void FiatConverter::updateCacheFile() const {
   GetRatesCacheFile(_dataDir).writeJson(data);
 }
 
-std::optional<double> FiatConverter::queryCurrencyRate(Market mk) {
-  auto ret = queryCurrencyRateSource1(mk);
+std::optional<double> FiatConverter::queryCurrencyRate(Market market) {
+  auto ret = queryCurrencyRateSource1(market);
   if (ret) {
     return ret;
   }
-  ret = queryCurrencyRateSource2(mk);
+  ret = queryCurrencyRateSource2(market);
   return ret;
 }
 
-std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
-  const auto qStr = mk.assetsPairStrUpper('_');
+std::optional<double> FiatConverter::queryCurrencyRateSource1(Market market) {
+  const auto qStr = market.assetsPairStrUpper('_');
 
   const CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _apiKey}});
 
@@ -111,17 +111,17 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market mk) {
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
   const auto resultsIt = data.find("results");
   if (data.is_discarded() || resultsIt == data.end() || !resultsIt->contains(qStr)) {
-    log::warn("No JSON data received from fiat currency converter service's first source for pair '{}'", mk);
-    refreshLastUpdatedTime(mk);
+    log::warn("No JSON data received from fiat currency converter service's first source for pair '{}'", market);
+    refreshLastUpdatedTime(market);
     return std::nullopt;
   }
   const auto& rates = (*resultsIt)[qStr];
   const double rate = rates["val"];
-  store(mk, rate);
+  store(market, rate);
   return rate;
 }
 
-std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
+std::optional<double> FiatConverter::queryCurrencyRateSource2(Market market) {
   const auto dataStr = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
   static constexpr bool kAllowExceptions = false;
   const json::container jsonData = json::container::parse(dataStr, nullptr, kAllowExceptions);
@@ -132,7 +132,7 @@ std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
   const auto baseIt = jsonData.find("base");
   const auto ratesIt = jsonData.find("rates");
   if (baseIt == jsonData.end() || ratesIt == jsonData.end()) {
-    log::warn("No JSON data received from fiat currency converter service's second source", mk);
+    log::warn("No JSON data received from fiat currency converter service's second source", market);
     return {};
   }
 
@@ -145,25 +145,25 @@ std::optional<double> FiatConverter::queryCurrencyRateSource2(Market mk) {
 
     _pricesMap.insert_or_assign(Market(_baseRateSource2, currencyCode), PriceTimedValue(rateDouble, nowTime));
   }
-  return retrieveRateFromCache(mk);
+  return retrieveRateFromCache(market);
 }
 
-void FiatConverter::store(Market mk, double rate) {
-  log::debug("Stored rate {} for {}", rate, mk);
+void FiatConverter::store(Market market, double rate) {
+  log::debug("Stored rate {} for {}", rate, market);
   const TimePoint nowTime = Clock::now();
 
-  _pricesMap.insert_or_assign(mk.reverse(), PriceTimedValue(static_cast<double>(1) / rate, nowTime));
-  _pricesMap.insert_or_assign(std::move(mk), PriceTimedValue(rate, nowTime));
+  _pricesMap.insert_or_assign(market.reverse(), PriceTimedValue(static_cast<double>(1) / rate, nowTime));
+  _pricesMap.insert_or_assign(std::move(market), PriceTimedValue(rate, nowTime));
 }
 
-void FiatConverter::refreshLastUpdatedTime(Market mk) {
-  const auto it = _pricesMap.find(mk);
+void FiatConverter::refreshLastUpdatedTime(Market market) {
+  const auto it = _pricesMap.find(market);
   if (it != _pricesMap.end()) {
     // Update cache time anyway to avoid querying too much the service
     const TimePoint nowTime = Clock::now();
 
     it->second.lastUpdatedTime = nowTime;
-    _pricesMap[mk.reverse()].lastUpdatedTime = nowTime;
+    _pricesMap[market.reverse()].lastUpdatedTime = nowTime;
   }
 }
 
@@ -171,27 +171,27 @@ std::optional<double> FiatConverter::convert(double amount, CurrencyCode from, C
   if (from == to) {
     return amount;
   }
-  const Market mk(from, to);
+  const Market market(from, to);
 
   double rate;
 
   std::lock_guard<std::mutex> guard(_pricesMutex);
 
-  const auto optRate = retrieveRateFromCache(mk);
+  const auto optRate = retrieveRateFromCache(market);
   if (optRate) {
     rate = *optRate;
   } else {
     if (_ratesUpdateFrequency == Duration::max()) {
-      log::error("Unable to query fiat currency rates and no rate found in cache for {}", mk);
+      log::error("Unable to query fiat currency rates and no rate found in cache for {}", market);
       return {};
     }
-    std::optional<double> queriedRate = queryCurrencyRate(mk);
+    std::optional<double> queriedRate = queryCurrencyRate(market);
     if (queriedRate) {
       rate = *queriedRate;
     } else {
-      const auto it = _pricesMap.find(mk);
+      const auto it = _pricesMap.find(market);
       if (it == _pricesMap.end()) {
-        log::error("Unable to query fiat currency rates and no rate found in cache for {}", mk);
+        log::error("Unable to query fiat currency rates and no rate found in cache for {}", market);
         return {};
       }
       log::warn("Fiat currency rate service unavailable, use not up to date currency rate in cache");
@@ -202,7 +202,7 @@ std::optional<double> FiatConverter::convert(double amount, CurrencyCode from, C
   return amount * rate;
 }
 
-std::optional<double> FiatConverter::retrieveRateFromCache(Market mk) const {
+std::optional<double> FiatConverter::retrieveRateFromCache(Market market) const {
   const auto rateIfYoung = [this, nowTime = Clock::now()](Market mk) -> std::optional<double> {
     const auto it = _pricesMap.find(mk);
     if (it != _pricesMap.end() && nowTime - it->second.lastUpdatedTime < _ratesUpdateFrequency) {
@@ -210,15 +210,15 @@ std::optional<double> FiatConverter::retrieveRateFromCache(Market mk) const {
     }
     return {};
   };
-  const auto directRate = rateIfYoung(mk);
+  const auto directRate = rateIfYoung(market);
   if (directRate) {
     return directRate;
   }
   if (_baseRateSource2.isDefined()) {
     // Try with dual rates from base source.
-    const auto rateBase1 = rateIfYoung(Market(_baseRateSource2, mk.base()));
+    const auto rateBase1 = rateIfYoung(Market(_baseRateSource2, market.base()));
     if (rateBase1) {
-      const auto rateBase2 = rateIfYoung(Market(_baseRateSource2, mk.quote()));
+      const auto rateBase2 = rateIfYoung(Market(_baseRateSource2, market.quote()));
       if (rateBase2) {
         return *rateBase2 / *rateBase1;
       }

@@ -604,7 +604,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
   string lowerCaseMarket = mk.assetsPairStrLower();
 
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
@@ -672,7 +672,7 @@ OrderInfo HuobiPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
 OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
-  const Market mk = tradeContext.mk;
+  const Market mk = tradeContext.market;
 
   string endpoint(kBaseUrlOrders);
   endpoint.append(orderId);

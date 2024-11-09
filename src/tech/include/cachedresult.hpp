@@ -54,14 +54,14 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
 
   struct Value {
     template <class R>
-    Value(R &&result, TimePoint lastUpdatedTs) : result(std::forward<R>(result)), lastUpdatedTs(lastUpdatedTs) {}
+    Value(R &&result, TimePoint lastUpdatedTs) : _result(std::forward<R>(result)), _lastUpdatedTs(lastUpdatedTs) {}
 
     template <class F, class K>
     Value(F &func, K &&key, TimePoint lastUpdatedTs)
-        : result(std::apply(func, std::forward<K>(key))), lastUpdatedTs(lastUpdatedTs) {}
+        : _result(std::apply(func, std::forward<K>(key))), _lastUpdatedTs(lastUpdatedTs) {}
 
-    ResultType result;
-    TimePoint lastUpdatedTs;
+    ResultType _result;
+    TimePoint _lastUpdatedTs;
   };
 
  public:
@@ -90,7 +90,7 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
 
     auto [it, isInserted] =
         _data.try_emplace(TKey(std::forward<Args &&>(funcArgs)...), std::forward<ResultTypeT>(val), timePoint);
-    if (!isInserted && it->second.lastUpdatedTs < timePoint) {
+    if (!isInserted && it->second._lastUpdatedTs < timePoint) {
       it->second = Value(std::forward<ResultTypeT>(val), timePoint);
     }
   }
@@ -114,10 +114,10 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
     auto [it, isInserted] = _data.try_emplace(key, flattenTuple, key, nowTime);
     if (!isInserted && this->_state != State::kForceCache &&
         // less or equal to make sure value is always refreshed for a zero refresh period
-        this->_refreshPeriod <= nowTime - it->second.lastUpdatedTs) {
+        this->_refreshPeriod <= nowTime - it->second._lastUpdatedTs) {
       it->second = Value(flattenTuple, std::move(key), nowTime);
     }
-    return it->second.result;
+    return it->second._result;
   }
 
   /// Retrieve a {pointer, lastUpdateTime} to latest value associated to the key built with given parameters.
@@ -128,7 +128,7 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
     if (it == _data.end()) {
       return {};
     }
-    return {std::addressof(it->second.result), it->second.lastUpdatedTs};
+    return {std::addressof(it->second._result), it->second._lastUpdatedTs};
   }
 
  private:
@@ -142,7 +142,7 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
     const auto nowTime = ClockT::now();
 
     for (auto it = _data.begin(); it != _data.end();) {
-      if (this->_refreshPeriod < nowTime - it->second.lastUpdatedTs) {
+      if (this->_refreshPeriod < nowTime - it->second._lastUpdatedTs) {
         // Data has expired, remove it
         it = _data.erase(it);
       } else {

@@ -265,22 +265,22 @@ json::container PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const API
 
   json::container ret = requestRetry.queryJson(
       endpoint,
-      [endpoint](json::container& ret) {
-        const auto errorCode = BithumbPublic::StatusCodeFromJsonResponse(ret);
+      [endpoint](json::container& jsonResponse) {
+        const auto errorCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
         if (errorCode == 0 || errorCode == BithumbPublic::kStatusNotPresentError) {
           return RequestRetry::Status::kResponseOK;
         }
 
         std::string_view msg;
-        auto messageIt = ret.find("message");
-        if (messageIt != ret.end()) {
+        auto messageIt = jsonResponse.find("message");
+        if (messageIt != jsonResponse.end()) {
           msg = messageIt->get<std::string_view>();
           switch (errorCode) {
             case kBadRequestErrorCode:
               CheckAndLogSynchronizedTime(msg);
               break;
             case kOrderRelatedErrorCode:
-              if (CheckOrderErrors(endpoint, msg, ret)) {
+              if (CheckOrderErrors(endpoint, msg, jsonResponse)) {
                 return RequestRetry::Status::kResponseOK;
               }
               break;
@@ -290,12 +290,11 @@ json::container PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const API
         }
         return RequestRetry::Status::kResponseError;
       },
-      [endpoint, &apiKey](CurlOptions& opts) {
-        auto [strData, nonce] = GetStrData(endpoint, opts.postData().str());
-
+      [endpoint, &apiKey](CurlOptions& curlOptions) {
+        auto [strData, nonce] = GetStrData(endpoint, curlOptions.postData().str());
         auto signature = B64Encode(ssl::Sha512Hex(strData, apiKey.privateKey()));
 
-        SetHttpHeaders(opts, apiKey, signature, nonce);
+        SetHttpHeaders(curlOptions, apiKey, signature, nonce);
       });
 
   return ret;
@@ -851,7 +850,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
 
   // It seems Bithumb uses "standard" currency codes, no need to translate them
   CurlPostData placePostData{{kOrderCurrencyParamStr, mk.base().str()}, {kPaymentCurParamStr, mk.quote().str()}};
@@ -1041,14 +1040,14 @@ CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
 
 void BithumbPrivate::cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext) {
   json::container ret = PrivateQuery(_curlHandle, _apiKey, "/trade/cancel",
-                                     OrderInfoPostData(tradeContext.mk, tradeContext.side, orderId));
+                                     OrderInfoPostData(tradeContext.market, tradeContext.side, orderId));
   if (ret.is_discarded()) {
     log::error("Cancel order process failed for {}, assuming order cancelled", exchangeName());
   }
 }
 
 OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
-  const Market mk = tradeContext.mk;
+  const Market mk = tradeContext.market;
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
 

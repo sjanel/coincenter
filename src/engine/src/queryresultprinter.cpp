@@ -779,11 +779,14 @@ json::container MarketTradingResultsJson(TimeWindow inputTimeWindow, const Repla
                                          CoincenterCommandType commandType) {
   json::container inOpt;
 
-  json::container timeStats;
-  timeStats.emplace("from", TimeToString(inputTimeWindow.from()));
-  timeStats.emplace("to", TimeToString(inputTimeWindow.to()));
+  const auto createTimeStats = [](TimeWindow timeWindow) {
+    json::container ret;
+    ret.emplace("from", TimeToString(timeWindow.from()));
+    ret.emplace("to", TimeToString(timeWindow.to()));
+    return ret;
+  };
 
-  inOpt.emplace("time", std::move(timeStats));
+  inOpt.emplace("time", createTimeStats(inputTimeWindow));
 
   json::container in;
   in.emplace("opt", std::move(inOpt));
@@ -798,18 +801,15 @@ json::container MarketTradingResultsJson(TimeWindow inputTimeWindow, const Repla
         const auto &marketTradingResult = marketGlobalTradingResult.result;
         const auto &stats = marketGlobalTradingResult.stats;
 
-        const auto computeTradeRangeResultsStats = [](const TradeRangeResultsStats &tradeRangeResultsStats) {
-          json::container stats;
-          stats.emplace("nb-successful", tradeRangeResultsStats.nbSuccessful);
-          stats.emplace("nb-error", tradeRangeResultsStats.nbError);
+        const auto computeTradeRangeResultsStats =
+            [&createTimeStats](const TradeRangeResultsStats &tradeRangeResultsStats) {
+              json::container ret;
+              ret.emplace("nb-successful", tradeRangeResultsStats.nbSuccessful);
+              ret.emplace("nb-error", tradeRangeResultsStats.nbError);
 
-          json::container timeStats;
-          timeStats.emplace("from", TimeToString(tradeRangeResultsStats.timeWindow.from()));
-          timeStats.emplace("to", TimeToString(tradeRangeResultsStats.timeWindow.to()));
-
-          stats.emplace("time", std::move(timeStats));
-          return stats;
-        };
+              ret.emplace("time", createTimeStats(tradeRangeResultsStats.timeWindow));
+              return ret;
+            };
 
         json::container startAmounts;
         startAmounts.emplace("base", marketTradingResult.startBaseAmount().str());

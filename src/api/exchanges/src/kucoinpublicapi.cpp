@@ -49,7 +49,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
                             const CurlPostData& curlPostData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, curlPostData));
 
-  json::container jsonResponse = requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
+  json::container baseRet = requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
     const auto errorIt = jsonResponse.find("code");
     if (errorIt != jsonResponse.end() && errorIt->get<std::string_view>() != "200000") {
       log::warn("Full Kucoin error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
@@ -58,8 +58,8 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
     return RequestRetry::Status::kResponseOK;
   });
   json::container ret;
-  const auto dataIt = jsonResponse.find("data");
-  if (dataIt != jsonResponse.end()) {
+  const auto dataIt = baseRet.find("data");
+  if (dataIt != baseRet.end()) {
     ret.swap(*dataIt);
   }
   return ret;

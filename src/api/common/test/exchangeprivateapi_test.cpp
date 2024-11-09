@@ -68,7 +68,7 @@ namespace cct::api {
 
 static inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
   // We don't compare on value userRef which is set from a timestamp
-  return lhs.mk == rhs.mk && lhs.side == rhs.side;
+  return lhs.market == rhs.market && lhs.side == rhs.side;
 }
 
 static inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {

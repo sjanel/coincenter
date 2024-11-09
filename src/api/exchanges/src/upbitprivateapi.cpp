@@ -571,7 +571,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
 
   const std::string_view askOrBid = fromCurrencyCode == mk.base() ? "ask" : "bid";
   const std::string_view marketOrPrice = fromCurrencyCode == mk.base() ? "market" : "price";
@@ -634,14 +634,14 @@ OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
     orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
     cancelledOrderClosed = IsOrderClosed(orderRes);
   }
-  return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.mk);
+  return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.market);
 }
 
 OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   json::container orderRes =
       PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
-  return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.mk);
+  return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.market);
 }
 
 std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {

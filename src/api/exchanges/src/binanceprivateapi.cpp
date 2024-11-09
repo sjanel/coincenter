@@ -672,7 +672,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   BinancePublic& binancePublic = dynamic_cast<BinancePublic&>(_exchangePublic);
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
   const std::string_view buyOrSell = fromCurrencyCode == mk.base() ? "SELL" : "BUY";
   const bool placeSimulatedRealOrder = binancePublic.exchangeConfig().placeSimulateRealOrder();
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
@@ -743,7 +743,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
 OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tradeContext,
                                      HttpRequestType requestType) {
-  const Market mk = tradeContext.mk;
+  const Market mk = tradeContext.market;
   const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::kSell ? mk.base() : mk.quote();
   const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? mk.base() : mk.quote();
   const string assetsStr = mk.assetsPairStrUpper();

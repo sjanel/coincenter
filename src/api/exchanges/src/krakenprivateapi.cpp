@@ -99,12 +99,12 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
         }
         return RequestRetry::Status::kResponseOK;
       },
-      [&apiKey, method](CurlOptions& opts) {
+      [&apiKey, method](CurlOptions& curlOptions) {
         Nonce noncePostData = Nonce_TimeSinceEpochInMs();
-        opts.mutablePostData().set("nonce", noncePostData);
+        curlOptions.mutablePostData().set("nonce", noncePostData);
 
         // concatenate nonce and postdata and compute SHA256
-        noncePostData.append(opts.postData().str());
+        noncePostData.append(curlOptions.postData().str());
 
         // concatenate path and nonce_postdata (path + ComputeSha256(nonce + postdata))
         auto sha256 = ssl::Sha256(noncePostData);
@@ -116,8 +116,8 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
         static constexpr std::string_view kSignatureKey = "API-Sign";
 
         // and compute HMAC
-        opts.mutableHttpHeaders().set_back(kSignatureKey,
-                                           B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
+        curlOptions.mutableHttpHeaders().set_back(kSignatureKey,
+                                                  B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
       });
 
   auto resultIt = ret.find("result");
@@ -533,7 +533,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   const bool isTakerStrategy =
       tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
   const bool isSimulation = tradeInfo.options.isSimulation();
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);
   const MonetaryAmount orderMin = krakenPublic.queryVolumeOrderMin(mk);
   CurrencyExchange krakenCurrencyBase = _exchangePublic.convertStdCurrencyToCurrencyExchange(mk.base());
@@ -622,7 +622,7 @@ void KrakenPrivate::cancelOrderProcess(OrderIdView orderId) {
 OrderInfo KrakenPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext, QueryOrder queryOrder) {
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
-  const Market mk = tradeContext.mk;
+  const Market mk = tradeContext.market;
 
   json::container ordersRes = queryOrdersData(tradeContext.userRef, orderId, queryOrder);
   auto openIt = ordersRes.find("open");

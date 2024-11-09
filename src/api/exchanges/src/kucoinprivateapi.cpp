@@ -484,7 +484,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
     return placeOrderInfo;
   }
 
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
 
   bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
 
@@ -539,7 +539,7 @@ void KucoinPrivate::cancelOrderProcess(OrderIdView orderId) {
 
 OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
-  const Market mk = tradeContext.mk;
+  const Market mk = tradeContext.market;
   string endpoint("/api/v1/orders/");
   endpoint.append(orderId);
 

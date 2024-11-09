@@ -67,16 +67,16 @@ class FiatConverter : public CacheFileUpdatorInterface {
     TimePoint lastUpdatedTime;
   };
 
-  std::optional<double> queryCurrencyRate(Market mk);
+  std::optional<double> queryCurrencyRate(Market market);
 
-  std::optional<double> queryCurrencyRateSource1(Market mk);
-  std::optional<double> queryCurrencyRateSource2(Market mk);
+  std::optional<double> queryCurrencyRateSource1(Market market);
+  std::optional<double> queryCurrencyRateSource2(Market market);
 
-  std::optional<double> retrieveRateFromCache(Market mk) const;
+  std::optional<double> retrieveRateFromCache(Market market) const;
 
-  void store(Market mk, double rate);
+  void store(Market market, double rate);
 
-  void refreshLastUpdatedTime(Market mk);
+  void refreshLastUpdatedTime(Market market);
 
   using PricesMap = std::unordered_map<Market, PriceTimedValue>;
 
