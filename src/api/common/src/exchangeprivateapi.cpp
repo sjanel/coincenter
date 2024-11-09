@@ -551,7 +551,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
 
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
                                                   const TradeInfo &tradeInfo) {
-  const Market mk = tradeInfo.tradeContext.mk;
+  const Market mk = tradeInfo.tradeContext.market;
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
   const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
 

@@ -9,6 +9,7 @@ namespace cct {
 class ExchangeConfig;
 
 namespace api {
+
 class ExchangePermanentCurlOptions {
  public:
   explicit ExchangePermanentCurlOptions(const ExchangeConfig &exchangeConfig);
@@ -20,6 +21,7 @@ class ExchangePermanentCurlOptions {
  private:
   const ExchangeConfig &_exchangeConfig;
 };
+
 }  // namespace api
 
 }  // namespace cct

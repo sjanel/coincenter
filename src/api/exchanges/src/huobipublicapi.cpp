@@ -57,7 +57,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  json::container jsonResponse = requestRetry.queryJson(method, [](const json::container& jsonResponse) {
+  json::container baseRet = requestRetry.queryJson(method, [](const json::container& jsonResponse) {
     const auto dataIt = jsonResponse.find("data");
     if (dataIt == jsonResponse.end()) {
       const auto tickIt = jsonResponse.find("tick");
@@ -69,12 +69,12 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
     return RequestRetry::Status::kResponseOK;
   });
   json::container ret;
-  const auto dataIt = jsonResponse.find("data");
-  if (dataIt != jsonResponse.end()) {
+  const auto dataIt = baseRet.find("data");
+  if (dataIt != baseRet.end()) {
     ret.swap(*dataIt);
   } else {
-    const auto tickIt = jsonResponse.find("tick");
-    if (tickIt != jsonResponse.end()) {
+    const auto tickIt = baseRet.find("tick");
+    if (tickIt != baseRet.end()) {
       ret.swap(*tickIt);
     }
   }

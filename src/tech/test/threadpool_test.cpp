@@ -31,7 +31,7 @@ int SlowAdd(const int &lhs, const int &rhs) {
 }
 
 struct NonCopyable {
-  NonCopyable(int val = 0) : val(val) {}
+  NonCopyable(int value = 0) : val(value) {}
 
   NonCopyable(const NonCopyable &) = delete;
   NonCopyable(NonCopyable &&) = default;

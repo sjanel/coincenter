@@ -482,12 +482,12 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSid
   }
   AmountType integralTotalAmount = *integralTotalAmountOpt;
   const auto countAmount = [volumeNbDecimals, &ret, &integralTotalAmount, cur = amount.currencyCode()](
-                               MonetaryAmount price, const AmountType intAmount) {
+                               MonetaryAmount linePrice, const AmountType intAmount) {
     if (intAmount < integralTotalAmount) {
-      ret.emplace_back(MonetaryAmount(intAmount, cur, volumeNbDecimals), price);
+      ret.emplace_back(MonetaryAmount(intAmount, cur, volumeNbDecimals), linePrice);
       integralTotalAmount -= intAmount;
     } else {
-      ret.emplace_back(MonetaryAmount(integralTotalAmount, cur, volumeNbDecimals), price);
+      ret.emplace_back(MonetaryAmount(integralTotalAmount, cur, volumeNbDecimals), linePrice);
       integralTotalAmount = 0;
     }
   };
