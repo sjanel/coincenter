@@ -88,7 +88,9 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                              api::CommonAPI& commonAPI)
     : ExchangePublic("binance", fiatConverter, commonAPI, coincenterInfo),
-      _commonInfo(coincenterInfo, exchangeConfig(), coincenterInfo.getRunMode()),
+      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+                  coincenterInfo.getRunMode()),
+      _commonInfo(_curlHandle, exchangeConfig()),
       _exchangeConfigCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
           _commonInfo),
@@ -135,11 +137,8 @@ std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode cur
   return withdrawFee;
 }
 
-BinancePublic::CommonInfo::CommonInfo(const CoincenterInfo& coincenterInfo, const ExchangeConfig& exchangeConfig,
-                                      settings::RunMode runMode)
-    : _exchangeConfig(exchangeConfig),
-      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(),
-                  _exchangeConfig.curlOptionsBuilderBase(ExchangeConfig::Api::kPublic).build(), runMode) {}
+BinancePublic::CommonInfo::CommonInfo(CurlHandle& curlHandle, const ExchangeConfig& exchangeConfig)
+    : _exchangeConfig(exchangeConfig), _curlHandle(curlHandle) {}
 
 MarketSet BinancePublic::MarketsFunc::operator()() {
   BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeConfigCache.get();

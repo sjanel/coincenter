@@ -5,6 +5,7 @@
 #include <string_view>
 #include <type_traits>
 
+#include "cache-file-updator-interface.hpp"
 #include "cct_exception.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
@@ -22,7 +23,7 @@
 
 namespace cct {
 
-class Exchange {
+class Exchange : public CacheFileUpdatorInterface {
  public:
   using ExchangePublic = api::ExchangePublic;
   using ExchangePrivate = api::ExchangePrivate;
@@ -112,7 +113,7 @@ class Exchange {
     return name() == exchangeName.name() && (!exchangeName.isKeyNameDefined() || keyName() == exchangeName.keyName());
   }
 
-  void updateCacheFile() const;
+  void updateCacheFile() const override;
 
   /// unique_ptr is always trivially relocatable whatever the underlying type.
   using trivially_relocatable = std::true_type;

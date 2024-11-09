@@ -5,11 +5,11 @@
 #include <optional>
 #include <string_view>
 
+#include "cache-file-updator-interface.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
-#include "exchangebase.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market-order-book-vector.hpp"
 #include "market-timestamp-set.hpp"
@@ -17,6 +17,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
+#include "permanentcurloptions.hpp"
 #include "priceoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "time-window.hpp"
@@ -31,7 +32,7 @@ class FiatConverter;
 
 namespace api {
 
-class ExchangePublic : public ExchangeBase {
+class ExchangePublic : public CacheFileUpdatorInterface {
  public:
   static constexpr int kDefaultDepth = MarketOrderBook::kDefaultDepth;
   static constexpr int kNbLastTradesDefault = 100;
@@ -191,6 +192,9 @@ class ExchangePublic : public ExchangeBase {
   MarketOrderBookVector pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow);
 
  protected:
+  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
+                 const CoincenterInfo &coincenterInfo);
+
   /// Retrieve the order book of given market.
   /// It should be more precise that previous version with possibility to go deeper.
   virtual MarketOrderBook queryOrderBook(Market mk, int depth = kDefaultDepth) = 0;
@@ -198,10 +202,9 @@ class ExchangePublic : public ExchangeBase {
   /// Retrieve an ordered vector of recent last trades
   virtual PublicTradeVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
 
-  friend class ExchangePrivate;
+  PermanentCurlOptions::Builder permanentCurlOptionsBuilder() const;
 
-  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
-                 const CoincenterInfo &coincenterInfo);
+  friend class ExchangePrivate;
 
   std::string_view _name;
   CachedResultVault _cachedResultVault;

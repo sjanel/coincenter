@@ -7,12 +7,12 @@
 #include <string_view>
 
 #include "binance-common-api.hpp"
+#include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
-#include "exchangebase.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
@@ -22,7 +22,7 @@ namespace cct {
 class CoincenterInfo;
 namespace api {
 /// Public API connected to different exchanges, providing fast methods to retrieve huge amount of data.
-class CommonAPI : public ExchangeBase {
+class CommonAPI : public CacheFileUpdatorInterface {
  public:
   enum class AtInit : int8_t { kLoadFromFileCache, kNoLoadFromFileCache };
 

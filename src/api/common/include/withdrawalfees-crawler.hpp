@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
 #include "coincenterinfo.hpp"
@@ -17,7 +18,7 @@ namespace cct {
 
 /// This class is able to crawl some public withdrawal fees web pages in order to retrieve them from unofficial sources,
 /// which is better than nothing. This class is non thread-safe.
-class WithdrawalFeesCrawler {
+class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
  public:
   WithdrawalFeesCrawler(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries,
                         CachedResultVault& cachedResultVault);
@@ -27,7 +28,7 @@ class WithdrawalFeesCrawler {
 
   const WithdrawalInfoMaps& get(std::string_view exchangeName) { return _withdrawalFeesCache.get(exchangeName); }
 
-  void updateCacheFile() const;
+  void updateCacheFile() const override;
 
  private:
   class WithdrawalFeesFunc {

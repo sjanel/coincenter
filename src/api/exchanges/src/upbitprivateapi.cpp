@@ -110,8 +110,8 @@ json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpR
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
     : ExchangePrivate(config, upbitPublic, apiKey),
-      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(), config.getRunMode()),
+      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _apiKey, exchangeConfig(), upbitPublic._commonApi),

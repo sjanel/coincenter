@@ -5,6 +5,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "cache-file-updator-interface.hpp"
 #include "cct_string.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
@@ -33,7 +34,7 @@ class CoincenterInfo;
 /// Fallback mechanism exists if api key does not exist or is expired.
 ///
 /// Conversion methods are thread safe.
-class FiatConverter {
+class FiatConverter : public CacheFileUpdatorInterface {
  public:
   static File GetRatesCacheFile(std::string_view dataDir);
 
@@ -58,7 +59,7 @@ class FiatConverter {
 
   /// Store rates in a file to make data persistent.
   /// This method is not thread-safe and is expected to be called only once before end of normal termination of program.
-  void updateCacheFile() const;
+  void updateCacheFile() const override;
 
  private:
   struct PriceTimedValue {

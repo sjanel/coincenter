@@ -12,7 +12,6 @@
 #include "http-config.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
-#include "permanentcurloptions.hpp"
 #include "timedef.hpp"
 #include "tradeconfig.hpp"
 
@@ -62,8 +61,8 @@ class ExchangeConfig {
 
   /// Apply the general maker fee defined for this exchange on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
-  MonetaryAmount applyFee(MonetaryAmount mk, FeeType feeType) const {
-    return mk * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
+  MonetaryAmount applyFee(MonetaryAmount ma, FeeType feeType) const {
+    return ma * (feeType == FeeType::kMaker ? _generalMakerRatio : _generalTakerRatio);
   }
 
   MonetaryAmount getMakerFeeRatio() const { return _generalMakerRatio; }
@@ -104,10 +103,6 @@ class ExchangeConfig {
   const HttpConfig &httpConfig() const { return _httpConfig; }
 
   const TradeConfig &tradeConfig() const { return _tradeConfig; }
-
-  enum class Api : int8_t { kPublic, kPrivate };
-
-  PermanentCurlOptions::Builder curlOptionsBuilderBase(Api api) const;
 
   bool withMarketDataSerialization() const { return _withMarketSerialization; }
 

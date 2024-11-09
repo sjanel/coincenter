@@ -320,8 +320,8 @@ File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(config, bithumbPublic, apiKey),
-      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(), config.getRunMode()),
+      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+                  config.getRunMode()),
       _currencyOrderInfoRefreshTime(exchangeConfig().getAPICallUpdateFrequency(kCurrencyInfoBithumb)),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),

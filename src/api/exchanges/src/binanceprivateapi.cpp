@@ -223,8 +223,7 @@ json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpR
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(),
-                  exchangeConfig().curlOptionsBuilderBase(ExchangeConfig::Api::kPrivate).build(),
+      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,

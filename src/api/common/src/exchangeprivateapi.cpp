@@ -22,6 +22,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
+#include "exchange-permanent-curl-options.hpp"
 #include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -638,4 +639,7 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
   return {currencyCode};
 }
 
+PermanentCurlOptions::Builder ExchangePrivate::permanentCurlOptionsBuilder() const {
+  return ExchangePermanentCurlOptions(exchangeConfig()).builderBase(ExchangePermanentCurlOptions::Api::Private);
+}
 }  // namespace cct::api
