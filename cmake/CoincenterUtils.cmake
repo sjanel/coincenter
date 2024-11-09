@@ -8,16 +8,6 @@ function(add_coincenter_library name)
   target_set_coincenter_options(coincenter_${name})
 endfunction()
 
-function(add_coincenter_executable name)
-  set(oneValueArgs)
-  set(multiValueArgs)
-  cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
-
-  add_executable(${name} ${MY_UNPARSED_ARGUMENTS})
-
-  target_set_coincenter_options(${name})
-endfunction()
-
 function (target_set_coincenter_options name)
   target_include_directories(${name} PUBLIC include)
 
@@ -46,4 +36,14 @@ function (target_set_coincenter_options name)
   if(CCT_ENABLE_PROTO)
     target_compile_definitions(${name} PRIVATE CCT_ENABLE_PROTO CCT_PROTOBUF_VERSION=\"${PROTOBUF_VERSION}\")
   endif()
+endfunction()
+
+function(add_coincenter_executable name)
+  set(oneValueArgs)
+  set(multiValueArgs)
+  cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+  add_executable(${name} ${MY_UNPARSED_ARGUMENTS})
+
+  target_set_coincenter_options(${name})
 endfunction()

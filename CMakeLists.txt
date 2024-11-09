@@ -114,10 +114,11 @@ endif()
 # Glaze - fast json serialization library
 find_package(glaze CONFIG)
 if(NOT glaze)
+
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v3.6.2.tar.gz
-    URL_HASH SHA256=74b14656b7a47c0a03d0a857adf5059e8c2351a7a84623593be0dd16b293216c
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.0.0.tar.gz
+    URL_HASH SHA256=6114cd6fc2eb39e396e229c7971b2ca5aeb8a670f0dfcd37d6223d766f4afecf
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)

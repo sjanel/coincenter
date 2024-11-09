@@ -37,6 +37,7 @@ add_unit_test(
     src/exchangename.cpp
     test/exchangename_test.cpp
     LIBRARIES
+    coincenter_basic-objects
     coincenter_tech
 )
 
