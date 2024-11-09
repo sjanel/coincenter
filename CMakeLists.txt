@@ -158,8 +158,8 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz
-    URL_HASH SHA256=1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.0.tar.gz
+    URL_HASH SHA256=9962648c9b4f1a7bbc76fd8d9172555bad1871fdb14ff4f842ef87949682caa5
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
