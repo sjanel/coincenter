@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/fmt/bundled/ranges.h>  // TODO: replace with C++23 std::ranges::views::join_with when available
+
 #include <cstdint>
 
 #include "cct_flatset.hpp"

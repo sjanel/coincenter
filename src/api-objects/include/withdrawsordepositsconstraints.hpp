@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/fmt/bundled/ranges.h>  // TODO: replace with C++23 std::ranges::views::join_with when available
+
 #include "baseconstraints.hpp"
 #include "cct_flatset.hpp"
 #include "cct_format.hpp"
