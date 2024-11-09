@@ -9,6 +9,7 @@
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "monetaryamount.hpp"
@@ -24,6 +25,7 @@ namespace cct {
 class CoincenterInfo;
 
 namespace api {
+
 class APIKey;
 class CommonAPI;
 class UpbitPublic;
@@ -74,7 +76,7 @@ class UpbitPrivate : public ExchangePrivate {
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
     CommonAPI& _commonApi;
   };
 

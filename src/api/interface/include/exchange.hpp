@@ -10,7 +10,7 @@
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
-#include "exchangeconfig.hpp"
+#include "exchange-config.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
@@ -29,10 +29,10 @@ class Exchange : public CacheFileUpdatorInterface {
   using ExchangePrivate = api::ExchangePrivate;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
-  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic);
+  Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic);
 
   /// Build a Exchange with both private and public exchanges
-  Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+  Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
            std::unique_ptr<ExchangePrivate> exchangePrivate);
 
   std::string_view name() const { return apiPublic().name(); }
@@ -62,7 +62,7 @@ class Exchange : public CacheFileUpdatorInterface {
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const ExchangeConfig &exchangeConfig() const { return *_pExchangeConfig; }
+  const schema::ExchangeConfig &exchangeConfig() const { return *_pExchangeConfig; }
 
   bool hasPrivateAPI() const { return static_cast<bool>(_exchangePrivate); }
 
@@ -119,7 +119,7 @@ class Exchange : public CacheFileUpdatorInterface {
  private:
   ExchangePublic *_pExchangePublic;
   std::unique_ptr<ExchangePrivate> _exchangePrivate;
-  const ExchangeConfig *_pExchangeConfig;
+  const schema::ExchangeConfig *_pExchangeConfig;
 };
 
 }  // namespace cct

@@ -26,13 +26,6 @@ add_unit_test(
 )
 
 add_unit_test(
-    exchangeconfig_test
-    test/exchangeconfig_test.cpp
-    LIBRARIES
-    coincenter_objects
-)
-
-add_unit_test(
     exchangename_test
     src/exchangename.cpp
     test/exchangename_test.cpp

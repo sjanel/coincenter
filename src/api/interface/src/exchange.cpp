@@ -7,7 +7,6 @@
 #include "cct_log.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
@@ -16,10 +15,10 @@
 
 namespace cct {
 
-Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic)
+Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic)
     : Exchange(exchangeConfig, exchangePublic, std::unique_ptr<ExchangePrivate>()) {}
 
-Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
                    std::unique_ptr<ExchangePrivate> exchangePrivate)
     : _pExchangePublic(std::addressof(exchangePublic)),
       _exchangePrivate(std::move(exchangePrivate)),
@@ -28,7 +27,7 @@ Exchange::Exchange(const ExchangeConfig &exchangeConfig, ExchangePublic &exchang
 std::size_t Exchange::publicExchangePos() const { return PublicExchangePos(name()); }
 
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
-  if (_pExchangeConfig->excludedCurrenciesWithdrawal().contains(currencyCode)) {
+  if (_pExchangeConfig->asset.withdrawExclude.contains(currencyCode)) {
     return false;
   }
   auto lb = currencyExchangeSet.find(currencyCode);

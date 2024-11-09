@@ -44,21 +44,21 @@ class ExchangesBaseTest : public ::testing::Test {
   api::APIKey key3{"test3", "testuser3", "", "", ""};
   api::APIKey key4{"test4", "testuser4", "", "", ""};
   api::APIKey key5{"test5", "testuser5", "", "", ""};
-  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
-  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2,
+  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.exchangeNameEnum()), exchangePublic2,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic2, coincenterInfo, key1)};
-  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key1)};
-  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key2)};
-  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+  Exchange exchange5{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key3)};
-  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+  Exchange exchange6{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key4)};
-  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3,
+  Exchange exchange7{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic3, coincenterInfo, key5)};
-  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+  Exchange exchange8{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key2)};
 
   static constexpr Market m1{"ETH", "EUR"};

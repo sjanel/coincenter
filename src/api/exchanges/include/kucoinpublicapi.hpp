@@ -107,7 +107,7 @@ class KucoinPublic : public ExchangePublic {
     std::pair<MarketSet, MarketInfoMap> operator()();
 
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct AllOrderBooksFunc {
@@ -115,14 +115,12 @@ class KucoinPublic : public ExchangePublic {
 
     CachedResult<MarketsFunc>& _marketsCache;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
   };
 
   struct OrderBookFunc {
     MarketOrderBook operator()(Market mk, int depth);
 
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
   };
 
   struct TradedVolumeFunc {

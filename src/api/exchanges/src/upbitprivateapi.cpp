@@ -33,7 +33,6 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -113,13 +112,16 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
       _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
-          _apiKey, exchangeConfig(), upbitPublic._commonApi),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
+          _curlHandle, _apiKey, exchangeConfig().asset, upbitPublic._commonApi),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
+                              _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
+                              _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
@@ -129,7 +131,7 @@ bool UpbitPrivate::validateApiKey() {
 }
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   CurrencyExchangeVector currencies;
   json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
   for (const json::container& curDetails : result) {
@@ -236,7 +238,8 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet =
+      coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()), currencyCode,
                 std::move(addressIt->get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
@@ -554,12 +557,13 @@ void UpbitPrivate::applyFee(Market mk, CurrencyCode fromCurrencyCode, bool isTak
                             MonetaryAmount& volume) {
   if (fromCurrencyCode == mk.quote()) {
     // For 'buy', from amount is fee excluded
-    const auto feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
-    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.name());
+    const auto feeType = isTakerStrategy ? schema::ExchangeTradeFeesConfig::FeeType::Taker
+                                         : schema::ExchangeTradeFeesConfig::FeeType::Maker;
+    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum());
     if (isTakerStrategy) {
-      from = exchangeConfig.applyFee(from, feeType);
+      from = exchangeConfig.tradeFees.applyFee(from, feeType);
     } else {
-      volume = exchangeConfig.applyFee(volume, feeType);
+      volume = exchangeConfig.tradeFees.applyFee(volume, feeType);
     }
   }
 }
@@ -568,7 +572,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
                                         const TradeInfo& tradeInfo) {
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().query.placeSimulateRealOrder;
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const Market mk = tradeInfo.tradeContext.market;
 

@@ -16,7 +16,6 @@
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi_mock.hpp"
@@ -83,7 +82,7 @@ class ExchangePrivateTest : public ::testing::Test {
   }
 
   TradeInfo computeTradeInfo(const TradeContext &tradeContext, const TradeOptions &tradeOptions) const {
-    TradeOptions resultingTradeOptions(tradeOptions, exchangePublic.exchangeConfig());
+    TradeOptions resultingTradeOptions(tradeOptions, exchangePublic.exchangeConfig().query.trade);
     return {tradeContext, resultingTradeOptions};
   }
 
@@ -125,7 +124,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
   MonetaryAmount vol(from);
   MonetaryAmount pri(bidPrice1);
 
-  PriceOptions priceOptions(PriceStrategy::kTaker);
+  PriceOptions priceOptions(PriceStrategy::taker);
   TradeOptions tradeOptions(priceOptions);
   TradeContext tradeContext(market, TradeSide::kSell);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
@@ -148,7 +147,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   auto [_, pri] = marketOrderBook1.avgPriceAndMatchedAmountTaker(from);
 
   MonetaryAmount vol(from / pri, market.base());
-  PriceOptions priceOptions(PriceStrategy::kTaker);
+  PriceOptions priceOptions(PriceStrategy::taker);
   TradeOptions tradeOptions(priceOptions);
   TradeContext tradeContext(market, TradeSide::kBuy);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
@@ -171,7 +170,7 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
   auto [_, pri] = marketOrderBook1.avgPriceAndMatchedAmountTaker(from);
 
   MonetaryAmount vol(from / pri, market.base());
-  PriceOptions priceOptions(PriceStrategy::kTaker);
+  PriceOptions priceOptions(PriceStrategy::taker);
   TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
                             TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
   TradeContext tradeContext(market, TradeSide::kBuy);
@@ -198,7 +197,7 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyMaker) {
   TradeSide side = TradeSide::kSell;
   TradeContext tradeContext(market, side);
 
-  PriceOptions priceOptions(PriceStrategy::kMaker);
+  PriceOptions priceOptions(PriceStrategy::maker);
   TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
                             TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
@@ -224,7 +223,7 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
   TradeSide side = TradeSide::kSell;
   TradeContext tradeContext(market, side);
 
-  PriceOptions priceOptions(PriceStrategy::kMaker);
+  PriceOptions priceOptions(PriceStrategy::maker);
   TradeOptions tradeOptions(priceOptions);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
@@ -346,8 +345,8 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
   EXPECT_CALL(exchangePrivate, placeOrder(from, vol, pri, tradeInfo)).Times(0);
 
   // In simulation mode, fee is applied
-  MonetaryAmount toAmount =
-      exchangePublic.exchangeConfig().applyFee(from.toNeutral() * askPrice1, ExchangeConfig::FeeType::kMaker);
+  MonetaryAmount toAmount = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      from.toNeutral() * askPrice1, schema::ExchangeTradeFeesConfig::FeeType::Maker);
 
   EXPECT_EQ(exchangePrivate.trade(from, market.quote(), tradeOptions), TradedAmounts(from, toAmount));
 }
@@ -638,7 +637,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   }
 
   std::optional<MonetaryAmount> dustThreshold(CurrencyCode cur) {
-    const auto &dustThresholds = exchangePublic.exchangeConfig().dustAmountsThreshold();
+    const auto &dustThresholds = exchangePublic.exchangeConfig().query.dustAmountsThreshold;
     auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, cur));
     if (dustThresholdLb == dustThresholds.end()) {
       return std::nullopt;
@@ -654,7 +653,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   Market xrpeurMarket{dustCur, "EUR"};
   Market etheurMarket{"ETH", "EUR"};
 
-  PriceOptions priceOptions{PriceStrategy::kTaker};
+  PriceOptions priceOptions{PriceStrategy::taker};
   TradeOptions tradeOptions{priceOptions};
 
   MonetaryAmount xrpbtcBidPri{31, "BTC", 6};

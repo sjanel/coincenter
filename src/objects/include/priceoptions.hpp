@@ -3,11 +3,12 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "exchange-query-config.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptionsdef.hpp"
 
 namespace cct {
-class TradeConfig;
+
 class PriceOptions {
  public:
   /// Constructs a PriceOptions with a maker strategy
@@ -29,7 +30,7 @@ class PriceOptions {
   explicit PriceOptions(RelativePrice relativePrice);
 
   /// Constructs a PriceOptions based on given trade configuration
-  explicit PriceOptions(const TradeConfig &tradeConfig);
+  explicit PriceOptions(const schema::ExchangeQueryTradeConfig &tradeConfig);
 
   constexpr PriceStrategy priceStrategy() const { return _priceStrategy; }
 
@@ -37,7 +38,7 @@ class PriceOptions {
 
   constexpr int relativePrice() const { return _relativePrice; }
 
-  constexpr bool isTakerStrategy() const { return _priceStrategy == PriceStrategy::kTaker; }
+  constexpr bool isTakerStrategy() const { return _priceStrategy == PriceStrategy::taker; }
 
   constexpr bool isFixedPrice() const { return !_fixedPrice.isDefault(); }
 
@@ -47,7 +48,7 @@ class PriceOptions {
     return !isFixedPrice() && !isTakerStrategy() && (!isRelativePrice() || relativePrice() == 0);
   }
 
-  constexpr void switchToTakerStrategy() { _priceStrategy = PriceStrategy::kTaker; }
+  constexpr void switchToTakerStrategy() { _priceStrategy = PriceStrategy::taker; }
 
   std::string_view priceStrategyStr(bool placeRealOrderInSimulationMode) const;
 
@@ -60,7 +61,7 @@ class PriceOptions {
  private:
   MonetaryAmount _fixedPrice;
   RelativePrice _relativePrice = kNoRelativePrice;
-  PriceStrategy _priceStrategy = PriceStrategy::kMaker;
+  PriceStrategy _priceStrategy = PriceStrategy::maker;
   bool _isDefault = true;  // to know if exchanges can use exchange config settings
 };
 }  // namespace cct

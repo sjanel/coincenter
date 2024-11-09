@@ -399,8 +399,7 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
       continue;
     }
 
-    const auto &exchangeConfig =
-        _coincenterInfo.exchangeConfig(kSupportedExchanges[static_cast<int>(exchangesWithThisMarketData[exchangePos])]);
+    const auto &exchangeConfig = _coincenterInfo.exchangeConfig(exchangesWithThisMarketData[exchangePos]);
 
     marketTraderEngines.emplace_back(exchangeConfig, market, startBaseAmount, startQuoteAmount);
   }

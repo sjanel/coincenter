@@ -20,7 +20,7 @@ class TraderCommand {
 
   /// Creates a Place command with given intensity, side and strategy. It should be in the range [0, 100].
   static TraderCommand Place(TradeSide tradeSide, int8_t amountIntensityPercentage = 100,
-                             PriceStrategy priceStrategy = PriceStrategy::kMaker);
+                             PriceStrategy priceStrategy = PriceStrategy::maker);
 
   /// Creates a Cancel command with optional orderId.
   /// If orderId is not specified (or empty string), will cancel all opened orders.
@@ -28,7 +28,7 @@ class TraderCommand {
 
   /// Creates an Update command for specified orderId.
   /// Equivalent to a Cancel and a Place at new price for remaining unmatched amount at the same turn.
-  static TraderCommand UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy = PriceStrategy::kMaker);
+  static TraderCommand UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy = PriceStrategy::maker);
 
   int32_t orderId() const { return _orderId; }
 

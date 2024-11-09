@@ -14,13 +14,13 @@ constexpr std::string_view kTakerStr = "taker";
 
 PriceStrategy StrategyFromStr(std::string_view priceStrategyStr) {
   if (priceStrategyStr == kMakerStr) {
-    return PriceStrategy::kMaker;
+    return PriceStrategy::maker;
   }
   if (priceStrategyStr == kNibbleStr) {
-    return PriceStrategy::kNibble;
+    return PriceStrategy::nibble;
   }
   if (priceStrategyStr == kTakerStr) {
-    return PriceStrategy::kTaker;
+    return PriceStrategy::taker;
   }
 
   throw invalid_argument("Unrecognized price strategy, possible values are '{}', '{}' and '{}'", kMakerStr, kNibbleStr,
@@ -32,11 +32,11 @@ std::string_view PriceStrategyStr(PriceStrategy priceStrategy, bool placeRealOrd
     return kMakerStr;
   }
   switch (priceStrategy) {
-    case PriceStrategy::kMaker:
+    case PriceStrategy::maker:
       return kMakerStr;
-    case PriceStrategy::kNibble:
+    case PriceStrategy::nibble:
       return kNibbleStr;
-    case PriceStrategy::kTaker:
+    case PriceStrategy::taker:
       return kTakerStr;
     default:
       unreachable();

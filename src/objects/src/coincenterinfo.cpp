@@ -10,9 +10,6 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "exchangeconfig.hpp"
-#include "exchangeconfigmap.hpp"
-#include "exchangeconfigparser.hpp"
 #include "general-config.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"
@@ -67,8 +64,7 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
                                const Reader& stableCoinsReader, const Reader& currencyPrefixesReader)
     : _currencyEquiAcronymMap(ComputeCurrencyEquivalentAcronymMap(currencyAcronymsReader)),
       _stableCoinsMap(ComputeStableCoinsMap(stableCoinsReader)),
-      _exchangeConfigMap(ComputeExchangeConfigMap(loadConfiguration.exchangeConfigFileName(),
-                                                  LoadExchangeConfigData(loadConfiguration))),
+      _allExchangeConfigs(loadConfiguration),
       _runMode(runMode),
       _dataDir(loadConfiguration.dataDir()),
       _generalConfig(std::move(generalConfig)),
@@ -100,7 +96,7 @@ CurrencyCode CoincenterInfo::standardizeCurrencyCode(std::string_view currencyCo
   auto maxPrefixLen = std::min(_maxPrefixLen, static_cast<int>(currencyCode.length()));
   string formattedCurrencyCode;
   for (int prefixLen = _minPrefixLen; prefixLen <= maxPrefixLen; ++prefixLen) {
-    string prefix = ToUpper(std::string_view(currencyCode.begin(), currencyCode.begin() + prefixLen));
+    string prefix = ToUpper(currencyCode.substr(0, prefixLen));
     auto lb = _currencyPrefixAcronymMap.lower_bound(prefix);
     if (lb == _currencyPrefixAcronymMap.end()) {
       // given currency code cannot have a prefix present in the map
@@ -131,14 +127,6 @@ CurrencyCode CoincenterInfo::tryConvertStableCoinToFiat(CurrencyCode maybeStable
     return it->second;
   }
   return {};
-}
-
-const ExchangeConfig& CoincenterInfo::exchangeConfig(std::string_view exchangeName) const {
-  auto it = _exchangeConfigMap.find(exchangeName);
-  if (it == _exchangeConfigMap.end()) {
-    throw exception("Unable to find this exchange in the configuration file");
-  }
-  return it->second;
 }
 
 AbstractMetricGateway& CoincenterInfo::metricGateway() const {

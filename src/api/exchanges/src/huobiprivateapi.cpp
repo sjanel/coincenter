@@ -149,7 +149,8 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
                   coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
+                              _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {
@@ -196,7 +197,8 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view tag;
   ExchangeName exchangeName(_huobiPublic.exchangeNameEnum(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeConfig(_huobiPublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet =
+      coincenterInfo.exchangeConfig(_huobiPublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
   auto dataIt = data.find("data");
@@ -607,7 +609,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const Market mk = tradeInfo.tradeContext.market;
   string lowerCaseMarket = mk.assetsPairStrLower();
 
-  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = _exchangePublic.exchangeConfig().query.placeSimulateRealOrder;
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   std::string_view type;
   if (isTakerStrategy) {

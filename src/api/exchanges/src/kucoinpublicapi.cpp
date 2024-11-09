@@ -72,19 +72,25 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
     : ExchangePublic(ExchangeNameEnum::kucoin, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
-          _coincenterInfo, commonAPI),
-      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
+          _curlHandle, _coincenterInfo, commonAPI),
+      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
+                                        _cachedResultVault),
+                    _curlHandle, exchangeConfig().asset),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle, exchangeConfig()),
-      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
+                              _cachedResultVault),
+          _marketsCache, _curlHandle),
+      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
+                                          _cachedResultVault),
+                      _curlHandle),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
+                              _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
+                                       _cachedResultVault),
                    _curlHandle) {}
 
 bool KucoinPublic::healthCheck() {
@@ -146,7 +152,7 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
 
   markets.reserve(static_cast<MarketSet::size_type>(result.size()));
 
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
   for (const json::container& marketDetails : result) {
     const std::string_view baseAsset = marketDetails["baseCurrency"].get<std::string_view>();

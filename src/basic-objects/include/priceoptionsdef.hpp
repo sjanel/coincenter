@@ -4,13 +4,15 @@
 #include <limits>
 #include <string_view>
 
+#include "cct_json-serialization.hpp"
+
 namespace cct {
 enum class PriceStrategy : int8_t {
-  kMaker,   // Place order at limit price.
-  kNibble,  // Buy at 'limit + 1' price, sell at 'limit - 1' price (+-1 referring to previous or next price of the
-            // orderbook). Benefits: you control the price, while at the same time speeding up the order execution
-            // (compared to kMaker)
-  kTaker    // Place order at market price for an expecting direct match
+  maker,   // Place order at limit price.
+  nibble,  // Buy at 'limit + 1' price, sell at 'limit - 1' price (+-1 referring to previous or next price of the
+           // orderbook). Benefits: you control the price, while at the same time speeding up the order execution
+           // (compared to kMaker)
+  taker    // Place order at market price for an expecting direct match
 };
 
 PriceStrategy StrategyFromStr(std::string_view priceStrategyStr);
@@ -26,3 +28,11 @@ using RelativePrice = int32_t;
 static constexpr RelativePrice kNoRelativePrice = std::numeric_limits<RelativePrice>::min();
 
 }  // namespace cct
+
+// To make enum serializable as strings
+template <>
+struct glz::meta<cct::PriceStrategy> {
+  using enum cct::PriceStrategy;
+
+  static constexpr auto value = enumerate(maker, nibble, taker);
+};

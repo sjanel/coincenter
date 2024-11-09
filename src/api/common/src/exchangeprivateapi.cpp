@@ -23,7 +23,6 @@
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
 #include "exchange-permanent-curl-options.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
@@ -90,11 +89,11 @@ void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio &balancePortfo
 TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
                                      const MarketsPath &conversionPath) {
   // Use exchange config settings for un-overriden trade options
-  const auto &exchangeConfig = this->exchangeConfig();
-  const TradeOptions actualOptions(options, exchangeConfig);
-  const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && exchangeConfig.placeSimulateRealOrder();
+  const auto &queryConfig = this->exchangeConfig().query;
+  const TradeOptions actualOptions(options, queryConfig.trade);
+  const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && queryConfig.placeSimulateRealOrder;
   const int nbTrades = static_cast<int>(conversionPath.size());
-  const bool isMultiTradeAllowed = actualOptions.isMultiTradeAllowed(exchangeConfig.multiTradeAllowedByDefault());
+  const bool isMultiTradeAllowed = actualOptions.isMultiTradeAllowed(queryConfig.multiTradeAllowedByDefault);
 
   ExchangeName exchangeName = this->exchangeName();
   log::info("{}rade {} -> {} on {} requested", isMultiTradeAllowed && nbTrades > 1 ? "Multi t" : "T", from, toCurrency,
@@ -142,7 +141,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   TradeContext tradeContext(mk, side, userRef);
   TradeInfo tradeInfo(tradeContext, tradeOptions);
   TradeOptions &options = tradeInfo.options;
-  const bool placeSimulatedRealOrder = exchangeConfig().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = exchangeConfig().query.placeSimulateRealOrder;
 
   enum class NextAction : int8_t { kPlaceInitialOrder, kPlaceLimitOrder, kPlaceMarketOrder, kWait };
 
@@ -477,9 +476,9 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 }
 
 TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
-  const auto &exchangeConfig = this->exchangeConfig();
-  const MonetaryAmountByCurrencySet &dustThresholds = exchangeConfig.dustAmountsThreshold();
-  const int dustSweeperMaxNbTrades = exchangeConfig.dustSweeperMaxNbTrades();
+  const auto &queryConfig = this->exchangeConfig().query;
+  const MonetaryAmountByCurrencySet &dustThresholds = queryConfig.dustAmountsThreshold;
+  const int dustSweeperMaxNbTrades = queryConfig.dustSweeperMaxNbTrades;
   const auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
   const auto eName = exchangeName();
 
@@ -490,8 +489,8 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
   }
   const MonetaryAmount dustThreshold = *dustThresholdLb;
 
-  PriceOptions priceOptions(PriceStrategy::kTaker);
-  TradeOptions tradeOptions(TradeOptions{priceOptions}, exchangeConfig);
+  PriceOptions priceOptions(PriceStrategy::taker);
+  TradeOptions tradeOptions(TradeOptions{priceOptions}, queryConfig.trade);
   MarketSet markets = _exchangePublic.queryTradableMarkets();
   MarketPriceMap marketPriceMap;
   bool checkAmountBalanceAgainstDustThreshold = true;
@@ -557,7 +556,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
   const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
-    if (exchangeConfig().placeSimulateRealOrder()) {
+    if (exchangeConfig().query.placeSimulateRealOrder) {
       log::debug("Place simulate real order - price {} will be overriden", price);
       MarketOrderBook marketOrderbook = _exchangePublic.getOrderBook(mk);
       price = isSell ? marketOrderbook.getHighestTheoreticalPrice() : marketOrderbook.getLowestTheoreticalPrice();
@@ -581,13 +580,14 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
 
 PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
                                                                        const TradeInfo &tradeInfo) const {
-  const bool placeSimulatedRealOrder = exchangeConfig().placeSimulateRealOrder();
+  const bool placeSimulatedRealOrder = exchangeConfig().query.placeSimulateRealOrder;
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
 
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
-  auto feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
-  toAmount = _coincenterInfo.exchangeConfig(_exchangePublic.name()).applyFee(toAmount, feeType);
+  auto feeType = isTakerStrategy ? schema::ExchangeTradeFeesConfig::FeeType::Taker
+                                 : schema::ExchangeTradeFeesConfig::FeeType::Maker;
+  toAmount = _coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).tradeFees.applyFee(toAmount, feeType);
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)),
                                 OrderId("SimulatedOrderId"));
   placeOrderInfo.setClosed();
@@ -641,6 +641,6 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
 }
 
 PermanentCurlOptions::Builder ExchangePrivate::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig()).builderBase(ExchangePermanentCurlOptions::Api::Private);
+  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Private);
 }
 }  // namespace cct::api

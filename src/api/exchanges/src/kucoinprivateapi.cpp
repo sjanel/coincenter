@@ -26,7 +26,6 @@
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -164,7 +163,8 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic&
       _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
+                              _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}
 
 bool KucoinPrivate::validateApiKey() {
@@ -211,7 +211,8 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   std::string_view tag = (memoIt != result.end() && !memoIt->is_null()) ? memoIt->get<std::string_view>() : "";
 
   const CoincenterInfo& coincenterInfo = _kucoinPublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeConfig(_kucoinPublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet =
+      coincenterInfo.exchangeConfig(_kucoinPublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
 
   Wallet wallet(std::move(exchangeName), currencyCode, std::move(result["address"].get_ref<string&>()), tag,
@@ -486,7 +487,8 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   const Market mk = tradeInfo.tradeContext.market;
 
-  bool isTakerStrategy = tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
+  bool isTakerStrategy =
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().query.placeSimulateRealOrder);
 
   KucoinPublic& kucoinPublic = dynamic_cast<KucoinPublic&>(_exchangePublic);
 

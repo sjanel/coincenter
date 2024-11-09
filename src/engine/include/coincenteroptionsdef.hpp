@@ -65,6 +65,8 @@ class CoincenterCmdLineOptionsDefinitions {
       JoinStringView_v<kLastTradesN1, IntToStringView_v<api::ExchangePublic::kNbLastTradesDefault>,
                        CharToStringView_v<')'>>;
 
+  static constexpr std::string_view kPreferredPaymentCurrenciesOptName = "preferredPaymentCurrencies";
+
   static constexpr std::string_view kSmartBuy1 =
       "Attempt to buy the specified amount in total, on matching exchange accounts (all are considered if none "
       "provided)."

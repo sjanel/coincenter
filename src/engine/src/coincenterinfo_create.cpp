@@ -57,7 +57,11 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
   // It will be held by GeneralConfig and then itself by CoincenterInfo though.
   loggingInfo = LoggingInfo(LoggingInfo::WithLoggersCreation::kYes, dataDir, generalConfig.log);
 
-  const LoadConfiguration loadConfiguration(dataDir, LoadConfiguration::ExchangeConfigFileType::kProd);
+  const auto exchangeConfigFileType = runMode == settings::RunMode::kTestKeys
+                                          ? LoadConfiguration::ExchangeConfigFileType::kTest
+                                          : LoadConfiguration::ExchangeConfigFileType::kProd;
+
+  const LoadConfiguration loadConfiguration(dataDir, exchangeConfigFileType);
 
   const File currencyAcronymsTranslatorFile(dataDir, File::Type::kStatic, "currencyacronymtranslator.json",
                                             File::IfError::kThrow);

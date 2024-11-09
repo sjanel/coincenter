@@ -17,8 +17,6 @@
 #include "commonapi.hpp"
 #include "exchange-names.hpp"
 #include "exchange.hpp"
-#include "exchangeconfigmap.hpp"
-#include "exchangeconfigparser.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"
@@ -34,8 +32,6 @@ class ExchangeRetrieverTest : public ::testing::Test {
  protected:
   LoadConfiguration loadConfiguration{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
-  ExchangeConfigMap exchangeConfigMap{
-      ComputeExchangeConfigMap(loadConfiguration.exchangeConfigFileName(), LoadExchangeConfigData(loadConfiguration))};
 
   api::CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
@@ -45,12 +41,12 @@ class ExchangeRetrieverTest : public ::testing::Test {
   api::MockExchangePublic exchangePublic3{ExchangeNameEnum::kucoin, fiatConverter, commonAPI, coincenterInfo};
   api::APIKey key1{"test1", "user1", "", "", ""};
   api::APIKey key2{"test2", "user2", "", "", ""};
-  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+  Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
-  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.name()), exchangePublic2,
+  Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.exchangeNameEnum()), exchangePublic2,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic2, coincenterInfo, key1)};
-  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.name()), exchangePublic3};
-  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic1.name()), exchangePublic1,
+  Exchange exchange3{coincenterInfo.exchangeConfig(exchangePublic3.exchangeNameEnum()), exchangePublic3};
+  Exchange exchange4{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key2)};
 };
 

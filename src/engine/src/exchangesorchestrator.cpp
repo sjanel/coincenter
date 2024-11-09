@@ -498,7 +498,7 @@ ExchangeAmountMarketsPathVector FilterConversionPaths(const ExchangeAmountPairVe
     const int nbMarketsInPath = static_cast<int>(marketsPath.size());
     if (nbMarketsInPath == 1 ||
         (nbMarketsInPath > 1 &&
-         tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeConfig().multiTradeAllowedByDefault()))) {
+         tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeConfig().query.multiTradeAllowedByDefault))) {
       ret.emplace_back(exchangePtr, exchangeAmount, std::move(marketsPath));
     } else {
       log::warn("{} is not convertible{} to {} on {}", fromCurrency,
@@ -642,7 +642,7 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
   SmallVector<bool, kTypicalNbPrivateAccounts> exchangesWithSomePreferredPaymentCurrency(balancePerExchange.size());
   std::ranges::transform(
       balancePerExchange, exchangesWithSomePreferredPaymentCurrency.begin(), [](auto &exchangeBalancePair) {
-        return std::ranges::any_of(exchangeBalancePair.first->exchangeConfig().preferredPaymentCurrencies(),
+        return std::ranges::any_of(exchangeBalancePair.first->exchangeConfig().asset.preferredPaymentCurrencies,
                                    [&](CurrencyCode cur) { return exchangeBalancePair.second.hasSome(cur); });
       });
   FilterVector(balancePerExchange, exchangesWithSomePreferredPaymentCurrency);
@@ -670,13 +670,13 @@ TradeResultPerExchange ExchangesOrchestrator::smartBuy(MonetaryAmount endAmount,
         ++publicExchangePos;
       }
       api::ExchangePublic &exchangePublic = *pExchangePublic;
-      if (nbSteps > 1 &&
-          !tradeOptions.isMultiTradeAllowed(exchangePublic.exchangeConfig().multiTradeAllowedByDefault())) {
+      const auto &exchangeConfig = exchangePublic.exchangeConfig();
+      if (nbSteps > 1 && !tradeOptions.isMultiTradeAllowed(exchangeConfig.query.multiTradeAllowedByDefault)) {
         continue;
       }
       auto &markets = marketsPerPublicExchange[publicExchangePos];
       auto &marketOrderBookMap = marketOrderBooksPerPublicExchange[publicExchangePos];
-      for (CurrencyCode fromCurrency : pExchange->exchangeConfig().preferredPaymentCurrencies()) {
+      for (CurrencyCode fromCurrency : exchangeConfig.asset.preferredPaymentCurrencies) {
         if (fromCurrency == toCurrency) {
           continue;
         }
@@ -776,12 +776,12 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
       for (auto &[pExchange, avAmount] : exchangeAmountPairVector) {
         if (avAmount == 0 ||  // It can be set to 0 in below code
             (nbSteps > 1 &&
-             !tradeOptions.isMultiTradeAllowed(pExchange->exchangeConfig().multiTradeAllowedByDefault()))) {
+             !tradeOptions.isMultiTradeAllowed(pExchange->exchangeConfig().query.multiTradeAllowedByDefault))) {
           ++exchangePos;
           continue;
         }
         MarketSet &markets = *marketSetsPtrPerExchange[exchangePos];
-        for (CurrencyCode toCurrency : pExchange->exchangeConfig().preferredPaymentCurrencies()) {
+        for (CurrencyCode toCurrency : pExchange->exchangeConfig().asset.preferredPaymentCurrencies) {
           if (fromCurrency == toCurrency) {
             continue;
           }

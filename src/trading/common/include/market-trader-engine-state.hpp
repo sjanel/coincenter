@@ -6,7 +6,7 @@
 
 #include "cct_type_traits.hpp"
 #include "closed-order.hpp"
-#include "exchangeconfig.hpp"
+#include "exchange-config.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
@@ -36,19 +36,20 @@ class MarketTraderEngineState {
 
   MonetaryAmount computeSellVolume(TraderCommand traderCommand) const;
 
-  void placeBuyOrder(const ExchangeConfig &exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
+  void placeBuyOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
                      MonetaryAmount price, MonetaryAmount matchedVolume, MonetaryAmount from,
-                     ExchangeConfig::FeeType feeType);
+                     schema::ExchangeTradeFeesConfig::FeeType feeType);
 
-  void placeSellOrder(const ExchangeConfig &exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
-                      MonetaryAmount price, MonetaryAmount matchedVolume, ExchangeConfig::FeeType feeType);
+  void placeSellOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
+                      MonetaryAmount remainingVolume, MonetaryAmount price, MonetaryAmount matchedVolume,
+                      schema::ExchangeTradeFeesConfig::FeeType feeType);
 
   auto nextOrderId() { return IntegralToString(++_nextOrderId); }
 
   void adjustOpenedOrderRemainingVolume(const OpenedOrder &matchedOrder, MonetaryAmount newMatchedVolume);
 
-  void countMatchedPart(const ExchangeConfig &exchangeConfig, const OpenedOrder &matchedOrder, MonetaryAmount price,
-                        MonetaryAmount newMatchedVolume, TimePoint matchedTime);
+  void countMatchedPart(const schema::ExchangeConfig &exchangeConfig, const OpenedOrder &matchedOrder,
+                        MonetaryAmount price, MonetaryAmount newMatchedVolume, TimePoint matchedTime);
 
   void cancelOpenedOrder(int32_t orderId);
 

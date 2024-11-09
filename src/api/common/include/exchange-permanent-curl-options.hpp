@@ -2,24 +2,23 @@
 
 #include <cstdint>
 
+#include "exchange-query-config.hpp"
 #include "permanentcurloptions.hpp"
 
 namespace cct {
-
-class ExchangeConfig;
 
 namespace api {
 
 class ExchangePermanentCurlOptions {
  public:
-  explicit ExchangePermanentCurlOptions(const ExchangeConfig &exchangeConfig);
+  explicit ExchangePermanentCurlOptions(const schema::ExchangeQueryConfig &queryConfig);
 
   enum class Api : int8_t { Public, Private };
 
   PermanentCurlOptions::Builder builderBase(Api api) const;
 
  private:
-  const ExchangeConfig &_exchangeConfig;
+  const schema::ExchangeQueryConfig &_queryConfig;
 };
 
 }  // namespace api

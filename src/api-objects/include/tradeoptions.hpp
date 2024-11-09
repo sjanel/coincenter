@@ -3,13 +3,14 @@
 #include <string_view>
 
 #include "cct_string.hpp"
+#include "exchange-query-config.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "timedef.hpp"
 #include "tradedefinitions.hpp"
 
 namespace cct {
-class ExchangeConfig;
+
 class TradeOptions {
  public:
   static constexpr Duration kDefaultMinTimeBetweenPriceUpdates = seconds(5);
@@ -28,7 +29,7 @@ class TradeOptions {
                TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
 
   /// Constructs a new TradeOptions based on 'rhs' with unspecified options overriden from exchange config values
-  TradeOptions(const TradeOptions &rhs, const ExchangeConfig &exchangeConfig);
+  TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryTradeConfig &exchangeTradeConfig);
 
   constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 

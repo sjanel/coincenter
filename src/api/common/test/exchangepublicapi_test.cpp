@@ -11,7 +11,6 @@
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -194,8 +193,9 @@ TEST_F(ExchangePublicConvertTest, ConvertSimple) {
   std::optional<MonetaryAmount> ret =
       exchangePublic.convert(from, toCurrency, conversionPath, fiats, marketOrderBookMap, priceOptions);
   ASSERT_TRUE(ret.has_value());
-  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  MonetaryAmount res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
   EXPECT_EQ(ret, std::optional<MonetaryAmount>(res));
 }
 
@@ -209,10 +209,12 @@ TEST_F(ExchangePublicConvertTest, ConvertDouble) {
 
   ASSERT_TRUE(ret.has_value());
 
-  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
-  res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  MonetaryAmount res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
+  res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook2.convert(res, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
   EXPECT_EQ(ret.value_or(MonetaryAmount{}), res);
 }
 
@@ -230,9 +232,9 @@ TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtBeginning) {
 
   ASSERT_TRUE(optRes.has_value());
 
-  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
+  MonetaryAmount res = exchangePublic.exchangeConfig().tradeFees.applyFee(
       marketOrderBook3.convert(optRes.value_or(MonetaryAmount{}), priceOptions).value_or(MonetaryAmount{-1}),
-      ExchangeConfig::FeeType::kMaker);
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
 
   EXPECT_EQ(ret.value_or(MonetaryAmount{}), res);
 }
@@ -248,12 +250,15 @@ TEST_F(ExchangePublicConvertTest, ConvertWithFiatAtEnd) {
 
   ASSERT_TRUE(ret.has_value());
 
-  MonetaryAmount res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
-  res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook4.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
-  res = exchangePublic.exchangeConfig().applyFee(
-      marketOrderBook3.convert(res, priceOptions).value_or(MonetaryAmount{-1}), ExchangeConfig::FeeType::kMaker);
+  MonetaryAmount res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook1.convert(from, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
+  res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook4.convert(res, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
+  res = exchangePublic.exchangeConfig().tradeFees.applyFee(
+      marketOrderBook3.convert(res, priceOptions).value_or(MonetaryAmount{-1}),
+      schema::ExchangeTradeFeesConfig::FeeType::Maker);
 
   EXPECT_EQ(ret, fiatConverter.convert(res, toCurrency));
 }

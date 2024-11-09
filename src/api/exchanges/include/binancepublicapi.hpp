@@ -10,6 +10,7 @@
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
@@ -21,7 +22,6 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeConfig;
 class FiatConverter;
 
 namespace api {
@@ -76,9 +76,7 @@ class BinancePublic : public ExchangePublic {
   MonetaryAmount computePriceForNotional(Market mk, int avgPriceMins);
 
   struct CommonInfo {
-    CommonInfo(CurlHandle& curlHandle, const ExchangeConfig& exchangeConfig);
-
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
     CurlHandle& _curlHandle;
   };
 
@@ -95,7 +93,7 @@ class BinancePublic : public ExchangePublic {
 
     CachedResult<ExchangeInfoFunc>& _exchangeConfigCache;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct AllOrderBooksFunc {

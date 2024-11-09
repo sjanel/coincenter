@@ -102,19 +102,24 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
     : ExchangePublic(ExchangeNameEnum::kraken, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
-          commonAPI, _curlHandle, exchangeConfig()),
-      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _tradableCurrenciesCache, config, _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
+          config, commonAPI, _curlHandle, exchangeConfig().asset),
+      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
+                                        _cachedResultVault),
+                    _tradableCurrenciesCache, config, _curlHandle, exchangeConfig().asset),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
+                              _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
-      _orderBookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
+      _orderBookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
+                                          _cachedResultVault),
                       _tradableCurrenciesCache, _marketsCache, _curlHandle),
-      _tickerCache(CachedResultOptions(std::min(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume),
-                                                exchangeConfig().getAPICallUpdateFrequency(kLastPrice)),
-                                       _cachedResultVault),
-                   _tradableCurrenciesCache, _curlHandle) {}
+      _tickerCache(
+          CachedResultOptions(std::min(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
+                                       exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration),
+                              _cachedResultVault),
+          _tradableCurrenciesCache, _curlHandle) {}
 
 bool KrakenPublic::healthCheck() {
   json::container result =
@@ -146,7 +151,7 @@ std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode curr
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
   json::container result = PublicQuery(_curlHandle, "/public/Assets");
   CurrencyExchangeVector currencies;
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   for (const auto& [krakenAssetName, value] : result.items()) {
     std::string_view altCodeStr = value["altname"].get<std::string_view>();
     if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _coincenterInfo)) {
@@ -171,7 +176,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
   ret.second.reserve(result.size());
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
   for (const auto& [key, value] : result.items()) {
     if (!value.contains("ordermin")) {

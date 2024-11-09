@@ -15,7 +15,7 @@ TraderCommand::TraderCommand(Type type, int32_t orderId, int8_t amountIntensityP
       _amountIntensityPercentage(amountIntensityPercentage),
       _priceStrategy(priceStrategy) {}
 
-TraderCommand TraderCommand::Wait() { return {Type::kWait, kAllOrdersId, 0, PriceStrategy::kMaker}; }
+TraderCommand TraderCommand::Wait() { return {Type::kWait, kAllOrdersId, 0, PriceStrategy::maker}; }
 
 TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPercentage, PriceStrategy priceStrategy) {
   if (amountIntensityPercentage > 100 || amountIntensityPercentage <= 0) {
@@ -42,7 +42,7 @@ TraderCommand TraderCommand::Cancel(OrderIdView orderId) {
   } else {
     orderIdInt = kAllOrdersId;
   }
-  return {Type::kCancel, orderIdInt, 0, PriceStrategy::kMaker};
+  return {Type::kCancel, orderIdInt, 0, PriceStrategy::maker};
 }
 
 TraderCommand TraderCommand::UpdatePrice(OrderIdView orderId, PriceStrategy priceStrategy) {

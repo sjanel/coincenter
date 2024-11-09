@@ -26,7 +26,6 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "exchange-permanent-curl-options.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "market-order-book-vector.hpp"
@@ -67,7 +66,7 @@ ExchangePublic::ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter 
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
-      _exchangeConfig(coincenterInfo.exchangeConfig(name())),
+      _exchangeConfig(coincenterInfo.exchangeConfig(_exchangeNameEnum)),
       _marketDataDeserializerPtr(new MarketDataDeserializer(coincenterInfo.dataDir(), name())) {}
 
 ExchangePublic::~ExchangePublic() = default;
@@ -82,8 +81,8 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
   if (conversionPath.empty()) {
     return std::nullopt;
   }
-  const ExchangeConfig::FeeType feeType =
-      priceOptions.isTakerStrategy() ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+  const auto feeType = priceOptions.isTakerStrategy() ? schema::ExchangeTradeFeesConfig::FeeType::Taker
+                                                      : schema::ExchangeTradeFeesConfig::FeeType::Maker;
 
   if (marketOrderBookMap.empty()) {
     std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
@@ -127,7 +126,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
         if (!optA) {
           return std::nullopt;
         }
-        from = _exchangeConfig.applyFee(*optA, feeType);
+        from = _exchangeConfig.tradeFees.applyFee(*optA, feeType);
         break;
       }
       default:
@@ -321,7 +320,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, Mo
   int depth = 1;
   if (priceOptions.isRelativePrice()) {
     depth = std::abs(priceOptions.relativePrice());
-  } else if (priceOptions.priceStrategy() == PriceStrategy::kTaker) {
+  } else if (priceOptions.priceStrategy() == PriceStrategy::taker) {
     depth = kDefaultDepth;
   }
   return getOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
@@ -476,7 +475,7 @@ MarketOrderBook ExchangePublic::getOrderBook(Market mk, int depth) {
   std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
   const auto marketOrderBook = queryOrderBook(mk, depth);
 
-  if (_exchangeConfig.withMarketDataSerialization()) {
+  if (_exchangeConfig.query.marketDataSerialization) {
     getMarketDataSerializer().push(marketOrderBook);
   }
   return marketOrderBook;
@@ -487,7 +486,7 @@ PublicTradeVector ExchangePublic::getLastTrades(Market mk, int nbTrades) {
   std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
   const auto lastTrades = queryLastTrades(mk, nbTrades);
 
-  if (_exchangeConfig.withMarketDataSerialization()) {
+  if (_exchangeConfig.query.marketDataSerialization) {
     getMarketDataSerializer().push(mk, lastTrades);
   }
   return lastTrades;
@@ -531,7 +530,7 @@ AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
 }
 
 PermanentCurlOptions::Builder ExchangePublic::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig()).builderBase(ExchangePermanentCurlOptions::Api::Public);
+  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Public);
 }
 
 }  // namespace cct::api

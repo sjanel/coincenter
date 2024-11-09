@@ -4,6 +4,7 @@
 
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "static_string_view_helpers.hpp"
@@ -12,7 +13,6 @@
 namespace cct {
 
 class CoincenterInfo;
-class ExchangeConfig;
 
 namespace api {
 class CommonAPI;
@@ -72,7 +72,7 @@ class KrakenPublic : public ExchangePublic {
     const CoincenterInfo& _coincenterInfo;
     CommonAPI& _commonApi;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct MarketsFunc {
@@ -88,7 +88,7 @@ class KrakenPublic : public ExchangePublic {
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     const CoincenterInfo& _coincenterInfo;
     CurlHandle& _curlHandle;
-    const ExchangeConfig& _exchangeConfig;
+    const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct AllOrderBooksFunc {

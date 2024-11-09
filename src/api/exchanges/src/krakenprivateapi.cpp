@@ -28,7 +28,6 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "exchangeconfig.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -134,7 +133,8 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
       _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   config.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kDepositWallet), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
+                              _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
 bool KrakenPrivate::validateApiKey() {
@@ -218,7 +218,8 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
+  bool doCheckWallet =
+      coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   string address;
   string tag;
@@ -531,7 +532,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   const CurrencyCode fromCurrencyCode(tradeInfo.tradeContext.fromCur());
   const CurrencyCode toCurrencyCode(tradeInfo.tradeContext.toCur());
   const bool isTakerStrategy =
-      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().placeSimulateRealOrder());
+      tradeInfo.options.isTakerStrategy(_exchangePublic.exchangeConfig().query.placeSimulateRealOrder);
   const bool isSimulation = tradeInfo.options.isSimulation();
   const Market mk = tradeInfo.tradeContext.market;
   KrakenPublic& krakenPublic = dynamic_cast<KrakenPublic&>(_exchangePublic);

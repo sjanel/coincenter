@@ -87,24 +87,31 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::huobi, fiatConverter, commonAPI, config),
       _curlHandle(kURLBases, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
-      _healthCheckCurlHandle(
-          kHealthCheckBaseUrl, config.metricGatewayPtr(),
-          PermanentCurlOptions::Builder().setMinDurationBetweenQueries(exchangeConfig().publicAPIRate()).build(),
-          config.getRunMode()),
+      _healthCheckCurlHandle(kHealthCheckBaseUrl, config.metricGatewayPtr(),
+                             PermanentCurlOptions::Builder()
+                                 .setMinDurationBetweenQueries(exchangeConfig().query.publicAPIRate.duration)
+                                 .build(),
+                             config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
+                              _cachedResultVault),
           _curlHandle),
-      _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
-                    _curlHandle, exchangeConfig()),
+      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
+                                        _cachedResultVault),
+                    _curlHandle, exchangeConfig().asset),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle, exchangeConfig()),
-      _orderbookCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kOrderBook), _cachedResultVault),
-                      _curlHandle, exchangeConfig()),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
+                              _cachedResultVault),
+          _marketsCache, _curlHandle),
+      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
+                                          _cachedResultVault),
+                      _curlHandle),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kTradedVolume), _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
+                              _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kLastPrice), _cachedResultVault),
+      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
+                                       _cachedResultVault),
                    _curlHandle) {}
 
 bool HuobiPublic::healthCheck() {
@@ -217,7 +224,7 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
 
   markets.reserve(static_cast<MarketSet::size_type>(result.size()));
 
-  const CurrencyCodeSet& excludedCurrencies = _exchangeConfig.excludedCurrenciesAll();
+  const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
   for (const json::container& marketDetails : result) {
     std::string_view baseAsset = marketDetails["base-currency"].get<std::string_view>();
