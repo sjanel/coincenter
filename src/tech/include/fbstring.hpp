@@ -1231,13 +1231,16 @@ class basic_fbstring {
 
   /// \sjanel - Added constructors from ssp::basic_string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  explicit basic_fbstring(const SV& sv, const A& = A()) : basic_fbstring(sv.data(), sv.size()) {}
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  explicit basic_fbstring(const SV& sv, const A& = A()) : basic_fbstring(static_cast<std::basic_string_view<E, T>>(sv).data(),
+                                                                         static_cast<std::basic_string_view<E, T>>(sv).size()) {}
 
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
   explicit basic_fbstring(const SV& sv, size_type pos, size_type n, const A& = A())
-    : basic_fbstring(sv.substr(pos, n)) {}
+    : basic_fbstring(static_cast<std::basic_string_view<E, T>>(sv).substr(pos, n)) {}
 
   ~basic_fbstring() noexcept {}
 
@@ -1398,7 +1401,8 @@ class basic_fbstring {
 
   /// \sjanel - Add operator+= string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
   basic_fbstring& operator+=(const SV& sv) { return append(sv); }
 
   basic_fbstring& append(const basic_fbstring& str);
@@ -1426,8 +1430,10 @@ class basic_fbstring {
 
   /// \sjanel - Add append string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  basic_fbstring& append(const SV& sv) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  basic_fbstring& append(const SV& svLike) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return append(sv.begin(), sv.end());
   }
 
@@ -1576,8 +1582,10 @@ class basic_fbstring {
 
   /// \sjanel - Add replace from string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  basic_fbstring& replace(size_type pos1, size_type n1, const SV& sv) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  basic_fbstring& replace(size_type pos1, size_type n1, const SV& svLike) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return replace(pos1, n1, sv.data(), sv.size());
   }
 
@@ -1627,18 +1635,21 @@ class basic_fbstring {
 
   /// \sjanel - Add replace from string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  basic_fbstring& replace(const_iterator i1, const_iterator i2, const SV& sv) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  basic_fbstring& replace(const_iterator i1, const_iterator i2, const SV& svLike) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return replace(i1, i2, sv.data(), sv.length());
   }
 
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  basic_fbstring& replace(size_type pos1, size_type n1, const SV& sv,
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  basic_fbstring& replace(size_type pos1, size_type n1, const SV& svLike,
                           size_type pos2, size_type n2 = npos) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     enforce<std::out_of_range>(pos2 <= sv.length(), "");
-    return replace(
-        pos1, n1, sv.data() + pos2, std::min(n2, sv.size() - pos2));
+    return replace(pos1, n1, sv.data() + pos2, std::min(n2, sv.size() - pos2));
   }
 
  private:
@@ -1743,8 +1754,10 @@ class basic_fbstring {
 
   /// \sjanel - Add find string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type find(const SV& sv, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type find(const SV& svLike, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return find(sv.data(), pos, sv.length());
   }
 
@@ -1764,8 +1777,10 @@ class basic_fbstring {
 
   /// \sjanel - Add rfind string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type rfind(const SV& sv, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type rfind(const SV& svLike, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return rfind(sv.data(), pos, sv.length());
   }
 
@@ -1786,8 +1801,10 @@ class basic_fbstring {
 
   /// \sjanel - Add find_first_of string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type find_first_of(const SV& sv, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type find_first_of(const SV& svLike, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return find_first_of(sv.data(), pos, sv.length());
   }
 
@@ -1808,8 +1825,10 @@ class basic_fbstring {
 
   /// \sjanel - Add find_last_of string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type find_last_of(const SV& sv, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type find_last_of(const SV& svLike, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return find_last_of(sv.data(), pos, sv.length());
   }
 
@@ -1831,8 +1850,10 @@ class basic_fbstring {
 
   /// \sjanel - Add find_first_not_of string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type find_first_not_of(const SV& sv, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type find_first_not_of(const SV& svLike, size_type pos = 0) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return find_first_not_of(sv.data(), pos, sv.length());
   }
 
@@ -1854,8 +1875,10 @@ class basic_fbstring {
 
   /// \sjanel - Add find_last_not_of string_view
   template <class SV, typename std::enable_if<std::is_convertible<const SV&, std::basic_string_view<E, T> >::value &&
-                                             !std::is_convertible<const SV&, const E*>::value, bool>::type = true>
-  size_type find_last_not_of(const SV& sv, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+                                             !std::is_convertible<const SV&, const E*>::value &&
+                                             !std::is_convertible<const SV*, const basic_fbstring*>::value, bool>::type = true>
+  size_type find_last_not_of(const SV& svLike, size_type pos = npos) const noexcept(std::is_nothrow_convertible_v<const SV&, std::basic_string_view<E, T>>) {
+    auto sv = static_cast<std::basic_string_view<E, T>>(svLike);
     return find_last_not_of(sv.data(), pos, sv.length());
   }
 
