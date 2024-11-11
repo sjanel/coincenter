@@ -40,7 +40,6 @@
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
-#include "runmodes.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
 #include "volumeandpricenbdecimals.hpp"

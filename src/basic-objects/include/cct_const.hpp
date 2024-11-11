@@ -9,7 +9,7 @@
 
 namespace cct {
 
-enum class SupportedExchangeName : int8_t { binance, bithumb, huobi, kraken, kucoin, upbit };
+enum class ExchangeNameEnum : int8_t { binance, bithumb, huobi, kraken, kucoin, upbit };
 
 static constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
 
@@ -32,8 +32,8 @@ static constexpr std::string_view kExchangeConfigFileName = "exchangeconfig.json
 
 // To make enum serializable as strings
 template <>
-struct glz::meta<cct::SupportedExchangeName> {
-  using enum cct::SupportedExchangeName;
+struct glz::meta<cct::ExchangeNameEnum> {
+  using enum cct::ExchangeNameEnum;
 
   static constexpr auto value = enumerate(binance, bithumb, huobi, kraken, kucoin, upbit);
 };
@@ -41,7 +41,7 @@ struct glz::meta<cct::SupportedExchangeName> {
 namespace cct {
 
 /// Ordered list of supported exchange names.
-static constexpr auto kSupportedExchanges = json::reflect<SupportedExchangeName>::keys;
+static constexpr auto kSupportedExchanges = json::reflect<ExchangeNameEnum>::keys;
 
 static_assert(std::ranges::is_sorted(kSupportedExchanges));
 

@@ -33,6 +33,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
+#include "permanentcurloptions.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "public-trade-vector.hpp"

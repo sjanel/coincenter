@@ -34,6 +34,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "orderid.hpp"
+#include "permanentcurloptions.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "recentdeposit.hpp"

@@ -31,3 +31,12 @@ add_unit_test(
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
+
+add_unit_test(
+    monetaryamountbycurrencyset_test
+    test/monetaryamountbycurrencyset_test.cpp
+    LIBRARIES
+    coincenter_basic-objects
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
