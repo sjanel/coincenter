@@ -4,6 +4,7 @@
 
 #include <optional>
 
+#include "cct_const.hpp"
 #include "commonapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -14,9 +15,9 @@
 namespace cct::api {
 class MockExchangePublic : public ExchangePublic {
  public:
-  MockExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
+  MockExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
                      const CoincenterInfo &config)
-      : ExchangePublic(name, fiatConverter, commonApi, config) {}
+      : ExchangePublic(exchangeNameEnum, fiatConverter, commonApi, config) {}
 
   MOCK_METHOD(bool, healthCheck, (), (override));
   MOCK_METHOD(CurrencyExchangeFlatSet, queryTradableCurrencies, (), (override));

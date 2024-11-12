@@ -11,6 +11,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -68,7 +69,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 }  // namespace
 
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
-    : ExchangePublic("kucoin", fiatConverter, commonAPI, config),
+    : ExchangePublic(ExchangeNameEnum::kucoin, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
@@ -91,16 +92,16 @@ bool KucoinPublic::healthCheck() {
       json::container::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet)));
   auto dataIt = result.find("data");
   if (dataIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    log::error("Unexpected answer from {} status: {}", name(), result.dump());
     return false;
   }
   auto statusIt = dataIt->find("status");
   if (statusIt == dataIt->end()) {
-    log::error("Unexpected answer from {} status: {}", _name, dataIt->dump());
+    log::error("Unexpected answer from {} status: {}", name(), dataIt->dump());
     return false;
   }
   std::string_view statusStr = statusIt->get<std::string_view>();
-  log::info("{} status: {}", _name, statusStr);
+  log::info("{} status: {}", name(), statusStr);
   return statusStr == "open";
 }
 
@@ -190,10 +191,10 @@ MonetaryAmountByCurrencySet KucoinPublic::queryWithdrawalFees() {
   fees.reserve(tradableCurrencies.size());
   for (const TradableCurrenciesFunc::CurrencyInfo& curDetail : tradableCurrencies) {
     fees.push_back(curDetail.withdrawalMinFee);
-    log::trace("Retrieved {} withdrawal fee {}", _name, curDetail.withdrawalMinFee);
+    log::trace("Retrieved {} withdrawal fee {}", name(), curDetail.withdrawalMinFee);
   }
 
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
+  log::info("Retrieved {} withdrawal fees for {} coins", name(), fees.size());
   return MonetaryAmountByCurrencySet(std::move(fees));
 }
 

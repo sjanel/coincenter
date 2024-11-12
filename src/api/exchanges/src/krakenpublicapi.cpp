@@ -9,6 +9,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
@@ -98,7 +99,7 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 }  // namespace
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
-    : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
+    : ExchangePublic(ExchangeNameEnum::kraken, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
@@ -120,21 +121,21 @@ bool KrakenPublic::healthCheck() {
       json::container::parse(_curlHandle.query("/public/SystemStatus", CurlOptions(HttpRequestType::kGet)));
   auto errorIt = result.find("error");
   if (errorIt != result.end() && !errorIt->empty()) {
-    log::error("Error in {} status: {}", _name, errorIt->dump());
+    log::error("Error in {} status: {}", name(), errorIt->dump());
     return false;
   }
   auto resultIt = result.find("result");
   if (resultIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    log::error("Unexpected answer from {} status: {}", name(), result.dump());
     return false;
   }
   auto statusIt = resultIt->find("status");
   if (statusIt == resultIt->end()) {
-    log::error("Unexpected answer from {} status: {}", _name, resultIt->dump());
+    log::error("Unexpected answer from {} status: {}", name(), resultIt->dump());
     return false;
   }
   std::string_view statusStr = statusIt->get<std::string_view>();
-  log::info("{} status: {}", _name, statusStr);
+  log::info("{} status: {}", name(), statusStr);
   return statusStr == "online";
 }
 

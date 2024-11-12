@@ -58,7 +58,7 @@ class ExchangePublicTest : public ::testing::Test {
                                 MonitoringInfo(), Reader(),          StableCoinReader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), FiatConverterReader()};
-  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
+  MockExchangePublic exchangePublic{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
 
   MarketSet markets{{"BTC", "EUR"}, {"XLM", "EUR"},  {"ETH", "EUR"},  {"ETH", "BTC"},  {"BTC", "KRW"},
                     {"USD", "EOS"}, {"SHIB", "ICP"}, {"AVAX", "ICP"}, {"AVAX", "USDT"}};

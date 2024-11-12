@@ -11,6 +11,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -63,7 +64,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 }  // namespace
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
-    : ExchangePublic("upbit", fiatConverter, commonAPI, config),
+    : ExchangePublic(ExchangeNameEnum::upbit, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _marketsCache(CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kMarkets), _cachedResultVault),
                     _curlHandle, exchangeConfig()),
@@ -71,7 +72,7 @@ UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConver
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), _curlHandle,
           _marketsCache),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), _name,
+          CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kWithdrawalFees), _cachedResultVault), name(),
           config.dataDir()),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kAllOrderBooks), _cachedResultVault),
@@ -90,12 +91,12 @@ bool UpbitPublic::healthCheck() {
       _curlHandle.query("/v1/ticker", CurlOptions(HttpRequestType::kGet, {{"markets", "KRW-BTC"}})), nullptr,
       kAllowExceptions);
   if (result.is_discarded()) {
-    log::error("{} health check response badly formatted", _name);
+    log::error("{} health check response badly formatted", name());
     return false;
   }
   auto errorIt = result.find("error");
   if (errorIt != result.end()) {
-    log::error("Error in {} status: {}", _name, errorIt->dump());
+    log::error("Error in {} status: {}", name(), errorIt->dump());
     return false;
   }
   return !result.empty() && result.is_array() && result.front().find("timestamp") != result.front().end();

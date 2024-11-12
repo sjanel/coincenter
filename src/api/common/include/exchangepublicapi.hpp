@@ -1,11 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string_view>
 
 #include "cache-file-updator-interface.hpp"
+#include "cct_const.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -117,8 +119,10 @@ class ExchangePublic : public CacheFileUpdatorInterface {
 
   CurrencyCodeSet queryFiats() { return _commonApi.queryFiats(); }
 
+  ExchangeNameEnum exchangeNameEnum() const { return _exchangeNameEnum; }
+
   /// Get the name of the exchange in lower case.
-  std::string_view name() const { return _name; }
+  std::string_view name() const { return kSupportedExchanges[static_cast<int>(_exchangeNameEnum)]; }
 
   /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
   /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.
@@ -192,7 +196,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   MarketOrderBookVector pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow);
 
  protected:
-  ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
+  ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
                  const CoincenterInfo &coincenterInfo);
 
   /// Retrieve the order book of given market.
@@ -206,7 +210,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
 
   friend class ExchangePrivate;
 
-  std::string_view _name;
+  ExchangeNameEnum _exchangeNameEnum;
   CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
   CommonAPI &_commonApi;

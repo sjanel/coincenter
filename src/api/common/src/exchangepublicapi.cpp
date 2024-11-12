@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "cct_allocator.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_flatset.hpp"
 #include "cct_log.hpp"
@@ -60,14 +61,14 @@ using MarketDataDeserializer = DummyMarketDataDeserializer;
 using MarketDataSerializer = DummyMarketDataSerializer;
 #endif
 
-ExchangePublic::ExchangePublic(std::string_view name, FiatConverter &fiatConverter, CommonAPI &commonApi,
+ExchangePublic::ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
                                const CoincenterInfo &coincenterInfo)
-    : _name(name),
+    : _exchangeNameEnum(exchangeNameEnum),
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
       _coincenterInfo(coincenterInfo),
-      _exchangeConfig(coincenterInfo.exchangeConfig(name)),
-      _marketDataDeserializerPtr(new MarketDataDeserializer(coincenterInfo.dataDir(), name)) {}
+      _exchangeConfig(coincenterInfo.exchangeConfig(name())),
+      _marketDataDeserializerPtr(new MarketDataDeserializer(coincenterInfo.dataDir(), name())) {}
 
 ExchangePublic::~ExchangePublic() = default;
 
@@ -244,7 +245,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
       std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
       markets = queryTradableMarkets();
       if (markets.empty()) {
-        log::error("No markets retrieved for {}", _name);
+        log::error("No markets retrieved for {}", name());
         return ret;
       }
     }
