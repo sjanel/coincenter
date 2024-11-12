@@ -238,7 +238,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
+  Wallet wallet(ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()), currencyCode,
                 std::move(addressIt->get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
@@ -554,9 +554,8 @@ void UpbitPrivate::applyFee(Market mk, CurrencyCode fromCurrencyCode, bool isTak
                             MonetaryAmount& volume) {
   if (fromCurrencyCode == mk.quote()) {
     // For 'buy', from amount is fee excluded
-    ExchangeConfig::FeeType feeType =
-        isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
-    const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.name());
+    const auto feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(_exchangePublic.name());
     if (isTakerStrategy) {
       from = exchangeConfig.applyFee(from, feeType);
     } else {

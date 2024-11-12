@@ -92,7 +92,7 @@ MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Mar
 
   std::ranges::transform(marketDataPerExchange, marketOrderBookConversionRates.begin(),
                          [](const auto &exchangeWithPairOrderBooksAndTrades) {
-                           return std::make_tuple(exchangeWithPairOrderBooksAndTrades.first->name(),
+                           return std::make_tuple(exchangeWithPairOrderBooksAndTrades.first->exchangeNameEnum(),
                                                   exchangeWithPairOrderBooksAndTrades.second.first, std::nullopt);
                          });
 
@@ -160,13 +160,15 @@ TradedAmountsVectorWithFinalAmountPerExchange Coincenter::dustSweeper(
 }
 
 MonetaryAmountPerExchange Coincenter::getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
-                                                    ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getConversion(amount, targetCurrencyCode, exchangeNames);
+                                                    ExchangeNameEnumSpan exchangeNameEnums) {
+  return _exchangesOrchestrator.getConversion(amount, targetCurrencyCode, exchangeNameEnums);
 }
 
 MonetaryAmountPerExchange Coincenter::getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
-                                                    CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames) {
-  return _exchangesOrchestrator.getConversion(monetaryAmountPerExchangeToConvert, targetCurrencyCode, exchangeNames);
+                                                    CurrencyCode targetCurrencyCode,
+                                                    ExchangeNameEnumSpan exchangeNameEnums) {
+  return _exchangesOrchestrator.getConversion(monetaryAmountPerExchangeToConvert, targetCurrencyCode,
+                                              exchangeNameEnums);
 }
 
 ConversionPathPerExchange Coincenter::getConversionPaths(Market mk, ExchangeNameSpan exchangeNames) {
@@ -247,10 +249,10 @@ MarketTimestampSetsPerExchange Coincenter::getMarketsAvailableForReplay(const Re
 
 namespace {
 auto CreateExchangeNameVector(Market market, const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
-  PublicExchangeNameVector exchangesWithThisMarketData;
+  ExchangeNameEnumVector exchangesWithThisMarketData;
   for (const auto &[exchange, marketTimestampSets] : marketTimestampSetsPerExchange) {
     if (ContainsMarket(market, marketTimestampSets)) {
-      exchangesWithThisMarketData.emplace_back(exchange->name());
+      exchangesWithThisMarketData.emplace_back(exchange->exchangeNameEnum());
     }
   }
   return exchangesWithThisMarketData;
@@ -339,7 +341,7 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
 MarketTradingGlobalResultPerExchange Coincenter::replayAlgorithm(
     const AbstractMarketTraderFactory &marketTraderFactory, std::string_view algorithmName,
     const ReplayOptions &replayOptions, std::span<MarketTraderEngine> marketTraderEngines,
-    const PublicExchangeNameVector &exchangesWithThisMarketData) {
+    const ExchangeNameEnumVector &exchangesWithThisMarketData) {
   CreateAndRegisterTraderAlgorithms(marketTraderFactory, algorithmName, marketTraderEngines);
 
   MarketTradeRangeStatsPerExchange tradeRangeStatsPerExchange =
@@ -363,7 +365,7 @@ MonetaryAmount ComputeStartAmount(CurrencyCode currencyCode, MonetaryAmount conv
 }  // namespace
 
 Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
-    const ReplayOptions &replayOptions, Market market, PublicExchangeNameVector &exchangesWithThisMarketData) {
+    const ReplayOptions &replayOptions, Market market, ExchangeNameEnumVector &exchangesWithThisMarketData) {
   const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto startBaseAmountEquivalent = automationConfig.startingContext.startBaseAmountEquivalent;
   const auto startQuoteAmountEquivalent = automationConfig.startingContext.startQuoteAmountEquivalent;
@@ -377,7 +379,7 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
                      : getConversion(startQuoteAmountEquivalent, market.quote(), exchangesWithThisMarketData);
 
   MarketTraderEngineVector marketTraderEngines;
-  for (PublicExchangeNameVector::size_type exchangePos{}; exchangePos < exchangesWithThisMarketData.size();
+  for (ExchangeNameEnumVector::size_type exchangePos{}; exchangePos < exchangesWithThisMarketData.size();
        ++exchangePos) {
     const auto startBaseAmount =
         isValidateOnly ? MonetaryAmount{0, market.base()}
@@ -388,7 +390,8 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
 
     if (!isValidateOnly && (startBaseAmount == 0 || startQuoteAmount == 0)) {
       log::warn("Cannot convert to start base / quote amounts for {} ({} / {})",
-                exchangesWithThisMarketData[exchangePos], startBaseAmount, startQuoteAmount);
+                kSupportedExchanges[static_cast<int>(exchangesWithThisMarketData[exchangePos])], startBaseAmount,
+                startQuoteAmount);
       exchangesWithThisMarketData.erase(exchangesWithThisMarketData.begin() + exchangePos);
       convertedBaseAmountPerExchange.erase(convertedBaseAmountPerExchange.begin() + exchangePos);
       convertedQuoteAmountPerExchange.erase(convertedQuoteAmountPerExchange.begin() + exchangePos);
@@ -396,8 +399,8 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
       continue;
     }
 
-    const ExchangeConfig &exchangeConfig =
-        _coincenterInfo.exchangeConfig(exchangesWithThisMarketData[exchangePos].name());
+    const auto &exchangeConfig =
+        _coincenterInfo.exchangeConfig(kSupportedExchanges[static_cast<int>(exchangesWithThisMarketData[exchangePos])]);
 
     marketTraderEngines.emplace_back(exchangeConfig, market, startBaseAmount, startQuoteAmount);
   }
@@ -406,7 +409,7 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
 
 MarketTradeRangeStatsPerExchange Coincenter::tradingProcess(const ReplayOptions &replayOptions,
                                                             std::span<MarketTraderEngine> marketTraderEngines,
-                                                            ExchangeNameSpan exchangesWithThisMarketData) {
+                                                            ExchangeNameEnumSpan exchangesWithThisMarketData) {
   const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto loadChunkDuration = automationConfig.deserialization.loadChunkDuration.duration;
   const auto timeWindow = replayOptions.timeWindow();

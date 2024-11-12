@@ -31,7 +31,7 @@ std::string_view GetSecretFileName(settings::RunMode runMode) {
 
 APIKeysProvider::APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo& exchangeSecretsInfo,
                                  settings::RunMode runMode)
-    : _apiKeysMap(ParseAPIKeys(dataDir, exchangeSecretsInfo, runMode)) {
+    : _apiKeysPerExchange(ParseAPIKeys(dataDir, exchangeSecretsInfo, runMode)) {
   if (log::get_level() <= log::level::debug) {
     string foundKeysStr = str();
     if (!foundKeysStr.empty()) {
@@ -40,23 +40,21 @@ APIKeysProvider::APIKeysProvider(std::string_view dataDir, const ExchangeSecrets
   }
 }
 
-APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(std::string_view platform) const {
+APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(ExchangeNameEnum exchangeNameEnum) const {
   KeyNames keyNames;
-  auto foundIt = _apiKeysMap.find(platform);
-  if (foundIt != _apiKeysMap.end()) {
-    const APIKeys& apiKeys = foundIt->second;
-    std::ranges::transform(apiKeys, std::back_inserter(keyNames), [](const APIKey& apiKey) { return apiKey.name(); });
-  }
+
+  const APIKeys& apiKeys = _apiKeysPerExchange[static_cast<int>(exchangeNameEnum)];
+  std::ranges::transform(apiKeys, std::back_inserter(keyNames), [](const APIKey& apiKey) { return apiKey.name(); });
+
   return keyNames;
 }
 
 const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
   std::string_view platformStr = exchangeName.name();
-  auto foundIt = _apiKeysMap.find(platformStr);
-  if (foundIt == _apiKeysMap.end()) {
-    throw exception("Unable to retrieve private key for {}", platformStr);
-  }
-  const APIKeys& apiKeys = foundIt->second;
+  ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(
+      std::find(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), platformStr) -
+      std::begin(kSupportedExchanges));
+  const APIKeys& apiKeys = _apiKeysPerExchange[static_cast<int>(exchangeNameEnum)];
   if (!exchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
       throw exception("Specify name for {} keys as you have several", platformStr);
@@ -71,10 +69,10 @@ const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
   return *keyNameIt;
 }
 
-APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataDir,
-                                                          const ExchangeSecretsInfo& exchangeSecretsInfo,
-                                                          settings::RunMode runMode) {
-  APIKeysProvider::APIKeysMap map;
+APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_view dataDir,
+                                                                  const ExchangeSecretsInfo& exchangeSecretsInfo,
+                                                                  settings::RunMode runMode) {
+  APIKeysProvider::APIKeysPerExchange apiKeysPerExchange;
   if (exchangeSecretsInfo.allExchangesWithoutSecrets()) {
     log::info("Not loading private keys, using only public exchanges");
   } else {
@@ -82,6 +80,7 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
     File secretsFile(dataDir, File::Type::kSecret, secretFileName,
                      settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
     json::container jsonData = secretsFile.readAllJson();
+    bool atLeastOneKeyFound = false;
     for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
       const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
       if (std::ranges::find(exchangesWithoutSecrets, ExchangeName(publicExchangeName)) !=
@@ -89,6 +88,10 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
         log::info("Not loading {} private keys as requested", publicExchangeName);
         continue;
       }
+      ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(
+          std::find(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), publicExchangeName) -
+          std::begin(kSupportedExchanges));
+
       for (auto& [name, keySecretObj] : keyObj.items()) {
         auto keyIt = keySecretObj.find("key");
         auto privateIt = keySecretObj.find("private");
@@ -115,41 +118,39 @@ APIKeysProvider::APIKeysMap APIKeysProvider::ParseAPIKeys(std::string_view dataD
           }
         }
 
-        map[publicExchangeName].emplace_back(publicExchangeName, name, std::move(keyIt->get_ref<string&>()),
-                                             std::move(privateIt->get_ref<string&>()), std::move(passphrase),
-                                             AccountOwner(ownerEnName, ownerKoName));
+        apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].emplace_back(
+            publicExchangeName, name, std::move(keyIt->get_ref<string&>()), std::move(privateIt->get_ref<string&>()),
+            std::move(passphrase), AccountOwner(ownerEnName, ownerKoName));
+        atLeastOneKeyFound = true;
       }
     }
-    if (map.empty()) {
+    if (!atLeastOneKeyFound) {
       log::warn("No private api keys file '{}' found. Only public exchange queries will be supported", secretFileName);
     }
   }
 
-  return map;
+  return apiKeysPerExchange;
 }
 
 string APIKeysProvider::str() const {
   string foundKeysStr;
-  for (const auto& [platform, keys] : _apiKeysMap) {
+  for (int exchangePos = 0; exchangePos < kNbSupportedExchanges; ++exchangePos) {
+    const APIKeys& apiKeys = _apiKeysPerExchange[exchangePos];
     if (!foundKeysStr.empty()) {
       foundKeysStr.append(" | ");
     }
-    if (keys.size() > 1U) {
-      foundKeysStr.push_back('{');
-    }
+    foundKeysStr.push_back('{');
     bool firstKey = true;
-    for (const APIKey& key : keys) {
+    for (const APIKey& key : apiKeys) {
       if (!firstKey) {
         foundKeysStr.push_back(',');
       }
       foundKeysStr.append(key.name());
       firstKey = false;
     }
-    if (keys.size() > 1U) {
-      foundKeysStr.push_back('}');
-    }
+    foundKeysStr.push_back('}');
     foundKeysStr.push_back('@');
-    foundKeysStr.append(platform);
+    foundKeysStr.append(kSupportedExchanges[exchangePos]);
   }
   return foundKeysStr;
 }

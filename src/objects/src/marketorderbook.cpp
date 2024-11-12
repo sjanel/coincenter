@@ -728,11 +728,12 @@ std::optional<MonetaryAmount> MarketOrderBook::computeAvgPrice(MonetaryAmount fr
   }
 }
 
-SimpleTable MarketOrderBook::getTable(std::string_view exchangeName,
+SimpleTable MarketOrderBook::getTable(ExchangeNameEnum exchangeNameEnum,
                                       std::optional<MonetaryAmount> conversionPriceRate) const {
   string h1("Sellers of ");
   string baseStr = _market.base().str();
   h1.append(baseStr).append(" (asks)");
+  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
   string h2(exchangeName);
   h2.append(" ").append(baseStr).append(" price in ");
   _market.quote().appendStrTo(h2);

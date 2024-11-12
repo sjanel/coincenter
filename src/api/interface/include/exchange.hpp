@@ -36,15 +36,13 @@ class Exchange : public CacheFileUpdatorInterface {
            std::unique_ptr<ExchangePrivate> exchangePrivate);
 
   std::string_view name() const { return apiPublic().name(); }
+  ExchangeNameEnum exchangeNameEnum() const { return apiPublic().exchangeNameEnum(); }
   std::string_view keyName() const { return apiPrivate().keyName(); }
 
   std::size_t publicExchangePos() const;
 
   ExchangeName createExchangeName() const {
-    if (hasPrivateAPI()) {
-      return {name(), keyName()};
-    }
-    return ExchangeName(name());
+    return ExchangeName(exchangeNameEnum(), hasPrivateAPI() ? keyName() : std::string_view());
   }
 
   ExchangePublic &apiPublic() { return *_pExchangePublic; }

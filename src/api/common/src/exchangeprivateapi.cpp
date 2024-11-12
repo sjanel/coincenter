@@ -586,7 +586,7 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
 
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
-  ExchangeConfig::FeeType feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
+  auto feeType = isTakerStrategy ? ExchangeConfig::FeeType::kTaker : ExchangeConfig::FeeType::kMaker;
   toAmount = _coincenterInfo.exchangeConfig(_exchangePublic.name()).applyFee(toAmount, feeType);
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(isSell ? volume : volume.toNeutral() * price, toAmount)),
                                 OrderId("SimulatedOrderId"));

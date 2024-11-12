@@ -107,11 +107,11 @@ class Coincenter {
 
   /// Returns given amount converted into target currency code for given exchanges, when possible.
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
-                                          ExchangeNameSpan exchangeNames);
+                                          ExchangeNameEnumSpan exchangeNameEnums);
 
   /// Returns given amount per exchange converted into target currency code for given exchanges, when possible.
   MonetaryAmountPerExchange getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
-                                          CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames);
+                                          CurrencyCode targetCurrencyCode, ExchangeNameEnumSpan exchangeNameEnums);
 
   /// Query the conversion paths for each public exchange requested
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
@@ -170,15 +170,15 @@ class Coincenter {
                                                        std::string_view algorithmName,
                                                        const ReplayOptions &replayOptions,
                                                        std::span<MarketTraderEngine> marketTraderEngines,
-                                                       const PublicExchangeNameVector &exchangesWithThisMarketData);
+                                                       const ExchangeNameEnumVector &exchangesWithThisMarketData);
 
   // TODO: may be moved somewhere else?
   MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions &replayOptions, Market market,
-                                                     PublicExchangeNameVector &exchangesWithThisMarketData);
+                                                     ExchangeNameEnumVector &exchangesWithThisMarketData);
 
   MarketTradeRangeStatsPerExchange tradingProcess(const ReplayOptions &replayOptions,
                                                   std::span<MarketTraderEngine> marketTraderEngines,
-                                                  ExchangeNameSpan exchangesWithThisMarketData);
+                                                  ExchangeNameEnumSpan exchangesWithThisMarketData);
 
   const CoincenterInfo &_coincenterInfo;
   api::CommonAPI _commonAPI;

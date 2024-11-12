@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "amount-price.hpp"
+#include "cct_const.hpp"
 #include "cct_smallvector.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
@@ -145,7 +146,7 @@ class MarketOrderBook {
   /// Print the market order book in a SimpleTable and returns it.
   /// @param conversionPriceRate prices will be multiplied to given amount to display an additional column of equivalent
   ///                            currency
-  SimpleTable getTable(std::string_view exchangeName, std::optional<MonetaryAmount> conversionPriceRate) const;
+  SimpleTable getTable(ExchangeNameEnum exchangeNameEnum, std::optional<MonetaryAmount> conversionPriceRate) const;
 
  private:
   using AmountType = MonetaryAmount::AmountType;

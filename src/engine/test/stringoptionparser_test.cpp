@@ -24,15 +24,16 @@ constexpr auto mandatory = StringOptionParser::FieldIs::kMandatory;
 TEST(StringOptionParserTest, ParseExchangesDefaultSeparator) {
   EXPECT_TRUE(StringOptionParser("").parseExchanges().empty());
   EXPECT_EQ(StringOptionParser("kraken,upbit").parseExchanges(),
-            ExchangeNames({ExchangeName("kraken"), ExchangeName("upbit")}));
+            ExchangeNames({ExchangeName(ExchangeNameEnum::kraken), ExchangeName(ExchangeNameEnum::upbit)}));
   EXPECT_EQ(StringOptionParser("huobi_user1").parseExchanges(), ExchangeNames({ExchangeName("huobi_user1")}));
 }
 
 TEST(StringOptionParserTest, ParseExchangesCustomSeparator) {
   EXPECT_TRUE(StringOptionParser("").parseExchanges('-').empty());
   EXPECT_EQ(StringOptionParser("kucoin-huobi_user1").parseExchanges('-'),
-            ExchangeNames({ExchangeName("kucoin"), ExchangeName("huobi", "user1")}));
-  EXPECT_EQ(StringOptionParser("kraken_user2").parseExchanges('-'), ExchangeNames({ExchangeName("kraken", "user2")}));
+            ExchangeNames({ExchangeName(ExchangeNameEnum::kucoin), ExchangeName(ExchangeNameEnum::huobi, "user1")}));
+  EXPECT_EQ(StringOptionParser("kraken_user2").parseExchanges('-'),
+            ExchangeNames({ExchangeName(ExchangeNameEnum::kraken, "user2")}));
 }
 
 TEST(StringOptionParserTest, ParseMarketMandatory) {
@@ -145,7 +146,8 @@ TEST(StringOptionParserTest, AmountExchangesFlow) {
   EXPECT_EQ(parser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional),
             std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
 
-  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName("kraken"), ExchangeName("huobi", "long_user1")}));
+  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName(ExchangeNameEnum::kraken),
+                                                       ExchangeName(ExchangeNameEnum::huobi, "long_user1")}));
 
   EXPECT_NO_THROW(parser.checkEndParsing());
 }
@@ -175,7 +177,8 @@ TEST(StringOptionParserTest, AmountCurrencyWithExchangesFlow) {
             std::make_pair(MonetaryAmount(), StringOptionParser::AmountType::kNotPresent));
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("USDT"));
 
-  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName("binance", "long_user2"), ExchangeName("kucoin")}));
+  EXPECT_EQ(parser.parseExchanges(','), ExchangeNames({ExchangeName(ExchangeNameEnum::binance, "long_user2"),
+                                                       ExchangeName(ExchangeNameEnum::kucoin)}));
 
   EXPECT_NO_THROW(parser.checkEndParsing());
 }
@@ -191,7 +194,8 @@ TEST(StringOptionParserTest, SeveralAmountCurrencyExchangesFlow) {
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode("HYDRA"));
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
 
-  EXPECT_EQ(parser.parseExchanges('-'), ExchangeNames({ExchangeName("binance"), ExchangeName("kraken")}));
+  EXPECT_EQ(parser.parseExchanges('-'),
+            ExchangeNames({ExchangeName(ExchangeNameEnum::binance), ExchangeName(ExchangeNameEnum::kraken)}));
 
   EXPECT_NO_THROW(parser.checkEndParsing());
 }
@@ -207,7 +211,8 @@ TEST(StringOptionParserTest, ExchangesNotLast) {
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
 
   EXPECT_EQ(parser.parseExchanges('-', ','),
-            ExchangeNames({ExchangeName("kucoin", "user1"), ExchangeName("binance"), ExchangeName("kraken")}));
+            ExchangeNames({ExchangeName(ExchangeNameEnum::kucoin, "user1"), ExchangeName(ExchangeNameEnum::binance),
+                           ExchangeName(ExchangeNameEnum::kraken)}));
   EXPECT_EQ(parser.parseCurrency(StringOptionParser::FieldIs::kMandatory), CurrencyCode("KRW"));
 
   EXPECT_NO_THROW(parser.checkEndParsing());
@@ -218,7 +223,8 @@ TEST(StringOptionParserTest, ParseDurationMandatory) {
 
   EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kMandatory),
             std::chrono::minutes{45} + std::chrono::seconds{83});
-  EXPECT_EQ(parser.parseExchanges(',', '\0'), ExchangeNames({ExchangeName("kraken"), ExchangeName("upbit")}));
+  EXPECT_EQ(parser.parseExchanges(',', '\0'),
+            ExchangeNames({ExchangeName(ExchangeNameEnum::kraken), ExchangeName(ExchangeNameEnum::upbit)}));
 
   EXPECT_NO_THROW(parser.checkEndParsing());
 }
@@ -227,7 +233,8 @@ TEST(StringOptionParserTest, ParseDurationOptional) {
   StringOptionParser parser("binance,huobi_user1,34h 4500ms");
 
   EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kOptional), kUndefinedDuration);
-  EXPECT_EQ(parser.parseExchanges(',', '\0'), ExchangeNames({ExchangeName("binance"), ExchangeName("huobi", "user1")}));
+  EXPECT_EQ(parser.parseExchanges(',', '\0'),
+            ExchangeNames({ExchangeName(ExchangeNameEnum::binance), ExchangeName(ExchangeNameEnum::huobi, "user1")}));
 
   EXPECT_EQ(parser.parseDuration(StringOptionParser::FieldIs::kOptional),
             std::chrono::hours{34} + std::chrono::milliseconds{4500});

@@ -16,4 +16,16 @@ string ConstructAccumulatedExchangeNames(ExchangeNameSpan exchangeNames) {
   return exchangesStr;
 }
 
+string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNames) {
+  // TODO: Use C++23 join_with feature
+  string exchangesStr(exchangeNames.empty() ? "all" : "");
+  for (const auto &exchangeName : exchangeNames) {
+    if (!exchangesStr.empty()) {
+      exchangesStr.push_back(',');
+    }
+    exchangesStr.append(kSupportedExchanges[static_cast<int>(exchangeName)]);
+  }
+  return exchangesStr;
+}
+
 }  // namespace cct

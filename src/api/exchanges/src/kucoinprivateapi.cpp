@@ -198,7 +198,7 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
 Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v2/deposit-addresses",
                                         {{"currency", currencyCode.str()}})["data"];
-  ExchangeName exchangeName(_kucoinPublic.name(), _apiKey.name());
+  ExchangeName exchangeName(_kucoinPublic.exchangeNameEnum(), _apiKey.name());
   if (result.empty()) {
     log::info("No deposit address for {} in {}, creating one", currencyCode, exchangeName);
     result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/api/v1/deposit-addresses",

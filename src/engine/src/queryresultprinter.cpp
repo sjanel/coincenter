@@ -227,7 +227,7 @@ json::container MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, s
   in.emplace("opt", std::move(inOpt));
 
   json::container out = json::container::object();
-  for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
+  for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
     json::container marketOrderBookForExchange;
     json::container bidsForExchange;
     json::container asksForExchange;
@@ -241,7 +241,7 @@ json::container MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, s
       AppendOrderbookLine(marketOrderBook, askPos, optConversionRate, asksForExchange);
     }
     marketOrderBookForExchange.emplace("ask", std::move(asksForExchange));
-    out.emplace(exchangeName, std::move(marketOrderBookForExchange));
+    out.emplace(kSupportedExchanges[static_cast<int>(exchangeNameEnum)], std::move(marketOrderBookForExchange));
   }
 
   return ToJson(CoincenterCommandType::Orderbook, std::move(in), std::move(out));
@@ -1050,8 +1050,8 @@ void QueryResultPrinter::printMarketOrderBooks(
   const json::container jsonData = MarketOrderBooksJson(mk, equiCurrencyCode, depth, marketOrderBooksConversionRates);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
-      for (const auto &[exchangeName, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
-        printTable(marketOrderBook.getTable(exchangeName, optConversionRate));
+      for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
+        printTable(marketOrderBook.getTable(exchangeNameEnum, optConversionRate));
       }
       break;
     }

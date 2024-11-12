@@ -34,30 +34,31 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
       _krakenPublic(_coincenterInfo, _fiatConverter, _commonAPI),
       _kucoinPublic(_coincenterInfo, _fiatConverter, _commonAPI),
       _upbitPublic(_coincenterInfo, _fiatConverter, _commonAPI) {
-  for (std::string_view exchangeStr : kSupportedExchanges) {
+  for (int exchangePos = 0; exchangePos < kNbSupportedExchanges; ++exchangePos) {
+    ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangePos);
     api::ExchangePublic* exchangePublic;
-    if (exchangeStr == "binance") {
+    if (exchangeNameEnum == ExchangeNameEnum::binance) {
       exchangePublic = &_binancePublic;
-    } else if (exchangeStr == "bithumb") {
+    } else if (exchangeNameEnum == ExchangeNameEnum::bithumb) {
       exchangePublic = &_bithumbPublic;
-    } else if (exchangeStr == "huobi") {
+    } else if (exchangeNameEnum == ExchangeNameEnum::huobi) {
       exchangePublic = &_huobiPublic;
-    } else if (exchangeStr == "kraken") {
+    } else if (exchangeNameEnum == ExchangeNameEnum::kraken) {
       exchangePublic = &_krakenPublic;
-    } else if (exchangeStr == "kucoin") {
+    } else if (exchangeNameEnum == ExchangeNameEnum::kucoin) {
       exchangePublic = &_kucoinPublic;
-    } else if (exchangeStr == "upbit") {
+    } else if (exchangeNameEnum == ExchangeNameEnum::upbit) {
       exchangePublic = &_upbitPublic;
     } else {
-      throw exception("Should not happen, unsupported platform {}", exchangeStr);
+      throw exception("Should not happen, unsupported exchange pos {}", exchangePos);
     }
 
-    const bool canUsePrivateExchange = _apiKeyProvider.contains(exchangeStr);
-    const ExchangeConfig& exchangeConfig = _coincenterInfo.exchangeConfig(exchangePublic->name());
+    const bool canUsePrivateExchange = _apiKeyProvider.hasAtLeastOneKey(exchangeNameEnum);
+    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(kSupportedExchanges[exchangePos]);
     if (canUsePrivateExchange) {
-      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeStr)) {
+      for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeNameEnum)) {
         std::unique_ptr<api::ExchangePrivate> exchangePrivate;
-        ExchangeName exchangeName(exchangeStr, keyName);
+        ExchangeName exchangeName(exchangeNameEnum, keyName);
         const api::APIKey& apiKey = _apiKeyProvider.get(exchangeName);
         if (exchangePublic == &_binancePublic) {
           exchangePrivate = std::make_unique<api::BinancePrivate>(_coincenterInfo, _binancePublic, apiKey);
@@ -72,7 +73,7 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
         } else if (exchangePublic == &_upbitPublic) {
           exchangePrivate = std::make_unique<api::UpbitPrivate>(_coincenterInfo, _upbitPublic, apiKey);
         } else {
-          throw exception("Unsupported platform {}", exchangeStr);
+          throw exception("Should not happen");
         }
 
         if (exchangeConfig.shouldValidateApiKey()) {
