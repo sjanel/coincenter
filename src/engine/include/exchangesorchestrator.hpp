@@ -55,10 +55,10 @@ class ExchangesOrchestrator {
                                           const WithdrawsConstraints &withdrawsConstraints);
 
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
-                                          ExchangeNameSpan exchangeNames);
+                                          ExchangeNameEnumSpan exchangeNameEnums);
 
   MonetaryAmountPerExchange getConversion(std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert,
-                                          CurrencyCode targetCurrencyCode, ExchangeNameSpan exchangeNames);
+                                          CurrencyCode targetCurrencyCode, ExchangeNameEnumSpan exchangeNameEnums);
 
   ConversionPathPerExchange getConversionPaths(Market mk, ExchangeNameSpan exchangeNames);
 
@@ -103,11 +103,11 @@ class ExchangesOrchestrator {
 
   MarketTradeRangeStatsPerExchange traderConsumeRange(const ReplayOptions &replayOptions, TimeWindow subTimeWindow,
                                                       std::span<MarketTraderEngine> marketTraderEngines,
-                                                      ExchangeNameSpan exchangeNames);
+                                                      ExchangeNameEnumSpan exchangeNames);
 
   MarketTradingGlobalResultPerExchange getMarketTraderResultPerExchange(
       std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange &&tradeRangeStatsPerExchange,
-      ExchangeNameSpan exchangeNames);
+      ExchangeNameEnumSpan exchangeNames);
 
  private:
   ExchangeRetriever _exchangeRetriever;

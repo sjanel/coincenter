@@ -44,7 +44,7 @@ TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(balancePortfolio1));
 
-  const ExchangeName privateExchangeNames[1] = {ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[1] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
   BalancePerExchange ret{{&exchange1, balancePortfolio1}};
   EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions), ret);
 }
@@ -57,9 +57,9 @@ TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencySeveralExchanges) {
   EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(balanceOptions))
       .WillOnce(testing::Return(balancePortfolio3));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
-                                               ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange4.name(), exchange4.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
   BalancePerExchange ret{
       {&exchange1, balancePortfolio1}, {&exchange3, balancePortfolio2}, {&exchange4, balancePortfolio3}};
   EXPECT_EQ(exchangesOrchestrator.getBalance(privateExchangeNames, balanceOptions), ret);
@@ -68,7 +68,7 @@ TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencySeveralExchanges) {
 TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
   CurrencyCode depositCurrency{"ETH"};
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.name(), exchange2.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName())};
 
   CurrencyExchangeFlatSet tradableCurrencies2{
       CurrencyExchangeVector{CurrencyExchange(depositCurrency, CurrencyExchange::Deposit::kAvailable,
@@ -88,9 +88,10 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoUniqueExchanges) {
 TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDeposits) {
   CurrencyCode depositCurrency{"XRP"};
 
-  const ExchangeName privateExchangeNames[] = {
-      ExchangeName(exchange3.name(), exchange3.keyName()), ExchangeName(exchange1.name(), exchange1.keyName()),
-      ExchangeName(exchange2.name(), exchange2.keyName()), ExchangeName(exchange4.name(), exchange4.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
 
   CurrencyExchangeFlatSet tradableCurrencies1{
       CurrencyExchangeVector{CurrencyExchange(depositCurrency, CurrencyExchange::Deposit::kUnavailable,
@@ -131,9 +132,9 @@ TEST_F(ExchangeOrchestratorTest, DepositInfoSeveralExchangesWithUnavailableDepos
 TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
   OrdersConstraints noConstraints;
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
-                                               ExchangeName(exchange2.name(), exchange2.keyName()),
-                                               ExchangeName(exchange4.name(), exchange4.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
 
   OpenedOrderVector openedOrders2{OpenedOrder("Id1", MonetaryAmount("0.1ETH"), MonetaryAmount("0.9ETH"),
                                               MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kBuy),
@@ -158,7 +159,7 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
 
 TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
   MonetaryAmount grossAmount{1000, "XRP"};
-  ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
+  ExchangeName fromExchange(exchange1.exchangeNameEnum(), exchange1.keyName());
   const ExchangeName &toExchange = fromExchange;
   EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions),
                exception);
@@ -166,8 +167,8 @@ TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
   MonetaryAmount grossAmount{1000, "XRP"};
-  ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
-  ExchangeName toExchange(exchange2.name(), exchange2.keyName());
+  ExchangeName fromExchange(exchange1.exchangeNameEnum(), exchange1.keyName());
+  ExchangeName toExchange(exchange2.exchangeNameEnum(), exchange2.keyName());
 
   CurrencyExchangeFlatSet tradableCurrencies1{
       CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
@@ -189,8 +190,8 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleFrom) {
 
 TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
   MonetaryAmount grossAmount{1000, "XRP"};
-  ExchangeName fromExchange(exchange1.name(), exchange1.keyName());
-  ExchangeName toExchange(exchange2.name(), exchange2.keyName());
+  ExchangeName fromExchange(exchange1.exchangeNameEnum(), exchange1.keyName());
+  ExchangeName toExchange(exchange2.exchangeNameEnum(), exchange2.keyName());
 
   CurrencyExchangeFlatSet tradableCurrencies1{
       CurrencyExchangeVector{CurrencyExchange(grossAmount.currencyCode(), CurrencyExchange::Deposit::kAvailable,
@@ -272,8 +273,8 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
   }
 
   CurrencyCode cur{"XRP"};
-  ExchangeName fromExchange{exchange1.name(), exchange1.keyName()};
-  ExchangeName toExchange{exchange2.name(), exchange2.keyName()};
+  ExchangeName fromExchange{exchange1.exchangeNameEnum(), exchange1.keyName()};
+  ExchangeName toExchange{exchange2.exchangeNameEnum(), exchange2.keyName()};
 
   MonetaryAmount fee{"0.02", cur};
   std::string_view withdrawId = "WithdrawId";

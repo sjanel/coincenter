@@ -42,27 +42,22 @@ TEST(ExchangeName, ConstructorWith1ParamInvalid) {
 }
 
 TEST(ExchangeName, ConstructorWith2ParamsValid) {
-  EXPECT_EQ(ExchangeName("upbit", "user1").str(), "upbit_user1");
-  EXPECT_EQ(ExchangeName("binance", "_user13").str(), "binance__user13");
-}
-
-TEST(ExchangeName, ConstructorWith2ParamsInvalid) {
-  EXPECT_THROW(ExchangeName("kraken_", "_user13"), invalid_argument);
-  EXPECT_THROW(ExchangeName("unknown", "user1"), invalid_argument);
+  EXPECT_EQ(ExchangeName(ExchangeNameEnum::upbit, "user1").str(), "upbit_user1");
+  EXPECT_EQ(ExchangeName(ExchangeNameEnum::binance, "_user13").str(), "binance__user13");
 }
 
 TEST(ExchangeName, IsKeyNameDefined) {
-  EXPECT_TRUE(ExchangeName("binance", "_user13").isKeyNameDefined());
-  EXPECT_FALSE(ExchangeName("binance", "").isKeyNameDefined());
+  EXPECT_TRUE(ExchangeName(ExchangeNameEnum::binance, "_user13").isKeyNameDefined());
+  EXPECT_FALSE(ExchangeName(ExchangeNameEnum::binance, "").isKeyNameDefined());
   EXPECT_TRUE(ExchangeName("upbit__thisisaTrap_").isKeyNameDefined());
   EXPECT_FALSE(ExchangeName("kraken").isKeyNameDefined());
 }
 
 TEST(ExchangeName, Equality) {
-  EXPECT_EQ(ExchangeName("binance", "_user13"), ExchangeName("BinanCE", "_user13"));
-  EXPECT_NE(ExchangeName("kucoin", "_user13"), ExchangeName("huobi", "_user13"));
-  EXPECT_NE(ExchangeName("binance", "_user13"), ExchangeName("binance", "_uSer13"));
-  EXPECT_NE(ExchangeName("upbit", "_user13"), ExchangeName("binance", "_user13"));
+  EXPECT_EQ(ExchangeName(ExchangeNameEnum::binance, "_user13"), ExchangeName(ExchangeNameEnum::binance, "_user13"));
+  EXPECT_NE(ExchangeName(ExchangeNameEnum::kucoin, "_user13"), ExchangeName(ExchangeNameEnum::huobi, "_user13"));
+  EXPECT_NE(ExchangeName(ExchangeNameEnum::binance, "_user13"), ExchangeName(ExchangeNameEnum::binance, "_uSer13"));
+  EXPECT_NE(ExchangeName(ExchangeNameEnum::upbit, "_user13"), ExchangeName(ExchangeNameEnum::binance, "_user13"));
 }
 
 TEST(ExchangeName, FormatWithoutKey) {

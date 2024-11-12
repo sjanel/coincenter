@@ -73,8 +73,9 @@ class ExchangeOrchestratorMarketOrderbookTest : public ExchangeOrchestratorTest 
   const MarketSet markets3{m1, testedMarket, m3};
   CurrencyCode equiCurrencyCode;
   std::optional<int> optDepth;
-  MarketOrderBookConversionRates marketOrderBookConversionRates{{exchange1.name(), marketOrderBook20, std::nullopt},
-                                                                {exchange3.name(), marketOrderBook21, std::nullopt}};
+  MarketOrderBookConversionRates marketOrderBookConversionRates{
+      {exchange1.exchangeNameEnum(), marketOrderBook20, std::nullopt},
+      {exchange3.exchangeNameEnum(), marketOrderBook21, std::nullopt}};
 };
 
 TEST_F(ExchangeOrchestratorMarketOrderbookTest, AllSpecifiedExchanges) {

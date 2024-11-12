@@ -489,33 +489,34 @@ class QueryResultPrinterMarketOrderBookTest : public QueryResultPrinterTest {
   int d = 3;
   MarketOrderBook mob{tp1,           askPrice2, MonetaryAmount("0.12BTC"), bidPrice2, MonetaryAmount("0.00234 BTC"),
                       volAndPriDec2, d};
-  MarketOrderBookConversionRates marketOrderBookConversionRates{{"exchangeA", mob, {}}, {"exchangeD", mob, {}}};
+  MarketOrderBookConversionRates marketOrderBookConversionRates{{ExchangeNameEnum::binance, mob, {}},
+                                                                {ExchangeNameEnum::huobi, mob, {}}};
 };
 
 TEST_F(QueryResultPrinterMarketOrderBookTest, FormattedTable) {
   basicQueryResultPrinter(ApiOutputType::table)
       .printMarketOrderBooks(mk, CurrencyCode{}, d, marketOrderBookConversionRates);
   static constexpr std::string_view kExpected = R"(
-+-----------------------+----------------------------+----------------------+
-| Sellers of BTC (asks) | exchangeA BTC price in EUR | Buyers of BTC (bids) |
-+-----------------------+----------------------------+----------------------+
-| 0.18116               | 31056.7                    |                      |
-| 0.15058               | 31056.68                   |                      |
-| 0.12                  | 31056.67                   |                      |
-|                       | 31056.66                   | 0.00234              |
-|                       | 31056.65                   | 0.03292              |
-|                       | 31056.63                   | 0.0635               |
-+-----------------------+----------------------------+----------------------+
-+-----------------------+----------------------------+----------------------+
-| Sellers of BTC (asks) | exchangeD BTC price in EUR | Buyers of BTC (bids) |
-+-----------------------+----------------------------+----------------------+
-| 0.18116               | 31056.7                    |                      |
-| 0.15058               | 31056.68                   |                      |
-| 0.12                  | 31056.67                   |                      |
-|                       | 31056.66                   | 0.00234              |
-|                       | 31056.65                   | 0.03292              |
-|                       | 31056.63                   | 0.0635               |
-+-----------------------+----------------------------+----------------------+
++-----------------------+--------------------------+----------------------+
+| Sellers of BTC (asks) | binance BTC price in EUR | Buyers of BTC (bids) |
++-----------------------+--------------------------+----------------------+
+| 0.18116               | 31056.7                  |                      |
+| 0.15058               | 31056.68                 |                      |
+| 0.12                  | 31056.67                 |                      |
+|                       | 31056.66                 | 0.00234              |
+|                       | 31056.65                 | 0.03292              |
+|                       | 31056.63                 | 0.0635               |
++-----------------------+--------------------------+----------------------+
++-----------------------+------------------------+----------------------+
+| Sellers of BTC (asks) | huobi BTC price in EUR | Buyers of BTC (bids) |
++-----------------------+------------------------+----------------------+
+| 0.18116               | 31056.7                |                      |
+| 0.15058               | 31056.68               |                      |
+| 0.12                  | 31056.67               |                      |
+|                       | 31056.66               | 0.00234              |
+|                       | 31056.65               | 0.03292              |
+|                       | 31056.63               | 0.0635               |
++-----------------------+------------------------+----------------------+
 )";
   expectStr(kExpected);
 }
@@ -550,7 +551,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
     "req": "Orderbook"
   },
   "out": {
-    "exchangeA": {
+    "binance": {
       "ask": [
         {
           "a": "0.12",
@@ -581,7 +582,7 @@ TEST_F(QueryResultPrinterMarketOrderBookTest, Json) {
       ],
       "time": "1999-03-25T04:46:43Z"
     },
-    "exchangeD": {
+    "huobi": {
       "ask": [
         {
           "a": "0.12",

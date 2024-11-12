@@ -194,7 +194,7 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
   string address;
   std::string_view tag;
-  ExchangeName exchangeName(_huobiPublic.name(), _apiKey.name());
+  ExchangeName exchangeName(_huobiPublic.exchangeNameEnum(), _apiKey.name());
   const CoincenterInfo& coincenterInfo = _huobiPublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeConfig(_huobiPublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);

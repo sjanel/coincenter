@@ -199,7 +199,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   auto [res, err] = PrivateQuery(_curlHandle, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
-  ExchangeName eName(_exchangePublic.name(), _apiKey.name());
+  ExchangeName eName(_exchangePublic.exchangeNameEnum(), _apiKey.name());
   if (res.empty()) {
     throw exception("No deposit method found on {} for {}", eName, currencyCode);
   }

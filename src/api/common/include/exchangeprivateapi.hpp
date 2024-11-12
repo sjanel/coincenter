@@ -124,9 +124,9 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   TradedAmountsVectorWithFinalAmount queryDustSweeper(CurrencyCode currencyCode);
 
   /// Builds an ExchangeName wrapping the exchange and the key name
-  ExchangeName exchangeName() const { return {_exchangePublic.name(), _apiKey.name()}; }
+  ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()); }
 
-  const ExchangeConfig &exchangeConfig() const { return _exchangePublic.exchangeConfig(); }
+  const auto &exchangeConfig() const { return _exchangePublic.exchangeConfig(); }
 
  protected:
   ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic, const APIKey &apiKey);

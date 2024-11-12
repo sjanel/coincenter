@@ -9,7 +9,9 @@
 
 namespace cct {
 
-enum class ExchangeNameEnum : int8_t { binance, bithumb, huobi, kraken, kucoin, upbit };
+#define CCT_EXCHANGE_NAMES binance, bithumb, huobi, kraken, kucoin, upbit
+
+enum class ExchangeNameEnum : int8_t { CCT_EXCHANGE_NAMES };
 
 static constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
 
@@ -35,8 +37,10 @@ template <>
 struct glz::meta<cct::ExchangeNameEnum> {
   using enum cct::ExchangeNameEnum;
 
-  static constexpr auto value = enumerate(binance, bithumb, huobi, kraken, kucoin, upbit);
+  static constexpr auto value = enumerate(CCT_EXCHANGE_NAMES);
 };
+
+#undef CCT_EXCHANGE_NAMES
 
 namespace cct {
 

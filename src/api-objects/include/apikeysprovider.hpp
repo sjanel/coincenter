@@ -23,9 +23,11 @@ class APIKeysProvider {
 
   APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo, settings::RunMode runMode);
 
-  KeyNames getKeyNames(std::string_view platform) const;
+  KeyNames getKeyNames(ExchangeNameEnum exchangeNameEnum) const;
 
-  bool contains(std::string_view platform) const { return _apiKeysMap.find(platform) != _apiKeysMap.end(); }
+  bool hasAtLeastOneKey(ExchangeNameEnum exchangeNameEnum) const {
+    return !_apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].empty();
+  }
 
   const APIKey &get(const ExchangeName &exchangeName) const;
 
@@ -33,11 +35,11 @@ class APIKeysProvider {
 
  private:
   using APIKeys = vector<APIKey>;
-  using APIKeysMap = std::map<string, APIKeys, std::less<>>;
+  using APIKeysPerExchange = std::array<APIKeys, kNbSupportedExchanges>;
 
-  static APIKeysMap ParseAPIKeys(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
-                                 settings::RunMode runMode);
+  static APIKeysPerExchange ParseAPIKeys(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
+                                         settings::RunMode runMode);
 
-  APIKeysMap _apiKeysMap;
+  APIKeysPerExchange _apiKeysPerExchange;
 };
 }  // namespace cct::api

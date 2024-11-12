@@ -122,6 +122,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       break;
     }
     case CoincenterCommandType::Conversion: {
+      ExchangeNameEnumVector exchangeNameEnumVector;
       if (firstCmd.amount().isDefault()) {
         std::array<MonetaryAmount, kNbSupportedExchanges> startAmountsPerExchangePos;
         bool oneSet = false;
@@ -129,6 +130,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
           auto publicExchangePos = transferableResult.targetedExchange().publicExchangePos();
           if (startAmountsPerExchangePos[publicExchangePos].isDefault()) {
             startAmountsPerExchangePos[publicExchangePos] = transferableResult.resultedAmount();
+            exchangeNameEnumVector.push_back(static_cast<ExchangeNameEnum>(publicExchangePos));
             oneSet = true;
           } else {
             throw invalid_argument(
@@ -140,12 +142,12 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
         }
 
         const auto conversionPerExchange =
-            _coincenter.getConversion(startAmountsPerExchangePos, firstCmd.cur1(), firstCmd.exchangeNames());
+            _coincenter.getConversion(startAmountsPerExchangePos, firstCmd.cur1(), exchangeNameEnumVector);
         _queryResultPrinter.printConversion(startAmountsPerExchangePos, firstCmd.cur1(), conversionPerExchange);
         FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
       } else {
         const auto conversionPerExchange =
-            _coincenter.getConversion(firstCmd.amount(), firstCmd.cur1(), firstCmd.exchangeNames());
+            _coincenter.getConversion(firstCmd.amount(), firstCmd.cur1(), exchangeNameEnumVector);
         _queryResultPrinter.printConversion(firstCmd.amount(), firstCmd.cur1(), conversionPerExchange);
         FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
       }

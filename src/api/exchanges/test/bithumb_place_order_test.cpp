@@ -43,7 +43,8 @@ class BithumbPrivateAPIPlaceOrderTest : public ::testing::Test {
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   BithumbPublic exchangePublic{coincenterInfo, fiatConverter, commonAPI};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};
-  ExchangeName exchangeName{exchangePublic.name(), apiKeysProvider.getKeyNames(exchangePublic.name()).front()};
+  ExchangeName exchangeName{exchangePublic.exchangeNameEnum(),
+                            apiKeysProvider.getKeyNames(exchangePublic.exchangeNameEnum()).front()};
   const APIKey& testKey = apiKeysProvider.get(exchangeName);
   BithumbPrivate exchangePrivate{coincenterInfo, exchangePublic, testKey};
 

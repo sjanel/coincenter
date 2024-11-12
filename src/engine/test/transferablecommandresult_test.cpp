@@ -24,11 +24,11 @@ class TransferableCommandResultTest : public ::testing::Test {
     return cmd;
   }
 
-  ExchangeName exchangeName11{"binance", "user1"};
-  ExchangeName exchangeName12{"binance", "user2"};
+  ExchangeName exchangeName11{ExchangeNameEnum::binance, "user1"};
+  ExchangeName exchangeName12{ExchangeNameEnum::binance, "user2"};
 
-  ExchangeName exchangeName21{"kraken", "user1"};
-  ExchangeName exchangeName22{"kraken", "user2"};
+  ExchangeName exchangeName21{ExchangeNameEnum::kraken, "user1"};
+  ExchangeName exchangeName22{ExchangeNameEnum::kraken, "user2"};
 
   MonetaryAmount amount11{50, "DOGE"};
   MonetaryAmount amount12{10, "DOGE"};

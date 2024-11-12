@@ -289,7 +289,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet = coincenterInfo.exchangeConfig(_exchangePublic.name()).validateDepositAddressesInFile();
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
-  Wallet wallet(ExchangeName(_exchangePublic.name(), _apiKey.name()), currencyCode,
+  Wallet wallet(ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()), currencyCode,
                 std::move(result["address"].get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {} (URL: '{}')", wallet, result["url"].get<std::string_view>());
   return wallet;

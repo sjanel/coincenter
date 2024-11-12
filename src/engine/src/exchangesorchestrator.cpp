@@ -178,7 +178,7 @@ MarketOrderBookConversionRates ExchangesOrchestrator::getMarketOrderBooks(Market
     if (!optConversionRate && !equiCurrencyCode.isNeutral()) {
       log::warn("Unable to convert {} into {} on {}", mk.quote(), equiCurrencyCode, exchange->name());
     }
-    return std::make_tuple(exchange->name(), exchange->getOrderBook(mk, actualDepth), optConversionRate);
+    return std::make_tuple(exchange->exchangeNameEnum(), exchange->getOrderBook(mk, actualDepth), optConversionRate);
   };
   _threadPool.parallelTransform(selectedExchanges, ret.begin(), marketOrderBooksFunc);
   return ret;
@@ -328,10 +328,10 @@ WithdrawsPerExchange ExchangesOrchestrator::getRecentWithdraws(ExchangeNameSpan 
 }
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
-                                                               ExchangeNameSpan exchangeNames) {
+                                                               ExchangeNameEnumSpan exchangeNameEnums) {
   log::info("Query {} conversion into {} from {}", amount, targetCurrencyCode,
-            ConstructAccumulatedExchangeNames(exchangeNames));
-  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+            ConstructAccumulatedExchangeNames(exchangeNameEnums));
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNameEnums);
   MonetaryAmountPerExchange convertedAmountPerExchange(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges, convertedAmountPerExchange.begin(), [amount, targetCurrencyCode](Exchange *exchange) {
@@ -344,10 +344,10 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(MonetaryAmount am
 
 MonetaryAmountPerExchange ExchangesOrchestrator::getConversion(
     std::span<const MonetaryAmount> monetaryAmountPerExchangeToConvert, CurrencyCode targetCurrencyCode,
-    ExchangeNameSpan exchangeNames) {
+    ExchangeNameEnumSpan exchangeNameEnums) {
   log::info("Query multiple conversions into {} from {}", targetCurrencyCode,
-            ConstructAccumulatedExchangeNames(exchangeNames));
-  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+            ConstructAccumulatedExchangeNames(exchangeNameEnums));
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNameEnums);
   MonetaryAmountPerExchange convertedAmountPerExchange(selectedExchanges.size());
   _threadPool.parallelTransform(
       selectedExchanges, convertedAmountPerExchange.begin(),
@@ -1004,7 +1004,7 @@ MarketTimestampSetsPerExchange ExchangesOrchestrator::pullAvailableMarketsForRep
 
 MarketTradeRangeStatsPerExchange ExchangesOrchestrator::traderConsumeRange(
     const ReplayOptions &replayOptions, TimeWindow subTimeWindow, std::span<MarketTraderEngine> marketTraderEngines,
-    ExchangeNameSpan exchangeNames) {
+    ExchangeNameEnumSpan exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
 
   MarketTradeRangeStatsPerExchange tradeRangeResultsPerExchange(selectedExchanges.size());
@@ -1043,7 +1043,7 @@ MarketTradeRangeStatsPerExchange ExchangesOrchestrator::traderConsumeRange(
 
 MarketTradingGlobalResultPerExchange ExchangesOrchestrator::getMarketTraderResultPerExchange(
     std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange &&tradeRangeStatsPerExchange,
-    ExchangeNameSpan exchangeNames) {
+    ExchangeNameEnumSpan exchangeNames) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
 
   if (selectedExchanges.size() != tradeRangeStatsPerExchange.size()) {

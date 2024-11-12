@@ -60,10 +60,11 @@ TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandMarketTest) {
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateMarketCommandSingleCurTest) {
-  EXPECT_EQ(CoincenterCommandFactory::CreateMarketCommand(inputStr("XLM,kraken,binance_user1")),
-            CoincenterCommand(CoincenterCommandType::Markets)
-                .setCur1("XLM")
-                .setExchangeNames(ExchangeNames({ExchangeName("kraken"), ExchangeName("binance", "user1")})));
+  EXPECT_EQ(
+      CoincenterCommandFactory::CreateMarketCommand(inputStr("XLM,kraken,binance_user1")),
+      CoincenterCommand(CoincenterCommandType::Markets)
+          .setCur1("XLM")
+          .setExchangeNames(ExchangeNames({ExchangeName("kraken"), ExchangeName(ExchangeNameEnum::binance, "user1")})));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
@@ -111,19 +112,20 @@ TEST_F(CoincenterCommandFactoryTest, CreateTradeAbsolute) {
                 .setAmount(MonetaryAmount("13XRP"))
                 .setPercentageAmount(false)
                 .setCur1("BTC")
-                .setExchangeNames(ExchangeNames({ExchangeName("binance", "user2")})));
+                .setExchangeNames(ExchangeNames({ExchangeName(ExchangeNameEnum::binance, "user2")})));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
 TEST_F(CoincenterCommandFactoryTest, CreateTradePercentage) {
   CoincenterCommandType type = CoincenterCommandType::Trade;
-  EXPECT_EQ(commandFactory.createTradeCommand(type, inputStr("67.906%eth-USDT,huobi,upbit_user1")),
-            CoincenterCommand(type)
-                .setTradeOptions(cmdLineOptions.computeTradeOptions())
-                .setAmount(MonetaryAmount("67.906ETH"))
-                .setPercentageAmount(true)
-                .setCur1("USDT")
-                .setExchangeNames(ExchangeNames({ExchangeName("huobi"), ExchangeName("upbit", "user1")})));
+  EXPECT_EQ(
+      commandFactory.createTradeCommand(type, inputStr("67.906%eth-USDT,huobi,upbit_user1")),
+      CoincenterCommand(type)
+          .setTradeOptions(cmdLineOptions.computeTradeOptions())
+          .setAmount(MonetaryAmount("67.906ETH"))
+          .setPercentageAmount(true)
+          .setCur1("USDT")
+          .setExchangeNames(ExchangeNames({ExchangeName("huobi"), ExchangeName(ExchangeNameEnum::upbit, "user1")})));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
@@ -182,7 +184,8 @@ TEST_F(CoincenterCommandFactoryTest, CreateWithdrawAbsoluteValid) {
             CoincenterCommand(CoincenterCommandType::Withdraw)
                 .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions())
                 .setAmount(MonetaryAmount("5000XRP"))
-                .setExchangeNames(ExchangeNames({ExchangeName("binance", "user1"), ExchangeName("kucoin", "user2")})));
+                .setExchangeNames(ExchangeNames({ExchangeName(ExchangeNameEnum::binance, "user1"),
+                                                 ExchangeName(ExchangeNameEnum::kucoin, "user2")})));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 
@@ -251,7 +254,7 @@ TEST_F(CoincenterCommandFactoryWithPreviousTest, CreateWithdrawWithPreviousValid
   EXPECT_EQ(commandFactory.createWithdrawApplyCommand(inputStr("kraken_user1")),
             CoincenterCommand(CoincenterCommandType::Withdraw)
                 .setWithdrawOptions(cmdLineOptions.computeWithdrawOptions())
-                .setExchangeNames(ExchangeNames({ExchangeName("kraken", "user1")})));
+                .setExchangeNames(ExchangeNames({ExchangeName(ExchangeNameEnum::kraken, "user1")})));
   EXPECT_NO_THROW(optionParser.checkEndParsing());
 }
 

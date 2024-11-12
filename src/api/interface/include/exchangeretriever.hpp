@@ -89,7 +89,11 @@ class ExchangeRetriever {
               ret.push_back(std::addressof(*foundIt));
             }
             if (ret.size() == oldSize) {
-              throw exception("Unable to find {} in the exchange list", name);
+              if constexpr (std::is_same_v<std::remove_cvref_t<decltype(name)>, ExchangeNameEnum>) {
+                throw exception("Unable to find {} in the exchange list", kSupportedExchanges[static_cast<int>(name)]);
+              } else {
+                throw exception("Unable to find {} in the exchange list", name);
+              }
             }
           }
           break;
@@ -103,13 +107,16 @@ class ExchangeRetriever {
 
   template <class NameType>
   struct Matcher {
-    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view>);
+    static_assert(std::is_same_v<NameType, ExchangeName> || std::is_same_v<NameType, std::string_view> ||
+                  std::is_same_v<NameType, ExchangeNameEnum>);
 
     bool operator()(const Exchange &e, const NameType &n) const {
       if constexpr (std::is_same_v<NameType, std::string_view>) {
         return e.name() == n;
-      } else {
+      } else if constexpr (std::is_same_v<NameType, ExchangeName>) {
         return e.matches(n);
+      } else if constexpr (std::is_same_v<NameType, ExchangeNameEnum>) {
+        return e.exchangeNameEnum() == n;
       }
     }
   };

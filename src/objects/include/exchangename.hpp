@@ -36,7 +36,7 @@ class ExchangeName {
   /// first '_' that is important.
   explicit ExchangeName(std::string_view globalExchangeName);
 
-  ExchangeName(std::string_view exchangeName, std::string_view keyName);
+  explicit ExchangeName(ExchangeNameEnum exchangeNameEnum, std::string_view keyName = {});
 
   std::string_view name() const {
     const auto underscore = underscorePos();
@@ -50,6 +50,8 @@ class ExchangeName {
   }
 
   auto publicExchangePos() const { return PublicExchangePos(name()); }
+
+  ExchangeNameEnum exchangeNameEnum() const { return static_cast<ExchangeNameEnum>(publicExchangePos()); }
 
   bool isKeyNameDefined() const { return underscorePos() != string::npos; }
 

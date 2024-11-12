@@ -44,13 +44,8 @@ ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(g
   }
 }
 
-ExchangeName::ExchangeName(std::string_view exchangeName, std::string_view keyName)
-    : _nameWithKey(ToLower(exchangeName)) {
-  if (std::ranges::find_if(kSupportedExchanges, [this](const auto exchangeStr) {
-        return exchangeStr == this->_nameWithKey;
-      }) == std::end(kSupportedExchanges)) {
-    throw invalid_argument("Invalid exchange name '{}'", exchangeName);
-  }
+ExchangeName::ExchangeName(ExchangeNameEnum exchangeNameEnum, std::string_view keyName)
+    : _nameWithKey(kSupportedExchanges[static_cast<int>(exchangeNameEnum)]) {
   if (!keyName.empty()) {
     _nameWithKey.push_back('_');
     _nameWithKey.append(keyName);

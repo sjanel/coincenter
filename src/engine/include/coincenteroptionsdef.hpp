@@ -8,7 +8,6 @@
 #include "apioutputtype.hpp"
 #include "cct_const.hpp"
 #include "commandlineoption.hpp"
-#include "exchangeconfigmap.hpp"
 #include "exchangepublicapi.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"

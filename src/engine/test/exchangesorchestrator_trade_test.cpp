@@ -322,7 +322,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuy) {
   TradedAmounts tradedAmounts = expectSingleTrade(1, from, toCurrency, side, TradableMarkets::kExpectCall,
                                                   OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   EXPECT_EQ(exchangesOrchestrator.trade(from, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions),
             TradeResultPerExchange(1, std::make_pair(&exchange1, TradeResult(tradedAmounts, from))));
@@ -333,8 +333,8 @@ TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange2.name(), exchange2.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName())};
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(BalanceOptions()))
       .WillOnce(testing::Return(balancePortfolio1));
@@ -356,8 +356,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
   CurrencyCode toCurrency("USDT");
   TradeSide side = TradeSide::kSell;
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
-                                               ExchangeName(exchange4.name(), exchange4.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
 
   // 1.5ETH
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(BalanceOptions()))
@@ -495,7 +495,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
   CurrencyCode toCurrency("XRP");
   TradeSide side = TradeSide::kBuy;
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
@@ -515,9 +515,9 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
   CurrencyCode toCurrency("EUR");
   TradeSide side = TradeSide::kSell;
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange2.name(), exchange2.keyName()),
-                                               ExchangeName(exchange3.name(), exchange3.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
@@ -543,9 +543,10 @@ TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
   CurrencyCode toCurrency("DOT");
   TradeSide side = TradeSide::kBuy;
 
-  const ExchangeName privateExchangeNames[] = {
-      ExchangeName(exchange1.name(), exchange1.keyName()), ExchangeName(exchange3.name(), exchange3.keyName()),
-      ExchangeName(exchange2.name(), exchange2.keyName()), ExchangeName(exchange4.name(), exchange4.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
@@ -587,7 +588,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1))};
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), tradeResultPerExchange);
@@ -607,7 +608,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuyTwoSteps) {
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1))};
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), tradeResultPerExchange);
@@ -632,8 +633,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
-                                               ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1)),
                                                 std::make_pair(&exchange3, TradeResult(tradedAmounts31, from31)),
@@ -657,8 +658,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange)
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.name(), exchange3.keyName()),
-                                               ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange3, TradeResult(tradedAmounts3, from3))};
   EXPECT_EQ(exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions), tradeResultPerExchange);
@@ -692,9 +693,9 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
   EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.name(), exchange4.keyName()),
-                                               ExchangeName(exchange2.name(), exchange2.keyName()),
-                                               ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1)),
                                                 std::make_pair(&exchange4, TradeResult(tradedAmounts4, from42))};
@@ -752,7 +753,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartSell) {
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1))};
   EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions),
@@ -791,8 +792,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSell) {
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange2.name(), exchange2.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1)),
                                                 std::make_pair(&exchange2, TradeResult(tradedAmounts2, from2))};
@@ -817,8 +818,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellPercentage) {
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange3.name(), exchange3.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange1, TradeResult(tradedAmounts1, from1))};
   EXPECT_EQ(tradeResultPerExchange,
@@ -841,8 +842,8 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.name(), exchange2.keyName()),
-                                               ExchangeName(exchange3.name(), exchange3.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
+                                               ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange2, TradeResult(tradedAmounts2, from2))};
   EXPECT_EQ(exchangesOrchestrator.smartSell(startAmount, false, privateExchangeNames, tradeOptions),
@@ -869,9 +870,9 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartSellFromAnotherPreferre
   EXPECT_CALL(ExchangePrivate(exchange3), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio3));
   EXPECT_CALL(ExchangePrivate(exchange4), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio4));
 
-  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.name(), exchange4.keyName()),
-                                               ExchangeName(exchange1.name(), exchange1.keyName()),
-                                               ExchangeName(exchange3.name(), exchange3.keyName())};
+  const ExchangeName privateExchangeNames[] = {ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName()),
+                                               ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
+                                               ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
   TradeResultPerExchange tradeResultPerExchange{std::make_pair(&exchange3, TradeResult(tradedAmounts3, from3)),
                                                 std::make_pair(&exchange4, TradeResult(tradedAmounts4, from4))};

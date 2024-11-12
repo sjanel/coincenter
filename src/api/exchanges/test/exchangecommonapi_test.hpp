@@ -299,13 +299,13 @@ class TestAPI {
 
  private:
   void createPrivateExchangeIfKeyPresent() {
-    std::string_view publicExchangeName = exchangePublic.name();
-    if (!apiKeysProvider.contains(publicExchangeName)) {
-      log::warn("Skip {} private API test as cannot find associated private key", publicExchangeName);
+    auto exchangeNameEnum = exchangePublic.exchangeNameEnum();
+    if (!apiKeysProvider.hasAtLeastOneKey(exchangeNameEnum)) {
+      log::warn("Skip {} private API test as cannot find associated private key", exchangePublic.name());
       return;
     }
 
-    ExchangeName exchangeName(publicExchangeName, apiKeysProvider.getKeyNames(publicExchangeName).front());
+    ExchangeName exchangeName(exchangeNameEnum, apiKeysProvider.getKeyNames(exchangeNameEnum).front());
     const APIKey &firstAPIKey = apiKeysProvider.get(exchangeName);
 
     exchangePrivateOpt.emplace(coincenterInfo, exchangePublic, firstAPIKey);

@@ -33,7 +33,7 @@ class Exchange;
 template <class T>
 using ExchangeWith = std::pair<const Exchange *, T>;
 
-using MarketOrderBookConversionRate = std::tuple<std::string_view, MarketOrderBook, std::optional<MonetaryAmount>>;
+using MarketOrderBookConversionRate = std::tuple<ExchangeNameEnum, MarketOrderBook, std::optional<MonetaryAmount>>;
 
 using MarketOrderBookConversionRates = FixedCapacityVector<MarketOrderBookConversionRate, kNbSupportedExchanges>;
 

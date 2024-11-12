@@ -11,10 +11,13 @@
 namespace cct {
 
 using ExchangeNameSpan = std::span<const ExchangeName>;
+using ExchangeNameEnumSpan = std::span<const ExchangeNameEnum>;
 using ExchangeNames = SmallVector<ExchangeName, 1>;
 
-using PublicExchangeNameVector = FixedCapacityVector<ExchangeName, kNbSupportedExchanges>;
+using ExchangeNameEnumVector = FixedCapacityVector<ExchangeNameEnum, kNbSupportedExchanges>;
 
 string ConstructAccumulatedExchangeNames(ExchangeNameSpan exchangeNames);
+
+string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNames);
 
 }  // namespace cct

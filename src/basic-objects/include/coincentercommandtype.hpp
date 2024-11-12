@@ -7,38 +7,18 @@
 
 namespace cct {
 
-enum class CoincenterCommandType : int8_t {
-  HealthCheck,
-  Currencies,
-  Markets,
-  Conversion,
-  ConversionPath,
-  LastPrice,
-  Ticker,
-  Orderbook,
-  LastTrades,
-  Last24hTradedVolume,
-  WithdrawFees,
+#define CCT_COINCENTER_COMMAND_TYPES                                                                               \
+  HealthCheck, Currencies, Markets, Conversion, ConversionPath, LastPrice, Ticker, Orderbook, LastTrades,          \
+      Last24hTradedVolume, WithdrawFees,                                                                           \
+                                                                                                                   \
+      Balance, DepositInfo, OrdersClosed, OrdersOpened, OrdersCancel, RecentDeposits, RecentWithdraws, Trade, Buy, \
+      Sell, Withdraw, DustSweeper,                                                                                 \
+                                                                                                                   \
+      MarketData, Replay, ReplayMarkets,                                                                           \
+                                                                                                                   \
+      Last
 
-  Balance,
-  DepositInfo,
-  OrdersClosed,
-  OrdersOpened,
-  OrdersCancel,
-  RecentDeposits,
-  RecentWithdraws,
-  Trade,
-  Buy,
-  Sell,
-  Withdraw,
-  DustSweeper,
-
-  MarketData,
-  Replay,
-  ReplayMarkets,
-
-  Last
-};
+enum class CoincenterCommandType : int8_t { CCT_COINCENTER_COMMAND_TYPES };
 
 std::string_view CoincenterCommandTypeToString(CoincenterCommandType type);
 
@@ -50,13 +30,7 @@ bool IsAnyTrade(CoincenterCommandType type);
 template <>
 struct glz::meta<::cct::CoincenterCommandType> {
   using enum ::cct::CoincenterCommandType;
-  static constexpr auto value = enumerate(HealthCheck, Currencies, Markets, Conversion, ConversionPath, LastPrice,
-                                          Ticker, Orderbook, LastTrades, Last24hTradedVolume, WithdrawFees,
-
-                                          Balance, DepositInfo, OrdersClosed, OrdersOpened, OrdersCancel,
-                                          RecentDeposits, RecentWithdraws, Trade, Buy, Sell, Withdraw, DustSweeper,
-
-                                          MarketData, Replay, ReplayMarkets,
-
-                                          Last);
+  static constexpr auto value = enumerate(CCT_COINCENTER_COMMAND_TYPES);
 };
+
+#undef CCT_COINCENTER_COMMAND_TYPES
