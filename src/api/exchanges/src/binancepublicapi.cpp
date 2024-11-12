@@ -15,6 +15,7 @@
 #include "apiquerytypeenum.hpp"
 #include "binance-common-api.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
@@ -86,7 +87,7 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exc
 
 BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                              api::CommonAPI& commonAPI)
-    : ExchangePublic("binance", fiatConverter, commonAPI, coincenterInfo),
+    : ExchangePublic(ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo),
       _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _commonInfo(_curlHandle, exchangeConfig()),
@@ -111,11 +112,11 @@ bool BinancePublic::healthCheck() {
   json::container result = json::container::parse(
       _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
   if (result.is_discarded()) {
-    log::error("{} health check response is badly formatted: {}", _name, result.dump());
+    log::error("{} health check response is badly formatted: {}", name(), result.dump());
     return false;
   }
   if (!result.empty()) {
-    log::error("{} health check is not empty: {}", _name, result.dump());
+    log::error("{} health check is not empty: {}", name(), result.dump());
   }
   return result.empty();
 }
@@ -441,7 +442,7 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
   static constexpr int kMaxNbLastTrades = 1000;
 
   if (nbTrades > kMaxNbLastTrades) {
-    log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, _name);
+    log::warn("{} is larger than maximum number of last trades of {} on {}", nbTrades, kMaxNbLastTrades, name());
     nbTrades = kMaxNbLastTrades;
   }
 

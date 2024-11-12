@@ -12,6 +12,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -84,7 +85,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
 }  // namespace
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
-    : ExchangePublic("huobi", fiatConverter, commonAPI, config),
+    : ExchangePublic(ExchangeNameEnum::huobi, fiatConverter, commonAPI, config),
       _curlHandle(kURLBases, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _healthCheckCurlHandle(
           kHealthCheckBaseUrl, config.metricGatewayPtr(),
@@ -112,21 +113,21 @@ bool HuobiPublic::healthCheck() {
       json::container::parse(_healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet)),
                              nullptr, kAllowExceptions);
   if (result.is_discarded()) {
-    log::error("{} health check response is badly formatted", _name);
+    log::error("{} health check response is badly formatted", name());
     return false;
   }
   auto statusIt = result.find("status");
   if (statusIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", _name, result.dump());
+    log::error("Unexpected answer from {} status: {}", name(), result.dump());
     return false;
   }
   auto descriptionIt = statusIt->find("description");
   if (descriptionIt == statusIt->end()) {
-    log::error("Unexpected answer from {} status: {}", _name, statusIt->dump());
+    log::error("Unexpected answer from {} status: {}", name(), statusIt->dump());
     return false;
   }
   std::string_view statusStr = descriptionIt->get<std::string_view>();
-  log::info("{} status: {}", _name, statusStr);
+  log::info("{} status: {}", name(), statusStr);
   auto incidentsIt = result.find("incidents");
   return incidentsIt != result.end() && incidentsIt->empty();
 }
@@ -291,13 +292,13 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
         if (withdrawFeeTypeStr == "fixed") {
           std::string_view withdrawFeeStr = chainDetail["transactFeeWithdraw"].get<std::string_view>();
           MonetaryAmount withdrawFee(withdrawFeeStr, cur);
-          log::trace("Retrieved {} withdrawal fee {}", _name, withdrawFee);
+          log::trace("Retrieved {} withdrawal fee {}", name(), withdrawFee);
           fees.push_back(withdrawFee);
         } else if (withdrawFeeTypeStr == "rate") {
-          log::debug("Unsupported rate withdraw fee for {}", _name);
+          log::debug("Unsupported rate withdraw fee for {}", name());
           fees.emplace_back(0, cur);
         } else if (withdrawFeeTypeStr == "circulated") {
-          log::debug("Unsupported circulated withdraw fee for {}", _name);
+          log::debug("Unsupported circulated withdraw fee for {}", name());
           fees.emplace_back(0, cur);
         }
       }
@@ -306,11 +307,11 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
       break;
     }
     if (!foundChainWithSameName) {
-      log::debug("Cannot find '{}' main chain in {}, discarding currency", curStr, _name);
+      log::debug("Cannot find '{}' main chain in {}, discarding currency", curStr, name());
     }
   }
 
-  log::info("Retrieved {} withdrawal fees for {} coins", _name, fees.size());
+  log::info("Retrieved {} withdrawal fees for {} coins", name(), fees.size());
   return MonetaryAmountByCurrencySet(std::move(fees));
 }
 

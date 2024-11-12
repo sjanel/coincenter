@@ -15,6 +15,7 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -93,7 +94,7 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, C
 }  // namespace
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
-    : ExchangePublic(kExchangeName, fiatConverter, commonAPI, config),
+    : ExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().getAPICallUpdateFrequency(kCurrencies), _cachedResultVault), config,
@@ -128,11 +129,11 @@ bool BithumbPublic::healthCheck() {
   const json::container jsonResponse = json::container::parse(
       _curlHandle.query("/public/assetsstatus/BTC", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
   if (jsonResponse.is_discarded()) {
-    log::error("{} health check response is badly formatted", _name);
+    log::error("{} health check response is badly formatted", name());
     return false;
   }
   const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
-  log::info("{} status code: {}", _name, statusCode);
+  log::info("{} status code: {}", name(), statusCode);
   return statusCode == kStatusOK;
 }
 
@@ -150,14 +151,14 @@ MarketSet BithumbPublic::queryTradableMarkets() {
 }
 
 std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  return _commonApi.tryQueryWithdrawalFee(kExchangeName, currencyCode);
+  return _commonApi.tryQueryWithdrawalFee(name(), currencyCode);
 }
 
 MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
   // Bithumb does not have a REST API endpoint for last price, let's compute it from the orderbook
   std::optional<MonetaryAmount> avgPrice = getOrderBook(mk).averagePrice();
   if (!avgPrice) {
-    log::error("Empty order book for {} on {} cannot compute average price", mk, _name);
+    log::error("Empty order book for {} on {} cannot compute average price", mk, name());
     return MonetaryAmount(0, mk.quote());
   }
   return *avgPrice;

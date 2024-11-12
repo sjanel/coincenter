@@ -92,7 +92,7 @@ class ExchangePrivateTest : public ::testing::Test {
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
 
-  MockExchangePublic exchangePublic{kSupportedExchanges[0], fiatConverter, commonAPI, coincenterInfo};
+  MockExchangePublic exchangePublic{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
   APIKey key{"test", "testUser", "", "", ""};
   MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
 
@@ -455,7 +455,7 @@ class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
  protected:
   MonetaryAmount grossAmount{"2.5ETH"};
   CurrencyCode cur{grossAmount.currencyCode()};
-  MockExchangePublic destinationExchangePublic{"kraken", fiatConverter, commonAPI, coincenterInfo};
+  MockExchangePublic destinationExchangePublic{ExchangeNameEnum::kraken, fiatConverter, commonAPI, coincenterInfo};
   MockExchangePrivate destinationExchangePrivate{destinationExchangePublic, coincenterInfo, key};
   Wallet receivingWallet{
       destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(), AccountOwner()};
@@ -545,7 +545,7 @@ TEST_F(ExchangePrivateWithdrawSimulationTest, SimulatedWithdrawalShouldNotCallLa
 TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
   MonetaryAmount grossAmount("2.5ETH");
   CurrencyCode cur = grossAmount.currencyCode();
-  MockExchangePublic destinationExchangePublic("bithumb", fiatConverter, commonAPI, coincenterInfo);
+  MockExchangePublic destinationExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, coincenterInfo);
   MockExchangePrivate destinationExchangePrivate(destinationExchangePublic, coincenterInfo, key);
   Wallet receivingWallet(destinationExchangePrivate.exchangeName(), cur, "TestAddress", "TestTag", WalletCheck(),
                          AccountOwner("SmithJohn", "스미스존"));
