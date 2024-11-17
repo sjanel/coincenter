@@ -246,6 +246,7 @@ if(MSVC)
   # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
   add_compile_definitions(NOMINMAX)
   add_compile_definitions(_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
+  add_compile_definitions(_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING)
 else()
   if(CCT_ENABLE_ASAN)
     if (NOT CCT_ASAN_OPTIONS)
