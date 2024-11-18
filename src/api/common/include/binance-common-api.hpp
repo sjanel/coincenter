@@ -2,8 +2,8 @@
 
 #include <mutex>
 
+#include "binance-common-schema.hpp"
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -11,7 +11,6 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "runmodes.hpp"
-#include "timedef.hpp"
 
 namespace cct {
 
@@ -19,17 +18,6 @@ class AbstractMetricGateway;
 class PermanentCurlOptions;
 
 namespace api {
-
-class BinanceGlobalInfosFunc {
- public:
-  BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
-                         settings::RunMode runMode);
-
-  json::container operator()();
-
- private:
-  CurlHandle _curlHandle;
-};
 
 class BinanceGlobalInfos {
  public:
@@ -45,8 +33,19 @@ class BinanceGlobalInfos {
  private:
   friend class BinancePrivate;
 
-  static CurrencyExchangeFlatSet ExtractTradableCurrencies(const json::container& allCoins,
-                                                           const CurrencyCodeSet& excludedCurrencies);
+  class BinanceGlobalInfosFunc {
+   public:
+    BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
+                           settings::RunMode runMode);
+
+    schema::binance::NetworkCoinDataVector operator()();
+
+   private:
+    CurlHandle _curlHandle;
+  };
+
+  static CurrencyExchangeFlatSet ExtractTradableCurrencies(
+      const schema::binance::NetworkCoinDataVector& networkCoinDataVector, const CurrencyCodeSet& excludedCurrencies);
 
   std::mutex _mutex;
   CachedResult<BinanceGlobalInfosFunc> _globalInfosCache;

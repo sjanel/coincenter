@@ -7,9 +7,10 @@
 #include <utility>
 
 #include "abstractmetricgateway.hpp"
+#include "binance-common-schema.hpp"
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
+#include "cct_smallvector.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -27,67 +28,48 @@ namespace cct::api {
 
 namespace {
 
-json::container PublicQuery(CurlHandle& curlHandle, std::string_view method) {
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
-
-  return requestRetry.queryJson(method, [](const json::container& jsonResponse) {
-    const auto foundErrorIt = jsonResponse.find("code");
-    const auto foundMsgIt = jsonResponse.find("msg");
-    if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
-      const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
-      log::warn("Binance error ({}), full: '{}'", statusCode, jsonResponse.dump());
-      return RequestRetry::Status::kResponseError;
-    }
-    return RequestRetry::Status::kResponseOK;
-  });
-}
-
 constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com";
 }  // namespace
 
-BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
-                                               const PermanentCurlOptions& permanentCurlOptions,
-                                               settings::RunMode runMode)
+BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
+                                                                   const PermanentCurlOptions& permanentCurlOptions,
+                                                                   settings::RunMode runMode)
     : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
 
-json::container BinanceGlobalInfosFunc::operator()() {
-  json::container ret = PublicQuery(_curlHandle, "/bapi/capital/v1/public/capital/getNetworkCoinAll");
-  auto dataIt = ret.find("data");
-  json::container dataRet;
-  if (dataIt == ret.end() || !dataIt->is_array()) {
-    log::error("Unexpected reply from binance getNetworkCoinAll, no data array");
-    dataRet = json::container::array_t();
-  } else {
-    dataRet = std::move(*dataIt);
+schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFunc::operator()() {
+  RequestRetry requestRetry(_curlHandle, CurlOptions(HttpRequestType::kGet));
+
+  schema::binance::NetworkCoinAll ret =
+      requestRetry.query<schema::binance::NetworkCoinAll,
+                         json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+          "/bapi/capital/v1/public/capital/getNetworkCoinAll", [](const auto& response) {
+            static constexpr std::string_view kExpectedCode = "000000";
+            if (response.code != kExpectedCode) {
+              log::warn("Binance error ({})", response.code);
+              return RequestRetry::Status::kResponseError;
+            }
+            return RequestRetry::Status::kResponseOK;
+          });
+
+  const auto [endIt, oldEndIt] =
+      std::ranges::remove_if(ret.data, [](const auto& el) { return el.coin.size() > CurrencyCode::kMaxLen; });
+
+  if (endIt != ret.data.end()) {
+    log::debug("{} currencies discarded for binance as code too long", ret.data.end() - endIt);
+    ret.data.erase(endIt, ret.data.end());
   }
 
-  const auto endIt = std::remove_if(dataRet.begin(), dataRet.end(), [](const json::container& el) {
-    return el["coin"].get<std::string_view>().size() > CurrencyCode::kMaxLen;
-  });
+  std::ranges::sort(ret.data);
 
-  if (endIt != dataRet.end()) {
-    log::debug("{} currencies discarded for binance as code too long", dataRet.end() - endIt);
-    dataRet.erase(endIt, dataRet.end());
-  }
-
-  std::sort(dataRet.begin(), dataRet.end(), [](const json::container& lhs, const json::container& rhs) {
-    return lhs["coin"].get<std::string_view>() < rhs["coin"].get<std::string_view>();
-  });
-  return dataRet;
+  return ret.data;
 }
 
 namespace {
-MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const json::container& coinElem) {
+MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const auto& coinElem) {
   MonetaryAmount withdrawFee(0, cur);
-  auto networkListIt = coinElem.find("networkList");
-  if (networkListIt == coinElem.end()) {
-    log::error("Unexpected Binance public coin data format, returning 0 monetary amount");
-    return withdrawFee;
-  }
-  for (const json::container& networkListPart : *networkListIt) {
-    MonetaryAmount fee(networkListPart["withdrawFee"].get<std::string_view>(), cur);
-    auto isDefaultIt = networkListPart.find("isDefault");
-    if (isDefaultIt != networkListPart.end() && isDefaultIt->get<bool>()) {
+  for (const auto& networkListPart : coinElem.networkList) {
+    MonetaryAmount fee(networkListPart.withdrawFee, cur);
+    if (networkListPart.isDefault) {
       withdrawFee = fee;
       break;
     }
@@ -105,13 +87,10 @@ MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {
   std::lock_guard<std::mutex> guard(_mutex);
   const auto& allCoins = _globalInfosCache.get();
 
-  MonetaryAmountVector fees;
+  MonetaryAmountVector fees(allCoins.size());
 
-  fees.reserve(allCoins.size());
-
-  std::transform(allCoins.begin(), allCoins.end(), std::back_inserter(fees), [](const json::container& el) {
-    CurrencyCode cur(el["coin"].get<std::string_view>());
-    return ComputeWithdrawalFeesFromNetworkList(cur, el);
+  std::ranges::transform(allCoins, fees.begin(), [](const auto& el) {
+    return ComputeWithdrawalFeesFromNetworkList(CurrencyCode{el.coin}, el);
   });
 
   log::info("Retrieved {} withdrawal fees for binance", fees.size());
@@ -123,10 +102,8 @@ MonetaryAmount BinanceGlobalInfos::queryWithdrawalFee(CurrencyCode currencyCode)
   const auto& allCoins = _globalInfosCache.get();
   const auto curStr = currencyCode.str();
 
-  const auto it = std::partition_point(allCoins.begin(), allCoins.end(), [&curStr](const json::container& el) {
-    return el["coin"].get<std::string_view>() < curStr;
-  });
-  if (it != allCoins.end() && (*it)["coin"].get<std::string_view>() == curStr) {
+  const auto it = std::ranges::partition_point(allCoins, [&curStr](const auto& el) { return el.coin < curStr; });
+  if (it != allCoins.end() && it->coin == curStr) {
     return ComputeWithdrawalFeesFromNetworkList(currencyCode, *it);
   }
   return MonetaryAmount(0, currencyCode);
@@ -137,30 +114,28 @@ CurrencyExchangeFlatSet BinanceGlobalInfos::queryTradableCurrencies(const Curren
   return ExtractTradableCurrencies(_globalInfosCache.get(), excludedCurrencies);
 }
 
-CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(const json::container& allCoins,
-                                                                      const CurrencyCodeSet& excludedCurrencies) {
+CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(
+    const schema::binance::NetworkCoinDataVector& networkCoinDataVector, const CurrencyCodeSet& excludedCurrencies) {
   CurrencyExchangeVector currencies;
-  for (const json::container& coinJson : allCoins) {
-    CurrencyCode cur(coinJson["coin"].get<std::string_view>());
+  for (const auto& coinJson : networkCoinDataVector) {
+    CurrencyCode cur{coinJson.coin};
     if (excludedCurrencies.contains(cur)) {
       log::trace("Discard {} excluded by config", cur.str());
       continue;
     }
-    const bool isFiat = coinJson["isLegalMoney"];
-    const auto& networkList = coinJson["networkList"];
-    if (networkList.size() > 1) {
+    const auto& networkList = coinJson.networkList;
+    if (coinJson.networkList.size() > 1) {
       log::debug("Several networks found for {}, considering only default network", cur.str());
     }
-    const auto it = std::find_if(networkList.begin(), networkList.end(),
-                                 [](const json::container& el) { return el["isDefault"].get<bool>(); });
+    const auto it = std::ranges::find_if(networkList, [](const auto& el) { return el.isDefault; });
     if (it != networkList.end()) {
-      auto deposit = (*it)["depositEnable"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
-                                                        : CurrencyExchange::Deposit::kUnavailable;
-      auto withdraw = (*it)["withdrawEnable"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
-                                                          : CurrencyExchange::Withdraw::kUnavailable;
+      auto deposit =
+          it->depositEnable ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable;
+      auto withdraw =
+          it->withdrawEnable ? CurrencyExchange::Withdraw::kAvailable : CurrencyExchange::Withdraw::kUnavailable;
 
       currencies.emplace_back(cur, cur, cur, deposit, withdraw,
-                              isFiat ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
+                              coinJson.isLegalMoney ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
     }
   }
   CurrencyExchangeFlatSet ret(std::move(currencies));
