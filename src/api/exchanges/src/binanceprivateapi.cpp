@@ -17,10 +17,11 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "binance-common-api.hpp"
+#include "binance-common-schema.hpp"
+#include "binance-schema.hpp"
 #include "binancepublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -60,6 +61,7 @@
 #include "withdraw.hpp"
 #include "withdrawinfo.hpp"
 #include "withdrawsconstraints.hpp"
+#include "write-json.hpp"
 
 namespace cct::api {
 
@@ -112,45 +114,58 @@ void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration
   postData.emplace_back(kSignatureKey, std::string_view(sha256Hex));
 }
 
-bool CheckErrorDoRetry(int statusCode, const json::container& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
-                       Duration& queryDelay) {
+bool CheckErrorMsg(std::string_view msg, QueryDelayDir& queryDelayDir, Duration& sleepingTime, Duration& queryDelay) {
   static constexpr Duration kInitialDurationQueryDelay = milliseconds(200);
+
+  // 'Timestamp for this request was 1000ms ahead of the server's time.' may be the error message.
+  // I guess this could happen when client time is not synchronized with binance time.
+  // Let's try to induce a delay in this case.
+  auto aheadPos = msg.find("ahead of the server's time");
+  if (aheadPos != std::string_view::npos) {
+    if (queryDelayDir != QueryDelayDir::kAhead) {
+      queryDelayDir = QueryDelayDir::kAhead;
+
+      sleepingTime = kInitialDurationQueryDelay;
+    }
+    queryDelay -= sleepingTime;
+    log::warn("Our local time is ahead of Binance server's time. Query delay modified to {}",
+              DurationToString(queryDelay));
+    // Ensure Nonce is increasing while modifying the query delay
+    std::this_thread::sleep_for(sleepingTime);
+    return true;
+  }
+
+  // If we are behind Binance clock, it returns below error message.
+  auto behindPos = msg.find("Timestamp for this request is outside of the recvWindow.");
+  if (behindPos != std::string_view::npos) {
+    if (queryDelayDir != QueryDelayDir::kBehind) {
+      queryDelayDir = QueryDelayDir::kBehind;
+
+      sleepingTime = kInitialDurationQueryDelay;
+    }
+    queryDelay += sleepingTime;
+    log::warn("Our local time is behind of Binance server's time. Query delay modified to {}",
+              DurationToString(queryDelay));
+    return true;
+  }
+
+  return false;
+}
+
+template <class T>
+using has_msg_t = decltype(std::declval<T>().msg);
+
+template <class T>
+using has_code_t = decltype(std::declval<T>().code);
+
+template <class T>
+bool CheckErrorDoRetry(int statusCode, const T& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
+                       Duration& queryDelay) {
   switch (statusCode) {
     case kInvalidTimestamp: {
-      auto msgIt = ret.find("msg");
-      if (msgIt != ret.end()) {
-        std::string_view msg = msgIt->get<std::string_view>();
-
-        // 'Timestamp for this request was 1000ms ahead of the server's time.' may be the error message.
-        // I guess this could happen when client time is not synchronized with binance time.
-        // Let's try to induce a delay in this case.
-        auto aheadPos = msg.find("ahead of the server's time");
-        if (aheadPos != std::string_view::npos) {
-          if (queryDelayDir != QueryDelayDir::kAhead) {
-            queryDelayDir = QueryDelayDir::kAhead;
-
-            sleepingTime = kInitialDurationQueryDelay;
-          }
-          queryDelay -= sleepingTime;
-          log::warn("Our local time is ahead of Binance server's time. Query delay modified to {}",
-                    DurationToString(queryDelay));
-          // Ensure Nonce is increasing while modifying the query delay
-          std::this_thread::sleep_for(sleepingTime);
-          return true;
-        }
-
-        // If we are behind Binance clock, it returns below error message.
-        auto behindPos = msg.find("Timestamp for this request is outside of the recvWindow.");
-        if (behindPos != std::string_view::npos) {
-          if (queryDelayDir != QueryDelayDir::kBehind) {
-            queryDelayDir = QueryDelayDir::kBehind;
-
-            sleepingTime = kInitialDurationQueryDelay;
-          }
-          queryDelay += sleepingTime;
-          log::warn("Our local time is behind of Binance server's time. Query delay modified to {}",
-                    DurationToString(queryDelay));
-          return true;
+      if constexpr (amc::is_detected<has_msg_t, T>::value) {
+        if (ret.msg) {
+          return CheckErrorMsg(*ret.msg, queryDelayDir, sleepingTime, queryDelay);
         }
       }
       break;
@@ -172,17 +187,18 @@ bool CheckErrorDoRetry(int statusCode, const json::container& ret, QueryDelayDir
   return false;
 }
 
-template <class CurlPostDataT = CurlPostData>
-json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
-                             std::string_view endpoint, Duration& queryDelay,
-                             CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
+template <class T,
+          json::opts jsonOpts = json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true},
+          class CurlPostDataT = CurlPostData>
+T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
+               Duration& queryDelay, CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
   opts.mutableHttpHeaders().emplace_back("X-MBX-APIKEY", apiKey.key());
 
   Duration sleepingTime = curlHandle.minDurationBetweenQueries();
   int statusCode{};
   QueryDelayDir queryDelayDir = QueryDelayDir::kNoDir;
-  json::container ret;
+  T ret;
   for (int retryPos = 0; retryPos < kNbOrderRequestsRetries; ++retryPos) {
     if (retryPos != 0) {
       log::trace("Wait {}...", DurationToString(sleepingTime));
@@ -192,21 +208,27 @@ json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpR
 
     SetNonceAndSignature(apiKey, opts.mutablePostData(), queryDelay);
 
-    static constexpr bool kAllowExceptions = false;
+    auto resStr = curlHandle.query(endpoint, opts);
 
-    ret = json::container::parse(curlHandle.query(endpoint, opts), nullptr, kAllowExceptions);
-    if (ret.is_discarded()) {
-      log::error("Badly formatted response from Binance, retry");
+    auto ec = json::read<jsonOpts>(ret, resStr);
+    if (ec) {
+      std::string_view prefixJsonContent = resStr.substr(0, std::min<int>(resStr.size(), 20));
+      log::error("Error while reading json content '{}{}': {}", prefixJsonContent,
+                 prefixJsonContent.size() < resStr.size() ? "..." : "", json::format_error(ec, resStr));
+      statusCode = -1;
       continue;
     }
 
-    auto codeIt = ret.find("code");
-    if (codeIt == ret.end() || !ret.contains("msg")) {
+    if constexpr (amc::is_detected<has_code_t, T>::value) {
+      if (!ret.code || *ret.code == 0) {
+        return ret;
+      }
+      // error in query
+      statusCode = *ret.code;  // 1100 for instance
+    } else {
+      // if no code, assume OK
       return ret;
     }
-
-    // error in query
-    statusCode = *codeIt;  // "1100" for instance
 
     if (CheckErrorDoRetry(statusCode, ret, queryDelayDir, sleepingTime, queryDelay)) {
       continue;
@@ -215,8 +237,16 @@ json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpR
     break;
   }
   if (throwIfError) {
-    log::error("Full Binance error for {}: '{}'", apiKey.name(), ret.dump());
-    throw exception("Error: {}, msg: {}", MonetaryAmount(statusCode), ret["msg"].get<std::string_view>());
+    std::string_view errorMsg;
+    string jsonStr = WriteJsonOrThrow(ret);
+    if constexpr (amc::is_detected<has_msg_t, T>::value) {
+      if (ret.msg) {
+        errorMsg = *ret.msg;
+      }
+    }
+
+    log::error("Full Binance error for {}: '{}'", apiKey.name(), jsonStr);
+    throw exception("Error: {}, msg: {}", MonetaryAmount(statusCode), errorMsg);
   }
   return ret;
 }
@@ -245,39 +275,40 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePubl
           _curlHandle, _apiKey, binancePublic, _queryDelay) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
-  json::container allCoins =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/config/getall", _queryDelay);
+  auto allCoins = PrivateQuery<schema::binance::NetworkCoinDataVector>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                                       "/sapi/v1/capital/config/getall", _queryDelay);
   return BinanceGlobalInfos::ExtractTradableCurrencies(allCoins, _exchangePublic.exchangeConfig().asset.allExclude);
 }
 
 bool BinancePrivate::validateApiKey() {
   static constexpr bool throwIfError = false;
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/account/status",
-                                        _queryDelay, CurlPostData(), throwIfError);
-  return result.find("code") == result.end();
+  auto result = PrivateQuery<schema::binance::V1AccountStatus>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                               "/sapi/v1/account/status", _queryDelay, CurlPostData(),
+                                                               throwIfError);
+  static constexpr std::string_view kNormalStatus = "Normal";
+  return result.data == kNormalStatus;
 }
 
 BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  const json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account", _queryDelay);
+  const auto v3AccountBalance =
+      PrivateQuery<schema::binance::V3AccountBalance>(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account",
+                                                      _queryDelay, CurlPostData{{"omitZeroBalances", "true"}});
   const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
 
   BalancePortfolio balancePortfolio;
+  balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(v3AccountBalance.balances.size()));
 
-  auto dataIt = result.find("balances");
-  if (dataIt == result.end()) {
-    log::error("Unexpected get account balance reply from {}", exchangeName());
-    return balancePortfolio;
-  }
-
-  balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(dataIt->size()));
-  for (const json::container& balance : *dataIt) {
-    CurrencyCode currencyCode(balance["asset"].get<std::string_view>());
-    MonetaryAmount amount(balance["free"].get<std::string_view>(), currencyCode);
+  for (const auto& balance : v3AccountBalance.balances) {
+    if (balance.asset.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping {} asset '{}' because it's too long", _exchangePublic.name(), balance.asset);
+      continue;
+    }
+    CurrencyCode currencyCode(balance.asset);
+    MonetaryAmount amount(balance.free, currencyCode);
 
     if (withBalanceInUse) {
-      MonetaryAmount usedAmount(balance["locked"].get<std::string_view>(), currencyCode);
+      MonetaryAmount usedAmount(balance.locked, currencyCode);
       amount += usedAmount;
     }
 
@@ -288,16 +319,17 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
 
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address",
-                                        _queryDelay, {{"coin", currencyCode.str()}});
-  std::string_view tag(result["tag"].get<std::string_view>());
+  const auto result = PrivateQuery<schema::binance::V1CapitalDepositAddressListElement>(
+      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address", _queryDelay,
+      {{"coin", currencyCode.str()}});
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
-  bool doCheckWallet =
+  const bool doCheckWallet =
       coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
+
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()), currencyCode,
-                std::move(result["address"].get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
-  log::info("Retrieved {} (URL: '{}')", wallet, result["url"].get<std::string_view>());
+                std::move(result.address), std::move(result.tag), walletCheck, _apiKey.accountOwner());
+  log::info("Retrieved {}", wallet);
   return wallet;
 }
 
@@ -312,14 +344,14 @@ bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
 
 namespace {
 template <class OrderVectorType>
-void FillOrders(const OrdersConstraints& ordersConstraints, const json::container& ordersArray,
+void FillOrders(const OrdersConstraints& ordersConstraints, std::span<const schema::binance::V3GetAllOrder> ordersArray,
                 ExchangePublic& exchangePublic, OrderVectorType& orderVector) {
   const auto cur1Str = ordersConstraints.curStr1();
   const auto cur2Str = ordersConstraints.curStr2();
 
   MarketSet markets;
-  for (const json::container& orderDetails : ordersArray) {
-    std::string_view marketStr = orderDetails["symbol"].get<std::string_view>();  // already higher case
+  for (const auto& orderDetails : ordersArray) {
+    std::string_view marketStr = orderDetails.symbol;  // already higher case
     std::size_t cur1Pos = marketStr.find(cur1Str);
     if (ordersConstraints.isCurDefined() && cur1Pos == std::string_view::npos) {
       continue;
@@ -327,7 +359,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json::containe
     if (ordersConstraints.isCur2Defined() && marketStr.find(cur2Str) == std::string_view::npos) {
       continue;
     }
-    const auto placedTimeMsSinceEpoch = orderDetails["time"].get<int64_t>();
+    const auto placedTimeMsSinceEpoch = orderDetails.time;
 
     const TimePoint placedTime{milliseconds(placedTimeMsSinceEpoch)};
     if (!ordersConstraints.validatePlacedTime(placedTime)) {
@@ -342,25 +374,25 @@ void FillOrders(const OrdersConstraints& ordersConstraints, const json::containe
 
     const CurrencyCode volumeCur = optMarket->base();
     const CurrencyCode priceCur = optMarket->quote();
-    const int64_t orderId = orderDetails["orderId"].get<int64_t>();
+    const int64_t orderId = orderDetails.orderId;
     string id = IntegralToString(orderId);
     if (!ordersConstraints.validateId(id)) {
       continue;
     }
 
-    const MonetaryAmount matchedVolume(orderDetails["executedQty"].get<std::string_view>(), volumeCur);
-    const MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
-    const TradeSide side = orderDetails["side"].get<std::string_view>() == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
+    const MonetaryAmount matchedVolume(orderDetails.executedQty, volumeCur);
+    const MonetaryAmount price(orderDetails.price, priceCur);
+    const TradeSide side = orderDetails.side == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
 
     using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
     if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
-      const MonetaryAmount originalVolume(orderDetails["origQty"].get<std::string_view>(), volumeCur);
+      const MonetaryAmount originalVolume(orderDetails.origQty, volumeCur);
       const MonetaryAmount remainingVolume = originalVolume - matchedVolume;
 
       orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
     } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
-      const auto matchedTimeMsSinceEpoch = orderDetails["updateTime"].get<int64_t>();
+      const auto matchedTimeMsSinceEpoch = orderDetails.updateTime;
       const TimePoint matchedTime{milliseconds(matchedTimeMsSinceEpoch)};
 
       orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
@@ -386,8 +418,8 @@ ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& clo
     if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
       params.emplace_back("endTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
     }
-    const json::container result =
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
+    const auto result = PrivateQuery<schema::binance::V3GetAllOrders>(
+        _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
 
     FillOrders(closedOrdersConstraints, result, _exchangePublic, closedOrders);
     log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
@@ -408,8 +440,8 @@ OpenedOrderVector BinancePrivate::queryOpenedOrders(const OrdersConstraints& ope
       return openedOrders;
     }
   }
-  const json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", _queryDelay, std::move(params));
+  const auto result = PrivateQuery<schema::binance::V3GetAllOrders>(
+      _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", _queryDelay, std::move(params));
 
   FillOrders(openedOrdersConstraints, result, _exchangePublic, openedOrders);
 
@@ -426,8 +458,8 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
       return 0;
     }
     if (canUseCancelAllEndpoint) {
-      json::container cancelledOrders = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete,
-                                                     "/api/v3/openOrders", _queryDelay, std::move(params));
+      const auto cancelledOrders = PrivateQuery<schema::binance::V3CancelAllOrders>(
+          _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, std::move(params));
       return static_cast<int>(cancelledOrders.size());
     }
   }
@@ -448,15 +480,19 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     }
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
       params.erase("orderId");
-      json::container cancelledOrders =
-          PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, params);
+      const auto cancelledOrders = PrivateQuery<schema::binance::V3CancelAllOrders>(
+          _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, params);
       nbOrdersCancelled += static_cast<int>(cancelledOrders.size());
     } else {
       for (const OpenedOrder& order : orders) {
         params.set("orderId", order.id());
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/order", _queryDelay, params);
+        auto cancelledOrder = PrivateQuery<schema::binance::V3CancelOrder>(
+            _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/order", _queryDelay, params);
+
+        if (cancelledOrder.orderId != 0) {
+          ++nbOrdersCancelled;
+        }
       }
-      nbOrdersCancelled += orders.size();
     }
   }
   return nbOrdersCancelled;
@@ -497,21 +533,27 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
       options.emplace_back("txId", depositsConstraints.idSet().front());
     }
   }
-  json::container depositStatus = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet,
-                                               "/sapi/v1/capital/deposit/hisrec", _queryDelay, std::move(options));
+
+  auto depositStatus = PrivateQuery<schema::binance::V1CapitalDepositHisRec>(
+      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay, std::move(options));
+
   Deposits deposits;
   deposits.reserve(static_cast<Deposits::size_type>(depositStatus.size()));
-  for (json::container& depositDetail : depositStatus) {
-    int statusInt = depositDetail["status"].get<int>();
-    Deposit::Status status = DepositStatusFromCode(statusInt);
 
-    CurrencyCode currencyCode(depositDetail["coin"].get<std::string_view>());
-    string& id = depositDetail["id"].get_ref<string&>();
-    MonetaryAmount amountReceived(depositDetail["amount"].get<double>(), currencyCode);
-    int64_t millisecondsSinceEpoch = depositDetail["insertTime"].get<int64_t>();
+  for (auto& depositDetail : depositStatus) {
+    if (depositDetail.coin.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping {} deposit '{}' because it's too long", exchangeName(), depositDetail.coin);
+      continue;
+    }
+
+    Deposit::Status status = DepositStatusFromCode(depositDetail.status);
+
+    CurrencyCode currencyCode(depositDetail.coin);
+    MonetaryAmount amountReceived(depositDetail.amount, currencyCode);
+    int64_t millisecondsSinceEpoch = depositDetail.insertTime;
     TimePoint timestamp{milliseconds(millisecondsSinceEpoch)};
 
-    deposits.emplace_back(std::move(id), timestamp, amountReceived, status);
+    deposits.emplace_back(std::move(depositDetail.id), timestamp, amountReceived, status);
   }
   DepositsSet depositsSet(std::move(deposits));
   log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
@@ -561,13 +603,12 @@ Withdraw::Status WithdrawStatusFromStatusStr(int statusInt, bool logStatus) {
   }
 }
 
-TimePoint RetrieveTimeStampFromWithdrawJson(const json::container& withdrawJson) {
+TimePoint RetrieveTimeStampFromWithdrawJson(const auto& withdrawJson) {
   int64_t millisecondsSinceEpoch;
-  auto completeTimeIt = withdrawJson.find("completeTime");
-  if (completeTimeIt != withdrawJson.end()) {
-    millisecondsSinceEpoch = completeTimeIt->get<int64_t>();
+  if (withdrawJson.completeTime != 0) {
+    millisecondsSinceEpoch = withdrawJson.completeTime;
   } else {
-    millisecondsSinceEpoch = withdrawJson["applyTime"].get<int64_t>();
+    millisecondsSinceEpoch = withdrawJson.applyTime;
   }
   return TimePoint{milliseconds(millisecondsSinceEpoch)};
 }
@@ -593,20 +634,24 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
   // Binance provides field 'withdrawOrderId' tu customize user id, but it's not well documented
   // so we use Binance generated 'id' instead.
   // What is important is that the same field is considered in both queries 'launchWithdraw' and 'queryRecentWithdraws'
-  json::container data = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history",
-                                      _queryDelay, CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
-  for (json::container& withdrawJson : data) {
-    int statusInt = withdrawJson["status"].get<int>();
-    Withdraw::Status status = WithdrawStatusFromStatusStr(statusInt, withdrawsConstraints.isCurDefined());
-    CurrencyCode currencyCode(withdrawJson["coin"].get<std::string_view>());
-    string& id = withdrawJson["id"].get_ref<string&>();
-    if (!withdrawsConstraints.validateId(id)) {
+  auto data = PrivateQuery<schema::binance::V1CapitalWithdrawHistory>(
+      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history", _queryDelay,
+      CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
+  for (auto& withdrawJson : data) {
+    if (withdrawJson.coin.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping {} deposit '{}' because it's too long", exchangeName(), withdrawJson.coin);
       continue;
     }
-    MonetaryAmount netEmittedAmount(withdrawJson["amount"].get<double>(), currencyCode);
-    MonetaryAmount withdrawFee(withdrawJson["transactionFee"].get<double>(), currencyCode);
+
+    Withdraw::Status status = WithdrawStatusFromStatusStr(withdrawJson.status, withdrawsConstraints.isCurDefined());
+    CurrencyCode currencyCode(withdrawJson.coin);
+    if (!withdrawsConstraints.validateId(withdrawJson.id)) {
+      continue;
+    }
+    MonetaryAmount netEmittedAmount(withdrawJson.amount, currencyCode);
+    MonetaryAmount withdrawFee(withdrawJson.transactionFee, currencyCode);
     TimePoint timestamp = RetrieveTimeStampFromWithdrawJson(withdrawJson);
-    withdraws.emplace_back(std::move(id), timestamp, netEmittedAmount, status, withdrawFee);
+    withdraws.emplace_back(std::move(withdrawJson.id), timestamp, netEmittedAmount, status, withdrawFee);
   }
   WithdrawsSet withdrawsSet(std::move(withdraws));
   log::info("Retrieved {} recent withdraws for {}", withdrawsSet.size(), exchangeName());
@@ -614,40 +659,46 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
 }
 
 MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
-  json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail", _queryDelay);
+  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                                "/sapi/v1/asset/assetDetail", _queryDelay);
   MonetaryAmountVector fees;
-  for (const auto& [curCodeStr, withdrawFeeDetails] : result.items()) {
-    if (withdrawFeeDetails["withdrawStatus"].get<bool>()) {
+  for (const auto& [curCodeStr, withdrawFeeDetails] : result) {
+    if (withdrawFeeDetails.withdrawStatus) {
+      if (curCodeStr.size() > CurrencyCode::kMaxLen) {
+        log::warn("Skipping {} deposit '{}' because it's too long", _exchangePublic.name(), curCodeStr);
+        continue;
+      }
+
       CurrencyCode cur(curCodeStr);
-      fees.emplace_back(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), cur);
+      fees.emplace_back(withdrawFeeDetails.withdrawFee, cur);
     }
   }
   return MonetaryAmountByCurrencySet(std::move(fees));
 }
 
 std::optional<MonetaryAmount> BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/asset/assetDetail",
-                                        _queryDelay, {{"asset", currencyCode.str()}});
-  if (!result.contains(currencyCode.str())) {
+  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                                "/sapi/v1/asset/assetDetail", _queryDelay,
+                                                                {{"asset", currencyCode.str()}});
+  const auto it = result.find(currencyCode.str());
+  if (it == result.end()) {
     return {};
   }
-  const json::container& withdrawFeeDetails = result[currencyCode.str()];
-  if (!withdrawFeeDetails["withdrawStatus"].get<bool>()) {
+  const auto& withdrawFeeDetails = it->second;
+  if (!withdrawFeeDetails.withdrawStatus) {
     log::error("{} is currently unavailable for withdraw from {}", currencyCode, _exchangePublic.name());
   }
-  return MonetaryAmount(withdrawFeeDetails["withdrawFee"].get<std::string_view>(), currencyCode);
+  return MonetaryAmount(withdrawFeeDetails.withdrawFee, currencyCode);
 }
 
 namespace {
-TradedAmounts ParseTrades(Market mk, CurrencyCode fromCurrencyCode, const json::container& fillDetail) {
-  MonetaryAmount price(fillDetail["price"].get<std::string_view>(), mk.quote());
-  MonetaryAmount quantity(fillDetail["qty"].get<std::string_view>(), mk.base());
+TradedAmounts ParseTrades(Market mk, CurrencyCode fromCurrencyCode, const auto& fillDetail) {
+  MonetaryAmount price(fillDetail.price, mk.quote());
+  MonetaryAmount quantity(fillDetail.qty, mk.base());
   MonetaryAmount quantityTimesPrice = quantity.toNeutral() * price;
   TradedAmounts detailTradedInfo(fromCurrencyCode == mk.quote() ? quantityTimesPrice : quantity,
                                  fromCurrencyCode == mk.quote() ? quantity : quantityTimesPrice);
-  MonetaryAmount fee(fillDetail["commission"].get<std::string_view>(),
-                     fillDetail["commissionAsset"].get<std::string_view>());
+  MonetaryAmount fee(fillDetail.commission, fillDetail.commissionAsset);
   log::debug("Gross {} has been matched at {} price, with a fee of {}", quantity, price, fee);
   if (fee.currencyCode() == detailTradedInfo.from.currencyCode()) {
     detailTradedInfo.from += fee;
@@ -659,14 +710,12 @@ TradedAmounts ParseTrades(Market mk, CurrencyCode fromCurrencyCode, const json::
   return detailTradedInfo;
 }
 
-TradedAmounts QueryOrdersAfterPlace(Market mk, CurrencyCode fromCurrencyCode, const json::container& orderJson) {
+TradedAmounts QueryOrdersAfterPlace(Market mk, CurrencyCode fromCurrencyCode, const auto& orderJson) {
   CurrencyCode toCurrencyCode(fromCurrencyCode == mk.quote() ? mk.base() : mk.quote());
   TradedAmounts ret(fromCurrencyCode, toCurrencyCode);
 
-  if (orderJson.contains("fills")) {
-    for (const json::container& fillDetail : orderJson["fills"]) {
-      ret += ParseTrades(mk, fromCurrencyCode, fillDetail);
-    }
+  for (const auto& fillDetail : orderJson.fills) {
+    ret += ParseTrades(mk, fromCurrencyCode, fillDetail);
   }
 
   return ret;
@@ -696,16 +745,19 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     if (!isSimulation && toCurrencyCode == kBinanceCoinCur) {
       // Use special Binance Dust transfer
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}", kBinanceCoinCur);
-      json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/asset/dust",
-                                            _queryDelay, {{"asset", from.currencyStr()}});
-      auto transferResultIt = result.find("transferResult");
-      if (transferResultIt == result.end() || transferResultIt->empty()) {
-        throw exception("Unexpected dust transfer result");
+      auto result = PrivateQuery<schema::binance::V1AssetDust>(_curlHandle, _apiKey, HttpRequestType::kPost,
+                                                               "/sapi/v1/asset/dust", _queryDelay,
+                                                               {{"asset", from.currencyStr()}});
+      if (result.transferResult.empty()) {
+        log::error("Unable to find any transfer result for dust transfer");
+        placeOrderInfo.setClosed();
+        return placeOrderInfo;
       }
-      const json::container& res = transferResultIt->front();
-      placeOrderInfo.orderId = IntegralToString(res["tranId"].get<std::size_t>());
+
+      const auto& transferResult = result.transferResult.front();
+      placeOrderInfo.orderId = IntegralToString(transferResult.tranId);
       // 'transfered' is misspelled (against 'transferred') but the field is really named like this in Binance REST API
-      MonetaryAmount netTransferredAmount(res["transferedAmount"].get<std::string_view>(), kBinanceCoinCur);
+      MonetaryAmount netTransferredAmount(transferResult.transferedAmount, kBinanceCoinCur);
       placeOrderInfo.tradedAmounts() += TradedAmounts(from, netTransferredAmount);
     } else {
       log::warn("No trade of {} into {} because min vol order is {} for this market", volume, toCurrencyCode,
@@ -727,14 +779,14 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
   const std::string_view methodName = isSimulation ? "/api/v3/order/test" : "/api/v3/order";
 
-  json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, methodName, _queryDelay, placePostData);
+  auto result = PrivateQuery<schema::binance::V3NewOrder>(_curlHandle, _apiKey, HttpRequestType::kPost, methodName,
+                                                          _queryDelay, placePostData);
   if (isSimulation) {
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
-  placeOrderInfo.orderId = IntegralToString(result["orderId"].get<std::size_t>());
-  std::string_view status = result["status"].get<std::string_view>();
+  placeOrderInfo.orderId = IntegralToString(result.orderId);
+  std::string_view status = result.status;
   if (status == "FILLED" || status == "REJECTED" || status == "EXPIRED") {
     if (status == "FILLED") {
       placeOrderInfo.tradedAmounts() += QueryOrdersAfterPlace(mk, fromCurrencyCode, result);
@@ -754,33 +806,37 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
   const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? mk.base() : mk.quote();
   const string assetsStr = mk.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
-  json::container result = PrivateQuery(_curlHandle, _apiKey, requestType, "/api/v3/order", _queryDelay,
-                                        {{"symbol", assets}, {"orderId", orderId}});
-  const std::string_view status = result["status"].get<std::string_view>();
+  const auto result = PrivateQuery<schema::binance::V3GetOrder>(
+      _curlHandle, _apiKey, requestType, "/api/v3/order", _queryDelay, {{"symbol", assets}, {"orderId", orderId}});
+
   bool isClosed = false;
   bool queryClosedOrder = false;
-  if (status == "FILLED" || status == "CANCELED") {
+  if (result.status == "FILLED" || result.status == "CANCELED") {
     isClosed = true;
     queryClosedOrder = true;
-  } else if (status == "REJECTED" || status == "EXPIRED") {
-    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, status);
+  } else if (result.status == "REJECTED" || result.status == "EXPIRED") {
+    log::error("{} rejected our order {} with status {}", _exchangePublic.name(), orderId, result.status);
     isClosed = true;
   }
+
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
+
   if (queryClosedOrder) {
     CurlPostData myTradesOpts{{"symbol", assets}};
-    auto timeIt = result.find("time");
-    if (timeIt != result.end()) {
-      myTradesOpts.emplace_back("startTime", timeIt->get<int64_t>() - 100L);  // -100 just to be sure
+    if (result.time != 0) {
+      myTradesOpts.emplace_back("startTime", result.time - 100L);  // -100 just to be sure
     }
-    result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
-    int64_t integralOrderId = StringToIntegral<int64_t>(orderId);
-    for (const json::container& tradeDetails : result) {
-      if (tradeDetails["orderId"].get<int64_t>() == integralOrderId) {
+    const auto myTradesResult = PrivateQuery<schema::binance::V3MyTrades>(
+        _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
+    const auto integralOrderId =
+        StringToIntegral<decltype(std::declval<decltype(myTradesResult)>()[0].orderId)>(orderId);
+    for (const auto& tradeDetails : myTradesResult) {
+      if (tradeDetails.orderId == integralOrderId) {
         orderInfo.tradedAmounts += ParseTrades(mk, fromCurrencyCode, tradeDetails);
       }
     }
   }
+
   return orderInfo;
 }
 
@@ -791,28 +847,30 @@ InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount,
   if (destinationWallet.hasTag()) {
     withdrawPostData.emplace_back("addressTag", destinationWallet.tag());
   }
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/sapi/v1/capital/withdraw/apply",
-                                        _queryDelay, std::move(withdrawPostData));
-  return {std::move(destinationWallet), std::move(result["id"].get_ref<string&>()), grossAmount};
+  auto result = PrivateQuery<schema::binance::V1CapitalWithdrawApply>(_curlHandle, _apiKey, HttpRequestType::kPost,
+                                                                      "/sapi/v1/capital/withdraw/apply", _queryDelay,
+                                                                      std::move(withdrawPostData));
+  return {std::move(destinationWallet), std::move(result.id), grossAmount};
 }
 
 ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
                                                            const SentWithdrawInfo& sentWithdrawInfo) {
   const CurrencyCode currencyCode = initiatedWithdrawInfo.grossEmittedAmount().currencyCode();
-  json::container depositStatus =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay,
-                   {{"coin", currencyCode.str()}});
   const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
 
-  auto newEndIt = std::ranges::remove_if(depositStatus, [&wallet](const json::container& el) {
-                    return el["status"].get<int>() != 1 || el["address"].get<std::string_view>() != wallet.address();
+  auto depositStatus = PrivateQuery<schema::binance::V1CapitalDepositHisRec>(
+      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay,
+      {{"coin", currencyCode.str()}});
+
+  auto newEndIt = std::ranges::remove_if(depositStatus, [&wallet](const auto& el) {
+                    return el.status != 1 || el.address != wallet.address();
                   }).begin();
 
   depositStatus.erase(newEndIt, depositStatus.end());
 
-  const auto recentDepositFromJsonEl = [currencyCode](const json::container& el) {
-    const MonetaryAmount amountReceived(el["amount"].get<double>(), currencyCode);
-    const TimePoint timestamp{milliseconds(el["insertTime"].get<int64_t>())};
+  const auto recentDepositFromJsonEl = [currencyCode](const auto& el) {
+    const MonetaryAmount amountReceived(el.amount, currencyCode);
+    const TimePoint timestamp{milliseconds(el.insertTime)};
 
     return RecentDeposit(amountReceived, timestamp);
   };
@@ -828,10 +886,10 @@ ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdr
     return {};
   }
 
-  json::container& depositEl = depositStatus[closestDepositPos];
+  auto& depositEl = depositStatus[closestDepositPos];
   const RecentDeposit recentDeposit = recentDepositFromJsonEl(depositEl);
 
-  return {std::move(depositEl["id"].get_ref<string&>()), recentDeposit.amount(), recentDeposit.timePoint()};
+  return {std::move(depositEl.id), recentDeposit.amount(), recentDeposit.timePoint()};
 }
 
 }  // namespace cct::api

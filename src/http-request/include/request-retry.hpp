@@ -6,6 +6,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_json-container.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_type_traits.hpp"
 #include "curlhandle.hpp"
@@ -14,6 +15,7 @@
 #include "query-retry-policy.hpp"
 #include "timedef.hpp"
 #include "unreachable.hpp"
+#include "write-json.hpp"
 
 namespace cct {
 
@@ -44,31 +46,71 @@ class RequestRetry {
   template <class StringType, class ResponseStatusT, class PostDataFuncT>
   json::container queryJson(const StringType &endpoint, ResponseStatusT responseStatus,
                             PostDataFuncT postDataUpdateFunc) {
-    decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
+    return query<json::container, json::opts{}, StringType, ResponseStatusT, PostDataFuncT>(endpoint, responseStatus,
+                                                                                            postDataUpdateFunc);
+  }
+
+  template <class T, json::opts opts, class StringType, class ResponseStatusT>
+  T query(const StringType &endpoint, ResponseStatusT responseStatus) {
+    return query<T, opts>(endpoint, responseStatus, [](CurlOptions &) {});
+  }
+
+  template <class T, json::opts opts, class StringType, class ResponseStatusT, class PostDataFuncT>
+  T query(const StringType &endpoint, ResponseStatusT responseStatus, PostDataFuncT postDataUpdateFunc) {
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
-    json::container ret;
+    decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
+    bool parsingError;
+    T ret;
 
     do {
       if (nbRetries != 0) {
-        log::warn("Got query error: '{}' for {}, retry {}/{} after {}", ret.dump(), endpoint, nbRetries,
-                  _queryRetryPolicy.nbMaxRetries, DurationToString(sleepingTime));
+        if (log::get_level() <= log::level::warn) {
+          string strContent;
+          if constexpr (std::is_same_v<T, json::container>) {
+            strContent = ret.dump();
+          } else {
+            strContent = WriteJsonOrThrow(ret);
+          }
+          log::warn("Got query error: '{}' for {}, retry {}/{} after {}", strContent, endpoint, nbRetries,
+                    _queryRetryPolicy.nbMaxRetries, DurationToString(sleepingTime));
+        }
+
         std::this_thread::sleep_for(sleepingTime);
         sleepingTime *= _queryRetryPolicy.exponentialBackoff;
       }
 
       postDataUpdateFunc(_curlOptions);
 
-      static constexpr bool kAllowExceptions = false;
-      ret = json::container::parse(_curlHandle.query(endpoint, _curlOptions), nullptr, kAllowExceptions);
+      auto queryStrRes = _curlHandle.query(endpoint, _curlOptions);
+      if constexpr (std::is_same_v<T, json::container>) {
+        static constexpr bool kAllowExceptions = false;
+        ret = json::container::parse(queryStrRes, nullptr, kAllowExceptions);
+        parsingError = ret.is_discarded();
+      } else {
+        auto ec = json::read<opts>(ret, queryStrRes);
+        if (ec) {
+          auto prefixJsonContent = queryStrRes.substr(0, std::min<int>(queryStrRes.size(), 20));
+          log::error("Error while reading json content '{}{}': {}", prefixJsonContent,
+                     prefixJsonContent.size() < queryStrRes.size() ? "..." : "", json::format_error(ec, queryStrRes));
+          parsingError = true;
+        } else {
+          parsingError = false;
+        }
+      }
 
-    } while ((ret.is_discarded() || responseStatus(ret) == Status::kResponseError) &&
+    } while ((parsingError || responseStatus(ret) == Status::kResponseError) &&
              ++nbRetries <= _queryRetryPolicy.nbMaxRetries);
 
     if (nbRetries > _queryRetryPolicy.nbMaxRetries) {
       switch (_queryRetryPolicy.tooManyFailuresPolicy) {
         case QueryRetryPolicy::TooManyFailuresPolicy::kReturnEmpty:
-          log::error("Too many query errors, returning empty result");
-          ret = json::container::object();
+          if constexpr (std::is_same_v<T, json::container>) {
+            log::error("Too many query errors, returning empty json");
+            ret = json::container::object();
+          } else {
+            log::error("Too many query errors, returning value initialized object");
+            ret = T();
+          }
           break;
         case QueryRetryPolicy::TooManyFailuresPolicy::kThrowException:
           throw exception("Too many query errors");

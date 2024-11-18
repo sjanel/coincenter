@@ -14,17 +14,13 @@ namespace cct {
       Balance, DepositInfo, OrdersClosed, OrdersOpened, OrdersCancel, RecentDeposits, RecentWithdraws, Trade, Buy, \
       Sell, Withdraw, DustSweeper,                                                                                 \
                                                                                                                    \
-      MarketData, Replay, ReplayMarkets,                                                                           \
-                                                                                                                   \
-      Last
+      MarketData, Replay, ReplayMarkets
 
 enum class CoincenterCommandType : int8_t { CCT_COINCENTER_COMMAND_TYPES };
 
-std::string_view CoincenterCommandTypeToString(CoincenterCommandType type);
+std::string_view CoincenterCommandTypeToString(CoincenterCommandType coincenterCommandType);
 
-CoincenterCommandType CoincenterCommandTypeFromString(std::string_view str);
-
-bool IsAnyTrade(CoincenterCommandType type);
+bool IsAnyTrade(CoincenterCommandType coincenterCommandType);
 }  // namespace cct
 
 template <>
