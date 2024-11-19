@@ -53,4 +53,6 @@ static constexpr int kNbSupportedExchanges = static_cast<int>(std::size(kSupport
 
 static constexpr int kTypicalNbPrivateAccounts = kNbSupportedExchanges;
 
+static constexpr std::string_view kDefaultAcceptEncoding = "gzip,deflate";
+
 }  // namespace cct
