@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <optional>
 #include <string_view>
@@ -88,6 +89,8 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
                           std::string_view endpoint, CurlPostData& postData, CurlPostData& signaturePostData) {
   auto isNotEncoded = [](char ch) { return isalnum(ch) || ch == '-' || ch == '.' || ch == '_' || ch == '~'; };
 
+  static constexpr std::string_view kSignatureKey = "Signature";
+
   signaturePostData.set("Timestamp", URLEncode(Nonce_LiteralDate(kTimeYearToSecondTSeparatedFormat), isNotEncoded));
 
   if (!postData.empty() && requestType == HttpRequestType::kGet) {
@@ -95,16 +98,17 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
     // We trust the caller for this. In case the order is not respected, error 'Signature not valid' will be
     // returned from Huobi
     signaturePostData.append(postData);
-    postData = CurlPostData();
+    postData.clear();
+  } else if (signaturePostData.back().key() == kSignatureKey) {
+    // signature needs to be erased (if we had an error) before computing the sha256
+    signaturePostData.pop_back();
   }
 
-  static constexpr std::string_view kSignatureKey = "Signature";
-
-  signaturePostData.set_back(kSignatureKey,
-                             URLEncode(B64Encode(ssl::Sha256Bin(BuildParamStr(requestType, curlHandle.getNextBaseUrl(),
-                                                                              endpoint, signaturePostData.str()),
-                                                                apiKey.privateKey())),
-                                       isNotEncoded));
+  signaturePostData.emplace_back(
+      kSignatureKey, URLEncode(B64Encode(ssl::Sha256Bin(BuildParamStr(requestType, curlHandle.getNextBaseUrl(),
+                                                                      endpoint, signaturePostData.str()),
+                                                        apiKey.privateKey())),
+                               isNotEncoded));
 }
 
 json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
@@ -112,8 +116,9 @@ json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpR
   CurlPostData signaturePostData{
       {"AccessKeyId", apiKey.key()}, {"SignatureMethod", "HmacSHA256"}, {"SignatureVersion", 2}};
 
-  string method(endpoint);
-  method.push_back('?');
+  string method(endpoint.size() + 1U, '?');
+
+  std::memcpy(method.data(), endpoint.data(), endpoint.size());
 
   CurlOptions::PostDataFormat postDataFormat = ComputePostDataFormat(requestType, postData);
 
