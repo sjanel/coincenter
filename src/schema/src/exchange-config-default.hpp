@@ -80,7 +80,7 @@ struct ExchangeConfigDefault {
     },
     "exchange": {
       "binance": {
-        "acceptEncoding": "gzip",
+        "acceptEncoding": "gzip,deflate",
         "privateAPIRate": "150ms",
         "publicAPIRate": "55ms"
       },

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -39,6 +40,7 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
                           coincenterInfo.metricGatewayPtr(),
                           PermanentCurlOptions::Builder()
                               .setFollowLocation()
+                              .setAcceptedEncoding(kDefaultAcceptEncoding)
                               .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
                               .build(),
                           coincenterInfo.getRunMode()),

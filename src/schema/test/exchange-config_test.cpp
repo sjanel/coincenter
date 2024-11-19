@@ -87,7 +87,7 @@ class ExchangeConfigTest : public ::testing::Test {
     },
     "exchange": {
       "binance": {
-        "acceptEncoding": "gzip",
+        "acceptEncoding": "gzip,deflate",
         "privateAPIRate": "150ms",
         "publicAPIRate": "55ms"
       },
@@ -177,7 +177,7 @@ TEST_F(ExchangeConfigTest, DirectRead) {
   EXPECT_EQ(exchangeConfigOptional.query.def.updateFrequency->size(), 9);
   EXPECT_EQ(exchangeConfigOptional.query.def.validateApiKey, false);
   EXPECT_EQ(exchangeConfigOptional.query.exchange.size(), 6);
-  EXPECT_EQ(exchangeConfigOptional.query.exchange.at(ExchangeNameEnum::binance).acceptEncoding, "gzip");
+  EXPECT_EQ(exchangeConfigOptional.query.exchange.at(ExchangeNameEnum::binance).acceptEncoding, "gzip,deflate");
 }
 
 TEST_F(ExchangeConfigTest, ExchangeValuesShouldOverrideDefault) {
@@ -190,7 +190,7 @@ TEST_F(ExchangeConfigTest, ExchangeValuesShouldOverrideDefault) {
   EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::binance].asset.allExclude, CurrencyCodeSet{"BQX"});
   EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::kraken].asset.withdrawExclude,
             CurrencyCodeSet({"AUD", "CAD", "CHF", "EUR", "GBP", "JPY", "KRW", "USD", "KFEE"}));
-  EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::binance].query.acceptEncoding, "gzip");
+  EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::binance].query.acceptEncoding, "gzip,deflate");
   EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::binance].query.privateAPIRate.duration,
             std::chrono::milliseconds(150));
   EXPECT_EQ(allExchangeConfigs[ExchangeNameEnum::binance].query.publicAPIRate.duration, std::chrono::milliseconds(55));

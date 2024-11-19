@@ -5,9 +5,7 @@
 #include "exchange-query-config.hpp"
 #include "permanentcurloptions.hpp"
 
-namespace cct {
-
-namespace api {
+namespace cct::api {
 
 class ExchangePermanentCurlOptions {
  public:
@@ -21,6 +19,4 @@ class ExchangePermanentCurlOptions {
   const schema::ExchangeQueryConfig &_queryConfig;
 };
 
-}  // namespace api
-
-}  // namespace cct
+}  // namespace cct::api

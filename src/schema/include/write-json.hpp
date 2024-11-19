@@ -3,7 +3,6 @@
 #include "cct_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
-#include "writer.hpp"
 
 namespace cct {
 
