@@ -39,7 +39,8 @@ class BithumbPrivateAPIPlaceOrderTest : public ::testing::Test {
   settings::RunMode runMode = settings::RunMode::kQueryResponseOverriden;
   LoadConfiguration loadConfig{kDefaultDataDir, LoadConfiguration::ExchangeConfigFileType::kTest};
   CoincenterInfo coincenterInfo{runMode, loadConfig};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
+  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader(), Reader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
   BithumbPublic exchangePublic{coincenterInfo, fiatConverter, commonAPI};
   APIKeysProvider apiKeysProvider{coincenterInfo.dataDir(), coincenterInfo.getRunMode()};

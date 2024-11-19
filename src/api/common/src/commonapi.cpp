@@ -1,6 +1,7 @@
 #include "commonapi.hpp"
 
 #include <cstdint>
+#include <glaze/glaze.hpp>  // IWYU pragma: export
 #include <mutex>
 #include <optional>
 #include <string_view>
@@ -8,18 +9,20 @@
 
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
+#include "fiats-cache-schema.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "permanentcurloptions.hpp"
+#include "read-json.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
 
@@ -46,18 +49,15 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
                           coincenterInfo.getRunMode()),
       _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
   if (atInit == AtInit::kLoadFromFileCache) {
-    json::container data = GetFiatCacheFile(_coincenterInfo.dataDir()).readAllJson();
-    if (!data.empty()) {
-      int64_t timeEpoch = data["timeepoch"].get<int64_t>();
-      auto& fiatsFile = data["fiats"];
-      CurrencyCodeSet fiats;
-      fiats.reserve(static_cast<CurrencyCodeSet::size_type>(fiatsFile.size()));
-      for (json::container& val : fiatsFile) {
-        log::trace("Reading fiat {} from cache file", val.get<std::string_view>());
-        fiats.emplace_hint(fiats.end(), std::move(val.get_ref<string&>()));
+    schema::FiatsCache fiatsCache;
+    auto dataStr = GetFiatCacheFile(_coincenterInfo.dataDir()).readAll();
+    if (!dataStr.empty()) {
+      ReadJsonOrThrow(dataStr, fiatsCache);
+      if (fiatsCache.timeepoch != 0) {
+        CurrencyCodeSet fiats(std::move(fiatsCache.fiats));
+        log::debug("Loaded {} fiats from cache file", fiats.size());
+        _fiatsCache.set(std::move(fiats), TimePoint(seconds(fiatsCache.timeepoch)));
       }
-      log::debug("Loaded {} fiats from cache file", fiats.size());
-      _fiatsCache.set(std::move(fiats), TimePoint(seconds(timeEpoch)));
     }
   }
 }
@@ -103,7 +103,7 @@ std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(std::string_view 
 }
 
 namespace {
-constexpr std::string_view kFiatsUrlSource1 = "https://datahub.io/core/currency-codes/r/codes-all.json";
+constexpr std::string_view kFiatsUrlSource1 = "https://datahub.io/core/currency-codes/_r/-/data/codes-all.csv";
 constexpr std::string_view kFiatsUrlSource2 = "https://www.iban.com/currency-codes";
 }  // namespace
 
@@ -130,6 +130,14 @@ CurrencyCodeSet CommonAPI::FiatsFunc::operator()() {
   }
   return fiats;
 }
+struct CurrencyCSV {
+  vector<string> Entity;
+  vector<string> Currency;
+  vector<string> AlphabeticCode;
+  vector<string> NumericCode;
+  vector<string> MinorUnit;
+  vector<string> WithdrawalDate;
+};
 
 CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   CurrencyCodeVector fiatsVec;
@@ -139,24 +147,26 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
     log::warn("Error parsing currency codes, no fiats found from first source");
     return fiatsVec;
   }
-  static constexpr bool kAllowExceptions = false;
-  json::container dataCSV = json::container::parse(data, nullptr, kAllowExceptions);
-  if (dataCSV.is_discarded()) {
-    log::warn("Error parsing json data of currency codes from source 1");
+
+  // data is UTF-8 encoded - but the relevant data that we will parse is ASCII normally
+
+  CurrencyCSV currencies;
+  auto ec = json::read<json::opts{.format = glz::CSV, .layout = glz::colwise}>(currencies, data);
+
+  if (ec || currencies.AlphabeticCode.size() != currencies.WithdrawalDate.size()) {
+    log::warn("Error parsing json data of currency codes from source 1: {}", glz::format_error(ec, data));
     return fiatsVec;
   }
-  for (const json::container& fiatData : dataCSV) {
-    static constexpr std::string_view kCodeKey = "AlphabeticCode";
-    static constexpr std::string_view kWithdrawalDateKey = "WithdrawalDate";
 
-    auto codeIt = fiatData.find(kCodeKey);
-    auto withdrawalDateIt = fiatData.find(kWithdrawalDateKey);
-    if (codeIt != fiatData.end() && !codeIt->is_null() && withdrawalDateIt != fiatData.end() &&
-        withdrawalDateIt->is_null()) {
-      fiatsVec.emplace_back(codeIt->get<std::string_view>());
-      log::debug("Stored {} fiat", codeIt->get<std::string_view>());
+  auto nbCurrencies = currencies.AlphabeticCode.size();
+  for (size_t currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
+    if (currencies.WithdrawalDate[currencyPos].empty()) {
+      fiatsVec.emplace_back(currencies.AlphabeticCode[currencyPos]);
+      log::debug("Stored {} fiat", fiatsVec.back());
     }
   }
+
+  log::info("Found {} fiats from first source", fiatsVec.size());
 
   return fiatsVec;
 }

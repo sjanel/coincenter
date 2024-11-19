@@ -4,9 +4,13 @@
 #include <optional>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 #include "cache-file-updator-interface.hpp"
+#include "cct_fixedcapacityvector.hpp"
+#include "cct_flatset.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "file.hpp"
@@ -36,16 +40,16 @@ class CoincenterInfo;
 /// Conversion methods are thread safe.
 class FiatConverter : public CacheFileUpdatorInterface {
  public:
-  static File GetRatesCacheFile(std::string_view dataDir);
-
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
   FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency);
 
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
-  /// @param reader the reader from which to load the initial rates conversion cache
-  FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency, const Reader &reader);
+  /// @param fiatsRatesCacheReader the reader from which to load the initial rates conversion cache
+  /// @param thirdPartySecretReader the reader from which to load the third party secret
+  FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency,
+                const Reader &fiatsRatesCacheReader, const Reader &thirdPartySecretReader);
 
   std::optional<double> convert(double amount, CurrencyCode from, CurrencyCode to);
 
@@ -64,15 +68,25 @@ class FiatConverter : public CacheFileUpdatorInterface {
  private:
   struct PriceTimedValue {
     double rate;
-    TimePoint lastUpdatedTime;
+    int64_t timeepoch;
+
+    TimePoint lastUpdatedTime() const { return TimePoint(seconds(timeepoch)); }
   };
+
+  struct ThirdPartySecret {
+    string freecurrencyconverter;
+  };
+
+  static ThirdPartySecret LoadCurrencyConverterAPIKey(const Reader &thirdPartySecretReader);
 
   std::optional<double> queryCurrencyRate(Market market);
 
   std::optional<double> queryCurrencyRateSource1(Market market);
   std::optional<double> queryCurrencyRateSource2(Market market);
 
-  std::optional<double> retrieveRateFromCache(Market market) const;
+  enum class CacheReadMode : int8_t { kOnlyRecentRates, kUseAllRates };
+
+  std::optional<double> retrieveRateFromCache(Market market, CacheReadMode cacheReadMode);
 
   void store(Market market, double rate);
 
@@ -80,13 +94,32 @@ class FiatConverter : public CacheFileUpdatorInterface {
 
   using PricesMap = std::unordered_map<Market, PriceTimedValue>;
 
+  // For the algorithm computing rates
+  struct Node {
+    // hard limit to avoid unreasonable long paths and memory allocations
+    static constexpr std::size_t kMaxCurrencyPathSize = 6U;
+
+    using CurrencyPath = FixedCapacityVector<CurrencyCode, kMaxCurrencyPathSize>;
+
+    using trivially_relocatable = std::true_type;
+
+    CurrencyPath currencyPath;
+    double rate;
+    TimePoint oldestTs;
+  };
+
+  vector<Node> _nodes;
+  using VisitedCurrencyCodesSet = FlatSet<CurrencyCode>;
+
+  VisitedCurrencyCodesSet _visitedCurrencies;
+  vector<std::pair<Market, PriceTimedValue>> _tmpPriceRatesVector;
+
   CurlHandle _curlHandle1;
   CurlHandle _curlHandle2;
   PricesMap _pricesMap;
   Duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;
-  string _apiKey;
+  ThirdPartySecret _thirdPartySecret;
   string _dataDir;
-  CurrencyCode _baseRateSource2;
 };
 }  // namespace cct

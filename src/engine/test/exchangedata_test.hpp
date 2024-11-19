@@ -35,7 +35,8 @@ class ExchangesBaseTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{runMode, loadConfiguration};
   api::CommonAPI commonAPI{coincenterInfo, Duration::max(), Duration::max(),
                            api::CommonAPI::AtInit::kLoadFromFileCache};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
+  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader(), Reader()};
   api::MockExchangePublic exchangePublic1{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{ExchangeNameEnum::bithumb, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic3{ExchangeNameEnum::huobi, fiatConverter, commonAPI, coincenterInfo};

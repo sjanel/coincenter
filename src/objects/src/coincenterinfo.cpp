@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
@@ -14,6 +13,7 @@
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"
 #include "monitoringinfo.hpp"
+#include "read-json.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
 #include "toupperlower-string.hpp"
@@ -28,26 +28,17 @@
 namespace cct {
 
 namespace {
-CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(
-    const Reader& currencyAcronymsTranslatorReader) {
-  json::container jsonData = currencyAcronymsTranslatorReader.readAllJson();
+
+CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(const Reader& reader) {
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
-  map.reserve(jsonData.size());
-  for (const auto& [key, value] : jsonData.items()) {
-    log::trace("Currency {} <=> {}", key, value.get<std::string_view>());
-    map.insert_or_assign(CurrencyCode(key), value.get<std::string_view>());
-  }
+  ReadJsonOrThrow(reader.readAll(), map);
   return map;
 }
 
-CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(const Reader& stableCoinsReader) {
-  json::container jsonData = stableCoinsReader.readAllJson();
-  CoincenterInfo::StableCoinsMap ret;
-  for (const auto& [key, value] : jsonData.items()) {
-    log::trace("Stable Crypto {} <=> {}", key, value.get<std::string_view>());
-    ret.emplace(key, value.get<std::string_view>());
-  }
-  return ret;
+CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(const Reader& reader) {
+  CoincenterInfo::StableCoinsMap map;
+  ReadJsonOrThrow(reader.readAll(), map);
+  return map;
 }
 
 #ifdef CCT_ENABLE_PROMETHEUS
@@ -73,12 +64,11 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
       _monitoringInfo(std::move(monitoringInfo)) {
-  json::container jsonData = currencyPrefixesReader.readAllJson();
-  for (auto& [prefix, acronym_prefix] : jsonData.items()) {
-    log::trace("Currency prefix {} <=> {}", prefix, acronym_prefix.get<std::string_view>());
+  ReadJsonOrThrow(currencyPrefixesReader.readAll(), _currencyPrefixAcronymMap);
+  for (auto& [prefix, acronym_prefix] : _currencyPrefixAcronymMap) {
+    log::trace("Currency prefix {} <=> {}", prefix, acronym_prefix);
     _minPrefixLen = std::min(_minPrefixLen, static_cast<int>(prefix.length()));
     _maxPrefixLen = std::max(_maxPrefixLen, static_cast<int>(prefix.length()));
-    _currencyPrefixAcronymMap.insert_or_assign(ToUpper(prefix), std::move(acronym_prefix.get_ref<string&>()));
   }
 }
 
