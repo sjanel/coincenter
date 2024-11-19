@@ -34,7 +34,8 @@ class ExchangeRetrieverTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{settings::RunMode::kTestKeys, loadConfiguration};
 
   api::CommonAPI commonAPI{coincenterInfo, Duration::max()};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader()};  // max to avoid real Fiat converter queries
+  // max to avoid real Fiat converter queries
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader(), Reader()};
 
   api::MockExchangePublic exchangePublic1{ExchangeNameEnum::bithumb, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{ExchangeNameEnum::kraken, fiatConverter, commonAPI, coincenterInfo};

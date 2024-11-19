@@ -8,13 +8,14 @@
 #include "accountowner.hpp"
 #include "apikey.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "exchangename.hpp"
 #include "exchangesecretsinfo.hpp"
 #include "file.hpp"
+#include "read-json.hpp"
 #include "runmodes.hpp"
+#include "secret-schema.hpp"
 
 namespace cct::api {
 namespace {
@@ -73,60 +74,47 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
                                                                   const ExchangeSecretsInfo& exchangeSecretsInfo,
                                                                   settings::RunMode runMode) {
   APIKeysProvider::APIKeysPerExchange apiKeysPerExchange;
+
   if (exchangeSecretsInfo.allExchangesWithoutSecrets()) {
     log::info("Not loading private keys, using only public exchanges");
-  } else {
-    std::string_view secretFileName = GetSecretFileName(runMode);
-    File secretsFile(dataDir, File::Type::kSecret, secretFileName,
-                     settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow);
-    json::container jsonData = secretsFile.readAllJson();
-    bool atLeastOneKeyFound = false;
-    for (auto& [publicExchangeName, keyObj] : jsonData.items()) {
-      const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
-      if (std::ranges::find(exchangesWithoutSecrets, ExchangeName(publicExchangeName)) !=
-          exchangesWithoutSecrets.end()) {
-        log::info("Not loading {} private keys as requested", publicExchangeName);
+    return apiKeysPerExchange;
+  }
+
+  std::string_view secretFileName = GetSecretFileName(runMode);
+  const auto throwOrNoThrow = settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow;
+  File secretsFile(dataDir, File::Type::kSecret, secretFileName, throwOrNoThrow);
+
+  schema::APIKeysPerExchangeMap apiKeysPerExchangeMap;
+
+  ReadJsonOrThrow(secretsFile.readAll(), apiKeysPerExchangeMap);
+
+  const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
+
+  bool atLeastOneKeyFound = false;
+  for (auto& [exchangeNameEnum, apiKeys] : apiKeysPerExchangeMap) {
+    auto publicExchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
+    if (std::ranges::any_of(exchangesWithoutSecrets, [exchangeNameEnum](const auto& exchangeName) {
+          return exchangeName.exchangeNameEnum() == exchangeNameEnum;
+        })) {
+      log::debug("Not loading {} private keys as requested", publicExchangeName);
+      continue;
+    }
+
+    for (auto& [keyName, apiKey] : apiKeys) {
+      if (apiKey.key.empty() || apiKey.priv.empty()) {
+        log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
         continue;
       }
-      ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(
-          std::find(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), publicExchangeName) -
-          std::begin(kSupportedExchanges));
 
-      for (auto& [name, keySecretObj] : keyObj.items()) {
-        auto keyIt = keySecretObj.find("key");
-        auto privateIt = keySecretObj.find("private");
-        if (keyIt == keySecretObj.end() || privateIt == keySecretObj.end()) {
-          log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
-          continue;
-        }
-        string passphrase;
-        auto passphraseIt = keySecretObj.find("passphrase");
-        if (passphraseIt != keySecretObj.end()) {
-          passphrase = std::move(passphraseIt->get_ref<string&>());
-        }
-        std::string_view ownerEnName;
-        std::string_view ownerKoName;
-        auto accountOwnerPartIt = keySecretObj.find("accountOwner");
-        if (accountOwnerPartIt != keySecretObj.end()) {
-          auto ownerEnNameIt = accountOwnerPartIt->find("enName");
-          if (ownerEnNameIt != accountOwnerPartIt->end()) {
-            ownerEnName = ownerEnNameIt->get<std::string_view>();
-          }
-          auto ownerKoNameIt = accountOwnerPartIt->find("koName");
-          if (ownerKoNameIt != accountOwnerPartIt->end()) {
-            ownerKoName = ownerKoNameIt->get<std::string_view>();
-          }
-        }
+      apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].emplace_back(
+          publicExchangeName, keyName, std::move(apiKey.key), std::move(apiKey.priv), std::move(apiKey.passphrase),
+          AccountOwner(apiKey.accountOwner.enName, apiKey.accountOwner.koName));
 
-        apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].emplace_back(
-            publicExchangeName, name, std::move(keyIt->get_ref<string&>()), std::move(privateIt->get_ref<string&>()),
-            std::move(passphrase), AccountOwner(ownerEnName, ownerKoName));
-        atLeastOneKeyFound = true;
-      }
+      atLeastOneKeyFound = true;
     }
-    if (!atLeastOneKeyFound) {
-      log::warn("No private api keys file '{}' found. Only public exchange queries will be supported", secretFileName);
-    }
+  }
+  if (!atLeastOneKeyFound) {
+    log::warn("No private api keys file '{}' found. Only public exchange queries will be supported", secretFileName);
   }
 
   return apiKeysPerExchange;

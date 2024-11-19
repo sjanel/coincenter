@@ -6,14 +6,15 @@
 #include <optional>
 #include <string_view>
 
+#include "../src/fiats-converter-responses-schema.hpp"
 #include "besturlpicker.hpp"
-#include "cct_json-container.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
 #include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
+#include "write-json.hpp"
 
 namespace cct {
 
@@ -28,6 +29,17 @@ constexpr double kUSD = 1.21;
 constexpr double kGBP = 0.88;
 
 constexpr std::string_view kSomeFakeURL = "some/fake/url";
+
+class DummyThirdPartyReader : public Reader {
+  [[nodiscard]] string readAll() const override {
+    return R"(
+{
+    "freecurrencyconverter": "blabla",
+    "exchangeratesapi": "blabla"
+}
+)";
+  }
+};
 }  // namespace
 
 CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
@@ -38,65 +50,65 @@ CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, const CurlOptions &opts) {
-  json::container jsonData;
-
   // Rates
   std::string_view marketStr = opts.postData().get("q");
   if (!marketStr.empty()) {
-    double rate = 0;
+    // First source
 
     std::string_view fromCurrency = marketStr.substr(0, 3);
     std::string_view targetCurrency = marketStr.substr(4);
+    schema::FreeCurrencyConverterResponse response;
+
+    auto &res = response.results[string(marketStr)];
+
+    res.to = string(targetCurrency);
+    res.fr = string(fromCurrency);
 
     if (fromCurrency == "EUR") {
       if (targetCurrency == "KRW") {
-        rate = kKRW;
+        res.val = kKRW;
       } else if (targetCurrency == "USD") {
-        rate = kUSD;
+        res.val = kUSD;
       } else if (targetCurrency == "GBP") {
-        rate = kGBP;
+        res.val = kGBP;
       }
     } else if (fromCurrency == "KRW") {
       if (targetCurrency == "EUR") {
-        rate = 1 / kKRW;
+        res.val = 1 / kKRW;
       } else if (targetCurrency == "USD") {
-        rate = kUSD / kKRW;
+        res.val = kUSD / kKRW;
       } else if (targetCurrency == "GBP") {
-        rate = kGBP / kKRW;
+        res.val = kGBP / kKRW;
       }
     } else if (fromCurrency == "GBP") {
       if (targetCurrency == "USD") {
-        rate = kUSD / kGBP;
+        res.val = kUSD / kGBP;
       }
     }
-    if (rate != 0) {
-      jsonData["results"][marketStr]["val"] = rate;
+    if (res.val != 0) {
+      _queryData = WriteJsonOrThrow(response);
     }
+
   } else {
     // second source
-    jsonData = R"(
-{
-  "base": "EUR",
-  "rates": {
-    "SUSHI": 36.78,
-    "KRW": 1341.88,
-    "NOK": 11.3375
-  }
-}
-)"_json;
+    schema::FiatRatesSource2Response response;
+    response.base = "EUR";
+    response.rates["SUSHI"] = 36.78;
+    response.rates["KRW"] = 1341.88;
+    response.rates["NOK"] = 11.3375;
+    _queryData = WriteJsonOrThrow(response);
   }
 
-  _queryData = jsonData.dump();
   return _queryData;
 }
 
-CurlHandle::~CurlHandle() {}  // NOLINT
+CurlHandle::~CurlHandle() = default;  // NOLINT
 
 class FiatConverterTest : public ::testing::Test {
  protected:
   settings::RunMode runMode = settings::RunMode::kTestKeys;
   CoincenterInfo coincenterInfo{runMode};
-  FiatConverter converter{coincenterInfo, milliseconds(1), Reader()};
+  FiatConverter converter{coincenterInfo, milliseconds(1), Reader(), DummyThirdPartyReader()};
 };
 
 TEST_F(FiatConverterTest, DirectConversion) {
@@ -117,7 +129,7 @@ TEST_F(FiatConverterTest, DoubleConversion) {
   AreDoubleEqual(converter.convert(amount, "KRW", "USD").value_or(0), (amount / kKRW) * kUSD);
   AreDoubleEqual(converter.convert(amount, "GBP", "USD").value_or(0), (amount / kGBP) * kUSD);
 
-  EXPECT_EQ(converter.convert(amount, "SUSHI", "KRW"), 729679173.46383917);
+  EXPECT_EQ(converter.convert(amount, "SUSHI", "KRW"), 729679173.46383893);
 }
 
 TEST_F(FiatConverterTest, NoConversionPossible) {

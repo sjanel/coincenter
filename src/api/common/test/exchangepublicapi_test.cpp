@@ -56,7 +56,7 @@ class ExchangePublicTest : public ::testing::Test {
   CoincenterInfo coincenterInfo{runMode,          loadConfiguration, schema::GeneralConfig(), LoggingInfo(),
                                 MonitoringInfo(), Reader(),          StableCoinReader()};
   CommonAPI commonAPI{coincenterInfo, Duration::max()};
-  FiatConverter fiatConverter{coincenterInfo, Duration::max(), FiatConverterReader()};
+  FiatConverter fiatConverter{coincenterInfo, Duration::max(), FiatConverterReader(), Reader()};
   MockExchangePublic exchangePublic{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
 
   MarketSet markets{{"BTC", "EUR"}, {"XLM", "EUR"},  {"ETH", "EUR"},  {"ETH", "BTC"},  {"BTC", "KRW"},

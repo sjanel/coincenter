@@ -15,6 +15,10 @@ constexpr auto kJsonOptions =
 
 template <json::opts opts = kJsonOptions>
 void ReadJsonOrThrow(std::string_view strContent, auto &outObject) {
+  if (strContent.empty()) {
+    return;
+  }
+
   auto ec = json::read<opts>(outObject, strContent);
 
   if (ec) {

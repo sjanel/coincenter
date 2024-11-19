@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "cct_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "currencycode.hpp"
 
 namespace cct {
@@ -65,4 +66,46 @@ TEST(MarketTest, StrLen) {
   market = Market("1INCH", "EUR", Market::Type::kFiatConversionMarket);
   EXPECT_EQ(market.strLen(), 10);
 }
+
+struct Foo {
+  bool operator==(const Foo &) const noexcept = default;
+
+  Market market;
+};
+
+TEST(MarketTest, JsonSerializationValue) {
+  Foo foo{Market{"DOGE", "BTC"}};
+
+  string buffer;
+  auto res = json::write<json::opts{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"market":"DOGE-BTC"})");
+}
+
+using MarketMap = std::map<Market, bool>;
+
+TEST(MarketTest, JsonSerializationKey) {
+  MarketMap map{{Market{"DOGE", "BTC"}, true}, {Market{"BTC", "ETH"}, false}};
+
+  string buffer;
+  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"BTC-ETH":false,"DOGE-BTC":true})");
+}
+
+TEST(MarketTest, JsonDeserialization) {
+  Foo foo;
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"market":"DOGE-ETH"})");
+
+  ASSERT_FALSE(ec);
+
+  EXPECT_EQ(foo, Foo{Market("DOGE", "ETH")});
+}
+
 }  // namespace cct
