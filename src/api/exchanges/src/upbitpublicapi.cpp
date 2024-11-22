@@ -146,27 +146,20 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
   for (const json::container& marketDetails : result) {
     std::string_view marketStr = marketDetails["market"].get<std::string_view>();
-    std::string_view marketWarningStr = marketDetails["market_warning"].get<std::string_view>();
-    if (marketWarningStr != "NONE") {
-      log::debug("Discard Upbit market {} as it has warning {}", marketStr, marketWarningStr);
+    auto marketWarningIt = marketDetails.find("market_warning");
+    if (marketWarningIt != marketDetails.end() && marketWarningIt->get<std::string_view>() != "NONE") {
+      log::error("Discard Upbit market {} as it has no warning", marketStr, marketWarningIt->get<std::string_view>());
       continue;
     }
     // Upbit markets are inverted
-    std::size_t dashPos = marketStr.find('-');
-    if (dashPos == std::string_view::npos) {
-      log::error("Discard Upbit market {} as unable to parse the currency codes in it", marketStr);
+    Market market(marketStr, '-');
+    market = market.reverse();
+    if (!CheckCurrencyCode(market.base(), excludedCurrencies) ||
+        !CheckCurrencyCode(market.quote(), excludedCurrencies)) {
       continue;
     }
-    CurrencyCode quote(std::string_view(marketStr.begin(), marketStr.begin() + dashPos));
-    if (!CheckCurrencyCode(quote, excludedCurrencies)) {
-      continue;
-    }
-    CurrencyCode base(std::string_view(marketStr.begin() + dashPos + 1, marketStr.end()));
-    if (!CheckCurrencyCode(base, excludedCurrencies)) {
-      continue;
-    }
-    auto mkIt = ret.emplace(base, quote).first;
-    log::debug("Retrieved Upbit market {}", *mkIt);
+    log::debug("Retrieved Upbit market {}", market);
+    ret.emplace(std::move(market));
   }
   log::info("Retrieved {} markets from Upbit", ret.size());
   return ret;

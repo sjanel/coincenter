@@ -134,10 +134,10 @@ bool LoadCurrencyInfoField(const json::container& currencyOrderInfoJson, std::st
     }
     if constexpr (std::is_same_v<ValueType, MonetaryAmount>) {
       val = MonetaryAmount(valIt->get<std::string_view>());
-      log::debug("Loaded {} for '{}' from cache file", val.str(), keyStr);
+      log::trace("Loaded {} for '{}' from cache file", val.str(), keyStr);
     } else {
       val = valIt->get<ValueType>();
-      log::debug("Loaded {} for '{}' from cache file", val, keyStr);
+      log::trace("Loaded {} for '{}' from cache file", val, keyStr);
     }
     ts = TimePoint(seconds(tsIt->get<int64_t>()));
     return true;
