@@ -146,6 +146,12 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
         _queryResultPrinter.printConversion(startAmountsPerExchangePos, firstCmd.cur1(), conversionPerExchange);
         FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
       } else {
+        for (const auto &exchangeName : firstCmd.exchangeNames()) {
+          ExchangeNameEnum exchangeNameEnum = exchangeName.exchangeNameEnum();
+          if (std::ranges::find(exchangeNameEnumVector, exchangeNameEnum) == exchangeNameEnumVector.end()) {
+            exchangeNameEnumVector.push_back(exchangeNameEnum);
+          }
+        }
         const auto conversionPerExchange =
             _coincenter.getConversion(firstCmd.amount(), firstCmd.cur1(), exchangeNameEnumVector);
         _queryResultPrinter.printConversion(firstCmd.amount(), firstCmd.cur1(), conversionPerExchange);

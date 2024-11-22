@@ -83,13 +83,23 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
   if (!cmdLineOptions.conversion.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.conversion);
 
-    const auto [amount, amountType] = optionParser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional);
+    auto [amount, amountType] = optionParser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional);
     if (amountType == StringOptionParser::AmountType::kPercentage) {
       throw invalid_argument("conversion should start with an absolute amount");
     }
+
+    CurrencyCode to;
+    if (amountType == StringOptionParser::AmountType::kNotPresent) {
+      Market market = optionParser.parseMarket();
+      amount = MonetaryAmount(1, market.base());
+      to = market.quote();
+    } else {
+      to = optionParser.parseCurrency();
+    }
+
     _commands.emplace_back(CoincenterCommandType::Conversion)
         .setAmount(amount)
-        .setCur1(optionParser.parseCurrency())
+        .setCur1(to)
         .setExchangeNames(optionParser.parseExchanges());
   }
 
