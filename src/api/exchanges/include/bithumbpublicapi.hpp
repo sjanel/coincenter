@@ -45,7 +45,9 @@ class BithumbPublic : public ExchangePublic {
 
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get()); }
 
-  MonetaryAmountByCurrencySet queryWithdrawalFees() override { return _commonApi.tryQueryWithdrawalFees(name()); }
+  MonetaryAmountByCurrencySet queryWithdrawalFees() override {
+    return _commonApi.tryQueryWithdrawalFees(exchangeNameEnum());
+  }
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 

@@ -7,6 +7,7 @@
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
+#include "cct_const.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
@@ -26,7 +27,9 @@ class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
   using WithdrawalMinMap = std::unordered_map<CurrencyCode, MonetaryAmount>;
   using WithdrawalInfoMaps = std::pair<MonetaryAmountByCurrencySet, WithdrawalMinMap>;
 
-  const WithdrawalInfoMaps& get(std::string_view exchangeName) { return _withdrawalFeesCache.get(exchangeName); }
+  const WithdrawalInfoMaps& get(ExchangeNameEnum exchangeNameEnum) {
+    return _withdrawalFeesCache.get(exchangeNameEnum);
+  }
 
   void updateCacheFile() const override;
 
@@ -35,18 +38,18 @@ class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
    public:
     explicit WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo);
 
-    WithdrawalInfoMaps operator()(std::string_view exchangeName);
+    WithdrawalInfoMaps operator()(ExchangeNameEnum exchangeNameEnum);
 
    private:
-    WithdrawalInfoMaps get1(std::string_view exchangeName);
-    WithdrawalInfoMaps get2(std::string_view exchangeName);
+    WithdrawalInfoMaps get1(ExchangeNameEnum exchangeNameEnum);
+    WithdrawalInfoMaps get2(ExchangeNameEnum exchangeNameEnum);
 
     CurlHandle _curlHandle1;
     CurlHandle _curlHandle2;
   };
 
   const CoincenterInfo& _coincenterInfo;
-  CachedResult<WithdrawalFeesFunc, std::string_view> _withdrawalFeesCache;
+  CachedResult<WithdrawalFeesFunc, ExchangeNameEnum> _withdrawalFeesCache;
 };
 
 }  // namespace cct

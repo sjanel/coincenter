@@ -156,7 +156,7 @@ MarketSet BithumbPublic::queryTradableMarkets() {
 }
 
 std::optional<MonetaryAmount> BithumbPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  return _commonApi.tryQueryWithdrawalFee(name(), currencyCode);
+  return _commonApi.tryQueryWithdrawalFee(exchangeNameEnum(), currencyCode);
 }
 
 MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {

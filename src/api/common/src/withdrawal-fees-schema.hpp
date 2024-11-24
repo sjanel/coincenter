@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
@@ -20,7 +21,7 @@ struct WithdrawInfoFileItem {
   std::unordered_map<CurrencyCode, WithdrawInfoFileItemAsset> assets;
 };
 
-using WithdrawInfoFile = std::unordered_map<string, WithdrawInfoFileItem>;
+using WithdrawInfoFile = std::unordered_map<ExchangeNameEnum, WithdrawInfoFileItem>;
 
 struct WithdrawFeesCrawlerExchangeFeesCoinSource1 {
   string symbol;

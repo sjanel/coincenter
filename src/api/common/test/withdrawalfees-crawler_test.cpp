@@ -23,8 +23,9 @@ class WithdrawalFeesCrawlerTest : public ::testing::Test {
 };
 
 TEST_F(WithdrawalFeesCrawlerTest, WithdrawalFeesCrawlerService) {
-  for (const std::string_view exchangeName : kSupportedExchanges) {
-    const auto [amountByCurrencySet, withdrawalMinMap] = withdrawalFeesCrawler.get(exchangeName);
+  for (int exchangeNamePos = 0; exchangeNamePos < kNbSupportedExchanges; ++exchangeNamePos) {
+    const auto [amountByCurrencySet, withdrawalMinMap] =
+        withdrawalFeesCrawler.get(static_cast<ExchangeNameEnum>(exchangeNamePos));
 
     if (!withdrawalMinMap.empty()) {
       return;

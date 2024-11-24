@@ -35,9 +35,11 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "read-json.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
+#include "withdraw-fees-file-schema.hpp"
 
 namespace cct::api {
 namespace {
@@ -168,13 +170,19 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
 MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
   MonetaryAmountVector fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
-  json::container jsonData = withdrawFeesFile.readAllJson();
-  for (const auto& [coin, value] : jsonData[_name].items()) {
-    CurrencyCode coinAcro(coin);
-    MonetaryAmount ma(value.get<std::string_view>(), coinAcro);
-    log::debug("Updated Upbit withdrawal fees {}", ma);
-    fees.push_back(ma);
+  auto jsonDataStr = withdrawFeesFile.readAll();
+  schema::WithdrawFeesFile obj;
+  ReadExactJsonOrThrow(jsonDataStr, obj);
+
+  auto upbitIt = obj.find(ExchangeNameEnum::upbit);
+  if (upbitIt != obj.end()) {
+    for (const auto& [cur, value] : upbitIt->second) {
+      MonetaryAmount ma(value, cur);
+      log::debug("Updated Upbit withdrawal fees {}", ma);
+      fees.push_back(ma);
+    }
   }
+
   log::info("Updated Upbit withdrawal fees for {} coins", fees.size());
   return MonetaryAmountByCurrencySet(std::move(fees));
 }
