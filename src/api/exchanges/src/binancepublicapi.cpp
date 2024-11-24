@@ -17,7 +17,6 @@
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -40,6 +39,7 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
+#include "read-json.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"
@@ -48,8 +48,8 @@
 namespace cct::api {
 namespace {
 
-json::container PublicQuery(CurlHandle& curlHandle, std::string_view method,
-                            const CurlPostData& curlPostData = CurlPostData()) {
+template <class T>
+T PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
   string endpoint(method);
   if (!curlPostData.empty()) {
     endpoint.push_back('?');
@@ -57,20 +57,21 @@ json::container PublicQuery(CurlHandle& curlHandle, std::string_view method,
   }
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  return requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
-    const auto foundErrorIt = jsonResponse.find("code");
-    const auto foundMsgIt = jsonResponse.find("msg");
-    if (foundErrorIt != jsonResponse.end() && foundMsgIt != jsonResponse.end()) {
-      const int statusCode = foundErrorIt->get<int>();  // "1100" for instance
-      log::warn("Binance error ({}), full: '{}'", statusCode, jsonResponse.dump());
-      return RequestRetry::Status::kResponseError;
-    }
-    return RequestRetry::Status::kResponseOK;
-  });
+  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+      endpoint, [](const T& response) {
+        if constexpr (amc::is_detected<has_code_t, T>::value && amc::is_detected<has_msg_t, T>::value) {
+          if (response.code && response.msg) {
+            const int statusCode = *response.code;  // "1100" for instance
+            log::warn("Binance error ({}), msg: '{}'", statusCode, *response.msg);
+            return RequestRetry::Status::kResponseError;
+          }
+        }
+
+        return RequestRetry::Status::kResponseOK;
+      });
 }
 
-template <class ExchangeInfoDataByMarket>
-const json::container& RetrieveMarketData(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
+const auto& RetrieveMarketData(const auto& exchangeInfoData, Market mk) {
   auto it = exchangeInfoData.find(mk);
   if (it == exchangeInfoData.end()) {
     throw exception("Unable to retrieve {} data", mk);
@@ -78,10 +79,9 @@ const json::container& RetrieveMarketData(const ExchangeInfoDataByMarket& exchan
   return it->second;
 }
 
-template <class ExchangeInfoDataByMarket>
-VolAndPriNbDecimals QueryVolAndPriNbDecimals(const ExchangeInfoDataByMarket& exchangeInfoData, Market mk) {
-  const json::container& marketData = RetrieveMarketData(exchangeInfoData, mk);
-  return {marketData["baseAssetPrecision"].get<int8_t>(), marketData["quoteAssetPrecision"].get<int8_t>()};
+VolAndPriNbDecimals QueryVolAndPriNbDecimals(const auto& exchangeInfoData, Market mk) {
+  const auto& marketData = RetrieveMarketData(exchangeInfoData, mk);
+  return {marketData.baseAssetPrecision, marketData.quoteAssetPrecision};
 }
 }  // namespace
 
@@ -114,17 +114,8 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                    _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
-  static constexpr bool kAllowExceptions = false;
-  json::container result = json::container::parse(
-      _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet)), nullptr, kAllowExceptions);
-  if (result.is_discarded()) {
-    log::error("{} health check response is badly formatted: {}", name(), result.dump());
-    return false;
-  }
-  if (!result.empty()) {
-    log::error("{} health check is not empty: {}", name(), result.dump());
-  }
-  return result.empty();
+  auto result = _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet));
+  return result == "{}";
 }
 
 CurrencyExchangeFlatSet BinancePublic::queryTradableCurrencies() {
@@ -144,22 +135,17 @@ std::optional<MonetaryAmount> BinancePublic::queryWithdrawalFee(CurrencyCode cur
 }
 
 MarketSet BinancePublic::MarketsFunc::operator()() {
-  BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket exchangeInfoData = _exchangeConfigCache.get();
+  const auto& exchangeInfoData = _exchangeConfigCache.get();
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
   MarketVector markets;
   markets.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
 
-  for (const auto& marketJsonPair : exchangeInfoData) {
-    const json::container& symbol = marketJsonPair.second;
-    std::string_view baseAsset = symbol["baseAsset"].get<std::string_view>();
-    std::string_view quoteAsset = symbol["quoteAsset"].get<std::string_view>();
-    CurrencyCode base(baseAsset);
-    CurrencyCode quote(quoteAsset);
-    if (excludedCurrencies.contains(base) || excludedCurrencies.contains(quote)) {
+  for (const auto& [mk, _] : exchangeInfoData) {
+    if (excludedCurrencies.contains(mk.base()) || excludedCurrencies.contains(mk.quote())) {
       continue;
     }
-    markets.emplace_back(base, quote);
+    markets.push_back(mk);
   }
   MarketSet ret(std::move(markets));
   log::debug("Retrieved {} markets from binance", ret.size());
@@ -168,52 +154,45 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
 
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
-  json::container exchangeInfoData = PublicQuery(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
-  auto symbolsIt = exchangeInfoData.find("symbols");
-  if (symbolsIt == exchangeInfoData.end()) {
-    return ret;
-  }
-  for (auto it = std::make_move_iterator(symbolsIt->begin()), endIt = std::make_move_iterator(symbolsIt->end());
-       it != endIt; ++it) {
-    std::string_view baseAsset = (*it)["baseAsset"].get<std::string_view>();
-    std::string_view quoteAsset = (*it)["quoteAsset"].get<std::string_view>();
-    if ((*it)["status"].get<std::string_view>() != "TRADING") {
-      log::trace("Discard {}-{} as not trading status {}", baseAsset, quoteAsset,
-                 (*it)["status"].get<std::string_view>());
+  auto data = PublicQuery<schema::binance::V3ExchangeInfo>(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
+  for (auto& symbol : data.symbols) {
+    if (symbol.status != "TRADING") {
+      log::trace("Discard {}-{} as not trading status {}", symbol.baseAsset, symbol.quoteAsset, symbol.status);
       continue;
     }
-    if ((*it)["permissions"].size() == 1 && (*it)["permissions"].front().get<std::string_view>() == "LEVERAGED") {
+    if (symbol.permissions.size() == 1 && symbol.permissions.front() == "LEVERAGED") {
       // These are '*DOWN' and '*UP' assets, do not take them into account for now
-      log::trace("Discard {}-{} as coincenter does not support leveraged markets", baseAsset, quoteAsset);
+      log::trace("Discard {}-{} as coincenter does not support leveraged markets", symbol.baseAsset, symbol.quoteAsset);
       continue;
     }
-    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
-      log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
+    if (symbol.baseAsset.size() > CurrencyCode::kMaxLen || symbol.quoteAsset.size() > CurrencyCode::kMaxLen) {
+      log::trace("Discard {}-{} as one asset is too long", symbol.baseAsset, symbol.quoteAsset);
       continue;
     }
-    log::trace("Accept {}-{} Binance asset pair", baseAsset, quoteAsset);
-    ret.insert_or_assign(Market(baseAsset, quoteAsset), std::move(*it));
+    log::trace("Accept {}-{} Binance asset pair", symbol.baseAsset, symbol.quoteAsset);
+    Market market(CurrencyCode{symbol.baseAsset}, CurrencyCode{symbol.quoteAsset});
+    ret.insert_or_assign(std::move(market), std::move(symbol));
   }
   return ret;
 }
 
 MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
-  const json::container& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
+  const auto& exchangeConfigCache = _exchangeConfigCache.get();
+  const auto& marketData = RetrieveMarketData(exchangeConfigCache, mk);
 
-  const json::container* pPriceFilter = nullptr;
+  const schema::binance::V3ExchangeInfo::Symbol::Filter* pPriceFilter = nullptr;
   MonetaryAmount ret(pri);
-  for (const json::container& filter : marketData["filters"]) {
-    const std::string_view filterType = filter["filterType"].get<std::string_view>();
-    if (filterType == "PRICE_FILTER") {
+  for (const auto& filter : marketData.filters) {
+    if (filter.filterType == "PRICE_FILTER") {
       pPriceFilter = std::addressof(filter);
       break;
     }
   }
 
   if (pPriceFilter != nullptr) {
-    MonetaryAmount maxPrice((*pPriceFilter)["maxPrice"].get<std::string_view>(), ret.currencyCode());
-    MonetaryAmount minPrice((*pPriceFilter)["minPrice"].get<std::string_view>(), ret.currencyCode());
-    MonetaryAmount tickSize((*pPriceFilter)["tickSize"].get<std::string_view>(), ret.currencyCode());
+    MonetaryAmount maxPrice(pPriceFilter->maxPrice, ret.currencyCode());
+    MonetaryAmount minPrice(pPriceFilter->minPrice, ret.currencyCode());
+    MonetaryAmount tickSize(pPriceFilter->tickSize, ret.currencyCode());
 
     if (ret > maxPrice) {
       log::debug("Too big price {} capped to {} for {}", ret, maxPrice, mk);
@@ -229,7 +208,7 @@ MonetaryAmount BinancePublic::sanitizePrice(Market mk, MonetaryAmount pri) {
     }
   }
 
-  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk);
+  VolAndPriNbDecimals volAndPriNbDecimals = QueryVolAndPriNbDecimals(exchangeConfigCache, mk);
   ret.truncate(volAndPriNbDecimals.priNbDecimals);
   if (pri != ret) {
     log::warn("Sanitize price {} -> {}", pri, ret);
@@ -247,45 +226,42 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
     log::error("Unable to retrieve last trades from {}, use average price instead for notional", mk);
   }
 
-  const json::container result =
-      PublicQuery(_commonInfo._curlHandle, "/api/v3/avgPrice", {{"symbol", mk.assetsPairStrUpper()}});
-  const auto priceIt = result.find("price");
-  const std::string_view priceStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
+  const auto result = PublicQuery<schema::binance::V3AvgPrice>(_commonInfo._curlHandle, "/api/v3/avgPrice",
+                                                               {{"symbol", mk.assetsPairStrUpper()}});
 
-  return {priceStr, mk.quote()};
+  return {result.price, mk.quote()};
 }
 
 MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, MonetaryAmount priceForNotional,
                                              bool isTakerOrder) {
-  const json::container& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
+  const auto& marketData = RetrieveMarketData(_exchangeConfigCache.get(), mk);
   MonetaryAmount ret(vol);
 
-  const json::container* pMinNotionalFilter = nullptr;
-  const json::container* pNotionalFilter = nullptr;
-  const json::container* pLotSizeFilter = nullptr;
-  const json::container* pMarketLotSizeFilter = nullptr;
+  const schema::binance::V3ExchangeInfo::Symbol::Filter* pMinNotionalFilter = nullptr;
+  const schema::binance::V3ExchangeInfo::Symbol::Filter* pNotionalFilter = nullptr;
+  const schema::binance::V3ExchangeInfo::Symbol::Filter* pLotSizeFilter = nullptr;
+  const schema::binance::V3ExchangeInfo::Symbol::Filter* pMarketLotSizeFilter = nullptr;
 
-  for (const json::container& filter : marketData["filters"]) {
-    const std::string_view filterType = filter["filterType"].get<std::string_view>();
-    if (filterType == "LOT_SIZE") {
+  for (const auto& filter : marketData.filters) {
+    if (filter.filterType == "LOT_SIZE") {
       pLotSizeFilter = std::addressof(filter);
-    } else if (filterType == "MARKET_LOT_SIZE") {
+    } else if (filter.filterType == "MARKET_LOT_SIZE") {
       if (isTakerOrder) {
         pMarketLotSizeFilter = std::addressof(filter);
       }
-    } else if (filterType == "MIN_NOTIONAL") {
+    } else if (filter.filterType == "MIN_NOTIONAL") {
       if (isTakerOrder) {
-        if (filter["applyToMarket"].get<bool>()) {
-          priceForNotional = computePriceForNotional(mk, filter["avgPriceMins"].get<int>());
+        if (filter.applyToMarket) {
+          priceForNotional = computePriceForNotional(mk, filter.avgPriceMins);
           pMinNotionalFilter = std::addressof(filter);
         }
       } else {
         pMinNotionalFilter = std::addressof(filter);
       }
-    } else if (filterType == "NOTIONAL") {
+    } else if (filter.filterType == "NOTIONAL") {
       if (isTakerOrder) {
-        if (filter["applyMinToMarket"].get<bool>() || filter["applyMaxToMarket"].get<bool>()) {
-          priceForNotional = computePriceForNotional(mk, filter["avgPriceMins"].get<int>());
+        if (filter.applyMinToMarket || filter.applyMaxToMarket) {
+          priceForNotional = computePriceForNotional(mk, filter.avgPriceMins);
           pNotionalFilter = std::addressof(filter);
         }
       } else {
@@ -296,7 +272,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
 
   MonetaryAmount minVolumeAfterMinNotional(0, ret.currencyCode());
   if (pMinNotionalFilter != nullptr) {
-    MonetaryAmount minNotional((*pMinNotionalFilter)["minNotional"].get<std::string_view>());
+    MonetaryAmount minNotional(pMinNotionalFilter->minNotional);
     MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForNotional.toNeutral();
 
     minVolumeAfterMinNotional = MonetaryAmount(minNotional / priceForNotional, ret.currencyCode());
@@ -309,9 +285,9 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
   if (pNotionalFilter != nullptr) {
     MonetaryAmount priceTimesQuantity = ret.toNeutral() * priceForNotional.toNeutral();
 
-    if (!isTakerOrder || (*pNotionalFilter)["applyMinToMarket"].get<bool>()) {
+    if (!isTakerOrder || pNotionalFilter->applyMinToMarket) {
       // min notional applies
-      MonetaryAmount minNotional((*pNotionalFilter)["minNotional"].get<std::string_view>());
+      MonetaryAmount minNotional(pNotionalFilter->minNotional);
 
       minVolumeAfterMinNotional =
           std::max(minVolumeAfterMinNotional, MonetaryAmount(minNotional / priceForNotional, ret.currencyCode()));
@@ -320,9 +296,9 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
         log::debug("Too small (price * quantity). {} increased to {} for {}", ret, minVolumeAfterMinNotional, mk);
         ret = minVolumeAfterMinNotional;
       }
-    } else if (!isTakerOrder || (*pNotionalFilter)["applyMaxToMarket"].get<bool>()) {
+    } else if (!isTakerOrder || pNotionalFilter->applyMaxToMarket) {
       // max notional applies
-      MonetaryAmount maxNotional((*pNotionalFilter)["maxNotional"].get<std::string_view>());
+      MonetaryAmount maxNotional(pNotionalFilter->maxNotional);
       MonetaryAmount maxVolumeAfterMaxNotional = MonetaryAmount(maxNotional / priceForNotional, ret.currencyCode());
 
       if (priceTimesQuantity > maxNotional) {
@@ -332,14 +308,14 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
     }
   }
 
-  for (const json::container* pLotFilterPtr : {pMarketLotSizeFilter, pLotSizeFilter}) {
+  for (const auto* pLotFilterPtr : {pMarketLotSizeFilter, pLotSizeFilter}) {
     if (pLotFilterPtr != nullptr) {
       // "maxQty": "9000000.00000000",
       // "minQty": "1.00000000",
       // "stepSize": "1.00000000"
-      MonetaryAmount maxQty((*pLotFilterPtr)["maxQty"].get<std::string_view>(), ret.currencyCode());
-      MonetaryAmount minQty((*pLotFilterPtr)["minQty"].get<std::string_view>(), ret.currencyCode());
-      MonetaryAmount stepSize((*pLotFilterPtr)["stepSize"].get<std::string_view>(), ret.currencyCode());
+      MonetaryAmount maxQty(pLotFilterPtr->maxQty, ret.currencyCode());
+      MonetaryAmount minQty(pLotFilterPtr->minQty, ret.currencyCode());
+      MonetaryAmount stepSize(pLotFilterPtr->stepSize, ret.currencyCode());
 
       if (ret > maxQty) {
         log::debug("Too big volume {} capped to {} for {}", ret, maxQty, mk);
@@ -370,7 +346,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
 MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
-  json::container result = PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
+  auto result = PublicQuery<schema::binance::V3TickerBookTicker>(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
   using BinanceAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
@@ -378,17 +354,16 @@ MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
     binanceAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
   const auto time = Clock::now();
-  for (const json::container& tickerDetails : result) {
-    string assetsPairStr = tickerDetails["symbol"];
-    auto it = binanceAssetPairToStdMarketMap.find(assetsPairStr);
+  for (const auto& elem : result) {
+    auto it = binanceAssetPairToStdMarketMap.find(elem.symbol);
     if (it == binanceAssetPairToStdMarketMap.end()) {
       continue;
     }
     Market mk = it->second;
-    MonetaryAmount askPri(tickerDetails["askPrice"].get<std::string_view>(), mk.quote());
-    MonetaryAmount bidPri(tickerDetails["bidPrice"].get<std::string_view>(), mk.quote());
-    MonetaryAmount askVol(tickerDetails["askQty"].get<std::string_view>(), mk.base());
-    MonetaryAmount bidVol(tickerDetails["bidQty"].get<std::string_view>(), mk.base());
+    MonetaryAmount askPri(elem.askPrice, mk.quote());
+    MonetaryAmount bidPri(elem.bidPrice, mk.quote());
+    MonetaryAmount askVol(elem.askQty, mk.base());
+    MonetaryAmount bidVol(elem.bidQty, mk.base());
 
     ret.insert_or_assign(mk, MarketOrderBook(time, askPri, askVol, bidPri, bidVol,
                                              QueryVolAndPriNbDecimals(_exchangeConfigCache.get(), mk), depth));
@@ -410,22 +385,20 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
   MarketOrderBookLines orderBookLines;
 
   const CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
-  const json::container asksAndBids = PublicQuery(_commonInfo._curlHandle, "/api/v3/depth", postData);
+  const auto asksAndBids =
+      PublicQuery<schema::binance::V3OrderBook>(_commonInfo._curlHandle, "/api/v3/depth", postData);
   const auto nowTime = Clock::now();
-  const auto asksIt = asksAndBids.find("asks");
-  const auto bidsIt = asksAndBids.find("bids");
 
-  if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksIt->size()), depth) +
-                           std::min(static_cast<decltype(depth)>(bidsIt->size()), depth));
-    for (const auto& asksOrBids : {asksIt, bidsIt}) {
-      const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
-      for (const auto& priceQuantityPair : *asksOrBids | std::ranges::views::take(depth)) {
-        MonetaryAmount amount(priceQuantityPair.back().get<std::string_view>(), mk.base());
-        MonetaryAmount price(priceQuantityPair.front().get<std::string_view>(), mk.quote());
+  orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksAndBids.asks.size()), depth) +
+                         std::min(static_cast<decltype(depth)>(asksAndBids.bids.size()), depth));
 
-        orderBookLines.push(amount, price, type);
-      }
+  for (const auto asksOrBids : {&asksAndBids.asks, &asksAndBids.bids}) {
+    const auto type = asksOrBids == &asksAndBids.asks ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
+    for (const auto& [pri, vol] : *asksOrBids | std::ranges::views::take(depth)) {
+      MonetaryAmount price(pri, mk.quote());
+      MonetaryAmount amount(vol, mk.base());
+
+      orderBookLines.push(amount, price, type);
     }
   }
 
@@ -433,12 +406,10 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
-  const json::container result =
-      PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/24hr", {{"symbol", mk.assetsPairStrUpper()}});
-  const auto volumeIt = result.find("volume");
-  const std::string_view last24hVol = volumeIt == result.end() ? std::string_view() : volumeIt->get<std::string_view>();
+  const auto result = PublicQuery<schema::binance::V3Ticker24hr>(_commonInfo._curlHandle, "/api/v3/ticker/24hr",
+                                                                 {{"symbol", mk.assetsPairStrUpper()}});
 
-  return {last24hVol, mk.base()};
+  return {result.volume, mk.base()};
 }
 
 PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
@@ -449,17 +420,17 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
     nbTrades = kMaxNbLastTrades;
   }
 
-  json::container result = PublicQuery(_commonInfo._curlHandle, "/api/v3/trades",
-                                       {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
+  const auto result = PublicQuery<schema::binance::V3Trades>(
+      _commonInfo._curlHandle, "/api/v3/trades", {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
 
-  for (const json::container& detail : result) {
-    MonetaryAmount amount(detail["qty"].get<std::string_view>(), mk.base());
-    MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
-    int64_t millisecondsSinceEpoch = detail["time"].get<int64_t>();
-    TradeSide tradeSide = detail["isBuyerMaker"].get<bool>() ? TradeSide::kSell : TradeSide::kBuy;
+  for (const auto& elem : result) {
+    MonetaryAmount price(elem.price, mk.quote());
+    MonetaryAmount amount(elem.qty, mk.base());
+    int64_t millisecondsSinceEpoch = elem.time;
+    TradeSide tradeSide = elem.isBuyerMaker ? TradeSide::kSell : TradeSide::kBuy;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }
@@ -468,11 +439,9 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market mk) {
-  const json::container data =
-      PublicQuery(_commonInfo._curlHandle, "/api/v3/ticker/price", {{"symbol", mk.assetsPairStrUpper()}});
-  const auto priceIt = data.find("price");
-  const std::string_view lastPrice = priceIt == data.end() ? std::string_view() : priceIt->get<std::string_view>();
-  return {lastPrice, mk.quote()};
+  const auto data = PublicQuery<schema::binance::V3TickerPrice>(_commonInfo._curlHandle, "/api/v3/ticker/price",
+                                                                {{"symbol", mk.assetsPairStrUpper()}});
+  return {data.price, mk.quote()};
 }
 
 }  // namespace cct::api
