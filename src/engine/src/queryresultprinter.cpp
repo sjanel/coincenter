@@ -1734,7 +1734,7 @@ void QueryResultPrinter::logActivity(CoincenterCommandType commandType, const js
   if (_loggingInfo.isCommandTypeTracked(commandType) &&
       (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
     File activityFile = _loggingInfo.getActivityFile();
-    activityFile.writeJson(jsonData, Writer::Mode::Append);
+    activityFile.write(jsonData.dump(), Writer::Mode::Append);
   }
 }
 

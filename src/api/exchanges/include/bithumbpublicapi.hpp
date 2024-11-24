@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "cachedresult.hpp"
+#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencyexchange.hpp"
 #include "exchange-asset-config.hpp"

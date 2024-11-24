@@ -9,7 +9,125 @@
 #include "cct_vector.hpp"
 #include "monetaryamount.hpp"
 
+namespace cct::api {
+template <class T>
+using has_msg_t = decltype(std::declval<T>().msg);
+
+template <class T>
+using has_code_t = decltype(std::declval<T>().code);
+}  // namespace cct::api
+
 namespace cct::schema::binance {
+
+// PUBLIC
+
+// https://binance-docs.github.io/apidocs/spot/en/#exchange-information
+
+struct V3ExchangeInfo {
+  struct Symbol {
+    string baseAsset;
+    string quoteAsset;
+    string status;
+    int8_t baseAssetPrecision;
+    int8_t quoteAssetPrecision;
+
+    struct Filter {
+      string filterType;
+      MonetaryAmount maxPrice;
+      MonetaryAmount minPrice;
+      MonetaryAmount tickSize;
+      MonetaryAmount minNotional;
+      MonetaryAmount maxNotional;
+      MonetaryAmount maxQty;
+      MonetaryAmount minQty;
+      MonetaryAmount stepSize;
+      int32_t avgPriceMins;
+      bool applyToMarket;
+      bool applyMinToMarket;
+      bool applyMaxToMarket;
+
+      using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+      auto operator<=>(const Filter&) const = default;
+    };
+
+    vector<Filter> filters;
+
+    vector<string> permissions;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Symbol&) const = default;
+  };
+
+  vector<Symbol> symbols;
+
+  std::optional<int> code;
+  std::optional<string> msg;
+};
+
+// https://binance-docs.github.io/apidocs/spot/en/#current-average-price
+struct V3AvgPrice {
+  MonetaryAmount price;
+  std::optional<int> code;
+  std::optional<string> msg;
+};
+
+// https://binance-docs.github.io/apidocs/spot/en/#symbol-order-book-ticker
+struct V3TickerBookTickerElem {
+  string symbol;
+  MonetaryAmount bidPrice;
+  MonetaryAmount bidQty;
+  MonetaryAmount askPrice;
+  MonetaryAmount askQty;
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
+};
+
+using V3TickerBookTicker = vector<V3TickerBookTickerElem>;
+
+// https://binance-docs.github.io/apidocs/spot/en/#order-book
+struct V3OrderBook {
+  using Line = std::array<MonetaryAmount, 2U>;  // price is first, then volume
+
+  vector<Line> asks;
+  vector<Line> bids;
+
+  std::optional<int> code;
+  std::optional<string> msg;
+};
+
+// https://binance-docs.github.io/apidocs/spot/en/#24hr-ticker-price-change-statistics
+struct V3Ticker24hr {
+  MonetaryAmount volume;
+
+  std::optional<int> code;
+  std::optional<string> msg;
+};
+
+// https://binance-docs.github.io/apidocs/spot/en/#recent-trades-list
+struct V3Trade {
+  MonetaryAmount price;
+  MonetaryAmount qty;
+  int64_t time{};
+  bool isBuyerMaker;
+
+  using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+  auto operator<=>(const V3Trade&) const = default;
+};
+
+using V3Trades = vector<V3Trade>;
+
+// https://binance-docs.github.io/apidocs/spot/en/#symbol-price-ticker
+struct V3TickerPrice {
+  MonetaryAmount price;
+
+  std::optional<int> code;
+  std::optional<string> msg;
+};
+
+// PRIVATE
 
 using OrderId = uint64_t;
 

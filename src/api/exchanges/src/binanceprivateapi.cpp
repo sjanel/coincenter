@@ -49,6 +49,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "read-json.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
 #include "stringconv.hpp"
@@ -153,12 +154,6 @@ bool CheckErrorMsg(std::string_view msg, QueryDelayDir& queryDelayDir, Duration&
 }
 
 template <class T>
-using has_msg_t = decltype(std::declval<T>().msg);
-
-template <class T>
-using has_code_t = decltype(std::declval<T>().code);
-
-template <class T>
 bool CheckErrorDoRetry(int statusCode, const T& ret, QueryDelayDir& queryDelayDir, Duration& sleepingTime,
                        Duration& queryDelay) {
   switch (statusCode) {
@@ -187,9 +182,7 @@ bool CheckErrorDoRetry(int statusCode, const T& ret, QueryDelayDir& queryDelayDi
   return false;
 }
 
-template <class T,
-          json::opts jsonOpts = json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true},
-          class CurlPostDataT = CurlPostData>
+template <class T, class CurlPostDataT = CurlPostData>
 T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
                Duration& queryDelay, CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
   CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
@@ -210,11 +203,9 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
 
     auto resStr = curlHandle.query(endpoint, opts);
 
-    auto ec = json::read<jsonOpts>(ret, resStr);
+    auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+        resStr, "binance private", ret);
     if (ec) {
-      std::string_view prefixJsonContent = resStr.substr(0, std::min<int>(resStr.size(), 20));
-      log::error("Error while reading json content '{}{}': {}", prefixJsonContent,
-                 prefixJsonContent.size() < resStr.size() ? "..." : "", json::format_error(ec, resStr));
       statusCode = -1;
       continue;
     }

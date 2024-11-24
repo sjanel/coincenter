@@ -4,8 +4,8 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "binance-schema.hpp"
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
@@ -81,7 +81,7 @@ class BinancePublic : public ExchangePublic {
   };
 
   struct ExchangeInfoFunc {
-    using ExchangeInfoDataByMarket = std::unordered_map<Market, json::container>;
+    using ExchangeInfoDataByMarket = std::unordered_map<Market, schema::binance::V3ExchangeInfo::Symbol>;
 
     ExchangeInfoDataByMarket operator()();
 
