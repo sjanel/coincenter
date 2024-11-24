@@ -9,6 +9,7 @@
 #include "binance-common-api.hpp"
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
+#include "cct_const.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -38,10 +39,10 @@ class CommonAPI : public CacheFileUpdatorInterface {
   /// Information here: https://en.wikipedia.org/wiki/Fiat_money
   bool queryIsCurrencyCodeFiat(CurrencyCode currencyCode);
 
-  std::optional<MonetaryAmount> tryQueryWithdrawalFee(std::string_view exchangeName, CurrencyCode currencyCode);
+  std::optional<MonetaryAmount> tryQueryWithdrawalFee(ExchangeNameEnum exchangeNameEnum, CurrencyCode currencyCode);
 
   /// Query withdrawal fees from crawler sources. It's not guaranteed to work though.
-  MonetaryAmountByCurrencySet tryQueryWithdrawalFees(std::string_view exchangeName);
+  MonetaryAmountByCurrencySet tryQueryWithdrawalFees(ExchangeNameEnum exchangeNameEnum);
 
   BinanceGlobalInfos &getBinanceGlobalInfos() { return _binanceGlobalInfos; }
 

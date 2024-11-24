@@ -49,11 +49,13 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
   ReadExactJsonOrThrow(data, withdrawInfoFileContent);
 
   const auto nowTime = Clock::now();
-  for (const auto& [exchangeName, exchangeData] : withdrawInfoFileContent) {
+  for (const auto& [exchangeNameEnum, exchangeData] : withdrawInfoFileContent) {
     TimePoint lastUpdatedTime(seconds(exchangeData.timeepoch));
     if (nowTime - lastUpdatedTime < minDurationBetweenQueries) {
       // we can reuse file data
       WithdrawalInfoMaps withdrawalInfoMaps;
+
+      std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
 
       for (const auto& [cur, val] : exchangeData.assets) {
         MonetaryAmount withdrawMin(val.min, cur);
@@ -66,15 +68,7 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
         withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
       }
 
-      // Warning: we store a std::string_view in the cache, and 'exchangeName' will be destroyed at the end
-      // of this function. So we need to retrieve the 'constant' std::string_view of this exchange (in static memory)
-      // to store in the cache.
-      auto constantExchangeNameSVIt = std::ranges::find(kSupportedExchanges, exchangeName);
-      if (constantExchangeNameSVIt == std::end(kSupportedExchanges)) {
-        throw exception("unknown exchange name {}", exchangeName);
-      }
-
-      _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, *constantExchangeNameSVIt);
+      _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, exchangeNameEnum);
     }
   }
 }
@@ -92,14 +86,15 @@ WithdrawalFeesCrawler::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterIn
                    coincenterInfo.getRunMode()) {}
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::operator()(
-    std::string_view exchangeName) {
+    ExchangeNameEnum exchangeNameEnum) {
   static constexpr auto kNbSources = 2;
 
   ThreadPool threadPool(kNbSources);
 
-  std::array results{
-      threadPool.enqueue([this](std::string_view exchangeName) { return get1(exchangeName); }, exchangeName),
-      threadPool.enqueue([this](std::string_view exchangeName) { return get2(exchangeName); }, exchangeName)};
+  std::array results{threadPool.enqueue([this](ExchangeNameEnum exchangeNameEnum) { return get1(exchangeNameEnum); },
+                                        exchangeNameEnum),
+                     threadPool.enqueue([this](ExchangeNameEnum exchangeNameEnum) { return get2(exchangeNameEnum); },
+                                        exchangeNameEnum)};
 
   auto [withdrawFees1, withdrawMinMap1] = results[0].get();
 
@@ -111,7 +106,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
   }
 
   if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
-    log::error("Unable to parse {} withdrawal fees", exchangeName);
+    log::error("Unable to parse {} withdrawal fees", kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
   }
 
   return std::make_pair(std::move(withdrawFees1), std::move(withdrawMinMap1));
@@ -119,13 +114,14 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 
 void WithdrawalFeesCrawler::updateCacheFile() const {
   schema::WithdrawInfoFile withdrawInfoFile;
-  for (const std::string_view exchangeName : kSupportedExchanges) {
-    const auto [withdrawalInfoMapsPtr, latestUpdate] = _withdrawalFeesCache.retrieve(exchangeName);
+  for (int exchangeNamePos = 0; exchangeNamePos < kNbSupportedExchanges; ++exchangeNamePos) {
+    auto exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangeNamePos);
+    const auto [withdrawalInfoMapsPtr, latestUpdate] = _withdrawalFeesCache.retrieve(exchangeNameEnum);
     if (withdrawalInfoMapsPtr != nullptr) {
       const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
 
       schema::WithdrawInfoFileItem& withdrawInfoFileItem =
-          withdrawInfoFile.emplace(std::make_pair(exchangeName, schema::WithdrawInfoFileItem{})).first->second;
+          withdrawInfoFile.emplace(std::make_pair(exchangeNameEnum, schema::WithdrawInfoFileItem{})).first->second;
       withdrawInfoFileItem.timeepoch = TimestampToSecondsSinceEpoch(latestUpdate);
       for (const auto withdrawFee : withdrawalInfoMaps.first) {
         CurrencyCode cur = withdrawFee.currencyCode();
@@ -146,7 +142,8 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
-    std::string_view exchangeName) {
+    ExchangeNameEnum exchangeNameEnum) {
+  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
   string path(exchangeName);
   path.append(".json");
   std::string_view dataStr = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
@@ -188,7 +185,8 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get2(
-    std::string_view exchangeName) {
+    ExchangeNameEnum exchangeNameEnum) {
+  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
   std::string_view withdrawalFeesCsv = _curlHandle2.query(exchangeName, CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Deposit & Withdrawal fees</h2>";

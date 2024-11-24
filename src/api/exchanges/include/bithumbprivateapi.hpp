@@ -70,14 +70,19 @@ class BithumbPrivate : public ExchangePrivate {
   void cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext);
 
   struct CurrencyOrderInfo {
-    int8_t nbDecimals{};
-    TimePoint lastNbDecimalsUpdatedTime;
-    MonetaryAmount minOrderSize;
-    TimePoint lastMinOrderSizeUpdatedTime;
-    MonetaryAmount minOrderPrice;
-    TimePoint lastMinOrderPriceUpdatedTime;
-    MonetaryAmount maxOrderPrice;
-    TimePoint lastMaxOrderPriceUpdatedTime;
+    struct MonetaryAmountWithTs {
+      int64_t ts;
+      MonetaryAmount val;
+    };
+    struct DecimalsWithTs {
+      int64_t ts;
+      int8_t val;
+    };
+
+    DecimalsWithTs nbDecimals;
+    MonetaryAmountWithTs minOrderSize;
+    MonetaryAmountWithTs minOrderPrice;
+    MonetaryAmountWithTs maxOrderPrice;
   };
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;

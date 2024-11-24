@@ -69,32 +69,33 @@ CurrencyCodeSet CommonAPI::queryFiats() {
 
 bool CommonAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return queryFiats().contains(currencyCode); }
 
-MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(std::string_view exchangeName) {
+MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(ExchangeNameEnum exchangeNameEnum) {
   MonetaryAmountByCurrencySet ret;
   {
     std::lock_guard<std::recursive_mutex> guard(_globalMutex);
-    ret = _withdrawalFeesCrawler.get(exchangeName).first;
+    ret = _withdrawalFeesCrawler.get(exchangeNameEnum).first;
   }
 
   if (ret.empty()) {
-    log::warn("Taking binance withdrawal fees for {} as crawler failed to retrieve data", exchangeName);
+    log::warn("Taking binance withdrawal fees for {} as crawler failed to retrieve data",
+              kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
     ret = _binanceGlobalInfos.queryWithdrawalFees();
   }
   return ret;
 }
 
-std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(std::string_view exchangeName,
+std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(ExchangeNameEnum exchangeNameEnum,
                                                                CurrencyCode currencyCode) {
   {
     std::lock_guard<std::recursive_mutex> guard(_globalMutex);
-    const auto& withdrawalFees = _withdrawalFeesCrawler.get(exchangeName).first;
+    const auto& withdrawalFees = _withdrawalFeesCrawler.get(exchangeNameEnum).first;
     auto it = withdrawalFees.find(currencyCode);
     if (it != withdrawalFees.end()) {
       return *it;
     }
   }
-  log::warn("Taking binance withdrawal fee for {} and currency {} as crawler failed to retrieve data", exchangeName,
-            currencyCode);
+  log::warn("Taking binance withdrawal fee for {} and currency {} as crawler failed to retrieve data",
+            kSupportedExchanges[static_cast<int>(exchangeNameEnum)], currencyCode);
   MonetaryAmount withdrawFee = _binanceGlobalInfos.queryWithdrawalFee(currencyCode);
   if (withdrawFee.isDefault()) {
     return {};
@@ -213,24 +214,19 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
 
 void CommonAPI::updateCacheFile() const {
   const auto fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
-  auto fiatsData = fiatsCacheFile.readAllJson();
+  auto fiatsDataStr = fiatsCacheFile.readAll();
+  schema::FiatsCache fiatsData;
+  ReadExactJsonOrThrow(fiatsDataStr, fiatsData);
   const auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
-  const auto timeEpochIt = fiatsData.find("timeepoch");
-  bool updateFiatsCache = true;
-  if (timeEpochIt != fiatsData.end()) {
-    const int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
-    if (TimePoint(seconds(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
-      updateFiatsCache = false;
-    }
-  }
-  if (updateFiatsCache) {
-    fiatsData.clear();
+  if (TimePoint(seconds(fiatsData.timeepoch)) < fiatsPtrLastUpdatedTimePair.second) {
+    // update fiats cache file
+    fiatsData.fiats.clear();
     if (fiatsPtrLastUpdatedTimePair.first != nullptr) {
       for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
-        fiatsData["fiats"].emplace_back(fiatCode.str());
+        fiatsData.fiats.emplace_back(fiatCode.str());
       }
-      fiatsData["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
-      fiatsCacheFile.writeJson(fiatsData);
+      fiatsData.timeepoch = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
+      fiatsCacheFile.write(WriteMiniJsonOrThrow(fiatsData));
     }
   }
 

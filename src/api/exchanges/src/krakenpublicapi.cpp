@@ -145,7 +145,7 @@ bool KrakenPublic::healthCheck() {
 }
 
 std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
-  return _commonApi.tryQueryWithdrawalFee(kExchangeName, currencyCode);
+  return _commonApi.tryQueryWithdrawalFee(exchangeNameEnum(), currencyCode);
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {

@@ -19,8 +19,6 @@ class CommonAPI;
 
 class KrakenPublic : public ExchangePublic {
  public:
-  static constexpr std::string_view kExchangeName = "kraken";
-
   KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 
   bool healthCheck() override;
@@ -38,7 +36,7 @@ class KrakenPublic : public ExchangePublic {
   MarketPriceMap queryAllPrices() override { return MarketPriceMapFromMarketOrderBookMap(_allOrderBooksCache.get(1)); }
 
   MonetaryAmountByCurrencySet queryWithdrawalFees() override {
-    return _commonApi.tryQueryWithdrawalFees(kExchangeName);
+    return _commonApi.tryQueryWithdrawalFees(exchangeNameEnum());
   }
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
