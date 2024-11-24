@@ -238,7 +238,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
   }
   if (throwIfError) {
     std::string_view errorMsg;
-    string jsonStr = WriteJsonOrThrow(ret);
+    string jsonStr = WriteMiniJsonOrThrow(ret);
     if constexpr (amc::is_detected<has_msg_t, T>::value) {
       if (ret.msg) {
         errorMsg = *ret.msg;

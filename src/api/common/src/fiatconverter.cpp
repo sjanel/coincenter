@@ -57,13 +57,13 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
       _dataDir(coincenterInfo.dataDir()) {
   const auto data = fiatsRatesCacheReader.readAll();
 
-  ReadJsonOrThrow(data, _pricesMap);
+  ReadExactJsonOrThrow(data, _pricesMap);
 
   log::debug("Loaded {} fiat currency rates from {}", _pricesMap.size(), kRatesCacheFile);
 }
 
 void FiatConverter::updateCacheFile() const {
-  auto dataStr = WriteJsonOrThrow(_pricesMap);
+  auto dataStr = WriteMiniJsonOrThrow(_pricesMap);
   GetRatesCacheFile(_dataDir).write(dataStr);
 }
 
@@ -89,13 +89,9 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market market) {
   schema::FreeCurrencyConverterResponse response;
 
   //{"query":{"count":1},"results":{"EUR_KRW":{"id":"EUR_KRW","val":1329.475323,"to":"KRW","fr":"EUR"}}}
-  auto ec = json::read<json::opts{.error_on_unknown_keys = false, .raw_string = true}>(response, dataStr);
+  auto ec = ReadPartialJson(dataStr, "fiat currency converter service's first source", response);
 
   if (ec) {
-    std::string_view prefixJsonContent = dataStr.substr(0, std::min<int>(dataStr.size(), 20));
-    log::error("Error while reading json content from fiat currency converter service's first source '{}{}': {}",
-               prefixJsonContent, prefixJsonContent.size() < dataStr.size() ? "..." : "",
-               json::format_error(ec, dataStr));
     return {};
   }
 
@@ -115,13 +111,9 @@ std::optional<double> FiatConverter::queryCurrencyRateSource2(Market market) {
 
   schema::FiatRatesSource2Response response;
 
-  auto ec = json::read<json::opts{.error_on_unknown_keys = false, .raw_string = true}>(response, dataStr);
+  auto ec = ReadPartialJson(dataStr, "fiat currency converter service's second source", response);
 
   if (ec) {
-    std::string_view prefixJsonContent = dataStr.substr(0, std::min<int>(dataStr.size(), 20));
-    log::error("Error while reading json content from fiat currency converter service's second source '{}{}': {}",
-               prefixJsonContent, prefixJsonContent.size() < dataStr.size() ? "..." : "",
-               json::format_error(ec, dataStr));
     return {};
   }
 
@@ -276,12 +268,9 @@ FiatConverter::ThirdPartySecret FiatConverter::LoadCurrencyConverterAPIKey(const
     return thirdPartySecret;
   }
 
-  auto ec = json::read<json::opts{.error_on_unknown_keys = false, .raw_string = true}>(thirdPartySecret, dataStr);
+  auto ec = ReadPartialJson(dataStr, "third party's secrets", thirdPartySecret);
 
   if (ec) {
-    std::string_view prefixJsonContent = dataStr.substr(0, std::min<int>(dataStr.size(), 20));
-    log::error("Error while reading json content from third party's secrets '{}{}': {}", prefixJsonContent,
-               prefixJsonContent.size() < dataStr.size() ? "..." : "", json::format_error(ec, dataStr));
     return thirdPartySecret;
   }
 

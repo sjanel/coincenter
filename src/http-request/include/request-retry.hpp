@@ -69,7 +69,7 @@ class RequestRetry {
           if constexpr (std::is_same_v<T, json::container>) {
             strContent = ret.dump();
           } else {
-            strContent = WriteJsonOrThrow(ret);
+            strContent = WriteMiniJsonOrThrow(ret);
           }
           log::warn("Got query error: '{}' for {}, retry {}/{} after {}", strContent, endpoint, nbRetries,
                     _queryRetryPolicy.nbMaxRetries, DurationToString(sleepingTime));

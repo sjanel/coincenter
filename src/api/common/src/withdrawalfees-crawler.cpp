@@ -12,7 +12,6 @@
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -22,8 +21,11 @@
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
 #include "permanentcurloptions.hpp"
+#include "read-json.hpp"
 #include "threadpool.hpp"
 #include "timedef.hpp"
+#include "withdrawal-fees-schema.hpp"
+#include "write-json.hpp"
 
 namespace cct {
 
@@ -40,37 +42,39 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
                                              CachedResultVault& cachedResultVault)
     : _coincenterInfo(coincenterInfo),
       _withdrawalFeesCache(CachedResultOptions(minDurationBetweenQueries, cachedResultVault), coincenterInfo) {
-  json::container data = GetWithdrawInfoFile(_coincenterInfo.dataDir()).readAllJson();
-  if (!data.empty()) {
-    const auto nowTime = Clock::now();
-    for (const auto& [exchangeName, exchangeData] : data.items()) {
-      TimePoint lastUpdatedTime(seconds(exchangeData["timeepoch"].get<int64_t>()));
-      if (nowTime - lastUpdatedTime < minDurationBetweenQueries) {
-        // we can reuse file data
-        WithdrawalInfoMaps withdrawalInfoMaps;
+  auto data = GetWithdrawInfoFile(_coincenterInfo.dataDir()).readAll();
 
-        for (const auto& [curCodeStr, val] : exchangeData["assets"].items()) {
-          CurrencyCode cur(curCodeStr);
-          MonetaryAmount withdrawMin(val["min"].get<std::string_view>(), cur);
-          MonetaryAmount withdrawFee(val["fee"].get<std::string_view>(), cur);
+  schema::WithdrawInfoFile withdrawInfoFileContent;
 
-          log::trace("Updated {} withdrawal fee {} from cache", exchangeName, withdrawFee);
-          log::trace("Updated {} min withdraw {} from cache", exchangeName, withdrawMin);
+  ReadExactJsonOrThrow(data, withdrawInfoFileContent);
 
-          withdrawalInfoMaps.first.insert(withdrawFee);
-          withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
-        }
+  const auto nowTime = Clock::now();
+  for (const auto& [exchangeName, exchangeData] : withdrawInfoFileContent) {
+    TimePoint lastUpdatedTime(seconds(exchangeData.timeepoch));
+    if (nowTime - lastUpdatedTime < minDurationBetweenQueries) {
+      // we can reuse file data
+      WithdrawalInfoMaps withdrawalInfoMaps;
 
-        // Warning: we store a std::string_view in the cache, and 'exchangeName' will be destroyed at the end
-        // of this function. So we need to retrieve the 'constant' std::string_view of this exchange (in static memory)
-        // to store in the cache.
-        auto constantExchangeNameSVIt = std::ranges::find(kSupportedExchanges, exchangeName);
-        if (constantExchangeNameSVIt == std::end(kSupportedExchanges)) {
-          throw exception("unknown exchange name {}", exchangeName);
-        }
+      for (const auto& [cur, val] : exchangeData.assets) {
+        MonetaryAmount withdrawMin(val.min, cur);
+        MonetaryAmount withdrawFee(val.fee, cur);
 
-        _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, *constantExchangeNameSVIt);
+        log::trace("Updated {} withdrawal fee {} from cache", exchangeName, withdrawFee);
+        log::trace("Updated {} min withdraw {} from cache", exchangeName, withdrawMin);
+
+        withdrawalInfoMaps.first.insert(withdrawFee);
+        withdrawalInfoMaps.second.insert_or_assign(cur, withdrawMin);
       }
+
+      // Warning: we store a std::string_view in the cache, and 'exchangeName' will be destroyed at the end
+      // of this function. So we need to retrieve the 'constant' std::string_view of this exchange (in static memory)
+      // to store in the cache.
+      auto constantExchangeNameSVIt = std::ranges::find(kSupportedExchanges, exchangeName);
+      if (constantExchangeNameSVIt == std::end(kSupportedExchanges)) {
+        throw exception("unknown exchange name {}", exchangeName);
+      }
+
+      _withdrawalFeesCache.set(std::move(withdrawalInfoMaps), lastUpdatedTime, *constantExchangeNameSVIt);
     }
   }
 }
@@ -114,78 +118,65 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 }
 
 void WithdrawalFeesCrawler::updateCacheFile() const {
-  json::container data;
+  schema::WithdrawInfoFile withdrawInfoFile;
   for (const std::string_view exchangeName : kSupportedExchanges) {
     const auto [withdrawalInfoMapsPtr, latestUpdate] = _withdrawalFeesCache.retrieve(exchangeName);
     if (withdrawalInfoMapsPtr != nullptr) {
       const WithdrawalInfoMaps& withdrawalInfoMaps = *withdrawalInfoMapsPtr;
 
-      json::container exchangeData;
-      exchangeData["timeepoch"] = TimestampToSecondsSinceEpoch(latestUpdate);
+      schema::WithdrawInfoFileItem& withdrawInfoFileItem =
+          withdrawInfoFile.emplace(std::make_pair(exchangeName, schema::WithdrawInfoFileItem{})).first->second;
+      withdrawInfoFileItem.timeepoch = TimestampToSecondsSinceEpoch(latestUpdate);
       for (const auto withdrawFee : withdrawalInfoMaps.first) {
-        string curCodeStr = withdrawFee.currencyCode().str();
-        exchangeData["assets"][curCodeStr]["min"] =
-            withdrawalInfoMaps.second.find(withdrawFee.currencyCode())->second.amountStr();
-        exchangeData["assets"][curCodeStr]["fee"] = withdrawFee.amountStr();
-      }
+        CurrencyCode cur = withdrawFee.currencyCode();
 
-      data.emplace(exchangeName, std::move(exchangeData));
+        schema::WithdrawInfoFileItemAsset& asset = withdrawInfoFileItem.assets[cur];
+
+        auto minIt = withdrawalInfoMaps.second.find(cur);
+        if (minIt != withdrawalInfoMaps.second.end()) {
+          asset.min = MonetaryAmount(minIt->second, CurrencyCode{});
+        }
+        asset.fee = MonetaryAmount(withdrawFee, CurrencyCode{});
+      }
     }
   }
-  GetWithdrawInfoFile(_coincenterInfo.dataDir()).writeJson(data);
+  auto dataStr = WriteMiniJsonOrThrow(withdrawInfoFile);
+
+  GetWithdrawInfoFile(_coincenterInfo.dataDir()).write(dataStr);
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
     std::string_view exchangeName) {
   string path(exchangeName);
   path.append(".json");
-  std::string_view withdrawalFeesCsv = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
+  std::string_view dataStr = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
 
   WithdrawalInfoMaps ret;
 
-  if (!withdrawalFeesCsv.empty()) {
-    static constexpr bool kAllowExceptions = false;
-    const json::container jsonData = json::container::parse(withdrawalFeesCsv, nullptr, kAllowExceptions);
-    const auto exchangesIt = jsonData.find("exchange");
-    if (jsonData.is_discarded() || exchangesIt == jsonData.end()) {
-      log::error("no exchange data found in source 1 - either site information unavailable or code to be updated");
-      return ret;
+  schema::WithdrawFeesCrawlerSource1 withdrawalFeesCrawlerSource1;
+  ReadPartialJson(dataStr, "withdraw fees crawler service's first source", withdrawalFeesCrawlerSource1);
+
+  if (withdrawalFeesCrawlerSource1.exchange.fees.empty()) {
+    log::error("no fees data found in source 1 - either site information unavailable or code to be updated");
+    return ret;
+  }
+
+  for (const schema::WithdrawFeesCrawlerExchangeFeesSource1& fee : withdrawalFeesCrawlerSource1.exchange.fees) {
+    if (fee.coin.symbol.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping {} withdrawal fees parsing from first source: symbol too long", fee.coin.symbol);
+      continue;
     }
-    const auto feesIt = exchangesIt->find("fees");
-    if (feesIt == exchangesIt->end() || !feesIt->is_array()) {
-      log::error("no fees data found in source 1 - either site information unavailable or code to be updated");
-      return ret;
-    }
 
-    for (const json::container& feeJson : *feesIt) {
-      const auto amountIt = feeJson.find("amount");
-      if (amountIt == feeJson.end() || !amountIt->is_number_float()) {
-        continue;
-      }
+    CurrencyCode cur{fee.coin.symbol};
 
-      const auto coinIt = feeJson.find("coin");
-      if (coinIt == feeJson.end()) {
-        continue;
-      }
-      const auto symbolIt = coinIt->find("symbol");
-      if (symbolIt == coinIt->end() || !symbolIt->is_string()) {
-        continue;
-      }
+    MonetaryAmount withdrawalFee(fee.amount, cur);
+    log::trace("Updated {} withdrawal fee {} from first source", exchangeName, withdrawalFee);
+    ret.first.insert(withdrawalFee);
 
-      MonetaryAmount withdrawalFee(amountIt->get<double>(), symbolIt->get<std::string_view>());
-      log::trace("Updated {} withdrawal fee {} from first source", exchangeName, withdrawalFee);
-      ret.first.insert(withdrawalFee);
+    MonetaryAmount minWithdrawal(fee.min, cur);
 
-      const auto minWithdrawalIt = feeJson.find("min");
-      if (minWithdrawalIt == feeJson.end() || !minWithdrawalIt->is_number_float()) {
-        continue;
-      }
-
-      MonetaryAmount minWithdrawal(minWithdrawalIt->get<double>(), symbolIt->get<std::string_view>());
-
-      log::trace("Updated {} min withdrawal {} from first source", exchangeName, minWithdrawal);
-      ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
-    }
+    log::trace("Updated {} min withdrawal {} from first source", exchangeName, minWithdrawal);
+    ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
   }
 
   if (ret.first.empty() || ret.second.empty()) {

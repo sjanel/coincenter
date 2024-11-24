@@ -26,7 +26,7 @@ AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguratio
 
         auto allExchangesConfigOptional =
             ReadJsonOrThrow<schema::details::AllExchangeConfigsOptional>(ExchangeConfigDefault::kProd);
-        WriteJsonOrThrow<true>(allExchangesConfigOptional);
+        WritePrettyJsonOrThrow(allExchangesConfigOptional);
 
         mergeWith(allExchangesConfigOptional);
       } else {
