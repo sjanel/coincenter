@@ -52,7 +52,7 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
     schema::FiatsCache fiatsCache;
     auto dataStr = GetFiatCacheFile(_coincenterInfo.dataDir()).readAll();
     if (!dataStr.empty()) {
-      ReadJsonOrThrow(dataStr, fiatsCache);
+      ReadExactJsonOrThrow(dataStr, fiatsCache);
       if (fiatsCache.timeepoch != 0) {
         CurrencyCodeSet fiats(std::move(fiatsCache.fiats));
         log::debug("Loaded {} fiats from cache file", fiats.size());
@@ -213,22 +213,25 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
 
 void CommonAPI::updateCacheFile() const {
   const auto fiatsCacheFile = GetFiatCacheFile(_coincenterInfo.dataDir());
-  auto data = fiatsCacheFile.readAllJson();
+  auto fiatsData = fiatsCacheFile.readAllJson();
   const auto fiatsPtrLastUpdatedTimePair = _fiatsCache.retrieve();
-  const auto timeEpochIt = data.find("timeepoch");
-  if (timeEpochIt != data.end()) {
+  const auto timeEpochIt = fiatsData.find("timeepoch");
+  bool updateFiatsCache = true;
+  if (timeEpochIt != fiatsData.end()) {
     const int64_t lastTimeFileUpdated = timeEpochIt->get<int64_t>();
     if (TimePoint(seconds(lastTimeFileUpdated)) >= fiatsPtrLastUpdatedTimePair.second) {
-      return;  // No update
+      updateFiatsCache = false;
     }
   }
-  data.clear();
-  if (fiatsPtrLastUpdatedTimePair.first != nullptr) {
-    for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
-      data["fiats"].emplace_back(fiatCode.str());
+  if (updateFiatsCache) {
+    fiatsData.clear();
+    if (fiatsPtrLastUpdatedTimePair.first != nullptr) {
+      for (CurrencyCode fiatCode : *fiatsPtrLastUpdatedTimePair.first) {
+        fiatsData["fiats"].emplace_back(fiatCode.str());
+      }
+      fiatsData["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
+      fiatsCacheFile.writeJson(fiatsData);
     }
-    data["timeepoch"] = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
-    fiatsCacheFile.writeJson(data);
   }
 
   _withdrawalFeesCrawler.updateCacheFile();

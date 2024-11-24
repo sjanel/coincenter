@@ -4,6 +4,7 @@
 
 namespace cct::json {
 
+using glz::error_ctx;
 using glz::format_error;
 using glz::meta;
 using glz::opts;

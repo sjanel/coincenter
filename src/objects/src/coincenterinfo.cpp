@@ -31,13 +31,13 @@ namespace {
 
 CoincenterInfo::CurrencyEquivalentAcronymMap ComputeCurrencyEquivalentAcronymMap(const Reader& reader) {
   CoincenterInfo::CurrencyEquivalentAcronymMap map;
-  ReadJsonOrThrow(reader.readAll(), map);
+  ReadExactJsonOrThrow(reader.readAll(), map);
   return map;
 }
 
 CoincenterInfo::StableCoinsMap ComputeStableCoinsMap(const Reader& reader) {
   CoincenterInfo::StableCoinsMap map;
-  ReadJsonOrThrow(reader.readAll(), map);
+  ReadExactJsonOrThrow(reader.readAll(), map);
   return map;
 }
 
@@ -64,7 +64,7 @@ CoincenterInfo::CoincenterInfo(settings::RunMode runMode, const LoadConfiguratio
                             ? new MetricGatewayType(monitoringInfo)
                             : nullptr),
       _monitoringInfo(std::move(monitoringInfo)) {
-  ReadJsonOrThrow(currencyPrefixesReader.readAll(), _currencyPrefixAcronymMap);
+  ReadExactJsonOrThrow(currencyPrefixesReader.readAll(), _currencyPrefixAcronymMap);
   for (auto& [prefix, acronym_prefix] : _currencyPrefixAcronymMap) {
     log::trace("Currency prefix {} <=> {}", prefix, acronym_prefix);
     _minPrefixLen = std::min(_minPrefixLen, static_cast<int>(prefix.length()));

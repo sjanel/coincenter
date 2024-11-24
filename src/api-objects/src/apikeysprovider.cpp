@@ -86,7 +86,7 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
 
   schema::APIKeysPerExchangeMap apiKeysPerExchangeMap;
 
-  ReadJsonOrThrow(secretsFile.readAll(), apiKeysPerExchangeMap);
+  ReadExactJsonOrThrow(secretsFile.readAll(), apiKeysPerExchangeMap);
 
   const auto& exchangesWithoutSecrets = exchangeSecretsInfo.exchangesWithoutSecrets();
 
