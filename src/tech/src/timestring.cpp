@@ -28,7 +28,7 @@ string TimeToString(TimePoint timePoint, const char* format) {
     throw exception("Issue in gmtime_r");
   }
 #endif
-  static constexpr string::size_type kMaxFormatLen = 4096;
+  static constexpr string::size_type kMaxFormatLen = 256;
   string::size_type bufSize = strnlen(format, kMaxFormatLen);
   string buf(bufSize, '\0');
 

@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencyexchange.hpp"
 #include "exchange-asset-config.hpp"
@@ -29,8 +28,6 @@ class BithumbPublic : public ExchangePublic {
   static constexpr auto kStatusOK = 0;
   static constexpr auto kStatusUnexpectedError = -1;
   static constexpr auto kStatusNotPresentError = -2;
-
-  static int64_t StatusCodeFromJsonResponse(const json::container& jsonResponse);
 
   BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI);
 

@@ -163,3 +163,10 @@ add_unit_test(
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )
+
+add_unit_test(
+    utf8_test
+    test/utf8_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
