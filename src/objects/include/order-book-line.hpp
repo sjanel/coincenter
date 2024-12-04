@@ -29,6 +29,8 @@ class OrderBookLine {
 
 class MarketOrderBookLines {
  public:
+  using size_type = vector<OrderBookLine>::size_type;
+
   MarketOrderBookLines() noexcept = default;
 
   auto begin() const noexcept { return _orderBookLines.begin(); }

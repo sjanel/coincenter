@@ -17,11 +17,11 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "base64.hpp"
+#include "bithumb-schema.hpp"
 #include "bithumbpublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -59,6 +59,7 @@
 #include "tradeinfo.hpp"
 #include "tradeoptions.hpp"
 #include "tradeside.hpp"
+#include "utf8.hpp"
 #include "wallet.hpp"
 #include "withdraw.hpp"
 #include "withdrawinfo.hpp"
@@ -68,14 +69,6 @@
 
 namespace cct::api {
 namespace {
-
-constexpr std::string_view kValueKeyStr = "val";
-constexpr std::string_view kTimestampKeyStr = "ts";
-
-constexpr std::string_view kMaxOrderPriceJsonKeyStr = "maxOrderPrice";
-constexpr std::string_view kMinOrderPriceJsonKeyStr = "minOrderPrice";
-constexpr std::string_view kMinOrderSizeJsonKeyStr = "minOrderSize";
-constexpr std::string_view kNbDecimalsStr = "nbDecimals";
 
 // Bithumb API parameter constants
 constexpr std::string_view kOrderCurrencyParamStr = "order_currency";
@@ -123,48 +116,28 @@ void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, const auto& signatu
   httpHeaders.emplace_back(kApiClientType, kApiClientTypeValue);
 }
 
-bool LoadCurrencyInfoField(const json::container& currencyOrderInfoJson, std::string_view keyStr, auto& valTs) {
-  const auto subPartIt = currencyOrderInfoJson.find(keyStr);
-  if (subPartIt != currencyOrderInfoJson.end()) {
-    const auto valIt = subPartIt->find(kValueKeyStr);
-    const auto tsIt = subPartIt->find(kTimestampKeyStr);
-    if (valIt == subPartIt->end() || tsIt == subPartIt->end()) {
-      log::warn("Unexpected format of Bithumb cache detected - do not use (will be automatically updated)");
-      return false;
-    }
-    using ValueType = std::remove_cvref_t<decltype(valTs.val)>;
-    if constexpr (std::is_same_v<ValueType, MonetaryAmount>) {
-      valTs.val = MonetaryAmount(valIt->get<std::string_view>());
-      log::trace("Loaded {} for '{}' from cache file", valTs.val.str(), keyStr);
-    } else {
-      valTs.val = valIt->get<ValueType>();
-      log::trace("Loaded {} for '{}' from cache file", valTs.val, keyStr);
-    }
-    valTs.ts = tsIt->get<int64_t>();
-    return true;
-  }
-  return false;
-}
+bool LoadCurrencyInfoField(const auto& extraField, auto& valTs) {
+  using ValueType = std::remove_cvref_t<decltype(valTs.val)>;
 
-template <class ValueType>
-json::container CurrencyOrderInfoField2Json(const ValueType& val, TimePoint ts) {
-  json::container data;
+  if (extraField.ts.ts == decltype(extraField.ts.ts){}) {
+    return false;
+  }
+
   if constexpr (std::is_same_v<ValueType, MonetaryAmount>) {
-    data.emplace(kValueKeyStr, val.str());
+    valTs.val = MonetaryAmount(extraField.val);
   } else {
-    data.emplace(kValueKeyStr, val);
+    valTs.val = extraField.val;
   }
-  data.emplace(kTimestampKeyStr, TimestampToSecondsSinceEpoch(ts));
-  return data;
+  valTs.ts = extraField.ts;
+  return true;
 }
 
-template <class ValueType>
+template <class T>
 bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::string_view logStr, std::string_view msg,
-                  std::string_view jsonKeyStr, json::container& jsonData) {
+                  T& extraField) {
   std::size_t startPos = msg.find(findStr1);
+
   if (startPos != std::string_view::npos) {
-    static_assert(std::is_integral_v<ValueType> || std::is_same_v<ValueType, string>,
-                  "ValueType should be a possible json value, not a view");
     std::size_t idxFirst = startPos + findStr1.size();
     std::size_t endPos = msg.find(findStr2, idxFirst);
     if (endPos == std::string_view::npos) {
@@ -174,14 +147,18 @@ bool ExtractError(std::string_view findStr1, std::string_view findStr2, std::str
     // I did not find the way via the API to get various important information for some currency bound values,
     // so I get them this way, by parsing the Korean error message of the response
     log::warn("Bithumb told us that {} is {}", logStr, valueStr);
-    ValueType val;
-    if constexpr (std::is_integral_v<ValueType>) {
-      val = StringToIntegral<ValueType>(valueStr);
+
+    if constexpr (std::is_same_v<schema::bithumb::Trade::ExtraStringField, T>) {
+      extraField.val = string(valueStr);
+    } else if constexpr (std::is_same_v<schema::bithumb::Trade::ExtraIntField, T>) {
+      extraField.val = StringToIntegral<decltype(extraField.val)>(valueStr);
     } else {
-      val = ValueType(valueStr);
+      static_assert(std::is_same_v<schema::bithumb::Trade::ExtraStringField, T> ||
+                    std::is_same_v<schema::bithumb::Trade::ExtraIntField, T>);
     }
-    jsonData.clear();
-    jsonData.emplace(jsonKeyStr, CurrencyOrderInfoField2Json(val, Clock::now()));
+
+    extraField.ts.ts = Clock::now();
+
     return true;
   }
   return false;
@@ -227,67 +204,66 @@ void CheckAndLogSynchronizedTime(std::string_view msg) {
   }
 }
 
-bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, json::container& data) {
+template <class T>
+bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, T& data) {
   const bool isInfoOpenedOrders = endpoint == "/info/orders";
   const bool isCancelQuery = endpoint == "/trade/cancel";
   const bool isDepositInfo = endpoint == kWalletAddressEndpointStr;
-  const bool isPlaceOrderQuery = !isCancelQuery && endpoint.starts_with("/trade");
 
-  if (isPlaceOrderQuery) {
-    if (ExtractError<int8_t>("수량은 소수점 ", "자", "number of decimals", msg, kNbDecimalsStr, data) ||
-        ExtractError<string>("주문금액은 ", " 입니다", "min order size", msg, kMinOrderSizeJsonKeyStr, data) ||
-        ExtractError<string>("주문 가격은 ", " 이상으로 입력 가능합니다", "min order price", msg,
-                             kMinOrderPriceJsonKeyStr, data) ||
-        ExtractError<string>("주문 가격은 ", " 이하로 입력 가능합니다", "max order price", msg,
-                             kMaxOrderPriceJsonKeyStr, data)) {
+  if constexpr (std::is_same_v<T, schema::bithumb::Trade>) {
+    auto& extraData = data.extra_data;
+    if (ExtractError("수량은 소수점 ", "자", "number of decimals", msg, extraData.nbDecimals) ||
+        ExtractError("주문금액은 ", " 입니다", "min order size", msg, extraData.minOrderSize) ||
+        ExtractError("주문 가격은 ", " 이상으로 입력 가능합니다", "min order price", msg, extraData.minOrderSize) ||
+        ExtractError("주문 가격은 ", " 이하로 입력 가능합니다", "max order price", msg, extraData.maxOrderPrice)) {
       return true;
     }
   }
   if ((isInfoOpenedOrders || isCancelQuery) &&
       msg.find("거래 진행중인 내역이 존재하지 않습니다") != std::string_view::npos) {
     // This is not really an error, it means that order has been eaten or cancelled.
-    // Just return empty json in this case
+    // Just return empty object in this case
     log::info("Considering Bithumb order as closed as no data received from them");
-    data.clear();
+    data = T();
     return true;
   }
   if (isDepositInfo && msg.find("잘못된 요청 입니다. 요청 정보를 확인 하세요.") != std::string_view::npos) {
     // This means that address is not generated for asked currency. It's useless to retry in these cases.
-    data.clear();
+    data = T();
     return true;
   }
   return false;
 }
 
-json::container PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                                               CurlOptions&& opts) {
+template <class T>
+T PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
+                                 CurlOptions&& opts) {
   RequestRetry requestRetry(curlHandle, std::move(opts));
 
-  json::container ret = requestRetry.queryJson(
+  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
       endpoint,
-      [endpoint](json::container& jsonResponse) {
-        const auto errorCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
-        if (errorCode == 0 || errorCode == BithumbPublic::kStatusNotPresentError) {
+      [endpoint](T& jsonResponse) {
+        auto statusCode = StringToIntegral<int64_t>(jsonResponse.status);
+        if (statusCode == 0 || statusCode == BithumbPublic::kStatusNotPresentError) {
           return RequestRetry::Status::kResponseOK;
         }
 
-        std::string_view msg;
-        auto messageIt = jsonResponse.find("message");
-        if (messageIt != jsonResponse.end()) {
-          msg = messageIt->get<std::string_view>();
-          switch (errorCode) {
-            case kBadRequestErrorCode:
-              CheckAndLogSynchronizedTime(msg);
-              break;
-            case kOrderRelatedErrorCode:
-              if (CheckOrderErrors(endpoint, msg, jsonResponse)) {
-                return RequestRetry::Status::kResponseOK;
-              }
-              break;
-            default:
-              break;
-          }
+        decode_utf8(jsonResponse.message);
+        std::string_view msg = jsonResponse.message;
+
+        switch (statusCode) {
+          case kBadRequestErrorCode:
+            CheckAndLogSynchronizedTime(msg);
+            break;
+          case kOrderRelatedErrorCode:
+            if (CheckOrderErrors(endpoint, msg, jsonResponse)) {
+              return RequestRetry::Status::kResponseOK;
+            }
+            break;
+          default:
+            break;
         }
+
         return RequestRetry::Status::kResponseError;
       },
       [endpoint, &apiKey](CurlOptions& curlOptions) {
@@ -296,19 +272,17 @@ json::container PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const API
 
         SetHttpHeaders(curlOptions, apiKey, signature, nonce);
       });
-
-  return ret;
 }
 
-template <class CurlPostDataT = CurlPostData>
-json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                             CurlPostDataT&& curlPostData = CurlPostData()) {
+template <class T, class CurlPostDataT = CurlPostData>
+T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
+               CurlPostDataT&& curlPostData = CurlPostData()) {
   CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
   postData.emplace_front("endpoint", endpoint);
 
   CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
 
-  return PrivateQueryProcessWithRetries(curlHandle, apiKey, endpoint, std::move(opts));
+  return PrivateQueryProcessWithRetries<T>(curlHandle, apiKey, endpoint, std::move(opts));
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
@@ -332,28 +306,21 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
 }
 
 bool BithumbPrivate::validateApiKey() {
-  const json::container jsonResponse = PrivateQuery(_curlHandle, _apiKey, "/info/balance", CurlPostData());
-  if (jsonResponse.is_discarded()) {
+  const auto data = PrivateQuery<schema::bithumb::InfoBalance>(_curlHandle, _apiKey, "/info/balance", CurlPostData());
+  if (data.status.empty()) {
+    log::error("Unexpected Bithumb reply from balance");
     return false;
   }
-  const auto statusCode = BithumbPublic::StatusCodeFromJsonResponse(jsonResponse);
+  const auto statusCode = StringToIntegral<int64_t>(data.status);
   log::info("{} status code: {}", exchangeName(), statusCode);
   return statusCode == BithumbPublic::kStatusOK;
 }
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  json::container jsonReply = PrivateQuery(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}});
+  const auto result =
+      PrivateQuery<schema::bithumb::InfoBalance>(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}});
 
   BalancePortfolio balancePortfolio;
-  if (jsonReply.is_discarded()) {
-    log::error("Badly formatted {} reply from balance", exchangeName());
-    return balancePortfolio;
-  }
-
-  const auto balanceItemsIt = jsonReply.find("data");
-  if (balanceItemsIt == jsonReply.end()) {
-    return balancePortfolio;
-  }
 
   static constexpr std::array<std::string_view, 2> kKnownPrefixes = {"available_", "in_use_"};
   auto endPrefixIt = kKnownPrefixes.end();
@@ -361,11 +328,11 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
     --endPrefixIt;
   }
 
-  for (const auto& [key, value] : balanceItemsIt->items()) {
+  for (const auto& [key, value] : result.data) {
     for (auto prefixIt = kKnownPrefixes.begin(); prefixIt != endPrefixIt; ++prefixIt) {
       if (key.starts_with(*prefixIt)) {
         std::string_view curStr(key.begin() + prefixIt->size(), key.end());
-        MonetaryAmount amount(value.get<std::string_view>(), _coincenterInfo.standardizeCurrencyCode(curStr));
+        MonetaryAmount amount(value, _coincenterInfo.standardizeCurrencyCode(curStr));
 
         balancePortfolio += amount;
         break;
@@ -376,17 +343,14 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
 }
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  json::container ret =
-      PrivateQuery(_curlHandle, _apiKey, kWalletAddressEndpointStr, {{"currency", currencyCode.str()}});
-  if (ret.is_discarded()) {
-    throw exception("Bithumb unexpected reply from wallet address query for {}", currencyCode);
-  }
-  if (ret.empty()) {
+  const auto ret = PrivateQuery<schema::bithumb::InfoWalletAddress>(_curlHandle, _apiKey, kWalletAddressEndpointStr,
+                                                                    {{"currency", currencyCode.str()}});
+  std::string_view addressAndTag = ret.data.wallet_address;
+  if (addressAndTag.empty()) {
     throw exception(
         "Bithumb wallet is not created for {}, it should be done with the UI first (no way to do it via API)",
         currencyCode);
   }
-  std::string_view addressAndTag = ret["data"]["wallet_address"].get<std::string_view>();
   std::size_t tagPos = addressAndTag.find('&');
   std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));
   std::string_view tag(
@@ -407,23 +371,25 @@ Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
 
 namespace {
 
-TimePoint RetrieveTimePointFromTrxJson(const json::container& trx, std::string_view fieldName) {
+TimePoint RetrieveTimePointFromTrxJson(const std::variant<string, int64_t>& date) {
   // In the official documentation, transfer_date field is an integer.
   // But in fact (as of 2022) it's a string representation of the integer timestamp.
   // Let's support both types to be safe.
   // Bithumb returns a UTC based timestamp.
-  const auto fieldIt = trx.find(fieldName);
-  if (fieldIt == trx.end()) {
-    throw exception("Was expecting '{}' parameter", fieldName);
-  }
+
   int64_t microsecondsSinceEpoch;
-  if (fieldIt->is_string()) {
-    microsecondsSinceEpoch = StringToIntegral<int64_t>(fieldIt->get<std::string_view>());
-  } else if (fieldIt->is_number_integer()) {
-    microsecondsSinceEpoch = fieldIt->get<int64_t>();
-  } else {
-    throw exception("Cannot understand '{}' parameter type", fieldName);
-  }
+  std::visit(
+      [&microsecondsSinceEpoch](auto&& field) {
+        using T = std::decay_t<decltype(field)>;
+        if constexpr (std::is_same_v<T, string>) {
+          microsecondsSinceEpoch = StringToIntegral<int64_t>(field);
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+          microsecondsSinceEpoch = field;
+        } else {
+          throw exception("Cannot understand '{}' parameter type", field);
+        }
+      },
+      date);
 
   return TimePoint{microseconds(microsecondsSinceEpoch)};
 }
@@ -448,24 +414,13 @@ auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePub
     // Trick: let's use balance query to guess where we can search for orders,
     // by looking at "is_use" amounts to retrieve opened orders or "available" amounts to retrieve closed orders.
     // The only drawback is that we need to make one query for each currency, but it's better than nothing.
-    const json::container jsonReply = PrivateQuery(curlHandle, apiKey, "/info/balance", {{"currency", "all"}});
-    const auto itemsIt = jsonReply.find("data");
-    if (jsonReply.is_discarded()) {
-      log::error("Badly formatted {} reply from balance", exchangePublic.name());
-      return orderCurrencies;
-    }
-    if (itemsIt == jsonReply.end()) {
-      return orderCurrencies;
-    }
-
-    for (const auto& [key, value] : itemsIt->items()) {
+    const auto balance =
+        PrivateQuery<schema::bithumb::InfoBalance>(curlHandle, apiKey, "/info/balance", {{"currency", "all"}});
+    for (const auto& [key, value] : balance.data) {
       if (key.starts_with(prefixKeyBalance)) {
         CurrencyCode cur(std::string_view(key.begin() + prefixKeyBalance.size(), key.end()));
-        if (cur != "KRW") {
-          MonetaryAmount amount(value.get<std::string_view>(), cur);
-          if (amount != 0) {
-            orderCurrencies.push_back(cur);
-          }
+        if (cur != "KRW" && value != 0) {
+          orderCurrencies.push_back(cur);
         }
       }
     }
@@ -502,34 +457,26 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
   for (CurrencyCode volumeCur : orderCurrencies) {
     params.set(kOrderCurrencyParamStr, volumeCur.str());
 
-    json::container jsonReply = PrivateQuery(curlHandle, apiKey, "/info/orders", params);
-    auto orderDetailsIt = jsonReply.find("data");
-    if (jsonReply.is_discarded()) {
-      log::error("Badly formatted {} reply from order details", exchangePublic.name());
-      continue;
-    }
-    if (orderDetailsIt == jsonReply.end()) {
-      continue;
-    }
+    const auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(curlHandle, apiKey, "/info/orders", params);
 
-    for (json::container& orderDetails : *orderDetailsIt) {
-      TimePoint placedTime = RetrieveTimePointFromTrxJson(orderDetails, "order_date");
+    for (auto& orderDetails : ordersReply.data) {
+      TimePoint placedTime = RetrieveTimePointFromTrxJson(orderDetails.order_date);
       if (!ordersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
 
-      string id = std::move(orderDetails[kOrderIdParamStr].get_ref<string&>());
+      string id = std::move(orderDetails.order_id);
       if (!ordersConstraints.validateId(id)) {
         continue;
       }
 
-      CurrencyCode priceCur(orderDetails[kPaymentCurParamStr].get<std::string_view>());
-      MonetaryAmount originalVolume(orderDetails["units"].get<std::string_view>(), volumeCur);
-      MonetaryAmount remainingVolume(orderDetails["units_remaining"].get<std::string_view>(), volumeCur);
+      CurrencyCode priceCur = orderDetails.payment_currency;
+      MonetaryAmount originalVolume(orderDetails.units, volumeCur);
+      MonetaryAmount remainingVolume(orderDetails.units_remaining, volumeCur);
       MonetaryAmount matchedVolume = originalVolume - remainingVolume;
-      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), priceCur);
+      MonetaryAmount price(orderDetails.price, priceCur);
       TradeSide side =
-          orderDetails[kTypeParamStr].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+          orderDetails.type == schema::bithumb::TransactionTypeEnum::bid ? TradeSide::kBuy : TradeSide::kSell;
 
       if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
         if (remainingVolume == 0) {
@@ -564,59 +511,53 @@ constexpr int kSearchGbDeposit = 4;
 constexpr int kSearchGbProcessedWithdrawals = 5;
 constexpr int kSearchGbKRWDeposits = 9;
 
-string GenerateDepositIdFromTrx(TimePoint timestamp, const json::container& trx) {
+string GenerateDepositIdFromTrx(TimePoint timestamp, const schema::bithumb::UserTransactions::UserTransaction& trx) {
   // Bithumb does not provide any transaction id, let's generate it from currency and timestamp...
-  string id{trx[kOrderCurrencyParamStr].get<std::string_view>()};
+  string id;
+  trx.order_currency.appendStrTo(id);
   id.push_back('-');
   AppendIntegralToString(id, TimestampToMillisecondsSinceEpoch(timestamp));
   return id;
 }
 
-string GenerateWithdrawIdFromTrx(MonetaryAmount netEmittedAmount, const json::container& trx) {
+string GenerateWithdrawIdFromTrx(MonetaryAmount netEmittedAmount,
+                                 const schema::bithumb::UserTransactions::UserTransaction& trx) {
   // We cannot use the timestamp for the withdraw ID because it changes where is switches from the state 'withdrawing'
   // to the state 'withdraw done' (searchGb 3->5)
   // There are two fields that does not seem to change over time, and we are going to use them to generate our id:
   //  - order_balance
   //  - payment_balance
-  MonetaryAmount orderBalance(trx["order_balance"].get<std::string_view>());
-  MonetaryAmount paymentBalance(trx["payment_balance"].get<std::string_view>());
   string withdrawId = netEmittedAmount.str();
   withdrawId.push_back(';');
-  orderBalance.appendStrTo(withdrawId);
+  trx.order_balance.appendStrTo(withdrawId);
   withdrawId.push_back(';');
-  paymentBalance.appendStrTo(withdrawId);
+  trx.payment_balance.appendStrTo(withdrawId);
   return B64Encode(withdrawId);
 }
 
-CurrencyCode CurrencyCodeFromTrx(const json::container& trx) { return {trx["order_currency"].get<std::string_view>()}; }
-
-MonetaryAmount RetrieveAmountFromTrxJson(const json::container& trx) {
+MonetaryAmount RetrieveAmountFromTrxJson(const schema::bithumb::UserTransactions::UserTransaction& trx) {
   // starts with "+ " for a deposit, "- " for a withdraw, return absolute
-  std::string_view amountStr = trx["units"].get<std::string_view>();
-
-  CurrencyCode currencyCode = CurrencyCodeFromTrx(trx);
-  MonetaryAmount amount{amountStr, currencyCode};
+  CurrencyCode currencyCode = trx.order_currency;
+  MonetaryAmount amount{trx.units, currencyCode};
   if (amount == 0) {
     // It's strange but for 'KRW' withdraws, Bithumb returns the KRW amount in the 'price' field (as negative!)
-    amount = MonetaryAmount{trx["price"].get<std::string_view>(), currencyCode};
+    amount = MonetaryAmount{trx.price, currencyCode};
   }
   return amount.abs();
 }
 
-MonetaryAmount RetrieveFeeFromTrxJson(const json::container& trx) {
-  std::string_view feeStr = trx["fee"].get<std::string_view>();  // starts with "+ "
-  CurrencyCode currencyCode(trx["fee_currency"].get<std::string_view>());
-  return {feeStr, currencyCode};
+MonetaryAmount RetrieveFeeFromTrxJson(const schema::bithumb::UserTransactions::UserTransaction& trx) {
+  return {trx.fee, trx.fee_currency};
 }
 
-MonetaryAmount RetrieveNetEmittedAmountFromTrxJson(const json::container& trx) {
+MonetaryAmount RetrieveNetEmittedAmountFromTrxJson(const schema::bithumb::UserTransactions::UserTransaction& trx) {
   MonetaryAmount grossEmittedAmount = RetrieveAmountFromTrxJson(trx);
   MonetaryAmount fee = RetrieveFeeFromTrxJson(trx);
   return grossEmittedAmount - fee;
 }
 
-Withdraw::Status RetrieveWithdrawStatusFromTrxJson(const json::container& trx) {
-  const auto searchGb = StringToIntegral(trx["search"].get<std::string_view>());
+Withdraw::Status RetrieveWithdrawStatusFromTrxJson(const schema::bithumb::UserTransactions::UserTransaction& trx) {
+  const auto searchGb = StringToIntegral(trx.search);
 
   return searchGb == kSearchGbOnGoingWithdrawals ? Withdraw::Status::kProcessing : Withdraw::Status::kSuccess;
 }
@@ -630,8 +571,8 @@ enum class UserTransactionEnum : int8_t {
 };
 
 template <class ConstraintsType>
-json::container QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHandle, const APIKey& apiKey,
-                                      const ConstraintsType& constraints, UserTransactionEnum userTransactionEnum) {
+auto QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHandle, const APIKey& apiKey,
+                           const ConstraintsType& constraints, UserTransactionEnum userTransactionEnum) {
   SmallVector<CurrencyCode, 1> orderCurrencies;
 
   if (constraints.isCurDefined()) {
@@ -663,7 +604,7 @@ json::container QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandl
     options.emplace_back(kPaymentCurParamStr, "BTC");
   }
 
-  json::container allResults;
+  vector<schema::bithumb::UserTransactions::UserTransaction> allResults;
   FixedCapacityVector<int, 2> searchGbsVector;
   switch (userTransactionEnum) {
     case UserTransactionEnum::kClosedOrders:
@@ -705,22 +646,15 @@ json::container QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandl
 
     for (int searchGb : searchGbsVector) {
       options.set("searchGb", searchGb);
-      json::container jsonReply = PrivateQuery(curlHandle, apiKey, "/info/user_transactions", options);
-      auto txrListIt = jsonReply.find("data");
-      if (jsonReply.is_discarded()) {
-        log::error("Badly formatted {} reply from user transactions", exchangePrivate.exchangeName());
-        continue;
-      }
-      if (txrListIt == jsonReply.end()) {
-        continue;
-      }
+      auto userTransactionsReply =
+          PrivateQuery<schema::bithumb::UserTransactions>(curlHandle, apiKey, "/info/user_transactions", options);
 
-      for (json::container& trx : *txrListIt) {
-        if (!constraints.validateCur(CurrencyCodeFromTrx(trx))) {
+      for (auto& trx : userTransactionsReply.data) {
+        if (!constraints.validateCur(trx.order_currency)) {
           continue;
         }
 
-        const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx, "transfer_date");
+        const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
         if (!constraints.validateTime(timestamp)) {
           continue;
         }
@@ -735,7 +669,7 @@ json::container QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandl
             continue;
           }
         } else if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
-          const auto searchValue = StringToIntegral<int>(trx["search"].get<std::string_view>());
+          const auto searchValue = StringToIntegral<int>(trx.search);
           if (searchValue != kSearchGbBuy && searchValue != kSearchGbSell) {
             continue;
           }
@@ -753,22 +687,19 @@ json::container QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandl
 ClosedOrderVector BithumbPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
   auto closedOrders = QueryOrders<ClosedOrderVector>(closedOrdersConstraints, _exchangePublic, _curlHandle, _apiKey);
 
-  const json::container orderTransactionsJson =
+  const auto orderTransactionsJson =
       QueryUserTransactions(*this, _curlHandle, _apiKey, closedOrdersConstraints, UserTransactionEnum::kClosedOrders);
 
   closedOrders.reserve(closedOrders.size() + orderTransactionsJson.size());
-  for (const json::container& trx : orderTransactionsJson) {
-    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx, "transfer_date");
+  for (const schema::bithumb::UserTransactions::UserTransaction& trx : orderTransactionsJson) {
+    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
 
     string id = GenerateDepositIdFromTrx(timestamp, trx);
 
-    CurrencyCode volumeCur(trx["order_currency"].get<std::string_view>());
-    CurrencyCode priceCur(trx["payment_currency"].get<std::string_view>());
+    MonetaryAmount matchedVolume(trx.units, trx.order_currency);
+    MonetaryAmount price(trx.price, trx.payment_currency);
 
-    MonetaryAmount matchedVolume(trx["units"].get<std::string_view>(), volumeCur);
-    MonetaryAmount price(trx["price"].get<std::string_view>(), priceCur);
-
-    const auto searchGb = StringToIntegral(trx["search"].get<std::string_view>());
+    const auto searchGb = StringToIntegral(trx.search);
 
     TradeSide side = searchGb == kSearchGbBuy ? TradeSide::kBuy : TradeSide::kSell;
 
@@ -795,11 +726,10 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
 DepositsSet BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
 
-  json::container txrList =
-      QueryUserTransactions(*this, _curlHandle, _apiKey, depositsConstraints, UserTransactionEnum::kDeposit);
+  auto txrList = QueryUserTransactions(*this, _curlHandle, _apiKey, depositsConstraints, UserTransactionEnum::kDeposit);
   deposits.reserve(txrList.size());
-  for (const json::container& trx : txrList) {
-    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx, "transfer_date");
+  for (const schema::bithumb::UserTransactions::UserTransaction& trx : txrList) {
+    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
 
     string id = GenerateDepositIdFromTrx(timestamp, trx);
 
@@ -814,11 +744,11 @@ DepositsSet BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depos
 WithdrawsSet BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
 
-  json::container txrList =
+  auto txrList =
       QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawsConstraints, UserTransactionEnum::kAllWithdraws);
   withdraws.reserve(txrList.size());
-  for (const json::container& trx : txrList) {
-    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx, "transfer_date");
+  for (const schema::bithumb::UserTransactions::UserTransaction& trx : txrList) {
+    const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
 
     const MonetaryAmount fee = RetrieveFeeFromTrxJson(trx);
     const MonetaryAmount netEmittedAmount = RetrieveNetEmittedAmountFromTrxJson(trx);
@@ -866,11 +796,10 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
 
   auto currencyOrderInfoIt = _currencyOrderInfoMap.find(mk.base());
   auto nowTime = Clock::now();
-  auto tsToTimePoint = [](int64_t ts) { return TimePoint{seconds(ts)}; };
   CurrencyOrderInfo currencyOrderInfo;
   if (currencyOrderInfoIt != _currencyOrderInfoMap.end()) {
     currencyOrderInfo = currencyOrderInfoIt->second;
-    if (tsToTimePoint(currencyOrderInfo.nbDecimals.ts) + _currencyOrderInfoRefreshTime > nowTime) {
+    if (currencyOrderInfo.nbDecimals.ts.ts + _currencyOrderInfoRefreshTime > nowTime) {
       int8_t nbMaxDecimalsUnits = currencyOrderInfo.nbDecimals.val;
       volume.truncate(nbMaxDecimalsUnits);
       if (volume == 0) {
@@ -883,11 +812,11 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
     if (!isTakerStrategy) {
       MonetaryAmount minOrderPrice = price;
       MonetaryAmount maxOrderPrice = price;
-      if (tsToTimePoint(currencyOrderInfo.minOrderPrice.ts) + _currencyOrderInfoRefreshTime > nowTime &&
+      if (currencyOrderInfo.minOrderPrice.ts.ts + _currencyOrderInfoRefreshTime > nowTime &&
           currencyOrderInfo.minOrderPrice.val.currencyCode() == price.currencyCode()) {
         minOrderPrice = currencyOrderInfo.minOrderPrice.val;
       }
-      if (tsToTimePoint(currencyOrderInfo.maxOrderPrice.ts) + _currencyOrderInfoRefreshTime > nowTime &&
+      if (currencyOrderInfo.maxOrderPrice.ts.ts + _currencyOrderInfoRefreshTime > nowTime &&
           currencyOrderInfo.maxOrderPrice.val.currencyCode() == price.currencyCode()) {
         maxOrderPrice = currencyOrderInfo.maxOrderPrice.val;
       }
@@ -908,7 +837,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       }
     }
 
-    if (tsToTimePoint(currencyOrderInfo.minOrderSize.ts) + _currencyOrderInfoRefreshTime > nowTime) {
+    if (currencyOrderInfo.minOrderSize.ts.ts + _currencyOrderInfoRefreshTime > nowTime) {
       MonetaryAmount size = currencyOrderInfo.minOrderSize.val;
       CurrencyCode minOrderSizeCur = size.currencyCode();
       if (volume.currencyCode() == minOrderSizeCur) {
@@ -934,22 +863,15 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   static constexpr int kNbMaxRetries = 3;
   bool currencyInfoUpdated = false;
   for (int nbRetries = 0; nbRetries < kNbMaxRetries; ++nbRetries) {
-    json::container result = PrivateQuery(_curlHandle, _apiKey, endpoint, placePostData);
-    if (result.is_discarded()) {
-      log::error("Unexpected answer from {} place order - reply badly formatted", exchangeName());
-      break;
-    }
-
-    auto orderIdIt = result.find(kOrderIdParamStr);
-
-    if (orderIdIt != result.end()) {
-      placeOrderInfo.orderId = std::move(orderIdIt->get_ref<string&>());
+    auto tradeReply = PrivateQuery<schema::bithumb::Trade>(_curlHandle, _apiKey, endpoint, placePostData);
+    if (!tradeReply.order_id.empty()) {
+      placeOrderInfo.orderId = std::move(tradeReply.order_id);
       placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext);
       break;
     }
 
     currencyInfoUpdated = true;
-    if (LoadCurrencyInfoField(result, kNbDecimalsStr, currencyOrderInfo.nbDecimals)) {
+    if (LoadCurrencyInfoField(tradeReply.extra_data.nbDecimals, currencyOrderInfo.nbDecimals)) {
       volume.truncate(currencyOrderInfo.nbDecimals.val);
       if (volume == 0) {
         log::warn("No trade of {} into {} because volume is 0 after truncating to {} decimals", volume, toCurrencyCode,
@@ -957,7 +879,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
         break;
       }
       placePostData.set("units", volume.amountStr());
-    } else if (LoadCurrencyInfoField(result, kMinOrderSizeJsonKeyStr, currencyOrderInfo.minOrderSize)) {
+    } else if (LoadCurrencyInfoField(tradeReply.extra_data.minOrderSize, currencyOrderInfo.minOrderSize)) {
       if (!isSimulationWithRealOrder || currencyOrderInfo.minOrderSize.val.currencyCode() != price.currencyCode()) {
         log::warn("No trade of {} into {} because min order size is {} for this market", volume, toCurrencyCode,
                   currencyOrderInfo.minOrderSize.val);
@@ -965,7 +887,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
       }
       volume = MonetaryAmount(currencyOrderInfo.minOrderSize.val / price, volume.currencyCode());
       placePostData.set("units", volume.amountStr());
-    } else if (LoadCurrencyInfoField(result, kMinOrderPriceJsonKeyStr, currencyOrderInfo.minOrderPrice)) {
+    } else if (LoadCurrencyInfoField(tradeReply.extra_data.minOrderPrice, currencyOrderInfo.minOrderPrice)) {
       if (isSimulationWithRealOrder) {
         if (!isTakerStrategy) {
           price = currencyOrderInfo.minOrderPrice.val;
@@ -976,7 +898,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
                   currencyOrderInfo.minOrderPrice.val);
         break;
       }
-    } else if (LoadCurrencyInfoField(result, kMaxOrderPriceJsonKeyStr, currencyOrderInfo.maxOrderPrice)) {
+    } else if (LoadCurrencyInfoField(tradeReply.extra_data.maxOrderPrice, currencyOrderInfo.maxOrderPrice)) {
       if (isSimulationWithRealOrder) {
         if (!isTakerStrategy) {
           price = currencyOrderInfo.maxOrderPrice.val;
@@ -1025,11 +947,8 @@ CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
 }  // namespace
 
 void BithumbPrivate::cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext) {
-  json::container ret = PrivateQuery(_curlHandle, _apiKey, "/trade/cancel",
-                                     OrderInfoPostData(tradeContext.market, tradeContext.side, orderId));
-  if (ret.is_discarded()) {
-    log::error("Cancel order process failed for {}, assuming order cancelled", exchangeName());
-  }
+  PrivateQuery<schema::bithumb::TradeCancel>(_curlHandle, _apiKey, "/trade/cancel",
+                                             OrderInfoPostData(tradeContext.market, tradeContext.side, orderId));
 }
 
 OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
@@ -1038,38 +957,25 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
 
   CurlPostData postData = OrderInfoPostData(mk, tradeContext.side, orderId);
-  json::container result = PrivateQuery(_curlHandle, _apiKey, "/info/orders", postData);
-  if (result.is_discarded()) {
-    log::error("Badly formatted reply from {} query order info, considering order closed", exchangeName());
-  }
-  auto dataIt = result.find("data");
+  auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(_curlHandle, _apiKey, "/info/orders", postData);
 
-  const bool isClosed = dataIt == result.end() ||
-                        (dataIt->empty() || dataIt->front()[kOrderIdParamStr].get<std::string_view>() != orderId);
+  const bool isClosed = ordersReply.data.empty() || ordersReply.data.front().order_id != orderId;
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
   if (!isClosed) {
     return orderInfo;
   }
 
   postData.erase(kTypeParamStr);
-  result = PrivateQuery(_curlHandle, _apiKey, "/info/order_detail", std::move(postData));
-  if (result.is_discarded()) {
-    log::error("Badly formatted reply from {} query order info details, considering order closed", exchangeName());
-  }
+  auto infoOrderDetailReply =
+      PrivateQuery<schema::bithumb::InfoOrderDetail>(_curlHandle, _apiKey, "/info/order_detail", std::move(postData));
 
-  dataIt = result.find("data");
-  if (dataIt == result.end()) {
-    return orderInfo;
-  }
-
-  for (const json::container& contractDetail : (*dataIt)["contract"]) {
+  for (const auto& contractDetail : infoOrderDetailReply.data.contract) {
     // always in base currency
-    MonetaryAmount tradedVol(contractDetail["units"].get<std::string_view>(), mk.base());
+    MonetaryAmount tradedVol(contractDetail.units, mk.base());
     // always in quote currency
-    MonetaryAmount price(contractDetail["price"].get<std::string_view>(), mk.quote());
+    MonetaryAmount price(contractDetail.price, mk.quote());
     MonetaryAmount tradedCost = tradedVol.toNeutral() * price;
-    CurrencyCode feeCurrency(contractDetail["fee_currency"].get<std::string_view>());
-    MonetaryAmount fee(contractDetail["fee"].get<std::string_view>(), feeCurrency);
+    MonetaryAmount fee(contractDetail.fee, contractDetail.fee_currency);
 
     if (fromCurrencyCode == mk.quote()) {
       orderInfo.tradedAmounts.from += tradedCost + fee;
@@ -1084,9 +990,10 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
 }
 
 namespace {
-bool CompareTrxByDate(const json::container& lhs, const json::container& rhs) {
-  const auto lhsTs = RetrieveTimePointFromTrxJson(lhs, "transfer_date");
-  const auto rhsTs = RetrieveTimePointFromTrxJson(rhs, "transfer_date");
+bool CompareTrxByDate(const schema::bithumb::UserTransactions::UserTransaction& lhs,
+                      const schema::bithumb::UserTransactions::UserTransaction& rhs) {
+  const auto lhsTs = RetrieveTimePointFromTrxJson(lhs.transfer_date);
+  const auto rhsTs = RetrieveTimePointFromTrxJson(rhs.transfer_date);
   return lhsTs < rhsTs;
 }
 
@@ -1134,58 +1041,55 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   // We have to retrieve the withdraw from the other endpoint used by 'queryRecentWithdraws'.
   WithdrawsConstraints withdrawConstraints(currencyCode);
 
-  json::container oldWithdraws =
+  auto oldWithdraws =
       QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
-  std::sort(oldWithdraws.begin(), oldWithdraws.end(), CompareTrxByDate);
+  std::ranges::sort(oldWithdraws, CompareTrxByDate);
 
   // Actually launch the withdraw
-  json::container ret = PrivateQuery(_curlHandle, _apiKey, "/trade/btc_withdrawal",
-                                     ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
-  if (ret.is_discarded()) {
-    log::error("Withdrawal query error for {} - please double check whether withdrawal has been applied or not",
-               exchangeName());
-  }
+  PrivateQuery<schema::bithumb::BtcWithdrawal>(_curlHandle, _apiKey, "/trade/btc_withdrawal",
+                                               ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
 
   // Query the withdraws, hopefully we will be able to find our withdraw
-  json::container newWithdrawTrx;
+  std::optional<schema::bithumb::UserTransactions::UserTransaction> newWithdrawTrx;
   seconds sleepingTime(1);
   static constexpr int kNbRetriesCatchWindow = 15;
-  for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && newWithdrawTrx.empty(); ++retryPos) {
+  for (int retryPos = 0; retryPos < kNbRetriesCatchWindow && !newWithdrawTrx.has_value(); ++retryPos) {
     if (retryPos != 0) {
       log::warn("Cannot retrieve just launched withdraw, retry {}/{} in {}...", retryPos, kNbRetriesCatchWindow,
                 DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime = (3 * sleepingTime) / 2;
     }
-    json::container currentWithdraws =
+    auto currentWithdraws =
         QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
-    std::sort(currentWithdraws.begin(), currentWithdraws.end(), CompareTrxByDate);
+    std::ranges::sort(currentWithdraws, CompareTrxByDate);
 
     // Isolate the new withdraws since the launch of our new withdraw
-    json::container newWithdraws;
+    decltype(currentWithdraws) newWithdraws;
     std::set_difference(currentWithdraws.begin(), currentWithdraws.end(), oldWithdraws.begin(), oldWithdraws.end(),
                         std::back_inserter(newWithdraws), CompareTrxByDate);
 
     log::debug("Isolated {} new withdraws, one of them is probably the one just launched", newWithdraws.size());
 
-    for (json::container& withdrawTrx : newWithdraws) {
+    for (schema::bithumb::UserTransactions::UserTransaction& withdrawTrx : newWithdraws) {
       MonetaryAmount withdrawNetEmittedAmount = RetrieveNetEmittedAmountFromTrxJson(withdrawTrx);
       if (withdrawNetEmittedAmount.isCloseTo(netEmittedAmount, 0.001)) {
-        log::debug("Found new withdraw {}", withdrawTrx.dump());
+        log::debug("Found new withdraw of {} {}", withdrawTrx.units, withdrawTrx.order_currency);
         newWithdrawTrx = std::move(withdrawTrx);
         break;
       }
-      log::debug("Withdraw {}'s is too different from our amount {}", withdrawTrx.dump(), netEmittedAmount);
+      log::debug("Withdraw of {} {} is too different from our amount {}", withdrawTrx.units, withdrawTrx.order_currency,
+                 netEmittedAmount);
     }
   }
 
-  if (newWithdrawTrx.empty()) {
+  if (!newWithdrawTrx.has_value()) {
     throw exception(
         "Unable to retrieve just launch withdraw from Bithumb - it may be pending verification, please check your "
         "emails");
   }
 
-  return {std::move(destinationWallet), GenerateWithdrawIdFromTrx(netEmittedAmount, newWithdrawTrx), grossAmount};
+  return {std::move(destinationWallet), GenerateWithdrawIdFromTrx(netEmittedAmount, *newWithdrawTrx), grossAmount};
 }
 
 void BithumbPrivate::updateCacheFile() const {

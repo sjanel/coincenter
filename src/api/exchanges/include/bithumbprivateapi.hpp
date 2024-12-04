@@ -3,11 +3,10 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
-#include "timedef.hpp"
+#include "timepoint-schema.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {
@@ -71,11 +70,11 @@ class BithumbPrivate : public ExchangePrivate {
 
   struct CurrencyOrderInfo {
     struct MonetaryAmountWithTs {
-      int64_t ts;
+      schema::TimePoint ts;
       MonetaryAmount val;
     };
     struct DecimalsWithTs {
-      int64_t ts;
+      schema::TimePoint ts;
       int8_t val;
     };
 
