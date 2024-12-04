@@ -767,6 +767,8 @@ TEST(MonetaryAmountTest, ExoticInput) {
 
   EXPECT_EQ(MonetaryAmount(" -.9   f&g "), MonetaryAmount("-0.9F&G"));
 
+  EXPECT_EQ(MonetaryAmount("2,708.89034514"), MonetaryAmount("2708.89034514"));
+
   EXPECT_THROW(MonetaryAmount("--.9"), exception);
 }
 

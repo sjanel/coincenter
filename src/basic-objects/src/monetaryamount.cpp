@@ -135,6 +135,10 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
       if (ch == ' ') {
         break;
       }
+      if (ch == ',') {
+        // Comma can be used to separate thousands, we ignore it.
+        continue;
+      }
       throw exception("Amount string {} with invalid character {}", amountStr, ch);
     }
 
