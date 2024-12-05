@@ -1,11 +1,13 @@
 #include "binanceprivateapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <thread>
 #include <type_traits>
@@ -22,6 +24,7 @@
 #include "binancepublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -310,7 +313,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
 
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
-  const auto result = PrivateQuery<schema::binance::V1CapitalDepositAddressListElement>(
+  auto result = PrivateQuery<schema::binance::V1CapitalDepositAddressListElement>(
       _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address", _queryDelay,
       {{"coin", currencyCode.str()}});
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();

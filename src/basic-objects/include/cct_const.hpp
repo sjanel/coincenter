@@ -1,14 +1,13 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <string_view>
 
 #include "cct_json-serialization.hpp"
 
 namespace cct {
 
+// Should be sorted alphabetically
 #define CCT_EXCHANGE_NAMES binance, bithumb, huobi, kraken, kucoin, upbit
 
 enum class ExchangeNameEnum : int8_t { CCT_EXCHANGE_NAMES };
@@ -46,8 +45,6 @@ namespace cct {
 
 /// Ordered list of supported exchange names.
 static constexpr auto kSupportedExchanges = json::reflect<ExchangeNameEnum>::keys;
-
-static_assert(std::ranges::is_sorted(kSupportedExchanges));
 
 static constexpr int kNbSupportedExchanges = static_cast<int>(std::size(kSupportedExchanges));
 

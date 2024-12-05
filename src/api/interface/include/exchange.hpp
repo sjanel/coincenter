@@ -113,9 +113,6 @@ class Exchange : public CacheFileUpdatorInterface {
 
   void updateCacheFile() const override;
 
-  /// unique_ptr is always trivially relocatable whatever the underlying type.
-  using trivially_relocatable = std::true_type;
-
  private:
   ExchangePublic *_pExchangePublic;
   std::unique_ptr<ExchangePrivate> _exchangePrivate;

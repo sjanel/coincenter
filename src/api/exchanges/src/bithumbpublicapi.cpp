@@ -1,6 +1,7 @@
 #include "bithumbpublicapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <chrono>
 #include <cstdint>
 #include <ctime>
@@ -8,9 +9,11 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "apiquerytypeenum.hpp"

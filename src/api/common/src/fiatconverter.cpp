@@ -1,6 +1,7 @@
 #include "fiatconverter.hpp"
 
-#include <cstdint>
+#include <algorithm>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <string_view>
@@ -11,7 +12,6 @@
 #include "coincenterinfo.hpp"
 #include "curloptions.hpp"
 #include "currencycode.hpp"
-#include "durationstring.hpp"
 #include "fiats-converter-responses-schema.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
@@ -20,7 +20,6 @@
 #include "read-json.hpp"
 #include "reader.hpp"
 #include "timedef.hpp"
-#include "timestring.hpp"
 #include "write-json.hpp"
 
 namespace cct {

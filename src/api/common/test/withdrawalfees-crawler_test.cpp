@@ -3,8 +3,6 @@
 
 #include <gtest/gtest.h>
 
-#include <string_view>
-
 #include "cachedresultvault.hpp"
 #include "cct_const.hpp"
 #include "cct_log.hpp"

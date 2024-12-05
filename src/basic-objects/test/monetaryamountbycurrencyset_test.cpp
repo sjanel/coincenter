@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include "currencycode.hpp"
+#include "monetaryamount.hpp"
+
 namespace cct {
 
 class MonetaryAmountByCurrencySetTest : public ::testing::Test {

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include "cct_const.hpp"
 #include "cct_format.hpp"
 #include "cct_invalid_argument_exception.hpp"
 

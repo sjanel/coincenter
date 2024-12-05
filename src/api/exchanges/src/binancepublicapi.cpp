@@ -1,6 +1,7 @@
 #include "binancepublicapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -14,9 +15,11 @@
 
 #include "apiquerytypeenum.hpp"
 #include "binance-common-api.hpp"
+#include "binance-schema.hpp"
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -39,7 +42,6 @@
 #include "order-book-line.hpp"
 #include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
-#include "read-json.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
 #include "tradeside.hpp"

@@ -4,6 +4,7 @@
 
 #include "cct_const.hpp"
 #include "cct_log.hpp"
+#include "cct_string.hpp"
 #include "exchange-config-default.hpp"
 #include "file.hpp"
 #include "loadconfiguration.hpp"
