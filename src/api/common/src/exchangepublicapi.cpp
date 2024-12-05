@@ -26,6 +26,7 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "exchange-permanent-curl-options.hpp"
+#include "exchange-tradefees-config.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "market-order-book-vector.hpp"

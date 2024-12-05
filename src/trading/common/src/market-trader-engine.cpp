@@ -11,6 +11,8 @@
 #include "abstract-market-trader.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "exchange-config.hpp"
+#include "exchange-tradefees-config.hpp"
 #include "market-data-view.hpp"
 #include "market-order-book-vector.hpp"
 #include "market-trading-result.hpp"

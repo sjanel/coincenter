@@ -82,7 +82,7 @@ class UpbitPublic : public ExchangePublic {
   };
 
   struct WithdrawalFeesFunc {
-    MonetaryAmountByCurrencySet operator()();
+    MonetaryAmountByCurrencySet operator()() const;
 
     std::string_view _name;
     std::string_view _dataDir;

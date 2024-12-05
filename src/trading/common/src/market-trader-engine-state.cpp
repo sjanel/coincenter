@@ -7,6 +7,8 @@
 
 #include "cct_exception.hpp"
 #include "closed-order.hpp"
+#include "exchange-config.hpp"
+#include "exchange-tradefees-config.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
 #include "stringconv.hpp"

@@ -247,6 +247,7 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(ExchangeNameSpan private
   });
   WalletPerExchange ret;
   ret.reserve(depositInfoExchanges.size());
+  // Note: we can use std::ranges::transform with walletPerExchange | std::views::as_rvalues in C++23
   std::transform(depositInfoExchanges.begin(), depositInfoExchanges.end(),
                  std::make_move_iterator(walletPerExchange.begin()), std::back_inserter(ret),
                  [](const Exchange *exchange, Wallet &&wallet) { return std::make_pair(exchange, std::move(wallet)); });

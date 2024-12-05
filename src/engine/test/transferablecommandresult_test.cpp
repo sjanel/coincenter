@@ -4,6 +4,7 @@
 
 #include <utility>
 
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"

@@ -167,7 +167,7 @@ MarketSet UpbitPublic::MarketsFunc::operator()() {
   return ret;
 }
 
-MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() {
+MonetaryAmountByCurrencySet UpbitPublic::WithdrawalFeesFunc::operator()() const {
   MonetaryAmountVector fees;
   File withdrawFeesFile(_dataDir, File::Type::kStatic, "withdrawfees.json", File::IfError::kThrow);
   auto jsonDataStr = withdrawFeesFile.readAll();

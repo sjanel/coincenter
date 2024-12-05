@@ -1,6 +1,5 @@
 #include "commonapi.hpp"
 
-#include <cstdint>
 #include <glaze/glaze.hpp>  // IWYU pragma: export
 #include <mutex>
 #include <optional>
@@ -9,6 +8,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -160,7 +160,7 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   }
 
   auto nbCurrencies = currencies.AlphabeticCode.size();
-  for (size_t currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
+  for (decltype(nbCurrencies) currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
     if (currencies.WithdrawalDate[currencyPos].empty()) {
       fiatsVec.emplace_back(currencies.AlphabeticCode[currencyPos]);
       log::debug("Stored {} fiat", fiatsVec.back());

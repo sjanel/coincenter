@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstring>
+
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 
@@ -37,11 +39,11 @@ TEST(UTF8Test, DecodeUTF8Str) {
 }
 
 TEST(UTF8Test, DecodeUTF8CharArray) {
-  vector<char> str(kUnicodeStr1, kUnicodeStr1 + strlen(kUnicodeStr1));
+  vector<char> str(kUnicodeStr1, kUnicodeStr1 + std::strlen(kUnicodeStr1));
   char* newEnd = decode_utf8(str.data(), str.data() + str.size());
   EXPECT_EQ(std::string_view(str.data(), newEnd), kExpectedStr1);
 
-  str = vector<char>(kUnicodeStr2, kUnicodeStr2 + strlen(kUnicodeStr2));
+  str = vector<char>(kUnicodeStr2, kUnicodeStr2 + std::strlen(kUnicodeStr2));
   newEnd = decode_utf8(str.data(), str.data() + str.size());
   EXPECT_EQ(std::string_view(str.data(), newEnd), kExpectedStr2);
 }

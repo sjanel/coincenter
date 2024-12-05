@@ -4,6 +4,7 @@
 
 #include <string_view>
 
+#include "cct_const.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"

@@ -7,6 +7,7 @@
 
 #include "accountowner.hpp"
 #include "apikey.hpp"
+#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -53,8 +54,7 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(ExchangeNameEnum exchange
 const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
   std::string_view platformStr = exchangeName.name();
   ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(
-      std::find(std::begin(kSupportedExchanges), std::end(kSupportedExchanges), platformStr) -
-      std::begin(kSupportedExchanges));
+      std::ranges::find(kSupportedExchanges, platformStr) - std::begin(kSupportedExchanges));
   const APIKeys& apiKeys = _apiKeysPerExchange[static_cast<int>(exchangeNameEnum)];
   if (!exchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {

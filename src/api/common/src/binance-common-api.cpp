@@ -1,7 +1,6 @@
 #include "binance-common-api.hpp"
 
 #include <algorithm>
-#include <iterator>
 #include <mutex>
 #include <string_view>
 #include <utility>

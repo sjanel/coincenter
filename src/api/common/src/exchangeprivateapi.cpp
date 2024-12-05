@@ -23,6 +23,7 @@
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
 #include "exchange-permanent-curl-options.hpp"
+#include "exchange-tradefees-config.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"

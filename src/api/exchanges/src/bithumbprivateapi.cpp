@@ -6,10 +6,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <string_view>
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "accountowner.hpp"
 #include "apikey.hpp"
@@ -22,9 +24,11 @@
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
+#include "cct_json-serialization.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
@@ -34,6 +38,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
+#include "exchange-tradefees-config.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -457,7 +462,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
   for (CurrencyCode volumeCur : orderCurrencies) {
     params.set(kOrderCurrencyParamStr, volumeCur.str());
 
-    const auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(curlHandle, apiKey, "/info/orders", params);
+    auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(curlHandle, apiKey, "/info/orders", params);
 
     for (auto& orderDetails : ordersReply.data) {
       TimePoint placedTime = RetrieveTimePointFromTrxJson(orderDetails.order_date);
@@ -990,12 +995,6 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
 }
 
 namespace {
-bool CompareTrxByDate(const schema::bithumb::UserTransactions::UserTransaction& lhs,
-                      const schema::bithumb::UserTransactions::UserTransaction& rhs) {
-  const auto lhsTs = RetrieveTimePointFromTrxJson(lhs.transfer_date);
-  const auto rhsTs = RetrieveTimePointFromTrxJson(rhs.transfer_date);
-  return lhsTs < rhsTs;
-}
 
 CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, const Wallet& destinationWallet) {
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
@@ -1041,9 +1040,14 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   // We have to retrieve the withdraw from the other endpoint used by 'queryRecentWithdraws'.
   WithdrawsConstraints withdrawConstraints(currencyCode);
 
+  const auto compareTrxByDate = [](const schema::bithumb::UserTransactions::UserTransaction& lhs,
+                                   const schema::bithumb::UserTransactions::UserTransaction& rhs) {
+    return RetrieveTimePointFromTrxJson(lhs.transfer_date) < RetrieveTimePointFromTrxJson(rhs.transfer_date);
+  };
+
   auto oldWithdraws =
       QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
-  std::ranges::sort(oldWithdraws, CompareTrxByDate);
+  std::ranges::sort(oldWithdraws, compareTrxByDate);
 
   // Actually launch the withdraw
   PrivateQuery<schema::bithumb::BtcWithdrawal>(_curlHandle, _apiKey, "/trade/btc_withdrawal",
@@ -1062,12 +1066,11 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
     }
     auto currentWithdraws =
         QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
-    std::ranges::sort(currentWithdraws, CompareTrxByDate);
+    std::ranges::sort(currentWithdraws, compareTrxByDate);
 
     // Isolate the new withdraws since the launch of our new withdraw
     decltype(currentWithdraws) newWithdraws;
-    std::set_difference(currentWithdraws.begin(), currentWithdraws.end(), oldWithdraws.begin(), oldWithdraws.end(),
-                        std::back_inserter(newWithdraws), CompareTrxByDate);
+    std::ranges::set_difference(currentWithdraws, oldWithdraws, std::back_inserter(newWithdraws), compareTrxByDate);
 
     log::debug("Isolated {} new withdraws, one of them is probably the one just launched", newWithdraws.size());
 
