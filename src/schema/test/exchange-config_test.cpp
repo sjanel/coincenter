@@ -169,16 +169,24 @@ TEST_F(ExchangeConfigTest, DirectRead) {
   EXPECT_EQ(exchangeConfigOptional.query.def.acceptEncoding, "");
   EXPECT_EQ(exchangeConfigOptional.query.def.dustAmountsThreshold.size(), 5);
   EXPECT_EQ(exchangeConfigOptional.query.def.dustSweeperMaxNbTrades, 7);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.http->timeout->duration, std::chrono::seconds(15));
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsCall, log::level::level_enum::info);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsAnswer, log::level::level_enum::trace);
   EXPECT_EQ(exchangeConfigOptional.query.def.marketDataSerialization, true);
   EXPECT_EQ(exchangeConfigOptional.query.def.multiTradeAllowedByDefault, false);
   EXPECT_EQ(exchangeConfigOptional.query.def.placeSimulateRealOrder, false);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.trade->minPriceUpdateDuration->duration, std::chrono::seconds(5));
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.trade->strategy, PriceStrategy::maker);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.trade->timeout->duration, std::chrono::seconds(30));
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.trade->timeoutMatch, false);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.updateFrequency->size(), 9);
   EXPECT_EQ(exchangeConfigOptional.query.def.validateApiKey, false);
   EXPECT_EQ(exchangeConfigOptional.query.exchange.size(), 6);
