@@ -12,6 +12,15 @@
 
 namespace cct {
 
+namespace {
+auto ComputeTimeoutAction(TradeTimeoutAction tradeTimeoutAction, bool timeoutMatch) {
+  if (tradeTimeoutAction != TradeTimeoutAction::kDefault) {
+    return tradeTimeoutAction;
+  }
+  return timeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel;
+}
+}  // namespace
+
 TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                            Duration maxTradeTime, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
                            TradeSyncPolicy tradeSyncPolicy)
@@ -29,9 +38,7 @@ TradeOptions::TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryT
                                       ? exchangeTradeConfig.minPriceUpdateDuration.duration
                                       : rhs._minTimeBetweenPriceUpdates),
       _priceOptions(rhs._priceOptions.isDefault() ? PriceOptions(exchangeTradeConfig) : rhs._priceOptions),
-      _timeoutAction(rhs._timeoutAction == TradeTimeoutAction::kDefault
-                         ? (exchangeTradeConfig.timeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel)
-                         : rhs._timeoutAction),
+      _timeoutAction(ComputeTimeoutAction(rhs._timeoutAction, exchangeTradeConfig.timeoutMatch)),
       _tradeMode(rhs._tradeMode),
       _tradeTypePolicy(rhs._tradeTypePolicy),
       _tradeSyncPolicy(rhs._tradeSyncPolicy) {}

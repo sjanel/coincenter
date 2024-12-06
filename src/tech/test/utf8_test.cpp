@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <string_view>
 
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
