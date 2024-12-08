@@ -28,6 +28,8 @@ class Market {
  public:
   enum class Type : int8_t { kRegularExchangeMarket, kFiatConversionMarket };
 
+  static constexpr auto kMaxLen = CurrencyCode::kMaxLen * 2 + 2U;  // 1 for sep, 1 for '*' if fiat conversion
+
   constexpr Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
   constexpr Market(CurrencyCode first, CurrencyCode second, Type type = Type::kRegularExchangeMarket)
@@ -172,7 +174,7 @@ template <>
 struct to<JSON, ::cct::Market> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    ::cct::details::ToJson<Opts>(value, b, ix);
+    ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
 }  // namespace glz::detail

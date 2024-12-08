@@ -236,8 +236,9 @@ MonetaryAmount::MonetaryAmount(double amount, CurrencyCode currencyCode, RoundTy
   const auto nbDigitsAmount = ndigits(_amount);
   const auto szCurrencyCode = _curWithDecimals.size();
   const auto nbDec = nbDecimals();
+
   return static_cast<uint32_t>(static_cast<uint32_t>(_amount < 0) + nbDigitsAmount + static_cast<uint32_t>(nbDec != 0) +
-                               static_cast<uint32_t>(nbDec >= nbDigitsAmount) +
+                               (nbDec >= nbDigitsAmount ? (nbDec - nbDigitsAmount + 1) : 0) +
                                static_cast<uint32_t>(withSpace == WithSpace::kYes && szCurrencyCode != 0) +
                                szCurrencyCode);
 }

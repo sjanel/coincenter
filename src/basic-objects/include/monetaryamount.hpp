@@ -3,6 +3,7 @@
 #include <charconv>
 #include <concepts>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -49,6 +50,7 @@ class MonetaryAmount {
   enum class RoundType : int8_t { kDown, kUp, kNearest };
 
   static constexpr std::size_t kMaxNbCharsAmount = std::numeric_limits<AmountType>::digits10 + 3;
+  static constexpr auto kMaxLen = kMaxNbCharsAmount + 1U + CurrencyCode::kMaxLen;  // 1 for space
 
   /// Constructs a MonetaryAmount with a value of 0 of neutral currency.
   constexpr MonetaryAmount() noexcept : _amount(0) {}
@@ -306,10 +308,36 @@ class MonetaryAmount {
     return std::copy_n(std::begin(amountBuf) + amountCharPos, nbDigits - amountCharPos, it);
   }
 
+  // optimization for char buffers
+  char *appendAmount(char *it) const {
+    if (_amount < 0) {
+      *it++ = '-';
+    }
+
+    const auto nbDigits = ndigits(_amount);
+    auto nbDecs = nbDecimals();
+    int remNbZerosToPrint = std::max(0, nbDecs + 1 - nbDigits);
+
+    if (remNbZerosToPrint > 0) {
+      std::memcpy(it, "0.", 2);
+      it += 2;
+      if (--remNbZerosToPrint > 0) {
+        std::memset(it, '0', remNbZerosToPrint);
+        it += remNbZerosToPrint;
+      }
+      nbDecs = 0;
+    }
+    auto [ptr, ec] = std::to_chars(it, it + std::numeric_limits<AmountType>::digits10 + 1, std::abs(_amount));
+    if (nbDecs > 0) {
+      std::memmove(ptr - nbDecs + 1, ptr - nbDecs, nbDecs);
+      *(ptr - nbDecs) = '.';
+      ++ptr;
+    }
+    return ptr;
+  }
+
   /// @brief Appends a string representation of the amount plus its currency to given output iterator
-  /// @param it output iterator should have at least a capacity of
-  ///           kMaxNbCharsAmount for the amount (explanation above)
-  ///            + CurrencyCodeBase::kMaxLen + 1 for the currency and the space separator
+  /// @param it output iterator should have at least a capacity of MonetaryAmount::kMaxLen
   template <class OutputIt>
   OutputIt appendTo(OutputIt it) const {
     it = appendAmount(it);
@@ -454,7 +482,7 @@ template <>
 struct to<JSON, ::cct::MonetaryAmount> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    ::cct::details::ToJson<Opts>(value, b, ix);
+    ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
 }  // namespace glz::detail

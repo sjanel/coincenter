@@ -401,7 +401,7 @@ template <>
 struct to<JSON, ::cct::CurrencyCode> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    ::cct::details::ToJson<Opts>(value, b, ix);
+    ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
 }  // namespace glz::detail

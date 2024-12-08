@@ -161,7 +161,7 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
 
   auto nbCurrencies = currencies.AlphabeticCode.size();
   for (decltype(nbCurrencies) currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
-    if (currencies.WithdrawalDate[currencyPos].empty()) {
+    if (currencies.WithdrawalDate[currencyPos].empty() && !currencies.AlphabeticCode[currencyPos].empty()) {
       fiatsVec.emplace_back(currencies.AlphabeticCode[currencyPos]);
       log::debug("Stored {} fiat", fiatsVec.back());
     }

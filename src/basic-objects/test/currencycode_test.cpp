@@ -9,6 +9,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 
 namespace cct {
 
@@ -242,20 +243,33 @@ TEST(CurrencyCodeTest, JsonSerializationValue) {
 
   EXPECT_FALSE(res);
 
-  EXPECT_EQ(buffer, R"({"currencyCode":"DOGE"})");
+  EXPECT_EQ(std::string_view(buffer), R"({"currencyCode":"DOGE"})");
 }
 
-using CurrencyCodeMap = std::map<CurrencyCode, bool>;
+struct Bar {
+  vector<CurrencyCode> currencyCodes{"EUR", "DOGE"};
+};
 
-TEST(CurrencyCodeTest, JsonSerializationKey) {
-  CurrencyCodeMap map{{"DOGE", true}, {"BTC", false}};
+TEST(CurrencyCodeTest, JsonSerializationVector) {
+  Bar bar;
 
   string buffer;
-  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res = json::write<json::opts{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
-  EXPECT_EQ(buffer, R"({"BTC":false,"DOGE":true})");
+  EXPECT_EQ(std::string_view(buffer), R"({"currencyCodes":["EUR","DOGE"]})");
+}
+
+TEST(CurrencyCodeTest, JsonSerializationKey) {
+  std::map<CurrencyCode, bool> map{{"DOGE", true}, {"BTC", false}};
+
+  string buffer;
+  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(std::string_view(buffer), R"({"BTC":false,"DOGE":true})");
 }
 
 TEST(CurrencyCodeTest, JsonDeserialization) {
@@ -267,6 +281,17 @@ TEST(CurrencyCodeTest, JsonDeserialization) {
   ASSERT_FALSE(ec);
 
   EXPECT_EQ(foo, Foo{"DOGE"});
+}
+
+TEST(CurrencyCodeTest, JsonDeserializationVector) {
+  vector<CurrencyCode> data;
+
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  auto ec = json::read<json::opts{.raw_string = true}>(data, R"(["EUR","DOGE"])");
+
+  ASSERT_FALSE(ec);
+
+  EXPECT_EQ(data, vector<CurrencyCode>({"EUR", "DOGE"}));
 }
 
 }  // namespace cct
