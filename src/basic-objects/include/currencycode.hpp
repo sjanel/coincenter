@@ -15,7 +15,6 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
-#include "generic-object-json.hpp"
 #include "toupperlower.hpp"
 
 namespace cct {
@@ -399,9 +398,11 @@ struct from<JSON, ::cct::CurrencyCode> {
 
 template <>
 struct to<JSON, ::cct::CurrencyCode> {
-  template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    ::cct::details::ToJson<Opts>(value, b, ix);
+  template <auto Opts>
+  static void op(::cct::CurrencyCode value, auto &&...args) noexcept {
+    char buf[::cct::CurrencyCode::kMaxLen + 1];
+    to<JSON, std::string_view>::op<Opts>(std::string_view(buf, value.appendTo(buf)), args...);
   }
 };
+
 }  // namespace glz::detail

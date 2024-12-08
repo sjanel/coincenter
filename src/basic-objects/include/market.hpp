@@ -10,7 +10,6 @@
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
-#include "generic-object-json.hpp"
 
 namespace cct {
 
@@ -27,6 +26,8 @@ struct MarketBase {
 class Market {
  public:
   enum class Type : int8_t { kRegularExchangeMarket, kFiatConversionMarket };
+
+  static constexpr auto kMaxLen = CurrencyCode::kMaxLen * 2 + 2U;  // 1 for sep, 1 for '*' if fiat conversion
 
   constexpr Market() noexcept(std::is_nothrow_default_constructible_v<CurrencyCode>) = default;
 
@@ -170,9 +171,11 @@ struct from<JSON, ::cct::Market> {
 
 template <>
 struct to<JSON, ::cct::Market> {
-  template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    ::cct::details::ToJson<Opts>(value, b, ix);
+  template <auto Opts>
+  static void op(::cct::Market value, auto &&...args) noexcept {
+    char buf[::cct::Market::kMaxLen + 1];
+    to<JSON, std::string_view>::op<Opts>(std::string_view(buf, value.appendTo(buf)), args...);
   }
 };
+
 }  // namespace glz::detail

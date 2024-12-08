@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <forward_list>
 #include <limits>
 #include <map>
 #include <optional>
@@ -10,6 +11,7 @@
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "ipow.hpp"
 
@@ -644,6 +646,30 @@ TEST(MonetaryAmountTest, NegativeAmountStr) {
   EXPECT_EQ(MonetaryAmount("-764.00000000000001 MAGIC4LIFE").amountStr(), "-764.00000000000001");
 }
 
+TEST(MonetaryAmountTest, AppendAmountCharBuffer) {
+  char buf[MonetaryAmount::kMaxLen];
+
+  auto get = [&buf](MonetaryAmount ma) { return std::string_view(buf, ma.appendAmount(buf)); };
+
+  EXPECT_EQ(get(MonetaryAmount()), "0");
+  EXPECT_EQ(get(MonetaryAmount("36")), "36");
+  EXPECT_EQ(get(MonetaryAmount("-336.07")), "-336.07");
+  EXPECT_EQ(get(MonetaryAmount("0.45")), "0.45");
+  EXPECT_EQ(get(MonetaryAmount("0.0017")), "0.0017");
+}
+
+TEST(MonetaryAmountTest, AppendAmountList) {
+  std::forward_list<char> buf(MonetaryAmount::kMaxLen, '\0');
+
+  auto get = [&buf](MonetaryAmount ma) { return string(buf.begin(), ma.appendAmount(buf.begin())); };
+
+  EXPECT_EQ(get(MonetaryAmount()), "0");
+  EXPECT_EQ(get(MonetaryAmount("36")), "36");
+  EXPECT_EQ(get(MonetaryAmount("-336.07")), "-336.07");
+  EXPECT_EQ(get(MonetaryAmount("0.45")), "0.45");
+  EXPECT_EQ(get(MonetaryAmount("0.0017")), "0.0017");
+}
+
 TEST(MonetaryAmountTest, AppendAmountStr) {
   {
     string str;
@@ -842,10 +868,8 @@ TEST(MonetaryAmountTest, JsonDeserializationValue) {
   EXPECT_EQ(foo, Foo{MonetaryAmount("15.5 DOGE")});
 }
 
-using MonetaryAmountMap = std::map<MonetaryAmount, bool>;
-
 TEST(MonetaryAmountTest, JsonSerializationKey) {
-  MonetaryAmountMap map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
+  std::map<MonetaryAmount, bool> map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
 
   string buffer;
   auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
@@ -854,4 +878,20 @@ TEST(MonetaryAmountTest, JsonSerializationKey) {
 
   EXPECT_EQ(buffer, R"({"-0.5605 DOGE":false,"15 DOGE":true})");
 }
+
+struct Bar {
+  vector<MonetaryAmount> amounts{MonetaryAmount("0.00000030482381689", "DOGE"), MonetaryAmount("-582.8347009")};
+};
+
+TEST(MonetaryAmountTest, JsonSerializationVector) {
+  Bar bar;
+
+  string buffer;
+  auto res = json::write<json::opts{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"amounts":["0.00000030482381689 DOGE","-582.8347009"]})");
+}
+
 }  // namespace cct
