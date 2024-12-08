@@ -9,15 +9,13 @@
 #include "cct_vector.hpp"
 #include "monetaryamount.hpp"
 
-namespace cct::api {
-template <class T>
-using has_msg_t = decltype(std::declval<T>().msg);
+namespace cct::schema::binance {
 
 template <class T>
 using has_code_t = decltype(std::declval<T>().code);
-}  // namespace cct::api
 
-namespace cct::schema::binance {
+template <class T>
+using has_msg_t = decltype(std::declval<T>().msg);
 
 // PUBLIC
 

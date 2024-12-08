@@ -6,12 +6,12 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "cct_json-container.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "huobi-schema.hpp"
 #include "public-trade-vector.hpp"
 #include "volumeandpricenbdecimals.hpp"
 
@@ -74,7 +74,7 @@ class HuobiPublic : public ExchangePublic {
   friend class HuobiPrivate;
 
   struct TradableCurrenciesFunc {
-    json::container operator()();
+    schema::huobi::V2ReferenceCurrency operator()();
 
     CurlHandle& _curlHandle;
   };
@@ -136,7 +136,7 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
-  static bool ShouldDiscardChain(CurrencyCode cur, const json::container& chainDetail);
+  static bool ShouldDiscardChain(CurrencyCode cur, const schema::huobi::V2ReferenceCurrencyDetails::Chain& chainDetail);
 
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;

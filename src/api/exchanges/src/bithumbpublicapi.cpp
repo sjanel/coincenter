@@ -81,7 +81,7 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurrencyCode base
 
   return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
       ComputeMethodUrl(method, base, quote, urlOpts), [](const T& response) {
-        if constexpr (amc::is_detected<has_status_t, T>::value) {
+        if constexpr (amc::is_detected<schema::bithumb::has_status_t, T>::value) {
           if (!response.status.empty()) {
             auto statusCode = StringToIntegral<int64_t>(response.status);
             if (statusCode != BithumbPublic::kStatusOK) {

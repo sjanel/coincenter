@@ -61,7 +61,8 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostDat
 
   return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
       endpoint, [](const T& response) {
-        if constexpr (amc::is_detected<has_code_t, T>::value && amc::is_detected<has_msg_t, T>::value) {
+        if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value &&
+                      amc::is_detected<schema::binance::has_msg_t, T>::value) {
           if (response.code && response.msg) {
             const int statusCode = *response.code;  // "1100" for instance
             log::warn("Binance error ({}), msg: '{}'", statusCode, *response.msg);
