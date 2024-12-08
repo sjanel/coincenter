@@ -7,6 +7,7 @@
 #include "cct_exception.hpp"
 #include "cct_json-serialization.hpp"
 #include "cct_string.hpp"
+#include "cct_vector.hpp"
 #include "currencycode.hpp"
 
 namespace cct {
@@ -87,10 +88,8 @@ TEST(MarketTest, JsonSerializationValue) {
   EXPECT_EQ(buffer, R"({"market":"DOGE-BTC"})");
 }
 
-using MarketMap = std::map<Market, bool>;
-
 TEST(MarketTest, JsonSerializationKey) {
-  MarketMap map{{Market{"DOGE", "BTC"}, true}, {Market{"BTC", "ETH"}, false}};
+  std::map<Market, bool> map{{Market{"DOGE", "BTC"}, true}, {Market{"BTC", "ETH"}, false}};
 
   string buffer;
   auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
@@ -98,6 +97,21 @@ TEST(MarketTest, JsonSerializationKey) {
   EXPECT_FALSE(res);
 
   EXPECT_EQ(buffer, R"({"BTC-ETH":false,"DOGE-BTC":true})");
+}
+
+struct Bar {
+  vector<Market> markets{Market{"DOGE", "BTC"}, Market{"ETH", "KRW"}};
+};
+
+TEST(MarketTest, JsonSerializationVector) {
+  Bar bar;
+
+  string buffer;
+  auto res = json::write<json::opts{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+
+  EXPECT_FALSE(res);
+
+  EXPECT_EQ(buffer, R"({"markets":["DOGE-BTC","ETH-KRW"]})");
 }
 
 TEST(MarketTest, JsonDeserialization) {

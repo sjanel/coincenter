@@ -22,25 +22,4 @@ constexpr bool JsonWithQuotes(B &&b, IX &&ix) {
   }
 }
 
-template <auto Opts, class B, class IX>
-constexpr void ToJson(auto &&value, B &&b, IX &&ix) {
-  auto valueLen = value.strLen();
-  bool withQuotes = JsonWithQuotes<Opts>(b, ix);
-
-  int64_t additionalSize = (withQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
-                           static_cast<int64_t>(b.size());
-  if (additionalSize > 0) {
-    b.append(additionalSize, ' ');
-  }
-
-  if (withQuotes) {
-    b[ix++] = '"';
-  }
-  value.appendTo(b.data() + ix);
-  ix += valueLen;
-  if (withQuotes) {
-    b[ix++] = '"';
-  }
-}
-
 }  // namespace cct::details
