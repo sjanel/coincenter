@@ -161,7 +161,7 @@ bool CheckErrorDoRetry(int statusCode, const T& ret, QueryDelayDir& queryDelayDi
                        Duration& queryDelay) {
   switch (statusCode) {
     case kInvalidTimestamp: {
-      if constexpr (amc::is_detected<has_msg_t, T>::value) {
+      if constexpr (amc::is_detected<schema::binance::has_msg_t, T>::value) {
         if (ret.msg) {
           return CheckErrorMsg(*ret.msg, queryDelayDir, sleepingTime, queryDelay);
         }
@@ -213,7 +213,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
       continue;
     }
 
-    if constexpr (amc::is_detected<has_code_t, T>::value) {
+    if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value) {
       if (!ret.code || *ret.code == 0) {
         return ret;
       }
@@ -233,7 +233,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
   if (throwIfError) {
     std::string_view errorMsg;
     string jsonStr = WriteMiniJsonOrThrow(ret);
-    if constexpr (amc::is_detected<has_msg_t, T>::value) {
+    if constexpr (amc::is_detected<schema::binance::has_msg_t, T>::value) {
       if (ret.msg) {
         errorMsg = *ret.msg;
       }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <glaze/glaze.hpp>  // IWYU pragma: export
 #include <unordered_map>
 #include <variant>
 
@@ -9,13 +10,10 @@
 #include "market.hpp"
 #include "timepoint-schema.hpp"
 
-namespace cct::api {
+namespace cct::schema::bithumb {
+
 template <class T>
 using has_status_t = decltype(std::declval<T>().status);
-
-}  // namespace cct::api
-
-namespace cct::schema::bithumb {
 
 // PUBLIC
 
