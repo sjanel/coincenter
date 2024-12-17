@@ -58,20 +58,18 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostDat
     endpoint.append(curlPostData.str());
   }
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
+  return requestRetry.query<T>(endpoint, [](const T& response) {
+    if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value &&
+                  amc::is_detected<schema::binance::has_msg_t, T>::value) {
+      if (response.code && response.msg) {
+        const int statusCode = *response.code;  // "1100" for instance
+        log::warn("Binance error ({}), msg: '{}'", statusCode, *response.msg);
+        return RequestRetry::Status::kResponseError;
+      }
+    }
 
-  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
-      endpoint, [](const T& response) {
-        if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value &&
-                      amc::is_detected<schema::binance::has_msg_t, T>::value) {
-          if (response.code && response.msg) {
-            const int statusCode = *response.code;  // "1100" for instance
-            log::warn("Binance error ({}), msg: '{}'", statusCode, *response.msg);
-            return RequestRetry::Status::kResponseError;
-          }
-        }
-
-        return RequestRetry::Status::kResponseOK;
-      });
+    return RequestRetry::Status::kResponseOK;
+  });
 }
 
 const auto& RetrieveMarketData(const auto& exchangeInfoData, Market mk) {

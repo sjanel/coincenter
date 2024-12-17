@@ -59,23 +59,26 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostD
   }
 
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
+  return requestRetry.query<T>(method, [](const T& response) {
+    if constexpr (amc::is_detected<schema::huobi::has_code_t, T>::value) {
+      if (response.code != 200) {
+        log::warn("Huobi error code: {}", response.code);
+        return RequestRetry::Status::kResponseError;
+      }
+    } else if constexpr (amc::is_detected<schema::huobi::has_status_t, T>::value) {
+      if (response.status != "ok") {
+        log::warn("Huobi status error: {}", response.status);
+        return RequestRetry::Status::kResponseError;
+      }
+    } else {
+      // TODO: can be replaced by static_assert(false) in C++23
+      static_assert(amc::is_detected<schema::huobi::has_code_t, T>::value ||
+                        amc::is_detected<schema::huobi::has_status_t, T>::value,
+                    "T should have a code or status member");
+    }
 
-  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
-      method, [](const T& response) {
-        if constexpr (amc::is_detected<schema::huobi::has_code_t, T>::value) {
-          if (response.code != 200) {
-            log::warn("Huobi error code: {}", response.code);
-            return RequestRetry::Status::kResponseError;
-          }
-        } else if constexpr (amc::is_detected<schema::huobi::has_status_t, T>::value) {
-          if (response.status != "ok") {
-            log::warn("Huobi status error: {}", response.status);
-            return RequestRetry::Status::kResponseError;
-          }
-        }
-
-        return RequestRetry::Status::kResponseOK;
-      });
+    return RequestRetry::Status::kResponseOK;
+  });
 }
 
 }  // namespace
@@ -113,6 +116,7 @@ HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConver
 bool HuobiPublic::healthCheck() {
   auto strData = _healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet));
   schema::huobi::V2SystemStatus networkInfo;
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
       strData, "Huobi system status", networkInfo);
   if (ec) {

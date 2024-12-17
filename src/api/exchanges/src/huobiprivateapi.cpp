@@ -125,13 +125,28 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
 
   RequestRetry requestRetry(curlHandle, CurlOptions(requestType, std::move(postData), postDataFormat),
                             QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
-
-  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+  return requestRetry.query<T>(
       method,
       [](const T& response) {
-        if (response.status != "ok") {
-          log::warn("Huobi status error: {}", response.status);
-          return RequestRetry::Status::kResponseError;
+        if constexpr (amc::is_detected<schema::huobi::has_code_t, T>::value) {
+          if (response.code != 200) {
+            log::warn("Huobi error code: {}", response.code);
+            return RequestRetry::Status::kResponseError;
+          }
+        } else if constexpr (amc::is_detected<schema::huobi::has_status_t, T>::value) {
+          if (response.status != "ok") {
+            if (response.status.empty()) {
+              log::warn("Huobi status is empty - is it supposed to be returned by this endpoint?");
+            } else {
+              log::warn("Huobi status error: {}", response.status);
+              return RequestRetry::Status::kResponseError;
+            }
+          }
+        } else {
+          // TODO: can be replaced by static_assert(false) in C++23
+          static_assert(amc::is_detected<schema::huobi::has_code_t, T>::value ||
+                            amc::is_detected<schema::huobi::has_status_t, T>::value,
+                        "T should have a code or status member");
         }
         return RequestRetry::Status::kResponseOK;
       },
@@ -159,6 +174,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
 bool HuobiPrivate::validateApiKey() {
   const auto result = PrivateQuery<schema::huobi::V1AccountAccounts>(_curlHandle, _apiKey, HttpRequestType::kGet,
                                                                      "/v1/account/accounts", CurlPostData());
+
   return result.status == "ok" && !result.data.empty();
 }
 

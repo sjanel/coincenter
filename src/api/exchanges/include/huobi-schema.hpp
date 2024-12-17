@@ -228,7 +228,7 @@ struct V1AccountAccountsBalance {
 // https://huobiapi.github.io/docs/spot/v1/en/#query-deposit-address
 
 struct V2AccountDepositAddress {
-  string status;
+  int code;
 
   struct Item {
     string address;
@@ -355,7 +355,7 @@ struct V1OrderOrdersDetail {
 // https://huobiapi.github.io/docs/spot/v1/en/#query-withdraw-address
 
 struct V1QueryWithdrawAddress {
-  string status;
+  int code;
 
   struct Item {
     string address;

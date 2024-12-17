@@ -79,20 +79,19 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurrencyCode base
               std::string_view urlOpts = "") {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
-      ComputeMethodUrl(method, base, quote, urlOpts), [](const T& response) {
-        if constexpr (amc::is_detected<schema::bithumb::has_status_t, T>::value) {
-          if (!response.status.empty()) {
-            auto statusCode = StringToIntegral<int64_t>(response.status);
-            if (statusCode != BithumbPublic::kStatusOK) {
-              log::warn("Bithumb error ({})", statusCode);
-              return RequestRetry::Status::kResponseError;
-            }
-          }
+  return requestRetry.query<T>(ComputeMethodUrl(method, base, quote, urlOpts), [](const T& response) {
+    if constexpr (amc::is_detected<schema::bithumb::has_status_t, T>::value) {
+      if (!response.status.empty()) {
+        auto statusCode = StringToIntegral<int64_t>(response.status);
+        if (statusCode != BithumbPublic::kStatusOK) {
+          log::warn("Bithumb error ({})", statusCode);
+          return RequestRetry::Status::kResponseError;
         }
+      }
+    }
 
-        return RequestRetry::Status::kResponseOK;
-      });
+    return RequestRetry::Status::kResponseOK;
+  });
 }
 
 }  // namespace
@@ -119,6 +118,7 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
 bool BithumbPublic::healthCheck() {
   auto networkInfoStr = _curlHandle.query("/public/network-info", CurlOptions(HttpRequestType::kGet));
   schema::bithumb::V1NetworkInfo networkInfo;
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
       networkInfoStr, "Bithumb network info", networkInfo);
   if (ec) {
