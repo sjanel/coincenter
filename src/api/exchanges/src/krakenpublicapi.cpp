@@ -117,7 +117,7 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
           _tradableCurrenciesCache, _curlHandle) {}
 
 bool KrakenPublic::healthCheck() {
-  const auto result = PublicQuery<schema::kraken::PublicSystemStatus>(_curlHandle, "/public/SystemStatus");
+  const auto result = PublicQuery<schema::kraken::SystemStatus>(_curlHandle, "/public/SystemStatus");
   log::info("{} status: {}", name(), result.result.status);
   return result.result.status == "online";
 }
@@ -127,7 +127,7 @@ std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode curr
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
-  const auto result = PublicQuery<schema::kraken::PublicAssets>(_curlHandle, "/public/Assets");
+  const auto result = PublicQuery<schema::kraken::Assets>(_curlHandle, "/public/Assets");
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
   CurrencyExchangeVector currencies;
@@ -151,7 +151,7 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
 }
 
 std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
-  const auto result = PublicQuery<schema::kraken::PublicAssetPairs>(_curlHandle, "/public/AssetPairs");
+  const auto result = PublicQuery<schema::kraken::AssetPairs>(_curlHandle, "/public/AssetPairs");
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.result.size()));
   ret.second.reserve(result.result.size());
@@ -226,8 +226,7 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
             .assetsPairStrUpper(),
         mk);
   }
-  const auto result =
-      PublicQuery<schema::kraken::PublicTicker>(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
+  const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
   const auto time = Clock::now();
   for (const auto& [krakenAssetPair, assetPairDetails] : result.result) {
     if (krakenAssetPairToStdMarketMap.find(krakenAssetPair) == krakenAssetPairToStdMarketMap.end()) {
@@ -277,8 +276,8 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
 
   MarketOrderBookLines orderBookLines;
 
-  const auto result = PublicQuery<schema::kraken::PublicDepth>(_curlHandle, "/public/Depth",
-                                                               {{"pair", krakenAssetPair}, {"count", count}});
+  const auto result =
+      PublicQuery<schema::kraken::Depth>(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
   const auto dataIt = result.result.find(krakenAssetPair);
   const auto nowTime = Clock::now();
   if (dataIt != result.result.end()) {
@@ -316,8 +315,7 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 
   if (krakenMarket.isDefined()) {
     const auto krakenPair = krakenMarket.assetsPairStrUpper();
-    const auto result =
-        PublicQuery<schema::kraken::PublicTicker>(_curlHandle, "/public/Ticker", {{"pair", krakenPair}});
+    const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker", {{"pair", krakenPair}});
     const auto dataIt = result.result.find(krakenPair);
     if (dataIt != result.result.end()) {
       return {MonetaryAmount(dataIt->second.v[1], mk.base()), MonetaryAmount(dataIt->second.c[0], mk.quote())};
@@ -333,13 +331,13 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
   if (krakenMarket.isDefined()) {
     const auto krakenPair = krakenMarket.assetsPairStrUpper();
-    const auto result = PublicQuery<schema::kraken::PublicTrades>(_curlHandle, "/public/Trades",
-                                                                  {{"pair", krakenPair}, {"count", nbLastTrades}});
+    const auto result = PublicQuery<schema::kraken::Trades>(_curlHandle, "/public/Trades",
+                                                            {{"pair", krakenPair}, {"count", nbLastTrades}});
 
     const auto dataIt = result.result.find(krakenPair);
 
     if (dataIt != result.result.end()) {
-      const auto& lastTrades = std::get<schema::kraken::PublicTrades::Data>(dataIt->second);
+      const auto& lastTrades = std::get<schema::kraken::Trades::Data>(dataIt->second);
 
       ret.reserve(static_cast<PublicTradeVector::size_type>(lastTrades.size()));
       for (const auto& det : lastTrades) {
