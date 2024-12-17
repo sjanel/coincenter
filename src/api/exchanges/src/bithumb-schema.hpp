@@ -205,7 +205,7 @@ struct Trade {
     TimePoint ts;
   };
   struct ExtraIntField {
-    int64_t val{};
+    int64_t val;
     TimePoint ts;
   };
 

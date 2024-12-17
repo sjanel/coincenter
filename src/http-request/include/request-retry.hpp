@@ -60,7 +60,8 @@ class RequestRetry {
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
     decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
     bool parsingError;
-    T ret;
+
+    T ret{};
 
     do {
       if (nbRetries != 0) {
