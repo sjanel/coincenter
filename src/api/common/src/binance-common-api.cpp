@@ -38,17 +38,15 @@ BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetri
 schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFunc::operator()() {
   RequestRetry requestRetry(_curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  schema::binance::NetworkCoinAll ret =
-      requestRetry.query<schema::binance::NetworkCoinAll,
-                         json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
-          "/bapi/capital/v1/public/capital/getNetworkCoinAll", [](const auto& response) {
-            static constexpr std::string_view kExpectedCode = "000000";
-            if (response.code != kExpectedCode) {
-              log::warn("Binance error ({})", response.code);
-              return RequestRetry::Status::kResponseError;
-            }
-            return RequestRetry::Status::kResponseOK;
-          });
+  schema::binance::NetworkCoinAll ret = requestRetry.query<schema::binance::NetworkCoinAll>(
+      "/bapi/capital/v1/public/capital/getNetworkCoinAll", [](const auto& response) {
+        static constexpr std::string_view kExpectedCode = "000000";
+        if (response.code != kExpectedCode) {
+          log::warn("Binance error ({})", response.code);
+          return RequestRetry::Status::kResponseError;
+        }
+        return RequestRetry::Status::kResponseOK;
+      });
 
   const auto [endIt, oldEndIt] =
       std::ranges::remove_if(ret.data, [](const auto& el) { return el.coin.size() > CurrencyCode::kMaxLen; });

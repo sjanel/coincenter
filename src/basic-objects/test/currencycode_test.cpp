@@ -265,6 +265,7 @@ TEST(CurrencyCodeTest, JsonSerializationKey) {
   std::map<CurrencyCode, bool> map{{"DOGE", true}, {"BTC", false}};
 
   string buffer;
+  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   auto res = json::write<json::opts{.raw_string = true}>(map, buffer);
 
   EXPECT_FALSE(res);

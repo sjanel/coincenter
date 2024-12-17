@@ -205,7 +205,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
     SetNonceAndSignature(apiKey, opts.mutablePostData(), queryDelay);
 
     auto resStr = curlHandle.query(endpoint, opts);
-
+    // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
         resStr, "binance private", ret);
     if (ec) {

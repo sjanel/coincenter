@@ -25,6 +25,12 @@ class RequestRetry {
  public:
   enum class Status : int8_t { kResponseError, kResponseOK };
 
+  static constexpr auto kDefaultJsonOpts =
+      json::opts{.error_on_unknown_keys = false,  // NOLINT(readability-implicit-bool-conversion)
+                 .minified = true,                // NOLINT(readability-implicit-bool-conversion)
+                 .error_on_const_read = true,     // NOLINT(readability-implicit-bool-conversion)
+                 .raw_string = true};             // NOLINT(readability-implicit-bool-conversion)
+
   RequestRetry(CurlHandle &curlHandle, CurlOptions curlOptions, QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
       : _curlHandle(curlHandle), _curlOptions(std::move(curlOptions)), _queryRetryPolicy(queryRetryPolicy) {}
 
@@ -32,8 +38,7 @@ class RequestRetry {
   /// responseStatus(jsonResponse) returns kResponseError.
   /// responseStatus should be a functor taking a single json by const reference argument, returning Status::kResponseOK
   /// if success, Status::kResponseError in case of error.
-  template <class StringType, class ResponseStatusT>
-  json::container queryJson(const StringType &endpoint, ResponseStatusT responseStatus) {
+  json::container queryJson(const auto &endpoint, auto responseStatus) {
     return queryJson(endpoint, responseStatus, [](CurlOptions &) {});
   }
 
@@ -43,20 +48,17 @@ class RequestRetry {
   /// if success, Status::kResponseError in case of error.
   /// postDataUpdateFunc is a functor that takes the embedded CurlOptions's reference as single argument and updates it
   /// before each query
-  template <class StringType, class ResponseStatusT, class PostDataFuncT>
-  json::container queryJson(const StringType &endpoint, ResponseStatusT responseStatus,
-                            PostDataFuncT postDataUpdateFunc) {
-    return query<json::container, json::opts{}, StringType, ResponseStatusT, PostDataFuncT>(endpoint, responseStatus,
-                                                                                            postDataUpdateFunc);
+  json::container queryJson(const auto &endpoint, auto responseStatus, auto postDataUpdateFunc) {
+    return query<json::container>(endpoint, responseStatus, postDataUpdateFunc);
   }
 
-  template <class T, json::opts opts, class StringType, class ResponseStatusT>
-  T query(const StringType &endpoint, ResponseStatusT responseStatus) {
+  template <class T, json::opts opts = kDefaultJsonOpts>
+  T query(const auto &endpoint, auto responseStatus) {
     return query<T, opts>(endpoint, responseStatus, [](CurlOptions &) {});
   }
 
-  template <class T, json::opts opts, class StringType, class ResponseStatusT, class PostDataFuncT>
-  T query(const StringType &endpoint, ResponseStatusT responseStatus, PostDataFuncT postDataUpdateFunc) {
+  template <class T, json::opts opts = kDefaultJsonOpts>
+  T query(const auto &endpoint, auto responseStatus, auto postDataUpdateFunc) {
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
     decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
     bool parsingError;

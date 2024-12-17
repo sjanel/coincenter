@@ -244,8 +244,7 @@ template <class T>
 T PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
                                  CurlOptions&& opts) {
   RequestRetry requestRetry(curlHandle, std::move(opts));
-
-  return requestRetry.query<T, json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+  return requestRetry.query<T>(
       endpoint,
       [endpoint](T& jsonResponse) {
         auto statusCode = StringToIntegral<int64_t>(jsonResponse.status);

@@ -11,7 +11,6 @@
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -27,6 +26,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "kraken-schema.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
@@ -40,24 +40,19 @@
 namespace cct::api {
 namespace {
 
-json::container PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
+template <class T>
+T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
-
-  json::container baseRet = requestRetry.queryJson(method, [](const json::container& jsonResponse) {
-    const auto errorIt = jsonResponse.find("error");
-    if (errorIt != jsonResponse.end() && !errorIt->empty()) {
-      log::warn("Full Kraken error: '{}'", jsonResponse.dump());
-      return RequestRetry::Status::kResponseError;
+  return requestRetry.query<T>(method, [](const T& response) {
+    if constexpr (amc::is_detected<schema::kraken::has_error_t, T>::value) {
+      if (!response.error.empty()) {
+        log::error("Kraken error(s): {}", response.error.front());
+        return RequestRetry::Status::kResponseError;
+      }
     }
+
     return RequestRetry::Status::kResponseOK;
   });
-
-  const auto resultIt = baseRet.find("result");
-  json::container ret;
-  if (resultIt != baseRet.end()) {
-    ret.swap(*resultIt);
-  }
-  return ret;
 }
 
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,
@@ -122,26 +117,9 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
           _tradableCurrenciesCache, _curlHandle) {}
 
 bool KrakenPublic::healthCheck() {
-  json::container result =
-      json::container::parse(_curlHandle.query("/public/SystemStatus", CurlOptions(HttpRequestType::kGet)));
-  auto errorIt = result.find("error");
-  if (errorIt != result.end() && !errorIt->empty()) {
-    log::error("Error in {} status: {}", name(), errorIt->dump());
-    return false;
-  }
-  auto resultIt = result.find("result");
-  if (resultIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", name(), result.dump());
-    return false;
-  }
-  auto statusIt = resultIt->find("status");
-  if (statusIt == resultIt->end()) {
-    log::error("Unexpected answer from {} status: {}", name(), resultIt->dump());
-    return false;
-  }
-  std::string_view statusStr = statusIt->get<std::string_view>();
-  log::info("{} status: {}", name(), statusStr);
-  return statusStr == "online";
+  const auto result = PublicQuery<schema::kraken::PublicSystemStatus>(_curlHandle, "/public/SystemStatus");
+  log::info("{} status: {}", name(), result.result.status);
+  return result.result.status == "online";
 }
 
 std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
@@ -149,11 +127,12 @@ std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode curr
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
-  json::container result = PublicQuery(_curlHandle, "/public/Assets");
-  CurrencyExchangeVector currencies;
+  const auto result = PublicQuery<schema::kraken::PublicAssets>(_curlHandle, "/public/Assets");
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
-  for (const auto& [krakenAssetName, value] : result.items()) {
-    std::string_view altCodeStr = value["altname"].get<std::string_view>();
+
+  CurrencyExchangeVector currencies;
+  for (const auto& [krakenAssetName, value] : result.result) {
+    std::string_view altCodeStr = value.altname;
     if (!CheckCurrencyExchange(krakenAssetName, altCodeStr, excludedCurrencies, _coincenterInfo)) {
       continue;
     }
@@ -172,18 +151,18 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
 }
 
 std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
-  json::container result = PublicQuery(_curlHandle, "/public/AssetPairs");
+  const auto result = PublicQuery<schema::kraken::PublicAssetPairs>(_curlHandle, "/public/AssetPairs");
   std::pair<MarketSet, MarketInfoMap> ret;
-  ret.first.reserve(static_cast<MarketSet::size_type>(result.size()));
-  ret.second.reserve(result.size());
+  ret.first.reserve(static_cast<MarketSet::size_type>(result.result.size()));
+  ret.second.reserve(result.result.size());
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   const CurrencyExchangeFlatSet& currencies = _tradableCurrenciesCache.get();
-  for (const auto& [key, value] : result.items()) {
-    if (!value.contains("ordermin")) {
+  for (const auto& [key, value] : result.result) {
+    if (value.ordermin.isDefault()) {
       log::debug("Discard market {} as it does not contain min order information", key);
       continue;
     }
-    std::string_view krakenBaseStr = value["base"].get<std::string_view>();
+    std::string_view krakenBaseStr = value.base;
     CurrencyCode base(_coincenterInfo.standardizeCurrencyCode(krakenBaseStr));
     auto baseIt = currencies.find(base);
     if (baseIt == currencies.end()) {
@@ -194,7 +173,7 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
       continue;
     }
 
-    std::string_view krakenQuoteStr = value["quote"].get<std::string_view>();
+    std::string_view krakenQuoteStr = value.quote;
     CurrencyCode quote(_coincenterInfo.standardizeCurrencyCode(krakenQuoteStr));
     auto quoteIt = currencies.find(quote);
     if (quoteIt == currencies.end()) {
@@ -206,8 +185,8 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
     }
     auto mkIt = ret.first.emplace(base, quote).first;
     log::trace("Retrieved Kraken market {}", *mkIt);
-    MonetaryAmount orderMin(value["ordermin"].get<std::string_view>(), base);
-    ret.second.insert_or_assign(*mkIt, MarketInfo{{value["lot_decimals"], value["pair_decimals"]}, orderMin});
+    MonetaryAmount orderMin(value.ordermin, base);
+    ret.second.insert_or_assign(*mkIt, MarketInfo{{value.lot_decimals, value.pair_decimals}, orderMin});
   }
   log::debug("Retrieved {} markets from kraken", ret.first.size());
   return ret;
@@ -247,9 +226,10 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
             .assetsPairStrUpper(),
         mk);
   }
-  json::container result = PublicQuery(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
+  const auto result =
+      PublicQuery<schema::kraken::PublicTicker>(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
   const auto time = Clock::now();
-  for (const auto& [krakenAssetPair, assetPairDetails] : result.items()) {
+  for (const auto& [krakenAssetPair, assetPairDetails] : result.result) {
     if (krakenAssetPairToStdMarketMap.find(krakenAssetPair) == krakenAssetPairToStdMarketMap.end()) {
       log::error("Unable to find {}", krakenAssetPair);
       continue;
@@ -260,12 +240,13 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
         Market(_coincenterInfo.standardizeCurrencyCode(mk.base()), _coincenterInfo.standardizeCurrencyCode(mk.quote()));
     //  a = ask array(<price>, <whole lot volume>, <lot volume>)
     //  b = bid array(<price>, <whole lot volume>, <lot volume>)
-    const json::container& askDetails = assetPairDetails["a"];
-    const json::container& bidDetails = assetPairDetails["b"];
-    MonetaryAmount askPri(askDetails[0].get<std::string_view>(), mk.quote());
-    MonetaryAmount bidPri(bidDetails[0].get<std::string_view>(), mk.quote());
-    MonetaryAmount askVol(askDetails[2].get<std::string_view>(), mk.base());
-    MonetaryAmount bidVol(bidDetails[2].get<std::string_view>(), mk.base());
+    const auto& askDetails = assetPairDetails.a;
+    const auto& bidDetails = assetPairDetails.b;
+
+    MonetaryAmount askPri(askDetails[0], mk.quote());
+    MonetaryAmount bidPri(bidDetails[0], mk.quote());
+    MonetaryAmount askVol(askDetails[2], mk.base());
+    MonetaryAmount bidVol(bidDetails[2], mk.base());
 
     const MarketsFunc::MarketInfo& marketInfo = marketInfoMap.find(mk)->second;
 
@@ -296,19 +277,19 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
 
   MarketOrderBookLines orderBookLines;
 
-  json::container result = PublicQuery(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
+  const auto result = PublicQuery<schema::kraken::PublicDepth>(_curlHandle, "/public/Depth",
+                                                               {{"pair", krakenAssetPair}, {"count", count}});
+  const auto dataIt = result.result.find(krakenAssetPair);
   const auto nowTime = Clock::now();
-  if (!result.empty()) {
-    const json::container& entry = result.front();
-    const auto asksIt = entry.find("asks");
-    const auto bidsIt = entry.find("bids");
-
-    orderBookLines.reserve(asksIt->size() + bidsIt->size());
-    for (const auto& asksOrBids : {asksIt, bidsIt}) {
-      const auto type = asksOrBids == asksIt ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
+  if (dataIt != result.result.end()) {
+    const auto& asks = dataIt->second.asks;
+    const auto& bids = dataIt->second.bids;
+    orderBookLines.reserve(asks.size() + bids.size());
+    for (const auto asksOrBids : {&asks, &bids}) {
+      const auto type = asksOrBids == &asks ? OrderBookLine::Type::kAsk : OrderBookLine::Type::kBid;
       for (const auto& priceQuantityTuple : *asksOrBids) {
-        MonetaryAmount amount(priceQuantityTuple[1].get<std::string_view>(), mk.base());
-        MonetaryAmount price(priceQuantityTuple[0].get<std::string_view>(), mk.quote());
+        MonetaryAmount price(std::get<string>(priceQuantityTuple[0]), mk.quote());
+        MonetaryAmount amount(std::get<string>(priceQuantityTuple[1]), mk.base());
 
         orderBookLines.push(amount, price, type);
       }
@@ -334,13 +315,12 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
   const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
 
   if (krakenMarket.isDefined()) {
-    const json::container result =
-        PublicQuery(_curlHandle, "/public/Ticker", {{"pair", krakenMarket.assetsPairStrUpper()}});
-    for (const auto& [krakenAssetPair, details] : result.items()) {
-      std::string_view last24hVol = details["v"][1].get<std::string_view>();
-      std::string_view lastTickerPrice = details["c"][0].get<std::string_view>();
-
-      return {MonetaryAmount(last24hVol, mk.base()), MonetaryAmount(lastTickerPrice, mk.quote())};
+    const auto krakenPair = krakenMarket.assetsPairStrUpper();
+    const auto result =
+        PublicQuery<schema::kraken::PublicTicker>(_curlHandle, "/public/Ticker", {{"pair", krakenPair}});
+    const auto dataIt = result.result.find(krakenPair);
+    if (dataIt != result.result.end()) {
+      return {MonetaryAmount(dataIt->second.v[1], mk.base()), MonetaryAmount(dataIt->second.c[0], mk.quote())};
     }
   }
 
@@ -352,18 +332,21 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
 
   const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
   if (krakenMarket.isDefined()) {
-    json::container result = PublicQuery(_curlHandle, "/public/Trades",
-                                         {{"pair", krakenMarket.assetsPairStrUpper()}, {"count", nbLastTrades}});
+    const auto krakenPair = krakenMarket.assetsPairStrUpper();
+    const auto result = PublicQuery<schema::kraken::PublicTrades>(_curlHandle, "/public/Trades",
+                                                                  {{"pair", krakenPair}, {"count", nbLastTrades}});
 
-    if (!result.empty()) {
-      const auto& lastTrades = result.front();
+    const auto dataIt = result.result.find(krakenPair);
+
+    if (dataIt != result.result.end()) {
+      const auto& lastTrades = std::get<schema::kraken::PublicTrades::Data>(dataIt->second);
 
       ret.reserve(static_cast<PublicTradeVector::size_type>(lastTrades.size()));
-      for (const json::container& det : lastTrades) {
-        const MonetaryAmount price(det[0].get<std::string_view>(), mk.quote());
-        const MonetaryAmount amount(det[1].get<std::string_view>(), mk.base());
-        const auto millisecondsSinceEpoch = static_cast<int64_t>(det[2].get<double>() * 1000);
-        const TradeSide tradeSide = det[3].get<std::string_view>() == "b" ? TradeSide::kBuy : TradeSide::kSell;
+      for (const auto& det : lastTrades) {
+        const MonetaryAmount price(std::get<string>(det[0]), mk.quote());
+        const MonetaryAmount amount(std::get<string>(det[1]), mk.base());
+        const auto millisecondsSinceEpoch = static_cast<int64_t>(std::get<double>(det[2]) * 1000);
+        const TradeSide tradeSide = std::get<string>(det[3]) == "b" ? TradeSide::kBuy : TradeSide::kSell;
 
         ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
       }
