@@ -14,7 +14,6 @@
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"

@@ -184,10 +184,234 @@ struct MarketTrade {
   Tick tick;
 };
 
+// PRIVATE
+
+// https://huobiapi.github.io/docs/spot/v1/en/#get-all-accounts-of-the-current-user
+
+struct V1AccountAccounts {
+  string status;
+
+  struct Item {
+    int64_t id;
+    string state;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#get-account-balance-of-a-specific-account
+
+struct V1AccountAccountsBalance {
+  string status;
+
+  struct Data {
+    struct Item {
+      string type;
+      string currency;
+      MonetaryAmount balance;
+
+      using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+      auto operator<=>(const Item&) const = default;
+    };
+
+    vector<Item> list;
+  };
+
+  Data data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#query-deposit-address
+
+struct V2AccountDepositAddress {
+  string status;
+
+  struct Item {
+    string address;
+    string addressTag;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#search-past-orders
+
+// https://huobiapi.github.io/docs/spot/v1/en/#search-historical-orders-within-48-hours
+
+struct V1Orders {
+  string status;
+
+  struct Item {
+    string symbol;
+    MonetaryAmount fieldAmount;  // field-amount
+    MonetaryAmount price;
+    string type;
+    int64_t createdAt;  // created-at
+    int64_t id;
+    int64_t finishedAt;  // finished-at
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#get-all-open-orders
+
+struct V1OrderOpenOrders {
+  string status;
+
+  struct Item {
+    string symbol;
+    MonetaryAmount amount;
+    MonetaryAmount price;
+    MonetaryAmount filledAmount;  // filled-amount
+    int64_t createdAt;            // created-at
+    int64_t id;
+    string type;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#search-for-existed-withdraws-and-deposits
+
+struct V1QueryDepositWithdraw {
+  string status;
+
+  struct Item {
+    string state;
+    string currency;
+    int64_t id;
+    double amount;
+    double fee;
+    int64_t updatedAt;  // updated-at
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#submit-cancel-for-multiple-orders-by-ids
+
+struct V1OrderOrdersBatchCancel {
+  string status;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#place-a-new-order
+
+struct V1OrderOrdersPlace {
+  string status;
+  string data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#submit-cancel-for-an-order
+
+struct V1OrderOrdersSubmitCancel {
+  string status;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#get-the-order-detail-of-an-order
+
+struct V1OrderOrdersDetail {
+  string status;
+
+  struct Data {
+    string state;
+
+    MonetaryAmount fieldAmount;      // field-amount
+    MonetaryAmount fieldCashAmount;  // field-cash-amount
+    MonetaryAmount fieldFees;        // field-fees
+
+    MonetaryAmount filledAmount;      // filled-amount
+    MonetaryAmount filledCashAmount;  // filled-cash-amount
+    MonetaryAmount filledFees;        // filled-fees
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Data&) const = default;
+  };
+
+  Data data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#query-withdraw-address
+
+struct V1QueryWithdrawAddress {
+  string status;
+
+  struct Item {
+    string address;
+    string addressTag;
+    string note;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const Item&) const = default;
+  };
+
+  vector<Item> data;
+};
+
+// https://huobiapi.github.io/docs/spot/v1/en/#create-a-withdraw-request
+
+struct V1DwWithdrawApiCreate {
+  string status;
+  int64_t data;
+};
+
 }  // namespace cct::schema::huobi
 
 template <>
 struct glz::meta<::cct::schema::huobi::MarketHistoryTrade::Trade::TradeData::Direction> {
   using enum ::cct::schema::huobi::MarketHistoryTrade::Trade::TradeData::Direction;
   static constexpr auto value = enumerate(buy, sell);
+};
+
+template <>
+struct glz::meta<::cct::schema::huobi::V1Orders::Item> {
+  using T = ::cct::schema::huobi::V1Orders::Item;
+  static constexpr auto value =
+      object("symbol", &T::symbol, "field-amount", &T::fieldAmount, "price", &T::price, "type", &T::type, "created-at",
+             &T::createdAt, "id", &T::id, "finished-at", &T::finishedAt);
+};
+
+template <>
+struct glz::meta<::cct::schema::huobi::V1OrderOpenOrders::Item> {
+  using T = ::cct::schema::huobi::V1OrderOpenOrders::Item;
+  static constexpr auto value = object("symbol", &T::symbol, "amount", &T::amount, "price", &T::price, "filled-amount",
+                                       &T::filledAmount, "created-at", &T::createdAt, "id", &T::id, "type", &T::type);
+};
+
+template <>
+struct glz::meta<::cct::schema::huobi::V1QueryDepositWithdraw::Item> {
+  using T = ::cct::schema::huobi::V1QueryDepositWithdraw::Item;
+  static constexpr auto value = object("state", &T::state, "currency", &T::currency, "id", &T::id, "amount", &T::amount,
+                                       "fee", &T::fee, "updated-at", &T::updatedAt);
+};
+
+template <>
+struct glz::meta<::cct::schema::huobi::V1OrderOrdersDetail::Data> {
+  using T = ::cct::schema::huobi::V1OrderOrdersDetail::Data;
+  static constexpr auto value =
+      object("state", &T::state, "field-amount", &T::fieldAmount, "field-cash-amount", &T::fieldCashAmount,
+             "field-fees", &T::fieldFees, "filled-amount", &T::filledAmount, "filled-cash-amount", &T::filledCashAmount,
+             "filled-fees", &T::filledFees);
 };

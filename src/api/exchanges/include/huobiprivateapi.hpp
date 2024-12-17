@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "cachedresult.hpp"
 #include "curlhandle.hpp"
 #include "exchangeprivateapi.hpp"
@@ -57,7 +59,7 @@ class HuobiPrivate : public ExchangePrivate {
   void cancelOrderProcess(OrderIdView orderId);
 
   struct AccountIdFunc {
-    int operator()();
+    int64_t operator()();
 
     CurlHandle& _curlHandle;
     const APIKey& _apiKey;

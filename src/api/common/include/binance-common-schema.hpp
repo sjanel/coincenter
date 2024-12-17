@@ -11,9 +11,9 @@
 namespace cct::schema::binance {
 
 struct NetworkListElement {
-  bool isDefault{};
-  bool depositEnable{};
-  bool withdrawEnable{};
+  bool isDefault;
+  bool depositEnable;
+  bool withdrawEnable;
   MonetaryAmount withdrawFee;
 
   auto operator<=>(const NetworkListElement&) const = default;
@@ -21,7 +21,7 @@ struct NetworkListElement {
 
 struct NetworkCoinData {
   string coin;
-  bool isLegalMoney{};
+  bool isLegalMoney;
   SmallVector<NetworkListElement, 4> networkList;
 
   using trivially_relocatable =
