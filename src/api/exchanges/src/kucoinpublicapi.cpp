@@ -12,7 +12,6 @@
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -29,6 +28,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "httprequesttype.hpp"
+#include "kucoin-schema.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetary-amount-vector.hpp"
@@ -46,24 +46,19 @@
 namespace cct::api {
 namespace {
 
-json::container PublicQuery(CurlHandle& curlHandle, std::string_view endpoint,
-                            const CurlPostData& curlPostData = CurlPostData()) {
+template <class T>
+T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, curlPostData));
 
-  json::container baseRet = requestRetry.queryJson(endpoint, [](const json::container& jsonResponse) {
-    const auto errorIt = jsonResponse.find("code");
-    if (errorIt != jsonResponse.end() && errorIt->get<std::string_view>() != "200000") {
-      log::warn("Full Kucoin error ({}): '{}'", errorIt->get<std::string_view>(), jsonResponse.dump());
-      return RequestRetry::Status::kResponseError;
+  return requestRetry.query<T>(endpoint, [](const T& response) {
+    if constexpr (amc::is_detected<schema::kucoin::has_code_t, T>::value) {
+      if (response.code != KucoinPublic::kStatusCodeOK) {
+        log::warn("Kucoin error: '{}'", response.code);
+        return RequestRetry::Status::kResponseError;
+      }
     }
     return RequestRetry::Status::kResponseOK;
   });
-  json::container ret;
-  const auto dataIt = baseRet.find("data");
-  if (dataIt != baseRet.end()) {
-    ret.swap(*dataIt);
-  }
-  return ret;
 }
 
 }  // namespace
@@ -94,43 +89,62 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
                    _curlHandle) {}
 
 bool KucoinPublic::healthCheck() {
-  json::container result =
-      json::container::parse(_curlHandle.query("/api/v1/status", CurlOptions(HttpRequestType::kGet)));
-  auto dataIt = result.find("data");
-  if (dataIt == result.end()) {
-    log::error("Unexpected answer from {} status: {}", name(), result.dump());
-    return false;
-  }
-  auto statusIt = dataIt->find("status");
-  if (statusIt == dataIt->end()) {
-    log::error("Unexpected answer from {} status: {}", name(), dataIt->dump());
-    return false;
-  }
-  std::string_view statusStr = statusIt->get<std::string_view>();
-  log::info("{} status: {}", name(), statusStr);
-  return statusStr == "open";
+  auto result = PublicQuery<schema::kucoin::V1Status>(_curlHandle, "/api/v1/status");
+  log::info("{} status: {}, msg: {}", name(), result.data.status, result.data.msg);
+  return result.data.status == "open";
 }
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
-  json::container result = PublicQuery(_curlHandle, "/api/v1/currencies");
+  const auto result = PublicQuery<schema::kucoin::V3Currencies>(_curlHandle, "/api/v3/currencies");
   vector<CurrencyInfo> currencyInfos;
-  currencyInfos.reserve(static_cast<uint32_t>(result.size()));
-  for (const json::container& curDetail : result) {
-    std::string_view curStr = curDetail["currency"].get<std::string_view>();
+  currencyInfos.reserve(static_cast<uint32_t>(result.data.size()));
+  for (const auto& curDetail : result.data) {
+    std::string_view curStr = curDetail.currency;
+
+    if (curStr.size() > CurrencyCode::kMaxLen) {
+      log::warn("Discard {} as currency code is too long", curStr);
+      continue;
+    }
+
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
-    CurrencyExchange currencyExchange(
-        cur, curStr, curStr,
-        curDetail["isDepositEnabled"].get<bool>() ? CurrencyExchange::Deposit::kAvailable
-                                                  : CurrencyExchange::Deposit::kUnavailable,
-        curDetail["isWithdrawEnabled"].get<bool>() ? CurrencyExchange::Withdraw::kAvailable
-                                                   : CurrencyExchange::Withdraw::kUnavailable,
-        _commonApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
 
-    log::debug("Retrieved Kucoin Currency {}", currencyExchange.str());
+    if (!curDetail.chains) {
+      CurrencyExchange currencyExchange(
+          cur, curStr, curStr, CurrencyExchange::Deposit::kUnavailable, CurrencyExchange::Withdraw::kUnavailable,
+          _commonApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
 
-    currencyInfos.emplace_back(std::move(currencyExchange),
-                               MonetaryAmount(curDetail["withdrawalMinSize"].get<std::string_view>(), cur),
-                               MonetaryAmount(curDetail["withdrawalMinFee"].get<std::string_view>(), cur));
+      log::debug("Retrieved Kucoin Currency {}", currencyExchange.str());
+
+      currencyInfos.emplace_back(std::move(currencyExchange), MonetaryAmount(0, cur), MonetaryAmount(0, cur));
+      continue;
+    }
+
+    bool foundChain = false;
+    for (const auto& curChain : *curDetail.chains) {
+      if (curDetail.chains->size() > 1U && curChain.chainName != curStr &&
+          (curChain.chainId.size() > CurrencyCode::kMaxLen || CurrencyCode(curChain.chainId) != cur)) {
+        log::debug("Discard {} as chain name is different from currency code", curStr);
+        continue;
+      }
+
+      foundChain = true;
+
+      CurrencyExchange currencyExchange(
+          cur, curStr, curStr,
+          curChain.isDepositEnabled ? CurrencyExchange::Deposit::kAvailable : CurrencyExchange::Deposit::kUnavailable,
+          curChain.isWithdrawEnabled ? CurrencyExchange::Withdraw::kAvailable
+                                     : CurrencyExchange::Withdraw::kUnavailable,
+          _commonApi.queryIsCurrencyCodeFiat(cur) ? CurrencyExchange::Type::kFiat : CurrencyExchange::Type::kCrypto);
+
+      log::debug("Retrieved Kucoin Currency {}", currencyExchange.str());
+
+      currencyInfos.emplace_back(std::move(currencyExchange), MonetaryAmount(curChain.withdrawalMinSize, cur),
+                                 MonetaryAmount(curChain.withdrawalMinFee, cur));
+      break;
+    }
+    if (!foundChain) {
+      log::debug("Discard {} as no chain name matches currency code", curStr);
+    }
   }
   log::info("Retrieved {} Kucoin currencies", currencyInfos.size());
   return CurrencyInfoSet(std::move(currencyInfos));
@@ -145,19 +159,19 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
 }
 
 std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
-  json::container result = PublicQuery(_curlHandle, "/api/v1/symbols");
+  auto result = PublicQuery<schema::kucoin::V2Symbols>(_curlHandle, "/api/v2/symbols");
 
   MarketSet markets;
   MarketInfoMap marketInfoMap;
 
-  markets.reserve(static_cast<MarketSet::size_type>(result.size()));
+  markets.reserve(static_cast<MarketSet::size_type>(result.data.size()));
 
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
-  for (const json::container& marketDetails : result) {
-    const std::string_view baseAsset = marketDetails["baseCurrency"].get<std::string_view>();
-    const std::string_view quoteAsset = marketDetails["quoteCurrency"].get<std::string_view>();
-    const bool isEnabled = marketDetails["enableTrading"].get<bool>();
+  for (const auto& marketDetails : result.data) {
+    const std::string_view baseAsset = marketDetails.baseCurrency;
+    const std::string_view quoteAsset = marketDetails.quoteCurrency;
+    const bool isEnabled = marketDetails.enableTrading;
     if (!isEnabled) {
       log::trace("Trading is disabled for market {}-{}", baseAsset, quoteAsset);
       continue;
@@ -166,7 +180,8 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
       log::trace("Discard {}-{} excluded by config", baseAsset, quoteAsset);
       continue;
     }
-    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
+    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen ||
+        marketDetails.feeCurrency.size() > CurrencyCode::kMaxLen) {
       log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
@@ -179,13 +194,13 @@ std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::Mar
 
     MarketInfo& marketInfo = marketInfoMap[std::move(mk)];
 
-    marketInfo.baseMinSize = MonetaryAmount(marketDetails["baseMinSize"].get<std::string_view>(), base);
-    marketInfo.quoteMinSize = MonetaryAmount(marketDetails["quoteMinSize"].get<std::string_view>(), quote);
-    marketInfo.baseMaxSize = MonetaryAmount(marketDetails["baseMaxSize"].get<std::string_view>(), base);
-    marketInfo.quoteMaxSize = MonetaryAmount(marketDetails["quoteMaxSize"].get<std::string_view>(), quote);
-    marketInfo.baseIncrement = MonetaryAmount(marketDetails["baseIncrement"].get<std::string_view>(), base);
-    marketInfo.priceIncrement = MonetaryAmount(marketDetails["priceIncrement"].get<std::string_view>(), quote);
-    marketInfo.feeCurrency = CurrencyCode(marketDetails["feeCurrency"].get<std::string_view>());
+    marketInfo.baseMinSize = MonetaryAmount(marketDetails.baseMinSize, base);
+    marketInfo.quoteMinSize = MonetaryAmount(marketDetails.quoteMinSize, quote);
+    marketInfo.baseMaxSize = MonetaryAmount(marketDetails.baseMaxSize, base);
+    marketInfo.quoteMaxSize = MonetaryAmount(marketDetails.quoteMaxSize, quote);
+    marketInfo.baseIncrement = MonetaryAmount(marketDetails.baseIncrement, base);
+    marketInfo.priceIncrement = MonetaryAmount(marketDetails.priceIncrement, quote);
+    marketInfo.feeCurrency = CurrencyCode(marketDetails.feeCurrency);
   }
   log::debug("Retrieved {} markets for kucoin", markets.size());
   return {std::move(markets), std::move(marketInfoMap)};
@@ -216,30 +231,30 @@ std::optional<MonetaryAmount> KucoinPublic::queryWithdrawalFee(CurrencyCode curr
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  const json::container data = PublicQuery(_curlHandle, "/api/v1/market/allTickers");
+  const auto data = PublicQuery<schema::kucoin::V1AllTickers>(_curlHandle, "/api/v1/market/allTickers");
   const auto time = Clock::now();
-  const auto tickerIt = data.find("ticker");
-  if (tickerIt == data.end()) {
-    return ret;
-  }
-  for (const json::container& tickerDetails : *tickerIt) {
-    Market mk(tickerDetails["symbol"].get<std::string_view>(), '-');
+  for (const auto& ticker : data.data.ticker) {
+    if (ticker.symbol.size() > Market::kMaxLen) {
+      log::debug("Discarding {} because of invalid ticker size", ticker.symbol);
+      continue;
+    }
+    Market mk(ticker.symbol, '-');
     if (!markets.contains(mk)) {
       log::debug("Market {} is not present", mk);
       continue;
     }
-    MonetaryAmount askPri(tickerDetails["sell"].get<std::string_view>(), mk.quote());
+    MonetaryAmount askPri(ticker.sell.value_or(MonetaryAmount()), mk.quote());
     if (askPri == 0) {
       log::debug("Discarding {} because of invalid ask price {}", mk, askPri);
       continue;
     }
-    MonetaryAmount bidPri(tickerDetails["buy"].get<std::string_view>(), mk.quote());
+    MonetaryAmount bidPri(ticker.buy.value_or(MonetaryAmount()), mk.quote());
     if (bidPri == 0) {
       log::debug("Discarding {} because of invalid bid price {}", mk, bidPri);
       continue;
     }
     // There is no volume in the response, we need to emulate it, based on the 24h volume
-    MonetaryAmount dayVolume(tickerDetails["vol"].get<std::string_view>(), mk.base());
+    MonetaryAmount dayVolume(ticker.vol.value_or(MonetaryAmount()), mk.base());
     if (dayVolume == 0) {
       log::debug("Discarding {} because of invalid volume {}", mk, dayVolume);
       continue;
@@ -280,28 +295,30 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
   MarketOrderBookLines orderBookLines;
 
-  const json::container asksAndBids = PublicQuery(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const auto asksAndBids = PublicQuery<schema::kucoin::V1PartOrderBook>(_curlHandle, endpoint, GetSymbolPostData(mk));
   const auto nowTime = Clock::now();
-  const auto asksIt = asksAndBids.find("asks");
-  const auto bidsIt = asksAndBids.find("bids");
-  if (asksIt != asksAndBids.end() && bidsIt != asksAndBids.end()) {
-    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksIt->size()), depth) +
-                           std::min(static_cast<decltype(depth)>(bidsIt->size()), depth));
+
+  if (asksAndBids.data.asks.size() == asksAndBids.data.bids.size()) {
+    orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksAndBids.data.asks.size()), depth) +
+                           std::min(static_cast<decltype(depth)>(asksAndBids.data.bids.size()), depth));
 
     // Reverse iterate as bids are received in descending order
-    for (const auto& val : *bidsIt | std::views::reverse | std::ranges::views::take(depth)) {
-      MonetaryAmount price(val[0].get<std::string_view>(), mk.quote());
-      MonetaryAmount amount(val[1].get<std::string_view>(), mk.base());
+    for (const auto& val : asksAndBids.data.bids | std::views::reverse | std::ranges::views::take(depth)) {
+      MonetaryAmount price(val[0], mk.quote());
+      MonetaryAmount amount(val[1], mk.base());
 
       orderBookLines.pushBid(amount, price);
     }
 
-    for (const auto& val : *asksIt | std::ranges::views::take(depth)) {
-      MonetaryAmount price(val[0].get<std::string_view>(), mk.quote());
-      MonetaryAmount amount(val[1].get<std::string_view>(), mk.base());
+    for (const auto& val : asksAndBids.data.asks | std::ranges::views::take(depth)) {
+      MonetaryAmount price(val[0], mk.quote());
+      MonetaryAmount amount(val[1], mk.base());
 
       orderBookLines.pushAsk(amount, price);
     }
+  } else {
+    log::error("Unexpected Kucoin order book response - number of asks != number of bids {} != {}",
+               asksAndBids.data.asks.size(), asksAndBids.data.bids.size());
   }
 
   return MarketOrderBook(nowTime, mk, orderBookLines);
@@ -341,10 +358,9 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
 }
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
-  const json::container result = PublicQuery(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
-  const auto volIt = result.find("vol");
-  const std::string_view amountStr = volIt == result.end() ? std::string_view() : volIt->get<std::string_view>();
-  return {amountStr, mk.base()};
+  const auto result =
+      PublicQuery<schema::kucoin::V1MarketStats>(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
+  return {result.data.vol, mk.base()};
 }
 
 PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
@@ -353,18 +369,21 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
     log::warn("Maximum number of last trades to query from {} is {}", name(), kMaxNbLastTrades);
   }
 
-  json::container result = PublicQuery(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
+  auto result =
+      PublicQuery<schema::kucoin::V1MarketHistories>(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
 
   PublicTradeVector ret;
-  ret.reserve(std::min(static_cast<PublicTradeVector::size_type>(result.size()),
+  ret.reserve(std::min(static_cast<PublicTradeVector::size_type>(result.data.size()),
                        static_cast<PublicTradeVector::size_type>(nbTrades)));
 
-  for (const json::container& detail : result | std::ranges::views::take(nbTrades)) {
-    const MonetaryAmount amount(detail["size"].get<std::string_view>(), mk.base());
-    const MonetaryAmount price(detail["price"].get<std::string_view>(), mk.quote());
+  for (const auto& detail : result.data | std::ranges::views::take(nbTrades)) {
+    const MonetaryAmount amount(detail.size, mk.base());
+    const MonetaryAmount price(detail.price, mk.quote());
     // time is in nanoseconds
-    const int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail["time"].get<uintmax_t>() / 1000000UL);
-    const TradeSide tradeSide = detail["side"].get<std::string_view>() == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+    const int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail.time / 1000000UL);
+    const TradeSide tradeSide = detail.side == schema::kucoin::V1MarketHistories::V1MarketHistory::Side::buy
+                                    ? TradeSide::kBuy
+                                    : TradeSide::kSell;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }
@@ -373,9 +392,8 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
-  const json::container result = PublicQuery(_curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
-  const auto priceIt = result.find("price");
-  const std::string_view amountStr = priceIt == result.end() ? std::string_view() : priceIt->get<std::string_view>();
-  return {amountStr, mk.quote()};
+  const auto result = PublicQuery<schema::kucoin::V1MarketOrderbookLevel1>(
+      _curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
+  return {result.data.price, mk.quote()};
 }
 }  // namespace cct::api

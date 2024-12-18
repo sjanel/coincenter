@@ -66,8 +66,9 @@ BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanc
     computeEquiCurrencyAmounts(balancePortfolio, equiCurrency);
   }
 
-  log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
-
+  if (!balancePortfolio.empty()) {
+    log::info("Retrieved {} balance for {} assets", exchangeName(), balancePortfolio.size());
+  }
   return balancePortfolio;
 }
 
