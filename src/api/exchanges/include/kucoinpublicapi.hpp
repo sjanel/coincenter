@@ -27,6 +27,8 @@ class KucoinPublic : public ExchangePublic {
  public:
   static constexpr std::string_view kUrlBase = "https://api.kucoin.com";
 
+  static constexpr std::string_view kStatusCodeOK = "200000";
+
   static constexpr int kKucoinStandardOrderBookDefaultDepth = 20;
 
   KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI);

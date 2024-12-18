@@ -67,8 +67,7 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
 
   string paramsStr(requestTypeStr.size() + urlBaseWithoutHttps.size() + method.size() + postDataStr.size() + 3U, '\n');
 
-  auto it = paramsStr.begin();
-  it = std::ranges::copy(requestTypeStr, it).out;
+  auto it = std::ranges::copy(requestTypeStr, paramsStr.data()).out;
   it = std::ranges::copy(urlBaseWithoutHttps, it + 1).out;
   it = std::ranges::copy(method, it + 1).out;
 
