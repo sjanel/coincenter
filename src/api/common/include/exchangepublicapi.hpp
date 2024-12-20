@@ -211,8 +211,6 @@ class ExchangePublic : public CacheFileUpdatorInterface {
 
   PermanentCurlOptions::Builder permanentCurlOptionsBuilder() const;
 
-  friend class ExchangePrivate;
-
   ExchangeNameEnum _exchangeNameEnum;
   CachedResultVault _cachedResultVault;
   FiatConverter &_fiatConverter;
@@ -224,6 +222,8 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   std::recursive_mutex _publicRequestsMutex;
 
  private:
+  friend class ExchangePrivate;
+
   AbstractMarketDataSerializer &getMarketDataSerializer();
 };
 }  // namespace api

@@ -19,7 +19,7 @@ class CurrencyExchange {
 
   CurrencyExchange() noexcept = default;
 
-  /// Constructs a CurrencyExchange with a standard code, with unknown withdrawal / deposit statuses
+  /// Constructs a CurrencyExchange with a standard code, with unknown (disabled) withdrawal / deposit statuses
   CurrencyExchange(CurrencyCode standardCode)
       : _standardCode(standardCode), _exchangeCode(standardCode), _altCode(standardCode) {}
 

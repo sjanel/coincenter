@@ -21,6 +21,7 @@
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
 #include "curlpostdata.hpp"
+#include "currency-chain-picker.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -132,21 +133,22 @@ schema::huobi::V2ReferenceCurrency HuobiPublic::TradableCurrenciesFunc::operator
   return PublicQuery<schema::huobi::V2ReferenceCurrency>(_curlHandle, "/v2/reference/currencies");
 }
 
-bool HuobiPublic::ShouldDiscardChain(CurrencyCode cur,
-                                     const schema::huobi::V2ReferenceCurrencyDetails::Chain& chainDetail) {
-  if (!cur.iequal(chainDetail.chain) && !cur.iequal(chainDetail.displayName)) {
-    log::debug("Discarding chain '{}' as not supported by {}", chainDetail.chain, cur);
-    return true;
-  }
-  return false;
+CurrencyChainPicker<schema::huobi::V2ReferenceCurrencyDetails::Chain> CreateCurrencyChainPicker(
+    const schema::ExchangeAssetConfig& assetConfig) {
+  return CurrencyChainPicker<schema::huobi::V2ReferenceCurrencyDetails::Chain>(
+      assetConfig, [](const schema::huobi::V2ReferenceCurrencyDetails::Chain& chain) -> std::string_view {
+        return chain.displayName;
+      });
 }
 
 HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
   WithdrawParams withdrawParams;
+  const auto& assetConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum()).asset;
+  const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curDetail.currency))) {
       for (const auto& chainDetail : curDetail.chains) {
-        if (ShouldDiscardChain(cur, chainDetail)) {
+        if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
           continue;
         }
 
@@ -165,6 +167,8 @@ HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
 
 CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
   CurrencyExchangeVector currencies;
+  const auto& assetConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum()).asset;
+  const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view statusStr = curDetail.instStatus;
     std::string_view curStr = curDetail.currency;
@@ -175,7 +179,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
     bool foundChainWithSameName = false;
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     for (const auto& chainDetail : curDetail.chains) {
-      if (ShouldDiscardChain(cur, chainDetail)) {
+      if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
         continue;
       }
       auto depositAllowed = chainDetail.depositStatus == "allowed" ? CurrencyExchange::Deposit::kAvailable
@@ -265,12 +269,14 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
 
 MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
   MonetaryAmountVector fees;
+  const auto& assetConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum()).asset;
+  const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view curStr = curDetail.currency;
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     bool foundChainWithSameName = false;
     for (const auto& chainDetail : curDetail.chains) {
-      if (ShouldDiscardChain(cur, chainDetail)) {
+      if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
         continue;
       }
       std::string_view withdrawFeeTypeStr = chainDetail.withdrawFeeType;
