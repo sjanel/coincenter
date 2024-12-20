@@ -49,8 +49,7 @@ string CurrencyExchange::str() const {
 }
 
 std::ostream &operator<<(std::ostream &os, const CurrencyExchange &currencyExchange) {
-  os << currencyExchange.str();
-  return os;
+  return os << currencyExchange.str();
 }
 
 }  // namespace cct

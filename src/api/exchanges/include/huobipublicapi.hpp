@@ -136,8 +136,6 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
-  static bool ShouldDiscardChain(CurrencyCode cur, const schema::huobi::V2ReferenceCurrencyDetails::Chain& chainDetail);
-
   CurlHandle _curlHandle;
   CurlHandle _healthCheckCurlHandle;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;

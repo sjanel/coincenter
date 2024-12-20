@@ -38,7 +38,7 @@ BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetri
 schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFunc::operator()() {
   RequestRetry requestRetry(_curlHandle, CurlOptions(HttpRequestType::kGet));
 
-  schema::binance::NetworkCoinAll ret = requestRetry.query<schema::binance::NetworkCoinAll>(
+  auto ret = requestRetry.query<schema::binance::NetworkCoinAll>(
       "/bapi/capital/v1/public/capital/getNetworkCoinAll", [](const auto& response) {
         static constexpr std::string_view kExpectedCode = "000000";
         if (response.code != kExpectedCode) {

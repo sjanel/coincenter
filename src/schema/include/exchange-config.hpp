@@ -46,8 +46,8 @@ class AllExchangeConfigs {
 
   explicit AllExchangeConfigs(const LoadConfiguration &loadConfiguration);
 
-  const ExchangeConfig &operator[](ExchangeNameEnum exchangeName) const {
-    return _exchangeConfigs[static_cast<int>(exchangeName)];
+  const ExchangeConfig &operator[](ExchangeNameEnum exchangeNameEnum) const {
+    return _exchangeConfigs[static_cast<int>(exchangeNameEnum)];
   }
 
   void mergeWith(const details::AllExchangeConfigsOptional &other);
