@@ -17,7 +17,6 @@
 #include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
@@ -46,12 +45,14 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "tradeside.hpp"
+#include "upbit-schema.hpp"
 #include "upbitpublicapi.hpp"
 #include "wallet.hpp"
 #include "withdraw.hpp"
@@ -65,46 +66,45 @@ namespace {
 
 enum class IfError : int8_t { kThrow, kNoThrow };
 
-template <class CurlPostDataT = CurlPostData>
-json::container PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
-                             std::string_view endpoint, CurlPostDataT&& curlPostData = CurlPostData(),
-                             IfError ifError = IfError::kThrow) {
-  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
-
+string ComputeAuthToken(const APIKey& apiKey, const CurlPostData& postData) {
   auto jsonWebToken = jwt::create()
                           .set_type("JWT")
                           .set_payload_claim("access_key", jwt::claim(std::string(apiKey.key())))
                           .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpochInMs())));
 
-  if (!opts.postData().empty()) {
-    const auto queryHash = ssl::Sha512Digest(opts.postData().str());
+  if (!postData.empty()) {
+    const auto queryHash = ssl::Sha512Digest(postData.str());
 
     jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash.data(), queryHash.size())))
         .set_payload_claim("query_hash_alg", jwt::claim(std::string("SHA512")));
   }
 
   // hs256 does not accept std::string_view, we need a copy...
-  auto token = jsonWebToken.sign(jwt::algorithm::hs256{std::string(apiKey.privateKey())});
-  string authStr("Bearer ");
-  authStr.append(token.begin(), token.end());
+  const auto token = jsonWebToken.sign(jwt::algorithm::hs256{std::string(apiKey.privateKey())});
 
-  opts.mutableHttpHeaders().emplace_back("Authorization", authStr);
+  static constexpr std::string_view kBearerPrefix = "Bearer";
+  string authStr(kBearerPrefix.size() + 1U + token.size(), ' ');
+  auto it = std::ranges::copy(kBearerPrefix, authStr.begin()).out;
+  std::ranges::copy(token, it + 1);
+  return authStr;
+}
 
-  json::container ret = json::container::parse(curlHandle.query(endpoint, opts));
-  if (ifError == IfError::kThrow) {
-    auto errorIt = ret.find("error");
-    if (errorIt != ret.end()) {
-      log::error("Full Upbit error: '{}'", ret.dump());
-      if (errorIt->contains("name")) {
-        throw exception(std::move((*errorIt)["name"].get_ref<string&>()));
-      }
-      if (errorIt->contains("message")) {
-        throw exception(std::move((*errorIt)["message"].get_ref<string&>()));
-      }
-      throw exception("Unknown Upbit API error message");
-    }
-  }
-  return ret;
+template <class T, class CurlPostDataT = CurlPostData>
+std::pair<T, schema::upbit::Error> PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey,
+                                                HttpRequestType requestType, std::string_view endpoint,
+                                                CurlPostDataT&& curlPostData = CurlPostData(),
+                                                int16_t nbMaxRetries = 3) {
+  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
+
+  opts.mutableHttpHeaders().emplace_back("Authorization", ComputeAuthToken(apiKey, opts.postData()));
+
+  RequestRetry requestRetry(
+      curlHandle, std::move(opts),
+      QueryRetryPolicy{.initialRetryDelay = seconds{1}, .exponentialBackoff = 1.5, .nbMaxRetries = nbMaxRetries});
+
+  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint, [&apiKey](CurlOptions& opts) {
+    opts.mutableHttpHeaders().set_back("Authorization", ComputeAuthToken(apiKey, opts.postData()));
+  });
 }
 }  // namespace
 
@@ -126,34 +126,46 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
-  json::container ret =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys", CurlPostData(), IfError::kNoThrow);
-  return !ret.empty() && ret.find("error") == ret.end();
+  auto ret = PrivateQuery<schema::upbit::V1ApiKeys>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys").first;
+  return !ret.empty();
 }
 
 CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   CurrencyExchangeVector currencies;
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet");
-  for (const json::container& curDetails : result) {
-    CurrencyCode cur(curDetails["currency"].get<std::string_view>());
-    CurrencyCode networkName(curDetails["net_type"].get<std::string_view>());
+  auto result =
+      PrivateQuery<schema::upbit::V1StatusWallets>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet")
+          .first;
+  for (const auto& curDetails : result) {
+    if (curDetails.currency.size() > CurrencyCode::kMaxLen) {
+      log::warn("Currency code '{}' is too long, do not consider it in the currencies", curDetails.currency);
+      continue;
+    }
+    CurrencyCode cur(curDetails.currency);
+    CurrencyCode networkName(curDetails.net_type);
     if (cur != networkName) {
       log::debug("Forgive about {}-{} as net type is not the main one", cur, networkName);
       continue;
     }
     if (UpbitPublic::CheckCurrencyCode(cur, excludedCurrencies)) {
-      std::string_view walletState = curDetails["wallet_state"].get<std::string_view>();
       CurrencyExchange::Withdraw withdrawStatus = CurrencyExchange::Withdraw::kUnavailable;
       CurrencyExchange::Deposit depositStatus = CurrencyExchange::Deposit::kUnavailable;
-      if (walletState == "working") {
-        withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
-        depositStatus = CurrencyExchange::Deposit::kAvailable;
-      } else if (walletState == "withdraw_only") {
-        withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
-      } else if (walletState == "deposit_only") {
-        depositStatus = CurrencyExchange::Deposit::kAvailable;
+
+      switch (curDetails.wallet_state) {
+        case schema::upbit::V1StatusWallet::WalletState::working:
+          withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
+          depositStatus = CurrencyExchange::Deposit::kAvailable;
+          break;
+        case schema::upbit::V1StatusWallet::WalletState::withdraw_only:
+          withdrawStatus = CurrencyExchange::Withdraw::kAvailable;
+          break;
+        case schema::upbit::V1StatusWallet::WalletState::deposit_only:
+          depositStatus = CurrencyExchange::Deposit::kAvailable;
+          break;
+        default:
+          break;
       }
+
       if (withdrawStatus == CurrencyExchange::Withdraw::kUnavailable) {
         log::debug("{} cannot be withdrawn from Upbit", cur);
       }
@@ -176,16 +188,20 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
   BalancePortfolio balancePortfolio;
 
-  json::container ret = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts");
+  auto ret = PrivateQuery<schema::upbit::V1Accounts>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts").first;
 
   balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(ret.size()));
 
-  for (const json::container& accountDetail : ret) {
-    const CurrencyCode currencyCode(accountDetail["currency"].get<std::string_view>());
-    MonetaryAmount availableAmount(accountDetail["balance"].get<std::string_view>(), currencyCode);
+  for (const auto& accountDetail : ret) {
+    if (accountDetail.currency.size() > CurrencyCode::kMaxLen) {
+      log::warn("Currency code '{}' is too long for Upbit, do not consider it in the balance", accountDetail.currency);
+      continue;
+    }
+    const CurrencyCode currencyCode(accountDetail.currency);
+    MonetaryAmount availableAmount(accountDetail.balance, currencyCode);
 
     if (withBalanceInUse) {
-      availableAmount += MonetaryAmount(accountDetail["locked"].get<std::string_view>(), currencyCode);
+      availableAmount += MonetaryAmount(accountDetail.locked, currencyCode);
     }
 
     balancePortfolio += availableAmount;
@@ -195,55 +211,41 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurlPostData postData{{"currency", currencyCode.str()}, {"net_type", currencyCode.str()}};
-  json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address",
-                                        postData, IfError::kNoThrow);
+  auto [result, error] = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                                           "/v1/deposits/coin_address", postData, 1);
   bool generateDepositAddressNeeded = false;
-  auto errorIt = result.find("error");
-  if (errorIt != result.end()) {
-    std::string_view name = (*errorIt)["name"].get<std::string_view>();
-    std::string_view msg = (*errorIt)["message"].get<std::string_view>();
-    if (name == "coin_address_not_found") {
+  if (std::holds_alternative<string>(error.error.name)) {
+    std::string_view msg = error.error.message;
+    if (std::get<string>(error.error.name) == "coin_address_not_found") {
       log::warn("No deposit address found for {}, generating a new one", currencyCode);
       generateDepositAddressNeeded = true;
     } else {
-      throw exception("Upbit error: {}, msg: {}", name, msg);
+      throw exception("Upbit error: {}, msg: {}", std::get<string>(error.error.name), msg);
     }
   }
   if (generateDepositAddressNeeded) {
-    json::container genCoinAddressResult =
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/deposits/generate_coin_address", postData);
-    if (genCoinAddressResult.contains("success")) {
+    auto genCoinAddressResult =
+        PrivateQuery<schema::upbit::V1DepositsGenerateCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kPost,
+                                                                   "/v1/deposits/generate_coin_address", postData)
+            .first;
+    if (genCoinAddressResult.success) {
       log::info("Successfully generated address");
+    } else {
+      log::error("Failed to generate address (or unexpected answer), message: {}", genCoinAddressResult.message);
     }
-    seconds sleepingTime(1);
-    static constexpr int kNbMaxRetries = 15;
-    int nbRetries = 0;
-    do {
-      if (nbRetries > 0) {
-        log::info("Waiting {} for address to be generated...", DurationToString(sleepingTime));
-      }
-      std::this_thread::sleep_for(sleepingTime);
-      result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits/coin_address", postData);
-      sleepingTime += seconds(1);
-      ++nbRetries;
-    } while (nbRetries < kNbMaxRetries && result["deposit_address"].is_null());
+    log::info("Waiting for address to be generated...");
+    result = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kGet,
+                                                               "/v1/deposits/coin_address", postData, 10)
+                 .first;
   }
-  auto addressIt = result.find("deposit_address");
-  if (addressIt == result.end() || addressIt->is_null()) {
-    throw exception("Deposit address for {} is undefined", currencyCode);
-  }
-  std::string_view tag;
-  auto secondaryAddressIt = result.find("secondary_address");
-  if (secondaryAddressIt != result.end() && !secondaryAddressIt->is_null()) {
-    tag = secondaryAddressIt->get<std::string_view>();
-  }
+  std::string_view tag = result.secondary_address.value_or("");
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet =
       coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
   WalletCheck walletCheck(coincenterInfo.dataDir(), doCheckWallet);
   Wallet wallet(ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()), currencyCode,
-                std::move(addressIt->get_ref<string&>()), tag, walletCheck, _apiKey.accountOwner());
+                std::move(result.deposit_address), tag, walletCheck, _apiKey.accountOwner());
   log::info("Retrieved {}", wallet);
   return wallet;
 }
@@ -256,7 +258,19 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
   int page = 0;
 
-  CurlPostData params{{"page", page}, {"state", std::is_same_v<OrderType, OpenedOrder> ? "wait" : "done"}};
+  static constexpr bool kIsOpenedOrder = std::is_same_v<OrderType, OpenedOrder>;
+
+  CurlPostData params;
+
+  static constexpr int kMaxNbOrdersPerPage = kIsOpenedOrder ? 100 : 1000;
+  static constexpr auto kNbMaxPagesToRetrieve = kIsOpenedOrder ? 10 : 1;
+
+  if constexpr (kIsOpenedOrder) {
+    params.emplace_back("page", page);
+  } else {
+    params.emplace_back("state", "done");
+    params.emplace_back("limit", kMaxNbOrdersPerPage);
+  }
 
   if (ordersConstraints.isCurDefined()) {
     MarketSet markets;
@@ -268,63 +282,79 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
     }
   }
 
-  static constexpr auto kMaxNbOrdersPerPage = 100;
-  static constexpr auto kNbMaxPagesToRetrieve = 10;
-
   for (auto nbOrdersRetrieved = kMaxNbOrdersPerPage;
        nbOrdersRetrieved == kMaxNbOrdersPerPage && page < kNbMaxPagesToRetrieve;) {
-    params.set("page", ++page);
+    if constexpr (kIsOpenedOrder) {
+      params.set("page", ++page);
+    }
 
-    json::container data = PrivateQuery(curlHandle, apiKey, HttpRequestType::kGet, "/v1/orders", params);
+    static constexpr std::string_view kOpenedOrdersEndpoint = "/v1/orders/open";
+    static constexpr std::string_view kClosedOrdersEndpoint = "/v1/orders/closed";
+
+    std::string_view endpoint = kIsOpenedOrder ? kOpenedOrdersEndpoint : kClosedOrdersEndpoint;
+
+    auto data =
+        PrivateQuery<schema::upbit::V1Orders>(curlHandle, apiKey, HttpRequestType::kGet, endpoint, params).first;
 
     nbOrdersRetrieved = static_cast<decltype(nbOrdersRetrieved)>(data.size());
 
-    for (json::container& orderDetails : data) {
-      const auto marketStr = orderDetails["market"].get<std::string_view>();
+    for (auto& orderDetails : data) {
+      const std::string_view marketStr = orderDetails.market;
       const auto dashPos = marketStr.find('-');
 
       if (dashPos == std::string_view::npos) {
-        throw exception("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
+        log::error("Expected a dash in {} for {} orders query", marketStr, exchangePublic.name());
+        continue;
       }
 
-      const CurrencyCode priceCur = marketStr.substr(0U, dashPos);
-      const CurrencyCode volumeCur = marketStr.substr(dashPos + 1U);
+      std::string_view priceCurStr = marketStr.substr(0U, dashPos);
+      if (priceCurStr.size() > CurrencyCode::kMaxLen) {
+        log::warn("Currency code '{}' is too long for {}, do not consider it in the orders", priceCurStr,
+                  exchangePublic.name());
+        continue;
+      }
+      std::string_view volumeCurStr = marketStr.substr(dashPos + 1U);
+      if (volumeCurStr.size() > CurrencyCode::kMaxLen) {
+        log::warn("Currency code '{}' is too long for {}, do not consider it in the orders", volumeCurStr,
+                  exchangePublic.name());
+        continue;
+      }
+
+      const CurrencyCode priceCur = priceCurStr;
+      const CurrencyCode volumeCur = volumeCurStr;
 
       if (!ordersConstraints.validateCur(volumeCur, priceCur)) {
         continue;
       }
 
       // 'created_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      const auto placedTime =
-          StringToTime(orderDetails["created_at"].get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      const auto placedTime = StringToTime(orderDetails.created_at, kTimeYearToSecondTSeparatedFormat);
       if (!ordersConstraints.validatePlacedTime(placedTime)) {
         continue;
       }
 
-      string id = std::move(orderDetails["uuid"].get_ref<string&>());
-      if (!ordersConstraints.validateId(id)) {
+      if (!ordersConstraints.validateId(orderDetails.uuid)) {
         continue;
       }
 
-      const auto priceIt = orderDetails.find("price");
-      if (priceIt == orderDetails.end()) {
+      if (orderDetails.price.isDefault()) {
         // Some old orders may have no price field set. In this case, just return what we have as the older orders will
         // probably not be filled as well.
         break;
       }
 
-      const MonetaryAmount matchedVolume(orderDetails["executed_volume"].get<std::string_view>(), volumeCur);
-      const MonetaryAmount price(priceIt->get<std::string_view>(), priceCur);
-      const TradeSide side = orderDetails["side"].get<std::string_view>() == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+      const MonetaryAmount matchedVolume(orderDetails.executed_volume, volumeCur);
+      const MonetaryAmount price(orderDetails.price, priceCur);
+      const TradeSide side = orderDetails.side == "bid" ? TradeSide::kBuy : TradeSide::kSell;
 
-      if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
-        const MonetaryAmount remainingVolume(orderDetails["remaining_volume"].get<std::string_view>(), volumeCur);
+      if constexpr (kIsOpenedOrder) {
+        const MonetaryAmount remainingVolume(orderDetails.remaining_volume, volumeCur);
 
-        orderVector.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
+        orderVector.emplace_back(std::move(orderDetails.uuid), matchedVolume, remainingVolume, price, placedTime, side);
       } else if constexpr (std::is_same_v<OrderType, ClosedOrder>) {
         const auto matchedTime = placedTime;
 
-        orderVector.emplace_back(std::move(id), matchedVolume, price, placedTime, matchedTime, side);
+        orderVector.emplace_back(std::move(orderDetails.uuid), matchedVolume, price, placedTime, matchedTime, side);
       } else {
         // Note: below ugly template lambda can be replaced with 'static_assert(false);' in C++23
         []<bool flag = false>() { static_assert(flag, "no match"); }();
@@ -368,18 +398,25 @@ int UpbitPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
 }
 
 namespace {
-Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
-  if (statusStr == "PROCESSING" || statusStr == "REFUNDING") {
-    return Deposit::Status::kProcessing;
+Deposit::Status DepositStatusFromStatus(schema::upbit::V1Deposit::State state) {
+  switch (state) {
+    case schema::upbit::V1Deposit::State::ACCEPTED:
+      return Deposit::Status::kSuccess;
+    case schema::upbit::V1Deposit::State::CANCELLED:
+      [[fallthrough]];
+    case schema::upbit::V1Deposit::State::REJECTED:
+      [[fallthrough]];
+    case schema::upbit::V1Deposit::State::TRAVEL_RULE_SUSPECTED:
+      [[fallthrough]];
+    case schema::upbit::V1Deposit::State::REFUNDED:
+      return Deposit::Status::kFailureOrRejected;
+    case schema::upbit::V1Deposit::State::PROCESSING:
+      [[fallthrough]];
+    case schema::upbit::V1Deposit::State::REFUNDING:
+      return Deposit::Status::kProcessing;
+    default:
+      throw exception("Unrecognized deposit status '{}' from Upbit", static_cast<int>(state));
   }
-  if (statusStr == "ACCEPTED") {
-    return Deposit::Status::kSuccess;
-  }
-  if (statusStr == "CANCELLED" || statusStr == "REJECTED" || statusStr == "TRAVEL_RULE_SUSPECTED" ||
-      statusStr == "REFUNDED") {
-    return Deposit::Status::kFailureOrRejected;
-  }
-  throw exception("Unrecognized deposit status '{}' from Upbit", statusStr);
 }
 
 constexpr int kNbResultsPerPage = 100;
@@ -402,31 +439,31 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
-    json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options);
+    auto result =
+        PrivateQuery<schema::upbit::V1Deposits>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options)
+            .first;
     if (deposits.empty()) {
       deposits.reserve(static_cast<Deposits::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
-    for (json::container& trx : result) {
-      CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
-      MonetaryAmount amount(trx["amount"].get<std::string_view>(), currencyCode);
-      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      auto timeIt = trx.find("done_at");
-      if (timeIt == trx.end() || timeIt->is_null()) {
-        // It can be the case for deposits that failed - take the start time instead of the end time in this case
-        timeIt = trx.find("created_at");
+    for (auto& trx : result) {
+      if (trx.currency.size() > CurrencyCode::kMaxLen) {
+        log::warn("Currency code '{}' is too long for Upbit, do not consider it in the deposits", trx.currency);
+        continue;
       }
+      CurrencyCode currencyCode(trx.currency);
+      MonetaryAmount amount(trx.amount, currencyCode);
 
-      TimePoint timestamp = StringToTime(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
+      // It can be empty for deposits that failed - take the start time instead of the end time in this case
+      std::string_view timeStr = trx.done_at.value_or(trx.created_at);
+
+      TimePoint timestamp = StringToTime(timeStr, kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateTime(timestamp)) {
         continue;
       }
-      string& id = trx["txid"].get_ref<string&>();
 
-      std::string_view statusStr = trx["state"].get<std::string_view>();
-      Deposit::Status status = DepositStatusFromStatusStr(statusStr);
-
-      deposits.emplace_back(std::move(id), timestamp, amount, status);
+      deposits.emplace_back(std::move(trx.txid), timestamp, amount, DepositStatusFromStatus(trx.state));
     }
   }
   DepositsSet depositsSet(std::move(deposits));
@@ -435,22 +472,25 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
 }
 
 namespace {
-Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
-  if (statusStr == "WAITING") {
-    return Withdraw::Status::kInitial;
+Withdraw::Status WithdrawStatusFromStatus(schema::upbit::V1Withdraw::State status) {
+  switch (status) {
+    case schema::upbit::V1Withdraw::State::WAITING:
+      return Withdraw::Status::kInitial;
+    case schema::upbit::V1Withdraw::State::PROCESSING:
+      return Withdraw::Status::kProcessing;
+    case schema::upbit::V1Withdraw::State::DONE:
+      return Withdraw::Status::kSuccess;
+    case schema::upbit::V1Withdraw::State::FAILED:
+      [[fallthrough]];
+    case schema::upbit::V1Withdraw::State::CANCELLED:
+      [[fallthrough]];
+    case schema::upbit::V1Withdraw::State::CANCELED:
+      [[fallthrough]];
+    case schema::upbit::V1Withdraw::State::REJECTED:
+      return Withdraw::Status::kFailureOrRejected;
+    default:
+      throw exception("Unrecognized withdraw status '{}' from Upbit", static_cast<int>(status));
   }
-  if (statusStr == "PROCESSING") {
-    return Withdraw::Status::kProcessing;
-  }
-  if (statusStr == "DONE") {
-    return Withdraw::Status::kSuccess;
-  }
-  // In earlier versions of Upbit API, 'CANCELED' was written with this typo.
-  // Let's support both spellings to avoid issues.
-  if (statusStr == "FAILED" || statusStr == "CANCELLED" || statusStr == "CANCELED" || statusStr == "REJECTED") {
-    return Withdraw::Status::kFailureOrRejected;
-  }
-  throw exception("Unrecognized withdraw status '{}' from Upbit", statusStr);
 }
 
 CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
@@ -475,31 +515,31 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
-    json::container result = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options);
+    auto result =
+        PrivateQuery<schema::upbit::V1Withdraws>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options)
+            .first;
     if (withdraws.empty()) {
       withdraws.reserve(static_cast<Withdraws::size_type>(result.size()));
     }
     nbResults = static_cast<int>(result.size());
-    for (json::container& trx : result) {
-      CurrencyCode currencyCode(trx["currency"].get<std::string_view>());
-      MonetaryAmount netEmittedAmount(trx["amount"].get<std::string_view>(), currencyCode);
-      MonetaryAmount withdrawFee(trx["fee"].get<std::string_view>(), currencyCode);
-      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
-      auto timeIt = trx.find("done_at");
-      if (timeIt == trx.end() || timeIt->is_null()) {
-        // It can be the case for withdraws that failed - take the start time instead of the end time in this case
-        timeIt = trx.find("created_at");
+    for (auto& trx : result) {
+      if (trx.currency.size() > CurrencyCode::kMaxLen) {
+        log::warn("Currency code '{}' is too long for Upbit, do not consider it in the withdraws", trx.currency);
+        continue;
       }
-      TimePoint timestamp = StringToTime(timeIt->get<std::string_view>(), kTimeYearToSecondTSeparatedFormat);
+      CurrencyCode currencyCode(trx.currency);
+      MonetaryAmount netEmittedAmount(trx.amount, currencyCode);
+      MonetaryAmount withdrawFee(trx.fee, currencyCode);
+      // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
+      // It can be empty for withdraws that failed - take the start time instead of the end time in this case
+      std::string_view timeStr = trx.done_at.value_or(trx.created_at);
+      TimePoint timestamp = StringToTime(timeStr, kTimeYearToSecondTSeparatedFormat);
       if (!withdrawsConstraints.validateTime(timestamp)) {
         continue;
       }
-      string& id = trx["txid"].get_ref<string&>();
 
-      std::string_view statusStr = trx["state"].get<std::string_view>();
-      Withdraw::Status status = WithdrawStatusFromStatusStr(statusStr);
-
-      withdraws.emplace_back(std::move(id), timestamp, netEmittedAmount, status, withdrawFee);
+      withdraws.emplace_back(std::move(trx.txid), timestamp, netEmittedAmount, WithdrawStatusFromStatus(trx.state),
+                             withdrawFee);
     }
   }
   WithdrawsSet withdrawsSet(std::move(withdraws));
@@ -508,8 +548,7 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
 }
 
 namespace {
-bool IsOrderClosed(const json::container& orderJson) {
-  std::string_view state = orderJson["state"].get<std::string_view>();
+bool IsOrderClosed(std::string_view state) {
   if (state == "done" || state == "cancel") {
     return true;
   }
@@ -520,19 +559,19 @@ bool IsOrderClosed(const json::container& orderJson) {
   return true;
 }
 
-OrderInfo ParseOrderJson(const json::container& orderJson, CurrencyCode fromCurrencyCode, Market mk) {
+OrderInfo ParseOrderJson(const auto& orderJson, CurrencyCode fromCurrencyCode, Market mk) {
   OrderInfo orderInfo(TradedAmounts(fromCurrencyCode, fromCurrencyCode == mk.base() ? mk.quote() : mk.base()),
-                      IsOrderClosed(orderJson));
+                      IsOrderClosed(orderJson.state));
 
-  if (orderJson.contains("trades")) {
+  if (orderJson.trades) {
     // TODO: to be confirmed (this is true at least for markets involving KRW)
     CurrencyCode feeCurrencyCode(mk.quote());
-    MonetaryAmount fee(orderJson["paid_fee"].get<std::string_view>(), feeCurrencyCode);
+    MonetaryAmount fee(orderJson.paid_fee.value_or(MonetaryAmount{}), feeCurrencyCode);
 
-    for (const json::container& orderDetails : orderJson["trades"]) {
-      MonetaryAmount tradedVol(orderDetails["volume"].get<std::string_view>(), mk.base());  // always in base currency
-      MonetaryAmount price(orderDetails["price"].get<std::string_view>(), mk.quote());      // always in quote currency
-      MonetaryAmount tradedCost(orderDetails["funds"].get<std::string_view>(), mk.quote());
+    for (const auto& orderDetails : *orderJson.trades) {
+      MonetaryAmount tradedVol(orderDetails.volume, mk.base());  // always in base currency
+      MonetaryAmount price(orderDetails.price, mk.quote());      // always in quote currency
+      MonetaryAmount tradedCost(orderDetails.funds, mk.quote());
 
       if (fromCurrencyCode == mk.quote()) {
         orderInfo.tradedAmounts.from += tradedCost;
@@ -611,17 +650,19 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
     placePostData.emplace_back("price", price.amountStr());
   }
 
-  json::container placeOrderRes =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/orders", placePostData);
+  auto placeOrderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kPost,
+                                                                  "/v1/orders", placePostData)
+                           .first;
 
   placeOrderInfo.orderInfo = ParseOrderJson(placeOrderRes, fromCurrencyCode, mk);
-  placeOrderInfo.orderId = std::move(placeOrderRes["uuid"].get_ref<string&>());
+  placeOrderInfo.orderId = std::move(placeOrderRes.uuid);
 
   // Upbit takes some time to match the market order - We should wait that it has been matched
   bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
   while (takerOrderNotClosed) {
-    json::container orderRes =
-        PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", placeOrderInfo.orderId}});
+    auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order",
+                                                               {{"uuid", placeOrderInfo.orderId}})
+                        .first;
 
     placeOrderInfo.orderInfo = ParseOrderJson(orderRes, fromCurrencyCode, mk);
 
@@ -632,29 +673,34 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
 OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
   CurlPostData postData{{"uuid", orderId}};
-  json::container orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData);
-  bool cancelledOrderClosed = IsOrderClosed(orderRes);
+  auto orderRes =
+      PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData)
+          .first;
+  bool cancelledOrderClosed = IsOrderClosed(orderRes.state);
   while (!cancelledOrderClosed) {
-    orderRes = PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData);
-    cancelledOrderClosed = IsOrderClosed(orderRes);
+    orderRes =
+        PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData)
+            .first;
+    cancelledOrderClosed = IsOrderClosed(orderRes.state);
   }
   return ParseOrderJson(orderRes, tradeContext.fromCur(), tradeContext.market);
 }
 
 OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
-  json::container orderRes =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", {{"uuid", orderId}});
+  auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order",
+                                                             {{"uuid", orderId}})
+                      .first;
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
   return ParseOrderJson(orderRes, fromCurrencyCode, tradeContext.market);
 }
 
 std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   auto curStr = currencyCode.str();
-  json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
-                   {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}});
-  std::string_view amountStr = result["currency"]["withdraw_fee"].get<std::string_view>();
-  return MonetaryAmount(amountStr, currencyCode);
+  auto result = PrivateQuery<schema::upbit::V1WithdrawChance>(
+                    _curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
+                    {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}})
+                    .first;
+  return MonetaryAmount(result.currency.withdraw_fee, currencyCode);
 }
 
 InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
@@ -669,9 +715,10 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     withdrawPostData.emplace_back("secondary_address", destinationWallet.tag());
   }
 
-  json::container result =
-      PrivateQuery(_curlHandle, _apiKey, HttpRequestType::kPost, "/v1/withdraws/coin", std::move(withdrawPostData));
-  return {std::move(destinationWallet), std::move(result["uuid"].get_ref<string&>()), grossAmount};
+  auto result = PrivateQuery<schema::upbit::V1WithdrawsCoin>(_curlHandle, _apiKey, HttpRequestType::kPost,
+                                                             "/v1/withdraws/coin", std::move(withdrawPostData))
+                    .first;
+  return {std::move(destinationWallet), std::move(result.uuid), grossAmount};
 }
 
 }  // namespace cct::api

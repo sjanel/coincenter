@@ -8,6 +8,7 @@
 #include <ranges>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
@@ -47,23 +48,7 @@ namespace {
 template <class T>
 T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
   RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
-
-  return requestRetry.query<T>(endpoint, [](const T& response) {
-    if constexpr (amc::is_detected<schema::upbit::has_error_t, T>::value) {
-      long statusCode = -1;
-      if constexpr (amc::is_detected<schema::upbit::has_name_t, T>::value) {
-        statusCode = response.name;
-      }
-      std::string_view msg;
-      if constexpr (amc::is_detected<schema::upbit::has_message_t, T>::value) {
-        msg = response.message;
-      }
-
-      log::warn("Upbit error ({}, '{}')", statusCode, msg);
-      return RequestRetry::Status::kResponseError;
-    }
-    return RequestRetry::Status::kResponseOK;
-  });
+  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint).first;
 }
 
 }  // namespace
