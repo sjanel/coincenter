@@ -51,8 +51,12 @@ TimePoint StringToTime(std::string_view timeStr, const char* format) {
   std::tm utc{};
   std::istringstream ss{std::string(timeStr)};
   ss >> std::get_time(&utc, format);
-  // TODO: fix issue of local time switch
-  return Clock::from_time_t(std::mktime(&utc));
+  if (ss.fail()) {
+    throw exception("Failed to parse time string {}", timeStr);
+  }
+  // Convert timestamp to epoch time assuming UTC
+  std::time_t timet = timegm(&utc);
+  return Clock::from_time_t(timet);
 }
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
