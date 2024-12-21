@@ -139,7 +139,6 @@ TEST_F(QueryResultPrinterCurrenciesTest, EmptyJson) {
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": null,
     "req": "Currencies"
   },
   "out": {}
@@ -153,7 +152,6 @@ TEST_F(QueryResultPrinterCurrenciesTest, Json) {
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": null,
     "req": "Currencies"
   },
   "out": {
@@ -1243,7 +1241,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, EmptyJson) {
 {
   "in": {
     "opt": {
-      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "timeWindow": "[1999-03-25T04:46:43Z -> 2000-10-07T01:14:27Z)"
     },
     "req": "ReplayMarkets"
   },
@@ -1258,7 +1256,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, Json) {
 {
   "in": {
     "opt": {
-      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "timeWindow": "[1999-03-25T04:46:43Z -> 2000-10-07T01:14:27Z)"
     },
     "req": "ReplayMarkets"
   },
@@ -1308,7 +1306,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, Json) {
       ]
     },
     "huobi": {
-      "orderBooks": null,
+      "orderBooks": [],
       "trades": [
         {
           "lastTimestamp": "2000-06-11T23:58:40Z",

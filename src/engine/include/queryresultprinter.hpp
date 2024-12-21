@@ -11,17 +11,19 @@
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
+#include "file.hpp"
+#include "logginginfo.hpp"
 #include "market.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
 #include "time-window.hpp"
 #include "withdrawsconstraints.hpp"
+#include "write-json.hpp"
 
 namespace cct {
 
 class DeliveredWithdrawInfo;
-class LoggingInfo;
 class TradeOptions;
 class WithdrawOptions;
 
@@ -118,9 +120,30 @@ class QueryResultPrinter {
 
   void printTable(const SimpleTable &table) const;
 
-  void printJson(const json::container &jsonData) const;
+  static string JsonStr(const auto &obj) {
+    using T = std::remove_cvref_t<decltype(obj)>;
+    if constexpr (std::is_same_v<T, json::container>) {
+      return obj.dump();
+    } else {
+      return WriteMiniJsonOrThrow(obj);
+    }
+  }
 
-  void logActivity(CoincenterCommandType commandType, const json::container &data, bool isSimulationMode = false) const;
+  void printJson(const auto &jsonObj) const {
+    if (_pOs != nullptr) {
+      *_pOs << JsonStr(jsonObj) << '\n';
+    } else {
+      _outputLogger->info(JsonStr(jsonObj));
+    }
+  }
+
+  void logActivity(CoincenterCommandType commandType, const auto &jsonObj, bool isSimulationMode = false) const {
+    if (_loggingInfo.isCommandTypeTracked(commandType) &&
+        (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
+      File activityFile = _loggingInfo.getActivityFile();
+      activityFile.write(JsonStr(jsonObj), Writer::Mode::Append);
+    }
+  }
 
   const LoggingInfo &_loggingInfo;
   std::ostream *_pOs = nullptr;

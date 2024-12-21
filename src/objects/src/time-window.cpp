@@ -2,11 +2,31 @@
 
 #include <algorithm>
 
+#include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"
 
 namespace cct {
+
+TimeWindow::TimeWindow(std::string_view timeWindowStr) {
+  auto openingBracketPos = timeWindowStr.find('[');
+  if (openingBracketPos == std::string_view::npos) {
+    throw invalid_argument("Invalid time window - missing opening bracket");
+  }
+  auto arrowPos = timeWindowStr.find(kArrow, openingBracketPos);
+  if (arrowPos == std::string_view::npos) {
+    throw invalid_argument("Invalid time window - missing arrow");
+  }
+  auto closingBracketPos = timeWindowStr.find(')', arrowPos);
+  if (closingBracketPos == std::string_view::npos) {
+    throw invalid_argument("Invalid time window - missing closing bracket");
+  }
+
+  _from = StringToTime(timeWindowStr.substr(openingBracketPos + 1, arrowPos - openingBracketPos - 1), kTimeFormat);
+  _to = StringToTime(timeWindowStr.substr(arrowPos + kArrow.size(), closingBracketPos - arrowPos - kArrow.size()),
+                     kTimeFormat);
+}
 
 TimeWindow TimeWindow::aggregateMinMax(TimeWindow rhs) const {
   TimeWindow ret{_from, std::max(_to, rhs._to)};
@@ -20,13 +40,18 @@ TimeWindow TimeWindow::aggregateMinMax(TimeWindow rhs) const {
 }
 
 string TimeWindow::str() const {
-  string ret;
-  ret.push_back('[');
-  ret.append(TimeToString(from(), kTimeYearToSecondSpaceSeparatedFormat));
-  ret.append(" -> ");
-  ret.append(TimeToString(to(), kTimeYearToSecondSpaceSeparatedFormat));
-  ret.push_back(')');
+  string ret(kTimeWindowLen, '\0');
+  appendTo(ret.data());
   return ret;
+}
+
+char *TimeWindow::appendTo(char *buf) const {
+  *buf++ = '[';
+  buf = std::ranges::copy(TimeToString(from(), kTimeFormat), buf).out;
+  buf = std::ranges::copy(kArrow, buf).out;
+  buf = std::ranges::copy(TimeToString(to(), kTimeFormat), buf).out;
+  *buf++ = ')';
+  return buf;
 }
 
 }  // namespace cct

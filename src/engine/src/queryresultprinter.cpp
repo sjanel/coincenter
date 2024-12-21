@@ -38,6 +38,7 @@
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "publictrade.hpp"
+#include "query-result-schema.hpp"
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
@@ -70,197 +71,202 @@ json::container ToJson(CoincenterCommandType commandType, json::container &&in, 
   return ret;
 }
 
-json::container HealthCheckJson(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
-  json::container in;
-  json::container out = json::container::object();
+auto HealthCheckJson(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
+  schema::queryresult::HealthCheck obj;
+
+  obj.out.reserve(healthCheckPerExchange.size());
   for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
-    out.emplace(e->name(), healthCheckValue);
+    obj.out.emplace_back(e->exchangeNameEnum(), healthCheckValue);
   }
 
-  return ToJson(CoincenterCommandType::HealthCheck, std::move(in), std::move(out));
+  return obj;
 }
 
-json::container CurrenciesJson(const CurrenciesPerExchange &currenciesPerExchange) {
-  json::container in;
-  json::container inOpt;
-  in.emplace("opt", std::move(inOpt));
+auto CurrenciesJson(const CurrenciesPerExchange &currenciesPerExchange) {
+  schema::queryresult::CurrenciesPerExchange obj;
 
-  json::container out = json::container::object();
   for (const auto &[e, currencies] : currenciesPerExchange) {
-    json::container currenciesForExchange;
+    using ExchangePartType = decltype(obj.out)::value_type::second_type;
+    auto &p = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{});
+
+    p.second.reserve(currencies.size());
     for (const CurrencyExchange &cur : currencies) {
-      json::container curExchangeJson;
+      auto &currency = p.second.emplace_back();
 
-      curExchangeJson.emplace("code", cur.standardCode().str());
-      curExchangeJson.emplace("exchangeCode", cur.exchangeCode().str());
-      curExchangeJson.emplace("altCode", cur.altCode().str());
-
-      curExchangeJson.emplace("canDeposit", cur.canDeposit());
-      curExchangeJson.emplace("canWithdraw", cur.canWithdraw());
-
-      curExchangeJson.emplace("isFiat", cur.isFiat());
-
-      currenciesForExchange.emplace_back(std::move(curExchangeJson));
+      currency.code = cur.standardCode();
+      currency.exchangeCode = cur.exchangeCode();
+      currency.altCode = cur.altCode();
+      currency.canDeposit = cur.canDeposit();
+      currency.canWithdraw = cur.canWithdraw();
+      currency.isFiat = cur.isFiat();
     }
-    out.emplace(e->name(), std::move(currenciesForExchange));
   }
 
-  return ToJson(CoincenterCommandType::Currencies, std::move(in), std::move(out));
+  return obj;
 }
 
-json::container MarketsJson(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) {
-  json::container in;
-  json::container inOpt = json::container::object();
+auto MarketsJson(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange &marketsPerExchange) {
+  schema::queryresult::Markets obj;
+
   if (!cur1.isNeutral()) {
-    inOpt.emplace("cur1", cur1.str());
+    obj.in.opt.cur1 = cur1;
   }
   if (!cur2.isNeutral()) {
-    inOpt.emplace("cur2", cur2.str());
+    obj.in.opt.cur2 = cur2;
   }
-  in.emplace("opt", std::move(inOpt));
-
-  json::container out = json::container::object();
+  obj.out.reserve(marketsPerExchange.size());
   for (const auto &[e, markets] : marketsPerExchange) {
-    json::container marketsForExchange;
-    for (const Market &mk : markets) {
-      marketsForExchange.emplace_back(mk.str());
-    }
-    out.emplace(e->name(), std::move(marketsForExchange));
+    obj.out.emplace_back(e->exchangeNameEnum(), markets);
   }
 
-  return ToJson(CoincenterCommandType::Markets, std::move(in), std::move(out));
+  return obj;
 }
 
-json::container MarketsForReplayJson(TimeWindow timeWindow,
-                                     const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
-  json::container in;
-  json::container inOpt = json::container::object();
+auto MarketsForReplayJson(TimeWindow timeWindow, const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
+  schema::queryresult::MarketsForReplay obj;
+
   if (timeWindow != TimeWindow{}) {
-    inOpt.emplace("timeWindow", timeWindow.str());
+    obj.in.opt.timeWindow = timeWindow;
   }
-  in.emplace("opt", std::move(inOpt));
 
-  json::container out = json::container::object();
   for (const auto &[e, marketTimestampSets] : marketTimestampSetsPerExchange) {
-    json::container orderBookMarketsPerExchange;
+    using ExchangePartType = decltype(obj.out)::value_type::second_type;
+    auto &exchangePart = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{}).second;
+
+    exchangePart.orderBooks.reserve(marketTimestampSets.orderBooksMarkets.size());
     for (const MarketTimestamp &marketTimestamp : marketTimestampSets.orderBooksMarkets) {
-      json::container marketTimestampJson;
-
-      marketTimestampJson.emplace("market", marketTimestamp.market.str());
-      marketTimestampJson.emplace("lastTimestamp", TimeToString(marketTimestamp.timePoint));
-
-      orderBookMarketsPerExchange.emplace_back(std::move(marketTimestampJson));
+      exchangePart.orderBooks.emplace_back(marketTimestamp.market, TimeToString(marketTimestamp.timePoint));
     }
 
-    json::container tradesMarketsPerExchange;
+    exchangePart.trades.reserve(marketTimestampSets.tradesMarkets.size());
     for (const MarketTimestamp &marketTimestamp : marketTimestampSets.tradesMarkets) {
-      json::container marketTimestampJson;
-
-      marketTimestampJson.emplace("market", marketTimestamp.market.str());
-      marketTimestampJson.emplace("lastTimestamp", TimeToString(marketTimestamp.timePoint));
-
-      tradesMarketsPerExchange.emplace_back(std::move(marketTimestampJson));
+      exchangePart.trades.emplace_back(marketTimestamp.market, TimeToString(marketTimestamp.timePoint));
     }
-
-    json::container exchangePart;
-
-    exchangePart.emplace("orderBooks", std::move(orderBookMarketsPerExchange));
-    exchangePart.emplace("trades", std::move(tradesMarketsPerExchange));
-
-    out.emplace(e->name(), std::move(exchangePart));
   }
 
-  return ToJson(CoincenterCommandType::ReplayMarkets, std::move(in), std::move(out));
+  return obj;
 }
 
-json::container TickerInformationJson(const ExchangeTickerMaps &exchangeTickerMaps) {
-  json::container in;
-  json::container out = json::container::object();
+auto TickerInformationJson(const ExchangeTickerMaps &exchangeTickerMaps) {
+  schema::queryresult::TickerInformation obj;
   for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
-    json::container allTickerForExchange;
+    using ExchangePartType = decltype(obj.out)::value_type::second_type;
+    auto &exchangePart = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{}).second;
+
+    exchangePart.reserve(marketOrderBookMap.size());
     for (const auto &[mk, marketOrderBook] : marketOrderBookMap) {
-      json::container tickerForExchange;
-      tickerForExchange.emplace("pair", mk.str());
-      json::container ask;
-      json::container bid;
-      ask.emplace("a", marketOrderBook.amountAtAskPrice().amountStr());
-      ask.emplace("p", marketOrderBook.lowestAskPrice().amountStr());
-      bid.emplace("a", marketOrderBook.amountAtBidPrice().amountStr());
-      bid.emplace("p", marketOrderBook.highestBidPrice().amountStr());
-      tickerForExchange.emplace("ask", std::move(ask));
-      tickerForExchange.emplace("bid", std::move(bid));
-      allTickerForExchange.emplace_back(tickerForExchange);
+      auto &ticker = exchangePart.emplace_back();
+
+      ticker.pair = mk;
+
+      ticker.ask.a = marketOrderBook.amountAtAskPrice().toNeutral();
+      ticker.ask.p = marketOrderBook.lowestAskPrice().toNeutral();
+      ticker.bid.a = marketOrderBook.amountAtBidPrice().toNeutral();
+      ticker.bid.p = marketOrderBook.highestBidPrice().toNeutral();
     }
     // Sort rows by market pair for consistent output
-    std::sort(allTickerForExchange.begin(), allTickerForExchange.end(),
-              [](const json::container &lhs, const json::container &rhs) {
-                return lhs["pair"].get<std::string_view>() < rhs["pair"].get<std::string_view>();
-              });
-    out.emplace(e->name(), std::move(allTickerForExchange));
+    std::ranges::sort(exchangePart, [](const auto &lhs, const auto &rhs) { return lhs.pair < rhs.pair; });
   }
 
-  return ToJson(CoincenterCommandType::Ticker, std::move(in), std::move(out));
+  return obj;
 }
 
 void AppendOrderbookLine(const MarketOrderBook &marketOrderBook, int pos,
-                         std::optional<MonetaryAmount> optConversionRate, json::container &data) {
+                         std::optional<MonetaryAmount> optConversionRate, auto &data) {
   auto [amount, price] = marketOrderBook[pos];
-  json::container &line = data.emplace_back();
-  line.emplace("a", amount.amountStr());
-  line.emplace("p", price.amountStr());
+  auto &line = data.emplace_back();
+  line.a = amount.toNeutral();
+  line.p = price.toNeutral();
+
   if (optConversionRate) {
-    line.emplace("eq", optConversionRate->amountStr());
+    line.eq = optConversionRate->toNeutral();
   }
 }
 
-json::container MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
-                                     const MarketOrderBookConversionRates &marketOrderBooksConversionRates) {
-  json::container in;
-  json::container inOpt;
-  inOpt.emplace("pair", mk.str());
+auto MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
+                          const MarketOrderBookConversionRates &marketOrderBooksConversionRates) {
+  schema::queryresult::MarketOrderBooks obj;
+
+  obj.in.opt.pair = mk;
   if (!equiCurrencyCode.isNeutral()) {
-    inOpt.emplace("equiCurrency", equiCurrencyCode.str());
+    obj.in.opt.equiCurrency = equiCurrencyCode;
   }
-  if (depth) {
-    inOpt.emplace("depth", *depth);
-  }
-  in.emplace("opt", std::move(inOpt));
+  obj.in.opt.depth = depth;
 
-  json::container out = json::container::object();
+  obj.out.reserve(marketOrderBooksConversionRates.size());
   for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
-    json::container marketOrderBookForExchange;
-    json::container bidsForExchange;
-    json::container asksForExchange;
+    using ExchangePartType = decltype(obj.out)::value_type::second_type;
+    auto &exchangePart = obj.out.emplace_back(exchangeNameEnum, ExchangePartType{}).second;
 
-    marketOrderBookForExchange.emplace("time", TimeToString(marketOrderBook.time()));
+    exchangePart.time.ts = marketOrderBook.time();
     for (int bidPos = 1; bidPos <= marketOrderBook.nbBidPrices(); ++bidPos) {
-      AppendOrderbookLine(marketOrderBook, -bidPos, optConversionRate, bidsForExchange);
+      AppendOrderbookLine(marketOrderBook, -bidPos, optConversionRate, exchangePart.bid);
     }
-    marketOrderBookForExchange.emplace("bid", std::move(bidsForExchange));
     for (int askPos = 1; askPos <= marketOrderBook.nbAskPrices(); ++askPos) {
-      AppendOrderbookLine(marketOrderBook, askPos, optConversionRate, asksForExchange);
+      AppendOrderbookLine(marketOrderBook, askPos, optConversionRate, exchangePart.ask);
     }
-    marketOrderBookForExchange.emplace("ask", std::move(asksForExchange));
-    out.emplace(kSupportedExchanges[static_cast<int>(exchangeNameEnum)], std::move(marketOrderBookForExchange));
   }
 
-  return ToJson(CoincenterCommandType::Orderbook, std::move(in), std::move(out));
+  return obj;
 }
 
-json::container BalanceJson(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) {
-  json::container in;
-  json::container inOpt = json::container::object();
-  if (!equiCurrency.isNeutral()) {
-    inOpt.emplace("equiCurrency", equiCurrency.str());
+auto BalanceJson(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) {
+  schema::queryresult::Balance obj;
+
+  BalancePortfolio totalBalance;
+
+  using ExchangePart = decltype(obj.out.exchange)::value_type::second_type;
+  using ExchangeKeyPart = ExchangePart::value_type::second_type;
+  using CurrencyPart = ExchangeKeyPart::value_type::second_type;
+
+  const bool hasEquiCurrency = !equiCurrency.isNeutral();
+
+  if (hasEquiCurrency) {
+    obj.in.opt.equiCurrency = equiCurrency;
   }
-  in.emplace("opt", std::move(inOpt));
 
-  BalancePerExchangePortfolio totalBalance(balancePerExchange);
+  for (const auto &[e, balance] : balancePerExchange) {
+    size_t publicExchangeIdx;
+    auto it = std::ranges::find_if(
+        obj.out.exchange, [&e](const auto &exchangePart) { return exchangePart.first == e->exchangeNameEnum(); });
+    if (it == obj.out.exchange.end()) {
+      obj.out.exchange.emplace_back(e->exchangeNameEnum(), ExchangePart{});
+      publicExchangeIdx = obj.out.exchange.size() - 1;
+    } else {
+      publicExchangeIdx = std::distance(obj.out.exchange.begin(), it);
+    }
 
-  return ToJson(CoincenterCommandType::Balance, std::move(in), totalBalance.printJson(equiCurrency));
+    auto &exchangePart = obj.out.exchange[publicExchangeIdx].second;
+    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+
+    for (const auto &[amount, equiAmount] : balance) {
+      auto &currencyPart = exchangeKeyPart.emplace_back(amount.currencyCode(), CurrencyPart{}).second;
+      currencyPart.a = amount.toNeutral();
+      if (hasEquiCurrency) {
+        currencyPart.eq = equiAmount.toNeutral();
+      }
+    }
+
+    totalBalance += balance;
+  }
+
+  MonetaryAmount totalEq(0, equiCurrency);
+  for (const auto &[amount, equiAmount] : totalBalance) {
+    auto &currencyPart = obj.out.total.cur.emplace_back(amount.currencyCode(), CurrencyPart{}).second;
+    currencyPart.a = amount.toNeutral();
+    if (hasEquiCurrency) {
+      currencyPart.eq = equiAmount.toNeutral();
+      totalEq += equiAmount;
+    }
+  }
+  if (hasEquiCurrency) {
+    obj.out.total.eq = totalEq.toNeutral();
+  }
+
+  return obj;
 }
 
-json::container DepositInfoJson(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange) {
+auto DepositInfoJson(CurrencyCode depositCurrencyCode, const WalletPerExchange &walletPerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("cur", depositCurrencyCode.str());
@@ -289,7 +295,7 @@ json::container DepositInfoJson(CurrencyCode depositCurrencyCode, const WalletPe
 
 inline const char *TradeModeToStr(TradeMode tradeMode) { return tradeMode == TradeMode::kReal ? "real" : "simulation"; }
 
-json::container TradeOptionsToJson(const TradeOptions &tradeOptions) {
+auto TradeOptionsToJson(const TradeOptions &tradeOptions) {
   json::container priceOptionsJson;
   const PriceOptions &priceOptions = tradeOptions.priceOptions();
   priceOptionsJson.emplace("strategy", PriceStrategyStr(priceOptions.priceStrategy(), false));
@@ -309,9 +315,8 @@ json::container TradeOptionsToJson(const TradeOptions &tradeOptions) {
   return ret;
 }
 
-json::container TradesJson(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount,
-                           bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
-                           CoincenterCommandType commandType) {
+auto TradesJson(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount, bool isPercentageTrade,
+                CurrencyCode toCurrency, const TradeOptions &tradeOptions, CoincenterCommandType commandType) {
   json::container in;
   json::container fromJson;
   fromJson.emplace("amount", amount.amountStr());
@@ -362,7 +367,7 @@ json::container TradesJson(const TradeResultPerExchange &tradeResultPerExchange,
   return ToJson(commandType, std::move(in), std::move(out));
 }
 
-json::container OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
+auto OrdersConstraintsToJson(const OrdersConstraints &ordersConstraints) {
   json::container ret;
   if (ordersConstraints.isCurDefined()) {
     ret.emplace("cur1", ordersConstraints.curStr1());
@@ -387,7 +392,7 @@ json::container OrdersConstraintsToJson(const OrdersConstraints &ordersConstrain
 }
 
 template <class OrderType>
-json::container OrderJson(const OrderType &orderData) {
+auto OrderJson(const OrderType &orderData) {
   static_assert(std::is_same_v<ClosedOrder, OrderType> || std::is_same_v<OpenedOrder, OrderType>);
 
   json::container order;
@@ -407,8 +412,8 @@ json::container OrderJson(const OrderType &orderData) {
 }
 
 template <class OrdersPerExchangeType>
-json::container OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExchangeType &ordersPerExchange,
-                           const OrdersConstraints &ordersConstraints) {
+auto OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExchangeType &ordersPerExchange,
+                const OrdersConstraints &ordersConstraints) {
   json::container in;
   json::container inOpt = OrdersConstraintsToJson(ordersConstraints);
 
@@ -436,8 +441,8 @@ json::container OrdersJson(CoincenterCommandType coincenterCommandType, const Or
   return ToJson(coincenterCommandType, std::move(in), std::move(out));
 }
 
-json::container OrdersCancelledJson(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange,
-                                    const OrdersConstraints &ordersConstraints) {
+auto OrdersCancelledJson(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange,
+                         const OrdersConstraints &ordersConstraints) {
   json::container in;
   json::container inOpt = OrdersConstraintsToJson(ordersConstraints);
 
@@ -465,8 +470,8 @@ json::container OrdersCancelledJson(const NbCancelledOrdersPerExchange &nbCancel
 
 enum class DepositOrWithdrawEnum : int8_t { kDeposit, kWithdraw };
 
-json::container DepositsConstraintsToJson(const WithdrawsOrDepositsConstraints &constraints,
-                                          DepositOrWithdrawEnum depositOrWithdraw) {
+auto DepositsConstraintsToJson(const WithdrawsOrDepositsConstraints &constraints,
+                               DepositOrWithdrawEnum depositOrWithdraw) {
   json::container ret;
   if (constraints.isCurDefined()) {
     ret.emplace("cur", constraints.currencyCode().str());
@@ -489,8 +494,8 @@ json::container DepositsConstraintsToJson(const WithdrawsOrDepositsConstraints &
   return ret;
 }
 
-json::container RecentDepositsJson(const DepositsPerExchange &depositsPerExchange,
-                                   const DepositsConstraints &depositsConstraints) {
+auto RecentDepositsJson(const DepositsPerExchange &depositsPerExchange,
+                        const DepositsConstraints &depositsConstraints) {
   json::container in;
   json::container inOpt = DepositsConstraintsToJson(depositsConstraints, DepositOrWithdrawEnum::kDeposit);
 
@@ -523,8 +528,8 @@ json::container RecentDepositsJson(const DepositsPerExchange &depositsPerExchang
   return ToJson(CoincenterCommandType::RecentDeposits, std::move(in), std::move(out));
 }
 
-json::container RecentWithdrawsJson(const WithdrawsPerExchange &withdrawsPerExchange,
-                                    const WithdrawsConstraints &withdrawsConstraints) {
+auto RecentWithdrawsJson(const WithdrawsPerExchange &withdrawsPerExchange,
+                         const WithdrawsConstraints &withdrawsConstraints) {
   json::container in;
   json::container inOpt = DepositsConstraintsToJson(withdrawsConstraints, DepositOrWithdrawEnum::kWithdraw);
 
@@ -558,8 +563,8 @@ json::container RecentWithdrawsJson(const WithdrawsPerExchange &withdrawsPerExch
   return ToJson(CoincenterCommandType::RecentWithdraws, std::move(in), std::move(out));
 }
 
-json::container ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
-                               const MonetaryAmountPerExchange &conversionPerExchange) {
+auto ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
+                    const MonetaryAmountPerExchange &conversionPerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("amount", amount.str());
@@ -578,9 +583,8 @@ json::container ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrenc
   return ToJson(CoincenterCommandType::Conversion, std::move(in), std::move(out));
 }
 
-json::container ConversionJson(std::span<const MonetaryAmount> startAmountPerExchangePos,
-                               CurrencyCode targetCurrencyCode,
-                               const MonetaryAmountPerExchange &conversionPerExchange) {
+auto ConversionJson(std::span<const MonetaryAmount> startAmountPerExchangePos, CurrencyCode targetCurrencyCode,
+                    const MonetaryAmountPerExchange &conversionPerExchange) {
   json::container in;
   json::container inOpt;
 
@@ -610,7 +614,7 @@ json::container ConversionJson(std::span<const MonetaryAmount> startAmountPerExc
   return ToJson(CoincenterCommandType::Conversion, std::move(in), std::move(out));
 }
 
-json::container ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) {
+auto ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPathsPerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("market", mk.str());
@@ -630,8 +634,7 @@ json::container ConversionPathJson(Market mk, const ConversionPathPerExchange &c
   return ToJson(CoincenterCommandType::ConversionPath, std::move(in), std::move(out));
 }
 
-json::container WithdrawFeesJson(const MonetaryAmountByCurrencySetPerExchange &withdrawFeePerExchange,
-                                 CurrencyCode cur) {
+auto WithdrawFeesJson(const MonetaryAmountByCurrencySetPerExchange &withdrawFeePerExchange, CurrencyCode cur) {
   json::container in;
   json::container inOpt = json::container::object();
   if (!cur.isNeutral()) {
@@ -651,7 +654,7 @@ json::container WithdrawFeesJson(const MonetaryAmountByCurrencySetPerExchange &w
   return ToJson(CoincenterCommandType::WithdrawFees, std::move(in), std::move(out));
 }
 
-json::container Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) {
+auto Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchange &tradedVolumePerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("market", mk.str());
@@ -665,8 +668,7 @@ json::container Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchan
   return ToJson(CoincenterCommandType::Last24hTradedVolume, std::move(in), std::move(out));
 }
 
-json::container LastTradesJson(Market mk, std::optional<int> nbLastTrades,
-                               const TradesPerExchange &lastTradesPerExchange) {
+auto LastTradesJson(Market mk, std::optional<int> nbLastTrades, const TradesPerExchange &lastTradesPerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("market", mk.str());
@@ -691,7 +693,7 @@ json::container LastTradesJson(Market mk, std::optional<int> nbLastTrades,
   return ToJson(CoincenterCommandType::LastTrades, std::move(in), std::move(out));
 }
 
-json::container LastPriceJson(Market mk, const MonetaryAmountPerExchange &pricePerExchange) {
+auto LastPriceJson(Market mk, const MonetaryAmountPerExchange &pricePerExchange) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("market", mk.str());
@@ -705,9 +707,9 @@ json::container LastPriceJson(Market mk, const MonetaryAmountPerExchange &priceP
   return ToJson(CoincenterCommandType::LastPrice, std::move(in), std::move(out));
 }
 
-json::container WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
-                             bool isPercentageWithdraw, const Exchange &fromExchange, const Exchange &toExchange,
-                             const WithdrawOptions &withdrawOptions) {
+auto WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo, MonetaryAmount grossAmount,
+                  bool isPercentageWithdraw, const Exchange &fromExchange, const Exchange &toExchange,
+                  const WithdrawOptions &withdrawOptions) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("cur", grossAmount.currencyStr());
@@ -740,9 +742,8 @@ json::container WithdrawJson(const DeliveredWithdrawInfo &deliveredWithdrawInfo,
   return ToJson(CoincenterCommandType::Withdraw, std::move(in), std::move(out));
 }
 
-json::container DustSweeperJson(
-    const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
-    CurrencyCode currencyCode) {
+auto DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
+                     CurrencyCode currencyCode) {
   json::container in;
   json::container inOpt;
   inOpt.emplace("cur", currencyCode.str());
@@ -775,8 +776,8 @@ json::container DustSweeperJson(
   return ToJson(CoincenterCommandType::DustSweeper, std::move(in), std::move(out));
 }
 
-json::container MarketTradingResultsJson(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
-                                         CoincenterCommandType commandType) {
+auto MarketTradingResultsJson(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
+                              CoincenterCommandType commandType) {
   json::container inOpt;
 
   const auto createTimeStats = [](TimeWindow timeWindow) {
@@ -872,7 +873,7 @@ QueryResultPrinter::QueryResultPrinter(std::ostream &os, ApiOutputType apiOutput
       _apiOutputType(apiOutputType) {}
 
 void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healthCheckPerExchange) const {
-  json::container jsonData = HealthCheckJson(healthCheckPerExchange);
+  auto jsonObj = HealthCheckJson(healthCheckPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -885,12 +886,12 @@ void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healt
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::HealthCheck, jsonData);
+  logActivity(CoincenterCommandType::HealthCheck, jsonObj);
 }
 
 namespace {
@@ -913,7 +914,7 @@ void Append(string &str, std::string_view exchangeName) {
 }  // namespace
 
 void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currenciesPerExchange) const {
-  json::container jsonData = CurrenciesJson(currenciesPerExchange);
+  auto jsonObj = CurrenciesJson(currenciesPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       // Compute all currencies for all exchanges
@@ -975,18 +976,18 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Currencies, jsonData);
+  logActivity(CoincenterCommandType::Currencies, jsonObj);
 }
 
 void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
                                       const MarketsPerExchange &marketsPerExchange,
                                       CoincenterCommandType coincenterCommandType) const {
-  json::container jsonData = MarketsJson(cur1, cur2, marketsPerExchange);
+  auto jsonObj = MarketsJson(cur1, cur2, marketsPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string marketsCol("Markets");
@@ -1009,16 +1010,16 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(coincenterCommandType, jsonData);
+  logActivity(coincenterCommandType, jsonObj);
 }
 
 void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchangeTickerMaps) const {
-  json::container jsonData = TickerInformationJson(exchangeTickerMaps);
+  auto jsonObj = TickerInformationJson(exchangeTickerMaps);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1036,18 +1037,18 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Ticker, jsonData);
+  logActivity(CoincenterCommandType::Ticker, jsonObj);
 }
 
 void QueryResultPrinter::printMarketOrderBooks(
     Market mk, CurrencyCode equiCurrencyCode, std::optional<int> depth,
     const MarketOrderBookConversionRates &marketOrderBooksConversionRates) const {
-  const json::container jsonData = MarketOrderBooksJson(mk, equiCurrencyCode, depth, marketOrderBooksConversionRates);
+  const auto jsonObj = MarketOrderBooksJson(mk, equiCurrencyCode, depth, marketOrderBooksConversionRates);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBooksConversionRates) {
@@ -1056,16 +1057,16 @@ void QueryResultPrinter::printMarketOrderBooks(
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Orderbook, jsonData);
+  logActivity(CoincenterCommandType::Orderbook, jsonObj);
 }
 
 void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) const {
-  json::container jsonData = BalanceJson(balancePerExchange, equiCurrency);
+  auto jsonObj = BalanceJson(balancePerExchange, equiCurrency);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       BalancePerExchangePortfolio totalBalance(balancePerExchange);
@@ -1073,17 +1074,17 @@ void QueryResultPrinter::printBalance(const BalancePerExchange &balancePerExchan
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Balance, jsonData);
+  logActivity(CoincenterCommandType::Balance, jsonObj);
 }
 
 void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
                                           const WalletPerExchange &walletPerExchange) const {
-  json::container jsonData = DepositInfoJson(depositCurrencyCode, walletPerExchange);
+  auto jsonObj = DepositInfoJson(depositCurrencyCode, walletPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string walletStr(depositCurrencyCode.str());
@@ -1098,19 +1099,18 @@ void QueryResultPrinter::printDepositInfo(CurrencyCode depositCurrencyCode,
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::DepositInfo, jsonData);
+  logActivity(CoincenterCommandType::DepositInfo, jsonObj);
 }
 
 void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAmount amount,
                                      bool isPercentageTrade, CurrencyCode toCurrency, const TradeOptions &tradeOptions,
                                      CoincenterCommandType commandType) const {
-  json::container jsonData =
-      TradesJson(tradeResultPerExchange, amount, isPercentageTrade, toCurrency, tradeOptions, commandType);
+  auto jsonObj = TradesJson(tradeResultPerExchange, amount, isPercentageTrade, toCurrency, tradeOptions, commandType);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string tradedFromStr("Traded from amount (");
@@ -1134,18 +1134,17 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(commandType, jsonData, tradeOptions.isSimulation());
+  logActivity(commandType, jsonObj, tradeOptions.isSimulation());
 }
 
 void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closedOrdersPerExchange,
                                            const OrdersConstraints &ordersConstraints) const {
-  json::container jsonData =
-      OrdersJson(CoincenterCommandType::OrdersClosed, closedOrdersPerExchange, ordersConstraints);
+  auto jsonObj = OrdersJson(CoincenterCommandType::OrdersClosed, closedOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1162,18 +1161,17 @@ void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closed
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::OrdersClosed, jsonData);
+  logActivity(CoincenterCommandType::OrdersClosed, jsonObj);
 }
 
 void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &openedOrdersPerExchange,
                                            const OrdersConstraints &ordersConstraints) const {
-  json::container jsonData =
-      OrdersJson(CoincenterCommandType::OrdersOpened, openedOrdersPerExchange, ordersConstraints);
+  auto jsonObj = OrdersJson(CoincenterCommandType::OrdersOpened, openedOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1190,17 +1188,17 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::OrdersOpened, jsonData);
+  logActivity(CoincenterCommandType::OrdersOpened, jsonObj);
 }
 
 void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange &nbCancelledOrdersPerExchange,
                                               const OrdersConstraints &ordersConstraints) const {
-  json::container jsonData = OrdersCancelledJson(nbCancelledOrdersPerExchange, ordersConstraints);
+  auto jsonObj = OrdersCancelledJson(nbCancelledOrdersPerExchange, ordersConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1213,17 +1211,17 @@ void QueryResultPrinter::printCancelledOrders(const NbCancelledOrdersPerExchange
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::OrdersCancel, jsonData);
+  logActivity(CoincenterCommandType::OrdersCancel, jsonObj);
 }
 
 void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &depositsPerExchange,
                                              const DepositsConstraints &depositsConstraints) const {
-  json::container jsonData = RecentDepositsJson(depositsPerExchange, depositsConstraints);
+  auto jsonObj = RecentDepositsJson(depositsPerExchange, depositsConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1238,17 +1236,17 @@ void QueryResultPrinter::printRecentDeposits(const DepositsPerExchange &deposits
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::RecentDeposits, jsonData);
+  logActivity(CoincenterCommandType::RecentDeposits, jsonObj);
 }
 
 void QueryResultPrinter::printRecentWithdraws(const WithdrawsPerExchange &withdrawsPerExchange,
                                               const WithdrawsConstraints &withdrawsConstraints) const {
-  json::container jsonData = RecentWithdrawsJson(withdrawsPerExchange, withdrawsConstraints);
+  auto jsonObj = RecentWithdrawsJson(withdrawsPerExchange, withdrawsConstraints);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1263,17 +1261,17 @@ void QueryResultPrinter::printRecentWithdraws(const WithdrawsPerExchange &withdr
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::RecentWithdraws, jsonData);
+  logActivity(CoincenterCommandType::RecentWithdraws, jsonObj);
 }
 
 void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
                                          const MonetaryAmountPerExchange &conversionPerExchange) const {
-  json::container jsonData = ConversionJson(amount, targetCurrencyCode, conversionPerExchange);
+  auto jsonObj = ConversionJson(amount, targetCurrencyCode, conversionPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string conversionStrHeader = amount.str();
@@ -1292,18 +1290,18 @@ void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode tar
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Conversion, jsonData);
+  logActivity(CoincenterCommandType::Conversion, jsonObj);
 }
 
 void QueryResultPrinter::printConversion(std::span<const MonetaryAmount> startAmountPerExchangePos,
                                          CurrencyCode targetCurrencyCode,
                                          const MonetaryAmountPerExchange &conversionPerExchange) const {
-  json::container jsonData = ConversionJson(startAmountPerExchangePos, targetCurrencyCode, conversionPerExchange);
+  auto jsonObj = ConversionJson(startAmountPerExchangePos, targetCurrencyCode, conversionPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1318,17 +1316,17 @@ void QueryResultPrinter::printConversion(std::span<const MonetaryAmount> startAm
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Conversion, jsonData);
+  logActivity(CoincenterCommandType::Conversion, jsonObj);
 }
 
 void QueryResultPrinter::printConversionPath(Market mk,
                                              const ConversionPathPerExchange &conversionPathsPerExchange) const {
-  json::container jsonData = ConversionPathJson(mk, conversionPathsPerExchange);
+  auto jsonObj = ConversionPathJson(mk, conversionPathsPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string conversionPathStrHeader("Fastest conversion path for ");
@@ -1353,17 +1351,17 @@ void QueryResultPrinter::printConversionPath(Market mk,
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::ConversionPath, jsonData);
+  logActivity(CoincenterCommandType::ConversionPath, jsonObj);
 }
 
 void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerExchange &withdrawFeesPerExchange,
                                            CurrencyCode currencyCode) const {
-  json::container jsonData = WithdrawFeesJson(withdrawFeesPerExchange, currencyCode);
+  auto jsonObj = WithdrawFeesJson(withdrawFeesPerExchange, currencyCode);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       table::Row header("Withdraw fee currency");
@@ -1396,17 +1394,17 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::WithdrawFees, jsonData);
+  logActivity(CoincenterCommandType::WithdrawFees, jsonObj);
 }
 
 void QueryResultPrinter::printLast24hTradedVolume(Market mk,
                                                   const MonetaryAmountPerExchange &tradedVolumePerExchange) const {
-  json::container jsonData = Last24hTradedVolumeJson(mk, tradedVolumePerExchange);
+  auto jsonObj = Last24hTradedVolumeJson(mk, tradedVolumePerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string headerTradedVolume("Last 24h ");
@@ -1422,17 +1420,17 @@ void QueryResultPrinter::printLast24hTradedVolume(Market mk,
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Last24hTradedVolume, jsonData);
+  logActivity(CoincenterCommandType::Last24hTradedVolume, jsonObj);
 }
 
 void QueryResultPrinter::printLastTrades(Market mk, std::optional<int> nbLastTrades,
                                          const TradesPerExchange &lastTradesPerExchange) const {
-  json::container jsonData = LastTradesJson(mk, nbLastTrades, lastTradesPerExchange);
+  auto jsonObj = LastTradesJson(mk, nbLastTrades, lastTradesPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       for (const auto &[exchangePtr, lastTrades] : lastTradesPerExchange) {
@@ -1485,16 +1483,16 @@ void QueryResultPrinter::printLastTrades(Market mk, std::optional<int> nbLastTra
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::LastTrades, jsonData);
+  logActivity(CoincenterCommandType::LastTrades, jsonObj);
 }
 
 void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchange &pricePerExchange) const {
-  json::container jsonData = LastPriceJson(mk, pricePerExchange);
+  auto jsonObj = LastPriceJson(mk, pricePerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string headerLastPrice(mk.str());
@@ -1509,12 +1507,12 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::LastPrice, jsonData);
+  logActivity(CoincenterCommandType::LastPrice, jsonObj);
 }
 
 void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges &deliveredWithdrawInfoWithExchanges,
@@ -1523,7 +1521,7 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
   MonetaryAmount grossAmount = deliveredWithdrawInfo.grossAmount();
   const Exchange &fromExchange = *deliveredWithdrawInfoWithExchanges.first.front();
   const Exchange &toExchange = *deliveredWithdrawInfoWithExchanges.first.back();
-  json::container jsonData =
+  auto jsonObj =
       WithdrawJson(deliveredWithdrawInfo, grossAmount, isPercentageWithdraw, fromExchange, toExchange, withdrawOptions);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
@@ -1542,18 +1540,18 @@ void QueryResultPrinter::printWithdraw(const DeliveredWithdrawInfoWithExchanges 
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::Withdraw, jsonData, withdrawOptions.mode() == WithdrawOptions::Mode::kSimulation);
+  logActivity(CoincenterCommandType::Withdraw, jsonObj, withdrawOptions.mode() == WithdrawOptions::Mode::kSimulation);
 }
 
 void QueryResultPrinter::printDustSweeper(
     const TradedAmountsVectorWithFinalAmountPerExchange &tradedAmountsVectorWithFinalAmountPerExchange,
     CurrencyCode currencyCode) const {
-  json::container jsonData = DustSweeperJson(tradedAmountsVectorWithFinalAmountPerExchange, currencyCode);
+  auto jsonObj = DustSweeperJson(tradedAmountsVectorWithFinalAmountPerExchange, currencyCode);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1576,17 +1574,17 @@ void QueryResultPrinter::printDustSweeper(
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::DustSweeper, jsonData);
+  logActivity(CoincenterCommandType::DustSweeper, jsonObj);
 }
 
 void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
                                                const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
-  json::container jsonData = MarketsForReplayJson(timeWindow, marketTimestampSetsPerExchange);
+  auto jsonObj = MarketsForReplayJson(timeWindow, marketTimestampSetsPerExchange);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       MarketSet allMarkets = ComputeAllMarkets(marketTimestampSetsPerExchange);
@@ -1630,17 +1628,17 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(CoincenterCommandType::ReplayMarkets, jsonData);
+  logActivity(CoincenterCommandType::ReplayMarkets, jsonObj);
 }
 
 void QueryResultPrinter::printMarketTradingResults(TimeWindow inputTimeWindow, const ReplayResults &replayResults,
                                                    CoincenterCommandType commandType) const {
-  json::container jsonData = MarketTradingResultsJson(inputTimeWindow, replayResults, commandType);
+  auto jsonObj = MarketTradingResultsJson(inputTimeWindow, replayResults, commandType);
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       SimpleTable table;
@@ -1698,12 +1696,12 @@ void QueryResultPrinter::printMarketTradingResults(TimeWindow inputTimeWindow, c
       break;
     }
     case ApiOutputType::json:
-      printJson(jsonData);
+      printJson(jsonObj);
       break;
     case ApiOutputType::off:
       break;
   }
-  logActivity(commandType, jsonData);
+  logActivity(commandType, jsonObj);
 }
 
 void QueryResultPrinter::printTable(const SimpleTable &table) const {
@@ -1717,24 +1715,6 @@ void QueryResultPrinter::printTable(const SimpleTable &table) const {
   } else {
     // logger library automatically adds a newline as suffix
     _outputLogger->info(ss.view());
-  }
-}
-
-void QueryResultPrinter::printJson(const json::container &jsonData) const {
-  string jsonStr = jsonData.dump();
-  if (_pOs != nullptr) {
-    *_pOs << jsonStr << '\n';
-  } else {
-    _outputLogger->info(jsonStr);
-  }
-}
-
-void QueryResultPrinter::logActivity(CoincenterCommandType commandType, const json::container &jsonData,
-                                     bool isSimulationMode) const {
-  if (_loggingInfo.isCommandTypeTracked(commandType) &&
-      (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
-    File activityFile = _loggingInfo.getActivityFile();
-    activityFile.write(jsonData.dump(), Writer::Mode::Append);
   }
 }
 
