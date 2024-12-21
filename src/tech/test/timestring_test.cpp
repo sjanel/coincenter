@@ -58,8 +58,7 @@ TEST(TimeStringTest, TimeToString) {
 }
 
 TEST(TimeStringTest, FromToString) {
-  // TODO: below lines should be uncommented
-  // std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-  // EXPECT_STREQ(TimeToString(now).c_str(), TimeToString(StringToTime(TimeToString(now).c_str())).c_str());
+  std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+  EXPECT_EQ(TimeToString(now), TimeToString(StringToTime(TimeToString(now).c_str())));
 }
 }  // namespace cct

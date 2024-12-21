@@ -15,6 +15,11 @@ namespace cct::schema {
 struct TimePoint {
   auto operator<=>(const TimePoint &) const noexcept = default;
 
+  //                             2023   -   01    -   01    T   12    :   34    :   56    Z
+  static constexpr size_t strLen() { return 4U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U; }
+
+  char *appendTo(char *buf) const { return std::ranges::copy(TimeToString(ts), buf).out; }
+
   ::cct::TimePoint ts{};
 };
 
@@ -50,23 +55,7 @@ template <>
 struct to<JSON, ::cct::schema::TimePoint> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    auto timeStr = ::cct::TimeToString(value.ts);
-    auto valueLen = timeStr.size();
-    bool withQuotes = ::cct::details::JsonWithQuotes<Opts>(b, ix);
-    int64_t additionalSize = (withQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
-                             static_cast<int64_t>(b.size());
-    if (additionalSize > 0) {
-      b.append(additionalSize, ' ');
-    }
-
-    if (withQuotes) {
-      b[ix++] = '"';
-    }
-    std::ranges::copy(timeStr, b.data() + ix);
-    ix += valueLen;
-    if (withQuotes) {
-      b[ix++] = '"';
-    }
+    ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
 }  // namespace glz::detail
