@@ -69,10 +69,12 @@ auto ComputeBaseStrToSign(HttpRequestType requestType, std::string_view method, 
 }
 
 CurlOptions CreateCurlOptions(const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
-                              string strToSign, std::string_view nonceTimeStr,
+                              string& strToSign, std::string_view nonceTimeStr,
                               CurlPostData&& postData = CurlPostData()) {
   CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
-  if (!postData.empty()) {
+  if (postData.empty()) {
+    ComputeBaseStrToSign(requestType, method, 0UL, nonceTimeStr, strToSign);
+  } else {
     if (requestType == HttpRequestType::kGet || requestType == HttpRequestType::kDelete) {
       std::string_view postDataStr = postData.str();
       auto it = ComputeBaseStrToSign(requestType, method, postDataStr.size() + 1UL, nonceTimeStr, strToSign);
