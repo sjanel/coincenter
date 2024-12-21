@@ -16,7 +16,7 @@ static constexpr auto kMinifiedJsonOptions =
                .minified = true,     // NOLINT(readability-implicit-bool-conversion)
                .raw_string = true};  // NOLINT(readability-implicit-bool-conversion)
 
-template <json::opts opts>
+template <json::opts opts = kMinifiedJsonOptions>
 string WriteJsonOrThrow(const auto &obj) {
   string buf;
 
@@ -27,17 +27,6 @@ string WriteJsonOrThrow(const auto &obj) {
     throw exception("Error while writing json content: {}", format_error(ec, buf));
   }
 
-  return buf;
-}
-
-string WriteMiniJsonOrThrow(const auto &obj) { return WriteJsonOrThrow<kMinifiedJsonOptions>(obj); }
-
-string WriteSingleObjectJsonNoQuotes(const auto &obj) {
-  auto buf = WriteMiniJsonOrThrow(obj);
-  if (!buf.empty() && buf.front() == '"') {
-    buf.pop_back();
-    buf.erase(buf.begin());
-  }
   return buf;
 }
 

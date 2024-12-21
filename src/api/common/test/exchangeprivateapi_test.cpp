@@ -94,7 +94,7 @@ class ExchangePrivateTest : public ::testing::Test {
   FiatConverter fiatConverter{coincenterInfo, Duration::max(), Reader(), Reader()};
 
   MockExchangePublic exchangePublic{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
-  APIKey key{"test", "testUser", "", "", ""};
+  APIKey key{"testUser", "", "", ""};
   MockExchangePrivate exchangePrivate{exchangePublic, coincenterInfo, key};
 
   Market market{"ETH", "EUR"};

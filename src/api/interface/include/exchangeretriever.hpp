@@ -90,7 +90,7 @@ class ExchangeRetriever {
             }
             if (ret.size() == oldSize) {
               if constexpr (std::is_same_v<std::remove_cvref_t<decltype(name)>, ExchangeNameEnum>) {
-                throw exception("Unable to find {} in the exchange list", kSupportedExchanges[static_cast<int>(name)]);
+                throw exception("Unable to find {} in the exchange list", EnumToString(name));
               } else {
                 throw exception("Unable to find {} in the exchange list", name);
               }

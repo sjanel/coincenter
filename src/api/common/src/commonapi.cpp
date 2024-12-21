@@ -78,7 +78,7 @@ MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(ExchangeNameEnum e
 
   if (ret.empty()) {
     log::warn("Taking binance withdrawal fees for {} as crawler failed to retrieve data",
-              kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
+              EnumToString(exchangeNameEnum));
     ret = _binanceGlobalInfos.queryWithdrawalFees();
   }
   return ret;
@@ -95,7 +95,7 @@ std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(ExchangeNameEnum 
     }
   }
   log::warn("Taking binance withdrawal fee for {} and currency {} as crawler failed to retrieve data",
-            kSupportedExchanges[static_cast<int>(exchangeNameEnum)], currencyCode);
+            EnumToString(exchangeNameEnum), currencyCode);
   MonetaryAmount withdrawFee = _binanceGlobalInfos.queryWithdrawalFee(currencyCode);
   if (withdrawFee.isDefault()) {
     return {};
@@ -226,7 +226,7 @@ void CommonAPI::updateCacheFile() const {
         fiatsData.fiats.emplace_back(fiatCode.str());
       }
       fiatsData.timeepoch = TimestampToSecondsSinceEpoch(fiatsPtrLastUpdatedTimePair.second);
-      fiatsCacheFile.write(WriteMiniJsonOrThrow(fiatsData));
+      fiatsCacheFile.write(WriteJsonOrThrow(fiatsData));
     }
   }
 

@@ -62,7 +62,7 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
 }
 
 void FiatConverter::updateCacheFile() const {
-  auto dataStr = WriteMiniJsonOrThrow(_pricesMap);
+  auto dataStr = WriteJsonOrThrow(_pricesMap);
   GetRatesCacheFile(_dataDir).write(dataStr);
 }
 

@@ -734,7 +734,7 @@ SimpleTable MarketOrderBook::getTable(ExchangeNameEnum exchangeNameEnum,
   string h1("Sellers of ");
   string baseStr = _market.base().str();
   h1.append(baseStr).append(" (asks)");
-  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
+  std::string_view exchangeName = EnumToString(exchangeNameEnum);
   string h2(exchangeName);
   h2.append(" ").append(baseStr).append(" price in ");
   _market.quote().appendStrTo(h2);

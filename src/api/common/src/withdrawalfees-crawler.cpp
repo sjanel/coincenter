@@ -55,7 +55,7 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
       // we can reuse file data
       WithdrawalInfoMaps withdrawalInfoMaps;
 
-      std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
+      std::string_view exchangeName = EnumToString(exchangeNameEnum);
 
       for (const auto& [cur, val] : exchangeData.assets) {
         MonetaryAmount withdrawMin(val.min, cur);
@@ -106,7 +106,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
   }
 
   if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
-    log::error("Unable to parse {} withdrawal fees", kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
+    log::error("Unable to parse {} withdrawal fees", EnumToString(exchangeNameEnum));
   }
 
   return std::make_pair(std::move(withdrawFees1), std::move(withdrawMinMap1));
@@ -136,14 +136,14 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
       }
     }
   }
-  auto dataStr = WriteMiniJsonOrThrow(withdrawInfoFile);
+  auto dataStr = WriteJsonOrThrow(withdrawInfoFile);
 
   GetWithdrawInfoFile(_coincenterInfo.dataDir()).write(dataStr);
 }
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
     ExchangeNameEnum exchangeNameEnum) {
-  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
+  std::string_view exchangeName = EnumToString(exchangeNameEnum);
   string path(exchangeName);
   path.append(".json");
   std::string_view dataStr = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
@@ -186,7 +186,7 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get2(
     ExchangeNameEnum exchangeNameEnum) {
-  std::string_view exchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
+  std::string_view exchangeName = EnumToString(exchangeNameEnum);
   std::string_view withdrawalFeesCsv = _curlHandle2.query(exchangeName, CurlOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Deposit & Withdrawal fees</h2>";

@@ -52,20 +52,18 @@ APIKeysProvider::KeyNames APIKeysProvider::getKeyNames(ExchangeNameEnum exchange
 }
 
 const APIKey& APIKeysProvider::get(const ExchangeName& exchangeName) const {
-  std::string_view platformStr = exchangeName.name();
-  ExchangeNameEnum exchangeNameEnum = static_cast<ExchangeNameEnum>(
-      std::ranges::find(kSupportedExchanges, platformStr) - std::begin(kSupportedExchanges));
+  ExchangeNameEnum exchangeNameEnum = exchangeName.exchangeNameEnum();
   const APIKeys& apiKeys = _apiKeysPerExchange[static_cast<int>(exchangeNameEnum)];
   if (!exchangeName.isKeyNameDefined()) {
     if (apiKeys.size() > 1) {
-      throw exception("Specify name for {} keys as you have several", platformStr);
+      throw exception("Specify name for {} keys as you have several", exchangeName.name());
     }
     return apiKeys.front();
   }
   auto keyNameIt = std::ranges::find_if(
       apiKeys, [exchangeName](const APIKey& apiKey) { return apiKey.name() == exchangeName.keyName(); });
   if (keyNameIt == apiKeys.end()) {
-    throw exception("Unable to retrieve private key for {} named {:k}", platformStr, exchangeName);
+    throw exception("Unable to retrieve private key for {} named {:k}", exchangeName.name(), exchangeName);
   }
   return *keyNameIt;
 }
@@ -92,11 +90,10 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
 
   bool atLeastOneKeyFound = false;
   for (auto& [exchangeNameEnum, apiKeys] : apiKeysPerExchangeMap) {
-    auto publicExchangeName = kSupportedExchanges[static_cast<int>(exchangeNameEnum)];
     if (std::ranges::any_of(exchangesWithoutSecrets, [exchangeNameEnum](const auto& exchangeName) {
           return exchangeName.exchangeNameEnum() == exchangeNameEnum;
         })) {
-      log::debug("Not loading {} private keys as requested", publicExchangeName);
+      log::debug("Not loading {} private keys as requested", EnumToString(exchangeNameEnum));
       continue;
     }
 
@@ -107,7 +104,7 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
       }
 
       apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].emplace_back(
-          publicExchangeName, keyName, std::move(apiKey.key), std::move(apiKey.priv), std::move(apiKey.passphrase),
+          keyName, std::move(apiKey.key), std::move(apiKey.priv), std::move(apiKey.passphrase),
           AccountOwner(apiKey.accountOwner.enName, apiKey.accountOwner.koName));
 
       atLeastOneKeyFound = true;
@@ -138,7 +135,7 @@ string APIKeysProvider::str() const {
     }
     foundKeysStr.push_back('}');
     foundKeysStr.push_back('@');
-    foundKeysStr.append(kSupportedExchanges[exchangePos]);
+    foundKeysStr.append(EnumToString(static_cast<ExchangeNameEnum>(exchangePos)));
   }
   return foundKeysStr;
 }

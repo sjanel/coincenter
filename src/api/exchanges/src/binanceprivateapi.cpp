@@ -232,7 +232,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
   }
   if (throwIfError) {
     std::string_view errorMsg;
-    string jsonStr = WriteMiniJsonOrThrow(ret);
+    string jsonStr = WriteJsonOrThrow(ret);
     if constexpr (amc::is_detected<schema::binance::has_msg_t, T>::value) {
       if (ret.msg) {
         errorMsg = *ret.msg;

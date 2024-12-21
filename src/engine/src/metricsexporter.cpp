@@ -95,7 +95,7 @@ void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRate
 
   for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
-    key.set("exchange", kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
+    key.set("exchange", EnumToString(exchangeNameEnum));
     key.set("side", "ask");
     _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, marketOrderBook.lowestAskPrice().toDouble());
     key.set("side", "bid");
@@ -105,7 +105,7 @@ void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRate
   key.set(kMetricHelpKey, "Best bids and asks volumes");
   for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
-    key.set("exchange", kSupportedExchanges[static_cast<int>(exchangeNameEnum)]);
+    key.set("exchange", EnumToString(exchangeNameEnum));
     key.set("side", "ask");
     _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
                           marketOrderBook.amountAtAskPrice().toDouble());
