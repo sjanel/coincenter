@@ -1011,7 +1011,7 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
   switch (_apiOutputType) {
     case ApiOutputType::table: {
       string tradedFromStr("Traded from amount (");
-      auto tradeModeStr = WriteSingleObjectJsonNoQuotes(tradeOptions.tradeMode());
+      string tradeModeStr(EnumToString(tradeOptions.tradeMode()));
       tradedFromStr.append(tradeModeStr);
       tradedFromStr.push_back(')');
       string tradedToStr("Traded to amount (");
@@ -1026,8 +1026,7 @@ void QueryResultPrinter::printTrades(const TradeResultPerExchange &tradeResultPe
         const TradedAmounts &tradedAmounts = tradeResult.tradedAmounts();
 
         table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), tradeResult.from().str(),
-                           tradedAmounts.from.str(), tradedAmounts.to.str(),
-                           WriteSingleObjectJsonNoQuotes(tradeResult.state()));
+                           tradedAmounts.from.str(), tradedAmounts.to.str(), EnumToString(tradeResult.state()));
       }
       printTable(table);
       break;
@@ -1053,7 +1052,7 @@ void QueryResultPrinter::printClosedOrders(const ClosedOrdersPerExchange &closed
         for (const ClosedOrder &closedOrder : closedOrders) {
           table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), closedOrder.id(),
                              TimeToString(closedOrder.placedTime()), TimeToString(closedOrder.matchedTime()),
-                             WriteSingleObjectJsonNoQuotes(closedOrder.side()), closedOrder.price().str(),
+                             EnumToString(closedOrder.side()), closedOrder.price().str(),
                              closedOrder.matchedVolume().str());
         }
       }
@@ -1080,7 +1079,7 @@ void QueryResultPrinter::printOpenedOrders(const OpenedOrdersPerExchange &opened
       for (const auto &[exchangePtr, openedOrders] : openedOrdersPerExchange) {
         for (const OpenedOrder &openedOrder : openedOrders) {
           table.emplace_back(exchangePtr->name(), exchangePtr->keyName(), openedOrder.id(),
-                             TimeToString(openedOrder.placedTime()), WriteSingleObjectJsonNoQuotes(openedOrder.side()),
+                             TimeToString(openedOrder.placedTime()), EnumToString(openedOrder.side()),
                              openedOrder.price().str(), openedOrder.matchedVolume().str(),
                              openedOrder.remainingVolume().str());
         }
@@ -1555,7 +1554,7 @@ void QueryResultPrinter::printMarketTradingResults(TimeWindow inputTimeWindow, c
             for (const ClosedOrder &closedOrder : marketTradingResults.matchedOrders()) {
               string orderStr = TimeToString(closedOrder.placedTime());
               orderStr.append(" - ");
-              orderStr.append(WriteSingleObjectJsonNoQuotes(closedOrder.side()));
+              orderStr.append(EnumToString(closedOrder.side()));
               orderStr.append(" - ");
               orderStr.append(closedOrder.matchedVolume().str());
               orderStr.append(" @ ");

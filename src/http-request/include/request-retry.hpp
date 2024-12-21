@@ -49,8 +49,8 @@ class RequestRetry {
     do {
       if (nbRetries != 0) {
         if (log::get_level() <= log::level::warn) {
-          log::warn("Got query error: '{}' for {}, retry {}/{} after {}", WriteMiniJsonOrThrow(ret), endpoint,
-                    nbRetries, _queryRetryPolicy.nbMaxRetries, DurationToString(sleepingTime));
+          log::warn("Got query error: '{}' for {}, retry {}/{} after {}", WriteJsonOrThrow(ret), endpoint, nbRetries,
+                    _queryRetryPolicy.nbMaxRetries, DurationToString(sleepingTime));
         }
 
         std::this_thread::sleep_for(sleepingTime);

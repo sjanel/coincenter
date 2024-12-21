@@ -1,7 +1,7 @@
 #pragma once
 
-#include <algorithm>
 #include <compare>
+#include <limits>
 #include <ostream>
 #include <string_view>
 
@@ -11,15 +11,6 @@
 #include "cct_type_traits.hpp"
 
 namespace cct {
-
-/// Returns the constant index (starting at 0) of given public exchange name in lower case.
-/// If not found, kNbSupportedExchanges will be returned.
-constexpr auto PublicExchangePos(std::string_view publicExchangeName) {
-  return std::ranges::find_if(
-             kSupportedExchanges,
-             [publicExchangeName](const auto exchangeStr) { return exchangeStr == publicExchangeName; }) -
-         std::begin(kSupportedExchanges);
-}
 
 class ExchangeName {
  public:
@@ -38,38 +29,33 @@ class ExchangeName {
 
   explicit ExchangeName(ExchangeNameEnum exchangeNameEnum, std::string_view keyName = {});
 
-  std::string_view name() const {
-    const auto underscore = underscorePos();
-    return {_nameWithKey.data(), underscore == string::npos ? _nameWithKey.size() : underscore};
-  }
+  std::string_view name() const { return EnumToString(_exchangeNameEnum); }
 
   std::string_view keyName() const {
-    const auto underscore = underscorePos();
-    return {_nameWithKey.begin() + (underscore == string::npos ? _nameWithKey.size() : underscore + 1U),
+    return {_nameWithKey.begin() + (_begKeyNamePos == kUndefinedKeyNamePos ? _nameWithKey.size() : _begKeyNamePos),
             _nameWithKey.end()};
   }
 
-  auto publicExchangePos() const { return PublicExchangePos(name()); }
+  std::size_t publicExchangePos() const { return static_cast<std::size_t>(_exchangeNameEnum); }
 
-  ExchangeNameEnum exchangeNameEnum() const { return static_cast<ExchangeNameEnum>(publicExchangePos()); }
+  ExchangeNameEnum exchangeNameEnum() const { return _exchangeNameEnum; }
 
-  bool isKeyNameDefined() const { return underscorePos() != string::npos; }
+  bool isKeyNameDefined() const { return _begKeyNamePos != kUndefinedKeyNamePos; }
 
   std::string_view str() const { return _nameWithKey; }
 
   bool operator==(const ExchangeName &) const noexcept = default;
   std::strong_ordering operator<=>(const ExchangeName &) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &rhs) { return os << rhs.str(); }
+  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &en) { return os << en.str(); }
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  static constexpr auto kMinExchangeNameLength =
-      std::ranges::min_element(kSupportedExchanges, [](auto lhs, auto rhs) { return lhs.size() < rhs.size(); })->size();
+  static constexpr uint8_t kUndefinedKeyNamePos = std::numeric_limits<uint8_t>::max();
 
-  string::size_type underscorePos() const { return _nameWithKey.find('_', kMinExchangeNameLength); }
-
+  ExchangeNameEnum _exchangeNameEnum;
+  uint8_t _begKeyNamePos;
   string _nameWithKey;
 };
 

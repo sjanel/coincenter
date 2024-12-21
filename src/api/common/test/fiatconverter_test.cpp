@@ -86,7 +86,7 @@ std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, c
       }
     }
     if (res.val != 0) {
-      _queryData = WriteMiniJsonOrThrow(response);
+      _queryData = WriteJsonOrThrow(response);
     }
 
   } else {
@@ -96,7 +96,7 @@ std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, c
     response.rates["SUSHI"] = 36.78;
     response.rates["KRW"] = 1341.88;
     response.rates["NOK"] = 11.3375;
-    _queryData = WriteMiniJsonOrThrow(response);
+    _queryData = WriteJsonOrThrow(response);
   }
 
   return _queryData;

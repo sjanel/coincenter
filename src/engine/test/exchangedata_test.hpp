@@ -40,11 +40,11 @@ class ExchangesBaseTest : public ::testing::Test {
   api::MockExchangePublic exchangePublic1{ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{ExchangeNameEnum::bithumb, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic3{ExchangeNameEnum::huobi, fiatConverter, commonAPI, coincenterInfo};
-  api::APIKey key1{"test1", "testuser1", "", "", ""};
-  api::APIKey key2{"test2", "testuser2", "", "", ""};
-  api::APIKey key3{"test3", "testuser3", "", "", ""};
-  api::APIKey key4{"test4", "testuser4", "", "", ""};
-  api::APIKey key5{"test5", "testuser5", "", "", ""};
+  api::APIKey key1{"testuser1", "", "", ""};
+  api::APIKey key2{"testuser2", "", "", ""};
+  api::APIKey key3{"testuser3", "", "", ""};
+  api::APIKey key4{"testuser4", "", "", ""};
+  api::APIKey key5{"testuser5", "", "", ""};
   Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
   Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.exchangeNameEnum()), exchangePublic2,

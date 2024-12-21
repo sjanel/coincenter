@@ -54,14 +54,17 @@ TimePoint StringToTime(std::string_view timeStr, const char* format) {
   if (ss.fail()) {
     throw exception("Failed to parse time string {}", timeStr);
   }
-  // Convert timestamp to epoch time assuming UTC
+// Convert timestamp to epoch time assuming UTC
+#ifdef _WIN32
+  std::time_t timet = _mkgmtime(&utc);
+#else
   std::time_t timet = timegm(&utc);
+#endif
   return Clock::from_time_t(timet);
 }
 
 Nonce Nonce_TimeSinceEpochInMs(Duration delay) {
-  const auto nowTime = Clock::now();
-  return IntegralToString(TimestampToMillisecondsSinceEpoch(nowTime + delay));
+  return IntegralToString(TimestampToMillisecondsSinceEpoch(Clock::now() + delay));
 }
 
 }  // namespace cct

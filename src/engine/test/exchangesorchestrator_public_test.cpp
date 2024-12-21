@@ -33,8 +33,8 @@ TEST_F(ExchangeOrchestratorTest, HealthCheck) {
   EXPECT_CALL(exchangePublic1, healthCheck()).WillOnce(testing::Return(true));
   EXPECT_CALL(exchangePublic2, healthCheck()).WillOnce(testing::Return(false));
 
-  const ExchangeName kTestedExchanges12[] = {ExchangeName(kSupportedExchanges[0]),
-                                             ExchangeName(kSupportedExchanges[1])};
+  const ExchangeName kTestedExchanges12[] = {ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(0))),
+                                             ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(1)))};
 
   ExchangeHealthCheckStatus expectedHealthCheck = {{&exchange1, true}, {&exchange2, false}};
   EXPECT_EQ(exchangesOrchestrator.healthCheck(kTestedExchanges12), expectedHealthCheck);
@@ -47,8 +47,8 @@ TEST_F(ExchangeOrchestratorTest, TickerInformation) {
   const MarketOrderBookMap marketOrderbookMap2 = {{m1, marketOrderBook10}, {m3, marketOrderBook3}};
   EXPECT_CALL(exchangePublic2, queryAllApproximatedOrderBooks(1)).WillOnce(testing::Return(marketOrderbookMap2));
 
-  const ExchangeName kTestedExchanges12[] = {ExchangeName(kSupportedExchanges[0]),
-                                             ExchangeName(kSupportedExchanges[1])};
+  const ExchangeName kTestedExchanges12[] = {ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(0))),
+                                             ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(1)))};
 
   ExchangeTickerMaps expectedTickerMaps = {{&exchange1, marketOrderbookMap1}, {&exchange2, marketOrderbookMap2}};
   EXPECT_EQ(exchangesOrchestrator.getTickerInformation(kTestedExchanges12), expectedTickerMaps);
@@ -79,8 +79,9 @@ class ExchangeOrchestratorMarketOrderbookTest : public ExchangeOrchestratorTest 
 };
 
 TEST_F(ExchangeOrchestratorMarketOrderbookTest, AllSpecifiedExchanges) {
-  const ExchangeName kTestedExchanges123[] = {
-      ExchangeName(kSupportedExchanges[0]), ExchangeName(kSupportedExchanges[1]), ExchangeName(kSupportedExchanges[2])};
+  const ExchangeName kTestedExchanges123[] = {ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(0))),
+                                              ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(1))),
+                                              ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(2)))};
 
   EXPECT_EQ(exchangesOrchestrator.getMarketOrderBooks(testedMarket, kTestedExchanges123, equiCurrencyCode, optDepth),
             marketOrderBookConversionRates);
@@ -109,7 +110,7 @@ class ExchangeOrchestratorEmptyMarketOrderbookTest : public ExchangeOrchestrator
 };
 
 TEST_F(ExchangeOrchestratorEmptyMarketOrderbookTest, MarketDoesNotExist) {
-  const ExchangeName kTestedExchanges2[] = {ExchangeName(kSupportedExchanges[1])};
+  const ExchangeName kTestedExchanges2[] = {ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(1)))};
   EXPECT_EQ(exchangesOrchestrator.getMarketOrderBooks(testedMarket, kTestedExchanges2, equiCurrencyCode, optDepth),
             marketOrderBookConversionRates);
 }
@@ -180,8 +181,8 @@ TEST_F(ExchangeOrchestratorTest, GetMarketsPerExchangeTwoCurrencies) {
 TEST_F(ExchangeOrchestratorTest, GetExchangesTradingCurrency) {
   CurrencyCode currencyCode{"XRP"};
 
-  const ExchangeName kTestedExchanges13[] = {ExchangeName(kSupportedExchanges[0]),
-                                             ExchangeName(kSupportedExchanges[2])};
+  const ExchangeName kTestedExchanges13[] = {ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(0))),
+                                             ExchangeName(EnumToString(static_cast<ExchangeNameEnum>(2)))};
 
   CurrencyExchangeFlatSet tradableCurrencies1{
       CurrencyExchangeVector{CurrencyExchange("XRP", CurrencyExchange::Deposit::kUnavailable,

@@ -121,9 +121,9 @@ class QueryResultPrinter {
 
   void printJson(const auto &jsonObj) const {
     if (_pOs != nullptr) {
-      *_pOs << WriteMiniJsonOrThrow(jsonObj) << '\n';
+      *_pOs << WriteJsonOrThrow(jsonObj) << '\n';
     } else {
-      _outputLogger->info(WriteMiniJsonOrThrow(jsonObj));
+      _outputLogger->info(WriteJsonOrThrow(jsonObj));
     }
   }
 
@@ -131,7 +131,7 @@ class QueryResultPrinter {
     if (_loggingInfo.isCommandTypeTracked(commandType) &&
         (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
       File activityFile = _loggingInfo.getActivityFile();
-      activityFile.write(WriteMiniJsonOrThrow(jsonObj), Writer::Mode::Append);
+      activityFile.write(WriteJsonOrThrow(jsonObj), Writer::Mode::Append);
     }
   }
 

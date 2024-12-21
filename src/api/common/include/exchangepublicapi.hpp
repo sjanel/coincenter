@@ -125,7 +125,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   ExchangeNameEnum exchangeNameEnum() const { return _exchangeNameEnum; }
 
   /// Get the name of the exchange in lower case.
-  std::string_view name() const { return kSupportedExchanges[static_cast<int>(_exchangeNameEnum)]; }
+  std::string_view name() const { return EnumToString(_exchangeNameEnum); }
 
   /// Retrieve the shortest array of markets that can convert 'fromCurrencyCode' to 'toCurrencyCode' (shortest in terms
   /// of number of conversions) of 'fromCurrencyCode' to 'toCurrencyCode'.

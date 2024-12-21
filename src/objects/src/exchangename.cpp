@@ -12,41 +12,63 @@
 
 namespace cct {
 
-bool ExchangeName::IsValid(std::string_view str) {
+namespace {
+
+std::pair<ExchangeNameEnum, bool> ExtractExchangeNameEnum(std::string_view str) {
+  static constexpr auto kMinExchangeNameLength =
+      std::ranges::min_element(kSupportedExchanges, [](auto lhs, auto rhs) { return lhs.size() < rhs.size(); })->size();
+
+  std::pair<ExchangeNameEnum, bool> res{};
   if (str.size() < kMinExchangeNameLength) {
-    return false;
+    return res;
   }
   const auto lowerStr = ToLower(str);
   const auto exchangePos =
       std::ranges::find_if(kSupportedExchanges, [&lowerStr](std::string_view ex) { return lowerStr.starts_with(ex); }) -
       std::begin(kSupportedExchanges);
   if (exchangePos == kNbSupportedExchanges) {
-    return false;
+    return res;
   }
   const auto publicExchangeName = kSupportedExchanges[exchangePos];
+  res.first = static_cast<ExchangeNameEnum>(exchangePos);
   if (publicExchangeName.size() == lowerStr.size()) {
-    return true;
+    res.second = true;
+    return res;
   }
   if (lowerStr[publicExchangeName.size()] != '_') {
-    return false;
+    return res;
   }
-  std::string_view keyName(lowerStr.begin() + publicExchangeName.size() + 1U, lowerStr.end());
-  return !keyName.empty();
+  res.second = str.size() > publicExchangeName.size() + 1U;
+  return res;
 }
+}  // namespace
+
+bool ExchangeName::IsValid(std::string_view str) { return ExtractExchangeNameEnum(str).second; }
 
 ExchangeName::ExchangeName(std::string_view globalExchangeName) : _nameWithKey(globalExchangeName) {
-  if (!IsValid(globalExchangeName)) {
+  const auto [exchangeNameEnum, isValid] = ExtractExchangeNameEnum(globalExchangeName);
+  if (!isValid) {
     throw invalid_argument("Invalid exchange name '{}'", globalExchangeName);
   }
-  const auto sz = globalExchangeName.size();
-  for (std::remove_const_t<decltype(sz)> charPos = 0; charPos < sz && _nameWithKey[charPos] != '_'; ++charPos) {
+  _exchangeNameEnum = exchangeNameEnum;
+  const auto exchangeNameSize = EnumToString(exchangeNameEnum).size();
+  if (_nameWithKey.size() > exchangeNameSize) {
+    _begKeyNamePos = exchangeNameSize + 1UL;
+  } else {
+    _begKeyNamePos = kUndefinedKeyNamePos;
+  }
+
+  for (std::remove_const_t<decltype(exchangeNameSize)> charPos = 0; charPos < exchangeNameSize; ++charPos) {
     _nameWithKey[charPos] = tolower(_nameWithKey[charPos]);
   }
 }
 
 ExchangeName::ExchangeName(ExchangeNameEnum exchangeNameEnum, std::string_view keyName)
-    : _nameWithKey(kSupportedExchanges[static_cast<int>(exchangeNameEnum)]) {
-  if (!keyName.empty()) {
+    : _exchangeNameEnum(exchangeNameEnum), _nameWithKey(EnumToString(exchangeNameEnum)) {
+  if (keyName.empty()) {
+    _begKeyNamePos = kUndefinedKeyNamePos;
+  } else {
+    _begKeyNamePos = _nameWithKey.size() + 1UL;
     _nameWithKey.push_back('_');
     _nameWithKey.append(keyName);
   }

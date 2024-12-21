@@ -3,14 +3,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "cct_json.hpp"
-
 namespace cct {
-
-std::string_view CoincenterCommandTypeToString(CoincenterCommandType coincenterCommandType) {
-  return json::reflect<CoincenterCommandType>::keys[static_cast<std::underlying_type_t<CoincenterCommandType>>(
-      coincenterCommandType)];
-}
 
 bool IsAnyTrade(CoincenterCommandType coincenterCommandType) {
   switch (coincenterCommandType) {

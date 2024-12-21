@@ -17,14 +17,14 @@ string ConstructAccumulatedExchangeNames(ExchangeNameSpan exchangeNames) {
   return exchangesStr;
 }
 
-string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNames) {
+string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNameEnums) {
   // TODO: Use C++23 join_with feature
-  string exchangesStr(exchangeNames.empty() ? "all" : "");
-  for (const auto &exchangeName : exchangeNames) {
+  string exchangesStr(exchangeNameEnums.empty() ? "all" : "");
+  for (const auto exchangeNameEnum : exchangeNameEnums) {
     if (!exchangesStr.empty()) {
       exchangesStr.push_back(',');
     }
-    exchangesStr.append(kSupportedExchanges[static_cast<int>(exchangeName)]);
+    exchangesStr.append(EnumToString(exchangeNameEnum));
   }
   return exchangesStr;
 }

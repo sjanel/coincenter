@@ -24,7 +24,7 @@ Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic 
       _exchangePrivate(std::move(exchangePrivate)),
       _pExchangeConfig(std::addressof(exchangeConfig)) {}
 
-std::size_t Exchange::publicExchangePos() const { return PublicExchangePos(name()); }
+std::size_t Exchange::publicExchangePos() const { return static_cast<std::size_t>(exchangeNameEnum()); }
 
 bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
   if (_pExchangeConfig->asset.withdrawExclude.contains(currencyCode)) {

@@ -1095,7 +1095,7 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
 }
 
 void BithumbPrivate::updateCacheFile() const {
-  GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).write(WriteMiniJsonOrThrow(_currencyOrderInfoMap));
+  GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).write(WriteJsonOrThrow(_currencyOrderInfoMap));
 }
 
 }  // namespace cct::api

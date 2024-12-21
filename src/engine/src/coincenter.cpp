@@ -73,18 +73,18 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, Exchan
 }
 
 MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos) {
-  ExchangeNames exchangeNames;
+  ExchangeNameEnumVector exchangeNameEnums;
 
   int exchangePos{};
   for (Market market : marketPerPublicExchangePos) {
     if (market.isDefined()) {
-      exchangeNames.emplace_back(kSupportedExchanges[exchangePos]);
+      exchangeNameEnums.emplace_back(static_cast<ExchangeNameEnum>(exchangePos));
     }
     ++exchangePos;
   }
 
   const auto marketDataPerExchange =
-      _exchangesOrchestrator.getMarketDataPerExchange(marketPerPublicExchangePos, exchangeNames);
+      _exchangesOrchestrator.getMarketDataPerExchange(marketPerPublicExchangePos, exchangeNameEnums);
 
   // Transform data structures to export metrics input format
   MarketOrderBookConversionRates marketOrderBookConversionRates(marketDataPerExchange.size());
@@ -390,8 +390,7 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
 
     if (!isValidateOnly && (startBaseAmount == 0 || startQuoteAmount == 0)) {
       log::warn("Cannot convert to start base / quote amounts for {} ({} / {})",
-                kSupportedExchanges[static_cast<int>(exchangesWithThisMarketData[exchangePos])], startBaseAmount,
-                startQuoteAmount);
+                EnumToString(exchangesWithThisMarketData[exchangePos]), startBaseAmount, startQuoteAmount);
       exchangesWithThisMarketData.erase(exchangesWithThisMarketData.begin() + exchangePos);
       convertedBaseAmountPerExchange.erase(convertedBaseAmountPerExchange.begin() + exchangePos);
       convertedQuoteAmountPerExchange.erase(convertedQuoteAmountPerExchange.begin() + exchangePos);

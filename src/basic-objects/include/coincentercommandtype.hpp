@@ -17,8 +17,6 @@ namespace cct {
 
 enum class CoincenterCommandType : int8_t { CCT_COINCENTER_COMMAND_TYPES };
 
-std::string_view CoincenterCommandTypeToString(CoincenterCommandType coincenterCommandType);
-
 bool IsAnyTrade(CoincenterCommandType coincenterCommandType);
 }  // namespace cct
 

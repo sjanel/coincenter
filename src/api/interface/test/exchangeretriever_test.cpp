@@ -40,8 +40,8 @@ class ExchangeRetrieverTest : public ::testing::Test {
   api::MockExchangePublic exchangePublic1{ExchangeNameEnum::bithumb, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic2{ExchangeNameEnum::kraken, fiatConverter, commonAPI, coincenterInfo};
   api::MockExchangePublic exchangePublic3{ExchangeNameEnum::kucoin, fiatConverter, commonAPI, coincenterInfo};
-  api::APIKey key1{"test1", "user1", "", "", ""};
-  api::APIKey key2{"test2", "user2", "", "", ""};
+  api::APIKey key1{"user1", "", "", ""};
+  api::APIKey key2{"user2", "", "", ""};
   Exchange exchange1{coincenterInfo.exchangeConfig(exchangePublic1.exchangeNameEnum()), exchangePublic1,
                      std::make_unique<api::MockExchangePrivate>(exchangePublic1, coincenterInfo, key1)};
   Exchange exchange2{coincenterInfo.exchangeConfig(exchangePublic2.exchangeNameEnum()), exchangePublic2,

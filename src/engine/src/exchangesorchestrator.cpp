@@ -954,9 +954,9 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLastPricePerExchange(Market 
   return lastPricePerExchange;
 }
 
-MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(std::span<const Market> marketPerPublicExchange,
-                                                                      ExchangeNameSpan exchangeNames) {
-  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNames);
+MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(
+    std::span<const Market> marketPerPublicExchange, std::span<const ExchangeNameEnum> exchangeNameEnums) {
+  UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNameEnums);
 
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
 
