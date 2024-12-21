@@ -26,7 +26,7 @@ class TradeOptions {
   TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                Duration maxTradeTime, Duration minTimeBetweenPriceUpdates = kUndefinedDuration,
                TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault,
-               TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::kSynchronous);
+               TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::synchronous);
 
   /// Constructs a new TradeOptions based on 'rhs' with unspecified options overriden from exchange config values
   TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryTradeConfig &exchangeTradeConfig);
@@ -53,13 +53,15 @@ class TradeOptions {
     return _priceOptions.isTakerStrategy() && (!isSimulation() || !placeRealOrderInSimulationMode);
   }
 
-  constexpr bool isSimulation() const { return _tradeMode == TradeMode::kSimulation; }
+  constexpr bool isSimulation() const { return _tradeMode == TradeMode::simulation; }
 
   constexpr bool isFixedPrice() const { return _priceOptions.isFixedPrice(); }
 
   constexpr bool isRelativePrice() const { return _priceOptions.isRelativePrice(); }
 
-  constexpr bool placeMarketOrderAtTimeout() const { return _timeoutAction == TradeTimeoutAction::kMatch; }
+  constexpr TradeTimeoutAction timeoutAction() const { return _timeoutAction; }
+
+  constexpr bool placeMarketOrderAtTimeout() const { return _timeoutAction == TradeTimeoutAction::match; }
 
   constexpr void switchToTakerStrategy() { _priceOptions.switchToTakerStrategy(); }
 
@@ -75,10 +77,10 @@ class TradeOptions {
   Duration _maxTradeTime = kUndefinedDuration;
   Duration _minTimeBetweenPriceUpdates = kUndefinedDuration;
   PriceOptions _priceOptions;
-  TradeTimeoutAction _timeoutAction = TradeTimeoutAction::kDefault;
-  TradeMode _tradeMode = TradeMode::kReal;
+  TradeTimeoutAction _timeoutAction = TradeTimeoutAction::exchange_default;
+  TradeMode _tradeMode = TradeMode::real;
   TradeTypePolicy _tradeTypePolicy = TradeTypePolicy::kDefault;
-  TradeSyncPolicy _tradeSyncPolicy = TradeSyncPolicy::kSynchronous;
+  TradeSyncPolicy _tradeSyncPolicy = TradeSyncPolicy::synchronous;
 };
 
 }  // namespace cct

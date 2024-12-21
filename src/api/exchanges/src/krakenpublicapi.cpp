@@ -344,7 +344,7 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
         const MonetaryAmount price(std::get<string>(det[0]), mk.quote());
         const MonetaryAmount amount(std::get<string>(det[1]), mk.base());
         const auto millisecondsSinceEpoch = static_cast<int64_t>(std::get<double>(det[2]) * 1000);
-        const TradeSide tradeSide = std::get<string>(det[3]) == "b" ? TradeSide::kBuy : TradeSide::kSell;
+        const TradeSide tradeSide = std::get<string>(det[3]) == "b" ? TradeSide::buy : TradeSide::sell;
 
         ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
       }

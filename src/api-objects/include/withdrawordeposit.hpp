@@ -3,6 +3,7 @@
 #include <compare>
 #include <string_view>
 
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
@@ -11,10 +12,10 @@ namespace cct {
 class WithdrawOrDeposit {
  public:
   enum class Status : int8_t {
-    kInitial,
-    kSuccess,
-    kProcessing,
-    kFailureOrRejected,
+    initial,
+    success,
+    processing,
+    failed,
   };
 
   template <class StringType>
@@ -46,3 +47,9 @@ class WithdrawOrDeposit {
 };
 
 }  // namespace cct
+
+template <>
+struct glz::meta<::cct::WithdrawOrDeposit::Status> {
+  using enum ::cct::WithdrawOrDeposit::Status;
+  static constexpr auto value = enumerate(initial, success, processing, failed);
+};

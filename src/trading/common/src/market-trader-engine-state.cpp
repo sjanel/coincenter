@@ -36,9 +36,9 @@ void MarketTraderEngineState::placeBuyOrder(const schema::ExchangeConfig &exchan
   _availableQuoteAmount -= from;
 
   if (remainingVolume == 0) {
-    _closedOrders.emplace_back(nextOrderId(), matchedVolume, price, placedTime, placedTime, TradeSide::kBuy);
+    _closedOrders.emplace_back(nextOrderId(), matchedVolume, price, placedTime, placedTime, TradeSide::buy);
   } else {
-    _openedOrders.emplace_back(nextOrderId(), matchedVolume, remainingVolume, price, placedTime, TradeSide::kBuy);
+    _openedOrders.emplace_back(nextOrderId(), matchedVolume, remainingVolume, price, placedTime, TradeSide::buy);
   }
 }
 
@@ -50,9 +50,9 @@ void MarketTraderEngineState::placeSellOrder(const schema::ExchangeConfig &excha
   _availableQuoteAmount += exchangeConfig.tradeFees.applyFee(matchedVolume.toNeutral() * price, feeType);
 
   if (remainingVolume == 0) {
-    _closedOrders.emplace_back(nextOrderId(), matchedVolume, price, placedTime, placedTime, TradeSide::kSell);
+    _closedOrders.emplace_back(nextOrderId(), matchedVolume, price, placedTime, placedTime, TradeSide::sell);
   } else {
-    _openedOrders.emplace_back(nextOrderId(), matchedVolume, remainingVolume, price, placedTime, TradeSide::kSell);
+    _openedOrders.emplace_back(nextOrderId(), matchedVolume, remainingVolume, price, placedTime, TradeSide::sell);
   }
 }
 
@@ -70,11 +70,11 @@ void MarketTraderEngineState::countMatchedPart(const schema::ExchangeConfig &exc
                                                const OpenedOrder &matchedOrder, MonetaryAmount price,
                                                MonetaryAmount newMatchedVolume, TimePoint matchedTime) {
   switch (matchedOrder.side()) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       _availableBaseAmount +=
           exchangeConfig.tradeFees.applyFee(newMatchedVolume, schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       _availableQuoteAmount += exchangeConfig.tradeFees.applyFee(newMatchedVolume.toNeutral() * price,
                                                                  schema::ExchangeTradeFeesConfig::FeeType::Maker);
       break;
@@ -119,10 +119,10 @@ void MarketTraderEngineState::cancelAllOpenedOrders() {
 
 void MarketTraderEngineState::adjustAvailableAmountsCancel(const OpenedOrder &openedOrder) {
   switch (openedOrder.side()) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       _availableQuoteAmount += openedOrder.remainingVolume().toNeutral() * openedOrder.price();
       break;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       _availableBaseAmount += openedOrder.remainingVolume();
       break;
     default:

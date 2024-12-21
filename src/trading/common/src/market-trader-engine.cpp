@@ -303,10 +303,10 @@ void MarketTraderEngine::updatePrice(const MarketOrderBook &marketOrderBook, Tra
   _marketTraderEngineState.cancelOpenedOrder(traderCommand.orderId());
 
   switch (tradeSide) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       buy(marketOrderBook, remainingAmount.toNeutral() * price, traderCommand.priceStrategy());
       break;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       sell(marketOrderBook, remainingAmount, traderCommand.priceStrategy());
       break;
     default:

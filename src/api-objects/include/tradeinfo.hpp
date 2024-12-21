@@ -14,8 +14,8 @@ namespace cct::api {
 using UserRefInt = int32_t;
 
 struct TradeContext {
-  CurrencyCode fromCur() const { return side == TradeSide::kSell ? market.base() : market.quote(); }
-  CurrencyCode toCur() const { return side == TradeSide::kBuy ? market.base() : market.quote(); }
+  CurrencyCode fromCur() const { return side == TradeSide::sell ? market.base() : market.quote(); }
+  CurrencyCode toCur() const { return side == TradeSide::buy ? market.base() : market.quote(); }
 
   Market market;
   TradeSide side{};

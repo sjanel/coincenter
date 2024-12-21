@@ -1,9 +1,7 @@
 #pragma once
 
 #include <compare>
-#include <string_view>
 
-#include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
@@ -25,10 +23,6 @@ class Order {
 
   TradeSide side() const { return _side; }
 
-  std::string_view sideStr() const;
-
-  string placedTimeStr() const;
-
   Market market() const { return Market(_matchedVolume.currencyCode(), _price.currencyCode()); }
 
   std::strong_ordering operator<=>(const Order &) const noexcept = default;
@@ -36,7 +30,8 @@ class Order {
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 
  protected:
-  Order(OrderId id, MonetaryAmount matchedVolume, MonetaryAmount price, TimePoint placedTime, TradeSide side);
+  Order(OrderId id, MonetaryAmount matchedVolume, MonetaryAmount price, TimePoint placedTime, TradeSide side)
+      : _placedTime(placedTime), _id(std::move(id)), _matchedVolume(matchedVolume), _price(price), _side(side) {}
 
  private:
   TimePoint _placedTime;

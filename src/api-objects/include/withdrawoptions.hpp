@@ -3,13 +3,14 @@
 #include <cstdint>
 #include <string_view>
 
+#include "cct_json.hpp"
 #include "timedef.hpp"
 
 namespace cct {
 
 enum class WithdrawSyncPolicy : int8_t {
-  kSynchronous,  // Follow lifetime of the withdraw until funds are received at destination
-  kAsynchronous  // Only trigger withdraw and exit withdraw process directly
+  synchronous,  // Follow lifetime of the withdraw until funds are received at destination
+  asynchronous  // Only trigger withdraw and exit withdraw process directly
 };
 
 class WithdrawOptions {
@@ -36,7 +37,14 @@ class WithdrawOptions {
   static constexpr auto kWithdrawRefreshTime = seconds(5);
 
   Duration _withdrawRefreshTime = kWithdrawRefreshTime;
-  WithdrawSyncPolicy _withdrawSyncPolicy = WithdrawSyncPolicy::kSynchronous;
+  WithdrawSyncPolicy _withdrawSyncPolicy = WithdrawSyncPolicy::synchronous;
   Mode _mode = Mode::kReal;
 };
 }  // namespace cct
+
+template <>
+struct glz::meta<cct::WithdrawSyncPolicy> {
+  using enum cct::WithdrawSyncPolicy;
+
+  static constexpr auto value = enumerate(synchronous, asynchronous);
+};

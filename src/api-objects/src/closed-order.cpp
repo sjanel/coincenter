@@ -2,7 +2,6 @@
 
 #include <utility>
 
-#include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "order.hpp"
 #include "orderid.hpp"
@@ -15,8 +14,6 @@ namespace cct {
 ClosedOrder::ClosedOrder(OrderId id, MonetaryAmount matchedVolume, MonetaryAmount price, TimePoint placedTime,
                          TimePoint matchedTime, TradeSide side)
     : Order(std::move(id), matchedVolume, price, placedTime, side), _matchedTime(matchedTime) {}
-
-string ClosedOrder::matchedTimeStr() const { return TimeToString(_matchedTime); }
 
 ClosedOrder ClosedOrder::mergeWith(const ClosedOrder &closedOrder) const {
   const MonetaryAmount totalMatchedVolume = closedOrder.matchedVolume() + matchedVolume();

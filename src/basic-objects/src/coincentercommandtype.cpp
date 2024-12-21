@@ -3,7 +3,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 
 namespace cct {
 

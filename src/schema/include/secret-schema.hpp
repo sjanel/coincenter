@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "cct_const.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 
 namespace cct::schema {

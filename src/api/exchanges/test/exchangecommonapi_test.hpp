@@ -289,7 +289,7 @@ class TestAPI {
         };
         auto [smallAmountIt, bigAmountIt] = std::ranges::minmax_element(lastTrades, compareTradedVolume);
 
-        TradeOptions tradeOptions(TradeMode::kSimulation);
+        TradeOptions tradeOptions(TradeMode::simulation);
         MonetaryAmount smallFrom = smallAmountIt->amount() / 100;
         MonetaryAmount bigFrom = bigAmountIt->amount().toNeutral() * bigAmountIt->price() * 100;
         EXPECT_GT(exchangePrivateOpt->trade(smallFrom, mk.quote(), tradeOptions).to, 0);

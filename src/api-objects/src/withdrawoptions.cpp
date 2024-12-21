@@ -11,9 +11,9 @@ WithdrawOptions::WithdrawOptions(Duration withdrawRefreshTime, WithdrawSyncPolic
 
 std::string_view WithdrawOptions::withdrawSyncPolicyStr() const {
   switch (_withdrawSyncPolicy) {
-    case WithdrawSyncPolicy::kSynchronous:
+    case WithdrawSyncPolicy::synchronous:
       return "synchronous";
-    case WithdrawSyncPolicy::kAsynchronous:
+    case WithdrawSyncPolicy::asynchronous:
       return "asynchronous";
     default:
       unreachable();

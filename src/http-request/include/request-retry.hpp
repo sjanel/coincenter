@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "cct_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_type_traits.hpp"
 #include "curlhandle.hpp"

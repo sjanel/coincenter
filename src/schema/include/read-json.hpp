@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "cct_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "file.hpp"
 #include "reader.hpp"

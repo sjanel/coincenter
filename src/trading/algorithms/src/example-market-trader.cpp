@@ -12,7 +12,7 @@ ExampleMarketTrader::ExampleMarketTrader(const MarketTraderEngineState &marketTr
     : AbstractMarketTrader(kName, marketTraderEngineState) {}
 
 TraderCommand ExampleMarketTrader::trade([[maybe_unused]] const MarketDataView &marketDataView) {
-  return TraderCommand::Place(TradeSide::kSell);
+  return TraderCommand::Place(TradeSide::sell);
 }
 
 }  // namespace cct

@@ -346,7 +346,7 @@ PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
     MonetaryAmount amount(detail.units_traded, mk.base());
     MonetaryAmount price(detail.price, mk.quote());
     // Korea time (UTC+9) in this format: "2021-11-29 03:29:35"
-    TradeSide tradeSide = detail.type == schema::bithumb::TransactionTypeEnum::bid ? TradeSide::kBuy : TradeSide::kSell;
+    TradeSide tradeSide = detail.type == schema::bithumb::TransactionTypeEnum::bid ? TradeSide::buy : TradeSide::sell;
 
     ret.emplace_back(tradeSide, amount, price, EpochTime(detail.transaction_date));
   }

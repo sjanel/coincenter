@@ -12,9 +12,9 @@ namespace cct {
 namespace {
 ::proto::TradeSide ConvertTradeSide(TradeSide tradeSide) {
   switch (tradeSide) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       return ::proto::TRADE_BUY;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       return ::proto::TRADE_SELL;
     default:
       unreachable();
@@ -24,9 +24,9 @@ namespace {
 TradeSide ConvertTradeSide(::proto::TradeSide tradeSide) {
   switch (tradeSide) {
     case ::proto::TRADE_BUY:
-      return TradeSide::kBuy;
+      return TradeSide::buy;
     case ::proto::TRADE_SELL:
-      return TradeSide::kSell;
+      return TradeSide::sell;
     default:
       unreachable();
   }

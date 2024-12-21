@@ -24,9 +24,9 @@ class PublicTradeTest : public ::testing::Test {
   MonetaryAmount price1{"1500.5", market.quote()};
   MonetaryAmount price2{"1501", market.quote()};
 
-  PublicTrade pt1{TradeSide::kBuy, amount1, price1, tp1};
-  PublicTrade pt2{TradeSide::kSell, amount2, price2, tp2};
-  PublicTrade pt3{TradeSide::kSell, amount3, price2, tp1};
+  PublicTrade pt1{TradeSide::buy, amount1, price1, tp1};
+  PublicTrade pt2{TradeSide::sell, amount2, price2, tp2};
+  PublicTrade pt3{TradeSide::sell, amount3, price2, tp1};
 };
 
 TEST_F(PublicTradeTest, Validity) {
@@ -35,16 +35,16 @@ TEST_F(PublicTradeTest, Validity) {
   EXPECT_TRUE(pt3.isValid());
 
   EXPECT_FALSE(PublicTrade(static_cast<TradeSide>(-1), amount1, price1, tp1).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, amount1, amount2, tp1).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, amount1, price1, TimePoint{}).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, MonetaryAmount{}, price1, tp1).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, amount1, MonetaryAmount{0, market.quote()}, tp1).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, -amount1, price1, tp1).isValid());
-  EXPECT_FALSE(PublicTrade(TradeSide::kBuy, amount1, -price1, tp1).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, amount1, amount2, tp1).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, amount1, price1, TimePoint{}).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, MonetaryAmount{}, price1, tp1).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, amount1, MonetaryAmount{0, market.quote()}, tp1).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, -amount1, price1, tp1).isValid());
+  EXPECT_FALSE(PublicTrade(TradeSide::buy, amount1, -price1, tp1).isValid());
 }
 
 TEST_F(PublicTradeTest, Members) {
-  EXPECT_EQ(pt1.side(), TradeSide::kBuy);
+  EXPECT_EQ(pt1.side(), TradeSide::buy);
   EXPECT_EQ(pt1.market(), market);
   EXPECT_EQ(pt1.amount(), amount1);
   EXPECT_EQ(pt1.price(), price1);

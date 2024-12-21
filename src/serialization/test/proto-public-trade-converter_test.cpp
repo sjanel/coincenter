@@ -17,7 +17,7 @@ class ProtoPublicTradeTest : public ::testing::Test {
  protected:
   TimePoint tp{milliseconds{std::numeric_limits<int64_t>::max() / 10000000}};
   Market market{"ETH", "USDT"};
-  PublicTrade pt{TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp};
+  PublicTrade pt{TradeSide::buy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp};
   PublicTradeConverter publicTradeConverter{market};
 };
 

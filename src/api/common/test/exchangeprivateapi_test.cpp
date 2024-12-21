@@ -128,7 +128,7 @@ TEST_F(ExchangePrivateTest, TakerTradeBaseToQuote) {
 
   PriceOptions priceOptions(PriceStrategy::taker);
   TradeOptions tradeOptions(priceOptions);
-  TradeContext tradeContext(market, TradeSide::kSell);
+  TradeContext tradeContext(market, TradeSide::sell);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo("23004 EUR");
@@ -151,7 +151,7 @@ TEST_F(ExchangePrivateTest, TakerTradeQuoteToBase) {
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::taker);
   TradeOptions tradeOptions(priceOptions);
-  TradeContext tradeContext(market, TradeSide::kBuy);
+  TradeContext tradeContext(market, TradeSide::buy);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
@@ -173,9 +173,9 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyTaker) {
 
   MonetaryAmount vol(from / pri, market.base());
   PriceOptions priceOptions(PriceStrategy::taker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
-                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
-  TradeContext tradeContext(market, TradeSide::kBuy);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::cancel, TradeMode::real, seconds(10), seconds(5),
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::asynchronous);
+  TradeContext tradeContext(market, TradeSide::buy);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   MonetaryAmount tradedTo = vol * pri.toNeutral();
@@ -196,12 +196,12 @@ TEST_F(ExchangePrivateTest, TradeAsyncPolicyMaker) {
   MonetaryAmount vol(from);
   MonetaryAmount pri(askPrice1);
 
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
   TradeContext tradeContext(market, side);
 
   PriceOptions priceOptions(PriceStrategy::maker);
-  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::kCancel, TradeMode::kReal, seconds(10), seconds(5),
-                            TradeTypePolicy::kDefault, TradeSyncPolicy::kAsynchronous);
+  TradeOptions tradeOptions(priceOptions, TradeTimeoutAction::cancel, TradeMode::real, seconds(10), seconds(5),
+                            TradeTypePolicy::kDefault, TradeSyncPolicy::asynchronous);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
   EXPECT_CALL(exchangePublic, queryOrderBook(market, testing::_)).WillOnce(testing::Return(marketOrderBook1));
@@ -222,7 +222,7 @@ TEST_F(ExchangePrivateTest, MakerTradeBaseToQuote) {
   MonetaryAmount vol(from);
   MonetaryAmount pri(askPrice1);
 
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
   TradeContext tradeContext(market, side);
 
   PriceOptions priceOptions(PriceStrategy::maker);
@@ -255,13 +255,13 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBase) {
   MonetaryAmount from(10000, market.quote());
   MonetaryAmount pri1(bidPrice1);
   MonetaryAmount pri2(bidPrice2);
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
   TradeContext tradeContext(market, side);
 
   MonetaryAmount vol1(from / pri1, market.base());
   MonetaryAmount vol2(from / pri2, market.base());
 
-  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::cancel, TradeMode::real, Duration::max(),
                             Duration::zero(), TradeTypePolicy::kForceMultiTrade);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
@@ -336,8 +336,8 @@ TEST_F(ExchangePrivateTest, SimulatedOrderShouldNotCallPlaceOrder) {
   MonetaryAmount vol(from);
   MonetaryAmount pri(askPrice1);
 
-  TradeSide side = TradeSide::kSell;
-  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kSimulation, Duration::max(),
+  TradeSide side = TradeSide::sell;
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::cancel, TradeMode::simulation, Duration::max(),
                             Duration::zero(), TradeTypePolicy::kForceMultiTrade);
   TradeContext tradeContext(market, side);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
@@ -358,12 +358,12 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseEmergencyTakerTrade) {
 
   MonetaryAmount from(10000, market.quote());
   MonetaryAmount pri1(bidPrice1);
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
   TradeContext tradeContext(market, side);
 
   MonetaryAmount vol1(from / pri1, market.base());
 
-  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kMatch, TradeMode::kReal, Duration::zero(),
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::match, TradeMode::real, Duration::zero(),
                             Duration::zero(), TradeTypePolicy::kForceMultiTrade);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
@@ -405,12 +405,12 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
 
   MonetaryAmount from(5000, market.quote());
   MonetaryAmount pri1(bidPrice1);
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
   TradeContext tradeContext(market, side);
 
   MonetaryAmount vol1(from / pri1, market.base());
 
-  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::zero(),
+  TradeOptions tradeOptions(PriceOptions{}, TradeTimeoutAction::cancel, TradeMode::real, Duration::zero(),
                             Duration::zero(), TradeTypePolicy::kForceMultiTrade);
   TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
@@ -471,8 +471,8 @@ class ExchangePrivateWithdrawTest : public ExchangePrivateTest {
   ReceivedWithdrawInfo receivedWithdrawInfo{"deposit-id", netEmittedAmount};
 
   SentWithdrawInfo defaultWithdrawInfo{currencyCode};
-  SentWithdrawInfo unsentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kProcessing};
-  SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
+  SentWithdrawInfo unsentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::processing};
+  SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::success};
 };
 
 class ExchangePrivateWithdrawRealTest : public ExchangePrivateWithdrawTest {
@@ -483,7 +483,7 @@ class ExchangePrivateWithdrawRealTest : public ExchangePrivateWithdrawTest {
         .WillOnce(testing::Return(initiatedWithdrawInfo));
   }
 
-  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous, WithdrawOptions::Mode::kReal};
+  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::synchronous, WithdrawOptions::Mode::kReal};
 };
 
 TEST_F(ExchangePrivateWithdrawRealTest, WithdrawSynchronousReceivedAfterSent) {
@@ -496,13 +496,13 @@ TEST_F(ExchangePrivateWithdrawRealTest, WithdrawSynchronousReceivedAfterSent) {
 
     EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(WithdrawsSet{
-            Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kProcessing, fee}}));
+            Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::processing, fee}}));
     EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, unsentWithdrawInfo))
         .WillOnce(testing::Return(ReceivedWithdrawInfo{}));
 
     EXPECT_CALL(exchangePrivate, queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
-            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
+            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::success, fee}}));
     EXPECT_CALL(destinationExchangePrivate, queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))
         .Times(2)
         .WillRepeatedly(testing::Return(ReceivedWithdrawInfo{}));
@@ -533,7 +533,7 @@ TEST_F(ExchangePrivateWithdrawRealTest, WithdrawSynchronousReceivedBeforeSent) {
 
 class ExchangePrivateWithdrawSimulationTest : public ExchangePrivateWithdrawTest {
  protected:
-  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous, WithdrawOptions::Mode::kSimulation};
+  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::synchronous, WithdrawOptions::Mode::kSimulation};
 };
 
 TEST_F(ExchangePrivateWithdrawSimulationTest, SimulatedWithdrawalShouldNotCallLaunchWithdraw) {
@@ -560,7 +560,7 @@ TEST_F(ExchangePrivateTest, WithdrawAsynchronous) {
 
   EXPECT_EQ(exchangePrivate.withdraw(
                 grossAmount, destinationExchangePrivate,
-                WithdrawOptions(Duration{}, WithdrawSyncPolicy::kAsynchronous, WithdrawOptions::Mode::kReal)),
+                WithdrawOptions(Duration{}, WithdrawSyncPolicy::asynchronous, WithdrawOptions::Mode::kReal)),
             deliveredWithdrawInfo);
 }
 
@@ -593,7 +593,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     MonetaryAmount vol(from);
 
     Market mk{from.currencyCode(), pri.currencyCode()};
-    TradeContext tradeContext(mk, TradeSide::kSell);
+    TradeContext tradeContext(mk, TradeSide::sell);
     TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
     MonetaryAmount tradedTo = vol.toNeutral() * pri;
@@ -619,7 +619,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
     MonetaryAmount from = to.toNeutral() * bidPri;
     MonetaryAmount vol(from / askPri, mk.base());
 
-    TradeContext tradeContext(mk, TradeSide::kBuy);
+    TradeContext tradeContext(mk, TradeSide::buy);
     TradeInfo tradeInfo = computeTradeInfo(tradeContext, tradeOptions);
 
     TradedAmounts tradedAmounts(MonetaryAmount{success ? from : MonetaryAmount(0), askPri.currencyCode()},

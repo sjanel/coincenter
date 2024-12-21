@@ -41,17 +41,17 @@ class ProtobufBaseDataTest : public ::testing::Test {
   Market mk6{"ETH", "BTC"};
   Market mk7{"DOGE", "CAD"};
 
-  PublicTrade pt1{TradeSide::kBuy, MonetaryAmount{"0.13", mk1.base()}, MonetaryAmount{"1500.5", mk1.quote()}, tp1};
-  PublicTrade pt2{TradeSide::kSell, MonetaryAmount{"3.7", mk1.base()}, MonetaryAmount{"1500.5", mk1.quote()}, tp2};
-  PublicTrade pt3{TradeSide::kBuy, MonetaryAmount{"0.004", mk1.base()}, MonetaryAmount{1501, mk1.quote()}, tp3};
-  PublicTrade pt4{TradeSide::kBuy, MonetaryAmount{"44473434", mk3.base()}, MonetaryAmount{"0.00045", mk3.quote()}, tp1};
-  PublicTrade pt5{TradeSide::kBuy, MonetaryAmount{"45.0986", mk4.base()}, MonetaryAmount{"0.00045", mk4.quote()}, tp7};
-  PublicTrade pt6{TradeSide::kSell, MonetaryAmount{"0.81153", mk6.base()}, MonetaryAmount{"0.0834", mk6.quote()}, tp6};
-  PublicTrade pt7{TradeSide::kSell, MonetaryAmount{694873, mk7.base()}, MonetaryAmount{"0.045", mk7.quote()}, tp8};
-  PublicTrade pt8{TradeSide::kSell, MonetaryAmount{"0.1", mk2.base()}, MonetaryAmount{50000, mk2.quote()}, tp4};
-  PublicTrade pt9{TradeSide::kSell, MonetaryAmount{"56", mk1.base()}, MonetaryAmount{1300, mk1.quote()}, tp5};
-  PublicTrade pt10{TradeSide::kBuy, MonetaryAmount{"37.8", mk5.base()}, MonetaryAmount{"0.032", mk5.quote()}, tp9};
-  PublicTrade pt11{TradeSide::kBuy, MonetaryAmount{"12.2", mk5.base()}, MonetaryAmount{"0.033", mk5.quote()}, tp10};
+  PublicTrade pt1{TradeSide::buy, MonetaryAmount{"0.13", mk1.base()}, MonetaryAmount{"1500.5", mk1.quote()}, tp1};
+  PublicTrade pt2{TradeSide::sell, MonetaryAmount{"3.7", mk1.base()}, MonetaryAmount{"1500.5", mk1.quote()}, tp2};
+  PublicTrade pt3{TradeSide::buy, MonetaryAmount{"0.004", mk1.base()}, MonetaryAmount{1501, mk1.quote()}, tp3};
+  PublicTrade pt4{TradeSide::buy, MonetaryAmount{"44473434", mk3.base()}, MonetaryAmount{"0.00045", mk3.quote()}, tp1};
+  PublicTrade pt5{TradeSide::buy, MonetaryAmount{"45.0986", mk4.base()}, MonetaryAmount{"0.00045", mk4.quote()}, tp7};
+  PublicTrade pt6{TradeSide::sell, MonetaryAmount{"0.81153", mk6.base()}, MonetaryAmount{"0.0834", mk6.quote()}, tp6};
+  PublicTrade pt7{TradeSide::sell, MonetaryAmount{694873, mk7.base()}, MonetaryAmount{"0.045", mk7.quote()}, tp8};
+  PublicTrade pt8{TradeSide::sell, MonetaryAmount{"0.1", mk2.base()}, MonetaryAmount{50000, mk2.quote()}, tp4};
+  PublicTrade pt9{TradeSide::sell, MonetaryAmount{"56", mk1.base()}, MonetaryAmount{1300, mk1.quote()}, tp5};
+  PublicTrade pt10{TradeSide::buy, MonetaryAmount{"37.8", mk5.base()}, MonetaryAmount{"0.032", mk5.quote()}, tp9};
+  PublicTrade pt11{TradeSide::buy, MonetaryAmount{"12.2", mk5.base()}, MonetaryAmount{"0.033", mk5.quote()}, tp10};
 
   ::proto::PublicTrade td1{ConvertPublicTradeToProto(pt1)};
   ::proto::PublicTrade td2{ConvertPublicTradeToProto(pt2)};

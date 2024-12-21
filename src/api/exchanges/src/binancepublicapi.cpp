@@ -19,7 +19,7 @@
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -431,7 +431,7 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
     MonetaryAmount price(elem.price, mk.quote());
     MonetaryAmount amount(elem.qty, mk.base());
     int64_t millisecondsSinceEpoch = elem.time;
-    TradeSide tradeSide = elem.isBuyerMaker ? TradeSide::kSell : TradeSide::kBuy;
+    TradeSide tradeSide = elem.isBuyerMaker ? TradeSide::sell : TradeSide::buy;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }

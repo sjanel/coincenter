@@ -99,18 +99,6 @@ if(CCT_ENABLE_TESTS)
   enable_testing()
 endif()
 
-# nlohmann_json - json container library
-find_package(nlohmann_json CONFIG)
-if(NOT nlohmann_json_FOUND)
-  FetchContent_Declare(
-    nlohmann_json
-    URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
-    URL_HASH SHA256=0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406
-  )
-
-  list(APPEND fetchContentPackagesToMakeAvailable nlohmann_json)
-endif()
-
 # Glaze - fast json serialization library
 find_package(glaze CONFIG)
 if(NOT glaze)

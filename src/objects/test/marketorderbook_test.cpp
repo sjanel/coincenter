@@ -261,23 +261,22 @@ TEST_F(MarketOrderBookTestCase2, ConvertQuoteAmountToBase) {
 
 TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsBuy) {
   EXPECT_EQ(
-      marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
-                                          MonetaryAmount("57.81", "KRW")),
+      marketOrderBook.computeMatchedParts(TradeSide::buy, MonetaryAmount(91000, "APM"), MonetaryAmount("57.81", "KRW")),
       AmountAtPriceVec({AmountPrice(MonetaryAmount("33.5081914157147", "APM"), MonetaryAmount("57.78", "KRW")),
                         AmountPrice(MonetaryAmount("1991.3922", "APM"), MonetaryAmount("57.8", "KRW")),
                         AmountPrice(MonetaryAmount("88975.0996085842853", "APM"), MonetaryAmount("57.81", "KRW"))}));
-  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kBuy, MonetaryAmount(91000, "APM"),
-                                                MonetaryAmount("57.77", "KRW")),
-            AmountAtPriceVec());
+  EXPECT_EQ(
+      marketOrderBook.computeMatchedParts(TradeSide::buy, MonetaryAmount(91000, "APM"), MonetaryAmount("57.77", "KRW")),
+      AmountAtPriceVec());
 }
 
 TEST_F(MarketOrderBookTestCase2, ComputeMatchedPartsSell) {
-  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(5000, "APM"),
-                                                MonetaryAmount("57.19", "KRW")),
-            AmountAtPriceVec({
-                AmountPrice(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW")),
-            }));
-  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::kSell, MonetaryAmount(91000, "APM"),
+  EXPECT_EQ(
+      marketOrderBook.computeMatchedParts(TradeSide::sell, MonetaryAmount(5000, "APM"), MonetaryAmount("57.19", "KRW")),
+      AmountAtPriceVec({
+          AmountPrice(MonetaryAmount("3890.879", "APM"), MonetaryAmount("57.19", "KRW")),
+      }));
+  EXPECT_EQ(marketOrderBook.computeMatchedParts(TradeSide::sell, MonetaryAmount(91000, "APM"),
                                                 MonetaryAmount("57.23", "KRW")),
             AmountAtPriceVec());
 }
@@ -312,17 +311,17 @@ TEST_F(MarketOrderBookTestCase3, Convert) {
 }
 
 TEST_F(MarketOrderBookTestCase3, AvgPriceAndMatchedVolume) {
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::buy, MonetaryAmount(100000, "XLM"),
                                                      MonetaryAmount("0.000007121", "BTC")),
             AmountPrice(MonetaryAmount(100000, "XLM"), MonetaryAmount("0.0000071176273715", "BTC")));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kBuy, MonetaryAmount(100000, "XLM"),
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::buy, MonetaryAmount(100000, "XLM"),
                                                      MonetaryAmount("0.000007090", "BTC")),
             AmountPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
 
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::sell, MonetaryAmount("4500000", "XLM"),
                                                      MonetaryAmount("0.000007079", "BTC")),
             AmountPrice(MonetaryAmount("411248.27", "XLM"), MonetaryAmount("0.00000708595487037", "BTC")));
-  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::kSell, MonetaryAmount("4500000", "XLM"),
+  EXPECT_EQ(marketOrderBook.avgPriceAndMatchedVolume(TradeSide::sell, MonetaryAmount("4500000", "XLM"),
                                                      MonetaryAmount("0.000007110", "BTC")),
             AmountPrice(MonetaryAmount(0, "XLM"), MonetaryAmount(0, "BTC")));
 }

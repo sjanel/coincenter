@@ -6,22 +6,23 @@
 #include <span>
 
 #include "apioutputtype.hpp"
-#include "cct_json-container.hpp"
 #include "cct_log.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "depositsconstraints.hpp"
+#include "file.hpp"
+#include "logginginfo.hpp"
 #include "market.hpp"
 #include "ordersconstraints.hpp"
 #include "queryresulttypes.hpp"
 #include "simpletable.hpp"
 #include "time-window.hpp"
 #include "withdrawsconstraints.hpp"
+#include "write-json.hpp"
 
 namespace cct {
 
 class DeliveredWithdrawInfo;
-class LoggingInfo;
 class TradeOptions;
 class WithdrawOptions;
 
@@ -118,9 +119,21 @@ class QueryResultPrinter {
 
   void printTable(const SimpleTable &table) const;
 
-  void printJson(const json::container &jsonData) const;
+  void printJson(const auto &jsonObj) const {
+    if (_pOs != nullptr) {
+      *_pOs << WriteMiniJsonOrThrow(jsonObj) << '\n';
+    } else {
+      _outputLogger->info(WriteMiniJsonOrThrow(jsonObj));
+    }
+  }
 
-  void logActivity(CoincenterCommandType commandType, const json::container &data, bool isSimulationMode = false) const;
+  void logActivity(CoincenterCommandType commandType, const auto &jsonObj, bool isSimulationMode = false) const {
+    if (_loggingInfo.isCommandTypeTracked(commandType) &&
+        (!isSimulationMode || _loggingInfo.alsoLogActivityForSimulatedCommands())) {
+      File activityFile = _loggingInfo.getActivityFile();
+      activityFile.write(WriteMiniJsonOrThrow(jsonObj), Writer::Mode::Append);
+    }
+  }
 
   const LoggingInfo &_loggingInfo;
   std::ostream *_pOs = nullptr;

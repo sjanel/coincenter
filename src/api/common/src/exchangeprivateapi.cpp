@@ -139,7 +139,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   const UserRefInt userRef = static_cast<UserRefInt>(TimestampToSecondsSinceEpoch(timerStart) %
                                                      static_cast<int64_t>(std::numeric_limits<UserRefInt>::max()));
 
-  const TradeSide side = fromCurrency == mk.base() ? TradeSide::kSell : TradeSide::kBuy;
+  const TradeSide side = fromCurrency == mk.base() ? TradeSide::sell : TradeSide::buy;
   TradeContext tradeContext(mk, side, userRef);
   TradeInfo tradeInfo(tradeContext, tradeOptions);
   TradeOptions &options = tradeInfo.options;
@@ -183,7 +183,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
 
         orderId = std::move(placeOrderInfo.orderId);
 
-        if (placeOrderInfo.isClosed() || tradeOptions.tradeSyncPolicy() == TradeSyncPolicy::kAsynchronous) {
+        if (placeOrderInfo.isClosed() || tradeOptions.tradeSyncPolicy() == TradeSyncPolicy::asynchronous) {
           totalTradedAmounts += placeOrderInfo.tradedAmounts();
           if (placeOrderInfo.isClosed()) {
             log::debug("Order {} immediately closed with last traded amounts {}", orderId,
@@ -223,7 +223,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
       if (optLimitPrice) {
         price = *optLimitPrice;
         updatePriceNeeded =
-            (side == TradeSide::kSell && price < lastPrice) || (side == TradeSide::kBuy && price > lastPrice);
+            (side == TradeSide::sell && price < lastPrice) || (side == TradeSide::buy && price > lastPrice);
       }
     }
     if (reachedEmergencyTime || updatePriceNeeded) {
@@ -262,9 +262,9 @@ enum class NextAction : int8_t { kCheckSender, kCheckReceiver, kTerminate };
 
 NextAction InitializeNextAction(WithdrawSyncPolicy withdrawSyncPolicy) {
   switch (withdrawSyncPolicy) {
-    case WithdrawSyncPolicy::kSynchronous:
+    case WithdrawSyncPolicy::synchronous:
       return NextAction::kCheckSender;
-    case WithdrawSyncPolicy::kAsynchronous:
+    case WithdrawSyncPolicy::asynchronous:
       log::info("Asynchronous mode, exit after withdraw initiated");
       return NextAction::kTerminate;
     default:
@@ -321,7 +321,7 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
               sentWithdrawInfo.netEmittedAmount(), sentWithdrawInfo.fee(), initiatedWithdrawInfo.grossEmittedAmount());
           log::info("Maybe because actual withdraw fee is different");
         }
-        if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::kSuccess || isSimulatedMode) {
+        if (sentWithdrawInfo.withdrawStatus() == Withdraw::Status::success || isSimulatedMode) {
           nextAction = NextAction::kCheckReceiver;
           continue;  // to skip the sleep and immediately check receiver
         }
@@ -554,7 +554,7 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
 PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
                                                   const TradeInfo &tradeInfo) {
   const Market mk = tradeInfo.tradeContext.market;
-  const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
+  const bool isSell = tradeInfo.tradeContext.side == TradeSide::sell;
   const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
 
   if (tradeInfo.options.isSimulation() && !isSimulatedOrderSupported()) {
@@ -584,7 +584,7 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
                                                                        const TradeInfo &tradeInfo) const {
   const bool placeSimulatedRealOrder = exchangeConfig().query.placeSimulateRealOrder;
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
-  const bool isSell = tradeInfo.tradeContext.side == TradeSide::kSell;
+  const bool isSell = tradeInfo.tradeContext.side == TradeSide::sell;
 
   MonetaryAmount toAmount = isSell ? volume.convertTo(price) : volume;
   auto feeType = isTakerStrategy ? schema::ExchangeTradeFeesConfig::FeeType::Taker

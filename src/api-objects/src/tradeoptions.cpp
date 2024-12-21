@@ -14,10 +14,10 @@ namespace cct {
 
 namespace {
 auto ComputeTimeoutAction(TradeTimeoutAction tradeTimeoutAction, bool timeoutMatch) {
-  if (tradeTimeoutAction != TradeTimeoutAction::kDefault) {
+  if (tradeTimeoutAction != TradeTimeoutAction::exchange_default) {
     return tradeTimeoutAction;
   }
-  return timeoutMatch ? TradeTimeoutAction::kMatch : TradeTimeoutAction::kCancel;
+  return timeoutMatch ? TradeTimeoutAction::match : TradeTimeoutAction::cancel;
 }
 }  // namespace
 
@@ -58,12 +58,12 @@ bool TradeOptions::isMultiTradeAllowed(bool multiTradeAllowedByDefault) const {
 
 std::string_view TradeOptions::timeoutActionStr() const {
   switch (_timeoutAction) {
-    case TradeTimeoutAction::kDefault:
+    case TradeTimeoutAction::exchange_default:
       // Default will behave the same as cancel - this field is not publicly exposed
       [[fallthrough]];
-    case TradeTimeoutAction::kCancel:
+    case TradeTimeoutAction::cancel:
       return "cancel";
-    case TradeTimeoutAction::kMatch:
+    case TradeTimeoutAction::match:
       return "match";
     default:
       unreachable();
@@ -72,9 +72,9 @@ std::string_view TradeOptions::timeoutActionStr() const {
 
 std::string_view TradeOptions::tradeSyncPolicyStr() const {
   switch (_tradeSyncPolicy) {
-    case TradeSyncPolicy::kSynchronous:
+    case TradeSyncPolicy::synchronous:
       return "synchronous";
-    case TradeSyncPolicy::kAsynchronous:
+    case TradeSyncPolicy::asynchronous:
       return "asynchronous";
     default:
       unreachable();

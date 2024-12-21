@@ -56,7 +56,7 @@ class SentWithdrawInfo {
  private:
   MonetaryAmount _netEmittedAmount;
   MonetaryAmount _fee;
-  Withdraw::Status _withdrawStatus = Withdraw::Status::kInitial;
+  Withdraw::Status _withdrawStatus = Withdraw::Status::initial;
 };
 
 class ReceivedWithdrawInfo {

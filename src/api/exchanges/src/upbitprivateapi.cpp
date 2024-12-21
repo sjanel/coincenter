@@ -345,7 +345,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
       const MonetaryAmount matchedVolume(orderDetails.executed_volume, volumeCur);
       const MonetaryAmount price(orderDetails.price, priceCur);
-      const TradeSide side = orderDetails.side == "bid" ? TradeSide::kBuy : TradeSide::kSell;
+      const TradeSide side = orderDetails.side == "bid" ? TradeSide::buy : TradeSide::sell;
 
       if constexpr (kIsOpenedOrder) {
         const MonetaryAmount remainingVolume(orderDetails.remaining_volume, volumeCur);
@@ -401,7 +401,7 @@ namespace {
 Deposit::Status DepositStatusFromStatus(schema::upbit::V1Deposit::State state) {
   switch (state) {
     case schema::upbit::V1Deposit::State::ACCEPTED:
-      return Deposit::Status::kSuccess;
+      return Deposit::Status::success;
     case schema::upbit::V1Deposit::State::CANCELLED:
       [[fallthrough]];
     case schema::upbit::V1Deposit::State::REJECTED:
@@ -409,11 +409,11 @@ Deposit::Status DepositStatusFromStatus(schema::upbit::V1Deposit::State state) {
     case schema::upbit::V1Deposit::State::TRAVEL_RULE_SUSPECTED:
       [[fallthrough]];
     case schema::upbit::V1Deposit::State::REFUNDED:
-      return Deposit::Status::kFailureOrRejected;
+      return Deposit::Status::failed;
     case schema::upbit::V1Deposit::State::PROCESSING:
       [[fallthrough]];
     case schema::upbit::V1Deposit::State::REFUNDING:
-      return Deposit::Status::kProcessing;
+      return Deposit::Status::processing;
     default:
       throw exception("Unrecognized deposit status '{}' from Upbit", static_cast<int>(state));
   }
@@ -475,11 +475,11 @@ namespace {
 Withdraw::Status WithdrawStatusFromStatus(schema::upbit::V1Withdraw::State status) {
   switch (status) {
     case schema::upbit::V1Withdraw::State::WAITING:
-      return Withdraw::Status::kInitial;
+      return Withdraw::Status::initial;
     case schema::upbit::V1Withdraw::State::PROCESSING:
-      return Withdraw::Status::kProcessing;
+      return Withdraw::Status::processing;
     case schema::upbit::V1Withdraw::State::DONE:
-      return Withdraw::Status::kSuccess;
+      return Withdraw::Status::success;
     case schema::upbit::V1Withdraw::State::FAILED:
       [[fallthrough]];
     case schema::upbit::V1Withdraw::State::CANCELLED:
@@ -487,7 +487,7 @@ Withdraw::Status WithdrawStatusFromStatus(schema::upbit::V1Withdraw::State statu
     case schema::upbit::V1Withdraw::State::CANCELED:
       [[fallthrough]];
     case schema::upbit::V1Withdraw::State::REJECTED:
-      return Withdraw::Status::kFailureOrRejected;
+      return Withdraw::Status::failed;
     default:
       throw exception("Unrecognized withdraw status '{}' from Upbit", static_cast<int>(status));
   }

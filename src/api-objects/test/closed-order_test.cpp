@@ -17,8 +17,8 @@ class ClosedOrderTest : public ::testing::Test {
   TimePoint tp2{milliseconds{std::numeric_limits<int64_t>::max() / 9900000}};
   TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 9800000}};
 
-  ClosedOrder closedOrder1{"1", MonetaryAmount(15, "BTC", 1), MonetaryAmount(35000, "USDT"), tp1, tp1, TradeSide::kBuy};
-  ClosedOrder closedOrder2{"2", MonetaryAmount(25, "BTC", 1), MonetaryAmount(45000, "USDT"), tp2, tp3, TradeSide::kBuy};
+  ClosedOrder closedOrder1{"1", MonetaryAmount(15, "BTC", 1), MonetaryAmount(35000, "USDT"), tp1, tp1, TradeSide::buy};
+  ClosedOrder closedOrder2{"2", MonetaryAmount(25, "BTC", 1), MonetaryAmount(45000, "USDT"), tp2, tp3, TradeSide::buy};
 };
 
 TEST_F(ClosedOrderTest, SelfMerge) {

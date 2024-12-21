@@ -8,7 +8,7 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "exchangedata_test.hpp"
 #include "queryresultprinter.hpp"
 #include "timedef.hpp"

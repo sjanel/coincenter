@@ -27,7 +27,7 @@ bool PublicTrade::isValid() const {
     log::error("Public trade has an invalid market {}", market());
     return false;
   }
-  if (side() != TradeSide::kBuy && side() != TradeSide::kSell) {
+  if (side() != TradeSide::buy && side() != TradeSide::sell) {
     log::error("Public trade has an invalid trade side {}", static_cast<int>(side()));
     return false;
   }
