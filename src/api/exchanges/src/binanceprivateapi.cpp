@@ -24,7 +24,7 @@
 #include "binancepublicapi.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -376,7 +376,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, std::span<const sche
 
     const MonetaryAmount matchedVolume(orderDetails.executedQty, volumeCur);
     const MonetaryAmount price(orderDetails.price, priceCur);
-    const TradeSide side = orderDetails.side == "BUY" ? TradeSide::kBuy : TradeSide::kSell;
+    const TradeSide side = orderDetails.side == "BUY" ? TradeSide::buy : TradeSide::sell;
 
     using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
@@ -496,15 +496,15 @@ namespace {
 Deposit::Status DepositStatusFromCode(int statusInt) {
   switch (statusInt) {
     case kDepositPendingCode:
-      return Deposit::Status::kProcessing;
+      return Deposit::Status::processing;
     case kDepositSuccessCode:
       [[fallthrough]];
     case kDepositCreditedButCannotWithdrawCode:
-      return Deposit::Status::kSuccess;
+      return Deposit::Status::success;
     case kDepositWrongDepositCode:
-      return Deposit::Status::kFailureOrRejected;
+      return Deposit::Status::failed;
     case kDepositWaitingUserConfirmCode:
-      return Deposit::Status::kProcessing;
+      return Deposit::Status::processing;
     default:
       throw exception("Unknown deposit status code {} from Binance", statusInt);
   }
@@ -561,37 +561,37 @@ Withdraw::Status WithdrawStatusFromStatusStr(int statusInt, bool logStatus) {
       if (logStatus) {
         log::warn("Awaiting Approval");
       }
-      return Withdraw::Status::kProcessing;
+      return Withdraw::Status::processing;
     case kWithdrawProcessingCode:
       if (logStatus) {
         log::info("Processing withdraw...");
       }
-      return Withdraw::Status::kProcessing;
+      return Withdraw::Status::processing;
     case kWithdrawEmailSentCode:
       if (logStatus) {
         log::warn("Email was sent");
       }
-      return Withdraw::Status::kProcessing;
+      return Withdraw::Status::processing;
     case kWithdrawCancelledCode:  // NOLINT(bugprone-branch-clone)
       if (logStatus) {
         log::warn("Withdraw cancelled");
       }
-      return Withdraw::Status::kFailureOrRejected;
+      return Withdraw::Status::failed;
     case kWithdrawRejectedCode:
       if (logStatus) {
         log::error("Withdraw rejected");
       }
-      return Withdraw::Status::kFailureOrRejected;
+      return Withdraw::Status::failed;
     case kWithdrawFailureCode:
       if (logStatus) {
         log::error("Withdraw failed");
       }
-      return Withdraw::Status::kFailureOrRejected;
+      return Withdraw::Status::failed;
     case kWithdrawCompletedCode:
       if (logStatus) {
         log::info("Withdraw completed!");
       }
-      return Withdraw::Status::kSuccess;
+      return Withdraw::Status::success;
     default:
       throw exception("Unknown withdraw status code {}", statusInt);
   }
@@ -796,8 +796,8 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tradeContext,
                                      HttpRequestType requestType) {
   const Market mk = tradeContext.market;
-  const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::kSell ? mk.base() : mk.quote();
-  const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::kBuy ? mk.base() : mk.quote();
+  const CurrencyCode fromCurrencyCode = tradeContext.side == TradeSide::sell ? mk.base() : mk.quote();
+  const CurrencyCode toCurrencyCode = tradeContext.side == TradeSide::buy ? mk.base() : mk.quote();
   const string assetsStr = mk.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   const auto result = PrivateQuery<schema::binance::V3GetOrder>(

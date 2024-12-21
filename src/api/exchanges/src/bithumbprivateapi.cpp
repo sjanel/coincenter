@@ -24,7 +24,7 @@
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
@@ -480,7 +480,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
       MonetaryAmount matchedVolume = originalVolume - remainingVolume;
       MonetaryAmount price(orderDetails.price, priceCur);
       TradeSide side =
-          orderDetails.type == schema::bithumb::TransactionTypeEnum::bid ? TradeSide::kBuy : TradeSide::kSell;
+          orderDetails.type == schema::bithumb::TransactionTypeEnum::bid ? TradeSide::buy : TradeSide::sell;
 
       if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
         if (remainingVolume == 0) {
@@ -563,7 +563,7 @@ MonetaryAmount RetrieveNetEmittedAmountFromTrxJson(const schema::bithumb::UserTr
 Withdraw::Status RetrieveWithdrawStatusFromTrxJson(const schema::bithumb::UserTransactions::UserTransaction& trx) {
   const auto searchGb = StringToIntegral(trx.search);
 
-  return searchGb == kSearchGbOnGoingWithdrawals ? Withdraw::Status::kProcessing : Withdraw::Status::kSuccess;
+  return searchGb == kSearchGbOnGoingWithdrawals ? Withdraw::Status::processing : Withdraw::Status::success;
 }
 
 enum class UserTransactionEnum : int8_t {
@@ -705,7 +705,7 @@ ClosedOrderVector BithumbPrivate::queryClosedOrders(const OrdersConstraints& clo
 
     const auto searchGb = StringToIntegral(trx.search);
 
-    TradeSide side = searchGb == kSearchGbBuy ? TradeSide::kBuy : TradeSide::kSell;
+    TradeSide side = searchGb == kSearchGbBuy ? TradeSide::buy : TradeSide::sell;
 
     closedOrders.emplace_back(std::move(id), matchedVolume, price, timestamp, timestamp, side);
   }
@@ -738,7 +738,7 @@ DepositsSet BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depos
     string id = GenerateDepositIdFromTrx(timestamp, trx);
 
     // No status information returned by Bithumb. Defaulting to Success
-    deposits.emplace_back(std::move(id), timestamp, RetrieveAmountFromTrxJson(trx), Deposit::Status::kSuccess);
+    deposits.emplace_back(std::move(id), timestamp, RetrieveAmountFromTrxJson(trx), Deposit::Status::success);
   }
   DepositsSet depositsSet(std::move(deposits));
   log::info("Retrieved {} recent deposits for {}", depositsSet.size(), exchangeName());
@@ -943,7 +943,7 @@ CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
 
   ret.emplace_back(kOrderCurrencyParamStr, baseStr);
   ret.emplace_back(kPaymentCurParamStr, quoteStr);
-  ret.emplace_back(kTypeParamStr, side == TradeSide::kSell ? "ask" : "bid");
+  ret.emplace_back(kTypeParamStr, side == TradeSide::sell ? "ask" : "bid");
   ret.emplace_back(kOrderIdParamStr, orderId);
 
   return ret;

@@ -13,7 +13,7 @@
 #include "cct_format.hpp"
 #include "cct_hash.hpp"
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "generic-object-json.hpp"
 #include "toupperlower.hpp"

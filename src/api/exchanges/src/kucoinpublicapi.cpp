@@ -381,9 +381,8 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
     const MonetaryAmount price(detail.price, mk.quote());
     // time is in nanoseconds
     const int64_t millisecondsSinceEpoch = static_cast<int64_t>(detail.time / 1000000UL);
-    const TradeSide tradeSide = detail.side == schema::kucoin::V1MarketHistories::V1MarketHistory::Side::buy
-                                    ? TradeSide::kBuy
-                                    : TradeSide::kSell;
+    const TradeSide tradeSide =
+        detail.side == schema::kucoin::V1MarketHistories::V1MarketHistory::Side::buy ? TradeSide::buy : TradeSide::sell;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }

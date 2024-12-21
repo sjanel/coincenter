@@ -90,9 +90,14 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
     CurrencyCode to;
     if (amountType == StringOptionParser::AmountType::kNotPresent) {
-      Market market = optionParser.parseMarket();
-      amount = MonetaryAmount(1, market.base());
-      to = market.quote();
+      Market market = optionParser.parseMarket(StringOptionParser::FieldIs::kOptional);
+      if (market.isNeutral()) {
+        amount = MonetaryAmount{};
+        to = optionParser.parseCurrency();
+      } else {
+        amount = MonetaryAmount(1, market.base());
+        to = market.quote();
+      }
     } else {
       to = optionParser.parseCurrency();
     }

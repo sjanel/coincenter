@@ -9,7 +9,7 @@
 
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"

@@ -18,11 +18,11 @@ class DepositTest : public ::testing::Test {
   TimePoint tp3{milliseconds{std::numeric_limits<int64_t>::max() / 8000000}};
   TimePoint tp4{milliseconds{std::numeric_limits<int64_t>::max() / 7000000}};
 
-  Deposit deposit1{"id1", tp2, MonetaryAmount("0.045", "BTC"), Deposit::Status::kSuccess};
-  Deposit deposit2{"id2", tp4, MonetaryAmount(37, "XRP"), Deposit::Status::kSuccess};
-  Deposit deposit3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Deposit::Status::kFailureOrRejected};
-  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::kProcessing};
-  Deposit deposit5{"id5", tp3, MonetaryAmount("69204866.9", "DOGE"), Deposit::Status::kSuccess};
+  Deposit deposit1{"id1", tp2, MonetaryAmount("0.045", "BTC"), Deposit::Status::success};
+  Deposit deposit2{"id2", tp4, MonetaryAmount(37, "XRP"), Deposit::Status::success};
+  Deposit deposit3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Deposit::Status::failed};
+  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::processing};
+  Deposit deposit5{"id5", tp3, MonetaryAmount("69204866.9", "DOGE"), Deposit::Status::success};
 
   vector<Deposit> deposits{deposit1, deposit2, deposit3, deposit4, deposit5};
 };

@@ -168,7 +168,7 @@ TEST_F(ProtobufSerializerDeserializerTest, ManySerializationsDifferentHoursOfDay
     for (Market market : kMarkets) {
       for (TimePoint tp : kTimePoints) {
         for (auto ts = tp; ts < tp + kDurationRange; ts += kDurationStep) {
-          TradeSide side = tp == tp1 ? TradeSide::kBuy : TradeSide::kSell;
+          TradeSide side = tp == tp1 ? TradeSide::buy : TradeSide::sell;
           MonetaryAmount amount{"0.13", market.base()};
           MonetaryAmount price{"1500.5", market.quote()};
           PublicTrade pt{side, amount, price, ts};

@@ -234,10 +234,10 @@ Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 namespace {
 TradeSide TradeSideFromTypeStr(std::string_view typeSide) {
   if (typeSide.starts_with("buy")) {
-    return TradeSide::kBuy;
+    return TradeSide::buy;
   }
   if (typeSide.starts_with("sell")) {
-    return TradeSide::kSell;
+    return TradeSide::sell;
   }
   throw exception("Unable to detect order side for type '{}'", typeSide);
 }
@@ -367,7 +367,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
     MonetaryAmount matchedVolume(orderDetails.filledAmount, volumeCur);
     MonetaryAmount remainingVolume = originalVolume - matchedVolume;
     MonetaryAmount price(orderDetails.price, priceCur);
-    TradeSide side = orderDetails.type.starts_with("buy") ? TradeSide::kBuy : TradeSide::kSell;
+    TradeSide side = orderDetails.type.starts_with("buy") ? TradeSide::buy : TradeSide::sell;
 
     openedOrders.emplace_back(std::move(id), matchedVolume, remainingVolume, price, placedTime, side);
   }
@@ -393,13 +393,13 @@ int HuobiPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstr
 namespace {
 Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
   if (statusStr == "unknown") {
-    return Deposit::Status::kInitial;
+    return Deposit::Status::initial;
   }
   if (statusStr == "confirming") {
-    return Deposit::Status::kProcessing;
+    return Deposit::Status::processing;
   }
   if (statusStr == "confirmed" || statusStr == "safe" || statusStr == "orphan") {
-    return Deposit::Status::kSuccess;
+    return Deposit::Status::success;
   }
   throw exception("Unexpected deposit status '{}' from Huobi", statusStr);
 }
@@ -450,80 +450,80 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
     if (logStatus) {
       log::debug("Awaiting verification");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "failed") {
     if (logStatus) {
       log::error("Verification failed");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   if (statusStr == "submitted") {
     if (logStatus) {
       log::debug("Withdraw request submitted successfully");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "reexamine") {
     if (logStatus) {
       log::warn("Under examination for withdraw validation");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   // Let's also check without typo error ('canceled' with the typo is from the official documentation)
   if (statusStr == "canceled" || statusStr == "cancelled") {
     if (logStatus) {
       log::error("Withdraw canceled");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   if (statusStr == "pass") {
     if (logStatus) {
       log::debug("Withdraw validation passed");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "reject") {
     if (logStatus) {
       log::error("Withdraw validation rejected");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   if (statusStr == "pre-transfer") {
     if (logStatus) {
       log::debug("Withdraw is about to be released");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "wallet-transfer") {
     if (logStatus) {
       log::debug("On-chain transfer initiated");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "wallet-reject") {
     if (logStatus) {
       log::error("Transfer rejected by chain");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   if (statusStr == "confirmed") {
     if (logStatus) {
       log::debug("On-chain transfer completed with one confirmation");
     }
-    return Withdraw::Status::kSuccess;
+    return Withdraw::Status::success;
   }
   if (statusStr == "confirm-error") {
     if (logStatus) {
       log::error("On-chain transfer failed to get confirmation");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   if (statusStr == "repealed") {
     if (logStatus) {
       log::error("Withdraw terminated by system");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   throw exception("unknown status value '{}'", statusStr);
 }

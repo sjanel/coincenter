@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include "cct_hash.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "generic-object-json.hpp"
 #include "timedef.hpp"
 #include "timestring.hpp"

@@ -270,8 +270,7 @@ PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
     MonetaryAmount amount(detail.trade_volume, mk.base());
     MonetaryAmount price(detail.trade_price, mk.quote());
     int64_t millisecondsSinceEpoch = detail.timestamp;
-    TradeSide tradeSide =
-        detail.ask_bid == schema::upbit::V1TradesTick::AskBid::BID ? TradeSide::kBuy : TradeSide::kSell;
+    TradeSide tradeSide = detail.ask_bid == schema::upbit::V1TradesTick::AskBid::BID ? TradeSide::buy : TradeSide::sell;
 
     ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
   }

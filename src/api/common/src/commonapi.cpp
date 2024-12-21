@@ -8,7 +8,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"

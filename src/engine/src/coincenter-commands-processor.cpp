@@ -193,6 +193,9 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       const auto tradedVolumePerExchange =
           _coincenter.getLast24hTradedVolumePerExchange(firstCmd.market(), firstCmd.exchangeNames());
       _queryResultPrinter.printLast24hTradedVolume(firstCmd.market(), tradedVolumePerExchange);
+      for (const auto &[exchangePtr, tradedVolume] : tradedVolumePerExchange) {
+        transferableResults.emplace_back(exchangePtr->createExchangeName(), tradedVolume);
+      }
       break;
     }
     case CoincenterCommandType::WithdrawFees: {

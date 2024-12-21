@@ -167,7 +167,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
     for (const OpenedOrder& order : queryOpenedOrders()) {
       MonetaryAmount remVolume = order.remainingVolume();
       switch (order.side()) {
-        case TradeSide::kBuy: {
+        case TradeSide::buy: {
           MonetaryAmount price = order.price();
           auto lb = std::ranges::lower_bound(balanceAmounts, price, compByCurrency);
           if (lb != balanceAmounts.end() && lb->currencyCode() == price.currencyCode()) {
@@ -177,7 +177,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
           }
           break;
         }
-        case TradeSide::kSell: {
+        case TradeSide::sell: {
           auto lb = std::ranges::lower_bound(balanceAmounts, remVolume, compByCurrency);
           if (lb != balanceAmounts.end() && lb->currencyCode() == remVolume.currencyCode()) {
             *lb -= remVolume;
@@ -343,7 +343,7 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
 
       TimePoint matchedTime = TimePointFromKrakenTime(orderDetails.closetm);
 
-      TradeSide side = descrPart.type == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+      TradeSide side = descrPart.type == "buy" ? TradeSide::buy : TradeSide::sell;
 
       closedOrders.emplace_back(orderId, matchedVolume, price, placedTime, matchedTime, side);
     }
@@ -390,7 +390,7 @@ OpenedOrderVector KrakenPrivate::queryOpenedOrders(const OrdersConstraints& open
     MonetaryAmount matchedVolume(orderDetails.vol_exec, volumeCur);
     MonetaryAmount remainingVolume = originalVolume - matchedVolume;
     MonetaryAmount price(descrPart.price, priceCur);
-    TradeSide side = descrPart.type == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+    TradeSide side = descrPart.type == "buy" ? TradeSide::buy : TradeSide::sell;
 
     TimePoint placedTime = TimePointFromKrakenTime(orderDetails.opentm);
     if (!openedOrdersConstraints.validatePlacedTime(placedTime)) {
@@ -420,12 +420,12 @@ int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
 namespace {
 Deposit::Status DepositStatusFromStatus(schema::kraken::DepositStatus::Deposit::Status depositStatus) {
   if (depositStatus == schema::kraken::DepositStatus::Deposit::Status::Settled) {
-    return Deposit::Status::kProcessing;
+    return Deposit::Status::processing;
   }
   if (depositStatus == schema::kraken::DepositStatus::Deposit::Status::Success) {
-    return Deposit::Status::kSuccess;
+    return Deposit::Status::success;
   }
-  return Deposit::Status::kFailureOrRejected;
+  return Deposit::Status::failed;
 }
 }  // namespace
 
@@ -467,16 +467,16 @@ DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& deposi
 namespace {
 Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
   if (statusStr == "Initial" || statusStr == "Pending") {
-    return Withdraw::Status::kInitial;
+    return Withdraw::Status::initial;
   }
   if (statusStr == "Settled" || statusStr == "On hold") {
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (statusStr == "Success") {
-    return Withdraw::Status::kSuccess;
+    return Withdraw::Status::success;
   }
   if (statusStr == "Failure") {
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   throw exception("Unrecognized withdraw status '{}' from Kraken", statusStr);
 }

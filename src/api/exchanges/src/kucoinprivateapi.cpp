@@ -328,7 +328,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
     const MonetaryAmount matchedVolume(orderDetails.dealSize, volumeCur);
     const MonetaryAmount price(orderDetails.price, priceCur);
-    const TradeSide side = orderDetails.side == "buy" ? TradeSide::kBuy : TradeSide::kSell;
+    const TradeSide side = orderDetails.side == "buy" ? TradeSide::buy : TradeSide::sell;
 
     if constexpr (std::is_same_v<OrderType, OpenedOrder>) {
       const MonetaryAmount originalVolume(orderDetails.size, volumeCur);
@@ -383,13 +383,13 @@ int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConst
 namespace {
 Deposit::Status DepositStatusFromStatus(schema::kucoin::V1Deposits::Data::Item::Status depositStatus) {
   if (depositStatus == schema::kucoin::V1Deposits::Data::Item::Status::SUCCESS) {
-    return Deposit::Status::kSuccess;
+    return Deposit::Status::success;
   }
   if (depositStatus == schema::kucoin::V1Deposits::Data::Item::Status::PROCESSING) {
-    return Deposit::Status::kProcessing;
+    return Deposit::Status::processing;
   }
   if (depositStatus == schema::kucoin::V1Deposits::Data::Item::Status::FAILURE) {
-    return Deposit::Status::kFailureOrRejected;
+    return Deposit::Status::failed;
   }
   throw exception("Unrecognized deposit status '{}' from Kucoin", static_cast<int>(depositStatus));
 }
@@ -450,25 +450,25 @@ Withdraw::Status WithdrawStatusFromStatus(schema::kucoin::V1Withdrawals::Data::I
     if (logStatus) {
       log::debug("Processing");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (status == schema::kucoin::V1Withdrawals::Data::Item::Status::WALLET_PROCESSING) {
     if (logStatus) {
       log::debug("Wallet processing");
     }
-    return Withdraw::Status::kProcessing;
+    return Withdraw::Status::processing;
   }
   if (status == schema::kucoin::V1Withdrawals::Data::Item::Status::SUCCESS) {
     if (logStatus) {
       log::debug("Success");
     }
-    return Withdraw::Status::kSuccess;
+    return Withdraw::Status::success;
   }
   if (status == schema::kucoin::V1Withdrawals::Data::Item::Status::FAILURE) {
     if (logStatus) {
       log::warn("Failure");
     }
-    return Withdraw::Status::kFailureOrRejected;
+    return Withdraw::Status::failed;
   }
   throw exception("unknown status value '{}' returned by Kucoin", static_cast<int>(status));
 }

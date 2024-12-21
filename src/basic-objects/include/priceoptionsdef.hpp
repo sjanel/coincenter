@@ -4,7 +4,7 @@
 #include <limits>
 #include <string_view>
 
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 
 namespace cct {
 enum class PriceStrategy : int8_t {

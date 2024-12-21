@@ -164,4 +164,32 @@ TEST_F(TimeWindowTest, AggregateMinMaxWithNeutral) {
   EXPECT_EQ(tw2.aggregateMinMax(tw1), tw1);
 }
 
+namespace {
+constexpr std::string_view kExpectedTimeWindowStr = "[1999-03-25T04:46:43Z -> 1999-07-11T00:42:21Z)";
+}
+
+TEST_F(TimeWindowTest, Str) {
+  TimeWindow tw(tp1, tp2);
+
+  EXPECT_EQ(tw.str(), kExpectedTimeWindowStr);
+}
+
+TEST_F(TimeWindowTest, AppendTo) {
+  TimeWindow tw(tp1, tp2);
+  char buf[TimeWindow::strLen()];
+
+  EXPECT_EQ(tw.appendTo(buf), buf + TimeWindow::strLen());
+  EXPECT_EQ(std::string_view(buf, TimeWindow::strLen()), kExpectedTimeWindowStr);
+}
+
+TEST_F(TimeWindowTest, FromString) {
+  TimeWindow tw(kExpectedTimeWindowStr);
+
+  EXPECT_EQ(tw.str(), kExpectedTimeWindowStr);
+
+  // For some reason, the timepoints are not exactly equal, they differ by a few hundreds of milliseconds
+  EXPECT_LT(tw.from() > tp1 ? tw.from() - tp1 : tp1 - tw.from(), std::chrono::seconds{1});
+  EXPECT_LT(tw.to() > tp2 ? tw.to() - tp2 : tp2 - tw.to(), std::chrono::seconds{1});
+}
+
 }  // namespace cct

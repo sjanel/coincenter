@@ -7,7 +7,7 @@
 #include <ostream>
 
 #include "cct_format.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
 #include "generic-object-json.hpp"

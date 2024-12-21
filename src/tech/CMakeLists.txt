@@ -3,7 +3,6 @@ aux_source_directory(src API_TECH_SRC)
 
 add_coincenter_library(tech STATIC ${API_TECH_SRC})
 
-target_link_libraries(coincenter_tech PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(coincenter_tech PUBLIC glaze::glaze)
 
 if (LINK_AMC)
@@ -64,8 +63,6 @@ add_unit_test(
     test/flatkeyvaluestring_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
-    LIBRARIES
-    nlohmann_json::nlohmann_json
 )
 
 if(MSVC)

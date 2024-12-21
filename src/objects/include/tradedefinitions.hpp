@@ -2,16 +2,18 @@
 
 #include <cstdint>
 
+#include "cct_json.hpp"
+
 namespace cct {
 enum class TradeTimeoutAction : int8_t {
-  kDefault,  // Use exchange config file default settings
-  kCancel,   // When timeout of trade is reached, cancel remaining order
-  kMatch     // When timeout of trade is reached, update remaining order at market price to force match
+  exchange_default,  // Use exchange config file default settings
+  cancel,            // When timeout of trade is reached, cancel remaining order
+  match              // When timeout of trade is reached, update remaining order at market price to force match
 };
 
 enum class TradeMode : int8_t {
-  kSimulation,  // No real trade will be made. Useful for tests.
-  kReal         // Real trade that will be executed in the exchange
+  simulation,  // No real trade will be made. Useful for tests.
+  real         // Real trade that will be executed in the exchange
 };
 
 /// Determines the default trade type if no override is present in the command.
@@ -29,9 +31,30 @@ enum class TradeTypePolicy : int8_t {
 };
 
 enum class TradeSyncPolicy : int8_t {
-  kSynchronous,  // Follow lifetime of the placed order, manage the price updates until it is either matched or
-                 // cancelled.
-  kAsynchronous  // Placed order will not be followed-up - trade will exits once placed.
+  synchronous,  // Follow lifetime of the placed order, manage the price updates until it is either matched or
+                // cancelled.
+  asynchronous  // Placed order will not be followed-up - trade will exits once placed.
 };
 
 }  // namespace cct
+
+template <>
+struct glz::meta<cct::TradeMode> {
+  using enum cct::TradeMode;
+
+  static constexpr auto value = enumerate(simulation, real);
+};
+
+template <>
+struct glz::meta<cct::TradeSyncPolicy> {
+  using enum cct::TradeSyncPolicy;
+
+  static constexpr auto value = enumerate(synchronous, asynchronous);
+};
+
+template <>
+struct glz::meta<cct::TradeTimeoutAction> {
+  using enum cct::TradeTimeoutAction;
+
+  static constexpr auto value = enumerate(exchange_default, cancel, match);
+};

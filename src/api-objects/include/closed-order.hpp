@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cct_string.hpp"
 #include "monetaryamount.hpp"
 #include "order.hpp"
 #include "orderid.hpp"
@@ -15,8 +14,6 @@ class ClosedOrder : public Order {
               TimePoint matchedTime, TradeSide side);
 
   TimePoint matchedTime() const { return _matchedTime; }
-
-  string matchedTimeStr() const;
 
   /// Compute the resulting merged closed order from *this and given one.
   /// Given closed order should be of same ID, TradeSide and Market.

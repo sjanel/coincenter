@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cct_exception.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 #include "cct_string.hpp"
 
 namespace cct {
@@ -31,6 +31,15 @@ string WriteJsonOrThrow(const auto &obj) {
 }
 
 string WriteMiniJsonOrThrow(const auto &obj) { return WriteJsonOrThrow<kMinifiedJsonOptions>(obj); }
+
+string WriteSingleObjectJsonNoQuotes(const auto &obj) {
+  auto buf = WriteMiniJsonOrThrow(obj);
+  if (!buf.empty() && buf.front() == '"') {
+    buf.pop_back();
+    buf.erase(buf.begin());
+  }
+  return buf;
+}
 
 string WritePrettyJsonOrThrow(const auto &obj) { return WriteJsonOrThrow<kPrettifyJsonOptions>(obj); }
 

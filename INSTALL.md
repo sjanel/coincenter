@@ -139,7 +139,6 @@ If you are building frequently `coincenter` you can install them to speed up its
 | -------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------- |
 | [amc](https://github.com/AmadeusITGroup/amc.git)               | High performance C++ containers (maintained by me)                   | MIT                  |
 | [googletest](https://github.com/google/googletest.git)         | Google Testing and Mocking Framework                                 | BSD-3-Clause License |
-| [json container](https://github.com/nlohmann/json)             | JSON for Modern C++                                                  | MIT                  |
 | [json serialization](https://github.com/stephenberry/glaze)    | Extremely fast, in memory, JSON and interface library for modern C++ | MIT                  |
 | [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                                             | MIT                  |
 | [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++                             | MIT                  |

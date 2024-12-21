@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "cct_cctype.hpp"
-#include "cct_json-serialization.hpp"
+#include "cct_json.hpp"
 
 namespace cct::details {
 

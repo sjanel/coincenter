@@ -150,7 +150,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
                                   TradableMarkets tradableMarketsCall, OrderBook orderBookCall,
                                   AllOrderBooks allOrderBooksCall, bool makeMarketAvailable) {
     Market mk(from.currencyCode(), toCurrency);
-    if (side == TradeSide::kBuy) {
+    if (side == TradeSide::buy) {
       mk = mk.reverse();
     }
 
@@ -164,8 +164,8 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     MonetaryAmount tradedTo(from, toCurrency);
 
     MonetaryAmount deltaPri(1, pri.currencyCode(), volAndPriDec1.priNbDecimals);
-    MonetaryAmount askPrice = side == TradeSide::kBuy ? pri : pri + deltaPri;
-    MonetaryAmount bidPrice = side == TradeSide::kSell ? pri : pri - deltaPri;
+    MonetaryAmount askPrice = side == TradeSide::buy ? pri : pri + deltaPri;
+    MonetaryAmount bidPrice = side == TradeSide::sell ? pri : pri - deltaPri;
     MarketOrderBook marketOrderbook{
         time, askPrice, maxVol, bidPrice, maxVol, volAndPriDec1, MarketOrderBook::kDefaultDepth};
 
@@ -218,7 +218,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
     CurrencyCode interCur("AAA");
     Market market1(from.currencyCode(), interCur);
     Market market2(interCur, toCurrency);
-    if (side == TradeSide::kBuy) {
+    if (side == TradeSide::buy) {
       market1 = Market(toCurrency, interCur);
       market2 = Market(interCur, from.currencyCode());
     } else {
@@ -242,10 +242,10 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
 
     MonetaryAmount deltaPri1(1, pri1.currencyCode(), volAndPriDec1.priNbDecimals);
     MonetaryAmount deltaPri2(1, pri2.currencyCode(), volAndPriDec1.priNbDecimals);
-    MonetaryAmount askPri1 = side == TradeSide::kBuy ? pri1 : pri1 + deltaPri1;
-    MonetaryAmount askPri2 = side == TradeSide::kBuy ? pri2 : pri2 + deltaPri2;
-    MonetaryAmount bidPri1 = side == TradeSide::kSell ? pri1 : pri1 - deltaPri1;
-    MonetaryAmount bidPri2 = side == TradeSide::kSell ? pri2 : pri2 - deltaPri2;
+    MonetaryAmount askPri1 = side == TradeSide::buy ? pri1 : pri1 + deltaPri1;
+    MonetaryAmount askPri2 = side == TradeSide::buy ? pri2 : pri2 + deltaPri2;
+    MonetaryAmount bidPri1 = side == TradeSide::sell ? pri1 : pri1 - deltaPri1;
+    MonetaryAmount bidPri2 = side == TradeSide::sell ? pri2 : pri2 - deltaPri2;
     MarketOrderBook marketOrderbook1{
         time, askPri1, maxVol1, bidPri1, maxVol1, volAndPriDec1, MarketOrderBook::kDefaultDepth};
     MarketOrderBook marketOrderbook2{
@@ -308,8 +308,8 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
   }
 
   PriceOptions priceOptions{PriceStrategy::taker};
-  TradeOptions tradeOptions{priceOptions,     TradeTimeoutAction::kCancel, TradeMode::kReal, Duration::max(),
-                            Duration::zero(), TradeTypePolicy::kDefault};
+  TradeOptions tradeOptions{priceOptions,    TradeTimeoutAction::cancel, TradeMode::real,
+                            Duration::max(), Duration::zero(),           TradeTypePolicy::kDefault};
   bool isPercentageTrade = false;
   MarketOrderBookMap marketOrderBookMap;
   MarketSet markets;
@@ -318,7 +318,7 @@ class ExchangeOrchestratorTradeTest : public ExchangeOrchestratorTest {
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuy) {
   MonetaryAmount from(100, "EUR");
   CurrencyCode toCurrency("XRP");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
   TradedAmounts tradedAmounts = expectSingleTrade(1, from, toCurrency, side, TradableMarkets::kExpectCall,
                                                   OrderBook::kExpectCall, AllOrderBooks::kExpectNoCall, true);
 
@@ -331,7 +331,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuy) {
 TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
   MonetaryAmount from(10, "SOL");
   CurrencyCode toCurrency("EUR");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
                                                ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName())};
@@ -354,7 +354,7 @@ TEST_F(ExchangeOrchestratorTradeTest, NoAvailableAmountToSell) {
 TEST_F(ExchangeOrchestratorTradeTest, TwoAccountsSameExchangeSell) {
   MonetaryAmount from(2, "ETH");
   CurrencyCode toCurrency("USDT");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
                                                ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
@@ -383,7 +383,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuy) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(13015, fromCurrency);
   CurrencyCode toCurrency("LUNA");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
@@ -412,7 +412,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesBuyNotEnoughAmount) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(13015, fromCurrency);
   CurrencyCode toCurrency("LUNA");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
@@ -444,7 +444,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
   CurrencyCode fromCurrency("USDT");
   MonetaryAmount from(40000, fromCurrency);
   CurrencyCode toCurrency("LUNA");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   EXPECT_CALL(ExchangePrivate(exchange1), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio1));
   EXPECT_CALL(ExchangePrivate(exchange2), queryAccountBalance(testing::_)).WillOnce(testing::Return(balancePortfolio2));
@@ -493,7 +493,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ManyAccountsTrade) {
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
   CurrencyCode fromCurrency("EUR");
   CurrencyCode toCurrency("XRP");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName())};
 
@@ -513,7 +513,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeBuyAll) {
 TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
   CurrencyCode fromCurrency("ETH");
   CurrencyCode toCurrency("EUR");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
                                                ExchangeName(exchange2.exchangeNameEnum(), exchange2.keyName()),
@@ -541,7 +541,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSellAll) {
 TEST_F(ExchangeOrchestratorTradeTest, AllExchangesBuyAllOneMarketUnavailable) {
   CurrencyCode fromCurrency("USDT");
   CurrencyCode toCurrency("DOT");
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   const ExchangeName privateExchangeNames[] = {ExchangeName(exchange1.exchangeNameEnum(), exchange1.keyName()),
                                                ExchangeName(exchange3.exchangeNameEnum(), exchange3.keyName()),
@@ -580,7 +580,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuy) {
   MonetaryAmount endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(
       MonetaryAmount(1000, "XRP"), schema::ExchangeTradeFeesConfig::FeeType::Taker);
   CurrencyCode toCurrency = endAmount.currencyCode();
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(1000, "USDT");
 
@@ -602,7 +602,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartBuyTwoSteps) {
   // Two fees applications
   endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(endAmount, feeType);
   CurrencyCode toCurrency = endAmount.currencyCode();
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(1000, "USDT");
 
@@ -621,7 +621,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuy) {
   MonetaryAmount endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(
       MonetaryAmount(10000, "XLM"), schema::ExchangeTradeFeesConfig::FeeType::Taker);
   CurrencyCode toCurrency = endAmount.currencyCode();
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
   MonetaryAmount from31 = MonetaryAmount(4250, "USDT");
@@ -650,7 +650,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartBuyNoMarketOnOneExchange)
   MonetaryAmount endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(
       MonetaryAmount(10000, "XLM"), schema::ExchangeTradeFeesConfig::FeeType::Taker);
   CurrencyCode toCurrency = endAmount.currencyCode();
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(0, "USDT");
   MonetaryAmount from3 = MonetaryAmount(4250, "USDT");
@@ -674,7 +674,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartBuy) {
   MonetaryAmount endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(
       MonetaryAmount(10000, "XLM"), schema::ExchangeTradeFeesConfig::FeeType::Taker);
   CurrencyCode toCurrency = endAmount.currencyCode();
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
   MonetaryAmount from2 = MonetaryAmount(0, "USDT");
@@ -712,7 +712,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartBuyAllExchanges) {
   CurrencyCode toCurrency("XLM");
   MonetaryAmount endAmount = exchangePublic1.exchangeConfig().tradeFees.applyFee(
       MonetaryAmount(18800, toCurrency), schema::ExchangeTradeFeesConfig::FeeType::Taker);
-  TradeSide side = TradeSide::kBuy;
+  TradeSide side = TradeSide::buy;
 
   MonetaryAmount from1 = MonetaryAmount(5000, "USDT");
   MonetaryAmount from2 = MonetaryAmount(6750, "USDT");
@@ -751,7 +751,7 @@ TEST_F(ExchangeOrchestratorTradeTest, SmartBuyAllExchanges) {
 TEST_F(ExchangeOrchestratorTradeTest, SingleExchangeSmartSell) {
   MonetaryAmount startAmount = MonetaryAmount(2, "ETH");
   CurrencyCode toCurrency("USDT");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from1 = MonetaryAmount("1.5ETH");
 
@@ -786,7 +786,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSell) {
   MonetaryAmount startAmount = MonetaryAmount(16, "BTC");
   CurrencyCode fromCurrency = startAmount.currencyCode();
   CurrencyCode toCurrency("EUR");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from1 = MonetaryAmount(15, fromCurrency);
   MonetaryAmount from2 = MonetaryAmount("0.5", fromCurrency);
@@ -812,7 +812,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellPercentage) {
   MonetaryAmount startAmount = MonetaryAmount(25, "ETH");
   CurrencyCode fromCurrency = startAmount.currencyCode();
   CurrencyCode toCurrency("USDT");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from1 = MonetaryAmount("0.525", fromCurrency);
   MonetaryAmount from3 = MonetaryAmount(0, fromCurrency);
@@ -836,7 +836,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellPercentage) {
 TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange) {
   MonetaryAmount startAmount = MonetaryAmount(10000, "SHIB");
   CurrencyCode toCurrency("USDT");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from2 = startAmount;
   MonetaryAmount from3 = MonetaryAmount(0, startAmount.currencyCode());
@@ -860,7 +860,7 @@ TEST_F(ExchangeOrchestratorTradeTest, TwoExchangesSmartSellNoMarketOnOneExchange
 TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartSellFromAnotherPreferredCurrency) {
   MonetaryAmount startAmount = MonetaryAmount(2000, "EUR");
   CurrencyCode toCurrency("USDT");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from1 = MonetaryAmount(0, startAmount.currencyCode());
   MonetaryAmount from3 = MonetaryAmount(1500, startAmount.currencyCode());
@@ -890,7 +890,7 @@ TEST_F(ExchangeOrchestratorTradeTest, ThreeExchangesSmartSellFromAnotherPreferre
 TEST_F(ExchangeOrchestratorTradeTest, SmartSellAllExchanges) {
   MonetaryAmount startAmount = MonetaryAmount(1, "ETH");
   CurrencyCode toCurrency("EUR");
-  TradeSide side = TradeSide::kSell;
+  TradeSide side = TradeSide::sell;
 
   MonetaryAmount from1 = MonetaryAmount(1, startAmount.currencyCode());
   MonetaryAmount from2 = MonetaryAmount(0, startAmount.currencyCode());

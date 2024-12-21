@@ -76,8 +76,8 @@ void CoincenterCmdLineOptions::mergeGlobalWith(const CoincenterCmdLineOptions& r
 TradeOptions CoincenterCmdLineOptions::computeTradeOptions() const {
   const TradeTypePolicy tradeTypePolicy = computeTradeTypePolicy();
   const TradeTimeoutAction timeoutAction = computeTradeTimeoutAction();
-  const TradeMode tradeMode = isSimulation ? TradeMode::kSimulation : TradeMode::kReal;
-  const TradeSyncPolicy tradeSyncPolicy = async ? TradeSyncPolicy::kAsynchronous : TradeSyncPolicy::kSynchronous;
+  const TradeMode tradeMode = isSimulation ? TradeMode::simulation : TradeMode::real;
+  const TradeSyncPolicy tradeSyncPolicy = async ? TradeSyncPolicy::asynchronous : TradeSyncPolicy::synchronous;
 
   if (!tradeStrategy.empty()) {
     PriceOptions priceOptions(tradeStrategy);
@@ -124,16 +124,16 @@ TradeTimeoutAction CoincenterCmdLineOptions::computeTradeTimeoutAction() const {
     if (tradeTimeoutMatch) {
       throw invalid_argument("Only one trade timeout action may be chosen");
     }
-    return TradeTimeoutAction::kCancel;
+    return TradeTimeoutAction::cancel;
   }
   if (tradeTimeoutMatch) {
-    return TradeTimeoutAction::kMatch;
+    return TradeTimeoutAction::match;
   }
-  return TradeTimeoutAction::kDefault;
+  return TradeTimeoutAction::exchange_default;
 }
 
 WithdrawOptions CoincenterCmdLineOptions::computeWithdrawOptions() const {
-  const auto withdrawSyncPolicy = async ? WithdrawSyncPolicy::kAsynchronous : WithdrawSyncPolicy::kSynchronous;
+  const auto withdrawSyncPolicy = async ? WithdrawSyncPolicy::asynchronous : WithdrawSyncPolicy::synchronous;
   const auto mode = isSimulation ? WithdrawOptions::Mode::kSimulation : WithdrawOptions::Mode::kReal;
   return {withdrawRefreshTime, withdrawSyncPolicy, mode};
 }

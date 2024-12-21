@@ -37,7 +37,7 @@ class ExchangeOrchestratorTest : public ExchangesBaseTest {
  protected:
   ExchangesOrchestrator exchangesOrchestrator{schema::RequestsConfig{}, std::span<Exchange>(&this->exchange1, 8)};
   BalanceOptions balanceOptions;
-  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::kSynchronous, WithdrawOptions::Mode::kReal};
+  WithdrawOptions withdrawOptions{Duration{}, WithdrawSyncPolicy::synchronous, WithdrawOptions::Mode::kReal};
 };
 
 TEST_F(ExchangeOrchestratorTest, BalanceNoEquivalentCurrencyUniqueExchange) {
@@ -137,18 +137,18 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
                                                ExchangeName(exchange4.exchangeNameEnum(), exchange4.keyName())};
 
   OpenedOrderVector openedOrders2{OpenedOrder("Id1", MonetaryAmount("0.1ETH"), MonetaryAmount("0.9ETH"),
-                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kBuy),
+                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::buy),
                                   OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("76XLM"),
-                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kSell)};
+                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::sell)};
   EXPECT_CALL(ExchangePrivate(exchange2), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders2));
 
   OpenedOrderVector openedOrders3{};
   EXPECT_CALL(ExchangePrivate(exchange3), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders3));
 
   OpenedOrderVector openedOrders4{OpenedOrder("Id37", MonetaryAmount("0.7ETH"), MonetaryAmount("0.9ETH"),
-                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::kSell),
+                                              MonetaryAmount("0.14BTC"), Clock::now(), TradeSide::sell),
                                   OpenedOrder("Id2", MonetaryAmount("15XLM"), MonetaryAmount("19XLM"),
-                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::kBuy)};
+                                              MonetaryAmount("0.5EUR"), Clock::now(), TradeSide::buy)};
   EXPECT_CALL(ExchangePrivate(exchange4), queryOpenedOrders(noConstraints)).WillOnce(testing::Return(openedOrders4));
 
   OpenedOrdersPerExchange ret{{&exchange2, OpenedOrderSet(openedOrders2.begin(), openedOrders2.end())},
@@ -260,10 +260,10 @@ class ExchangeOrchestratorWithdrawTest : public ExchangeOrchestratorTest {
     EXPECT_CALL(ExchangePrivate(exchange1), launchWithdraw(grossAmount, std::move(receivingWallet)))
         .WillOnce(testing::Return(initiatedWithdrawInfo));
 
-    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
+    api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::success};
     EXPECT_CALL(ExchangePrivate(exchange1), queryRecentWithdraws(testing::_))
         .WillOnce(testing::Return(
-            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::kSuccess, fee}}));
+            WithdrawsSet{Withdraw{withdrawId, withdrawTimestamp, netEmittedAmount, Withdraw::Status::success, fee}}));
 
     api::ReceivedWithdrawInfo receivedWithdrawInfo{"deposit-id", netEmittedAmount};
     EXPECT_CALL(ExchangePrivate(exchange2), queryWithdrawDelivery(initiatedWithdrawInfo, sentWithdrawInfo))

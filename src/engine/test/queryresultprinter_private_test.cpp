@@ -557,9 +557,9 @@ TEST_F(QueryResultPrinterTradesAmountTest, FormattedTable) {
 +----------+-----------+---------+---------------------------+-------------------------+-----------+
 | Exchange | Account   | From    | Traded from amount (real) | Traded to amount (real) | Status    |
 +----------+-----------+---------+---------------------------+-------------------------+-----------+
-| binance  | testuser1 | 0.1 BTC | 0.1 BTC                   | 1050 XRP                | Complete  |
-| huobi    | testuser1 | 0.6 BTC | 0.3 BTC                   | 3500.6 XRP              | Partial   |
-| huobi    | testuser2 | 1 BTC   | 0 BTC                     | 0 XRP                   | Untouched |
+| binance  | testuser1 | 0.1 BTC | 0.1 BTC                   | 1050 XRP                | complete  |
+| huobi    | testuser1 | 0.6 BTC | 0.3 BTC                   | 3500.6 XRP              | partial   |
+| huobi    | testuser2 | 1 BTC   | 0 BTC                     | 0 XRP                   | untouched |
 +----------+-----------+---------+---------------------------+-------------------------+-----------+
 )";
 
@@ -631,7 +631,7 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
     "binance": {
       "testuser1": {
         "from": "0.1",
-        "status": "Complete",
+        "status": "complete",
         "tradedFrom": "0.1",
         "tradedTo": "1050"
       }
@@ -639,13 +639,13 @@ TEST_F(QueryResultPrinterTradesAmountTest, Json) {
     "huobi": {
       "testuser1": {
         "from": "0.6",
-        "status": "Partial",
+        "status": "partial",
         "tradedFrom": "0.3",
         "tradedTo": "3500.6"
       },
       "testuser2": {
         "from": "1",
-        "status": "Untouched",
+        "status": "untouched",
         "tradedFrom": "0",
         "tradedTo": "0"
       }
@@ -679,7 +679,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, FormattedTable) {
 +----------+-----------+--------------+---------------------------+-------------------------+---------+
 | Exchange | Account   | From         | Traded from amount (real) | Traded to amount (real) | Status  |
 +----------+-----------+--------------+---------------------------+-------------------------+---------+
-| bithumb  | testuser1 | 30001.12 EUR | 15000.56 EUR              | 885475102 SHIB          | Partial |
+| bithumb  | testuser1 | 30001.12 EUR | 15000.56 EUR              | 885475102 SHIB          | partial |
 +----------+-----------+--------------+---------------------------+-------------------------+---------+
 )";
   expectStr(kExpected);
@@ -750,7 +750,7 @@ TEST_F(QueryResultPrinterTradesPercentageTest, Json) {
     "bithumb": {
       "testuser1": {
         "from": "30001.12",
-        "status": "Partial",
+        "status": "partial",
         "tradedFrom": "15000.56",
         "tradedTo": "885475102"
       }
@@ -779,7 +779,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, FormattedTable) {
 +----------+-----------+-------------+---------------------------+-------------------------+----------+
 | Exchange | Account   | From        | Traded from amount (real) | Traded to amount (real) | Status   |
 +----------+-----------+-------------+---------------------------+-------------------------+----------+
-| binance  | testuser1 | 4500.67 EUR | 4500.67 EUR               | 3 ETH                   | Complete |
+| binance  | testuser1 | 4500.67 EUR | 4500.67 EUR               | 3 ETH                   | complete |
 +----------+-----------+-------------+---------------------------+-------------------------+----------+
 )";
   expectStr(kExpected);
@@ -842,7 +842,7 @@ TEST_F(QueryResultPrinterSmartBuyTest, Json) {
     "binance": {
       "testuser1": {
         "from": "4500.67",
-        "status": "Complete",
+        "status": "complete",
         "tradedFrom": "4500.67",
         "tradedTo": "3"
       }
@@ -876,9 +876,9 @@ TEST_F(QueryResultPrinterSmartSellTest, FormattedTable) {
 +----------+-----------+----------+---------------------------+-------------------------+----------+
 | Exchange | Account   | From     | Traded from amount (real) | Traded to amount (real) | Status   |
 +----------+-----------+----------+---------------------------+-------------------------+----------+
-| binance  | testuser1 | 0.01 BTC | 0.01 BTC                  | 1500 USDT               | Complete |
-| huobi    | testuser1 | 0.02 BTC | 0.004 BTC                 | 350 EUR                 | Partial  |
-| huobi    | testuser2 | 0.3 BTC  | 0.1 BTC                   | 17 ETH                  | Partial  |
+| binance  | testuser1 | 0.01 BTC | 0.01 BTC                  | 1500 USDT               | complete |
+| huobi    | testuser1 | 0.02 BTC | 0.004 BTC                 | 350 EUR                 | partial  |
+| huobi    | testuser2 | 0.3 BTC  | 0.1 BTC                   | 17 ETH                  | partial  |
 +----------+-----------+----------+---------------------------+-------------------------+----------+
 )";
 
@@ -944,7 +944,7 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
     "binance": {
       "testuser1": {
         "from": "0.01",
-        "status": "Complete",
+        "status": "complete",
         "tradedFrom": "0.01",
         "tradedTo": "1500"
       }
@@ -952,13 +952,13 @@ TEST_F(QueryResultPrinterSmartSellTest, Json) {
     "huobi": {
       "testuser1": {
         "from": "0.02",
-        "status": "Partial",
+        "status": "partial",
         "tradedFrom": "0.004",
         "tradedTo": "350"
       },
       "testuser2": {
         "from": "0.3",
-        "status": "Partial",
+        "status": "partial",
         "tradedFrom": "0.1",
         "tradedTo": "17"
       }
@@ -976,12 +976,12 @@ TEST_F(QueryResultPrinterSmartSellTest, NoPrint) {
 
 class QueryResultPrinterClosedOrdersBaseTest : public QueryResultPrinterTest {
  protected:
-  ClosedOrder order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(50000, "EUR"), tp1, tp1, TradeSide::kBuy};
-  ClosedOrder order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("1500.56USDT"), tp2, tp3, TradeSide::kSell};
-  ClosedOrder order3{"id3", MonetaryAmount(13, "XRP"), MonetaryAmount("1.31USDT"), tp3, tp1, TradeSide::kBuy};
-  ClosedOrder order4{"id4", MonetaryAmount("34.56LTC"), MonetaryAmount("1574564KRW"), tp4, tp2, TradeSide::kSell};
-  ClosedOrder order5{"id5",           MonetaryAmount("11235435.59SHIB"), MonetaryAmount("0.00000045USDT"), tp2, tp4,
-                     TradeSide::kSell};
+  ClosedOrder order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(50000, "EUR"), tp1, tp1, TradeSide::buy};
+  ClosedOrder order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("1500.56USDT"), tp2, tp3, TradeSide::sell};
+  ClosedOrder order3{"id3", MonetaryAmount(13, "XRP"), MonetaryAmount("1.31USDT"), tp3, tp1, TradeSide::buy};
+  ClosedOrder order4{"id4", MonetaryAmount("34.56LTC"), MonetaryAmount("1574564KRW"), tp4, tp2, TradeSide::sell};
+  ClosedOrder order5{"id5",          MonetaryAmount("11235435.59SHIB"), MonetaryAmount("0.00000045USDT"), tp2, tp4,
+                     TradeSide::sell};
 };
 
 class QueryResultPrinterClosedOrdersNoConstraintsTest : public QueryResultPrinterClosedOrdersBaseTest {
@@ -999,11 +999,11 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, FormattedTable) {
 +----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
 | Exchange | Account   | Exchange Id | Placed time          | Matched time         | Side | Price           | Matched Amount   |
 +----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
-| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | 2011-10-03T06:49:36Z | Sell | 0.00000045 USDT | 11235435.59 SHIB |
-| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | 1999-03-25T04:46:43Z | Buy  | 1.31 USDT       | 13 XRP           |
-| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | 2006-07-14T23:58:24Z | Sell | 1500.56 USDT    | 0.56 ETH         |
-| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | 1999-03-25T04:46:43Z | Buy  | 50000 EUR       | 0 BTC            |
-| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | 2002-06-23T07:58:35Z | Sell | 1574564 KRW     | 34.56 LTC        |
+| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | 2011-10-03T06:49:36Z | sell | 0.00000045 USDT | 11235435.59 SHIB |
+| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | 1999-03-25T04:46:43Z | buy  | 1.31 USDT       | 13 XRP           |
+| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | 2006-07-14T23:58:24Z | sell | 1500.56 USDT    | 0.56 ETH         |
+| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | 1999-03-25T04:46:43Z | buy  | 50000 EUR       | 0 BTC            |
+| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | 2002-06-23T07:58:35Z | sell | 1574564 KRW     | 34.56 LTC        |
 +----------+-----------+-------------+----------------------+----------------------+------+-----------------+------------------+
 )";
   expectStr(kExpected);
@@ -1041,7 +1041,7 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
           "pair": "SHIB-USDT",
           "placedTime": "2002-06-23T07:58:35Z",
           "price": "0.00000045",
-          "side": "Sell"
+          "side": "sell"
         },
         {
           "id": "id3",
@@ -1050,7 +1050,7 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
           "pair": "XRP-USDT",
           "placedTime": "2006-07-14T23:58:24Z",
           "price": "1.31",
-          "side": "Buy"
+          "side": "buy"
         }
       ]
     },
@@ -1063,7 +1063,7 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
           "pair": "BTC-EUR",
           "placedTime": "1999-03-25T04:46:43Z",
           "price": "50000",
-          "side": "Buy"
+          "side": "buy"
         },
         {
           "id": "id4",
@@ -1072,7 +1072,7 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
           "pair": "LTC-KRW",
           "placedTime": "2011-10-03T06:49:36Z",
           "price": "1574564",
-          "side": "Sell"
+          "side": "sell"
         }
       ],
       "testuser2": [
@@ -1083,7 +1083,7 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, Json) {
           "pair": "ETH-USDT",
           "placedTime": "2002-06-23T07:58:35Z",
           "price": "1500.56",
-          "side": "Sell"
+          "side": "sell"
         }
       ]
     }
@@ -1099,20 +1099,20 @@ TEST_F(QueryResultPrinterClosedOrdersNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterOpenedOrdersBaseTest : public QueryResultPrinterTest {
  protected:
-  OpenedOrder order1{"id1", MonetaryAmount(0, "BTC"), MonetaryAmount(1, "BTC"), MonetaryAmount(50000, "EUR"),
-                     tp1,   TradeSide::kBuy};
-  OpenedOrder order2{"id2", MonetaryAmount("0.56ETH"), MonetaryAmount("0.44ETH"), MonetaryAmount("1500.56USDT"),
-                     tp2,   TradeSide::kSell};
+  OpenedOrder order1{
+      "id1", MonetaryAmount(0, "BTC"), MonetaryAmount(1, "BTC"), MonetaryAmount(50000, "EUR"), tp1, TradeSide::buy};
+  OpenedOrder order2{
+      "id2", MonetaryAmount("0.56ETH"), MonetaryAmount("0.44ETH"), MonetaryAmount("1500.56USDT"), tp2, TradeSide::sell};
   OpenedOrder order3{
-      "id3", MonetaryAmount(13, "XRP"), MonetaryAmount("500.45XRP"), MonetaryAmount("1.31USDT"), tp3, TradeSide::kBuy};
+      "id3", MonetaryAmount(13, "XRP"), MonetaryAmount("500.45XRP"), MonetaryAmount("1.31USDT"), tp3, TradeSide::buy};
   OpenedOrder order4{
-      "id4", MonetaryAmount("34.56LTC"), MonetaryAmount("0.4LTC"), MonetaryAmount("1574564KRW"), tp4, TradeSide::kSell};
+      "id4", MonetaryAmount("34.56LTC"), MonetaryAmount("0.4LTC"), MonetaryAmount("1574564KRW"), tp4, TradeSide::sell};
   OpenedOrder order5{"id5",
                      MonetaryAmount("11235435435SHIB"),
                      MonetaryAmount("11235435.59SHIB"),
                      MonetaryAmount("0.00000045USDT"),
                      tp2,
-                     TradeSide::kSell};
+                     TradeSide::sell};
 };
 
 class QueryResultPrinterOpenedOrdersNoConstraintsTest : public QueryResultPrinterOpenedOrdersBaseTest {
@@ -1130,11 +1130,11 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, FormattedTable) {
 +----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
 | Exchange | Account   | Exchange Id | Placed time          | Side | Price           | Matched Amount   | Remaining Amount |
 +----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
-| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | Sell | 0.00000045 USDT | 11235435435 SHIB | 11235435.59 SHIB |
-| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | Buy  | 1.31 USDT       | 13 XRP           | 500.45 XRP       |
-| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | Sell | 1500.56 USDT    | 0.56 ETH         | 0.44 ETH         |
-| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | Buy  | 50000 EUR       | 0 BTC            | 1 BTC            |
-| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | Sell | 1574564 KRW     | 34.56 LTC        | 0.4 LTC          |
+| bithumb  | testuser1 | id5         | 2002-06-23T07:58:35Z | sell | 0.00000045 USDT | 11235435435 SHIB | 11235435.59 SHIB |
+| bithumb  | testuser1 | id3         | 2006-07-14T23:58:24Z | buy  | 1.31 USDT       | 13 XRP           | 500.45 XRP       |
+| huobi    | testuser2 | id2         | 2002-06-23T07:58:35Z | sell | 1500.56 USDT    | 0.56 ETH         | 0.44 ETH         |
+| huobi    | testuser1 | id1         | 1999-03-25T04:46:43Z | buy  | 50000 EUR       | 0 BTC            | 1 BTC            |
+| huobi    | testuser1 | id4         | 2011-10-03T06:49:36Z | sell | 1574564 KRW     | 34.56 LTC        | 0.4 LTC          |
 +----------+-----------+-------------+----------------------+------+-----------------+------------------+------------------+
 )";
   expectStr(kExpected);
@@ -1172,7 +1172,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "placedTime": "2002-06-23T07:58:35Z",
           "price": "0.00000045",
           "remaining": "11235435.59",
-          "side": "Sell"
+          "side": "sell"
         },
         {
           "id": "id3",
@@ -1181,7 +1181,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "placedTime": "2006-07-14T23:58:24Z",
           "price": "1.31",
           "remaining": "500.45",
-          "side": "Buy"
+          "side": "buy"
         }
       ]
     },
@@ -1194,7 +1194,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "placedTime": "1999-03-25T04:46:43Z",
           "price": "50000",
           "remaining": "1",
-          "side": "Buy"
+          "side": "buy"
         },
         {
           "id": "id4",
@@ -1203,7 +1203,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "placedTime": "2011-10-03T06:49:36Z",
           "price": "1574564",
           "remaining": "0.4",
-          "side": "Sell"
+          "side": "sell"
         }
       ],
       "testuser2": [
@@ -1214,7 +1214,7 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, Json) {
           "placedTime": "2002-06-23T07:58:35Z",
           "price": "1500.56",
           "remaining": "0.44",
-          "side": "Sell"
+          "side": "sell"
         }
       ]
     }
@@ -1230,11 +1230,11 @@ TEST_F(QueryResultPrinterOpenedOrdersNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterRecentDepositsBaseTest : public QueryResultPrinterTest {
  protected:
-  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC"), Deposit::Status::kInitial};
-  Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP"), Deposit::Status::kSuccess};
-  Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR"), Deposit::Status::kFailureOrRejected};
-  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::kProcessing};
-  Deposit deposit5{"id5", tp4, MonetaryAmount("69204866.9", "DOGE"), Deposit::Status::kSuccess};
+  Deposit deposit1{"id1", tp1, MonetaryAmount("0.045", "BTC"), Deposit::Status::initial};
+  Deposit deposit2{"id2", tp2, MonetaryAmount(37, "XRP"), Deposit::Status::success};
+  Deposit deposit3{"id3", tp3, MonetaryAmount("15020.67", "EUR"), Deposit::Status::failed};
+  Deposit deposit4{"id4", tp4, MonetaryAmount("1.31", "ETH"), Deposit::Status::processing};
+  Deposit deposit5{"id5", tp4, MonetaryAmount("69204866.9", "DOGE"), Deposit::Status::success};
 };
 
 class QueryResultPrinterRecentDepositsNoConstraintsTest : public QueryResultPrinterRecentDepositsBaseTest {
@@ -1342,14 +1342,14 @@ TEST_F(QueryResultPrinterRecentDepositsNoConstraintsTest, NoPrint) {
 
 class QueryResultPrinterRecentWithdrawsBaseTest : public QueryResultPrinterTest {
  protected:
-  Withdraw withdraw1{"id1", tp3, MonetaryAmount("0.045", "BTC"), Withdraw::Status::kInitial,
+  Withdraw withdraw1{"id1", tp3, MonetaryAmount("0.045", "BTC"), Withdraw::Status::initial,
                      MonetaryAmount("0.00001", "BTC")};
-  Withdraw withdraw2{"id2", tp4, MonetaryAmount(37, "XRP"), Withdraw::Status::kSuccess, MonetaryAmount("0.02", "XRP")};
-  Withdraw withdraw3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Withdraw::Status::kFailureOrRejected,
+  Withdraw withdraw2{"id2", tp4, MonetaryAmount(37, "XRP"), Withdraw::Status::success, MonetaryAmount("0.02", "XRP")};
+  Withdraw withdraw3{"id3", tp1, MonetaryAmount("15020.67", "EUR"), Withdraw::Status::failed,
                      MonetaryAmount("0.1", "EUR")};
-  Withdraw withdraw4{"id4", tp2, MonetaryAmount("1.31", "ETH"), Withdraw::Status::kProcessing,
+  Withdraw withdraw4{"id4", tp2, MonetaryAmount("1.31", "ETH"), Withdraw::Status::processing,
                      MonetaryAmount("0.001", "ETH")};
-  Withdraw withdraw5{"id5", tp2, MonetaryAmount("69204866.9", "DOGE"), Withdraw::Status::kSuccess,
+  Withdraw withdraw5{"id5", tp2, MonetaryAmount("69204866.9", "DOGE"), Withdraw::Status::success,
                      MonetaryAmount(2, "DOGE")};
 };
 
@@ -1543,7 +1543,7 @@ class QueryResultPrinterWithdrawTest : public QueryResultPrinterTest {
   Wallet receivingWallet{toExchange,    grossAmount.currencyCode(),           "xrpaddress666", "xrptag2",
                          WalletCheck{}, AccountOwner("SmithJohn", "스미스존")};
   MonetaryAmount grossEmittedAmount;
-  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::kSuccess};
+  api::SentWithdrawInfo sentWithdrawInfo{netEmittedAmount, fee, Withdraw::Status::success};
 
   DeliveredWithdrawInfoWithExchanges deliveredWithdrawInfoWithExchanges{
       {&exchange1, &exchange4},

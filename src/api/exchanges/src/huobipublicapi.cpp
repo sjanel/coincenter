@@ -478,8 +478,8 @@ PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
       const MonetaryAmount price(detail2.price, mk.quote());
       const int64_t millisecondsSinceEpoch = detail2.ts;
       const TradeSide tradeSide =
-          detail2.direction == schema::huobi::MarketHistoryTrade::Trade::TradeData::Direction::buy ? TradeSide::kBuy
-                                                                                                   : TradeSide::kSell;
+          detail2.direction == schema::huobi::MarketHistoryTrade::Trade::TradeData::Direction::buy ? TradeSide::buy
+                                                                                                   : TradeSide::sell;
 
       ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
 

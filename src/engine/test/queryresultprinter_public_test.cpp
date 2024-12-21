@@ -139,7 +139,6 @@ TEST_F(QueryResultPrinterCurrenciesTest, EmptyJson) {
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": null,
     "req": "Currencies"
   },
   "out": {}
@@ -153,7 +152,6 @@ TEST_F(QueryResultPrinterCurrenciesTest, Json) {
   static constexpr std::string_view kExpected = R"(
 {
   "in": {
-    "opt": null,
     "req": "Currencies"
   },
   "out": {
@@ -655,8 +653,9 @@ TEST_F(QueryResultPrinterConversionSingleAmountTest, EmptyJson) {
 {
   "in": {
     "opt": {
-      "amount": "345.25 SOL",
-      "targetCurrency": "KRW"
+      "fromAmount": "345.25",
+      "fromCurrency": "SOL",
+      "toCurrency": "KRW"
     },
     "req": "Conversion"
   },
@@ -672,20 +671,21 @@ TEST_F(QueryResultPrinterConversionSingleAmountTest, Json) {
 {
   "in": {
     "opt": {
-      "amount": "345.25 SOL",
-      "targetCurrency": "KRW"
+      "fromAmount": "345.25",
+      "fromCurrency": "SOL",
+      "toCurrency": "KRW"
     },
     "req": "Conversion"
   },
   "out": {
     "binance": {
-      "convertedAmount": "41786641 KRW"
+      "convertedAmount": "41786641"
     },
     "bithumb": {
-      "convertedAmount": "59000249 KRW"
+      "convertedAmount": "59000249"
     },
     "huobi": {
-      "convertedAmount": "44487640 KRW"
+      "convertedAmount": "44487640"
     }
   }
 })";
@@ -736,12 +736,21 @@ TEST_F(QueryResultPrinterConversionSeveralAmountTest, EmptyJson) {
 {
   "in": {
     "opt": {
-      "sourceAmount": {
-        "binance": "1 BTC",
-        "bithumb": "1.4 BTC",
-        "huobi": "1.1 BTC"
+      "fromAmount": {
+        "binance": {
+          "amount": "1",
+          "cur": "BTC"
+        },
+        "bithumb": {
+          "amount": "1.4",
+          "cur": "BTC"
+        },
+        "huobi": {
+          "amount": "1.1",
+          "cur": "BTC"
+        }
       },
-      "targetCurrency": "KRW"
+      "toCurrency": "KRW"
     },
     "req": "Conversion"
   },
@@ -757,24 +766,33 @@ TEST_F(QueryResultPrinterConversionSeveralAmountTest, Json) {
 {
   "in": {
     "opt": {
-      "sourceAmount": {
-        "binance": "1 BTC",
-        "bithumb": "1.4 BTC",
-        "huobi": "1.1 BTC"
+      "fromAmount": {
+        "binance": {
+          "amount": "1",
+          "cur": "BTC"
+        },
+        "bithumb": {
+          "amount": "1.4",
+          "cur": "BTC"
+        },
+        "huobi": {
+          "amount": "1.1",
+          "cur": "BTC"
+        }
       },
-      "targetCurrency": "KRW"
+      "toCurrency": "KRW"
     },
     "req": "Conversion"
   },
   "out": {
     "binance": {
-      "convertedAmount": "41786641 KRW"
+      "convertedAmount": "41786641"
     },
     "bithumb": {
-      "convertedAmount": "59000249 KRW"
+      "convertedAmount": "59000249"
     },
     "huobi": {
-      "convertedAmount": "44487640 KRW"
+      "convertedAmount": "44487640"
     }
   }
 })";
@@ -983,18 +1001,18 @@ class QueryResultPrinterLastTradesVolumeTest : public QueryResultPrinterTest {
   TradesPerExchange lastTradesPerExchange{
       {&exchange1,
        PublicTradeVector{
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
+           PublicTrade(TradeSide::buy, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp1),
+           PublicTrade(TradeSide::sell, MonetaryAmount{"3.7", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp2),
+           PublicTrade(TradeSide::buy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp3)}},
       {&exchange3,
        PublicTradeVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
+           PublicTrade(TradeSide::sell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+           PublicTrade(TradeSide::buy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2)}},
       {&exchange2,
        PublicTradeVector{
-           PublicTrade(TradeSide::kSell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
-           PublicTrade(TradeSide::kBuy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
+           PublicTrade(TradeSide::sell, MonetaryAmount{"0.13", "ETH"}, MonetaryAmount{"1500.5", "USDT"}, tp4),
+           PublicTrade(TradeSide::buy, MonetaryAmount{"0.004", "ETH"}, MonetaryAmount{1501, "USDT"}, tp2),
+           PublicTrade(TradeSide::buy, MonetaryAmount{"47.78", "ETH"}, MonetaryAmount{1498, "USDT"}, tp1)}}};
 };
 
 TEST_F(QueryResultPrinterLastTradesVolumeTest, FormattedTable) {
@@ -1062,19 +1080,19 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
       {
         "a": "0.13",
         "p": "1500.5",
-        "side": "Buy",
+        "side": "buy",
         "time": "1999-03-25T04:46:43Z"
       },
       {
         "a": "3.7",
         "p": "1500.5",
-        "side": "Sell",
+        "side": "sell",
         "time": "2002-06-23T07:58:35Z"
       },
       {
         "a": "0.004",
         "p": "1501",
-        "side": "Buy",
+        "side": "buy",
         "time": "2006-07-14T23:58:24Z"
       }
     ],
@@ -1082,19 +1100,19 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
       {
         "a": "0.13",
         "p": "1500.5",
-        "side": "Sell",
+        "side": "sell",
         "time": "2011-10-03T06:49:36Z"
       },
       {
         "a": "0.004",
         "p": "1501",
-        "side": "Buy",
+        "side": "buy",
         "time": "2002-06-23T07:58:35Z"
       },
       {
         "a": "47.78",
         "p": "1498",
-        "side": "Buy",
+        "side": "buy",
         "time": "1999-03-25T04:46:43Z"
       }
     ],
@@ -1102,13 +1120,13 @@ TEST_F(QueryResultPrinterLastTradesVolumeTest, Json) {
       {
         "a": "0.13",
         "p": "1500.5",
-        "side": "Sell",
+        "side": "sell",
         "time": "2011-10-03T06:49:36Z"
       },
       {
         "a": "0.004",
         "p": "1501",
-        "side": "Buy",
+        "side": "buy",
         "time": "2002-06-23T07:58:35Z"
       }
     ]
@@ -1243,7 +1261,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, EmptyJson) {
 {
   "in": {
     "opt": {
-      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "timeWindow": "[1999-03-25T04:46:43Z -> 2000-10-07T01:14:27Z)"
     },
     "req": "ReplayMarkets"
   },
@@ -1258,7 +1276,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, Json) {
 {
   "in": {
     "opt": {
-      "timeWindow": "[1999-03-25 04:46:43 -> 2000-10-07 01:14:27)"
+      "timeWindow": "[1999-03-25T04:46:43Z -> 2000-10-07T01:14:27Z)"
     },
     "req": "ReplayMarkets"
   },
@@ -1308,7 +1326,7 @@ TEST_F(QueryResultPrinterReplayMarketsTest, Json) {
       ]
     },
     "huobi": {
-      "orderBooks": null,
+      "orderBooks": [],
       "trades": [
         {
           "lastTimestamp": "2000-06-11T23:58:40Z",
@@ -1334,11 +1352,11 @@ class QueryResultPrinterReplayTest : public QueryResultPrinterReplayBaseTest {
  protected:
   CurrencyCode base{"BTC"};
   CurrencyCode quote{"USDT"};
-  ClosedOrder closedOrder1{"1", MonetaryAmount(15, base, 1), MonetaryAmount(35000, quote), tp1, tp1, TradeSide::kBuy};
-  ClosedOrder closedOrder2{"2", MonetaryAmount(25, base, 1), MonetaryAmount(45000, quote), tp2, tp2, TradeSide::kBuy};
-  ClosedOrder closedOrder3{"3", MonetaryAmount(5, base, 2), MonetaryAmount(35000, quote), tp3, tp4, TradeSide::kSell};
-  ClosedOrder closedOrder4{"4", MonetaryAmount(17, base, 1), MonetaryAmount(50000, quote), tp3, tp4, TradeSide::kSell};
-  ClosedOrder closedOrder5{"5", MonetaryAmount(36, base, 3), MonetaryAmount(47899, quote), tp4, tp5, TradeSide::kSell};
+  ClosedOrder closedOrder1{"1", MonetaryAmount(15, base, 1), MonetaryAmount(35000, quote), tp1, tp1, TradeSide::buy};
+  ClosedOrder closedOrder2{"2", MonetaryAmount(25, base, 1), MonetaryAmount(45000, quote), tp2, tp2, TradeSide::buy};
+  ClosedOrder closedOrder3{"3", MonetaryAmount(5, base, 2), MonetaryAmount(35000, quote), tp3, tp4, TradeSide::sell};
+  ClosedOrder closedOrder4{"4", MonetaryAmount(17, base, 1), MonetaryAmount(50000, quote), tp3, tp4, TradeSide::sell};
+  ClosedOrder closedOrder5{"5", MonetaryAmount(36, base, 3), MonetaryAmount(47899, quote), tp4, tp5, TradeSide::sell};
 
   MonetaryAmount startBaseAmount{1, base};
   MonetaryAmount startQuoteAmount{1000, quote};
@@ -1387,25 +1405,25 @@ TEST_F(QueryResultPrinterReplayTest, FormattedTable) {
 | first-alg  | binance  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 0 USDT        |                                                      | order books: 42 OK           |
 |            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               |                                                      | trades: 3 OK, 10 KO          |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
-|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
+|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
-|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
-|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
+|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
+|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - sell - 1.7 BTC @ 50000 USDT   |                              |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
 | first-alg  | binance  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 0 USDT        |                                                      | order books: 42 OK           |
 |            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               |                                                      | trades: 3 OK, 10 KO          |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
-|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - Sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 500 USDT      | 1999-03-25T04:46:43Z - buy - 1.5 BTC @ 35000 USDT    | order books: 500000 OK, 2 KO |
+|            |          | 1999-07-11T00:42:21Z |          | 1000 USDT     |               | 2000-06-11T23:58:40Z - sell - 0.036 BTC @ 47899 USDT | trades: 0 OK                 |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - Buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
-|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
-|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - Sell - 1.7 BTC @ 50000 USDT   |                              |
+| second-alg | huobi    | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | 780 USDT      | 1999-07-11T00:42:21Z - buy - 2.5 BTC @ 45000 USDT    | order books: 79009 OK        |
+|            |          | 1999-10-29T01:26:51Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - sell - 0.05 BTC @ 35000 USDT  | trades: 1555555555 OK, 45 KO |
+|            |          |                      |          |               |               | 1999-10-29T01:26:51Z - sell - 1.7 BTC @ 50000 USDT   |                              |
 |~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
-| first-alg  | bithumb  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | -334 USDT     | 1999-03-25T04:46:43Z - Buy - 1.5 BTC @ 35000 USDT    | order books: 23 OK, 1 KO     |
-|            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - Sell - 0.05 BTC @ 35000 USDT  | trades: 0 OK, 10 KO          |
+| first-alg  | bithumb  | 1999-03-25T04:46:43Z | BTC-USDT | 1 BTC         | -334 USDT     | 1999-03-25T04:46:43Z - buy - 1.5 BTC @ 35000 USDT    | order books: 23 OK, 1 KO     |
+|            |          | 1999-03-25T04:46:43Z |          | 1000 USDT     |               | 1999-10-29T01:26:51Z - sell - 0.05 BTC @ 35000 USDT  | trades: 0 OK, 10 KO          |
 +------------+----------+----------------------+----------+---------------+---------------+------------------------------------------------------+------------------------------+
 )";
   expectStr(kExpected);
@@ -1450,24 +1468,24 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "binance": {
             "algorithm": "first-alg",
             "market": "BTC-USDT",
-            "matched-orders": [],
-            "profit-and-loss": "0 USDT",
-            "start-amounts": {
+            "matchedOrders": [],
+            "profitAndLoss": "0 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 0,
-                "nb-successful": 42,
+              "orderBooks": {
+                "nbError": 0,
+                "nbSuccessful": 42,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-03-25T04:46:43Z"
                 }
               },
               "trades": {
-                "nb-error": 10,
-                "nb-successful": 3,
+                "nbError": 10,
+                "nbSuccessful": 3,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-07-11T00:42:21Z"
@@ -1480,7 +1498,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "huobi": {
             "algorithm": "second-alg",
             "market": "BTC-USDT",
-            "matched-orders": [
+            "matchedOrders": [
               {
                 "id": "1",
                 "matched": "1.5",
@@ -1488,7 +1506,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-03-25T04:46:43Z",
                 "price": "35000",
-                "side": "Buy"
+                "side": "buy"
               },
               {
                 "id": "5",
@@ -1497,26 +1515,26 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "2000-06-11T23:58:40Z",
                 "price": "47899",
-                "side": "Sell"
+                "side": "sell"
               }
             ],
-            "profit-and-loss": "500 USDT",
-            "start-amounts": {
+            "profitAndLoss": "500 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 2,
-                "nb-successful": 500000,
+              "orderBooks": {
+                "nbError": 2,
+                "nbSuccessful": 500000,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-07-11T00:42:21Z"
                 }
               },
               "trades": {
-                "nb-error": 0,
-                "nb-successful": 0,
+                "nbError": 0,
+                "nbSuccessful": 0,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-10-29T01:26:51Z"
@@ -1529,7 +1547,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "huobi": {
             "algorithm": "second-alg",
             "market": "BTC-USDT",
-            "matched-orders": [
+            "matchedOrders": [
               {
                 "id": "2",
                 "matched": "2.5",
@@ -1537,7 +1555,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-07-11T00:42:21Z",
                 "price": "45000",
-                "side": "Buy"
+                "side": "buy"
               },
               {
                 "id": "3",
@@ -1546,7 +1564,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-10-29T01:26:51Z",
                 "price": "35000",
-                "side": "Sell"
+                "side": "sell"
               },
               {
                 "id": "4",
@@ -1555,26 +1573,26 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-10-29T01:26:51Z",
                 "price": "50000",
-                "side": "Sell"
+                "side": "sell"
               }
             ],
-            "profit-and-loss": "780 USDT",
-            "start-amounts": {
+            "profitAndLoss": "780 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 0,
-                "nb-successful": 79009,
+              "orderBooks": {
+                "nbError": 0,
+                "nbSuccessful": 79009,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-10-29T01:26:51Z"
                 }
               },
               "trades": {
-                "nb-error": 45,
-                "nb-successful": 1555555555,
+                "nbError": 45,
+                "nbSuccessful": 1555555555,
                 "time": {
                   "from": "1999-07-11T00:42:21Z",
                   "to": "2000-06-11T23:58:40Z"
@@ -1591,24 +1609,24 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "binance": {
             "algorithm": "first-alg",
             "market": "BTC-USDT",
-            "matched-orders": [],
-            "profit-and-loss": "0 USDT",
-            "start-amounts": {
+            "matchedOrders": [],
+            "profitAndLoss": "0 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 0,
-                "nb-successful": 42,
+              "orderBooks": {
+                "nbError": 0,
+                "nbSuccessful": 42,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-03-25T04:46:43Z"
                 }
               },
               "trades": {
-                "nb-error": 10,
-                "nb-successful": 3,
+                "nbError": 10,
+                "nbSuccessful": 3,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-07-11T00:42:21Z"
@@ -1621,7 +1639,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "huobi": {
             "algorithm": "second-alg",
             "market": "BTC-USDT",
-            "matched-orders": [
+            "matchedOrders": [
               {
                 "id": "1",
                 "matched": "1.5",
@@ -1629,7 +1647,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-03-25T04:46:43Z",
                 "price": "35000",
-                "side": "Buy"
+                "side": "buy"
               },
               {
                 "id": "5",
@@ -1638,26 +1656,26 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "2000-06-11T23:58:40Z",
                 "price": "47899",
-                "side": "Sell"
+                "side": "sell"
               }
             ],
-            "profit-and-loss": "500 USDT",
-            "start-amounts": {
+            "profitAndLoss": "500 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 2,
-                "nb-successful": 500000,
+              "orderBooks": {
+                "nbError": 2,
+                "nbSuccessful": 500000,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-07-11T00:42:21Z"
                 }
               },
               "trades": {
-                "nb-error": 0,
-                "nb-successful": 0,
+                "nbError": 0,
+                "nbSuccessful": 0,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-10-29T01:26:51Z"
@@ -1670,7 +1688,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "huobi": {
             "algorithm": "second-alg",
             "market": "BTC-USDT",
-            "matched-orders": [
+            "matchedOrders": [
               {
                 "id": "2",
                 "matched": "2.5",
@@ -1678,7 +1696,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-07-11T00:42:21Z",
                 "price": "45000",
-                "side": "Buy"
+                "side": "buy"
               },
               {
                 "id": "3",
@@ -1687,7 +1705,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-10-29T01:26:51Z",
                 "price": "35000",
-                "side": "Sell"
+                "side": "sell"
               },
               {
                 "id": "4",
@@ -1696,26 +1714,26 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-10-29T01:26:51Z",
                 "price": "50000",
-                "side": "Sell"
+                "side": "sell"
               }
             ],
-            "profit-and-loss": "780 USDT",
-            "start-amounts": {
+            "profitAndLoss": "780 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 0,
-                "nb-successful": 79009,
+              "orderBooks": {
+                "nbError": 0,
+                "nbSuccessful": 79009,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-10-29T01:26:51Z"
                 }
               },
               "trades": {
-                "nb-error": 45,
-                "nb-successful": 1555555555,
+                "nbError": 45,
+                "nbSuccessful": 1555555555,
                 "time": {
                   "from": "1999-07-11T00:42:21Z",
                   "to": "2000-06-11T23:58:40Z"
@@ -1730,7 +1748,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
           "bithumb": {
             "algorithm": "first-alg",
             "market": "BTC-USDT",
-            "matched-orders": [
+            "matchedOrders": [
               {
                 "id": "1",
                 "matched": "1.5",
@@ -1738,7 +1756,7 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-03-25T04:46:43Z",
                 "price": "35000",
-                "side": "Buy"
+                "side": "buy"
               },
               {
                 "id": "3",
@@ -1747,26 +1765,26 @@ TEST_F(QueryResultPrinterReplayTest, Json) {
                 "pair": "BTC-USDT",
                 "placedTime": "1999-10-29T01:26:51Z",
                 "price": "35000",
-                "side": "Sell"
+                "side": "sell"
               }
             ],
-            "profit-and-loss": "-334 USDT",
-            "start-amounts": {
+            "profitAndLoss": "-334 USDT",
+            "startAmounts": {
               "base": "1 BTC",
               "quote": "1000 USDT"
             },
             "stats": {
-              "order-books": {
-                "nb-error": 1,
-                "nb-successful": 23,
+              "orderBooks": {
+                "nbError": 1,
+                "nbSuccessful": 23,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "1999-03-25T04:46:43Z"
                 }
               },
               "trades": {
-                "nb-error": 10,
-                "nb-successful": 0,
+                "nbError": 10,
+                "nbSuccessful": 0,
                 "time": {
                   "from": "1999-03-25T04:46:43Z",
                   "to": "2000-10-07T01:14:27Z"

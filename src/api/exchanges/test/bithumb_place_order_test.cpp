@@ -66,8 +66,7 @@ TEST_F(BithumbPrivateAPIPlaceOrderTest, PlaceOrderShortenDecimals) {
        {"/info/orders?endpoint=%2Finfo%2Forders&order_currency=ETH&payment_currency=EUR&type=ask&order_id=ID0001",
         R"({"status":"0000","data":[{"order_id":"ID0001"}]})"}});
 
-  PlaceOrderInfo placeOrderInfo =
-      placeOrder(MonetaryAmount("2.000001ETH"), MonetaryAmount("1500EUR"), TradeSide::kSell);
+  PlaceOrderInfo placeOrderInfo = placeOrder(MonetaryAmount("2.000001ETH"), MonetaryAmount("1500EUR"), TradeSide::sell);
   EXPECT_EQ(placeOrderInfo.orderId, "ID0001");
 }
 
@@ -78,8 +77,7 @@ TEST_F(BithumbPrivateAPIPlaceOrderTest, NoPlaceOrderTooSmallAmount) {
         "place?endpoint=%2Ftrade%2Fplace&order_currency=ETH&payment_currency=EUR&type=ask&price=1500&units=0.000001",
         R"({"status":"5600","message":"수량은 소수점 4자"})"}});
 
-  PlaceOrderInfo placeOrderInfo =
-      placeOrder(MonetaryAmount("0.000001ETH"), MonetaryAmount("1500EUR"), TradeSide::kSell);
+  PlaceOrderInfo placeOrderInfo = placeOrder(MonetaryAmount("0.000001ETH"), MonetaryAmount("1500EUR"), TradeSide::sell);
   EXPECT_EQ(placeOrderInfo.orderId, "UndefinedId");
 }
 }  // namespace cct::api

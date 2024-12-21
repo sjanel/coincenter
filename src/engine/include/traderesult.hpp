@@ -1,15 +1,15 @@
 #pragma once
 
 #include <cstdint>
-#include <string_view>
 
+#include "cct_json.hpp"
 #include "monetaryamount.hpp"
 #include "tradedamounts.hpp"
 
 namespace cct {
 class TradeResult {
  public:
-  enum class State : int8_t { kComplete, kPartial, kUntouched };
+  enum class State : int8_t { complete, partial, untouched };
 
   TradeResult() noexcept = default;
 
@@ -19,11 +19,9 @@ class TradeResult {
 
   MonetaryAmount from() const { return _from; }
 
-  bool isComplete() const { return state() == State::kComplete; }
+  bool isComplete() const { return state() == State::complete; }
 
   State state() const;
-
-  std::string_view stateStr() const;
 
   constexpr bool operator==(const TradeResult &) const noexcept = default;
 
@@ -33,3 +31,10 @@ class TradeResult {
 };
 
 }  // namespace cct
+
+template <>
+struct glz::meta<::cct::TradeResult::State> {
+  using enum ::cct::TradeResult::State;
+
+  static constexpr auto value = enumerate(complete, partial, untouched);
+};

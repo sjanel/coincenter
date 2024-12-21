@@ -493,7 +493,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSid
     }
   };
   switch (tradeSide) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       for (int pos = _highestBidPricePos + 1; pos < nbOrders && integralTotalAmount > 0; ++pos) {
         // amount is < 0 here
         const auto linePrice = priceAt(pos);
@@ -503,7 +503,7 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSid
         countAmount(linePrice, -_orders[pos].amount);
       }
       break;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       for (int pos = _lowestAskPricePos - 1; pos >= 0 && integralTotalAmount > 0; --pos) {
         const auto linePrice = priceAt(pos);
         if (price > linePrice) {
@@ -521,9 +521,9 @@ MarketOrderBook::AmountPerPriceVec MarketOrderBook::computeMatchedParts(TradeSid
 AmountPrice MarketOrderBook::avgPriceAndMatchedVolume(TradeSide tradeSide, MonetaryAmount amount,
                                                       MonetaryAmount price) const {
   switch (tradeSide) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       return avgPriceAndMatchedVolumeBuy(amount, price);
-    case TradeSide::kSell:
+    case TradeSide::sell:
       return avgPriceAndMatchedVolumeSell(amount, price);
     default:
       throw exception("Unexpected trade side {}", static_cast<int>(tradeSide));

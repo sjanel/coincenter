@@ -23,10 +23,10 @@ TraderCommand TraderCommand::Place(TradeSide tradeSide, int8_t amountIntensityPe
   }
   Type type;
   switch (tradeSide) {
-    case TradeSide::kBuy:
+    case TradeSide::buy:
       type = Type::kBuy;
       break;
-    case TradeSide::kSell:
+    case TradeSide::sell:
       type = Type::kSell;
       break;
     default:
@@ -52,9 +52,9 @@ TraderCommand TraderCommand::UpdatePrice(OrderIdView orderId, PriceStrategy pric
 TradeSide TraderCommand::tradeSide() const {
   switch (_type) {
     case Type::kBuy:
-      return TradeSide::kBuy;
+      return TradeSide::buy;
     case Type::kSell:
-      return TradeSide::kSell;
+      return TradeSide::sell;
     default:
       throw exception("Unexpected trade command type for trade side");
   }

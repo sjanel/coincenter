@@ -3,19 +3,16 @@
 #include <cstdint>
 #include <string_view>
 
+#include "cct_json.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
-enum class TradeSide : int8_t { kBuy, kSell };
-
-inline std::string_view SideStr(TradeSide side) {
-  switch (side) {
-    case TradeSide::kBuy:
-      return "Buy";
-    case TradeSide::kSell:
-      return "Sell";
-    default:
-      unreachable();
-  }
-}
+enum class TradeSide : int8_t { buy, sell };
 }  // namespace cct
+
+template <>
+struct glz::meta<cct::TradeSide> {
+  using enum cct::TradeSide;
+
+  static constexpr auto value = enumerate(buy, sell);
+};
