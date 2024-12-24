@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.2.0.tar.gz
-    URL_HASH SHA256=96037265d138a0d778d2b8672c976bc2739b3f753aefabc3fcf55ada3ead1869
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.2.2.tar.gz
+    URL_HASH SHA256=965e32de67e60d185402e8cfe684c6d40c1f018a4fa5e781b11b0cac0817edb9
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
@@ -235,6 +235,7 @@ if(MSVC)
   add_compile_definitions(NOMINMAX)
   add_compile_definitions(_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
   add_compile_definitions(_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING)
+  add_compile_options(/Zc:preprocessor) # Needed by glaze
 else()
   if(CCT_ENABLE_ASAN)
     if (NOT CCT_ASAN_OPTIONS)
