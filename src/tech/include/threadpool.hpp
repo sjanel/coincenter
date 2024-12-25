@@ -14,7 +14,6 @@
 #include <type_traits>
 
 #include "cct_exception.hpp"
-#include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_vector.hpp"
 
@@ -73,8 +72,6 @@ class ThreadPool {
   template <class Futures, class OutputIt>
   OutputIt retrieveAllResults(Futures& futures, OutputIt out);
 
-  void stopRequested();
-
   // the task queue
   TasksQueue _tasks;
 
@@ -88,38 +85,8 @@ class ThreadPool {
   vector<std::jthread> _workers;
 };
 
-inline ThreadPool::ThreadPool(int nbThreads) {
-  if (nbThreads < 1) {
-    throw invalid_argument("number of threads should be strictly positive");
-  }
-  _workers.reserve(static_cast<decltype(_workers)::size_type>(nbThreads));
-  for (decltype(nbThreads) threadPos = 0; threadPos < nbThreads; ++threadPos) {
-    _workers.emplace_back([this] {
-      while (true) {
-        TasksQueue::value_type task;
-
-        {
-          std::unique_lock<std::mutex> lock(this->_queueMutex);
-          this->_condition.wait(lock, [this] { return this->_stop || !this->_tasks.empty(); });
-          if (this->_stop && this->_tasks.empty()) {
-            break;
-          }
-          task = std::move(this->_tasks.front());
-          this->_tasks.pop();
-        }
-        task();
-      }
-    });
-  }
-}
-
-inline ThreadPool::~ThreadPool() {
-  stopRequested();
-  _condition.notify_all();
-}
-
 template <class Func, class... Args>
-inline std::future<std::invoke_result_t<Func, Args...>> ThreadPool::enqueue(Func&& func, Args&&... args) {
+std::future<std::invoke_result_t<Func, Args...>> ThreadPool::enqueue(Func&& func, Args&&... args) {
   // std::bind copies the arguments. To avoid copies, you can use std::ref to copy reference instead.
   using return_type = std::invoke_result_t<Func, Args...>;
 
@@ -145,7 +112,7 @@ template <std::ranges::input_range InputRange, std::weakly_incrementable OutputI
           std::copy_constructible UnaryOperation>
   requires std::indirectly_writable<OutputIt,
                                     std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>
-inline OutputIt ThreadPool::parallelTransform(InputRange&& r, OutputIt result, UnaryOperation op) {
+OutputIt ThreadPool::parallelTransform(InputRange&& r, OutputIt result, UnaryOperation op) {
   using FutureT = std::future<std::invoke_result_t<UnaryOperation, std::ranges::range_reference_t<InputRange>>>;
   vector<FutureT> futures;
   if constexpr (std::ranges::sized_range<InputRange>) {
@@ -162,7 +129,7 @@ template <std::ranges::input_range InputRange1, std::ranges::input_range InputRa
   requires std::indirectly_writable<OutputIt,
                                     std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
                                                          std::ranges::range_reference_t<InputRange2>>>
-inline OutputIt ThreadPool::parallelTransform(InputRange1&& r1, InputRange2&& r2, OutputIt result, BinaryOperation op) {
+OutputIt ThreadPool::parallelTransform(InputRange1&& r1, InputRange2&& r2, OutputIt result, BinaryOperation op) {
   using FutureT = std::future<std::invoke_result_t<BinaryOperation, std::ranges::range_reference_t<InputRange1>,
                                                    std::ranges::range_reference_t<InputRange2>>>;
   vector<FutureT> futures;
@@ -201,11 +168,6 @@ inline OutputIt ThreadPool::retrieveAllResults(Futures& futures, OutputIt out) {
   }
 
   return out;
-}
-
-inline void ThreadPool::stopRequested() {
-  std::unique_lock<std::mutex> lock(_queueMutex);
-  _stop = true;
 }
 
 }  // namespace cct
