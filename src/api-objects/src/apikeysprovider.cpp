@@ -74,7 +74,7 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
   APIKeysProvider::APIKeysPerExchange apiKeysPerExchange;
 
   if (exchangeSecretsInfo.allExchangesWithoutSecrets()) {
-    log::info("Not loading private keys, using only public exchanges");
+    log::debug("Will not use private keys");
     return apiKeysPerExchange;
   }
 
@@ -82,7 +82,7 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
   const auto throwOrNoThrow = settings::AreTestKeysRequested(runMode) ? File::IfError::kThrow : File::IfError::kNoThrow;
   File secretsFile(dataDir, File::Type::kSecret, secretFileName, throwOrNoThrow);
 
-  schema::APIKeysPerExchangeMap apiKeysPerExchangeMap;
+  schema::APIKeysPerExchange apiKeysPerExchangeMap;
 
   ReadExactJsonOrThrow(secretsFile.readAll(), apiKeysPerExchangeMap);
 
@@ -93,11 +93,15 @@ APIKeysProvider::APIKeysPerExchange APIKeysProvider::ParseAPIKeys(std::string_vi
     if (std::ranges::any_of(exchangesWithoutSecrets, [exchangeNameEnum](const auto& exchangeName) {
           return exchangeName.exchangeNameEnum() == exchangeNameEnum;
         })) {
-      log::debug("Not loading {} private keys as requested", EnumToString(exchangeNameEnum));
+      log::debug("Do not use {} private keys", EnumToString(exchangeNameEnum));
       continue;
     }
 
     for (auto& [keyName, apiKey] : apiKeys) {
+      if (!apiKey.enabled) {
+        log::debug("{} private key {} is disabled", EnumToString(exchangeNameEnum), keyName);
+        continue;
+      }
       if (apiKey.key.empty() || apiKey.priv.empty()) {
         log::error("Wrong format for secret.json file. It should contain at least fields 'key' and 'private'");
         continue;

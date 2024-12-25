@@ -128,6 +128,7 @@ add_unit_test(
 
 add_unit_test(
     threadpool_test
+    src/threadpool.cpp
     test/threadpool_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
