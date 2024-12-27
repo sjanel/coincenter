@@ -26,6 +26,14 @@ add_unit_test(
 )
 
 add_unit_test(
+    exchange-query-update-frequency-config_test
+    src/exchange-query-update-frequency-config.cpp
+    test/exchange-query-update-frequency-config_test.cpp
+    LIBRARIES
+    coincenter_schema
+)
+
+add_unit_test(
     general-config_test
     test/general-config_test.cpp
     LIBRARIES

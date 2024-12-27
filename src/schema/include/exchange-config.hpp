@@ -1,9 +1,10 @@
 #pragma once
 
 #include <array>
-#include <map>
+#include <utility>
 
 #include "cct_const.hpp"
+#include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchange-query-config.hpp"
@@ -21,7 +22,7 @@ namespace details {
 template <class T>
 struct ExchangeConfigPart {
   T def;  // default is a reserved keyword - we override the json field name below
-  std::map<ExchangeNameEnum, T> exchange;
+  FixedCapacityVector<std::pair<ExchangeNameEnum, T>, kNbSupportedExchanges> exchange;
 };
 
 struct AllExchangeConfigsOptional {
@@ -40,23 +41,23 @@ struct ExchangeConfig {
   ExchangeWithdrawConfig withdraw;
 };
 
+}  // namespace schema
+
 class AllExchangeConfigs {
  public:
   AllExchangeConfigs() = default;
 
   explicit AllExchangeConfigs(const LoadConfiguration &loadConfiguration);
 
-  const ExchangeConfig &operator[](ExchangeNameEnum exchangeNameEnum) const {
+  const schema::ExchangeConfig &operator[](ExchangeNameEnum exchangeNameEnum) const {
     return _exchangeConfigs[static_cast<int>(exchangeNameEnum)];
   }
 
-  void mergeWith(const details::AllExchangeConfigsOptional &other);
+  void mergeWith(schema::details::AllExchangeConfigsOptional &other);
 
  private:
-  std::array<ExchangeConfig, kNbSupportedExchanges> _exchangeConfigs;
+  std::array<schema::ExchangeConfig, kNbSupportedExchanges> _exchangeConfigs;
 };
-
-}  // namespace schema
 
 }  // namespace cct
 

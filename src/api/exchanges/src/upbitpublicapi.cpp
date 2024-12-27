@@ -56,31 +56,27 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::upbit, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
-      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
-                                        _cachedResultVault),
-                    _curlHandle, exchangeConfig().asset),
+      _marketsCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
+          _curlHandle, exchangeConfig().asset),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _curlHandle, _marketsCache),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
           name(), config.dataDir()),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           _curlHandle, _marketsCache),
-      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
-                                          _cachedResultVault),
-                      _curlHandle),
-      _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
-                              _cachedResultVault),
+      _orderbookCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
-                                       _cachedResultVault),
-                   _curlHandle) {}
+      _tradedVolumeCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
+          _curlHandle),
+      _tickerCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
+          _curlHandle) {}
 
 bool UpbitPublic::healthCheck() {
   auto result = PublicQuery<schema::upbit::V1Tickers>(_curlHandle, "/v1/ticker", {{"markets", "KRW-BTC"}});

@@ -166,8 +166,7 @@ HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& hu
                   coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _curlHandle, apiKey),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {

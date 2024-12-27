@@ -252,20 +252,16 @@ BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePubl
       _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay),
       _allWithdrawFeesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay),
       _withdrawFeesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, binancePublic, _queryDelay) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {

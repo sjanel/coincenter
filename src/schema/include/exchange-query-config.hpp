@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <map>
 #include <type_traits>
 
 #include "apiquerytypeenum.hpp"
@@ -12,6 +12,7 @@
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
 #include "duration-schema.hpp"
+#include "exchange-query-update-frequency-config.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "optional-or-type.hpp"
@@ -79,8 +80,6 @@ struct ExchangeQueryLogLevelsConfig {
 using ExchangeQueryHttpConfig = details::ExchangeQueryHttpConfig<false>;
 using ExchangeQueryHttpConfigOptional = details::ExchangeQueryHttpConfig<true>;
 
-using ExchangeQueryUpdateFrequencyConfig = std::map<QueryType, Duration>;
-
 using ExchangeQueryTradeConfig = details::ExchangeQueryTradeConfig<false>;
 using ExchangeQueryTradeConfigOptional = details::ExchangeQueryTradeConfig<true>;
 
@@ -89,7 +88,7 @@ namespace details {
 template <bool Optional>
 struct ExchangeQueryConfig {
   template <class T, std::enable_if_t<std::is_same_v<T, ExchangeQueryConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  void mergeWith(T &other) {
     if (other.http) {
       http.mergeWith(*other.http);
     }
@@ -99,11 +98,7 @@ struct ExchangeQueryConfig {
     if (other.trade) {
       trade.mergeWith(*other.trade);
     }
-    if (other.updateFrequency) {
-      for (const auto &[key, value] : *other.updateFrequency) {
-        updateFrequency.insert_or_assign(key, value);
-      }
-    }
+    MergeWith(other.updateFrequency, updateFrequency);
     if (other.acceptEncoding) {
       acceptEncoding = *other.acceptEncoding;
     }
@@ -133,10 +128,14 @@ struct ExchangeQueryConfig {
     }
   }
 
+  ::cct::Duration getUpdateFrequency(QueryType queryType) const {
+    return updateFrequency[static_cast<int>(queryType)].second.duration;
+  }
+
   optional_or_t<ExchangeQueryHttpConfig<Optional>, Optional> http;
   optional_or_t<ExchangeQueryLogLevelsConfig<Optional>, Optional> logLevels;
   optional_or_t<ExchangeQueryTradeConfig<Optional>, Optional> trade;
-  optional_or_t<ExchangeQueryUpdateFrequencyConfig, Optional> updateFrequency;
+  ExchangeQueryUpdateFrequencyConfig updateFrequency;
   optional_or_t<string, Optional> acceptEncoding;
   optional_or_t<Duration, Optional> privateAPIRate{};
   optional_or_t<Duration, Optional> publicAPIRate{};

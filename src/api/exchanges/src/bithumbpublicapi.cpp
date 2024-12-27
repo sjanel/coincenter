@@ -100,19 +100,16 @@ BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatCo
     : ExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           config, commonAPI, _curlHandle),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           config, _curlHandle, exchangeConfig().asset),
-      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
-                                          _cachedResultVault),
-                      config, _curlHandle, exchangeConfig().asset),
+      _orderbookCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
+          config, _curlHandle, exchangeConfig().asset),
       _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
           _curlHandle) {}
 
 bool BithumbPublic::healthCheck() {
@@ -133,7 +130,7 @@ bool BithumbPublic::healthCheck() {
 MarketSet BithumbPublic::queryTradableMarkets() {
   auto [pMarketOrderbookMap, lastUpdatedTime] = _allOrderBooksCache.retrieve();
   if (pMarketOrderbookMap == nullptr ||
-      lastUpdatedTime + exchangeConfig().query.updateFrequency.at(QueryType::markets).duration < Clock::now()) {
+      lastUpdatedTime + exchangeConfig().query.getUpdateFrequency(QueryType::markets) < Clock::now()) {
     pMarketOrderbookMap = std::addressof(_allOrderBooksCache.get());
   }
   MarketSet markets;

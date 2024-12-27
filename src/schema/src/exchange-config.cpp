@@ -12,7 +12,7 @@
 #include "unreachable.hpp"
 #include "write-json.hpp"
 
-namespace cct::schema {
+namespace cct {
 
 AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {
@@ -49,36 +49,37 @@ AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguratio
   }
 }
 
-void AllExchangeConfigs::mergeWith(const details::AllExchangeConfigsOptional &other) {
+void AllExchangeConfigs::mergeWith(schema::details::AllExchangeConfigsOptional &other) {
   for (int exchangePos = 0; exchangePos < kNbSupportedExchanges; ++exchangePos) {
     auto &exchangeConfig = _exchangeConfigs[exchangePos];
-    auto exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangePos);
-
-    auto assetIt = other.asset.exchange.find(exchangeNameEnum);
-    auto queryIt = other.query.exchange.find(exchangeNameEnum);
-    auto tradeFeesIt = other.tradeFees.exchange.find(exchangeNameEnum);
-    auto withdrawIt = other.withdraw.exchange.find(exchangeNameEnum);
+    auto matchExchangeIt = [exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangePos)](const auto &pair) {
+      return pair.first == exchangeNameEnum;
+    };
 
     exchangeConfig.asset.mergeWith(other.asset.def);
+    auto assetIt = std::ranges::find_if(other.asset.exchange, matchExchangeIt);
     if (assetIt != other.asset.exchange.end()) {
       exchangeConfig.asset.mergeWith(assetIt->second);
     }
 
     exchangeConfig.query.mergeWith(other.query.def);
+    auto queryIt = std::ranges::find_if(other.query.exchange, matchExchangeIt);
     if (queryIt != other.query.exchange.end()) {
       exchangeConfig.query.mergeWith(queryIt->second);
     }
 
     exchangeConfig.tradeFees.mergeWith(other.tradeFees.def);
+    auto tradeFeesIt = std::ranges::find_if(other.tradeFees.exchange, matchExchangeIt);
     if (tradeFeesIt != other.tradeFees.exchange.end()) {
       exchangeConfig.tradeFees.mergeWith(tradeFeesIt->second);
     }
 
     exchangeConfig.withdraw.mergeWith(other.withdraw.def);
+    auto withdrawIt = std::ranges::find_if(other.withdraw.exchange, matchExchangeIt);
     if (withdrawIt != other.withdraw.exchange.end()) {
       exchangeConfig.withdraw.mergeWith(withdrawIt->second);
     }
   }
 }
 
-}  // namespace cct::schema
+}  // namespace cct

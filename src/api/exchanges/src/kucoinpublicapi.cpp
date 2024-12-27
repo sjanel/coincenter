@@ -67,26 +67,23 @@ KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConv
     : ExchangePublic(ExchangeNameEnum::kucoin, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _curlHandle, _coincenterInfo, commonAPI),
-      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
-                                        _cachedResultVault),
-                    _curlHandle, exchangeConfig().asset),
+      _marketsCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
+          _curlHandle, exchangeConfig().asset),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           _marketsCache, _curlHandle),
-      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
-                                          _cachedResultVault),
-                      _curlHandle),
-      _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
-                              _cachedResultVault),
+      _orderbookCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
           _curlHandle),
-      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
-                                       _cachedResultVault),
-                   _curlHandle) {}
+      _tradedVolumeCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
+          _curlHandle),
+      _tickerCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
+          _curlHandle) {}
 
 bool KucoinPublic::healthCheck() {
   auto result = PublicQuery<schema::kucoin::V1Status>(_curlHandle, "/api/v1/status");

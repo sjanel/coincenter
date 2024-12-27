@@ -97,24 +97,21 @@ KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConv
     : ExchangePublic(ExchangeNameEnum::kraken, fiatConverter, commonAPI, config),
       _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           config, commonAPI, _curlHandle, exchangeConfig().asset),
-      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
-                                        _cachedResultVault),
-                    _tradableCurrenciesCache, config, _curlHandle, exchangeConfig().asset),
+      _marketsCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
+          _tradableCurrenciesCache, config, _curlHandle, exchangeConfig().asset),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
-      _orderBookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
-                                          _cachedResultVault),
-                      _tradableCurrenciesCache, _marketsCache, _curlHandle),
-      _tickerCache(
-          CachedResultOptions(std::min(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
-                                       exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration),
-                              _cachedResultVault),
-          _tradableCurrenciesCache, _curlHandle) {}
+      _orderBookCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
+          _tradableCurrenciesCache, _marketsCache, _curlHandle),
+      _tickerCache(CachedResultOptions(std::min(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume),
+                                                exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice)),
+                                       _cachedResultVault),
+                   _tradableCurrenciesCache, _curlHandle) {}
 
 bool KrakenPublic::healthCheck() {
   const auto result = PublicQuery<schema::kraken::SystemStatus>(_curlHandle, "/public/SystemStatus");

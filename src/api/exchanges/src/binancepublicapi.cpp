@@ -93,26 +93,23 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
                   coincenterInfo.getRunMode()),
       _commonInfo(exchangeConfig().asset, _curlHandle),
       _exchangeConfigCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _commonInfo),
-      _marketsCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::markets).duration,
-                                        _cachedResultVault),
-                    _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._assetConfig),
+      _marketsCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
+          _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._assetConfig),
       _allOrderBooksCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::allOrderBooks).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           _exchangeConfigCache, _marketsCache, _commonInfo),
-      _orderbookCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::orderBook).duration,
-                                          _cachedResultVault),
-                      _commonInfo),
-      _tradedVolumeCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::tradedVolume).duration,
-                              _cachedResultVault),
+      _orderbookCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
           _commonInfo),
-      _tickerCache(CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::lastPrice).duration,
-                                       _cachedResultVault),
-                   _commonInfo) {}
+      _tradedVolumeCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
+          _commonInfo),
+      _tickerCache(
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
+          _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
   auto result = _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet));

@@ -299,10 +299,9 @@ BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bith
     : ExchangePrivate(config, bithumbPublic, apiKey),
       _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   config.getRunMode()),
-      _currencyOrderInfoRefreshTime(exchangeConfig().query.updateFrequency.at(QueryType::currencyInfo).duration),
+      _currencyOrderInfoRefreshTime(exchangeConfig().query.getUpdateFrequency(QueryType::currencyInfo)),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, bithumbPublic) {
   if (config.getRunMode() != settings::RunMode::kQueryResponseOverriden) {
     ReadExactJsonOrThrow(GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAll(), _currencyOrderInfoMap);
