@@ -113,16 +113,13 @@ UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPubli
       _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::currencies).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _curlHandle, _apiKey, exchangeConfig().asset, upbitPublic._commonApi),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic),
       _withdrawalFeesCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::withdrawalFees).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
           _curlHandle, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {

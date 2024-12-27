@@ -1,25 +1,20 @@
 #pragma once
 
-#include <unordered_map>
 #include <utility>
 
 #include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_json.hpp"
+#include "cct_smallvector.hpp"
 #include "cct_string.hpp"
-#include "cct_vector.hpp"
 
 namespace cct::schema {
 struct AccountOwner {
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
-
   string enName;
   string koName;
 };
 
 struct APIKey {
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
-
   string key;
   string priv;  // private is a reserved keyword - we override the json field name below
   string passphrase;
@@ -27,9 +22,9 @@ struct APIKey {
   bool enabled = true;
 };
 
-using APIKeys = vector<std::pair<string, APIKey>>;
+using APIKeys = SmallVector<std::pair<string, APIKey>, 1>;
 
-using APIKeysPerExchange = std::unordered_map<ExchangeNameEnum, APIKeys>;
+using APIKeysPerExchange = FixedCapacityVector<std::pair<ExchangeNameEnum, APIKeys>, kNbSupportedExchanges>;
 
 }  // namespace cct::schema
 

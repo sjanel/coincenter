@@ -75,7 +75,7 @@ class CoincenterInfo {
   CurrencyEquivalentAcronymMap _currencyEquiAcronymMap;
   CurrencyPrefixAcronymMap _currencyPrefixAcronymMap;
   StableCoinsMap _stableCoinsMap;
-  schema::AllExchangeConfigs _allExchangeConfigs;
+  AllExchangeConfigs _allExchangeConfigs;
   settings::RunMode _runMode;
   string _dataDir;
   schema::GeneralConfig _generalConfig;

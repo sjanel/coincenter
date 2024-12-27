@@ -202,8 +202,7 @@ KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic&
       _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, kucoinPublic) {}
 
 bool KucoinPrivate::validateApiKey() {

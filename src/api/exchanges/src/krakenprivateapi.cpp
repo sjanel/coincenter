@@ -126,8 +126,7 @@ KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenP
       _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
                   config.getRunMode()),
       _depositWalletsCache(
-          CachedResultOptions(exchangeConfig().query.updateFrequency.at(QueryType::depositWallet).duration,
-                              _cachedResultVault),
+          CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _curlHandle, _apiKey, krakenPublic) {}
 
 bool KrakenPrivate::validateApiKey() {

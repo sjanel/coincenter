@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.2.2.tar.gz
-    URL_HASH SHA256=965e32de67e60d185402e8cfe684c6d40c1f018a4fa5e781b11b0cac0817edb9
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.2.3.tar.gz
+    URL_HASH SHA256=cfe439b211dcca62649e92d3e8b404477b02df07522bde843e98ce25ff5bf824
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
