@@ -88,6 +88,16 @@ As an example, consider this file:
 
 ```json
 {
+  "general" : {
+    "default": {
+      "enabled": true
+    },
+    "exchange": {
+      "kucoin": {
+        "enabled": false
+      }
+    }
+  },
   "asset": {
     "default": {
       "withdrawExclude": "BTC"
@@ -128,6 +138,7 @@ Refer to the hardcoded default json example as a model in case of doubt.
 
 | Module      | Name                               | Value                                                                          | Description                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ----------- | ---------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| *general*   | **enabled**                        | Boolean (`true` or `false`)                                                    | If not enabled, no query will be made for this exchange.                                                                                                                                                                                                                                                                                                                                                                 |
 | *asset*     | **allExclude**                     | Array of coin acronyms (ex: `["EUR", "AUD"]`)                                  | Exclude coins with these acronym from `coincenter`                                                                                                                                                                                                                                                                                                                                                                       |
 | *asset*     | **withdrawExclude**                | Array of coin acronyms (ex: `["BTC", "ETC"]`)                                  | Make these coins unavailable for withdraw                                                                                                                                                                                                                                                                                                                                                                                |
 | *asset*     | **preferredPaymentCurrencies**     | Ordered array of coin acronyms (ex: `["USDT", "BTC"]`)                         | Coins that can be used for smart buy and sell as base payment currency. They should be ordered by decreasing priority.                                                                                                                                                                                                                                                                                                   |

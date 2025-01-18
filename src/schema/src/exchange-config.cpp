@@ -56,6 +56,12 @@ void AllExchangeConfigs::mergeWith(schema::details::AllExchangeConfigsOptional &
       return pair.first == exchangeNameEnum;
     };
 
+    exchangeConfig.general.mergeWith(other.general.def);
+    auto generalIt = std::ranges::find_if(other.general.exchange, matchExchangeIt);
+    if (generalIt != other.general.exchange.end()) {
+      exchangeConfig.general.mergeWith(generalIt->second);
+    }
+
     exchangeConfig.asset.mergeWith(other.asset.def);
     auto assetIt = std::ranges::find_if(other.asset.exchange, matchExchangeIt);
     if (assetIt != other.asset.exchange.end()) {

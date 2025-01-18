@@ -7,6 +7,7 @@
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
 #include "exchange-asset-config.hpp"
+#include "exchange-general-config.hpp"
 #include "exchange-query-config.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchange-withdraw-config.hpp"
@@ -26,6 +27,7 @@ struct ExchangeConfigPart {
 };
 
 struct AllExchangeConfigsOptional {
+  ExchangeConfigPart<ExchangeGeneralConfigOptional> general;
   ExchangeConfigPart<ExchangeAssetConfig> asset;
   ExchangeConfigPart<ExchangeQueryConfigOptional> query;
   ExchangeConfigPart<ExchangeTradeFeesConfigOptional> tradeFees;
@@ -35,6 +37,7 @@ struct AllExchangeConfigsOptional {
 }  // namespace details
 
 struct ExchangeConfig {
+  ExchangeGeneralConfig general;
   ExchangeAssetConfig asset;
   ExchangeQueryConfig query;
   ExchangeTradeFeesConfig tradeFees;

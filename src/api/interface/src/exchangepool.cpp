@@ -53,8 +53,13 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
       throw exception("Should not happen, unsupported exchange pos {}", exchangePos);
     }
 
-    const bool canUsePrivateExchange = _apiKeyProvider.hasAtLeastOneKey(exchangeNameEnum);
     const auto& exchangeConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum);
+
+    if (!exchangeConfig.general.enabled) {
+      continue;
+    }
+
+    const bool canUsePrivateExchange = _apiKeyProvider.hasAtLeastOneKey(exchangeNameEnum);
     if (canUsePrivateExchange) {
       for (std::string_view keyName : _apiKeyProvider.getKeyNames(exchangeNameEnum)) {
         std::unique_ptr<api::ExchangePrivate> exchangePrivate;
@@ -91,7 +96,11 @@ ExchangePool::ExchangePool(const CoincenterInfo& coincenterInfo, FiatConverter& 
       _exchanges.emplace_back(exchangeConfig, *exchangePublic);
     }
   }
-  _exchanges.shrink_to_fit();
+  if (_exchanges.empty()) {
+    log::error("No exchange enabled, check your configuration");
+  } else {
+    _exchanges.shrink_to_fit();
+  }
 }
 
 }  // namespace cct
