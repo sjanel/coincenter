@@ -25,7 +25,7 @@ class MarketTraderEngine {
   MarketTraderEngine(const schema::ExchangeConfig &exchangeConfig, Market market, MonetaryAmount startAmountBase,
                      MonetaryAmount startAmountQuote);
 
-  Market market() const { return {_startAmountBase.currencyCode(), _startAmountQuote.currencyCode()}; }
+  Market market() const { return _market; }
 
   void registerMarketTrader(std::unique_ptr<AbstractMarketTrader> marketTrader);
 
