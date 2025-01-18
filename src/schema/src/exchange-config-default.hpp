@@ -7,6 +7,11 @@ namespace cct {
 struct ExchangeConfigDefault {
   static constexpr std::string_view kProd = R"(
 {
+  "general": {
+    "default": {
+      "enabled": true
+    }
+  },
   "asset": {
     "default": {
       "allExclude": [],
