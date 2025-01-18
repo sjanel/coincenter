@@ -25,6 +25,7 @@
 #include "read-json.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
+#include "write-json.hpp"
 
 namespace cct::api {
 namespace {
@@ -152,10 +153,10 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   // data is UTF-8 encoded - but the relevant data that we will parse is ASCII normally
 
   CurrencyCSV currencies;
-  auto ec = json::read<json::opts{.format = glz::CSV, .layout = glz::colwise}>(currencies, data);
+  auto ec = json::read<json::opts{.format = json::CSV, .layout = json::colwise}>(currencies, data);
 
   if (ec || currencies.AlphabeticCode.size() != currencies.WithdrawalDate.size()) {
-    log::warn("Error parsing json data of currency codes from source 1: {}", glz::format_error(ec, data));
+    log::warn("Error parsing json data of currency codes from source 1: {}", json::format_error(ec, data));
     return fiatsVec;
   }
 

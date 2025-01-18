@@ -14,6 +14,7 @@
 #include "amount-price.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"

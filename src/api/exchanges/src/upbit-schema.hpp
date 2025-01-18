@@ -231,6 +231,13 @@ struct V1Deposit {
 
   enum class State : int8_t { PROCESSING, REFUNDING, ACCEPTED, CANCELLED, REJECTED, TRAVEL_RULE_SUSPECTED, REFUNDED };
 
+  std::string_view timeStr() const {
+    if (done_at) {
+      return *done_at;
+    }
+    return created_at;
+  }
+
   string currency;
   string txid;
   string created_at;
@@ -251,6 +258,13 @@ struct V1Withdraw {
   // In earlier versions of Upbit API, 'CANCELED' was written with this typo.
   // Let's support both spellings to avoid issues.
   enum class State : int8_t { WAITING, PROCESSING, DONE, FAILED, CANCELLED, CANCELED, REJECTED };
+
+  std::string_view timeStr() const {
+    if (done_at) {
+      return *done_at;
+    }
+    return created_at;
+  }
 
   string currency;
   string txid;

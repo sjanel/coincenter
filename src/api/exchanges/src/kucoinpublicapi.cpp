@@ -1,6 +1,7 @@
 #include "kucoinpublicapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <array>
 #include <cstdint>
 #include <iterator>
@@ -116,9 +117,11 @@ KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurr
       continue;
     }
 
+    const auto& chains = *curDetail.chains;
+
     bool foundChain = false;
-    for (const auto& curChain : *curDetail.chains) {
-      if (curDetail.chains->size() > 1U && curChain.chainName != curStr &&
+    for (const auto& curChain : chains) {
+      if (chains.size() > 1U && curChain.chainName != curStr &&
           (curChain.chainId.size() > CurrencyCode::kMaxLen || CurrencyCode(curChain.chainId) != cur)) {
         log::debug("Discard {} as chain name is different from currency code", curStr);
         continue;

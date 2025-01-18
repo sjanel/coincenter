@@ -206,21 +206,21 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
                                               CurrencyExchange::Withdraw::kAvailable, Type::kCrypto)}};
   EXPECT_CALL(ExchangePrivate(exchange2), queryTradableCurrencies()).WillOnce(testing::Return(tradableCurrencies2));
 
-  auto [exchanges, deliveredWithdrawInfo] =
+  const auto [exchanges, deliveredWithdrawInfo] =
       exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions);
   EXPECT_FALSE(deliveredWithdrawInfo.hasBeenInitiated());
 }
 
-static inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
+inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
 namespace api {
-static inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-static inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 }  // namespace api

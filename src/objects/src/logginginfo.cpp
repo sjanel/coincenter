@@ -1,6 +1,7 @@
 #include "logginginfo.hpp"
 
 #include <spdlog/async.h>
+#include <spdlog/async_logger.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 

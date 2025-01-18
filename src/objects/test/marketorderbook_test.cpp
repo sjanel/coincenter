@@ -34,10 +34,6 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
 
 }  // namespace
 
-static constexpr bool operator==(const AmountPrice &lhs, const AmountPrice &rhs) {
-  return lhs.amount == rhs.amount && lhs.price == rhs.price;
-}
-
 TEST(MarketOrderBookTest, DefaultConstructor) {
   MarketOrderBook marketOrderBook;
 

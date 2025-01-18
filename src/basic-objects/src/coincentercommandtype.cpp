@@ -1,8 +1,5 @@
 #include "coincentercommandtype.hpp"
 
-#include <string_view>
-#include <type_traits>
-
 namespace cct {
 
 bool IsAnyTrade(CoincenterCommandType coincenterCommandType) {

@@ -7,9 +7,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "apikey.hpp"
 #include "apiquerytypeenum.hpp"
@@ -31,7 +31,6 @@
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "durationstring.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
@@ -45,6 +44,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "timedef.hpp"
@@ -235,7 +235,11 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
                                                                "/v1/deposits/coin_address", postData, 10)
                  .first;
   }
-  std::string_view tag = result.secondary_address.value_or("");
+
+  std::string_view tag;
+  if (result.secondary_address) {
+    tag = *result.secondary_address;
+  }
 
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   bool doCheckWallet =
@@ -453,7 +457,7 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
 
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
       // It can be empty for deposits that failed - take the start time instead of the end time in this case
-      std::string_view timeStr = trx.done_at.value_or(trx.created_at);
+      std::string_view timeStr = trx.timeStr();
 
       TimePoint timestamp = StringToTime(timeStr, kTimeYearToSecondTSeparatedFormat);
       if (!depositsConstraints.validateTime(timestamp)) {
@@ -529,7 +533,8 @@ WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& with
       MonetaryAmount withdrawFee(trx.fee, currencyCode);
       // 'done_at' string is in this format: "2019-01-04T13:48:09+09:00"
       // It can be empty for withdraws that failed - take the start time instead of the end time in this case
-      std::string_view timeStr = trx.done_at.value_or(trx.created_at);
+      std::string_view timeStr = trx.timeStr();
+
       TimePoint timestamp = StringToTime(timeStr, kTimeYearToSecondTSeparatedFormat);
       if (!withdrawsConstraints.validateTime(timestamp)) {
         continue;

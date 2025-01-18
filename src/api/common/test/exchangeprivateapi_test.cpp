@@ -46,12 +46,15 @@
 
 namespace cct {
 
-static inline BalancePortfolio operator+(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
+namespace {
+BalancePortfolio addTradedAmounts(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
   BalancePortfolio ret = balancePortfolio;
   ret += tradedAmounts.to;
   ret += -tradedAmounts.from;
   return ret;
 }
+
+}  // namespace
 
 static inline bool operator==(const TradedAmountsVectorWithFinalAmount &lhs,
                               const TradedAmountsVectorWithFinalAmount &rhs) {
@@ -444,11 +447,11 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
   EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), partialMatchedTradedAmounts);
 }
 
-static inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-static inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 
@@ -788,7 +791,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   TradedAmounts tradedAmounts1 = expectTakerBuy(xrpDustThreshold, xrpbtcAskPri, xrpbtcBidPri, xrpbtcMarket);
   from += tradedAmounts1.to;
 
-  BalancePortfolio balance2 = balance1 + tradedAmounts1;
+  BalancePortfolio balance2 = addTradedAmounts(balance1, tradedAmounts1);
 
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance2));
 
@@ -796,7 +799,7 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   TradedAmounts tradedAmounts2 = expectTakerSell(from, priBtc, percentXRPSoldSecondStep);
   from -= tradedAmounts2.from;
 
-  BalancePortfolio balance3 = balance2 + tradedAmounts2;
+  BalancePortfolio balance3 = addTradedAmounts(balance2, tradedAmounts2);
 
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance3));
 
@@ -810,13 +813,13 @@ TEST_F(ExchangePrivateDustSweeperTest, DustSweeper5Steps) {
   TradedAmounts tradedAmounts3 = expectTakerBuy((3 * xrpDustThreshold) / 2, xrpeurAskPri, xrpeurBidPri, xrpeurMarket);
   from += tradedAmounts3.to;
 
-  BalancePortfolio balance4 = balance3 + tradedAmounts3;
+  BalancePortfolio balance4 = addTradedAmounts(balance3, tradedAmounts3);
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance4));
 
   // Final sell that works
   TradedAmounts tradedAmounts4 = expectTakerSell(from, priEur);
 
-  BalancePortfolio balance5 = balance4 + tradedAmounts4;
+  BalancePortfolio balance5 = addTradedAmounts(balance4, tradedAmounts4);
 
   EXPECT_CALL(exchangePrivate, queryAccountBalance(balanceOptions)).WillOnce(testing::Return(balance5));
 

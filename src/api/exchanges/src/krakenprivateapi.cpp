@@ -6,7 +6,9 @@
 #include <optional>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "apikey.hpp"
 #include "apiquerytypeenum.hpp"
@@ -228,7 +230,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
           [&tag](auto&& field) {
             using T = std::decay_t<decltype(field)>;
             if constexpr (std::is_same_v<T, string>) {
-              tag = std::move(field);
+              tag = std::forward<decltype(field)>(field);
             } else if constexpr (std::is_same_v<T, int64_t>) {
               tag = IntegralToString(field);
             } else {
@@ -242,7 +244,7 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
             [&tag](auto&& field) {
               using T = std::decay_t<decltype(field)>;
               if constexpr (std::is_same_v<T, string>) {
-                tag = std::move(field);
+                tag = std::forward<decltype(field)>(field);
               } else if constexpr (std::is_same_v<T, int64_t>) {
                 tag = IntegralToString(field);
               } else {

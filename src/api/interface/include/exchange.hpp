@@ -23,7 +23,7 @@
 
 namespace cct {
 
-class Exchange : public CacheFileUpdatorInterface {
+class Exchange final : public CacheFileUpdatorInterface {
  public:
   using ExchangePublic = api::ExchangePublic;
   using ExchangePrivate = api::ExchangePrivate;

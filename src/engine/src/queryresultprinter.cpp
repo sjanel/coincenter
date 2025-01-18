@@ -8,11 +8,14 @@
 #include <span>
 #include <sstream>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "apioutputtype.hpp"
 #include "balanceperexchangeportfolio.hpp"
+#include "balanceportfolio.hpp"
 #include "cct_const.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
@@ -22,20 +25,16 @@
 #include "currencyexchange.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
-#include "durationstring.hpp"
 #include "exchange.hpp"
 #include "exchangepublicapitypes.hpp"
-#include "file.hpp"
 #include "logginginfo.hpp"
 #include "market-timestamp.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "opened-order.hpp"
-#include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "priceoptions.hpp"
-#include "priceoptionsdef.hpp"
 #include "publictrade.hpp"
 #include "query-result-schema.hpp"
 #include "query-result-type-helpers.hpp"
@@ -46,7 +45,6 @@
 #include "timestring.hpp"
 #include "trade-range-stats.hpp"
 #include "tradedamounts.hpp"
-#include "tradedefinitions.hpp"
 #include "tradeside.hpp"
 #include "unreachable.hpp"
 #include "withdraw.hpp"
@@ -54,8 +52,6 @@
 #include "withdrawoptions.hpp"
 #include "withdrawsconstraints.hpp"
 #include "withdrawsordepositsconstraints.hpp"
-#include "write-json.hpp"
-#include "writer.hpp"
 
 namespace cct {
 namespace {
@@ -64,8 +60,8 @@ auto HealthCheckJson(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
   schema::queryresult::HealthCheck obj;
 
   obj.out.reserve(healthCheckPerExchange.size());
-  for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
-    obj.out.emplace_back(e->exchangeNameEnum(), healthCheckValue);
+  for (const auto &[exchange, healthCheckValue] : healthCheckPerExchange) {
+    obj.out.emplace_back(exchange->exchangeNameEnum(), healthCheckValue);
   }
 
   return obj;
@@ -74,13 +70,13 @@ auto HealthCheckJson(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
 auto CurrenciesJson(const CurrenciesPerExchange &currenciesPerExchange) {
   schema::queryresult::CurrenciesPerExchange obj;
 
-  for (const auto &[e, currencies] : currenciesPerExchange) {
+  for (const auto &[exchange, currencies] : currenciesPerExchange) {
     using ExchangePartType = decltype(obj.out)::value_type::second_type;
-    auto &p = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{});
+    auto &pair = obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePartType{});
 
-    p.second.reserve(currencies.size());
+    pair.second.reserve(currencies.size());
     for (const CurrencyExchange &cur : currencies) {
-      auto &currency = p.second.emplace_back();
+      auto &currency = pair.second.emplace_back();
 
       currency.code = cur.standardCode();
       currency.exchangeCode = cur.exchangeCode();
@@ -104,8 +100,8 @@ auto MarketsJson(CurrencyCode cur1, CurrencyCode cur2, const MarketsPerExchange 
     obj.in.opt.cur2 = cur2;
   }
   obj.out.reserve(marketsPerExchange.size());
-  for (const auto &[e, markets] : marketsPerExchange) {
-    obj.out.emplace_back(e->exchangeNameEnum(), markets);
+  for (const auto &[exchange, markets] : marketsPerExchange) {
+    obj.out.emplace_back(exchange->exchangeNameEnum(), markets);
   }
 
   return obj;
@@ -118,9 +114,9 @@ auto MarketsForReplayJson(TimeWindow timeWindow, const MarketTimestampSetsPerExc
     obj.in.opt.timeWindow = timeWindow;
   }
 
-  for (const auto &[e, marketTimestampSets] : marketTimestampSetsPerExchange) {
+  for (const auto &[exchange, marketTimestampSets] : marketTimestampSetsPerExchange) {
     using ExchangePartType = decltype(obj.out)::value_type::second_type;
-    auto &exchangePart = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{}).second;
+    auto &exchangePart = obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePartType{}).second;
 
     exchangePart.orderBooks.reserve(marketTimestampSets.orderBooksMarkets.size());
     for (const MarketTimestamp &marketTimestamp : marketTimestampSets.orderBooksMarkets) {
@@ -138,9 +134,9 @@ auto MarketsForReplayJson(TimeWindow timeWindow, const MarketTimestampSetsPerExc
 
 auto TickerInformationJson(const ExchangeTickerMaps &exchangeTickerMaps) {
   schema::queryresult::TickerInformation obj;
-  for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
+  for (const auto &[exchange, marketOrderBookMap] : exchangeTickerMaps) {
     using ExchangePartType = decltype(obj.out)::value_type::second_type;
-    auto &exchangePart = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePartType{}).second;
+    auto &exchangePart = obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePartType{}).second;
 
     exchangePart.reserve(marketOrderBookMap.size());
     for (const auto &[mk, marketOrderBook] : marketOrderBookMap) {
@@ -199,12 +195,12 @@ auto MarketOrderBooksJson(Market mk, CurrencyCode equiCurrencyCode, std::optiona
   return obj;
 }
 
-auto &GetExchangePart(const Exchange *e, auto &out) {
+auto &GetExchangePart(const Exchange *exchange, auto &out) {
   using ExchangePart = std::remove_cvref_t<decltype(out)>::value_type::second_type;
-  auto it =
-      std::ranges::find_if(out, [e](const auto &exchangePart) { return exchangePart.first == e->exchangeNameEnum(); });
+  auto it = std::ranges::find_if(
+      out, [exchange](const auto &exchangePart) { return exchangePart.first == exchange->exchangeNameEnum(); });
   if (it == out.end()) {
-    return out.emplace_back(e->exchangeNameEnum(), ExchangePart{}).second;
+    return out.emplace_back(exchange->exchangeNameEnum(), ExchangePart{}).second;
   }
   return it->second;
 }
@@ -224,9 +220,9 @@ auto BalanceJson(const BalancePerExchange &balancePerExchange, CurrencyCode equi
     obj.in.opt.equiCurrency = equiCurrency;
   }
 
-  for (const auto &[e, balance] : balancePerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out.exchange);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, balance] : balancePerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out.exchange);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     for (const auto &[amount, equiAmount] : balance) {
       auto &currencyPart = exchangeKeyPart.emplace_back(amount.currencyCode(), CurrencyPart{}).second;
@@ -263,9 +259,9 @@ auto DepositInfoJson(CurrencyCode depositCurrencyCode, const WalletPerExchange &
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
 
-  for (const auto &[e, wallet] : walletPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, wallet] : walletPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.address = wallet.address();
     if (wallet.hasTag()) {
@@ -323,9 +319,9 @@ auto TradesJson(const TradeResultPerExchange &tradeResultPerExchange, MonetaryAm
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
 
-  for (const auto &[e, tradeResult] : tradeResultPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, tradeResult] : tradeResultPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.from = tradeResult.from().toNeutral();
     exchangeKeyPart.status = tradeResult.state();
@@ -394,9 +390,9 @@ auto OrdersJson(CoincenterCommandType coincenterCommandType, const OrdersPerExch
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
 
-  for (const auto &[e, ordersData] : ordersPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, ordersData] : ordersPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.reserve(ordersData.size());
     for (const auto &orderData : ordersData) {
@@ -418,9 +414,9 @@ auto OrdersCancelledJson(const NbCancelledOrdersPerExchange &nbCancelledOrdersPe
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
 
-  for (const auto &[e, nbCancelledOrders] : nbCancelledOrdersPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, nbCancelledOrders] : nbCancelledOrdersPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.nb = nbCancelledOrders;
   }
@@ -473,9 +469,9 @@ auto RecentDepositsJson(const DepositsPerExchange &depositsPerExchange,
 
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
-  for (const auto &[e, deposits] : depositsPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, deposits] : depositsPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.reserve(deposits.size());
     for (const Deposit &deposit : deposits) {
@@ -499,9 +495,9 @@ auto RecentWithdrawsJson(const WithdrawsPerExchange &withdrawsPerExchange,
 
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
-  for (const auto &[e, withdraws] : withdrawsPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, withdraws] : withdrawsPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.reserve(withdraws.size());
     for (const Withdraw &withdraw : withdraws) {
@@ -526,11 +522,11 @@ auto ConversionJson(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
   obj.in.opt.fromCurrency = amount.currencyCode();
   obj.in.opt.toCurrency = targetCurrencyCode;
 
-  for (const auto &[e, convertedAmount] : conversionPerExchange) {
+  for (const auto &[exchange, convertedAmount] : conversionPerExchange) {
     if (convertedAmount != 0) {
       using ExchangePart = decltype(obj.out)::value_type::second_type;
 
-      obj.out.emplace_back(e->exchangeNameEnum(), ExchangePart{.convertedAmount = convertedAmount.toNeutral()});
+      obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePart{.convertedAmount = convertedAmount.toNeutral()});
     }
   }
 
@@ -555,11 +551,11 @@ auto ConversionJson(std::span<const MonetaryAmount> startAmountPerExchangePos, C
     ++publicExchangePos;
   }
 
-  for (const auto &[e, convertedAmount] : conversionPerExchange) {
+  for (const auto &[exchange, convertedAmount] : conversionPerExchange) {
     if (convertedAmount != 0) {
       using ExchangePart = decltype(obj.out)::value_type::second_type;
 
-      obj.out.emplace_back(e->exchangeNameEnum(), ExchangePart{.convertedAmount = convertedAmount.toNeutral()});
+      obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePart{.convertedAmount = convertedAmount.toNeutral()});
     }
   }
 
@@ -571,9 +567,9 @@ auto ConversionPathJson(Market mk, const ConversionPathPerExchange &conversionPa
 
   obj.in.opt.market = mk;
 
-  for (const auto &[e, conversionPath] : conversionPathsPerExchange) {
+  for (const auto &[exchange, conversionPath] : conversionPathsPerExchange) {
     if (!conversionPath.empty()) {
-      obj.out.emplace_back(e->exchangeNameEnum(), conversionPath);
+      obj.out.emplace_back(exchange->exchangeNameEnum(), conversionPath);
     }
   }
 
@@ -587,8 +583,8 @@ auto WithdrawFeesJson(const MonetaryAmountByCurrencySetPerExchange &withdrawFeeP
     obj.in.opt.cur = cur;
   }
 
-  for (const auto &[e, withdrawFees] : withdrawFeePerExchange) {
-    obj.out.emplace_back(e->exchangeNameEnum(), withdrawFees);
+  for (const auto &[exchange, withdrawFees] : withdrawFeePerExchange) {
+    obj.out.emplace_back(exchange->exchangeNameEnum(), withdrawFees);
   }
 
   return obj;
@@ -598,8 +594,8 @@ auto Last24hTradedVolumeJson(Market mk, const MonetaryAmountPerExchange &tradedV
   schema::queryresult::Last24hTradedVolume obj;
   obj.in.opt.market = mk;
 
-  for (const auto &[e, tradedVolume] : tradedVolumePerExchange) {
-    obj.out.emplace_back(e->exchangeNameEnum(), tradedVolume.toNeutral());
+  for (const auto &[exchange, tradedVolume] : tradedVolumePerExchange) {
+    obj.out.emplace_back(exchange->exchangeNameEnum(), tradedVolume.toNeutral());
   }
 
   return obj;
@@ -611,10 +607,10 @@ auto LastTradesJson(Market mk, std::optional<int> nbLastTrades, const TradesPerE
   obj.in.opt.market = mk;
   obj.in.opt.nb = nbLastTrades;
 
-  for (const auto &[e, lastTrades] : lastTradesPerExchange) {
+  for (const auto &[exchange, lastTrades] : lastTradesPerExchange) {
     using ExchangePart = decltype(obj.out)::value_type::second_type;
 
-    auto &exchangePart = obj.out.emplace_back(e->exchangeNameEnum(), ExchangePart{}).second;
+    auto &exchangePart = obj.out.emplace_back(exchange->exchangeNameEnum(), ExchangePart{}).second;
 
     exchangePart.reserve(lastTrades.size());
     for (const PublicTrade &trade : lastTrades) {
@@ -635,8 +631,8 @@ auto LastPriceJson(Market mk, const MonetaryAmountPerExchange &pricePerExchange)
 
   obj.in.opt.market = mk;
 
-  for (const auto &[e, lastPrice] : pricePerExchange) {
-    obj.out.emplace_back(e->exchangeNameEnum(), lastPrice.toNeutral());
+  for (const auto &[exchange, lastPrice] : pricePerExchange) {
+    obj.out.emplace_back(exchange->exchangeNameEnum(), lastPrice.toNeutral());
   }
 
   return obj;
@@ -679,9 +675,9 @@ auto DustSweeperJson(const TradedAmountsVectorWithFinalAmountPerExchange &traded
   using ExchangePart = decltype(obj.out)::value_type::second_type;
   using ExchangeKeyPart = ExchangePart::value_type::second_type;
 
-  for (const auto &[e, tradedAmountsVectorWithFinalAmount] : tradedAmountsVectorWithFinalAmountPerExchange) {
-    auto &exchangePart = GetExchangePart(e, obj.out);
-    auto &exchangeKeyPart = exchangePart.emplace_back(e->keyName(), ExchangeKeyPart{}).second;
+  for (const auto &[exchange, tradedAmountsVectorWithFinalAmount] : tradedAmountsVectorWithFinalAmountPerExchange) {
+    auto &exchangePart = GetExchangePart(exchange, obj.out);
+    auto &exchangeKeyPart = exchangePart.emplace_back(exchange->keyName(), ExchangeKeyPart{}).second;
 
     exchangeKeyPart.trades.reserve(tradedAmountsVectorWithFinalAmount.tradedAmountsVector.size());
     for (const auto &tradedAmounts : tradedAmountsVectorWithFinalAmount.tradedAmountsVector) {
@@ -714,7 +710,7 @@ auto MarketTradingResultsJson(TimeWindow inputTimeWindow, const ReplayResults &r
       auto &allResults = algorithmNameResults.emplace_back();
 
       allResults.reserve(marketTradingResultPerExchange.size());
-      for (const auto &[e, marketGlobalTradingResult] : marketTradingResultPerExchange) {
+      for (const auto &[exchange, marketGlobalTradingResult] : marketTradingResultPerExchange) {
         const auto &marketTradingResult = marketGlobalTradingResult.result;
         const auto &stats = marketGlobalTradingResult.stats;
 
@@ -723,7 +719,7 @@ auto MarketTradingResultsJson(TimeWindow inputTimeWindow, const ReplayResults &r
         using MarketTradingResult = AllResults::value_type::value_type::second_type;
 
         auto &marketTradingResultPart =
-            exchangeMarketResults.emplace_back(e->exchangeNameEnum(), MarketTradingResult{}).second;
+            exchangeMarketResults.emplace_back(exchange->exchangeNameEnum(), MarketTradingResult{}).second;
 
         marketTradingResultPart.algorithm = marketTradingResult.algorithmName();
         marketTradingResultPart.market = marketTradingResult.market();
@@ -776,8 +772,8 @@ void QueryResultPrinter::printHealthCheck(const ExchangeHealthCheckStatus &healt
       SimpleTable table;
       table.reserve(1U + healthCheckPerExchange.size());
       table.emplace_back("Exchange", "Health Check status");
-      for (const auto &[e, healthCheckValue] : healthCheckPerExchange) {
-        table.emplace_back(e->name(), healthCheckValue ? "OK" : "Not OK!");
+      for (const auto &[exchange, healthCheckValue] : healthCheckPerExchange) {
+        table.emplace_back(exchange->name(), healthCheckValue ? "OK" : "Not OK!");
       }
       printTable(table);
       break;
@@ -898,9 +894,9 @@ void QueryResultPrinter::printMarkets(CurrencyCode cur1, CurrencyCode cur2,
       }
       SimpleTable table;
       table.emplace_back("Exchange", std::move(marketsCol));
-      for (const auto &[e, markets] : marketsPerExchange) {
+      for (const auto &[exchange, markets] : marketsPerExchange) {
         for (Market mk : markets) {
-          table.emplace_back(e->name(), mk.str());
+          table.emplace_back(exchange->name(), mk.str());
         }
       }
       printTable(table);
@@ -921,9 +917,9 @@ void QueryResultPrinter::printTickerInformation(const ExchangeTickerMaps &exchan
     case ApiOutputType::table: {
       SimpleTable table;
       table.emplace_back("Exchange", "Market", "Bid price", "Bid volume", "Ask price", "Ask volume");
-      for (const auto &[e, marketOrderBookMap] : exchangeTickerMaps) {
+      for (const auto &[exchange, marketOrderBookMap] : exchangeTickerMaps) {
         for (const auto &[mk, marketOrderBook] : marketOrderBookMap) {
-          table.emplace_back(e->name(), mk.str(), marketOrderBook.highestBidPrice().str(),
+          table.emplace_back(exchange->name(), mk.str(), marketOrderBook.highestBidPrice().str(),
                              marketOrderBook.amountAtBidPrice().str(), marketOrderBook.lowestAskPrice().str(),
                              marketOrderBook.amountAtAskPrice().str());
         }
@@ -1181,9 +1177,9 @@ void QueryResultPrinter::printConversion(MonetaryAmount amount, CurrencyCode tar
       SimpleTable table;
       table.reserve(1U + conversionPerExchange.size());
       table.emplace_back("Exchange", std::move(conversionStrHeader));
-      for (const auto &[e, convertedAmount] : conversionPerExchange) {
+      for (const auto &[exchange, convertedAmount] : conversionPerExchange) {
         if (convertedAmount != 0) {
-          table.emplace_back(e->name(), convertedAmount.str());
+          table.emplace_back(exchange->name(), convertedAmount.str());
         }
       }
       printTable(table);
@@ -1207,9 +1203,10 @@ void QueryResultPrinter::printConversion(std::span<const MonetaryAmount> startAm
       SimpleTable table;
       table.reserve(1U + conversionPerExchange.size());
       table.emplace_back("Exchange", "From", "To");
-      for (const auto &[e, convertedAmount] : conversionPerExchange) {
+      for (const auto &[exchange, convertedAmount] : conversionPerExchange) {
         if (convertedAmount != 0) {
-          table.emplace_back(e->name(), startAmountPerExchangePos[e->publicExchangePos()].str(), convertedAmount.str());
+          table.emplace_back(exchange->name(), startAmountPerExchangePos[exchange->publicExchangePos()].str(),
+                             convertedAmount.str());
         }
       }
       printTable(table);
@@ -1234,7 +1231,7 @@ void QueryResultPrinter::printConversionPath(Market mk,
       SimpleTable table;
       table.reserve(1U + conversionPathsPerExchange.size());
       table.emplace_back("Exchange", std::move(conversionPathStrHeader));
-      for (const auto &[e, conversionPath] : conversionPathsPerExchange) {
+      for (const auto &[exchange, conversionPath] : conversionPathsPerExchange) {
         if (conversionPath.empty()) {
           continue;
         }
@@ -1245,7 +1242,7 @@ void QueryResultPrinter::printConversionPath(Market mk,
           }
           conversionPathStr.append(market.str());
         }
-        table.emplace_back(e->name(), std::move(conversionPathStr));
+        table.emplace_back(exchange->name(), std::move(conversionPathStr));
       }
       printTable(table);
       break;
@@ -1266,8 +1263,8 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
     case ApiOutputType::table: {
       table::Row header("Withdraw fee currency");
       CurrencyCodeVector allCurrencyCodes;
-      for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
-        header.emplace_back(e->name());
+      for (const auto &[exchange, withdrawFees] : withdrawFeesPerExchange) {
+        header.emplace_back(exchange->name());
         for (MonetaryAmount ma : withdrawFees) {
           allCurrencyCodes.push_back(ma.currencyCode());
         }
@@ -1281,7 +1278,7 @@ void QueryResultPrinter::printWithdrawFees(const MonetaryAmountByCurrencySetPerE
       table.emplace_back(std::move(header));
       for (CurrencyCode cur : allCurrencyCodes) {
         auto &row = table.emplace_back(cur.str());
-        for (const auto &[e, withdrawFees] : withdrawFeesPerExchange) {
+        for (const auto &[exchange, withdrawFees] : withdrawFeesPerExchange) {
           auto it = withdrawFees.find(cur);
           if (it == withdrawFees.end()) {
             row.emplace_back("");
@@ -1313,8 +1310,8 @@ void QueryResultPrinter::printLast24hTradedVolume(Market mk,
       SimpleTable table;
       table.reserve(1U + tradedVolumePerExchange.size());
       table.emplace_back("Exchange", std::move(headerTradedVolume));
-      for (const auto &[e, tradedVolume] : tradedVolumePerExchange) {
-        table.emplace_back(e->name(), tradedVolume.str());
+      for (const auto &[exchange, tradedVolume] : tradedVolumePerExchange) {
+        table.emplace_back(exchange->name(), tradedVolume.str());
       }
       printTable(table);
       break;
@@ -1400,8 +1397,8 @@ void QueryResultPrinter::printLastPrice(Market mk, const MonetaryAmountPerExchan
       SimpleTable table;
       table.reserve(1U + pricePerExchange.size());
       table.emplace_back("Exchange", std::move(headerLastPrice));
-      for (const auto &[e, lastPrice] : pricePerExchange) {
-        table.emplace_back(e->name(), lastPrice.str());
+      for (const auto &[exchange, lastPrice] : pricePerExchange) {
+        table.emplace_back(exchange->name(), lastPrice.str());
       }
       printTable(table);
       break;
@@ -1496,7 +1493,7 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
       for (const Market market : allMarkets) {
         table::Cell orderBookCell;
         table::Cell tradesCell;
-        for (const auto &[e, marketTimestamps] : marketTimestampSetsPerExchange) {
+        for (const auto &[exchange, marketTimestamps] : marketTimestampSetsPerExchange) {
           const auto &orderBooksMarkets = marketTimestamps.orderBooksMarkets;
           const auto &tradesMarkets = marketTimestamps.tradesMarkets;
           const auto marketPartitionPred = [market](const auto &marketTimestamp) {
@@ -1508,7 +1505,7 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
           if (orderBooksIt != orderBooksMarkets.end() && orderBooksIt->market == market) {
             string str = TimeToString(orderBooksIt->timePoint);
             str.append(" @ ");
-            str.append(e->name());
+            str.append(exchange->name());
 
             orderBookCell.emplace_back(std::move(str));
           }
@@ -1516,7 +1513,7 @@ void QueryResultPrinter::printMarketsForReplay(TimeWindow timeWindow,
           if (tradesIt != tradesMarkets.end() && tradesIt->market == market) {
             string str = TimeToString(tradesIt->timePoint);
             str.append(" @ ");
-            str.append(e->name());
+            str.append(exchange->name());
 
             tradesCell.emplace_back(std::move(str));
           }

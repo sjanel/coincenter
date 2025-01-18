@@ -1,6 +1,7 @@
 #include "kucoinprivateapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <chrono>
 #include <cstdint>
 #include <string_view>
@@ -39,6 +40,7 @@
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
 #include "permanentcurloptions.hpp"
+#include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
 #include "stringconv.hpp"

@@ -8,10 +8,12 @@
 
 #include "../src/fiats-converter-responses-schema.hpp"
 #include "besturlpicker.hpp"
+#include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "curloptions.hpp"
 #include "permanentcurloptions.hpp"
+#include "reader.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 #include "write-json.hpp"

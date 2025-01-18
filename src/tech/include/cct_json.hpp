@@ -7,6 +7,8 @@
 namespace cct {
 
 namespace json {
+using glz::colwise;
+using glz::CSV;
 using glz::error_ctx;
 using glz::format_error;
 using glz::meta;

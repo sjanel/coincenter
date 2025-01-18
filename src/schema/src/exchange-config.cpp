@@ -1,5 +1,6 @@
 #include "exchange-config.hpp"
 
+#include <algorithm>
 #include <string_view>
 
 #include "cct_const.hpp"
