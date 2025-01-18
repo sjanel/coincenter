@@ -15,7 +15,8 @@ void MergeWith(ExchangeQueryUpdateFrequencyConfig &src, ExchangeQueryUpdateFrequ
     if (desIt == des.end()) {
       des.insert(des.end(), srcIt, srcEnd);
       break;
-    } else if (srcIt == srcEnd) {
+    }
+    if (srcIt == srcEnd) {
       break;
     }
     if (desIt->first == srcIt->first) {

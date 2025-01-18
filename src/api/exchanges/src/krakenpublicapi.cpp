@@ -1,6 +1,7 @@
 #include "krakenpublicapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <cstdint>
 #include <optional>
 #include <string_view>

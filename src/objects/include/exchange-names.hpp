@@ -18,6 +18,6 @@ using ExchangeNameEnumVector = FixedCapacityVector<ExchangeNameEnum, kNbSupporte
 
 string ConstructAccumulatedExchangeNames(ExchangeNameSpan exchangeNames);
 
-string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNames);
+string ConstructAccumulatedExchangeNames(ExchangeNameEnumSpan exchangeNameEnums);
 
 }  // namespace cct

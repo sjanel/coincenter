@@ -8,7 +8,6 @@
 #include <ranges>
 #include <string_view>
 #include <utility>
-#include <variant>
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"

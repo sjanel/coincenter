@@ -1,9 +1,5 @@
 #include "traderesult.hpp"
 
-#include <string_view>
-
-#include "cct_exception.hpp"
-
 namespace cct {
 TradeResult::State TradeResult::state() const {
   // from could be lower than actually traded from amount if rounding issues

@@ -1,9 +1,7 @@
 #include "withdrawalfees-crawler.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstdint>
 #include <string_view>
 #include <utility>
 
@@ -12,6 +10,7 @@
 #include "cct_cctype.hpp"
 #include "cct_const.hpp"
 #include "cct_exception.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"

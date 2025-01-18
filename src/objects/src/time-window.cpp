@@ -1,6 +1,7 @@
 #include "time-window.hpp"
 
 #include <algorithm>
+#include <string_view>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_string.hpp"

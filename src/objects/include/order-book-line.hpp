@@ -43,9 +43,7 @@ class MarketOrderBookLines {
 
   void shrink_to_fit() { _orderBookLines.shrink_to_fit(); }
 
-  void reserve(std::size_t capacity) {
-    _orderBookLines.reserve(static_cast<decltype(_orderBookLines)::size_type>(capacity));
-  }
+  void reserve(size_type capacity) { _orderBookLines.reserve(capacity); }
 
   void push(MonetaryAmount amount, MonetaryAmount price, OrderBookLine::Type type) {
     if (amount != 0) {

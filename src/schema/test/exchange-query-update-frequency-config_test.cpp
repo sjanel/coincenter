@@ -2,6 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
+#include "apiquerytypeenum.hpp"
+#include "duration-schema.hpp"
+
 namespace cct::schema {
 
 class ExchangeQueryUpdateFrequencyConfigTest : public ::testing::Test {

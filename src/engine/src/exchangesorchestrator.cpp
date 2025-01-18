@@ -7,6 +7,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <tuple>
@@ -203,6 +204,7 @@ BalancePerExchange ExchangesOrchestrator::getBalance(ExchangeNameSpan privateExc
 
   BalancePerExchange ret;
   ret.reserve(selectedExchanges.size());
+  // Note: we can use std::ranges::transform with balancePortfolios | std::views::as_rvalues in C++23
   std::transform(selectedExchanges.begin(), selectedExchanges.end(), std::make_move_iterator(balancePortfolios.begin()),
                  std::back_inserter(ret), [](Exchange *exchange, BalancePortfolio &&balancePortfolio) {
                    return std::make_pair(exchange, std::move(balancePortfolio));
@@ -405,7 +407,7 @@ MarketsPerExchange ExchangesOrchestrator::getMarketsPerExchange(CurrencyCode cur
   auto marketsWithCur = [cur1, cur2](Exchange *exchange) {
     MarketSet markets = exchange->queryTradableMarkets();
     MarketSet ret;
-    std::copy_if(markets.begin(), markets.end(), std::inserter(ret, ret.end()), [cur1, cur2](Market mk) {
+    std::ranges::copy_if(markets, std::inserter(ret, ret.end()), [cur1, cur2](Market mk) {
       return (cur1.isNeutral() || mk.canTrade(cur1)) && (cur2.isNeutral() || mk.canTrade(cur2));
     });
     return std::make_pair(exchange, std::move(ret));
@@ -465,14 +467,12 @@ MarketSetsPtrPerExchange MapMarketSetsPtrInExchangesOrder(const ExchangeAmountPa
                                                           const ExchangeRetriever::PublicExchangesVec &publicExchanges,
                                                           MarketSetsPerPublicExchange &marketSetsPerExchange) {
   MarketSetsPtrPerExchange marketSetsPtrFromExchange(exchangeAmountPairVector.size());
-  std::transform(exchangeAmountPairVector.begin(), exchangeAmountPairVector.end(), marketSetsPtrFromExchange.begin(),
-                 [&](const auto &exchangePair) {
-                   auto posIt =
-                       std::ranges::find_if(publicExchanges, [&exchangePair](api::ExchangePublic *publicExchange) {
-                         return exchangePair.first->name() == publicExchange->name();
-                       });
-                   return marketSetsPerExchange.data() + (posIt - publicExchanges.begin());
-                 });
+  std::ranges::transform(exchangeAmountPairVector, marketSetsPtrFromExchange.begin(), [&](const auto &exchangePair) {
+    auto posIt = std::ranges::find_if(publicExchanges, [&exchangePair](api::ExchangePublic *publicExchange) {
+      return exchangePair.first->name() == publicExchange->name();
+    });
+    return marketSetsPerExchange.data() + (posIt - publicExchanges.begin());
+  });
   return marketSetsPtrFromExchange;
 }
 

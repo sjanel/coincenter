@@ -1,6 +1,7 @@
 #include "huobiprivateapi.hpp"
 
 #include <algorithm>
+#include <amc/isdetected.hpp>
 #include <chrono>
 #include <cstdint>
 #include <cstring>

@@ -5,6 +5,7 @@
 #include <span>
 
 #include "cct_const.hpp"
+#include "cct_json.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"

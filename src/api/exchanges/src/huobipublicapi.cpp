@@ -14,6 +14,7 @@
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
 #include "cct_const.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
@@ -26,6 +27,7 @@
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -130,13 +132,14 @@ schema::huobi::V2ReferenceCurrency HuobiPublic::TradableCurrenciesFunc::operator
   return PublicQuery<schema::huobi::V2ReferenceCurrency>(_curlHandle, "/v2/reference/currencies");
 }
 
+namespace {
 CurrencyChainPicker<schema::huobi::V2ReferenceCurrencyDetails::Chain> CreateCurrencyChainPicker(
     const schema::ExchangeAssetConfig& assetConfig) {
-  return CurrencyChainPicker<schema::huobi::V2ReferenceCurrencyDetails::Chain>(
-      assetConfig, [](const schema::huobi::V2ReferenceCurrencyDetails::Chain& chain) -> std::string_view {
-        return chain.displayName;
-      });
+  return {assetConfig, [](const schema::huobi::V2ReferenceCurrencyDetails::Chain& chain) -> std::string_view {
+            return chain.displayName;
+          }};
 }
+}  // namespace
 
 HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
   WithdrawParams withdrawParams;

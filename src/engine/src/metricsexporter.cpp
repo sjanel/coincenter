@@ -3,7 +3,7 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
-#include "cct_const.hpp"
+#include "cct_json.hpp"
 #include "curlmetrics.hpp"
 #include "currencycode.hpp"
 #include "exchange.hpp"
