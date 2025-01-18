@@ -54,8 +54,6 @@ namespace {
 
 template <class VectorType>
 TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossibleTime) {
-  using std::erase_if;
-
   using ObjType = std::remove_cvref_t<decltype(*std::declval<VectorType>().begin())>;
 
   static_assert(std::is_same_v<ObjType, MarketOrderBook> || std::is_same_v<ObjType, PublicTrade>);
@@ -66,6 +64,7 @@ TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossible
 
   stats.nbSuccessful = static_cast<decltype(stats.nbSuccessful)>(vec.size());
 
+  using std::erase_if;
   const auto nbInvalidObjects = erase_if(vec, [](const auto &obj) { return !obj.isValid(); });
   if (nbInvalidObjects != 0) {
     log::error("{} {}(s) with invalid data detected", nbInvalidObjects, kObjName);
