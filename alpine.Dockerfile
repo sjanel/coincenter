@@ -1,4 +1,4 @@
-FROM alpine:3.20 AS build
+FROM alpine:3.21 AS build
 
 # Declare and set default values of following arguments
 ARG BUILD_MODE=Release
