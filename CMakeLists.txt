@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.2.3.tar.gz
-    URL_HASH SHA256=cfe439b211dcca62649e92d3e8b404477b02df07522bde843e98ce25ff5bf824
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.3.1.tar.gz
+    URL_HASH SHA256=934b16d0a00dfc2b06bc2920a6444b8a6a34edb4f0fe872f8ad7a044518a37e3
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
@@ -116,8 +116,8 @@ endif()
 if(CCT_BUILD_PROMETHEUS_FROM_SRC)
   FetchContent_Declare(
     prometheus-cpp
-    URL https://github.com/jupp0r/prometheus-cpp/archive/refs/tags/v1.2.4.tar.gz
-    URL_HASH SHA256=48dbad454d314b836cc667ec4def93ec4a6e4255fc8387c20cacb3b8b6faee30
+    URL https://github.com/jupp0r/prometheus-cpp/archive/refs/tags/v1.3.0.tar.gz
+    URL_HASH SHA256=ac6e958405a29fbbea9db70b00fa3c420e16ad32e1baf941ab233ba031dd72ee
   )
 
   # Disable Prometheus testing
@@ -173,7 +173,7 @@ if(CCT_ENABLE_PROTO)
   else()
     # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
     if (NOT PROTOBUF_VERSION)
-      set(PROTOBUF_VERSION v5.28.3)
+      set(PROTOBUF_VERSION v5.29.3)
     endif()
 
     message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")
