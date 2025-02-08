@@ -162,7 +162,7 @@ class CommandLineOptionsParser {
 
       std::visit(overloaded{
                      // integral value matcher including bool
-                     [&data, &idx, argv, &commandLineOption](std::integral auto OptValueType::*arg) {
+                     [&data, &idx, argv, &commandLineOption](std::integral auto OptValueType::* arg) {
                        using IntType = std::remove_reference_t<decltype(data.*arg)>;
                        if constexpr (std::is_same_v<IntType, bool>) {
                          data.*arg = true;
@@ -180,7 +180,7 @@ class CommandLineOptionsParser {
                      },
 
                      // CommandLineOptionalInt32 value matcher
-                     [&data, &idx, argv](CommandLineOptionalInt32 OptValueType::*arg) {
+                     [&data, &idx, argv](CommandLineOptionalInt32 OptValueType::* arg) {
                        data.*arg = CommandLineOptionalInt32(CommandLineOptionalInt32::State::kOptionPresent);
                        if (idx + 1U < argv.size()) {
                          std::string_view opt(argv[idx + 1]);
@@ -192,7 +192,7 @@ class CommandLineOptionsParser {
                      },
 
                      // std::string_view value matcher
-                     [&data, &idx, argv, &commandLineOption](std::string_view OptValueType::*arg) {
+                     [&data, &idx, argv, &commandLineOption](std::string_view OptValueType::* arg) {
                        if (idx + 1U < argv.size()) {
                          data.*arg = std::string_view(argv[++idx]);
                          return;
@@ -201,7 +201,7 @@ class CommandLineOptionsParser {
                      },
 
                      // optional std::string_view value matcher
-                     [this, &data, &idx, argv](std::optional<std::string_view> OptValueType::*arg) {
+                     [this, &data, &idx, argv](std::optional<std::string_view> OptValueType::* arg) {
                        if (idx + 1U < argv.size() && this->isOptionValue(argv[idx + 1])) {
                          data.*arg = std::string_view(argv[idx + 1]);
                          ++idx;
@@ -211,7 +211,7 @@ class CommandLineOptionsParser {
                      },
 
                      // duration value matcher
-                     [&data, &idx, argv, &commandLineOption](Duration OptValueType::*arg) {
+                     [&data, &idx, argv, &commandLineOption](Duration OptValueType::* arg) {
                        if (idx + 1U < argv.size()) {
                          data.*arg = ParseDuration(argv[++idx]);
                          return;
