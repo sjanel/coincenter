@@ -2,9 +2,9 @@
 
 #include <bitset>
 
-#include "cct_const.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangename.hpp"
 
 namespace cct {

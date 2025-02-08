@@ -8,11 +8,11 @@
 #include <utility>
 
 #include "balanceportfolio.hpp"
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_vector.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market-timestamp-set.hpp"

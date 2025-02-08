@@ -9,6 +9,7 @@
 #include "curlhandle.hpp"
 #include "curlpostdata.hpp"
 #include "currencycode.hpp"
+#include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "public-trade-vector.hpp"

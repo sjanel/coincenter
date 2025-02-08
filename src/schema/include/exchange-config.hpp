@@ -3,11 +3,11 @@
 #include <array>
 #include <utility>
 
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_string.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchange-general-config.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-query-config.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchange-withdraw-config.hpp"

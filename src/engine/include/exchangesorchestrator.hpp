@@ -3,6 +3,7 @@
 #include <optional>
 #include <span>
 
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangeretriever.hpp"

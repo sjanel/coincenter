@@ -4,9 +4,9 @@
 #include <gtest/gtest.h>
 
 #include "cachedresultvault.hpp"
-#include "cct_const.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "exchange-name-enum.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 

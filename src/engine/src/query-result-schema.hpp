@@ -4,11 +4,11 @@
 #include <span>
 #include <utility>
 
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "duration-schema.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"

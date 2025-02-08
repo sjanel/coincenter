@@ -1,21 +1,21 @@
 #pragma once
 
-#include <string_view>
 #include <unordered_map>
 #include <utility>
 
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
-#include "cct_const.hpp"
-#include "coincenterinfo.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
+#include "exchange-name-enum.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
 
 namespace cct {
+
+class CoincenterInfo;
 
 /// This class is able to crawl some public withdrawal fees web pages in order to retrieve them from unofficial sources,
 /// which is better than nothing. This class is non thread-safe.

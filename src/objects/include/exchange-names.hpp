@@ -2,10 +2,10 @@
 
 #include <span>
 
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangename.hpp"
 
 namespace cct {

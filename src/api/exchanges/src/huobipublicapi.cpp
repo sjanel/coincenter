@@ -13,7 +13,6 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -28,6 +27,7 @@
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchange-asset-config.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"

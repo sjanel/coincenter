@@ -4,12 +4,12 @@
 
 #include <string_view>
 
-#include "cct_const.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommand.hpp"
 #include "coincentercommandtype.hpp"
 #include "coincenteroptions.hpp"
 #include "currencycode.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "monetaryamount.hpp"

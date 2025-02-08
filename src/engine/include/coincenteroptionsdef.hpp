@@ -6,8 +6,9 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
-#include "cct_const.hpp"
 #include "commandlineoption.hpp"
+#include "default-data-dir.hpp"
+#include "deposit-addresses-file-name.hpp"
 #include "exchangepublicapi.hpp"
 #include "loadconfiguration.hpp"
 #include "logginginfo.hpp"

@@ -5,8 +5,8 @@
 #include <string_view>
 
 #include "amount-price.hpp"
-#include "cct_const.hpp"
 #include "cct_smallvector.hpp"
+#include "exchange-name-enum.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"

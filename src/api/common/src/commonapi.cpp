@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "cachedresult.hpp"
-#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -17,6 +16,7 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
+#include "exchange-name-enum.hpp"
 #include "fiats-cache-schema.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
@@ -33,6 +33,8 @@ namespace {
 File GetFiatCacheFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, "fiatcache.json", File::IfError::kNoThrow};
 }
+
+constexpr std::string_view kDefaultAcceptEncoding = "gzip,deflate";
 
 }  // namespace
 

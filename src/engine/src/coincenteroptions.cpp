@@ -6,10 +6,10 @@
 #include <utility>
 
 #include "cct_config.hpp"
-#include "cct_const.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommandtype.hpp"
 #include "curlhandle.hpp"
+#include "default-data-dir.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"

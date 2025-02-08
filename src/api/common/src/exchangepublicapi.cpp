@@ -14,7 +14,6 @@
 #include <utility>
 
 #include "cct_allocator.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_flatset.hpp"
 #include "cct_log.hpp"
@@ -25,6 +24,7 @@
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-permanent-curl-options.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchangepublicapitypes.hpp"

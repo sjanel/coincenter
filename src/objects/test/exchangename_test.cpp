@@ -2,9 +2,9 @@
 
 #include <gtest/gtest.h>
 
-#include "cct_const.hpp"
 #include "cct_format.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "exchange-name-enum.hpp"
 
 namespace cct {
 TEST(ExchangeName, NoKeyName) {

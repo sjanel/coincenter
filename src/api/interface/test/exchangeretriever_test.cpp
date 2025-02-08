@@ -10,11 +10,12 @@
 #include <utility>
 
 #include "apikey.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "default-data-dir.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
