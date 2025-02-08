@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <string_view>
 
 #include "cct_string.hpp"
@@ -59,6 +60,8 @@ class PriceOptions {
   bool operator==(const PriceOptions &) const noexcept = default;
 
  private:
+  static constexpr RelativePrice kNoRelativePrice = std::numeric_limits<RelativePrice>::min();
+
   MonetaryAmount _fixedPrice;
   RelativePrice _relativePrice = kNoRelativePrice;
   PriceStrategy _priceStrategy = PriceStrategy::maker;

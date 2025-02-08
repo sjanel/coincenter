@@ -7,15 +7,9 @@
 
 namespace cct {
 
-enum class ApiOutputType : int8_t {
-  off,
-  table,
-  json,
-};
+#define CCT_API_OUTPUT_TYPES off, table, json
 
-static constexpr std::string_view kApiOutputTypeNoPrintStr = "off";
-static constexpr std::string_view kApiOutputTypeTableStr = "table";
-static constexpr std::string_view kApiOutputTypeJsonStr = "json";
+enum class ApiOutputType : int8_t { CCT_API_OUTPUT_TYPES };
 
 ApiOutputType ApiOutputTypeFromString(std::string_view str);
 
@@ -24,5 +18,7 @@ ApiOutputType ApiOutputTypeFromString(std::string_view str);
 template <>
 struct glz::meta<::cct::ApiOutputType> {
   using enum ::cct::ApiOutputType;
-  static constexpr auto value = enumerate(off, table, json);
+  static constexpr auto value = enumerate(CCT_API_OUTPUT_TYPES);
 };
+
+#undef CCT_API_OUTPUT_TYPES

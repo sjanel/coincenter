@@ -245,7 +245,7 @@ using ExtParserType = CommandLineOptionsParser<OptsExt>;
 using ExtCommandLineOptionType = AllowedCommandLineOptionsBase<OptsExt>::CommandLineOptionType;
 using ExtCommandLineOptionWithValue = AllowedCommandLineOptionsBase<OptsExt>::CommandLineOptionWithValue;
 
-static constexpr std::array kAdditionalOpts = {
+inline constexpr std::array kAdditionalOpts = {
     ExtCommandLineOptionWithValue{{{"Monitoring", 3}, "--optExt", "", "extension value string"}, &OptsExt::sv2},
     ExtCommandLineOptionWithValue{{{"Monitoring", 3}, "--intExt", "", "extension value int"}, &OptsExt::int3Opt},
 };

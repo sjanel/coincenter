@@ -26,10 +26,10 @@ struct glz::meta<cct::ExchangeNameEnum> {
 namespace cct {
 
 /// Ordered list of supported exchange names.
-static constexpr auto kSupportedExchanges = json::reflect<ExchangeNameEnum>::keys;
+inline constexpr auto kSupportedExchanges = json::reflect<ExchangeNameEnum>::keys;
 
-static constexpr int kNbSupportedExchanges = static_cast<int>(std::size(kSupportedExchanges));
+inline constexpr auto kNbSupportedExchanges = static_cast<int>(std::size(kSupportedExchanges));
 
-static constexpr int kTypicalNbPrivateAccounts = kNbSupportedExchanges;
+inline constexpr auto kTypicalNbPrivateAccounts = kNbSupportedExchanges;
 
 }  // namespace cct

@@ -12,12 +12,12 @@
 
 namespace cct {
 
-static constexpr auto kExactJsonOptions =
+inline constexpr auto kExactJsonOptions =
     json::opts{.error_on_unknown_keys = true,  // NOLINT(readability-implicit-bool-conversion)
                .error_on_const_read = true,    // NOLINT(readability-implicit-bool-conversion)
                .raw_string = true};            // NOLINT(readability-implicit-bool-conversion)
 
-static constexpr auto kPartialJsonOptions =
+inline constexpr auto kPartialJsonOptions =
     json::opts{.error_on_unknown_keys = false,  // NOLINT(readability-implicit-bool-conversion)
                .error_on_const_read = true,     // NOLINT(readability-implicit-bool-conversion)
                .raw_string = true};             // NOLINT(readability-implicit-bool-conversion)

@@ -10,13 +10,13 @@ namespace cct {
 
 inline string ToUpper(std::string_view str) {
   string ret(str);
-  std::ranges::transform(ret, ret.begin(), toupper);
+  std::ranges::transform(ret, ret.begin(), [](char ch) { return toupper(ch); });
   return ret;
 }
 
 inline string ToLower(std::string_view str) {
   string ret(str);
-  std::ranges::transform(ret, ret.begin(), tolower);
+  std::ranges::transform(ret, ret.begin(), [](char ch) { return tolower(ch); });
   return ret;
 }
 

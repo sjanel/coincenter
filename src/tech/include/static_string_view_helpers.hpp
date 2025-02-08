@@ -42,7 +42,7 @@ class JoinStringView {
 
 // Helper to get the value out
 template <std::string_view const&... Strs>
-static constexpr auto JoinStringView_v = JoinStringView<Strs...>::value;
+inline constexpr auto JoinStringView_v = JoinStringView<Strs...>::value;
 
 /// Same as JoinStringView but with a char separator between each string_view
 template <std::string_view const& Sep, std::string_view const&... Strs>
@@ -80,7 +80,7 @@ class JoinStringViewWithSep {
 
 // Helper to get the value out
 template <std::string_view const& Sep, std::string_view const&... Strs>
-static constexpr auto JoinStringViewWithSep_v = JoinStringViewWithSep<Sep, Strs...>::value;
+inline constexpr auto JoinStringViewWithSep_v = JoinStringViewWithSep<Sep, Strs...>::value;
 
 namespace details {
 template <std::string_view const& Sep, const auto& a, typename>
@@ -129,7 +129,7 @@ class IntToStringView {
 };
 
 template <int64_t intVal>
-static constexpr auto IntToStringView_v = IntToStringView<intVal>::value;
+inline constexpr auto IntToStringView_v = IntToStringView<intVal>::value;
 
 /// Creates a std::string_view on a storage with a single char available at compile time.
 template <char Char>
@@ -142,6 +142,6 @@ class CharToStringView {
 };
 
 template <char Char>
-static constexpr auto CharToStringView_v = CharToStringView<Char>::value;
+inline constexpr auto CharToStringView_v = CharToStringView<Char>::value;
 
 }  // namespace cct

@@ -115,6 +115,11 @@ add_unit_test(
 )
 
 add_unit_test(
+    string-equal-ignore-case_test
+    test/string-equal-ignore-case_test.cpp
+)
+
+add_unit_test(
     stringconv_test
     test/stringconv_test.cpp
     DEFINITIONS
@@ -143,6 +148,18 @@ add_unit_test(
     timestring_test
     src/timestring.cpp
     test/timestring_test.cpp
+    DEFINITIONS
+    CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    toupperlower_test
+    test/toupperlower_test.cpp
+)
+
+add_unit_test(
+    toupperlower-string_test
+    test/toupperlower-string_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
 )

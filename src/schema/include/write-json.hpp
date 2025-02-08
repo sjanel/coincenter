@@ -6,12 +6,12 @@
 
 namespace cct {
 
-static constexpr auto kPrettifyJsonOptions =
+inline constexpr auto kPrettifyJsonOptions =
     json::opts{.prettify = true,        // NOLINT(readability-implicit-bool-conversion)
                .indentation_width = 2,  // NOLINT(readability-implicit-bool-conversion)
                .raw_string = true};     // NOLINT(readability-implicit-bool-conversion)
 
-static constexpr auto kMinifiedJsonOptions =
+inline constexpr auto kMinifiedJsonOptions =
     json::opts{.prettify = false,    // NOLINT(readability-implicit-bool-conversion)
                .minified = true,     // NOLINT(readability-implicit-bool-conversion)
                .raw_string = true};  // NOLINT(readability-implicit-bool-conversion)

@@ -47,10 +47,10 @@ class CoincenterCmdLineOptionsDefinitions {
       JoinStringView_v<kLog1, kLoggingLevels, kLog2, IntToStringView_v<LoggingInfo::kNbLogLevels>, kLog3>;
 
   static constexpr std::string_view kOutput1 = "Output format. One of (";
+  static constexpr std::string_view kApiOutputTypes =
+      make_joined_string_view<kLoggingLevelsSep, json::reflect<ApiOutputType>::keys>::value;
   static constexpr std::string_view kOutput2 = ") (default configured in general config file)";
-  static constexpr std::string_view kOutput =
-      JoinStringView_v<kOutput1, kApiOutputTypeNoPrintStr, CharToStringView_v<'|'>, kApiOutputTypeTableStr,
-                       CharToStringView_v<'|'>, kApiOutputTypeJsonStr, kOutput2>;
+  static constexpr std::string_view kOutput = JoinStringView_v<kOutput1, kApiOutputTypes, kOutput2>;
 
   static constexpr std::string_view kData1 = "Use given 'data' directory instead of the one chosen at build time '";
   static constexpr std::string_view kData = JoinStringView_v<kData1, kDefaultDataDir, CharToStringView_v<'\''>>;

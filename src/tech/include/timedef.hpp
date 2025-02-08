@@ -12,7 +12,7 @@ using Clock = std::chrono::system_clock;
 using TimePoint = Clock::time_point;
 using Duration = Clock::duration;
 
-static constexpr auto kUndefinedDuration = Duration::min();
+inline constexpr auto kUndefinedDuration = Duration::min();
 
 using seconds = std::chrono::seconds;
 using milliseconds = std::chrono::milliseconds;

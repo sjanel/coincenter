@@ -8,7 +8,7 @@
 namespace cct {
 enum class HttpRequestType : int8_t { kGet, kPut, kPost, kDelete };
 
-static constexpr HttpRequestType kHttpRequestTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
+inline constexpr HttpRequestType kHttpRequestTypes[] = {HttpRequestType::kGet, HttpRequestType::kPost,
                                                         HttpRequestType::kPut, HttpRequestType::kDelete};
 
 constexpr std::string_view HttpRequestTypeToString(HttpRequestType requestType) {

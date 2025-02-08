@@ -280,11 +280,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
     std::optional<Market> optMarket =
         _exchangePublic.determineMarketFromMarketStr(marketStr, markets, closedOrdersConstraints.cur1());
 
-    if (!optMarket) {
-      continue;
-    }
-
-    if (!closedOrdersConstraints.validateCur(optMarket->base(), optMarket->quote())) {
+    if (!optMarket || !closedOrdersConstraints.validateCur(optMarket->base(), optMarket->quote())) {
       continue;
     }
 
