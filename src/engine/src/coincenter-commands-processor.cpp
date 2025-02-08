@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "balanceoptions.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
@@ -19,6 +18,7 @@
 #include "coincenterinfo.hpp"
 #include "currencycode.hpp"
 #include "durationstring.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"

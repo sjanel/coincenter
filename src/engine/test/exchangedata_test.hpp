@@ -6,6 +6,8 @@
 
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "default-data-dir.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange.hpp"
 #include "exchangeprivateapi_mock.hpp"
 #include "exchangepublicapi_mock.hpp"

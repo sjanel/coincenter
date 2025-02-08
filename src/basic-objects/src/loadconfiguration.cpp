@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "cct_const.hpp"
+#include "default-data-dir.hpp"
 
 namespace cct {
 LoadConfiguration::LoadConfiguration() noexcept

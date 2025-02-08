@@ -11,6 +11,7 @@
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "exchange-config.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"

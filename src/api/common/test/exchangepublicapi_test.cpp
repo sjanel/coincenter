@@ -5,12 +5,13 @@
 
 #include <optional>
 
-#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
+#include "default-data-dir.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangepublicapi_mock.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"

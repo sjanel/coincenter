@@ -7,10 +7,10 @@
 #include <span>
 #include <type_traits>
 
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"
 #include "exchangepublicapi.hpp"

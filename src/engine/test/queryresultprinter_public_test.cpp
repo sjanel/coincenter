@@ -6,12 +6,12 @@
 #include <string_view>
 
 #include "apioutputtype.hpp"
-#include "cct_const.hpp"
 #include "closed-order.hpp"
 #include "coincentercommandtype.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market-timestamp-set.hpp"

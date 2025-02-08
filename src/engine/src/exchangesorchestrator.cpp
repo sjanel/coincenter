@@ -15,7 +15,6 @@
 
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_log.hpp"
@@ -26,6 +25,7 @@
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"

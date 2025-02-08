@@ -3,9 +3,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
+#include "default-data-dir.hpp"
 #include "general-config.hpp"
 #include "loadconfiguration.hpp"
 #include "monitoringinfo.hpp"

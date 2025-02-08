@@ -7,11 +7,11 @@
 #include <string_view>
 
 #include "cache-file-updator-interface.hpp"
-#include "cct_const.hpp"
 #include "commonapi.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market-order-book-vector.hpp"
 #include "market-timestamp-set.hpp"

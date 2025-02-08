@@ -10,6 +10,7 @@
 #include "apikeysprovider.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "default-data-dir.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"

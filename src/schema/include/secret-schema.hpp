@@ -2,11 +2,11 @@
 
 #include <utility>
 
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_json.hpp"
 #include "cct_smallvector.hpp"
 #include "cct_string.hpp"
+#include "exchange-name-enum.hpp"
 
 namespace cct::schema {
 struct AccountOwner {

@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <string_view>
 
-#include "cct_const.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "exchange-config-default.hpp"
+#include "exchange-name-enum.hpp"
 #include "file.hpp"
 #include "loadconfiguration.hpp"
 #include "read-json.hpp"
@@ -14,6 +14,13 @@
 #include "write-json.hpp"
 
 namespace cct {
+
+namespace {
+/// File containing exchange configuration.
+/// It has a particular format, with default values which can optionally be overriden by exchange name.
+/// See ExchangeConfig in exchange-config.hpp.
+constexpr std::string_view kExchangeConfigFileName = "exchangeconfig.json";
+}  // namespace
 
 AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {

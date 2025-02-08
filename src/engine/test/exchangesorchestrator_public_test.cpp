@@ -4,11 +4,11 @@
 #include <optional>
 #include <span>
 
-#include "cct_const.hpp"
 #include "cct_json.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchange.hpp"
 #include "exchangedata_test.hpp"

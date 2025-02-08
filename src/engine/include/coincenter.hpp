@@ -4,10 +4,10 @@
 #include <span>
 
 #include "apikeysprovider.hpp"
-#include "cct_const.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
 #include "exchangepool.hpp"

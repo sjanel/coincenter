@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <unordered_map>
 
-#include "cct_const.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "currencycode.hpp"
+#include "exchange-name-enum.hpp"
 #include "monetaryamount.hpp"
 
 namespace cct::schema {

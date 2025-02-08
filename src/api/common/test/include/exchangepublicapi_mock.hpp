@@ -4,8 +4,8 @@
 
 #include <optional>
 
-#include "cct_const.hpp"
 #include "commonapi.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"

@@ -4,8 +4,8 @@
 
 #include <utility>
 
-#include "cct_const.hpp"
 #include "cct_log.hpp"
+#include "default-data-dir.hpp"
 #include "log-config.hpp"
 
 namespace cct {

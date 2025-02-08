@@ -7,11 +7,11 @@
 
 #include "accountowner.hpp"
 #include "apikey.hpp"
-#include "cct_const.hpp"
 #include "cct_exception.hpp"
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "exchange-name-enum.hpp"
 #include "exchangename.hpp"
 #include "exchangesecretsinfo.hpp"
 #include "file.hpp"

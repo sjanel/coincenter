@@ -2,8 +2,8 @@
 
 #include <unordered_map>
 
-#include "cct_const.hpp"
 #include "currencycode.hpp"
+#include "exchange-name-enum.hpp"
 #include "monetaryamount.hpp"
 
 namespace cct::schema {

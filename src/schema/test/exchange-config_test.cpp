@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <chrono>
 
-#include "cct_const.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "exchange-name-enum.hpp"
 #include "priceoptionsdef.hpp"
 #include "read-json.hpp"
 #include "reader.hpp"
