@@ -89,8 +89,8 @@ if(CCT_ENABLE_TESTS)
   if(NOT GTest_FOUND)
     FetchContent_Declare(
       googletest
-      URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz
-      URL_HASH SHA256=7b42b4d6ed48810c5362c265a17faebe90dc2373c885e5216439d37927f02926
+      URL https://github.com/google/googletest/archive/refs/tags/v1.16.0.tar.gz
+      URL_HASH SHA256=78c676fc63881529bf97bf9d45948d905a66833fbfa5318ea2cd7478cb98f399
     )
 
     list(APPEND fetchContentPackagesToMakeAvailable googletest)
@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.3.1.tar.gz
-    URL_HASH SHA256=934b16d0a00dfc2b06bc2920a6444b8a6a34edb4f0fe872f8ad7a044518a37e3
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.4.1.tar.gz
+    URL_HASH SHA256=0a5490905483e0e8fbc4c14a8edfe0cff2b298dfb0299c2a658d6e1ab4fc2e0a
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
@@ -146,8 +146,8 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.0.tar.gz
-    URL_HASH SHA256=9962648c9b4f1a7bbc76fd8d9172555bad1871fdb14ff4f842ef87949682caa5
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.1.tar.gz
+    URL_HASH SHA256=25c843860f039a1600f232c6eb9e01e6627f7d030a2ae5e232bdd3c9205d26cc
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
