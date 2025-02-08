@@ -4,6 +4,6 @@
 
 namespace cct {
 
-static constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
+inline constexpr std::string_view kDefaultDataDir = CCT_DATA_DIR;
 
 }  // namespace cct

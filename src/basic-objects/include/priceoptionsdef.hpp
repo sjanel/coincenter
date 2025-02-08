@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <limits>
 #include <string_view>
 
 #include "cct_json.hpp"
@@ -24,8 +23,6 @@ std::string_view PriceStrategyStr(PriceStrategy priceStrategy, bool placeRealOrd
 /// Negative values corresponds to the 'taker' method, by matching immediately available amounts, positive values is a
 /// limit price.
 using RelativePrice = int32_t;
-
-static constexpr RelativePrice kNoRelativePrice = std::numeric_limits<RelativePrice>::min();
 
 }  // namespace cct
 

@@ -7,11 +7,11 @@
 
 namespace cct {
 
-static constexpr const char* const kTimeYearToSecondSpaceSeparatedFormat = "%Y-%m-%d %H:%M:%S";
+inline constexpr const char* const kTimeYearToSecondSpaceSeparatedFormat = "%Y-%m-%d %H:%M:%S";
 
-static constexpr const char* const kTimeYearToSecondTSeparatedFormat = "%Y-%m-%dT%H:%M:%S";
+inline constexpr const char* const kTimeYearToSecondTSeparatedFormat = "%Y-%m-%dT%H:%M:%S";
 
-static constexpr const char* const kTimeYearToSecondTSeparatedFormatUTC = "%Y-%m-%dT%H:%M:%SZ";
+inline constexpr const char* const kTimeYearToSecondTSeparatedFormatUTC = "%Y-%m-%dT%H:%M:%SZ";
 
 /// Nonce represents an increasing value only over time - in string format.
 /// Mostly for documentation purposes
