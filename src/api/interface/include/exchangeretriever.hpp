@@ -10,6 +10,7 @@
 #include "cct_exception.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_smallvector.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "exchange.hpp"
 #include "exchangename.hpp"

@@ -24,12 +24,14 @@ class RequestRetry {
  public:
   enum class Status : int8_t { kResponseError, kResponseOK };
 
+ private:
   static constexpr auto kDefaultJsonOpts =
       json::opts{.error_on_unknown_keys = false,  // NOLINT(readability-implicit-bool-conversion)
                  .minified = true,                // NOLINT(readability-implicit-bool-conversion)
                  .error_on_const_read = true,     // NOLINT(readability-implicit-bool-conversion)
                  .raw_string = true};             // NOLINT(readability-implicit-bool-conversion)
 
+ public:
   RequestRetry(CurlHandle &curlHandle, CurlOptions curlOptions, QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
       : _curlHandle(curlHandle), _curlOptions(std::move(curlOptions)), _queryRetryPolicy(queryRetryPolicy) {}
 

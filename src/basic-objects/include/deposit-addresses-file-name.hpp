@@ -12,6 +12,6 @@ namespace cct {
 /// }
 /// In case crypto contains an additional "tag", "memo" or other, it will be placed after the ',' in the address
 /// field.
-static constexpr std::string_view kDepositAddressesFileName = "depositaddresses.json";
+inline constexpr std::string_view kDepositAddressesFileName = "depositaddresses.json";
 
 }  // namespace cct

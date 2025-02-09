@@ -5,7 +5,6 @@
 #include <cstring>
 #include <string_view>
 
-#include "cct_string.hpp"
 #include "cct_vector.hpp"
 
 namespace cct {
@@ -30,13 +29,13 @@ constexpr const char* const kExpectedStr2 = "최소 주문금액은 5000 KRW 입
 }  // namespace
 
 TEST(UTF8Test, DecodeUTF8Str) {
-  string str(kUnicodeStr1);
+  vector<char> str(kUnicodeStr1, kUnicodeStr1 + std::strlen(kUnicodeStr1));
   decode_utf8(str);
-  EXPECT_EQ(str, kExpectedStr1);
+  EXPECT_EQ(std::string_view(str), kExpectedStr1);
 
-  str = kUnicodeStr2;
+  str = vector<char>(kUnicodeStr2, kUnicodeStr2 + std::strlen(kUnicodeStr2));
   decode_utf8(str);
-  EXPECT_EQ(str, kExpectedStr2);
+  EXPECT_EQ(std::string_view(str), kExpectedStr2);
 }
 
 TEST(UTF8Test, DecodeUTF8CharArray) {

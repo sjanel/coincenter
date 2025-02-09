@@ -16,6 +16,7 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "fiats-cache-schema.hpp"
 #include "file.hpp"

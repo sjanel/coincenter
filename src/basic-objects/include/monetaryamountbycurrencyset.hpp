@@ -3,6 +3,7 @@
 #include <initializer_list>
 
 #include "cct_flatset.hpp"
+#include "cct_type_traits.hpp"
 #include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 

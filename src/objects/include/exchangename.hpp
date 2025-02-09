@@ -8,6 +8,7 @@
 #include "cct_format.hpp"
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 
 namespace cct {

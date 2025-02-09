@@ -15,6 +15,7 @@
 #include "base64.hpp"
 #include "cachedresult.hpp"
 #include "cct_exception.hpp"
+#include "cct_format.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "closed-order.hpp"
@@ -582,14 +583,14 @@ OrderInfo KucoinPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tr
 }
 
 void KucoinPrivate::cancelOrderProcess(OrderIdView orderId) {
-  const auto endpoint = fmt::format("/api/v1/orders/{}", orderId);
+  const auto endpoint = cct::format("/api/v1/orders/{}", orderId);
   PrivateQuery<schema::kucoin::V1OrderCancel>(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
 }
 
 OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
   const Market mk = tradeContext.market;
-  const auto endpoint = fmt::format("/api/v1/orders/{}", orderId);
+  const auto endpoint = cct::format("/api/v1/orders/{}", orderId);
 
   auto data = PrivateQuery<schema::kucoin::V1OrderInfo>(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint).data;
 

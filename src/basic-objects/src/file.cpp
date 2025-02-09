@@ -6,7 +6,6 @@
 #include <ios>
 #include <iterator>
 #include <string_view>
-#include <utility>
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
@@ -69,12 +68,10 @@ int File::write(std::string_view data, Writer::Mode mode) const {
   auto openMode = mode == Writer::Mode::FromStart ? std::ios_base::out : std::ios_base::app;
   std::ofstream fileOfStream(_filePath.c_str(), openMode);
   if (!fileOfStream) {
-    string err("Unable to open ");
-    err.append(_filePath).append(" for writing");
     if (_ifError == IfError::kThrow) {
-      throw exception(std::move(err));
+      throw exception("Unable to open {} for writing", _filePath);
     }
-    log::error(err);
+    log::error("Unable to open {} for writing", _filePath);
     return 0;
   }
   try {

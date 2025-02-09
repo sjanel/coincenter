@@ -13,8 +13,6 @@ target_link_libraries(coincenter_tech PUBLIC spdlog)
 add_unit_test(
     cachedresult_test
     test/cachedresult_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
 )
 
 add_unit_test(
@@ -48,6 +46,14 @@ add_unit_test(
     test/durationstring_test.cpp
     DEFINITIONS
     CCT_DISABLE_SPDLOG
+)
+
+add_unit_test(
+    enum-string_test
+    test/enum-string_test.cpp
+    LIBRARIES
+    glaze::glaze
+    spdlog
 )
 
 add_unit_test(
@@ -182,6 +188,4 @@ add_unit_test(
 add_unit_test(
     utf8_test
     test/utf8_test.cpp
-    DEFINITIONS
-    CCT_DISABLE_SPDLOG
 )

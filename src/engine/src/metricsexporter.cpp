@@ -3,9 +3,9 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
-#include "cct_json.hpp"
 #include "curlmetrics.hpp"
 #include "currencycode.hpp"
+#include "enum-string.hpp"
 #include "exchange.hpp"
 #include "market.hpp"
 #include "metric.hpp"

@@ -18,6 +18,7 @@
 #include "cachedresult.hpp"
 #include "cct_cctype.hpp"
 #include "cct_exception.hpp"
+#include "cct_format.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
@@ -178,7 +179,7 @@ bool HuobiPrivate::validateApiKey() {
 }
 
 BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
-  const auto method = fmt::format("/v1/account/accounts/{}/balance", _accountIdCache.get());
+  const auto method = cct::format("/v1/account/accounts/{}/balance", _accountIdCache.get());
   const auto result =
       PrivateQuery<schema::huobi::V1AccountAccountsBalance>(_curlHandle, _apiKey, HttpRequestType::kGet, method);
   const bool withBalanceInUse =

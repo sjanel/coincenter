@@ -23,6 +23,7 @@ bool IsAnyTrade(CoincenterCommandType coincenterCommandType);
 template <>
 struct glz::meta<::cct::CoincenterCommandType> {
   using enum ::cct::CoincenterCommandType;
+
   static constexpr auto value = enumerate(CCT_COINCENTER_COMMAND_TYPES);
 };
 
