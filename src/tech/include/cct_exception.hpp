@@ -1,60 +1,38 @@
 #pragma once
 
-#include <algorithm>
-#include <array>
+#include <cstring>
 #include <exception>
-#include <iterator>
 #include <type_traits>
-#include <utility>
-#include <variant>
 
 #include "cct_format.hpp"
-#include "cct_string.hpp"
-#include "cct_type_traits.hpp"
-#include "unreachable.hpp"
 
 namespace cct {
 
-/// Implementation of a simple string (un-truncated) storage with noexcept constructors and what() method.
-/// To be constructed from a 'const char []', it needs to be small enough to fill in the buffer. For custom, longer
-/// error messages, the constructor from the rvalue of a string should be used instead.
+/// Non allocating basic exception class that can be constructed from a string literal or a format string (truncated).
 class exception : public std::exception {
  public:
-  static constexpr int kMsgMaxLen = 80;
+  static constexpr int kMsgMaxLen = 87;
 
   template <int N, std::enable_if_t<N <= kMsgMaxLen, bool> = true>
   explicit exception(const char (&str)[N]) noexcept {
-    // Hint: default constructor constructs a variant holding the value-initialized value of the first alternative
-    // (index() is zero). In our case, it's a std::array, which is what we want here.
-
-    std::ranges::copy(str, std::get<0>(_data).data());
-    // No need to set the null terminating char - it has already been set to 0 thanks to value initialization of the
-    // char array.
+    std::memcpy(_data, str, N);
+    _data[N] = '\0';
   }
-
-  explicit exception(string&& str) noexcept(std::is_nothrow_move_constructible_v<string>) : _data(std::move(str)) {}
 
   template <typename... Args>
-  explicit exception(format_string<Args...> fmt, Args&&... args) : _data(std::in_place_type<string>) {
-    cct::format_to(std::back_inserter(std::get<1>(_data)), fmt, std::forward<Args>(args)...);
-  }
-
-  const char* what() const noexcept override {
-    switch (_data.index()) {
-      case 0:
-        return std::get<0>(_data).data();
-      case 1:
-        return std::get<1>(_data).c_str();
-      default:
-        unreachable();
+  explicit exception(format_string<Args...> fmt, Args&&... args) {
+    auto sz = cct::format_to_n(_data, kMsgMaxLen, fmt, std::forward<Args>(args)...).size;
+    if (sz > kMsgMaxLen) {
+      std::memcpy(_data + kMsgMaxLen - 3, "...", 3);
+      sz = kMsgMaxLen;
     }
+    _data[sz] = '\0';
   }
 
-  using trivially_relocatable = is_trivially_relocatable<string>::type;
+  const char* what() const noexcept override { return _data; }
 
  private:
-  using CharStorage = std::array<char, kMsgMaxLen + 1>;
-
-  std::variant<CharStorage, string> _data;
+  char _data[kMsgMaxLen + 1];
 };
+
 }  // namespace cct

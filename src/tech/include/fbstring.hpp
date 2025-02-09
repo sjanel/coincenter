@@ -31,8 +31,9 @@
 #include <type_traits>
 
 #include "cct_config.hpp"
-#include "cct_format.hpp"
-#include "cct_type_traits.hpp"
+#ifndef CCT_DISABLE_SPDLOG
+#include <spdlog/fmt/fmt.h>
+#endif
 #include "unreachable.hpp"
 
 #define FOLLY_HAS_STRING_VIEW 1

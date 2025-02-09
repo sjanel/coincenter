@@ -3,6 +3,7 @@
 #include <cstdint>
 
 namespace cct::settings {
+
 enum class RunMode : int8_t {
   kProd,
   kTestKeys,

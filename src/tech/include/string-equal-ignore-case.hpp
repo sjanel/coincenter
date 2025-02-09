@@ -19,4 +19,17 @@ constexpr bool CaseInsensitiveEqual(std::string_view lhs, std::string_view rhs) 
   return true;
 }
 
+constexpr bool CaseInsensitiveLess(std::string_view lhs, std::string_view rhs) {
+  const auto lhsSize = lhs.size();
+  const auto rhsSize = rhs.size();
+  for (std::string_view::size_type charPos{}; charPos < lhsSize && charPos < rhsSize; ++charPos) {
+    const auto lhsChar = toupper(lhs[charPos]);
+    const auto rhsChar = toupper(rhs[charPos]);
+    if (lhsChar != rhsChar) {
+      return lhsChar < rhsChar;
+    }
+  }
+  return lhsSize < rhsSize;
+}
+
 }  // namespace cct

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <span>
+#include <string_view>
 #include <utility>
 
 #include "apikey.hpp"
@@ -33,8 +34,6 @@ class TradeOptions;
 class WithdrawOptions;
 
 namespace api {
-class APIKey;
-
 class ExchangePrivate : public CacheFileUpdatorInterface {
  public:
   virtual ~ExchangePrivate() = default;

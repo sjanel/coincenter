@@ -7,6 +7,7 @@
 #include "cct_flatset.hpp"
 #include "cct_format.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "orderid.hpp"

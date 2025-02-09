@@ -5,6 +5,7 @@
 
 #include "cct_json.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "monetaryamount.hpp"
 #include "timedef.hpp"
 

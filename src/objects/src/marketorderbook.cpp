@@ -13,10 +13,10 @@
 
 #include "amount-price.hpp"
 #include "cct_exception.hpp"
-#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "currencycode.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"

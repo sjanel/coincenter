@@ -11,6 +11,7 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "market-order-book-vector.hpp"

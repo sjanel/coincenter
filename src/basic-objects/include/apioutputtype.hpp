@@ -18,6 +18,7 @@ ApiOutputType ApiOutputTypeFromString(std::string_view str);
 template <>
 struct glz::meta<::cct::ApiOutputType> {
   using enum ::cct::ApiOutputType;
+
   static constexpr auto value = enumerate(CCT_API_OUTPUT_TYPES);
 };
 

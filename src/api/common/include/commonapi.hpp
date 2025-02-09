@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <mutex>
 #include <optional>
-#include <string_view>
 
 #include "binance-common-api.hpp"
 #include "cache-file-updator-interface.hpp"
@@ -20,7 +19,9 @@
 #include "withdrawalfees-crawler.hpp"
 
 namespace cct {
+
 class CoincenterInfo;
+
 namespace api {
 /// Public API connected to different exchanges, providing fast methods to retrieve huge amount of data.
 class CommonAPI : public CacheFileUpdatorInterface {
