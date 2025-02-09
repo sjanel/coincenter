@@ -115,7 +115,7 @@ MarketOrderBook::MarketOrderBook(TimePoint timeStamp, MonetaryAmount askPrice, M
       _isArtificiallyExtended(depth > 1),
       _volAndPriNbDecimals(volAndPriNbDecimals) {
   if (depth <= 0) {
-    throw exception("Invalid depth, should be strictly positive");
+    throw exception("Invalid depth {}, should be strictly positive", depth);
   }
 
   static constexpr std::string_view kErrNegVolumeMsg = " for MarketOrderbook creation, should be strictly positive";
@@ -275,7 +275,6 @@ std::optional<MonetaryAmount> MarketOrderBook::averagePrice() const {
     case 1U:
       return MonetaryAmount(_orders.front().price, _market.quote(), _volAndPriNbDecimals.priNbDecimals);
     default:
-      // std::midpoint computes safely the average of two values (without overflow)
       return MonetaryAmount(std::midpoint(_orders[_lowestAskPricePos].price, _orders[_highestBidPricePos].price),
                             _market.quote(), _volAndPriNbDecimals.priNbDecimals);
   }
@@ -301,7 +300,7 @@ MonetaryAmount MarketOrderBook::computeCumulAmountSoldImmediatelyAt(MonetaryAmou
 std::optional<MonetaryAmount> MarketOrderBook::computeMaxPriceAtWhichAmountWouldBeBoughtImmediately(
     MonetaryAmount ma) const {
   if (ma.currencyCode() != _market.base()) {
-    throw exception("Given amount should be in the base currency of this market");
+    throw exception("Given amount {} should be in the base currency of this market {}", ma, _market);
   }
   AmountType integralAmountRep = 0;
   const std::optional<AmountType> integralTotalAmountOpt = ma.amount(_volAndPriNbDecimals.volNbDecimals);
