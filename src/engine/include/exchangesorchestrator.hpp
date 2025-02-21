@@ -3,6 +3,8 @@
 #include <optional>
 #include <span>
 
+#include "auto-trade-options.hpp"
+#include "auto-trade-processor.hpp"
 #include "exchange-name-enum.hpp"
 #include "exchange-names.hpp"
 #include "exchangename.hpp"
