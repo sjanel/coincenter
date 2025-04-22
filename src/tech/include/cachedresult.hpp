@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cstdint>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -11,7 +10,6 @@
 #include "cachedresultvault.hpp"
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_hash.hpp"
-#include "cct_type_traits.hpp"
 #include "timedef.hpp"
 
 namespace cct {

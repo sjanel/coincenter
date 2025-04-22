@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <string_view>
 
 #include "amount-price.hpp"
 #include "cct_smallvector.hpp"

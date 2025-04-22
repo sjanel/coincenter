@@ -2,6 +2,7 @@
 openssl/[>=3.0.2]
 zlib/[>=1.2.11]
 libcurl/[>=7.81.0]
+protobuf/[>=5.29.3]
 
 [generators]
 CMakeDeps

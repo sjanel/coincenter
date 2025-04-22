@@ -9,13 +9,13 @@ namespace cct {
 /// overflow.
 template <std::signed_integral T>
 constexpr bool WillSumOverflow(T lhs, T rhs) {
-  if ((static_cast<T>(lhs) ^ static_cast<T>(rhs)) < 0) {
+  if ((lhs ^ rhs) < 0) {
     return false;
   }
   if (lhs > 0) {
-    return static_cast<T>(rhs) > std::numeric_limits<T>::max() - static_cast<T>(lhs);
+    return rhs > std::numeric_limits<T>::max() - lhs;
   }
-  return static_cast<T>(rhs) < std::numeric_limits<T>::min() - static_cast<T>(lhs);
+  return rhs < std::numeric_limits<T>::min() - lhs;
 }
 
 }  // namespace cct

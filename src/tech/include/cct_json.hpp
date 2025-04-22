@@ -2,9 +2,7 @@
 
 #include <glaze/glaze.hpp>  // IWYU pragma: export
 
-namespace cct {
-
-namespace json {
+namespace cct::json {
 using glz::colwise;
 using glz::CSV;
 using glz::error_ctx;
@@ -14,6 +12,4 @@ using glz::opts;
 using glz::read;
 using glz::reflect;
 using glz::write;
-}  // namespace json
-
-}  // namespace cct
+}  // namespace cct::json

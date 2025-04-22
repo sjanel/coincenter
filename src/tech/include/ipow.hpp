@@ -30,7 +30,13 @@ constexpr int64_t ipow(int64_t base, uint8_t exp) noexcept {
 
   switch (kHighestBitSet[exp]) {
     case 255:  // we use 255 as an overflow marker and return 0 on overflow/underflow
-      return base == 1 ? 1 : (base == -1 ? (1 - 2 * (exp & 1)) : 0);
+      if (base == 1) {
+        return 1;
+      }
+      if (base != -1) {
+        return 0;
+      }
+      return 1 - (2 * (exp & 1));
     case 6:
       if ((exp & 1U) != 0) {
         result *= base;
