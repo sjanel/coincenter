@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v4.4.2.tar.gz
-    URL_HASH SHA256=5f9c8efe35491f90755ef7a9d392ddd2ac395fd2e005e3ca61b5daf54ebfc9de
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v5.1.0.tar.gz
+    URL_HASH SHA256=c91265728918f914a69a935e2d1dbca26d025170b6d338220fc83b698c913f80
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
@@ -146,8 +146,8 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.1.tar.gz
-    URL_HASH SHA256=25c843860f039a1600f232c6eb9e01e6627f7d030a2ae5e232bdd3c9205d26cc
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.2.tar.gz
+    URL_HASH SHA256=7a80896357f3e8e920e85e92633b14ba0f229c506e6f978578bdc35ba09e9a5d
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
@@ -156,8 +156,8 @@ endif()
 # JWT library
 FetchContent_Declare(
   jwt-cpp
-  URL https://github.com/Thalhammer/jwt-cpp/archive/refs/tags/v0.7.0.tar.gz
-  URL_HASH SHA256=b9eb270e3ba8221e4b2bc38723c9a1cb4fa6c241a42908b9a334daff31137406
+  URL https://github.com/Thalhammer/jwt-cpp/archive/refs/tags/v0.7.1.tar.gz
+  URL_HASH SHA256=e52f247d5e62fac5da6191170998271a70ce27f747f2ce8fde9b09f96a5375a4
 )
 
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -173,7 +173,7 @@ if(CCT_ENABLE_PROTO)
   else()
     # Check here for a new version: https://protobuf.dev/support/version-support/#cpp
     if (NOT PROTOBUF_VERSION)
-      set(PROTOBUF_VERSION v5.29.3)
+      set(PROTOBUF_VERSION v6.30.2)
     endif()
 
     message(STATUS "Configuring protobuf ${PROTOBUF_VERSION} from sources")

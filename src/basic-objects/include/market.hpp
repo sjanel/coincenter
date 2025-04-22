@@ -158,7 +158,7 @@ struct hash<::cct::Market> {
 };
 }  // namespace std
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::Market> {
   template <auto Opts, class It, class End>
@@ -177,4 +177,4 @@ struct to<JSON, ::cct::Market> {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
-}  // namespace glz::detail
+}  // namespace glz

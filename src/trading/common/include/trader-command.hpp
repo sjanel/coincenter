@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string_view>
 
 #include "orderid.hpp"
 #include "priceoptionsdef.hpp"

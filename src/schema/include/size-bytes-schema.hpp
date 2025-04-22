@@ -33,7 +33,7 @@ struct glz::meta<::cct::schema::SizeBytes> {
   static constexpr auto value{&::cct::schema::SizeBytes::sizeInBytes};
 };
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::schema::SizeBytes> {
   template <auto Opts, class It, class End>
@@ -69,4 +69,4 @@ struct to<JSON, ::cct::schema::SizeBytes> {
     }
   }
 };
-}  // namespace glz::detail
+}  // namespace glz

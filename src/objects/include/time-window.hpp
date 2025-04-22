@@ -103,7 +103,7 @@ struct fmt::formatter<cct::TimeWindow> {
 };
 #endif
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::TimeWindow> {
   template <auto Opts, class It, class End>
@@ -122,4 +122,4 @@ struct to<JSON, ::cct::TimeWindow> {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
-}  // namespace glz::detail
+}  // namespace glz
