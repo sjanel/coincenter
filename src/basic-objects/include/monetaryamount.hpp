@@ -466,7 +466,7 @@ struct hash<::cct::MonetaryAmount> {
 };
 }  // namespace std
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::MonetaryAmount> {
   template <auto Opts, class It, class End>
@@ -485,4 +485,4 @@ struct to<JSON, ::cct::MonetaryAmount> {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
-}  // namespace glz::detail
+}  // namespace glz

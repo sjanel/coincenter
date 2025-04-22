@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
@@ -16,7 +17,7 @@ struct TimePoint {
   auto operator<=>(const TimePoint &) const noexcept = default;
 
   //                             2023   -   01    -   01    T   12    :   34    :   56    Z
-  static constexpr size_t strLen() { return 4U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U; }
+  static constexpr std::size_t strLen() { return 4U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U + 2U + 1U; }
 
   char *appendTo(char *buf) const { return std::ranges::copy(TimeToString(ts), buf).out; }
 
@@ -39,7 +40,7 @@ struct glz::meta<::cct::schema::TimePoint> {
   static constexpr auto value{&::cct::schema::TimePoint::ts};
 };
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::schema::TimePoint> {
   template <auto Opts, class It, class End>
@@ -58,4 +59,4 @@ struct to<JSON, ::cct::schema::TimePoint> {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };
-}  // namespace glz::detail
+}  // namespace glz

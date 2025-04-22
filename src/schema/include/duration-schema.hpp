@@ -35,7 +35,7 @@ struct glz::meta<::cct::schema::Duration> {
   static constexpr auto value{&::cct::schema::Duration::duration};
 };
 
-namespace glz::detail {
+namespace glz {
 template <>
 struct from<JSON, ::cct::schema::Duration> {
   template <auto Opts, class It, class End>
@@ -72,4 +72,4 @@ struct to<JSON, ::cct::schema::Duration> {
     }
   }
 };
-}  // namespace glz::detail
+}  // namespace glz
