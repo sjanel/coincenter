@@ -4,16 +4,31 @@
 
 namespace cct {
 
-TEST(MathHelpers, Power) {
+TEST(MathHelpers, PowerPositiveBase) {
+  EXPECT_EQ(ipow(0, 0), 1);
+  EXPECT_EQ(ipow(0, 2), 0);
+  EXPECT_EQ(ipow(1, 0), 1);
+  EXPECT_EQ(ipow(1, 23), 1);
+  EXPECT_EQ(ipow(1, 24), 1);
   EXPECT_EQ(ipow(3, 2), 9);
   EXPECT_EQ(ipow(4, 3), 64);
-  EXPECT_EQ(ipow(-3, 3), -27);
-  EXPECT_EQ(ipow(-2, 1), -2);
   EXPECT_EQ(ipow(17, 5), 1419857);
   EXPECT_EQ(ipow(10, 10), 10000000000LL);
-  EXPECT_EQ(ipow(-23, 13), -504036361936467383LL);
+  EXPECT_EQ(ipow(0, 0), 1);
 
   static_assert(ipow(5, 3) == 125);
+}
+
+TEST(MathHelpers, PowerNegativeBase) {
+  EXPECT_EQ(ipow(-1, 0), 1);
+  EXPECT_EQ(ipow(-1, 2), 1);
+  EXPECT_EQ(ipow(-1, 3), -1);
+  EXPECT_EQ(ipow(-1, 32), 1);
+  EXPECT_EQ(ipow(-1, 33), -1);
+  EXPECT_EQ(ipow(-2, 1), -2);
+  EXPECT_EQ(ipow(-3, 3), -27);
+  EXPECT_EQ(ipow(-23, 13), -504036361936467383LL);
+
   static_assert(ipow(-7, 0) == 1);
 }
 

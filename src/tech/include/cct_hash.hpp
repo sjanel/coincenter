@@ -20,12 +20,14 @@ constexpr uint64_t HashValue64(uint64_t h1) {
 constexpr std::size_t HashCombine(std::size_t h1, std::size_t h2) {
   // Taken from boost::hash_combine
   static_assert(sizeof(std::size_t) == 4 || sizeof(std::size_t) == 8, "HashCombine not defined for this std::size_t");
+
   if constexpr (sizeof(std::size_t) == 4) {
     h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
   } else {
     // see https://github.com/HowardHinnant/hash_append/issues/7
     h1 ^= h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 4);
   }
+
   return h1;
 }
 

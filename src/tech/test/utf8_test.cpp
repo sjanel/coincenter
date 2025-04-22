@@ -10,11 +10,11 @@
 namespace cct {
 
 TEST(UTF8Test, ToUTF8) {
-  EXPECT_EQ(std::string_view(to_utf8(0x24)), "$");
-  EXPECT_EQ(std::string_view(to_utf8(0xA2)), "¢");
-  EXPECT_EQ(std::string_view(to_utf8(0x20AC)), "€");
-  EXPECT_EQ(std::string_view(to_utf8(0x10348)), "𐍈");
-  EXPECT_EQ(std::string_view(to_utf8(0x1F600)), "😀");
+  EXPECT_EQ(std::string_view(to_utf8_vector(0x24)), "$");
+  EXPECT_EQ(std::string_view(to_utf8_vector(0xA2)), "¢");
+  EXPECT_EQ(std::string_view(to_utf8_vector(0x20AC)), "€");
+  EXPECT_EQ(std::string_view(to_utf8_vector(0x10348)), "𐍈");
+  EXPECT_EQ(std::string_view(to_utf8_vector(0x1F600)), "😀");
 }
 
 namespace {

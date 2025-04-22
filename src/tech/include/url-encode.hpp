@@ -16,7 +16,7 @@ string URLEncode(std::span<const char> data, IsNotEncodedFunc isNotEncodedFunc) 
   const auto nbNotEncodedChars = std::ranges::count_if(data, isNotEncodedFunc);
   const auto nbEncodedChars = data.size() - nbNotEncodedChars;
 
-  string ret(nbNotEncodedChars + 3U * nbEncodedChars, '\0');
+  string ret(nbNotEncodedChars + (3U * nbEncodedChars), '\0');
 
   char* outCharIt = ret.data();
   for (char ch : data) {

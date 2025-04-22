@@ -18,10 +18,10 @@ class FlatKeyValueStringIterator {
     auto valLen() const { return _endValue - _begValue; }
 
     /// Access to the key of this iterator value
-    std::string_view key() const { return {_begKey, static_cast<std::string_view::size_type>(keyLen())}; }
+    [[nodiscard]] std::string_view key() const { return {_begKey, static_cast<std::string_view::size_type>(keyLen())}; }
 
     /// Access to the value of this iterator value
-    std::string_view val() const { return {_begValue, _endValue}; }
+    [[nodiscard]] std::string_view val() const { return {_begValue, _endValue}; }
 
     /// Get the total size of the key value pair of this iterator value
     auto size() const { return _endValue - _begKey; }
