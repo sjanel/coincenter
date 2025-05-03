@@ -208,7 +208,7 @@ OutputType ParseOrderBooks(const schema::upbit::V1Orderbooks& result, int depth)
       orderBookLines.pushAsk(askVol, askPri);
       orderBookLines.pushBid(bidVol, bidPri);
     }
-    if (static_cast<int>(orderBookLines.size() / 2) < depth) {
+    if (std::cmp_less(orderBookLines.size() / 2, depth)) {
       log::warn("Upbit does not support orderbook depth larger than {}", orderBookLines.size() / 2);
     }
     if constexpr (std::is_same_v<OutputType, MarketOrderBookMap>) {

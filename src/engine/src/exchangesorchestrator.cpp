@@ -788,9 +788,9 @@ TradeResultPerExchange ExchangesOrchestrator::smartSell(MonetaryAmount startAmou
           }
           MarketsPath path = pExchange->apiPublic().findMarketsPath(fromCurrency, toCurrency, markets, fiats,
                                                                     api::ExchangePublic::MarketPathMode::kStrict);
-          if (static_cast<int>(path.size()) > nbSteps) {
+          if (std::cmp_greater(path.size(), nbSteps)) {
             continuingHigherStepsPossible = true;
-          } else if (static_cast<int>(path.size()) == nbSteps) {
+          } else if (std::cmp_equal(path.size(), nbSteps)) {
             MonetaryAmount fromAmount = avAmount;
             if (fromAmount > remStartAmount) {
               fromAmount = remStartAmount;

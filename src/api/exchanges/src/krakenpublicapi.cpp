@@ -227,12 +227,13 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
   const auto time = Clock::now();
   for (const auto& [krakenAssetPair, assetPairDetails] : result.result) {
-    if (krakenAssetPairToStdMarketMap.find(krakenAssetPair) == krakenAssetPairToStdMarketMap.end()) {
+    auto it = krakenAssetPairToStdMarketMap.find(krakenAssetPair);
+    if (it == krakenAssetPairToStdMarketMap.end()) {
       log::error("Unable to find {}", krakenAssetPair);
       continue;
     }
 
-    Market mk = krakenAssetPairToStdMarketMap.find(krakenAssetPair)->second;
+    Market mk = it->second;
     mk =
         Market(_coincenterInfo.standardizeCurrencyCode(mk.base()), _coincenterInfo.standardizeCurrencyCode(mk.quote()));
     //  a = ask array(<price>, <whole lot volume>, <lot volume>)

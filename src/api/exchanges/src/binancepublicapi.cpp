@@ -139,7 +139,7 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
   MarketVector markets;
   markets.reserve(static_cast<MarketSet::size_type>(exchangeInfoData.size()));
 
-  for (const auto& [mk, _] : exchangeInfoData) {
+  for (const auto& [mk, symbol] : exchangeInfoData) {
     if (excludedCurrencies.contains(mk.base()) || excludedCurrencies.contains(mk.quote())) {
       continue;
     }

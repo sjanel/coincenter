@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <span>
 #include <string_view>
+#include <utility>
 
 #include "cct_exception.hpp"
 
@@ -34,13 +35,11 @@ AlgorithmNameIterator::AlgorithmNameIterator(std::string_view algorithmNames,
 }
 
 bool AlgorithmNameIterator::hasNext() const {
-  using PosT = decltype(_begPos);
-
   if (_algorithmNames.empty()) {
-    return _begPos < static_cast<PosT>(_allAlgorithms.size());
+    return std::cmp_less(_begPos, _allAlgorithms.size());
   }
 
-  return _begPos != static_cast<PosT>(_algorithmNames.length());
+  return std::cmp_not_equal(_begPos, _algorithmNames.length());
 }
 
 std::string_view AlgorithmNameIterator::next() {
@@ -50,7 +49,7 @@ std::string_view AlgorithmNameIterator::next() {
 
   std::string_view nextAlgorithmName(_algorithmNames.begin() + _begPos, _algorithmNames.begin() + _endPos);
 
-  if (_endPos == static_cast<decltype(_begPos)>(_algorithmNames.length())) {
+  if (std::cmp_equal(_endPos, _algorithmNames.length())) {
     _begPos = _endPos;
   } else {
     _begPos = _endPos + kAlgorithmNameSeparator.length();
