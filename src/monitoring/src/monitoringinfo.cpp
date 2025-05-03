@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <string_view>
+#include <utility>
 
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_log.hpp"
@@ -16,7 +17,7 @@ MonitoringInfo::MonitoringInfo(bool useMonitoring, std::string_view jobName, std
       _username(username),
       _password(password),
       _port(useMonitoring ? static_cast<uint16_t>(port) : 0U) {
-  if (port < 0 || port > static_cast<int>(std::numeric_limits<uint16_t>::max())) {
+  if (port < 0 || std::cmp_less(std::numeric_limits<uint16_t>::max(), port)) {
     throw invalid_argument("Invalid port value {}", port);
   }
   if (useMonitoring) {

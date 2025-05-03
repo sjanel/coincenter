@@ -23,7 +23,8 @@ constexpr const char* const kUnicodeStr1 =
     "\\uc720\\ud6a8\\ud569\\ub2c8\\ub2e4.";
 constexpr const char* const kExpectedStr1 = "EOS 수량은 소수점 8자리까지만 유효합니다.";
 
-constexpr const char* const kUnicodeStr2 = "\ucd5c\uc18c \uc8fc\ubb38\uae08\uc561\uc740 5000 KRW \uc785\ub2c8\ub2e4.";
+constexpr const char* const kUnicodeStr2 =
+    "\\ucd5c\\uc18c \\uc8fc\\ubb38\\uae08\\uc561\\uc740 5000 KRW \\uc785\\ub2c8\\ub2e4.";
 constexpr const char* const kExpectedStr2 = "최소 주문금액은 5000 KRW 입니다.";
 
 }  // namespace

@@ -5,7 +5,9 @@
 #include <cstddef>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
+#include "cct_config.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json.hpp"
 #include "static_string_view_helpers.hpp"
@@ -35,7 +37,7 @@ constexpr EnumT EnumFromString(std::string_view str) {
     std::size_t idx;
   };
 
-  static constexpr auto kSortedKeys = []() {
+  CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC auto kSortedKeys = []() {
     auto keys = json::reflect<EnumT>::keys;
 
     std::array<KeyIdx, std::size(keys)> sortedKeys;
@@ -51,10 +53,10 @@ constexpr EnumT EnumFromString(std::string_view str) {
                                  return CaseInsensitive ? CaseInsensitiveLess(lhs.key, rhs.key) : lhs.key < rhs.key;
                                }) -
       std::begin(kSortedKeys);
-  if (pos == std::size(kSortedKeys) ||
+  if (std::cmp_equal(pos, std::size(kSortedKeys)) ||
       (CaseInsensitive ? !CaseInsensitiveEqual(kSortedKeys[pos].key, str) : kSortedKeys[pos].key != str)) {
     static constexpr std::string_view kSep = "|";
-    static constexpr std::string_view kConcatenatedKeys =
+    CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC std::string_view kConcatenatedKeys =
         make_joined_string_view<kSep, json::reflect<EnumT>::keys>::value;
 
     throw invalid_argument("Bad enum value {} among {}", str, kConcatenatedKeys);

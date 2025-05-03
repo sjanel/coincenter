@@ -16,13 +16,7 @@ if(CCT_ENABLE_PROTO)
 
   target_include_directories(coincenter_serialization PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-  target_link_libraries(coincenter_serialization PUBLIC ${Protobuf_LIBRARIES})
-
-  if(MSVC)
-    # Not sure why it's needed for Windows.
-    target_link_libraries(libprotobuf PUBLIC ZLIB::ZLIB)
-  endif()
-  target_link_libraries(coincenter_serialization PUBLIC ZLIB::ZLIB)
+  target_link_libraries(coincenter_serialization PUBLIC protobuf::libprotobuf ZLIB::ZLIB)
 
   protobuf_generate(
     TARGET coincenter_serialization
