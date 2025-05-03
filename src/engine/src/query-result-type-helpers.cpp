@@ -23,7 +23,7 @@ bool ContainsMarket(Market market, const MarketTimestampSets &marketTimestampSet
 
 MarketSet ComputeAllMarkets(const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
   MarketSet allMarkets;
-  for (const auto &[_, marketTimestamps] : marketTimestampSetsPerExchange) {
+  for (const auto &[exchange, marketTimestamps] : marketTimestampSetsPerExchange) {
     std::ranges::transform(marketTimestamps.orderBooksMarkets, std::inserter(allMarkets, allMarkets.end()),
                            [](const auto &marketTimestamp) { return marketTimestamp.market; });
     std::ranges::transform(marketTimestamps.tradesMarkets, std::inserter(allMarkets, allMarkets.end()),

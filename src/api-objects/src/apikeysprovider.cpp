@@ -10,6 +10,7 @@
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
+#include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "exchangename.hpp"
 #include "exchangesecretsinfo.hpp"

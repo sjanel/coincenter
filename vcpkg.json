@@ -2,6 +2,12 @@
   "dependencies": [
     "openssl",
     "zlib",
-    "curl"
+    "curl",
+    {
+      "name": "protobuf",
+      "features": [
+        "zlib"
+      ]
+    }
   ]
 }

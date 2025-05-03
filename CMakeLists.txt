@@ -209,7 +209,6 @@ if(CCT_ENABLE_PROTO)
     list(APPEND fetchContentPackagesToMakeAvailable protobuf)
 
     set(PROTOBUF_FETCHED_CONTENT ON)
-    set(Protobuf_LIBRARIES "protobuf::libprotobuf")
   endif()
 endif()
 

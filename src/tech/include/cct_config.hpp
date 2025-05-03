@@ -32,12 +32,16 @@
 #ifdef CCT_MSVC
 #define CCT_ALWAYS_INLINE __forceinline
 #define CCT_NOINLINE __declspec(noinline)
+// MSVC does not implement P2647R1 yet
+#define CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC constexpr
 #elif defined(__GNUC__)
 #define CCT_ALWAYS_INLINE inline __attribute__((__always_inline__))
 #define CCT_NOINLINE __attribute__((__noinline__))
+#define CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC static constexpr
 #else
 #define CCT_ALWAYS_INLINE inline
 #define CCT_NOINLINE
+#define CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC static constexpr
 #endif
 
 #define CCT_STRINGIFY(x) #x
