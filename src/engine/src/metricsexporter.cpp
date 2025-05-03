@@ -62,10 +62,10 @@ void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerE
 void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) {
   RETURN_IF_NO_MONITORING;
   MetricKey key;
-  for (const auto &[e, marketOrderBookMap] : marketOrderBookMaps) {
+  for (const auto &[exchange, marketOrderBookMap] : marketOrderBookMaps) {
     key.set(kMetricNameKey, "limit_price");
     key.set(kMetricHelpKey, "Best bids and asks prices");
-    key.set("exchange", e->name());
+    key.set("exchange", exchange->name());
     for (const auto &[mk, marketOrderbook] : marketOrderBookMap) {
       key.set("market", mk.assetsPairStrLower('-'));
       key.set("side", "ask");
@@ -119,13 +119,13 @@ void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTrade
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
 
-  for (const auto &[e, lastTrades] : lastTradesPerExchange) {
+  for (const auto &[exchange, lastTrades] : lastTradesPerExchange) {
     if (lastTrades.empty()) {
       continue;
     }
     Market mk = lastTrades.front().market();
     key.set("market", mk.assetsPairStrLower('-'));
-    key.set("exchange", e->name());
+    key.set("exchange", exchange->name());
 
     std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};
     std::array<MonetaryAmount, 2> totalPrices{MonetaryAmount(0, mk.quote()), MonetaryAmount(0, mk.quote())};
@@ -153,9 +153,9 @@ void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTrade
 }
 
 void MetricsExporter::createSummariesAndHistograms() {
-  for (const auto &[k, v] : CurlMetrics::kRequestDurationKeys) {
+  for (const auto &[requestType, metricKey] : CurlMetrics::kRequestDurationKeys) {
     static constexpr std::array kRequestDurationBoundariesMs = {5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0};
-    _pMetricsGateway->createHistogram(v, kRequestDurationBoundariesMs);
+    _pMetricsGateway->createHistogram(metricKey, kRequestDurationBoundariesMs);
   }
 }
 }  // namespace cct

@@ -813,7 +813,7 @@ void QueryResultPrinter::printCurrencies(const CurrenciesPerExchange &currencies
       // Compute all currencies for all exchanges
       CurrencyCodeVector allCurrencyCodes;
 
-      for (const auto &[_, currencies] : currenciesPerExchange) {
+      for (const auto &[exchange, currencies] : currenciesPerExchange) {
         allCurrencyCodes.insert(allCurrencyCodes.end(), currencies.begin(), currencies.end());
       }
 

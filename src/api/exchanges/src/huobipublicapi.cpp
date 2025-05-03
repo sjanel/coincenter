@@ -483,11 +483,11 @@ PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
 
       ret.emplace_back(tradeSide, amount, price, TimePoint(milliseconds(millisecondsSinceEpoch)));
 
-      if (static_cast<int>(ret.size()) == nbTrades) {
+      if (std::cmp_equal(ret.size(), nbTrades)) {
         break;
       }
     }
-    if (static_cast<int>(ret.size()) == nbTrades) {
+    if (std::cmp_equal(ret.size(), nbTrades)) {
       break;
     }
   }
