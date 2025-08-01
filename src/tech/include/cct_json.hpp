@@ -9,6 +9,7 @@ using glz::error_ctx;
 using glz::format_error;
 using glz::meta;
 using glz::opts;
+using glz::opts_csv;
 using glz::read;
 using glz::reflect;
 using glz::write;

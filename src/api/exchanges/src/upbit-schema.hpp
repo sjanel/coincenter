@@ -38,10 +38,10 @@ std::pair<T, Error> GetOrValueInitialized(
               if constexpr (std::is_same_v<V, Error>) {
                 std::string_view msg = arg.error.message;
                 std::visit(
-                    [msg](auto&& arg) {
-                      using U = std::decay_t<decltype(arg)>;
+                    [msg](auto&& localArg) {
+                      using U = std::decay_t<decltype(localArg)>;
                       if constexpr (std::is_same_v<U, int64_t> || std::is_same_v<U, string>) {
-                        log::warn("Upbit error ({}, '{}')", arg, msg);
+                        log::warn("Upbit error ({}, '{}')", localArg, msg);
                       } else {
                         static_assert(std::is_same_v<U, int64_t> || std::is_same_v<U, string>,
                                       "non-exhaustive visitor!");
@@ -64,9 +64,9 @@ std::pair<T, Error> GetOrValueInitialized(
       [](auto&& arg) -> std::pair<T, Error> {
         using V = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<V, Error>) {
-          return {T{}, std::move(arg)};
+          return {T{}, std::forward<decltype(arg)>(arg)};
         } else if constexpr (std::is_same_v<V, T>) {
-          return {std::move(arg), Error{}};
+          return {std::forward<decltype(arg)>(arg), Error{}};
         } else {
           static_assert(std::is_same_v<V, Error> || std::is_same_v<V, T>, "non-exhaustive visitor!");
         }
@@ -231,12 +231,7 @@ struct V1Deposit {
 
   enum class State : int8_t { PROCESSING, REFUNDING, ACCEPTED, CANCELLED, REJECTED, TRAVEL_RULE_SUSPECTED, REFUNDED };
 
-  std::string_view timeStr() const {
-    if (done_at) {
-      return *done_at;
-    }
-    return created_at;
-  }
+  [[nodiscard]] std::string_view timeStr() const { return done_at ? *done_at : created_at; }
 
   string currency;
   string txid;
@@ -259,12 +254,7 @@ struct V1Withdraw {
   // Let's support both spellings to avoid issues.
   enum class State : int8_t { WAITING, PROCESSING, DONE, FAILED, CANCELLED, CANCELED, REJECTED };
 
-  std::string_view timeStr() const {
-    if (done_at) {
-      return *done_at;
-    }
-    return created_at;
-  }
+  [[nodiscard]] std::string_view timeStr() const { return done_at ? *done_at : created_at; }
 
   string currency;
   string txid;

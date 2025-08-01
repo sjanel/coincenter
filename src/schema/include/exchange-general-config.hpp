@@ -9,8 +9,10 @@ namespace cct::schema {
 namespace details {
 template <bool Optional>
 struct ExchangeGeneralConfig {
-  template <class T, std::enable_if_t<std::is_same_v<T, ExchangeGeneralConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  template <class T>
+  void mergeWith(const T &other)
+    requires(std::is_same_v<T, ExchangeGeneralConfig<true>> && !Optional)
+  {
     if (other.enabled) {
       enabled = *other.enabled;
     }

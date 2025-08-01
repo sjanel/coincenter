@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <type_traits>
 
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -20,6 +21,11 @@ class ExchangeConfigTest : public ::testing::Test {
     [[nodiscard]] string readAll() const override {
       return R"(
 {
+  "general": {
+    "default": {
+      "enabled": true
+    }
+  },
   "asset": {
     "default": {
       "allExclude": [],
@@ -179,9 +185,9 @@ TEST_F(ExchangeConfigTest, DirectRead) {
   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   EXPECT_EQ(exchangeConfigOptional.query.def.http->timeout->duration, std::chrono::seconds(15));
   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-  EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsCall, log::level::level_enum::info);
+  EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsCall, LogLevel::info);
   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-  EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsAnswer, log::level::level_enum::trace);
+  EXPECT_EQ(exchangeConfigOptional.query.def.logLevels->requestsAnswer, LogLevel::trace);
   EXPECT_EQ(exchangeConfigOptional.query.def.marketDataSerialization, true);
   EXPECT_EQ(exchangeConfigOptional.query.def.multiTradeAllowedByDefault, false);
   EXPECT_EQ(exchangeConfigOptional.query.def.placeSimulateRealOrder, false);

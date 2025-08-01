@@ -38,15 +38,27 @@ TEST(UnitsParser, ParseNumberOfBytesInvalidInput) {
 }
 
 TEST(UnitsParser, BytesToStrBufferTooSmall) {
-  char buf[3];
-  EXPECT_THROW(BytesToStr(123456789, buf), exception);
+  char buf[6];
+  EXPECT_THROW(BytesToBuffer(123456789, buf), exception);
 }
 
-TEST(UnitsParser, BytesToStrNominalCase) {
+TEST(UnitsParser, BytesToBufferNominalCase) {
   char buf[20];
-  auto resultBuf = BytesToStr(1060858233000, buf);
+  auto resultBuf = BytesToBuffer(1060858233000, buf);
   std::string_view resultStr = std::string_view(resultBuf.data(), resultBuf.size());
   EXPECT_EQ(resultStr, "988Gi1Mi256Ki168");
+}
+
+TEST(UnitsParser, BytesToStr) {
+  EXPECT_EQ(BytesToStr(-262144), "-256Ki");
+  EXPECT_EQ(BytesToStr(3145728), "3Mi");
+  EXPECT_EQ(BytesToStr(1060858233000), "988Gi1Mi256Ki168");
+}
+
+TEST(UnitsParser, BytesToStrLen) {
+  EXPECT_EQ(BytesToStrLen(-262144), 6);
+  EXPECT_EQ(BytesToStrLen(3145728), 3);
+  EXPECT_EQ(BytesToStrLen(1060858233000), 16);
 }
 
 }  // namespace cct

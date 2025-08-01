@@ -14,6 +14,7 @@
 #include "cct_hash.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "cct_json.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "generic-object-json.hpp"
 #include "toupperlower.hpp"
@@ -168,8 +169,10 @@ class CurrencyCode {
   constexpr CurrencyCode() noexcept : _data() {}
 
   /// Constructs a currency code from a char array.
-  template <unsigned N, std::enable_if_t<N <= kMaxLen + 1U, bool> = true>
-  constexpr CurrencyCode(const char (&acronym)[N]) : _data(CurrencyCodeBase::StrToBmp(acronym)) {}
+  template <unsigned N>
+  constexpr CurrencyCode(const char (&acronym)[N])
+    requires(N <= kMaxLen + 1U)
+      : _data(CurrencyCodeBase::StrToBmp(acronym)) {}
 
   /// Constructs a currency code from given string.
   /// If number of chars in 'acronym' is higher than 'kMaxLen', exception will be raised.
@@ -184,13 +187,13 @@ class CurrencyCode {
   /// Constructs a currency code from 'sz' chars, all set to 'ch'.
   constexpr CurrencyCode(size_type sz, char ch) : _data() { resize(sz, ch); }
 
-  constexpr const_iterator begin() const noexcept { return const_iterator(_data); }
-  constexpr const_iterator end() const noexcept { return const_iterator(_data, size()); }
+  [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator(_data); }
+  [[nodiscard]] constexpr const_iterator end() const noexcept { return const_iterator(_data, size()); }
 
-  constexpr const_iterator cbegin() const noexcept { return begin(); }
-  constexpr const_iterator cend() const noexcept { return end(); }
+  [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
+  [[nodiscard]] constexpr const_iterator cend() const noexcept { return end(); }
 
-  constexpr size_type size() const noexcept {
+  [[nodiscard]] constexpr size_type size() const noexcept {
     size_type count = kMaxLen;
     size_type first{};
     while (count != 0) {
@@ -207,7 +210,7 @@ class CurrencyCode {
     return first;
   }
 
-  constexpr size_type strLen() const noexcept { return size(); }
+  [[nodiscard]] constexpr size_type strLen() const noexcept { return size(); }
 
   /// Resizes the currency code to a length of 'newSize'.
   /// If 'newSize' is greater than 'kMaxLen', exception will be raised.
@@ -232,10 +235,10 @@ class CurrencyCode {
 
   constexpr void assign(const char *buf, size_type sz) { *this = CurrencyCode(std::string_view(buf, sz)); }
 
-  constexpr size_type length() const noexcept { return size(); }
+  [[nodiscard]] constexpr size_type length() const noexcept { return size(); }
 
   /// Get a string of this CurrencyCode, trimmed.
-  string str() const {
+  [[nodiscard]] string str() const {
     string ret;
     appendStrTo(ret);
     return ret;
@@ -243,7 +246,7 @@ class CurrencyCode {
 
   /// Return true if this currency code acronym is equal to given string.
   /// Comparison is case insensitive.
-  constexpr bool iequal(std::string_view curStr) const {
+  [[nodiscard]] constexpr bool iequal(std::string_view curStr) const {
     if (curStr.size() > kMaxLen) {
       return false;
     }
@@ -282,11 +285,11 @@ class CurrencyCode {
   }
 
   /// Returns a 64 bits code
-  constexpr uint64_t code() const noexcept { return _data; }
+  [[nodiscard]] constexpr uint64_t code() const noexcept { return _data; }
 
-  constexpr bool isDefined() const noexcept { return (_data & CurrencyCodeBase::kFirstCharMask) != 0; }
+  [[nodiscard]] constexpr bool isDefined() const noexcept { return (_data & CurrencyCodeBase::kFirstCharMask) != 0; }
 
-  constexpr bool isNeutral() const noexcept { return !isDefined(); }
+  [[nodiscard]] constexpr bool isNeutral() const noexcept { return !isDefined(); }
 
   constexpr char operator[](uint32_t pos) const noexcept {
     return CurrencyCodeBase::CharAt(_data, static_cast<int>(pos));
@@ -324,7 +327,9 @@ class CurrencyCode {
 
   explicit constexpr CurrencyCode(uint64_t data) : _data(data) {}
 
-  constexpr bool isLongCurrencyCode() const noexcept { return (_data & CurrencyCodeBase::kBeforeLastCharMask) != 0; }
+  [[nodiscard]] constexpr bool isLongCurrencyCode() const noexcept {
+    return (_data & CurrencyCodeBase::kBeforeLastCharMask) != 0;
+  }
 
   constexpr void uncheckedSetAdditionalBits(int8_t data) noexcept {
     // For currency codes whose length is > 8, only 15 digits are supported
@@ -332,16 +337,16 @@ class CurrencyCode {
     _data = static_cast<uint64_t>(data) + (_data & (~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode())));
   }
 
-  constexpr int8_t getAdditionalBits() const noexcept {
+  [[nodiscard]] constexpr int8_t getAdditionalBits() const noexcept {
     return static_cast<int8_t>(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
-  constexpr CurrencyCode toNeutral() const {
+  [[nodiscard]] constexpr CurrencyCode toNeutral() const {
     // keep number of decimals
     return CurrencyCode(_data & CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }
 
-  constexpr CurrencyCode withNoDecimalsPart() const {
+  [[nodiscard]] constexpr CurrencyCode withNoDecimalsPart() const {
     // Keep currency, not decimals
     return CurrencyCode(_data & ~CurrencyCodeBase::DecimalsMask(isLongCurrencyCode()));
   }

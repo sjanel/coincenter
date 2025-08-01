@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "stringconv.hpp"
 
 namespace cct {
@@ -58,38 +59,78 @@ int64_t ParseNumberOfBytes(std::string_view sizeStr) {
   return totalNbBytes;
 }
 
-std::span<char> BytesToStr(int64_t numberOfBytes, std::span<char> buf) {
-  static constexpr std::pair<int64_t, std::string_view> kUnits[] = {
-      {static_cast<int64_t>(1024) * 1024 * 1024 * 1024, "Ti"},
-      {static_cast<int64_t>(1024) * 1024 * 1024, "Gi"},
-      {static_cast<int64_t>(1024) * 1024, "Mi"},
-      {static_cast<int64_t>(1024), "Ki"},
-      {static_cast<int64_t>(1), ""}};
+namespace {
+constexpr std::pair<int64_t, std::string_view> kBytesUnits[] = {{static_cast<int64_t>(1024) * 1024 * 1024 * 1024, "Ti"},
+                                                                {static_cast<int64_t>(1024) * 1024 * 1024, "Gi"},
+                                                                {static_cast<int64_t>(1024) * 1024, "Mi"},
+                                                                {static_cast<int64_t>(1024), "Ki"},
+                                                                {static_cast<int64_t>(1), ""}};
+}
 
+std::span<char> BytesToBuffer(int64_t numberOfBytes, std::span<char> buf, int nbSignificantUnits) {
   char *begBuf = buf.data();
-
   char *endBuf = begBuf + buf.size();
 
-  for (int unitPos = 0; numberOfBytes > 0; ++unitPos) {
-    int64_t nbUnits = numberOfBytes / kUnits[unitPos].first;
+  if (numberOfBytes < 0) {
+    *begBuf = '-';
+    ++begBuf;
+
+    numberOfBytes = -numberOfBytes;
+  }
+
+  for (int unitPos = 0; numberOfBytes > 0 && nbSignificantUnits > 0; ++unitPos) {
+    int64_t nbUnits = numberOfBytes / kBytesUnits[unitPos].first;
 
     if (nbUnits != 0) {
-      numberOfBytes %= kUnits[unitPos].first;
+      numberOfBytes %= kBytesUnits[unitPos].first;
 
       auto [ptr, errc] = std::to_chars(begBuf, endBuf, nbUnits);
       if (errc != std::errc()) {
         throw exception("Unable to decode integral into string");
       }
 
-      if (ptr + kUnits[unitPos].second.size() >= endBuf) {
+      if (ptr + kBytesUnits[unitPos].second.size() > endBuf) {
         throw exception("Buffer too small for number of bytes string representation");
       }
 
-      begBuf = std::ranges::copy(kUnits[unitPos].second, ptr).out;
+      begBuf = std::ranges::copy(kBytesUnits[unitPos].second, ptr).out;
+
+      --nbSignificantUnits;
     }
   }
 
   return {buf.data(), begBuf};
+}
+
+int64_t BytesToStrLen(int64_t numberOfBytes, int nbSignificantUnits) {
+  int64_t len = 0;
+
+  if (numberOfBytes < 0) {
+    ++len;
+    numberOfBytes = -numberOfBytes;
+  }
+  for (int unitPos = 0; numberOfBytes > 0 && nbSignificantUnits > 0; ++unitPos) {
+    int64_t nbUnits = numberOfBytes / kBytesUnits[unitPos].first;
+
+    if (nbUnits != 0) {
+      numberOfBytes %= kBytesUnits[unitPos].first;
+
+      auto intStr = IntegralToCharVector(nbUnits);
+
+      len += intStr.size();
+      len += kBytesUnits[unitPos].second.size();
+
+      --nbSignificantUnits;
+    }
+  }
+
+  return len;
+}
+
+string BytesToStr(int64_t numberOfBytes, int nbSignificantUnits) {
+  string ret(BytesToStrLen(numberOfBytes, nbSignificantUnits), '\0');
+  BytesToBuffer(numberOfBytes, ret, nbSignificantUnits);
+  return ret;
 }
 
 }  // namespace cct

@@ -5,10 +5,12 @@
 #include <functional>
 #include <tuple>
 
+#include "cct_config.hpp"
+
 namespace cct {
 constexpr uint64_t HashValue64(uint64_t h1) {
   // Murmur-inspired hashing.
-  constexpr uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  CCT_STATIC_CONSTEXPR_IN_CONSTEXPR_FUNC uint64_t kMul = 0x9ddfea08eb382d69ULL;
   h1 *= kMul;
   h1 ^= (h1 >> 44);
   h1 *= kMul;
