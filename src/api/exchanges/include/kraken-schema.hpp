@@ -82,7 +82,6 @@ struct Depth {
 
   struct Result {
     using Item = std::variant<int64_t, string>;
-
     using Data = std::array<Item, 3>;
 
     vector<Data> asks;
@@ -95,11 +94,10 @@ struct Depth {
 // https://docs.kraken.com/api/docs/rest-api/get-recent-trades
 
 struct Trades {
-  vector<string> error;
-
   using Item = std::variant<double, string>;
-
   using Data = vector<std::array<Item, 7>>;
+
+  vector<string> error;
 
   std::unordered_map<string, std::variant<Data, string>> result;
 };
@@ -118,13 +116,14 @@ struct PrivateBalance {
 
 struct DepositMethods {
   vector<string> error;
-  struct Data {
-    string method;
-    string minimum;
 
+  struct Data {
     using trivially_relocatable = is_trivially_relocatable<string>::type;
 
     auto operator<=>(const Data&) const = default;
+
+    string method;
+    string minimum;
   };
 
   vector<Data> result;
@@ -136,13 +135,13 @@ struct DepositAddresses {
   vector<string> error;
 
   struct Result {
-    string address;
-    std::variant<string, int64_t> tag;
-    std::variant<string, int64_t> memo;
-
     using trivially_relocatable = is_trivially_relocatable<string>::type;
 
     auto operator<=>(const Result&) const = default;
+
+    string address;
+    std::variant<string, int64_t> tag;
+    std::variant<string, int64_t> memo;
   };
 
   vector<Result> result;

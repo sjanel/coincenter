@@ -36,6 +36,10 @@ struct ExchangeConfigDefault {
           "BQX"
         ]
       },
+      "bithumb": {
+        "allExclude": [
+        ]
+      },
       "kraken": {
         "withdrawExclude": [
           "KFEE"
@@ -150,6 +154,11 @@ struct ExchangeConfigDefault {
   /// ExchangeInfos for tests only. Some tests rely on provided values so changing them may make them fail.
   static constexpr std::string_view kTest = R"(
 {
+  "general": {
+    "default": {
+      "enabled": true
+    }
+  },
   "asset": {
     "default": {
       "preferredPaymentCurrencies": [

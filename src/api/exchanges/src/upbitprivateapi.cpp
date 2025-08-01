@@ -102,8 +102,8 @@ std::pair<T, schema::upbit::Error> PrivateQuery(CurlHandle& curlHandle, const AP
       curlHandle, std::move(opts),
       QueryRetryPolicy{.initialRetryDelay = seconds{1}, .exponentialBackoff = 1.5, .nbMaxRetries = nbMaxRetries});
 
-  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint, [&apiKey](CurlOptions& opts) {
-    opts.mutableHttpHeaders().set_back("Authorization", ComputeAuthToken(apiKey, opts.postData()));
+  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint, [&apiKey](CurlOptions& curlOptions) {
+    curlOptions.mutableHttpHeaders().set_back("Authorization", ComputeAuthToken(apiKey, curlOptions.postData()));
   });
 }
 }  // namespace

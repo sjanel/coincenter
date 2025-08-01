@@ -6,8 +6,10 @@
 #include <variant>
 
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "market.hpp"
+#include "monetaryamount.hpp"
 #include "timepoint-schema.hpp"
 
 namespace cct::schema::bithumb {
@@ -41,12 +43,12 @@ struct V1AssetStatus {
 
 struct V1NetworkInfo {
   struct CurrencyData {
-    CurrencyCode net_type;
-    string net_name;
-
     auto operator<=>(const CurrencyData&) const = default;
 
     using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    string net_type;
+    string net_name;
   };
 
   vector<CurrencyData> data;
@@ -58,10 +60,10 @@ struct V1NetworkInfo {
 
 struct OrderbookData {
   struct Order {
+    auto operator<=>(const Order&) const = default;
+
     MonetaryAmount price;
     MonetaryAmount quantity;
-
-    auto operator<=>(const Order&) const = default;
   };
 
   vector<Order> bids;
@@ -101,14 +103,14 @@ enum class TransactionTypeEnum : int8_t { bid, ask };
 
 struct TransactionHistory {
   struct Data {
+    auto operator<=>(const Data&) const = default;
+
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
     MonetaryAmount units_traded;
     MonetaryAmount price;
     TransactionTypeEnum type;
     string transaction_date;
-
-    auto operator<=>(const Data&) const = default;
-
-    using trivially_relocatable = is_trivially_relocatable<string>::type;
   };
 
   vector<Data> data;
@@ -147,6 +149,10 @@ struct InfoOrders {
   string message;
 
   struct OrderDetails {
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
+    auto operator<=>(const OrderDetails&) const = default;
+
     std::variant<string, int64_t> order_date;
     string order_id;
     CurrencyCode payment_currency;
@@ -154,10 +160,6 @@ struct InfoOrders {
     MonetaryAmount units_remaining;
     MonetaryAmount price;
     TransactionTypeEnum type;
-
-    using trivially_relocatable = is_trivially_relocatable<string>::type;
-
-    auto operator<=>(const OrderDetails&) const = default;
   };
   vector<OrderDetails> data;
 };
@@ -169,6 +171,8 @@ struct UserTransactions {
   string message;
 
   struct UserTransaction {
+    auto operator<=>(const UserTransaction&) const = default;
+
     CurrencyCode order_currency;
     CurrencyCode payment_currency;
     std::variant<string, int64_t> transfer_date;
@@ -179,8 +183,6 @@ struct UserTransactions {
     MonetaryAmount order_balance;
     MonetaryAmount payment_balance;
     CurrencyCode fee_currency;
-
-    auto operator<=>(const UserTransaction&) const = default;
   };
 
   vector<UserTransaction> data;
@@ -234,12 +236,12 @@ struct InfoOrderDetail {
 
   struct Data {
     struct Contract {
+      auto operator<=>(const Contract&) const = default;
+
       MonetaryAmount units;
       MonetaryAmount price;
       MonetaryAmount fee;
       CurrencyCode fee_currency;
-
-      auto operator<=>(const Contract&) const = default;
     };
 
     vector<Contract> contract;

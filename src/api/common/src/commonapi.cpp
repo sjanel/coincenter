@@ -156,15 +156,15 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   // data is UTF-8 encoded - but the relevant data that we will parse is ASCII normally
 
   CurrencyCSV currencies;
-  auto ec = json::read<json::opts{.format = json::CSV, .layout = json::colwise}>(currencies, data);
+  auto ec = json::read<json::opts_csv{.format = json::CSV, .layout = json::colwise}>(currencies, data);
 
   if (ec || currencies.AlphabeticCode.size() != currencies.WithdrawalDate.size()) {
     log::warn("Error parsing json data of currency codes from source 1: {}", json::format_error(ec, data));
     return fiatsVec;
   }
 
-  auto nbCurrencies = currencies.AlphabeticCode.size();
-  for (decltype(nbCurrencies) currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
+  const auto nbCurrencies = currencies.AlphabeticCode.size();
+  for (std::remove_const_t<decltype(nbCurrencies)> currencyPos = 0; currencyPos < nbCurrencies; ++currencyPos) {
     if (currencies.WithdrawalDate[currencyPos].empty() && !currencies.AlphabeticCode[currencyPos].empty()) {
       fiatsVec.emplace_back(currencies.AlphabeticCode[currencyPos]);
       log::debug("Stored {} fiat", fiatsVec.back());

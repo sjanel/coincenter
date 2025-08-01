@@ -249,13 +249,13 @@ MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
           if constexpr (std::is_same_v<T, string>) {
             // do nothing, unused field
           } else if constexpr (std::is_same_v<T, schema::bithumb::OrderbookData>) {
-            CurrencyCode base{key};
-            if (excludedCurrencies.contains(base)) {
+            CurrencyCode localBaseCur{key};
+            if (excludedCurrencies.contains(localBaseCur)) {
               // Forbidden currency, do not consider its market
-              log::trace("Discard {} excluded by config", base);
+              log::trace("Discard {} excluded by config", localBaseCur);
               return;
             }
-            Market mk(base, quote);
+            Market mk(localBaseCur, quote);
             ParseOrderBookLines(val, mk, 1, orderBookLines);
             ret[mk] = MarketOrderBook(nowTime, mk, orderBookLines);
           } else {

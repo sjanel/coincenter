@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "cct_fixedcapacityvector.hpp"
-#include "cct_string.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchange-general-config.hpp"
 #include "exchange-name-enum.hpp"

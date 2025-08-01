@@ -49,12 +49,11 @@ template <>
 struct to<JSON, ::cct::schema::SizeBytes> {
   template <auto Opts, is_context Ctx, class B, class IX>
   static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
-    char buf[30];
-    auto adjustedBuf = ::cct::BytesToStr(value.sizeInBytes, buf);
-    auto valueLen = adjustedBuf.size();
-    bool withQuotes = ::cct::details::JsonWithQuotes<Opts>(b, ix);
-    int64_t additionalSize = (withQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
-                             static_cast<int64_t>(b.size());
+    const auto adjustedBuf = ::cct::BytesToStr(value.sizeInBytes);
+    const auto valueLen = adjustedBuf.size();
+    const bool withQuotes = ::cct::details::JsonWithQuotes<Opts>(b, ix);
+    const int64_t additionalSize = (withQuotes ? 2L : 0L) + static_cast<int64_t>(ix) + static_cast<int64_t>(valueLen) -
+                                   static_cast<int64_t>(b.size());
     if (additionalSize > 0) {
       b.append(additionalSize, ' ');
     }

@@ -25,8 +25,10 @@ namespace details {
 
 template <bool Optional>
 struct ExchangeQueryHttpConfig {
-  template <class T, std::enable_if_t<std::is_same_v<T, ExchangeQueryHttpConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  template <class T>
+  void mergeWith(const T &other)
+    requires(std::is_same_v<T, ExchangeQueryHttpConfig<true>> && !Optional)
+  {
     if (other.timeout) {
       timeout = *other.timeout;
     }
@@ -37,8 +39,10 @@ struct ExchangeQueryHttpConfig {
 
 template <bool Optional>
 struct ExchangeQueryTradeConfig {
-  template <class T, std::enable_if_t<std::is_same_v<T, ExchangeQueryTradeConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  template <class T>
+  void mergeWith(const T &other)
+    requires(std::is_same_v<T, ExchangeQueryTradeConfig<true>> && !Optional)
+  {
     if (other.minPriceUpdateDuration) {
       minPriceUpdateDuration = *other.minPriceUpdateDuration;
     }
@@ -61,8 +65,10 @@ struct ExchangeQueryTradeConfig {
 
 template <bool Optional>
 struct ExchangeQueryLogLevelsConfig {
-  template <class T, std::enable_if_t<std::is_same_v<T, ExchangeQueryLogLevelsConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  template <class T>
+  void mergeWith(const T &other)
+    requires(std::is_same_v<T, ExchangeQueryLogLevelsConfig<true>> && !Optional)
+  {
     if (other.requestsCall) {
       requestsCall = *other.requestsCall;
     }
@@ -71,8 +77,8 @@ struct ExchangeQueryLogLevelsConfig {
     }
   }
 
-  optional_or_t<log::level::level_enum, Optional> requestsCall{};
-  optional_or_t<log::level::level_enum, Optional> requestsAnswer{};
+  optional_or_t<LogLevel, Optional> requestsCall{};
+  optional_or_t<LogLevel, Optional> requestsAnswer{};
 };
 
 }  // namespace details
@@ -128,7 +134,7 @@ struct ExchangeQueryConfig {
     }
   }
 
-  ::cct::Duration getUpdateFrequency(QueryType queryType) const {
+  [[nodiscard]] ::cct::Duration getUpdateFrequency(QueryType queryType) const {
     return updateFrequency[static_cast<int>(queryType)].second.duration;
   }
 
@@ -154,11 +160,3 @@ using ExchangeQueryConfigOptional = ExchangeQueryConfig<true>;
 using ExchangeQueryConfig = details::ExchangeQueryConfig<false>;
 
 }  // namespace cct::schema
-
-// To make enum serializable as strings
-template <>
-struct glz::meta<::cct::log::level::level_enum> {
-  using enum ::cct::log::level::level_enum;
-
-  static constexpr auto value = enumerate(trace, debug, info, warn, err, critical, off);
-};

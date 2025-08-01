@@ -12,8 +12,10 @@ namespace details {
 
 template <bool Optional>
 struct ExchangeTradeFeesConfig {
-  template <class T, std::enable_if_t<std::is_same_v<T, ExchangeTradeFeesConfig<true>> && !Optional, bool> = true>
-  void mergeWith(const T &other) {
+  template <class T>
+  void mergeWith(const T &other)
+    requires(std::is_same_v<T, ExchangeTradeFeesConfig<true>> && !Optional)
+  {
     if (other.maker) {
       maker = *other.maker;
     }
@@ -24,10 +26,12 @@ struct ExchangeTradeFeesConfig {
 
   enum class FeeType : int8_t { Maker, Taker };
 
-  template <class MA, std::enable_if_t<std::is_same_v<MA, optional_or_t<MonetaryAmount, Optional>>, bool> = true>
+  template <class MA>
   /// Apply the general maker fee defined for this exchange trade fees config on given MonetaryAmount.
   /// In other words, convert a gross amount into a net amount with maker fees
-  MonetaryAmount applyFee(MA ma, FeeType feeType) const {
+  MonetaryAmount applyFee(MA ma, FeeType feeType) const
+    requires(std::is_same_v<MA, optional_or_t<MonetaryAmount, Optional>>)
+  {
     return (ma * (MonetaryAmount(100) - fee(feeType))) / 100;
   }
 

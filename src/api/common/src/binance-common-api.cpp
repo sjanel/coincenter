@@ -115,6 +115,10 @@ CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(
     const schema::binance::NetworkCoinDataVector& networkCoinDataVector, const CurrencyCodeSet& excludedCurrencies) {
   CurrencyExchangeVector currencies;
   for (const auto& coinJson : networkCoinDataVector) {
+    if (coinJson.coin.size() > CurrencyCode::kMaxLen) {
+      log::warn("Discard {} as code is too long", coinJson.coin);
+      continue;
+    }
     CurrencyCode cur{coinJson.coin};
     if (excludedCurrencies.contains(cur)) {
       log::trace("Discard {} excluded by config", cur.str());

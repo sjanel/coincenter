@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        compiler: [g++-13, clang++-19]
+        compiler: [g++-13, clang++-20]
         buildmode: [Debug, Release]
 
     steps:

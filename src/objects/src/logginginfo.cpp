@@ -81,6 +81,12 @@ File LoggingInfo::getActivityFile() const {
   return {_dataDir, File::Type::kLog, activityFileName, File::IfError::kThrow};
 }
 
+namespace {
+constexpr log::level::level_enum LevelFromPos(int8_t levelPos) {
+  return static_cast<log::level::level_enum>(static_cast<int8_t>(log::level::off) - levelPos);
+}
+}  // namespace
+
 void LoggingInfo::createLoggers() {
   FixedCapacityVector<log::sink_ptr, 2> sinks;
 

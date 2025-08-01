@@ -45,9 +45,6 @@ class LoggingInfo {
 
   int32_t maxNbLogFiles() const { return _maxNbLogFiles; }
 
-  log::level::level_enum logConsole() const { return LevelFromPos(_logLevelConsolePos); }
-  log::level::level_enum logFile() const { return LevelFromPos(_logLevelFilePos); }
-
   bool isCommandTypeTracked(CoincenterCommandType cmd) const { return _trackedCommandTypes.contains(cmd); }
 
   File getActivityFile() const;
@@ -68,8 +65,8 @@ class LoggingInfo {
   TrackedCommandTypes _trackedCommandTypes;
   int64_t _maxFileSizeLogFileInBytes = kDefaultFileSizeInBytes;
   int32_t _maxNbLogFiles = kDefaultNbMaxFiles;
-  int8_t _logLevelConsolePos = PosFromLevel(log::level::info);
-  int8_t _logLevelFilePos = PosFromLevel(log::level::off);
+  int8_t _logLevelConsolePos = PosFromLevel(LogLevel::info);
+  int8_t _logLevelFilePos = PosFromLevel(LogLevel::off);
   bool _destroyOutputLogger = false;
   bool _alsoLogActivityForSimulatedCommands = false;
 };

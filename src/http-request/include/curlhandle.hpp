@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "besturlpicker.hpp"
+#include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "permanentcurloptions.hpp"
 #include "runmodes.hpp"
@@ -80,8 +81,8 @@ class CurlHandle {
   TimePoint _lastQueryTime;
   BestURLPicker _bestURLPicker;
   string _queryData;
-  log::level::level_enum _requestCallLogLevel = log::level::level_enum::off;
-  log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::off;
+  LogLevel _requestCallLogLevel = LogLevel::off;
+  LogLevel _requestAnswerLogLevel = LogLevel::off;
   int _nbMaxRetries = PermanentCurlOptions::kDefaultNbMaxRetries;
   PermanentCurlOptions::TooManyErrorsPolicy _tooManyErrorsPolicy = PermanentCurlOptions::TooManyErrorsPolicy::kThrow;
 };

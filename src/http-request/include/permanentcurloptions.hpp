@@ -73,12 +73,12 @@ class PermanentCurlOptions {
       return *this;
     }
 
-    Builder &setRequestCallLogLevel(log::level::level_enum requestCallLogLevel) {
+    Builder &setRequestCallLogLevel(LogLevel requestCallLogLevel) {
       _requestCallLogLevel = requestCallLogLevel;
       return *this;
     }
 
-    Builder &setRequestAnswerLogLevel(log::level::level_enum requestAnswerLogLevel) {
+    Builder &setRequestAnswerLogLevel(LogLevel requestAnswerLogLevel) {
       _requestAnswerLogLevel = requestAnswerLogLevel;
       return *this;
     }
@@ -120,8 +120,8 @@ class PermanentCurlOptions {
     string _acceptedEncoding;
     Duration _minDurationBetweenQueries{};
     Duration _timeout{};
-    log::level::level_enum _requestCallLogLevel = log::level::level_enum::info;
-    log::level::level_enum _requestAnswerLogLevel = log::level::level_enum::trace;
+    LogLevel _requestCallLogLevel = LogLevel::info;
+    LogLevel _requestAnswerLogLevel = LogLevel::trace;
     int _nbMaxRetries = kDefaultNbMaxRetries;
     bool _followLocation = false;
     TooManyErrorsPolicy _tooManyErrorsPolicy = TooManyErrorsPolicy::kThrow;
@@ -129,8 +129,8 @@ class PermanentCurlOptions {
 
  private:
   PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries, Duration timeout,
-                       log::level::level_enum requestCallLogLevel, log::level::level_enum requestAnswerLogLevel,
-                       int nbMaxRetries, bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
+                       LogLevel requestCallLogLevel, LogLevel requestAnswerLogLevel, int nbMaxRetries,
+                       bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
       : _userAgent(std::move(userAgent)),
         _acceptedEncoding(std::move(acceptedEncoding)),
         _minDurationBetweenQueries(minDurationBetweenQueries),
@@ -145,8 +145,8 @@ class PermanentCurlOptions {
   string _acceptedEncoding;
   Duration _minDurationBetweenQueries;
   Duration _timeout;
-  log::level::level_enum _requestCallLogLevel;
-  log::level::level_enum _requestAnswerLogLevel;
+  LogLevel _requestCallLogLevel;
+  LogLevel _requestAnswerLogLevel;
   int _nbMaxRetries;
   bool _followLocation;
   TooManyErrorsPolicy _tooManyErrorsPolicy;

@@ -264,9 +264,11 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   if (opts.requestType() != HttpRequestType::kGet || nbRequestsDone % kLogRequestsThreshold == 0) {
     const auto httpRequestStr = HttpRequestTypeToString(opts.requestType());
-    log::log(_requestCallLogLevel, "{} {}{}{}", httpRequestStr, modifiedURL, optsStr.empty() ? "" : "?", optsStr);
+    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "{} {}{}{}", httpRequestStr, modifiedURL,
+             optsStr.empty() ? "" : "?", optsStr);
     if (nbRequestsDone == 0 && opts.requestType() == HttpRequestType::kGet) {
-      log::log(_requestCallLogLevel, "Will only log {} requests every {} calls", httpRequestStr, kLogRequestsThreshold);
+      log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Will only log {} requests every {} calls",
+               httpRequestStr, kLogRequestsThreshold);
     }
   }
 
@@ -334,9 +336,11 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   if (!mayBeJsonResponse && _queryData.size() > kMaxLenResponse) {
     const std::string_view outPrinted(_queryData.begin(),
                                       _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
-    log::log(_requestAnswerLogLevel, "Truncated non JSON response {}...", outPrinted);
+    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Truncated non JSON response {}...",
+             outPrinted);
   } else {
-    log::log(_requestAnswerLogLevel, "Full{}JSON response {}", mayBeJsonResponse ? " " : " non ", _queryData);
+    log::log(static_cast<log::level::level_enum>(_requestAnswerLogLevel), "Full{}JSON response {}",
+             mayBeJsonResponse ? " " : " non ", _queryData);
   }
 
   return _queryData;
