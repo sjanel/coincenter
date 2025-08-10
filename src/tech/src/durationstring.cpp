@@ -36,6 +36,8 @@ constexpr char kInvalidTimeDurationUnitMsg[] =
 std::string_view::size_type DurationLen(std::string_view str) {
   std::string_view::size_type ret{};
 
+  bool negativeSignAllowed = true;
+
   while (!str.empty()) {
     const auto sz = str.size();
 
@@ -46,8 +48,15 @@ std::string_view::size_type DurationLen(std::string_view str) {
 
     int value{};
     const auto [ptr, err] = std::from_chars(str.data() + charPos, str.data() + sz, value);
-    if (err != std::errc() || value <= 0) {
+    if (err != std::errc()) {
       break;
+    }
+    if (value < 0) {
+      if (negativeSignAllowed) {
+        negativeSignAllowed = false;
+      } else {
+        break;  // Several negative values are not allowed
+      }
     }
 
     charPos = ptr - str.data();
@@ -88,6 +97,11 @@ Duration ParseDuration(std::string_view durationStr) {
     throw invalid_argument("Time amount should be an integral value");
   }
 
+  const bool isNegative = durationStr.front() == '-';
+  if (isNegative) {
+    durationStr.remove_prefix(1);
+  }
+
   const auto sz = durationStr.size();
   Duration ret{};
   for (std::remove_const_t<decltype(sz)> charPos = 0; charPos < sz;) {
@@ -122,7 +136,7 @@ Duration ParseDuration(std::string_view durationStr) {
     }
   }
 
-  return ret;
+  return isNegative ? -ret : ret;
 }
 
 namespace {
@@ -174,6 +188,10 @@ string DurationToString(Duration dur, int nbSignificantUnits) {
   if (dur == kUndefinedDuration) {
     ret.append(kUndefStr);
   } else {
+    if (dur < Duration::zero()) {
+      ret.push_back('-');
+      dur = -dur;
+    }
     std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto &unitDuration) {
       return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, ret);
     });
@@ -192,6 +210,11 @@ std::span<char> DurationToBuffer(Duration dur, std::span<char> buffer, int nbSig
   }
 
   auto begBuf = buffer.data();
+  if (dur < Duration::zero()) {
+    buffer[0] = '-';
+    buffer = buffer.subspan(1);
+    dur = -dur;
+  }
 
   std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto &unitDuration) {
     return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, buffer);

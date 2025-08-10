@@ -19,11 +19,10 @@ jobs:
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 15.4
+          xcode-version: latest-stable
 
       - name: Install dependencies
         run: |
-          brew update && brew upgrade
           brew install ninja
           echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
 
