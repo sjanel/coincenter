@@ -20,7 +20,9 @@ TEST(DurationLen, BasicWithComma) { EXPECT_EQ(DurationLen("23s,bithumb"), 3); }
 
 TEST(DurationLen, ComplexWithSpaces) { EXPECT_EQ(DurationLen(" 1 d 52 h,kraken"), 9); }
 
-TEST(DurationLen, NegativeValue) { EXPECT_EQ(DurationLen("-3sec"), 0); }
+TEST(DurationLen, NegativeValue) { EXPECT_EQ(DurationLen("-3s"), 3); }
+
+TEST(DurationLen, InvalidNegativeValue) { EXPECT_EQ(DurationLen("-3s-30ms"), 3); }
 
 TEST(DurationLen, InvalidTimeUnit) { EXPECT_EQ(DurationLen("63po"), 0); }
 
@@ -37,6 +39,8 @@ TEST(ParseDuration, DurationMinutesSpaces) {
 }
 
 TEST(ParseDuration, DurationSeconds) { EXPECT_EQ(ParseDuration("3s"), seconds(3)); }
+
+TEST(ParseDuration, Negative) { EXPECT_EQ(ParseDuration("-3s400ms"), -seconds(3) - milliseconds(400)); }
 
 TEST(ParseDuration, DurationMilliseconds) { EXPECT_EQ(ParseDuration("1500 ms"), milliseconds(1500)); }
 
@@ -58,6 +62,7 @@ TEST(DurationString, DurationToStringUndefined) { EXPECT_EQ(DurationToString(kUn
 TEST(DurationString, DurationToStringYears) { EXPECT_EQ(DurationToString(std::chrono::years(23)), "23y"); }
 TEST(DurationString, DurationToStringMonths) { EXPECT_EQ(DurationToString(std::chrono::months(4)), "4mon"); }
 TEST(DurationString, DurationToStringDays) { EXPECT_EQ(DurationToString(std::chrono::days(7)), "1w"); }
+TEST(DurationString, Negative) { EXPECT_EQ(DurationToString(-std::chrono::days(7)), "-1w"); }
 TEST(DurationString, DurationToStringDaysAndHours) {
   EXPECT_EQ(DurationToString(std::chrono::days(3) + std::chrono::hours(12)), "3d12h");
 }
@@ -107,6 +112,16 @@ TEST(DurationString, DurationToBufferNominal) {
       DurationToBuffer(std::chrono::weeks(2) + std::chrono::days(6) + std::chrono::minutes(57), bufSpan, 3);
 
   EXPECT_EQ(std::string_view(buffer, actualBuf.size()), "2w6d57min");
+}
+
+TEST(DurationString, DurationToBufferNegative) {
+  char buffer[100];
+  std::span<char> bufSpan(buffer);
+
+  auto actualBuf =
+      DurationToBuffer(-std::chrono::weeks(2) - std::chrono::days(6) - std::chrono::minutes(57), bufSpan, 3);
+
+  EXPECT_EQ(std::string_view(buffer, actualBuf.size()), "-2w6d57min");
 }
 
 }  // namespace cct

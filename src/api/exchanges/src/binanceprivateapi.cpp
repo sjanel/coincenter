@@ -206,6 +206,15 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
 
     auto resStr = curlHandle.query(endpoint, opts);
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+
+    // reset msg & code to nullopt before new call, otherwise it keeps the previous one
+    if constexpr (amc::is_detected<schema::binance::has_msg_t, T>::value) {
+      ret.msg = std::nullopt;
+    }
+    if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value) {
+      ret.code = std::nullopt;
+    }
+
     auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
         resStr, "binance private", ret);
     if (ec) {
