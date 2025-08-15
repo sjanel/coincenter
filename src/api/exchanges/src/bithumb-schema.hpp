@@ -204,11 +204,11 @@ struct Trade {
 
   struct ExtraStringField {
     string val;
-    TimePoint ts;
+    TimePointIso8601UTC ts;
   };
   struct ExtraIntField {
     int64_t val;
-    TimePoint ts;
+    TimePointIso8601UTC ts;
   };
 
   struct ExtraData {
