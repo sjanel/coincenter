@@ -24,9 +24,9 @@ TimeWindow::TimeWindow(std::string_view timeWindowStr) {
     throw invalid_argument("Invalid time window - missing closing bracket");
   }
 
-  _from = StringToTime(timeWindowStr.substr(openingBracketPos + 1, arrowPos - openingBracketPos - 1), kTimeFormat);
-  _to = StringToTime(timeWindowStr.substr(arrowPos + kArrow.size(), closingBracketPos - arrowPos - kArrow.size()),
-                     kTimeFormat);
+  _from = StringToTimeISO8601UTC(timeWindowStr.data() + openingBracketPos + 1, timeWindowStr.data() + arrowPos);
+  _to =
+      StringToTimeISO8601UTC(timeWindowStr.data() + arrowPos + kArrow.size(), timeWindowStr.data() + closingBracketPos);
 }
 
 TimeWindow TimeWindow::aggregateMinMax(TimeWindow rhs) const {

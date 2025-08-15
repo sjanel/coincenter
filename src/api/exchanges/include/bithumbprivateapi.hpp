@@ -70,11 +70,11 @@ class BithumbPrivate : public ExchangePrivate {
 
   struct CurrencyOrderInfo {
     struct MonetaryAmountWithTs {
-      schema::TimePoint ts;
+      schema::TimePointIso8601UTC ts;
       MonetaryAmount val;
     };
     struct DecimalsWithTs {
-      schema::TimePoint ts;
+      schema::TimePointIso8601UTC ts;
       int8_t val;
     };
 

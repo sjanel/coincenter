@@ -121,7 +121,7 @@ struct MarketOrderBooks {
 
     vector<AskOrBid> ask;
     vector<AskOrBid> bid;
-    TimePoint time;
+    TimePointIso8601UTC time;
   };
 
   FixedCapacityVector<std::pair<ExchangeNameEnum, ExchangePart>, kNbSupportedExchanges> out;
@@ -220,8 +220,8 @@ struct Orders {
     struct Opt {
       std::optional<CurrencyCode> cur1;
       std::optional<CurrencyCode> cur2;
-      std::optional<TimePoint> placedBefore;
-      std::optional<TimePoint> placedAfter;
+      std::optional<TimePointIso8601UTC> placedBefore;
+      std::optional<TimePointIso8601UTC> placedAfter;
       std::optional<std::span<const OrderId>> matchIds;
     };
 
@@ -233,8 +233,8 @@ struct Orders {
 
     std::string_view id;
     Market pair;
-    TimePoint placedTime;
-    std::optional<TimePoint> matchedTime;
+    TimePointIso8601UTC placedTime;
+    std::optional<TimePointIso8601UTC> matchedTime;
     TradeSide side;
     MonetaryAmount price;
     MonetaryAmount matched;
@@ -263,10 +263,10 @@ struct RecentDeposits {
     CoincenterCommandType req = CoincenterCommandType::RecentDeposits;
     struct Opt {
       std::optional<CurrencyCode> cur;
-      std::optional<TimePoint> receivedBefore;
-      std::optional<TimePoint> sentBefore;
-      std::optional<TimePoint> receivedAfter;
-      std::optional<TimePoint> sentAfter;
+      std::optional<TimePointIso8601UTC> receivedBefore;
+      std::optional<TimePointIso8601UTC> sentBefore;
+      std::optional<TimePointIso8601UTC> receivedAfter;
+      std::optional<TimePointIso8601UTC> sentAfter;
       std::optional<std::span<const OrderId>> matchIds;
     };
 
@@ -276,7 +276,7 @@ struct RecentDeposits {
   struct Elem {
     std::string_view id;
     CurrencyCode cur;
-    TimePoint receivedTime;
+    TimePointIso8601UTC receivedTime;
     MonetaryAmount amount;
     WithdrawOrDeposit::Status status;
   };
@@ -296,7 +296,7 @@ struct RecentWithdraws {
   struct Elem {
     std::string_view id;
     CurrencyCode cur;
-    TimePoint sentTime;
+    TimePointIso8601UTC sentTime;
     MonetaryAmount netEmittedAmount;
     MonetaryAmount fee;
     WithdrawOrDeposit::Status status;
@@ -403,7 +403,7 @@ struct LastTrades {
   struct Elem {
     MonetaryAmount a;
     MonetaryAmount p;
-    TimePoint time;
+    TimePointIso8601UTC time;
     TradeSide side;
   };
 
@@ -441,7 +441,7 @@ struct Withdraw {
       std::string_view account;
       std::string_view id;
       MonetaryAmount amount;
-      TimePoint time;
+      TimePointIso8601UTC time;
     } from;
     struct To {
       ExchangeNameEnum exchange;
@@ -450,7 +450,7 @@ struct Withdraw {
       MonetaryAmount amount;
       std::string_view address;
       std::optional<std::string_view> tag;
-      TimePoint time;
+      TimePointIso8601UTC time;
     } to;
   } out;
 };
@@ -486,8 +486,8 @@ struct MarketTradingResults {
     CoincenterCommandType req{};
     struct Opt {
       struct Time {
-        TimePoint from;
-        TimePoint to;
+        TimePointIso8601UTC from;
+        TimePointIso8601UTC to;
       } time;
     };
 
@@ -507,8 +507,8 @@ struct MarketTradingResults {
         int nbError;
         int nbSuccessful;
         struct Time {
-          TimePoint from;
-          TimePoint to;
+          TimePointIso8601UTC from;
+          TimePointIso8601UTC to;
         } time;
       };
       TradeRangeResultsStats orderBooks;
