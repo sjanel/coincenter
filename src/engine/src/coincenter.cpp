@@ -1,6 +1,7 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <csignal>
 #include <optional>
 #include <span>
@@ -9,6 +10,7 @@
 
 #include "abstract-market-trader-factory.hpp"
 #include "algorithm-name-iterator.hpp"
+#include "auto-trade-processor.hpp"
 #include "balanceoptions.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
@@ -30,6 +32,7 @@
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
+#include "signal-handler.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
 #include "withdrawsconstraints.hpp"
@@ -325,7 +328,8 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
 
       // Create the MarketTraderEngines based on this market, filtering out exchanges without available amount to
       // trade
-      auto marketTraderEngines = createMarketTraderEngines(replayOptions, replayMarket, exchangesWithThisMarketData);
+      auto marketTraderEngines =
+          createMarketTraderEnginesForReplay(replayOptions, replayMarket, exchangesWithThisMarketData);
 
       MarketTradingGlobalResultPerExchange marketTradingResultPerExchange = replayAlgorithm(
           marketTraderFactory, algorithmName, replayOptions, marketTraderEngines, exchangesWithThisMarketData);
@@ -337,6 +341,31 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
   }
 
   return replayResults;
+}
+
+void Coincenter::autoTrade(const AutoTradeOptions &autoTradeOptions) {
+  AutoTradeProcessor autoTradeProcessor(autoTradeOptions);
+
+  auto marketTraderEngines = autoTradeProcessor.createMarketTraderEngines(_coincenterInfo);
+
+  while (!IsStopRequested()) {
+    // 1: select exchanges positions for which we are allowed to send a request.
+    AutoTradeProcessor::SelectedMarketVector selectedMarkets = autoTradeProcessor.computeSelectedMarkets();
+    if (selectedMarkets.empty()) {
+      break;
+    }
+
+    // 2: Query order books for those exchanges
+    std::array<Market, kNbSupportedExchanges> selectedMarketsPerPublicExchangePos;
+    for (const AutoTradeProcessor::SelectedMarket &selectedMarket : selectedMarkets) {
+      const auto publicExchangePos = selectedMarket.privateExchangeNames.front().publicExchangePos();
+      selectedMarketsPerPublicExchangePos[publicExchangePos] = selectedMarket.market;
+    }
+    MarketDataPerExchange marketDataPerExchange = queryMarketDataPerExchange(selectedMarketsPerPublicExchangePos);
+
+    // 3: call algorithms and retrieve their actions
+    // 4: perform actions (Trades, cancel, exit criteria)
+  }
 }
 
 MarketTradingGlobalResultPerExchange Coincenter::replayAlgorithm(
@@ -365,7 +394,7 @@ MonetaryAmount ComputeStartAmount(CurrencyCode currencyCode, MonetaryAmount conv
 }
 }  // namespace
 
-Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
+Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEnginesForReplay(
     const ReplayOptions &replayOptions, Market market, ExchangeNameEnumVector &exchangesWithThisMarketData) {
   const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto startBaseAmountEquivalent = automationConfig.startingContext.startBaseAmountEquivalent;
