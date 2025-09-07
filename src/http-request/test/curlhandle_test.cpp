@@ -2,10 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <chrono>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #include "cct_exception.hpp"
+#include "cct_string.hpp"
 #include "curloptions.hpp"
 #include "curlpostdata.hpp"
 #include "httprequesttype.hpp"
@@ -20,6 +24,47 @@
 namespace cct {
 namespace {
 const CurlOptions kVerboseHttpGetOptions(HttpRequestType::kGet, CurlOptions::Verbose::kOn);
+
+// Simple heuristic to detect a transient server-side unavailability response we want to retry on.
+// We do not have HTTP status codes exposed here, so we inspect body content.
+bool IsLikelyTransientServiceUnavailable(std::string_view resp) {
+  if (resp.empty()) {
+    return true;  // empty body is unexpected for the endpoints we target
+  }
+  // Lowercase copy for case-insensitive search (responses are tiny)
+  string lower(resp);
+  std::ranges::transform(lower, lower.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  return lower.find("service unavailable") != string::npos || lower.find("unavailable") != string::npos;
+}
+
+// Test-side retry wrapper for transient 5xx-like conditions (observed random 503 from httpbin.org).
+// Keeps production code unchanged (Step 1). Exponential backoff with small caps to avoid slowing CI.
+std::string_view QueryWithTransientRetry(CurlHandle &handle, std::string_view path, const CurlOptions &opts,
+                                         int maxAttempts = 5) {
+  using namespace std::chrono_literals;
+  std::string_view lastResp;
+  for (int attempt = 1; attempt <= maxAttempts; ++attempt) {
+    try {
+      lastResp = handle.query(path, opts);
+      if (!IsLikelyTransientServiceUnavailable(lastResp)) {
+        return lastResp;  // success
+      }
+    } catch (const exception &) {
+      if (attempt == maxAttempts) {
+        throw;  // propagate after final attempt
+      }
+    }
+    if (attempt < maxAttempts) {
+      // Backoff: 100ms, 150ms, 225ms, 337ms ... capped implicitly by attempts
+      auto sleepDur = 100ms;
+      for (int i = 1; i < attempt; ++i) {
+        sleepDur += sleepDur / 2;  // multiply by 1.5 each time
+      }
+      std::this_thread::sleep_for(sleepDur);
+    }
+  }
+  return lastResp;  // Return last response (may still be transient error text)
+}
 }  // namespace
 
 class ExampleBaseCurlHandle : public ::testing::Test {
@@ -34,20 +79,22 @@ TEST_F(ExampleBaseCurlHandle, CurlVersion) { EXPECT_FALSE(GetCurlVersionInfo().e
 TEST_F(ExampleBaseCurlHandle, QueryJsonAndMoveConstruct) {
   CurlOptions opts = kVerboseHttpGetOptions;
   opts.mutableHttpHeaders().emplace_back("MyHeaderIsVeryLongToAvoidSSO", "Val1");
-
-  EXPECT_NE(handle.query("/json", opts).find("slideshow"), std::string_view::npos);
+  auto jsonResp = QueryWithTransientRetry(handle, "/json", opts);
+  EXPECT_NE(std::string_view(jsonResp).find("slideshow"), std::string_view::npos);
 
   CurlHandle newCurlHandle = std::move(handle);
-  EXPECT_NE(newCurlHandle.query("/json", opts).find("slideshow"), std::string_view::npos);
+  auto jsonResp2 = QueryWithTransientRetry(newCurlHandle, "/json", opts);
+  EXPECT_NE(std::string_view(jsonResp2).find("slideshow"), std::string_view::npos);
 }
 
 TEST_F(ExampleBaseCurlHandle, QueryXmlAndMoveAssign) {
-  EXPECT_NE(handle.query("/xml", kVerboseHttpGetOptions).find("<?xml"), std::string_view::npos);
+  auto xmlResp = QueryWithTransientRetry(handle, "/xml", kVerboseHttpGetOptions);
+  EXPECT_NE(std::string_view(xmlResp).find("<?xml"), std::string_view::npos);
 
   CurlHandle newCurlHandle;
   newCurlHandle = std::move(handle);
-
-  EXPECT_NE(newCurlHandle.query("/xml", kVerboseHttpGetOptions).find("<?xml"), std::string_view::npos);
+  auto xmlResp2 = QueryWithTransientRetry(newCurlHandle, "/xml", kVerboseHttpGetOptions);
+  EXPECT_NE(std::string_view(xmlResp2).find("<?xml"), std::string_view::npos);
 }
 
 class CurlHandleProxyTest : public ::testing::Test {

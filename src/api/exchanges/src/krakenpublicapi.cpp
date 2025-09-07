@@ -198,7 +198,6 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
   KrakenAssetPairToStdMarketMap krakenAssetPairToStdMarketMap;
   krakenAssetPairToStdMarketMap.reserve(markets.size());
 
-  string allAssetPairs;
   MarketOrderBookMap ret;
   ret.reserve(markets.size());
   for (Market mk : markets) {
@@ -214,22 +213,18 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
     CurrencyExchange krakenCurrencyExchangeQuote = *it;
     Market krakenMarket(krakenCurrencyExchangeBase.altCode(), krakenCurrencyExchangeQuote.altCode());
     string assetPairStr = krakenMarket.assetsPairStrUpper();
-    if (!allAssetPairs.empty()) {
-      allAssetPairs.push_back(',');
-    }
-    allAssetPairs.append(assetPairStr);
+
     krakenAssetPairToStdMarketMap.insert_or_assign(assetPairStr, mk);
     krakenAssetPairToStdMarketMap.insert_or_assign(
         Market(krakenCurrencyExchangeBase.exchangeCode(), krakenCurrencyExchangeQuote.exchangeCode())
             .assetsPairStrUpper(),
         mk);
   }
-  const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker", {{"pair", allAssetPairs}});
+  const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker");
   const auto time = Clock::now();
   for (const auto& [krakenAssetPair, assetPairDetails] : result.result) {
     auto it = krakenAssetPairToStdMarketMap.find(krakenAssetPair);
     if (it == krakenAssetPairToStdMarketMap.end()) {
-      log::error("Unable to find {}", krakenAssetPair);
       continue;
     }
 

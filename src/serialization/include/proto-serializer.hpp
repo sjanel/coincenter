@@ -51,8 +51,15 @@ class ProtobufObjectsSerializer {
       lastWrittenObjectTimestamp = timestamp;
 
       // When program starts, we want to exclude equal timestamps to avoid writing objects that may have been written
-      // already from a previous run (the SortUnique will not protect us here)
-      ++lastWrittenObjectTimestamp;
+      // already from a previous run (the SortUnique will not protect us here).
+      // C++20 adds pre/post ++/-- for std::chrono::time_point (see [time.point]) but not all deployed libc++ versions
+      // ship them yet (or you may be picking up an older Apple-provided libc++ while using a newer clang). We detect
+      // support at compile time and fall back to adding one tick explicitly for portability.
+      if constexpr (requires(TimePoint &tp) { ++tp; }) {
+        ++lastWrittenObjectTimestamp;  // preferred, when available
+      } else {
+        lastWrittenObjectTimestamp += TimePoint::duration{1};  // portable fallback (one tick of underlying duration)
+      }
     }
   }
 

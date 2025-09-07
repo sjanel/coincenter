@@ -16,7 +16,7 @@ jobs:
         generator: [Visual Studio 17 2022]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure CMake with vcpkg
         run: cmake -S . -B build -G "${{matrix.generator}}"

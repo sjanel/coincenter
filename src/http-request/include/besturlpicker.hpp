@@ -26,8 +26,10 @@ class BestURLPicker {
 
   /// Builds a BestURLPicker that will work with several base URLs.
   /// Warning: given base URL should come from static storage
-  template <unsigned N, std::enable_if_t<(N > 0) && N <= kNbMaxBaseUrl, bool> = true>
-  BestURLPicker(const std::string_view (&aBaseUrl)[N]) : BestURLPicker(std::span<const std::string_view>(aBaseUrl)) {}
+  template <unsigned N>
+  BestURLPicker(const std::string_view (&aBaseUrl)[N])
+    requires((N > 0) && N <= kNbMaxBaseUrl)
+      : BestURLPicker(std::span<const std::string_view>(aBaseUrl)) {}
 
   BestURLPicker(const string[]) = delete;
   BestURLPicker(const char *[]) = delete;
@@ -43,15 +45,15 @@ class BestURLPicker {
 
   // Return the best URL that will be used by the next query.
   // A "good" URL is some URL that has lower average response time (all queries mixed) according to the others.
-  std::string_view getNextBaseURL() const { return _pBaseUrls[nextBaseURLPos()]; }
-  std::string_view getBaseURL(int8_t pos) const { return _pBaseUrls[pos]; }
+  [[nodiscard]] std::string_view getNextBaseURL() const { return _pBaseUrls[nextBaseURLPos()]; }
+  [[nodiscard]] std::string_view getBaseURL(int8_t pos) const { return _pBaseUrls[pos]; }
 
-  int8_t nextBaseURLPos() const;
+  [[nodiscard]] int8_t nextBaseURLPos() const;
   void storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t responseTimeInMs);
 
-  int8_t nbBaseURL() const { return static_cast<int8_t>(_responseTimeStatsPerBaseUrl.size()); }
+  [[nodiscard]] int8_t nbBaseURL() const { return static_cast<int8_t>(_responseTimeStatsPerBaseUrl.size()); }
 
-  int nbRequestsDone() const;
+  [[nodiscard]] int nbRequestsDone() const;
 
  private:
   explicit BestURLPicker(std::span<const std::string_view> baseUrls);
@@ -59,7 +61,9 @@ class BestURLPicker {
   struct ResponseTimeStats {
     constexpr bool operator==(const ResponseTimeStats &) const noexcept = default;
 
-    constexpr auto score() const noexcept { return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs; }
+    [[nodiscard]] constexpr auto score() const noexcept {
+      return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs;
+    }
 
     uint16_t nbRequestsDone;       // when reaching max, all stats are reset to give equal chances to all base URLs
     uint16_t avgResponseTimeInMs;  // approximation of moving average
