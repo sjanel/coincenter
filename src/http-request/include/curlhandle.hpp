@@ -52,9 +52,9 @@ class CurlHandle {
   /// The pointed memory is valid until a next call to 'query'.
   std::string_view query(std::string_view endpoint, const CurlOptions &opts);
 
-  std::string_view getNextBaseUrl() const { return _bestURLPicker.getNextBaseURL(); }
+  [[nodiscard]] std::string_view getNextBaseUrl() const { return _bestURLPicker.getNextBaseURL(); }
 
-  Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
+  [[nodiscard]] Duration minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
   /// Instead of actually performing real calls, instructs this CurlHandle to
   /// return hardcoded responses (in values of given map) based on query endpoints with appended options (in key of

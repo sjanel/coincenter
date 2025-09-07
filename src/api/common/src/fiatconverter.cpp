@@ -47,9 +47,17 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency,
                              const Reader& fiatsRatesCacheReader, const Reader& thirdPartySecretReader)
-    : _curlHandle1(kFiatConverterSource1BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+    : _curlHandle1(kFiatConverterSource1BaseUrl, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setRequestCallLogLevel(LogLevel::info)
+                       .setRequestAnswerLogLevel(LogLevel::debug)
+                       .build(),
                    coincenterInfo.getRunMode()),
-      _curlHandle2(kFiatConverterSource2BaseUrl, coincenterInfo.metricGatewayPtr(), PermanentCurlOptions(),
+      _curlHandle2(kFiatConverterSource2BaseUrl, coincenterInfo.metricGatewayPtr(),
+                   PermanentCurlOptions::Builder()
+                       .setRequestCallLogLevel(LogLevel::info)
+                       .setRequestAnswerLogLevel(LogLevel::debug)
+                       .build(),
                    coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _thirdPartySecret(LoadCurrencyConverterAPIKey(thirdPartySecretReader)),

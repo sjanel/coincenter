@@ -136,19 +136,22 @@ TimePoint StringToTimeISO8601UTC(const char* begPtr, const char* endPtr) {
       --endPtr;
     }
     // parse sub-seconds parts until the end (possible 'Z' removed)
-    auto subSecondsSz = std::min<long>(endPtr - begPtr - 20, 9);
+    const auto subSecondsSz = std::min<long>(endPtr - begPtr - 20, 9);
     switch (subSecondsSz) {
+      case 0:
+        break;
       case 3:  // milliseconds
-        ts += std::chrono::milliseconds{parse3(begPtr + 20)};
+        ts += std::chrono::duration_cast<Duration>(std::chrono::milliseconds{parse3(begPtr + 20)});
         break;
       case 6:  // microseconds
-        ts += std::chrono::microseconds{parse6(begPtr + 20)};
+        ts += std::chrono::duration_cast<Duration>(std::chrono::microseconds{parse6(begPtr + 20)});
         break;
       case 9:  // nanoseconds
-        ts += std::chrono::nanoseconds{parse9(begPtr + 20)};
+        ts += std::chrono::duration_cast<Duration>(std::chrono::nanoseconds{parse9(begPtr + 20)});
         break;
       default:
-        ts += std::chrono::nanoseconds{parse(begPtr + 20, subSecondsSz) * ipow10(9 - subSecondsSz)};
+        ts += std::chrono::duration_cast<Duration>(
+            std::chrono::nanoseconds{parse(begPtr + 20, subSecondsSz) * ipow10(9 - subSecondsSz)});
         break;
     }
   }

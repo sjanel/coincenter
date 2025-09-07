@@ -2,7 +2,6 @@
 
 #include <mutex>
 #include <optional>
-#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -10,10 +9,10 @@
 #include "cct_fixedcapacityvector.hpp"
 #include "cct_flatset.hpp"
 #include "cct_string.hpp"
+#include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
 #include "curlhandle.hpp"
 #include "currencycode.hpp"
-#include "file.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "reader.hpp"
@@ -70,7 +69,7 @@ class FiatConverter : public CacheFileUpdatorInterface {
     double rate;
     int64_t timeepoch;
 
-    TimePoint lastUpdatedTime() const { return TimePoint(seconds(timeepoch)); }
+    [[nodiscard]] TimePoint lastUpdatedTime() const { return TimePoint(seconds(timeepoch)); }
   };
 
   struct ThirdPartySecret {
@@ -101,7 +100,7 @@ class FiatConverter : public CacheFileUpdatorInterface {
 
     using CurrencyPath = FixedCapacityVector<CurrencyCode, kMaxCurrencyPathSize>;
 
-    using trivially_relocatable = std::true_type;
+    using trivially_relocatable = amc::is_trivially_relocatable<CurrencyPath>::type;
 
     CurrencyPath currencyPath;
     double rate;

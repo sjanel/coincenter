@@ -9,31 +9,43 @@ on:
 jobs:
   xcode:
     name: Build on MacOS
-    runs-on: macos-latest
+    runs-on: macos-26
     strategy:
       matrix:
-        compiler: [g++-14]
         buildmode: [Debug]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
 
-      - name: Install dependencies
+      - name: Select LLVM 20 toolchain and SDK
         run: |
-          brew install ninja
-          echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
+          set -euo pipefail
+          LLVM_PREFIX="$(brew --prefix llvm@20)"
+          SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+          DEPLOYMENT_TARGET="13.0"
+          echo "Using Homebrew LLVM prefix: ${LLVM_PREFIX}" 
+          echo "Using macOS SDK: ${SDK_PATH}"
+          echo "CC=${LLVM_PREFIX}/bin/clang" >> $GITHUB_ENV
+          echo "CXX=${LLVM_PREFIX}/bin/clang++" >> $GITHUB_ENV
+          echo "SDKROOT=${SDK_PATH}" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=${DEPLOYMENT_TARGET}" >> $GITHUB_ENV
+          ${LLVM_PREFIX}/bin/clang++ --version
+          xcrun --show-sdk-version
 
       - name: Configure
-        run: cmake -DCCT_ENABLE_ASAN=OFF -S . -B build -GNinja
+        run: cmake -DCCT_ENABLE_ASAN=OFF -DCMAKE_OSX_SYSROOT=$SDKROOT -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET -S . -B build -GNinja
         env:
-          CXX: ${{matrix.compiler}}
-          CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
+          CC: ${{ env.CC }}
+          CXX: ${{ env.CXX }}
+          SDKROOT: ${{ env.SDKROOT }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
+          CMAKE_BUILD_TYPE: ${{ matrix.buildmode }}
 
       - name: Build
-        run: cmake --build build --config ${{matrix.buildmode}}
+        run: cmake --build build --config ${{ matrix.buildmode }}
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
@@ -42,3 +54,4 @@ jobs:
       - name: Sanity check main executable
         working-directory: ${{github.workspace}}/build
         run: ./coincenter --help
+

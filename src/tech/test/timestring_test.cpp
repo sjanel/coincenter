@@ -159,87 +159,92 @@ TEST_F(StringToTimeISO8601UTCTest, ParsesBasicISO8601UTC) {
   EXPECT_EQ(unsigned(ymd.month()), 8);
   EXPECT_EQ(unsigned(ymd.day()), 14);
 
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<hours>(t).count(), 12);
-  EXPECT_EQ(duration_cast<minutes>(t).count() % 60, 34);
-  EXPECT_EQ(duration_cast<seconds>(t).count() % 60, 56);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<hours>(timeOfDay).count(), 12);
+  EXPECT_EQ(duration_cast<minutes>(timeOfDay).count() % 60, 34);
+  EXPECT_EQ(duration_cast<seconds>(timeOfDay).count() % 60, 56);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesISO8601UTCWithoutZ) {
   auto tp = StringToTimeISO8601UTC("2025-08-14 12:34:56");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<hours>(t).count(), 12);
-  EXPECT_EQ(duration_cast<minutes>(t).count() % 60, 34);
-  EXPECT_EQ(duration_cast<seconds>(t).count() % 60, 56);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<hours>(timeOfDay).count(), 12);
+  EXPECT_EQ(duration_cast<minutes>(timeOfDay).count() % 60, 34);
+  EXPECT_EQ(duration_cast<seconds>(timeOfDay).count() % 60, 56);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesWithMilliseconds) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.123Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<milliseconds>(t).count() % 1000, 123);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<milliseconds>(timeOfDay).count() % 1000, 123);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesWithMicroseconds) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.123456Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<microseconds>(t).count() % 1000000, 123456);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<microseconds>(timeOfDay).count() % 1000000, 123456);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesWithNanoseconds) {
   auto tp = StringToTimeISO8601UTC("2025-08-08T18:00:00.000864693Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 1000000000, 864693);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+
+  auto rem = duration_cast<nanoseconds>(timeOfDay).count() % 1'000'000'000;
+  using SysDur = std::chrono::system_clock::duration;
+  // Compute system_clock tick size in nanoseconds: (1e9 * num / den)
+  constexpr int64_t tick_ns = static_cast<int64_t>((1'000'000'000LL * SysDur::period::num) / SysDur::period::den);
+  EXPECT_LE(std::llabs(rem - 864693), tick_ns - 1);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesWithCustomSubSecondPrecision) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.1234567Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 1000000000, 123456700);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 123456700);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesSpaceInsteadOfT) {
   auto tp = StringToTimeISO8601UTC("2025-08-14 12:34:56Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<hours>(t).count(), 12);
-  EXPECT_EQ(duration_cast<minutes>(t).count() % 60, 34);
-  EXPECT_EQ(duration_cast<seconds>(t).count() % 60, 56);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<hours>(timeOfDay).count(), 12);
+  EXPECT_EQ(duration_cast<minutes>(timeOfDay).count() % 60, 34);
+  EXPECT_EQ(duration_cast<seconds>(timeOfDay).count() % 60, 56);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesWithoutSecondsFraction) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T00:00:00Z");
   auto sys_days = floor<days>(tp);
-  auto t = tp - sys_days;
+  auto timeOfDay = tp - sys_days;
 
-  EXPECT_GE(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<seconds>(t).count(), 0);
+  EXPECT_GE(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<seconds>(timeOfDay).count(), 0);
 }
 
 // ------------------------ Edge cases ------------------------
@@ -269,37 +274,44 @@ TEST_F(StringToTimeISO8601UTCTest, ThrowsOnEmptyString) { EXPECT_THROW(StringToT
 // ------------------------ Sub-second edge cases ------------------------
 TEST_F(StringToTimeISO8601UTCTest, Handles1DigitSubsecond) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.1Z");
-  auto t = tp - floor<days>(tp);
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 1000000000, 100'000'000);
+  auto timeOfDay = tp - floor<days>(tp);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 100'000'000);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, Handles2DigitSubsecond) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.12Z");
-  auto t = tp - floor<days>(tp);
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 1000000000, 120'000'000);
+  auto timeOfDay = tp - floor<days>(tp);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 120'000'000);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, Handles7DigitSubsecond) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.12345670Z");
-  auto t = tp - floor<days>(tp);
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 1000000000, 123456700);
+  auto timeOfDay = tp - floor<days>(tp);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
+  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 123456700);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, Handles10DigitSubsecond) {
   auto tp = StringToTimeISO8601UTC("2025-08-14T12:34:56.3508191888");
-  auto t = tp - floor<days>(tp);
-  EXPECT_GT(t, std::chrono::nanoseconds{0});
-  EXPECT_LT(t, std::chrono::days{1});
+  auto timeOfDay = tp - floor<days>(tp);
+  EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
+  EXPECT_LT(timeOfDay, std::chrono::days{1});
 
-  t -= std::chrono::hours{12} + std::chrono::minutes{34} + std::chrono::seconds{56};
-
-  EXPECT_EQ(duration_cast<nanoseconds>(t).count() % 10000000000, 350819188);
+  timeOfDay -= std::chrono::hours{12} + std::chrono::minutes{34} + std::chrono::seconds{56};
+  // We provided 10 fractional digits; parser keeps up to 9 (nanosecond precision) and truncates the rest.
+  // On platforms where system_clock has coarser resolution (e.g. 100ns on Windows), the stored value is quantized.
+  auto ns = duration_cast<nanoseconds>(timeOfDay).count();
+  constexpr int64_t expected_ns = 350819188;  // after truncating the 10th digit
+  using sys_period = std::chrono::system_clock::period;
+  // size (in ns) of one system_clock tick
+  const int64_t tick_ns = (1'000'000'000LL * sys_period::num) / sys_period::den;
+  const int64_t quantized_expected = (expected_ns / tick_ns) * tick_ns;
+  EXPECT_EQ(ns, quantized_expected) << "(system_clock tick=" << tick_ns << "ns, expected raw=" << expected_ns << ")";
 }
 
 }  // namespace cct

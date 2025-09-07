@@ -225,9 +225,9 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
           while (endPos > begPos && isspace(withdrawalFeesCsv[endPos - 1])) {
             --endPos;
           }
-          MonetaryAmount ret(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
+          MonetaryAmount amt(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
           begPos = endHtmlTagPos + kEndHtmlTag.size();
-          return ret;
+          return amt;
         };
 
         // Locate withdrawal fee

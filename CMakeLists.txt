@@ -76,8 +76,8 @@ else()
 
   FetchContent_Declare(
     amadeusamc
-    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.5.2.tar.gz
-    URL_HASH SHA256=91c092f7add31493e0071eef49103c96f03611ca476b844278175459d0679335
+    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.6.0.tar.gz
+    URL_HASH SHA256=381cda7834c73cd81f51693739eb3132cfb822a41499972d98621d914924de5f
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable amadeusamc)
@@ -105,8 +105,8 @@ if(NOT glaze)
 
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v5.5.4.tar.gz
-    URL_HASH SHA256=309184e6cf046669f22b336b85a1ab92278a45ad05fce079be4c0f45e19dcbd2
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v5.7.1.tar.gz
+    URL_HASH SHA256=c896ec90927a93ea43d33113ca2fd7b62961b870cb7fc12586cc865f335992f7
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)

@@ -25,6 +25,7 @@
 #include <compare>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <iosfwd>
 #include <limits>
 #include <stdexcept>
@@ -120,13 +121,13 @@ namespace folly {
  * failure and throw std::bad_alloc in that case.
  */
 inline void* checkedMalloc(size_t size) {
-  void* p = malloc(size);
+  void* p = std::malloc(size);
   if (!p) throw std::bad_alloc();
   return p;
 }
 
 inline void* checkedRealloc(void* ptr, size_t size) {
-  void* p = realloc(ptr, size);
+  void* p = std::realloc(ptr, size);
   if (!p) throw std::bad_alloc();
   return p;
 }
@@ -164,7 +165,7 @@ FOLLY_MALLOC_CHECKED_MALLOC FOLLY_NOINLINE inline void* smartRealloc(
     // Too much slack, malloc-copy-free cycle:
     auto const result = checkedMalloc(newCapacity);
     std::memcpy(result, p, currentSize);
-    free(p);
+    std::free(p);
     return result;
   }
   // If there's not too much slack, we realloc in hope of coalescing
@@ -251,7 +252,7 @@ inline void podFill(Pod* b, SizeType n, T c) {
  * adaptation outside).
  */
 template <class Pod>
-inline void podCopy(const Pod* b, const Pod* e, Pod* d) {
+void podCopy(const Pod* b, const Pod* e, Pod* d) {
   assert(b != nullptr);
   assert(e != nullptr);
   assert(d != nullptr);
@@ -265,7 +266,7 @@ inline void podCopy(const Pod* b, const Pod* e, Pod* d) {
  * some asserts
  */
 template <class Pod>
-inline void podMove(const Pod* b, const Pod* e, Pod* d) {
+void podMove(const Pod* b, const Pod* e, Pod* d) {
   assert(e >= b);
   memmove(d, b, (e - b) * sizeof(*b));
 }
@@ -457,7 +458,7 @@ class fbstring_core {
       ml_.setCapacity(allocatedSize - 1, Category::isMedium);
     } else {
       // No need for the memory
-      free(data);
+      std::free(data);
       reset();
     }
   }
@@ -591,7 +592,7 @@ class fbstring_core {
     auto const c = category();
     assert(c != Category::isSmall);
     if (c == Category::isMedium) {
-      free(ml_.data_);
+      std::free(ml_.data_);
     } else {
       RefCounted::decrementRefs(ml_.data_);
     }
@@ -624,7 +625,7 @@ class fbstring_core {
       size_t oldcnt = dis->refCount_.fetch_sub(1, std::memory_order_acq_rel);
       assert(oldcnt > 0);
       if (oldcnt == 1) {
-        free(dis);
+        std::free(dis);
       }
     }
 

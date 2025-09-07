@@ -64,9 +64,10 @@ class RequestRetry {
       auto queryStrRes = _curlHandle.query(endpoint, _curlOptions);
       auto ec = json::read<opts>(ret, queryStrRes);
       if (ec) {
-        auto prefixJsonContent = queryStrRes.substr(0, std::min<int>(queryStrRes.size(), 20));
-        log::error("Error while reading json content '{}{}': {}", prefixJsonContent,
-                   prefixJsonContent.size() < queryStrRes.size() ? "..." : "", json::format_error(ec, queryStrRes));
+        auto prefixJsonContent = queryStrRes.substr(0, std::min<int>(queryStrRes.size(), 30));
+        log::error("For endpoint {}{} - error while reading json content '{}{}': {}", _curlHandle.getNextBaseUrl(),
+                   endpoint, prefixJsonContent, prefixJsonContent.size() < queryStrRes.size() ? "..." : "",
+                   json::format_error(ec, queryStrRes));
         parsingError = true;
       } else {
         parsingError = false;
