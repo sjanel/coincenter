@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <concepts>
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -26,6 +27,10 @@
 
 namespace cct {
 
+// Detection concept: satisfied if pre-increment operator is available for the time point type (C++26 working draft).
+template <class TP>
+concept HasTimePointPreIncrement = requires(TP tpValue) { ++tpValue; };
+
 /// Class responsible to accumulate protobuf objects in memory and perform regular flushes of its data to the disk.
 /// Data is accumulated by Market and will write to following files (from subPath):
 ///  'BASECUR-QUOTECUR/YYYY/MM/DD/HH:00:00_HH:59:59.binpb'
@@ -39,6 +44,18 @@ template <class ProtobufObjectType, class Comp = void, class Equal = void, int32
           class DurationType = std::chrono::days, int32_t DurationValue = 3>
 class ProtobufObjectsSerializer {
  public:
+  // Helper to advance a time point by exactly one tick of its duration type. Uses ++ if available in the
+  // current standard library implementation (C++26 working draft) else falls back to += duration{1}. The template
+  // parameter makes the requires-expression dependent so unsupported ++ does not cause a hard error.
+  template <class TP>
+  static constexpr void AdvanceOneTick(TP &tp) {
+    if constexpr (HasTimePointPreIncrement<TP>) {
+      ++tp;
+    } else {
+      tp += typename TP::duration{1};
+    }
+  }
+
   /// Creates a new ProtobufObjectsSerializer.
   /// @param marketTimestampSet the latest written timestamp for all markets to avoid writing duplicate entries between
   /// coincenter restarts.
@@ -52,14 +69,8 @@ class ProtobufObjectsSerializer {
 
       // When program starts, we want to exclude equal timestamps to avoid writing objects that may have been written
       // already from a previous run (the SortUnique will not protect us here).
-      // C++20 adds pre/post ++/-- for std::chrono::time_point (see [time.point]) but not all deployed libc++ versions
-      // ship them yet (or you may be picking up an older Apple-provided libc++ while using a newer clang). We detect
-      // support at compile time and fall back to adding one tick explicitly for portability.
-      if constexpr (requires(TimePoint &tp) { ++tp; }) {
-        ++lastWrittenObjectTimestamp;  // preferred, when available
-      } else {
-        lastWrittenObjectTimestamp += TimePoint::duration{1};  // portable fallback (one tick of underlying duration)
-      }
+      // Prefer ++ (available in newer working drafts / lib implementations) and fall back portably otherwise.
+      AdvanceOneTick(lastWrittenObjectTimestamp);
     }
   }
 
