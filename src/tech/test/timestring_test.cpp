@@ -222,7 +222,13 @@ TEST_F(StringToTimeISO8601UTCTest, ParsesWithCustomSubSecondPrecision) {
 
   EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
   EXPECT_LT(timeOfDay, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 123456700);
+  // Quantize expectation according to system_clock tick size (some platforms have coarse ticks).
+  using SysDur = std::chrono::system_clock::duration;
+  constexpr int64_t expected_raw = 123456700;
+  const int64_t tick_ns = static_cast<int64_t>((1'000'000'000LL * SysDur::period::num) / SysDur::period::den);
+  const int64_t quantized_expected = (expected_raw / tick_ns) * tick_ns;
+  const int64_t rem = duration_cast<nanoseconds>(timeOfDay).count() % 1'000'000'000;
+  EXPECT_EQ(rem, quantized_expected);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, ParsesSpaceInsteadOfT) {
@@ -293,7 +299,12 @@ TEST_F(StringToTimeISO8601UTCTest, Handles7DigitSubsecond) {
   auto timeOfDay = tp - floor<days>(tp);
   EXPECT_GT(timeOfDay, std::chrono::nanoseconds{0});
   EXPECT_LT(timeOfDay, std::chrono::days{1});
-  EXPECT_EQ(duration_cast<nanoseconds>(timeOfDay).count() % 1000000000, 123456700);
+  using SysDur = std::chrono::system_clock::duration;
+  constexpr int64_t expected_raw = 123456700;
+  const int64_t tick_ns = static_cast<int64_t>((1'000'000'000LL * SysDur::period::num) / SysDur::period::den);
+  const int64_t quantized_expected = (expected_raw / tick_ns) * tick_ns;
+  const int64_t rem = duration_cast<nanoseconds>(timeOfDay).count() % 1'000'000'000;
+  EXPECT_EQ(rem, quantized_expected);
 }
 
 TEST_F(StringToTimeISO8601UTCTest, Handles10DigitSubsecond) {

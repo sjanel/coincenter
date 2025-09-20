@@ -146,6 +146,10 @@ HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
   const auto& assetConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum()).asset;
   const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
+    if (curDetail.currency.size() > CurrencyCode::kMaxLen) {
+      log::debug("Discard {} as currency code is too long", curDetail.currency);
+      continue;
+    }
     if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curDetail.currency))) {
       for (const auto& chainDetail : curDetail.chains) {
         if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
@@ -177,6 +181,10 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       continue;
     }
     bool foundChainWithSameName = false;
+    if (curStr.size() > CurrencyCode::kMaxLen) {
+      log::debug("Discard {} as currency code is too long", curStr);
+      continue;
+    }
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     for (const auto& chainDetail : curDetail.chains) {
       if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
@@ -220,6 +228,10 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
   for (const auto& symbol : result.data) {
     std::string_view baseAsset = symbol.bc;
     std::string_view quoteAsset = symbol.qc;
+    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
+      log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
+      continue;
+    }
     if (excludedCurrencies.contains(baseAsset) || excludedCurrencies.contains(quoteAsset)) {
       log::trace("Discard {}-{} excluded by config", baseAsset, quoteAsset);
       continue;
@@ -231,10 +243,6 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
     std::string_view stateStr = symbol.state;
     if (stateStr != "online") {  // Possible values are [online，pre-online,offline,suspend]
       log::trace("Trading is {} for market {}-{}", stateStr, baseAsset, quoteAsset);
-      continue;
-    }
-    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
-      log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
     log::trace("Accept {}-{} Huobi asset pair", baseAsset, quoteAsset);
@@ -273,6 +281,10 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
   const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view curStr = curDetail.currency;
+    if (curStr.size() > CurrencyCode::kMaxLen) {
+      log::debug("Discard {} as currency code is too long", curStr);
+      continue;
+    }
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     bool foundChainWithSameName = false;
     for (const auto& chainDetail : curDetail.chains) {
@@ -308,6 +320,10 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
 std::optional<MonetaryAmount> HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view curStr = curDetail.currency;
+    if (curStr.size() > CurrencyCode::kMaxLen) {
+      log::debug("Discard {} as currency code is too long", curStr);
+      continue;
+    }
     CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
     if (cur != currencyCode) {
       continue;
