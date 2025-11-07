@@ -28,6 +28,45 @@ jobs:
           DEPLOYMENT_TARGET="13.0"
           echo "Using Homebrew LLVM prefix: ${LLVM_PREFIX}" 
           echo "Using macOS SDK: ${SDK_PATH}"
+          # Derive Xcode developer dir from SDK path by removing the /Platforms... suffix.
+          # Use bash parameter expansion which avoids duplicating '/Contents/Developer'.
+          if [[ -n "${SDK_PATH}" && "${SDK_PATH}" == */Platforms/* ]]; then
+            DEV_DIR="${SDK_PATH%%/Platforms/*}"
+          else
+            DEV_DIR=""
+          fi
+          # If derivation failed or result isn't a directory, fall back to xcode-select -p
+          if [[ -z "${DEV_DIR}" || ! -d "${DEV_DIR}" ]]; then
+            echo "Derived DEV_DIR was empty or not a directory, falling back to xcode-select -p"
+            DEV_DIR="$(xcode-select -p 2>/dev/null || true)"
+          fi
+          echo "Derived Xcode developer dir: ${DEV_DIR}"
+          if [[ -n "${DEV_DIR}" && -d "${DEV_DIR}" ]]; then
+            sudo xcode-select -s "${DEV_DIR}"
+            echo "DEVELOPER_DIR=${DEV_DIR}" >> $GITHUB_ENV
+          else
+            echo "Warning: could not determine a valid Xcode developer dir from SDK_PATH or xcode-select -p"
+          fi
+          # Accept license and run first launch tasks to ensure xcodebuild/xcrun are usable on the runner.
+          sudo xcodebuild -license accept || true
+          sudo xcodebuild -runFirstLaunch || true
+          # Debugging output to help diagnose SDK resolution issues
+          echo "--- xcode-select -p ---"
+          xcode-select -p || true
+          echo "--- ls -la DEV_DIR ---"
+          ls -la "${DEV_DIR}" || true
+          echo "--- ls -la ${DEV_DIR}/Platforms ---"
+          ls -la "${DEV_DIR}/Platforms" || true
+          echo "--- SDKs available under Xcode ---"
+          ls -la "${DEV_DIR}/Platforms/MacOSX.platform/Developer/SDKs" || true
+          echo "--- CommandLineTools SDKs (if present) ---"
+          ls -la /Library/Developer/CommandLineTools/SDKs || true
+          echo "--- tool locations ---"
+          which xcodebuild || true
+          which xcrun || true
+          which clang || true
+          echo "--- xcrun --show-sdk-path (again) ---"
+          xcrun --sdk macosx --show-sdk-path || true
           echo "CC=${LLVM_PREFIX}/bin/clang" >> $GITHUB_ENV
           echo "CXX=${LLVM_PREFIX}/bin/clang++" >> $GITHUB_ENV
           echo "SDKROOT=${SDK_PATH}" >> $GITHUB_ENV
@@ -41,6 +80,7 @@ jobs:
           CC: ${{ env.CC }}
           CXX: ${{ env.CXX }}
           SDKROOT: ${{ env.SDKROOT }}
+          DEVELOPER_DIR: ${{ env.DEVELOPER_DIR }}
           MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
           CMAKE_BUILD_TYPE: ${{ matrix.buildmode }}
 

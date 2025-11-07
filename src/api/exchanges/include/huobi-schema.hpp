@@ -41,6 +41,9 @@ struct V2ReferenceCurrencyDetails {
   string instStatus;
 
   struct Chain {
+    auto operator<=>(const Chain&) const = default;
+    using trivially_relocatable = is_trivially_relocatable<string>::type;
+
     string chain;
     string displayName;
     string depositStatus;
@@ -51,10 +54,6 @@ struct V2ReferenceCurrencyDetails {
     MonetaryAmount minWithdrawAmt;
     MonetaryAmount maxWithdrawAmt;
     int8_t withdrawPrecision;
-
-    using trivially_relocatable = is_trivially_relocatable<string>::type;
-
-    auto operator<=>(const Chain&) const = default;
   };
 
   vector<Chain> chains;
