@@ -34,10 +34,10 @@
 #include "timedef.hpp"
 #include "unreachable.hpp"
 
-extern "C" size_t CurlWriteCallback(const char *contents, size_t size, size_t nmemb, void *userp) {
+extern "C" size_t CurlWriteCallback(const char* contents, size_t size, size_t nmemb, void* userp) {
   try {
-    reinterpret_cast<cct::string *>(userp)->append(contents, size * nmemb);
-  } catch (const std::bad_alloc &e) {
+    reinterpret_cast<cct::string*>(userp)->append(contents, size * nmemb);
+  } catch (const std::bad_alloc& e) {
     // Do not throw exceptions in a function passed to a C library
     // Returning 0 is a magic number that will cause CURL to raise an error
     cct::log::error("Bad alloc caught in curl write call back action, returning 0: {}", e.what());
@@ -55,11 +55,11 @@ namespace {
 using FlatQueryResponseMap = FlatKeyValueString<'\0', '"'>;
 
 template <class T>
-void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
+void CurlSetLogIfError(CURL* curl, CURLoption curlOption, T value) {
   static_assert(std::is_integral_v<T> || std::is_pointer_v<T>);
   const CURLcode code = curl_easy_setopt(curl, curlOption, value);
   if (code != CURLE_OK) {
-    if constexpr (std::is_integral_v<T> || std::is_same_v<T, const char *>) {
+    if constexpr (std::is_integral_v<T> || std::is_same_v<T, const char*>) {
       log::error("Curl error {} setting option {} to {}", static_cast<int>(code), static_cast<int>(curlOption), value);
     } else {
       log::error("Curl error {} setting option {}", static_cast<int>(code), static_cast<int>(curlOption));
@@ -67,10 +67,10 @@ void CurlSetLogIfError(CURL *curl, CURLoption curlOption, T value) {
   }
 }
 
-curl_slist *ComputeCurlSListPtr(const CurlOptions::HttpHeaders &httpHeaders) {
-  curl_slist *curlListPtr = nullptr;
-  curl_slist *oldCurlListPtr = nullptr;
-  for (const auto &httpHeader : httpHeaders) {
+curl_slist* ComputeCurlSListPtr(const CurlOptions::HttpHeaders& httpHeaders) {
+  curl_slist* curlListPtr = nullptr;
+  curl_slist* oldCurlListPtr = nullptr;
+  for (const auto& httpHeader : httpHeaders) {
     // Trick: HttpHeaders is actually a FlatKeyValueString with '\0' as header separator and ':' as key / value
     // separator. curl_slist_append expects a 'const char *' as HTTP header - it's possible here to just give the
     // pointer to the beginning of the key as we know the bundle key/value ends with a null-terminating char
@@ -89,7 +89,7 @@ curl_slist *ComputeCurlSListPtr(const CurlOptions::HttpHeaders &httpHeaders) {
 }  // namespace
 
 string GetCurlVersionInfo() {
-  const curl_version_info_data &curlVersionInfo = *curl_version_info(CURLVERSION_NOW);
+  const curl_version_info_data& curlVersionInfo = *curl_version_info(CURLVERSION_NOW);
 
   string curlVersionInfoStr("curl ");
   curlVersionInfoStr.append(curlVersionInfo.version);
@@ -105,8 +105,8 @@ string GetCurlVersionInfo() {
   return curlVersionInfoStr;
 }
 
-CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetricGateway,
-                       const PermanentCurlOptions &permanentCurlOptions, settings::RunMode runMode)
+CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway* pMetricGateway,
+                       const PermanentCurlOptions& permanentCurlOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(permanentCurlOptions.minDurationBetweenQueries()),
       _bestURLPicker(std::move(bestURLPicker)),
@@ -114,15 +114,21 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
       _requestAnswerLogLevel(permanentCurlOptions.requestAnswerLogLevel()),
       _nbMaxRetries(permanentCurlOptions.nbMaxRetries()),
       _tooManyErrorsPolicy(permanentCurlOptions.tooManyErrorsPolicy()) {
+  const auto& exchangeLogTag = permanentCurlOptions.getExchangeLogTag();
+  if (!exchangeLogTag.empty()) {
+    _logPrefix.push_back('[');
+    _logPrefix.append(exchangeLogTag);
+    _logPrefix.append("] ");
+  }
   if (!settings::AreQueryResponsesOverriden(runMode)) {
-    CURL *curl = curl_easy_init();
+    CURL* curl = curl_easy_init();
     if (curl == nullptr) {
       throw std::bad_alloc();
     }
 
     _handle = curl;
 
-    const string &userAgent = permanentCurlOptions.getUserAgent();
+    const string& userAgent = permanentCurlOptions.getUserAgent();
     if (userAgent.empty()) {
       string defaultUserAgent = "coincenter ";
       defaultUserAgent.append(CCT_VERSION);
@@ -135,7 +141,7 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
     }
     CurlSetLogIfError(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
     CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &_queryData);
-    const string &acceptedEncoding = permanentCurlOptions.getAcceptedEncoding();
+    const string& acceptedEncoding = permanentCurlOptions.getAcceptedEncoding();
     if (!acceptedEncoding.empty()) {
       CurlSetLogIfError(curl, CURLOPT_ACCEPT_ENCODING, acceptedEncoding.data());
     }
@@ -152,7 +158,7 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
     CurlSetLogIfError(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 #endif
 
-    log::debug("Initialize CurlHandle for {} with {} as minimum duration between queries",
+    log::debug("{}Initialize CurlHandle for {} with {} as minimum duration between queries", _logPrefix,
                _bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
 
     if (settings::IsProxyRequested(runMode)) {
@@ -167,18 +173,18 @@ CurlHandle::CurlHandle(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
 /**
  * Should function remove proxy for subsequent calls when option is off ? not useful for now
  */
-void CurlHandle::setUpProxy(const char *proxyUrl, bool reset) {
+void CurlHandle::setUpProxy(const char* proxyUrl, bool reset) {
   if (proxyUrl != nullptr || reset) {
     log::info("Setting proxy to {} reset = {} ?", proxyUrl, reset);
-    CURL *curl = reinterpret_cast<CURL *>(_handle);
+    CURL* curl = reinterpret_cast<CURL*>(_handle);
     CurlSetLogIfError(curl, CURLOPT_PROXY, proxyUrl);  // Default of nullptr
     CurlSetLogIfError(curl, CURLOPT_CAINFO, GetProxyCAInfo());
     CurlSetLogIfError(curl, CURLOPT_SSL_VERIFYHOST, proxyUrl != nullptr ? 0L : 1L);
   }
 }
 
-std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions &opts) {
-  const CurlPostData &postData = opts.postData();
+std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions& opts) {
+  const CurlPostData& postData = opts.postData();
   const bool queryResponseOverrideMode = _handle == nullptr;
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
@@ -213,7 +219,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     return response;
   }
 
-  CURL *curl = reinterpret_cast<CURL *>(_handle);
+  CURL* curl = reinterpret_cast<CURL*>(_handle);
 
   // Note on below clang-tidy warning: we specify the size of the buffer thanks to CURLOPT_POSTFIELDSIZE
   // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
@@ -233,9 +239,9 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   CurlSetLogIfError(curl, CURLOPT_VERBOSE, opts.isVerbose() ? 1L : 0L);
 
-  curl_slist *curlListPtr = ComputeCurlSListPtr(opts.httpHeaders());
+  curl_slist* curlListPtr = ComputeCurlSListPtr(opts.httpHeaders());
 
-  using CurlSlistDeleter = decltype([](curl_slist *hdrList) { curl_slist_free_all(hdrList); });
+  using CurlSlistDeleter = decltype([](curl_slist* hdrList) { curl_slist_free_all(hdrList); });
   using CurlListUniquePtr = std::unique_ptr<curl_slist, CurlSlistDeleter>;
 
   CurlListUniquePtr curlListUniquePtr(curlListPtr);
@@ -250,7 +256,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
     if (nowTime < _lastQueryTime + _minDurationBetweenQueries) {
       // We should sleep a bit before performing query
       const Duration sleepingTime = _minDurationBetweenQueries - (nowTime - _lastQueryTime);
-      log::trace("Wait {} before performing query", DurationToString(sleepingTime));
+      log::trace("{}Wait {} before performing query", _logPrefix, DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       _lastQueryTime = nowTime + sleepingTime;
     } else {
@@ -264,11 +270,11 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
 
   if (opts.requestType() != HttpRequestType::kGet || nbRequestsDone % kLogRequestsThreshold == 0) {
     const auto httpRequestStr = HttpRequestTypeToString(opts.requestType());
-    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "{} {}{}{}", httpRequestStr, modifiedURL,
-             optsStr.empty() ? "" : "?", optsStr);
+    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "{}{} {}{}{}", _logPrefix, httpRequestStr,
+             modifiedURL, optsStr.empty() ? "" : "?", optsStr);
     if (nbRequestsDone == 0 && opts.requestType() == HttpRequestType::kGet) {
-      log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Will only log {} requests every {} calls",
-               httpRequestStr, kLogRequestsThreshold);
+      log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "{}Will only log {} requests every {} calls",
+               _logPrefix, httpRequestStr, kLogRequestsThreshold);
     }
   }
 
@@ -285,8 +291,8 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
         _pMetricGateway->add(MetricType::kCounter, MetricOperation::kIncrement,
                              CurlMetrics::kNbRequestErrorKeys.find(opts.requestType())->second);
       }
-      log::error("Got curl error {} for {}, retry {}/{} after {}", static_cast<int>(res), modifiedURL, retryPos,
-                 _nbMaxRetries, DurationToString(sleepingTime));
+      log::error("{}Got curl error {} for {}, retry {}/{} after {}", _logPrefix, static_cast<int>(res), modifiedURL,
+                 retryPos, _nbMaxRetries, DurationToString(sleepingTime));
       std::this_thread::sleep_for(sleepingTime);
       sleepingTime *= 2;
     }
@@ -320,7 +326,7 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   if (retryPos > _nbMaxRetries) {
     switch (_tooManyErrorsPolicy) {
       case PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse:
-        log::error("Too many errors from curl, return empty response");
+        log::error("{}Too many errors from curl, return empty response", _logPrefix);
         _queryData.clear();
         break;
       case PermanentCurlOptions::TooManyErrorsPolicy::kThrow:
@@ -336,23 +342,23 @@ std::string_view CurlHandle::query(std::string_view endpoint, const CurlOptions 
   if (!mayBeJsonResponse && _queryData.size() > kMaxLenResponse) {
     const std::string_view outPrinted(_queryData.begin(),
                                       _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
-    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Truncated non JSON response {}...",
-             outPrinted);
+    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "{}Truncated non JSON response {}...",
+             _logPrefix, outPrinted);
   } else {
-    log::log(static_cast<log::level::level_enum>(_requestAnswerLogLevel), "Full{}JSON response {}",
+    log::log(static_cast<log::level::level_enum>(_requestAnswerLogLevel), "{}Full{}JSON response {}", _logPrefix,
              mayBeJsonResponse ? " " : " non ", _queryData);
   }
 
   return _queryData;
 }
 
-void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap) {
+void CurlHandle::setOverridenQueryResponses(const std::map<string, string>& queryResponsesMap) {
   if (_handle != nullptr) {
     throw exception(
         "CurlHandle should be created in Query response override mode in order to override its next response");
   }
   FlatQueryResponseMap flatQueryResponses;
-  for (const auto &[query, response] : queryResponsesMap) {
+  for (const auto& [query, response] : queryResponsesMap) {
     flatQueryResponses.emplace_back(query, response);
   }
   _queryData = string(flatQueryResponses.str());
@@ -360,12 +366,12 @@ void CurlHandle::setOverridenQueryResponses(const std::map<string, string> &quer
 
 void CurlHandle::setWriteData() {
   if (_handle != nullptr) {
-    CURL *curl = reinterpret_cast<CURL *>(_handle);
+    CURL* curl = reinterpret_cast<CURL*>(_handle);
     CurlSetLogIfError(curl, CURLOPT_WRITEDATA, &_queryData);
   }
 }
 
-void CurlHandle::swap(CurlHandle &rhs) noexcept {
+void CurlHandle::swap(CurlHandle& rhs) noexcept {
   using std::swap;
 
   swap(_handle, rhs._handle);
@@ -374,6 +380,7 @@ void CurlHandle::swap(CurlHandle &rhs) noexcept {
   swap(_lastQueryTime, rhs._lastQueryTime);
   swap(_bestURLPicker, rhs._bestURLPicker);
   _queryData.swap(rhs._queryData);
+  _logPrefix.swap(rhs._logPrefix);
   swap(_requestCallLogLevel, rhs._requestCallLogLevel);
   swap(_requestAnswerLogLevel, rhs._requestAnswerLogLevel);
   swap(_nbMaxRetries, rhs._nbMaxRetries);
@@ -383,16 +390,16 @@ void CurlHandle::swap(CurlHandle &rhs) noexcept {
   rhs.setWriteData();
 }
 
-CurlHandle::CurlHandle(CurlHandle &&rhs) noexcept { swap(rhs); }
+CurlHandle::CurlHandle(CurlHandle&& rhs) noexcept { swap(rhs); }
 
-CurlHandle &CurlHandle::operator=(CurlHandle &&rhs) noexcept {
+CurlHandle& CurlHandle::operator=(CurlHandle&& rhs) noexcept {
   swap(rhs);
   return *this;
 }
 
 CurlHandle::~CurlHandle() {
   if (_handle != nullptr) {
-    curl_easy_cleanup(reinterpret_cast<CURL *>(_handle));
+    curl_easy_cleanup(reinterpret_cast<CURL*>(_handle));
   }
 }
 

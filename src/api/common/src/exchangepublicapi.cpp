@@ -61,8 +61,8 @@ using MarketDataDeserializer = DummyMarketDataDeserializer;
 using MarketDataSerializer = DummyMarketDataSerializer;
 #endif
 
-ExchangePublic::ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
-                               const CoincenterInfo &coincenterInfo)
+ExchangePublic::ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter& fiatConverter, CommonAPI& commonApi,
+                               const CoincenterInfo& coincenterInfo)
     : _exchangeNameEnum(exchangeNameEnum),
       _fiatConverter(fiatConverter),
       _commonApi(commonApi),
@@ -73,9 +73,9 @@ ExchangePublic::ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter 
 ExchangePublic::~ExchangePublic() = default;
 
 std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, CurrencyCode toCurrency,
-                                                      const MarketsPath &conversionPath, const CurrencyCodeSet &fiats,
-                                                      MarketOrderBookMap &marketOrderBookMap,
-                                                      const PriceOptions &priceOptions) {
+                                                      const MarketsPath& conversionPath, const CurrencyCodeSet& fiats,
+                                                      MarketOrderBookMap& marketOrderBookMap,
+                                                      const PriceOptions& priceOptions) {
   if (from.currencyCode() == toCurrency) {
     return from;
   }
@@ -122,7 +122,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
         if (it == marketOrderBookMap.end()) {
           throw exception("Should not happen - regular market should be present in the markets list");
         }
-        const MarketOrderBook &marketOrderBook = it->second;
+        const MarketOrderBook& marketOrderBook = it->second;
         const std::optional<MonetaryAmount> optA = marketOrderBook.convert(from, priceOptions);
         if (!optA) {
           return std::nullopt;
@@ -144,7 +144,7 @@ namespace {
 struct CurrencyDir {
   enum class Dir : int8_t { kExchangeOrder, kReversed };
 
-  constexpr std::strong_ordering operator<=>(const CurrencyDir &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyDir&) const noexcept = default;
 
   CurrencyCode cur;
   Dir dir = Dir::kExchangeOrder;
@@ -155,9 +155,9 @@ using CurrencyDirPath = SmallVector<CurrencyDir, 3>;
 
 class CurrencyDirFastestPathComparator {
  public:
-  explicit CurrencyDirFastestPathComparator(CommonAPI &commonApi) : _commonApi(commonApi) {}
+  explicit CurrencyDirFastestPathComparator(CommonAPI& commonApi) : _commonApi(commonApi) {}
 
-  bool operator()(const CurrencyDirPath &lhs, const CurrencyDirPath &rhs) {
+  bool operator()(const CurrencyDirPath& lhs, const CurrencyDirPath& rhs) {
     // First, favor paths with the least number of non regular markets
     const auto hasNonRegularMarket = [](CurrencyDir curDir) {
       return curDir.marketType != Market::Type::kRegularExchangeMarket;
@@ -186,12 +186,12 @@ class CurrencyDirFastestPathComparator {
   }
 
  private:
-  CommonAPI &_commonApi;
+  CommonAPI& _commonApi;
 };
 }  // namespace
 
-MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency, MarketSet &markets,
-                                            const CurrencyCodeSet &fiats, MarketPathMode marketsPathMode) {
+MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyCode toCurrency, MarketSet& markets,
+                                            const CurrencyCodeSet& fiats, MarketPathMode marketsPathMode) {
   MarketsPath ret;
   if (fromCurrency == toCurrency) {
     return ret;
@@ -257,25 +257,25 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
 
       reachedTargetCurrency = reachedTargetCurrency || (newCur == toCurrency);
 
-      CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+      CurrencyDirPath& newPath = searchPaths.emplace_back(path);
       newPath.emplace_back(newCur, dir, Market::Type::kRegularExchangeMarket);
       std::ranges::push_heap(searchPaths, comp);
     }
 
     if (isFiatConvertible(cur)) {
       if (isToCurrencyFiatConvertible && !reachedTargetCurrency) {
-        CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+        CurrencyDirPath& newPath = searchPaths.emplace_back(path);
         newPath.emplace_back(toCurrency, CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
         std::ranges::push_heap(searchPaths, comp);
       } else if (path.size() == 1 && searchPaths.empty()) {
         // A conversion is possible from starting fiat currency
         for (Market mk : markets) {
           if (fiats.contains(mk.base())) {
-            CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+            CurrencyDirPath& newPath = searchPaths.emplace_back(path);
             newPath.emplace_back(mk.base(), CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
             std::ranges::push_heap(searchPaths, comp);
           } else if (fiats.contains(mk.quote())) {
-            CurrencyDirPath &newPath = searchPaths.emplace_back(path);
+            CurrencyDirPath& newPath = searchPaths.emplace_back(path);
             newPath.emplace_back(mk.quote(), CurrencyDir::Dir::kExchangeOrder, Market::Type::kFiatConversionMarket);
             std::ranges::push_heap(searchPaths, comp);
           }
@@ -308,13 +308,13 @@ ExchangePublic::CurrenciesPath ExchangePublic::findCurrenciesPath(CurrencyCode f
 }
 
 std::optional<MonetaryAmount> ExchangePublic::computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
-                                                                     const PriceOptions &priceOptions) {
+                                                                     const PriceOptions& priceOptions) {
   const int depth = priceOptions.isRelativePrice() ? std::abs(priceOptions.relativePrice()) : 1;
   return getOrderBook(mk, depth).computeLimitPrice(fromCurrencyCode, priceOptions);
 }
 
 std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, MonetaryAmount from,
-                                                                   const PriceOptions &priceOptions) {
+                                                                   const PriceOptions& priceOptions) {
   if (priceOptions.isFixedPrice()) {
     return MonetaryAmount(priceOptions.fixedPrice(), mk.quote());
   }
@@ -327,7 +327,7 @@ std::optional<MonetaryAmount> ExchangePublic::computeAvgOrderPrice(Market mk, Mo
   return getOrderBook(mk, depth).computeAvgPrice(from, priceOptions);
 }
 
-std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets) {
+std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet& markets) {
   Market mk(c1, c2);
   if (!markets.contains(mk)) {
     mk = mk.reverse();
@@ -343,10 +343,10 @@ std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCo
   return RetrieveMarket(c1, c2, queryTradableMarkets());
 }
 
-MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap) {
+MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap& marketOrderBookMap) {
   MarketPriceMap marketPriceMap;
   marketPriceMap.reserve(marketOrderBookMap.size());
-  for (const auto &[market, marketOrderBook] : marketOrderBookMap) {
+  for (const auto& [market, marketOrderBook] : marketOrderBookMap) {
     std::optional<MonetaryAmount> optAmount = marketOrderBook.averagePrice();
     if (optAmount) {
       marketPriceMap.insert_or_assign(market, *optAmount);
@@ -355,7 +355,7 @@ MarketPriceMap ExchangePublic::MarketPriceMapFromMarketOrderBookMap(const Market
   return marketPriceMap;
 }
 
-std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
+std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_view marketStr, MarketSet& markets,
                                                                    CurrencyCode filterCur) {
   if (!filterCur.isNeutral()) {
     const auto curSize = filterCur.size();
@@ -418,7 +418,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
   return std::nullopt;
 }
 
-Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
+Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet& markets, CurrencyCode filterCur1,
                                                            CurrencyCode filterCur2) {
   if (markets.empty()) {
     std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
@@ -509,7 +509,7 @@ MarketOrderBookVector ExchangePublic::pullMarketOrderBooksForReplay(Market marke
   return _marketDataDeserializerPtr->pullMarketOrderBooks(market, timeWindow);
 }
 
-AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
+AbstractMarketDataSerializer& ExchangePublic::getMarketDataSerializer() {
   if (_marketDataSerializerPtr) {
     return *_marketDataSerializerPtr;
   }
@@ -531,7 +531,9 @@ AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
 }
 
 PermanentCurlOptions::Builder ExchangePublic::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Public);
+  return ExchangePermanentCurlOptions(exchangeConfig().query)
+      .builderBase(ExchangePermanentCurlOptions::Api::Public)
+      .setExchangeLogTag(string(name()));
 }
 
 }  // namespace cct::api
