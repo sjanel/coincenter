@@ -54,11 +54,11 @@
 
 namespace cct::api {
 
-ExchangePrivate::ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic,
-                                 const APIKey &apiKey)
+ExchangePrivate::ExchangePrivate(const CoincenterInfo& coincenterInfo, ExchangePublic& exchangePublic,
+                                 const APIKey& apiKey)
     : _exchangePublic(exchangePublic), _coincenterInfo(coincenterInfo), _apiKey(apiKey) {}
 
-BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanceOptions) {
+BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions& balanceOptions) {
   BalancePortfolio balancePortfolio = queryAccountBalance(balanceOptions);
 
   const auto equiCurrency = balanceOptions.equiCurrency();
@@ -72,13 +72,13 @@ BalancePortfolio ExchangePrivate::getAccountBalance(const BalanceOptions &balanc
   return balancePortfolio;
 }
 
-void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency) {
+void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio& balancePortfolio, CurrencyCode equiCurrency) {
   MarketOrderBookMap marketOrderBookMap;
   auto fiats = _exchangePublic.queryFiats();
   MarketSet markets;
   ExchangeName exchangeName = this->exchangeName();
 
-  for (auto &[amount, equi] : balancePortfolio) {
+  for (auto& [amount, equi] : balancePortfolio) {
     MarketsPath conversionPath =
         _exchangePublic.findMarketsPath(amount.currencyCode(), equiCurrency, markets, fiats,
                                         ExchangePublic::MarketPathMode::kWithPossibleFiatConversionAtExtremity);
@@ -88,10 +88,10 @@ void ExchangePrivate::computeEquiCurrencyAmounts(BalancePortfolio &balancePortfo
   }
 }
 
-TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
-                                     const MarketsPath &conversionPath) {
+TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions& options,
+                                     const MarketsPath& conversionPath) {
   // Use exchange config settings for un-overriden trade options
-  const auto &queryConfig = this->exchangeConfig().query;
+  const auto& queryConfig = this->exchangeConfig().query;
   const TradeOptions actualOptions(options, queryConfig.trade);
   const bool realOrderPlacedInSimulationMode = !isSimulatedOrderSupported() && queryConfig.placeSimulateRealOrder;
   const int nbTrades = static_cast<int>(conversionPath.size());
@@ -131,7 +131,7 @@ TradedAmounts ExchangePrivate::trade(MonetaryAmount from, CurrencyCode toCurrenc
   return tradedAmounts;
 }
 
-TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk) {
+TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptions& tradeOptions, Market mk) {
   const CurrencyCode fromCurrency = from.currencyCode();
   const CurrencyCode toCurrency = mk.opposite(fromCurrency);
 
@@ -142,7 +142,7 @@ TradedAmounts ExchangePrivate::marketTrade(MonetaryAmount from, const TradeOptio
   const TradeSide side = fromCurrency == mk.base() ? TradeSide::sell : TradeSide::buy;
   TradeContext tradeContext(mk, side, userRef);
   TradeInfo tradeInfo(tradeContext, tradeOptions);
-  TradeOptions &options = tradeInfo.options;
+  TradeOptions& options = tradeInfo.options;
   const bool placeSimulatedRealOrder = exchangeConfig().query.placeSimulateRealOrder;
 
   enum class NextAction : int8_t { kPlaceInitialOrder, kPlaceLimitOrder, kPlaceMarketOrder, kWait };
@@ -274,8 +274,8 @@ NextAction InitializeNextAction(WithdrawSyncPolicy withdrawSyncPolicy) {
 
 }  // namespace
 
-DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                                                const WithdrawOptions &withdrawOptions) {
+DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange,
+                                                const WithdrawOptions& withdrawOptions) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   const Duration withdrawRefreshTime = withdrawOptions.withdrawRefreshTime();
   const WithdrawOptions::Mode mode = withdrawOptions.mode();
@@ -353,17 +353,17 @@ DeliveredWithdrawInfo ExchangePrivate::withdraw(MonetaryAmount grossAmount, Exch
 }
 
 namespace {
-bool IsAboveDustAmountThreshold(const MonetaryAmountByCurrencySet &dustThresholds, MonetaryAmount amount) {
+bool IsAboveDustAmountThreshold(const MonetaryAmountByCurrencySet& dustThresholds, MonetaryAmount amount) {
   const auto foundIt = dustThresholds.find(amount);
   return foundIt == dustThresholds.end() || *foundIt <= amount;
 }
 
 using PenaltyPerMarketMap = std::map<Market, int>;
 
-MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance,
-                                                 const MonetaryAmountByCurrencySet &dustThresholds,
-                                                 CurrencyCode currencyCode, const MarketSet &markets,
-                                                 const PenaltyPerMarketMap &penaltyPerMarketMap) {
+MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio& balance,
+                                                 const MonetaryAmountByCurrencySet& dustThresholds,
+                                                 CurrencyCode currencyCode, const MarketSet& markets,
+                                                 const PenaltyPerMarketMap& penaltyPerMarketMap) {
   MarketVector possibleMarkets;
   for (const auto [avAmount, _] : balance) {
     const CurrencyCode avCur = avAmount.currencyCode();
@@ -380,7 +380,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
 
   class PenaltyMarketComparator {
    public:
-    explicit PenaltyMarketComparator(const PenaltyPerMarketMap &map) : _penaltyPerMarketMap(map) {}
+    explicit PenaltyMarketComparator(const PenaltyPerMarketMap& map) : _penaltyPerMarketMap(map) {}
 
     bool operator()(Market m1, Market m2) const {
       const int w1 = weight(m1);
@@ -399,7 +399,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
       return it == _penaltyPerMarketMap.end() ? 0 : it->second;
     }
 
-    const PenaltyPerMarketMap &_penaltyPerMarketMap;
+    const PenaltyPerMarketMap& _penaltyPerMarketMap;
   };
 
   // Sort them according to the penalty (we favor markets on which we did not try any buy on them yet)
@@ -409,7 +409,7 @@ MarketVector GetPossibleMarketsForDustThresholds(const BalancePortfolio &balance
 }  // namespace
 
 std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSweeper(
-    std::span<const Market> possibleMarkets, MonetaryAmount amountBalance, const TradeOptions &tradeOptions) {
+    std::span<const Market> possibleMarkets, MonetaryAmount amountBalance, const TradeOptions& tradeOptions) {
   for (Market mk : possibleMarkets) {
     log::info("Dust sweeper - attempt to sell in one shot on {}", mk);
     TradedAmounts tradedAmounts = marketTrade(amountBalance, tradeOptions, mk);
@@ -421,9 +421,9 @@ std::pair<TradedAmounts, Market> ExchangePrivate::isSellingPossibleOneShotDustSw
 }
 
 TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
-    std::span<const Market> possibleMarkets, MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
-    const BalancePortfolio &balance, const TradeOptions &tradeOptions,
-    const MonetaryAmountByCurrencySet &dustThresholds) {
+    std::span<const Market> possibleMarkets, MarketPriceMap& marketPriceMap, MonetaryAmount dustThreshold,
+    const BalancePortfolio& balance, const TradeOptions& tradeOptions,
+    const MonetaryAmountByCurrencySet& dustThresholds) {
   CurrencyCode currencyCode = dustThreshold.currencyCode();
   static constexpr MonetaryAmount kMultiplier(15, CurrencyCode(), 1);
 
@@ -478,8 +478,8 @@ TradedAmounts ExchangePrivate::buySomeAmountToMakeFutureSellPossible(
 }
 
 TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCode currencyCode) {
-  const auto &queryConfig = this->exchangeConfig().query;
-  const MonetaryAmountByCurrencySet &dustThresholds = queryConfig.dustAmountsThreshold;
+  const auto& queryConfig = this->exchangeConfig().query;
+  const MonetaryAmountByCurrencySet& dustThresholds = queryConfig.dustAmountsThreshold;
   const int dustSweeperMaxNbTrades = queryConfig.dustSweeperMaxNbTrades;
   const auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, currencyCode));
   const auto eName = exchangeName();
@@ -551,8 +551,8 @@ TradedAmountsVectorWithFinalAmount ExchangePrivate::queryDustSweeper(CurrencyCod
   return ret;
 }
 
-PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, MonetaryAmount price,
-                                                  const TradeInfo &tradeInfo) {
+PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount& from, MonetaryAmount price,
+                                                  const TradeInfo& tradeInfo) {
   const Market mk = tradeInfo.tradeContext.market;
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::sell;
   const MonetaryAmount volume(isSell ? from : MonetaryAmount(from / price, mk.base()));
@@ -581,7 +581,7 @@ PlaceOrderInfo ExchangePrivate::placeOrderProcess(MonetaryAmount &from, Monetary
 }
 
 PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
-                                                                       const TradeInfo &tradeInfo) const {
+                                                                       const TradeInfo& tradeInfo) const {
   const bool placeSimulatedRealOrder = exchangeConfig().query.placeSimulateRealOrder;
   const bool isTakerStrategy = tradeInfo.options.isTakerStrategy(placeSimulatedRealOrder);
   const bool isSell = tradeInfo.tradeContext.side == TradeSide::sell;
@@ -597,7 +597,7 @@ PlaceOrderInfo ExchangePrivate::computeSimulatedMatchedPlacedOrderInfo(MonetaryA
 }
 
 ReceivedWithdrawInfo ExchangePrivate::queryWithdrawDelivery(
-    [[maybe_unused]] const InitiatedWithdrawInfo &initiatedWithdrawInfo, const SentWithdrawInfo &sentWithdrawInfo) {
+    [[maybe_unused]] const InitiatedWithdrawInfo& initiatedWithdrawInfo, const SentWithdrawInfo& sentWithdrawInfo) {
   MonetaryAmount netEmittedAmount = sentWithdrawInfo.netEmittedAmount();
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
   DepositsSet deposits = queryRecentDeposits(DepositsConstraints(currencyCode));
@@ -605,7 +605,7 @@ ReceivedWithdrawInfo ExchangePrivate::queryWithdrawDelivery(
   ClosestRecentDepositPicker closestRecentDepositPicker;
   closestRecentDepositPicker.reserve(static_cast<ClosestRecentDepositPicker::size_type>(deposits.size()));
   std::ranges::transform(deposits, std::back_inserter(closestRecentDepositPicker),
-                         [](const Deposit &deposit) { return RecentDeposit(deposit.amount(), deposit.time()); });
+                         [](const Deposit& deposit) { return RecentDeposit(deposit.amount(), deposit.time()); });
 
   RecentDeposit expectedDeposit(netEmittedAmount, Clock::now());
 
@@ -613,11 +613,11 @@ ReceivedWithdrawInfo ExchangePrivate::queryWithdrawDelivery(
   if (closestDepositPos == -1) {
     return {};
   }
-  const Deposit &deposit = deposits[closestDepositPos];
+  const Deposit& deposit = deposits[closestDepositPos];
   return {string(deposit.id()), deposit.amount(), deposit.time()};
 }
 
-SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo) {
+SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo) {
   MonetaryAmount grossEmittedAmount = initiatedWithdrawInfo.grossEmittedAmount();
   const CurrencyCode currencyCode = grossEmittedAmount.currencyCode();
   std::string_view withdrawId = initiatedWithdrawInfo.withdrawId();
@@ -629,7 +629,7 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
                 withdraws.size());
     }
 
-    const Withdraw &withdraw = withdraws.back();
+    const Withdraw& withdraw = withdraws.back();
 
     MonetaryAmount netEmittedAmount = withdraw.amount();
     MonetaryAmount fee = withdraw.withdrawFee();
@@ -643,6 +643,11 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
 }
 
 PermanentCurlOptions::Builder ExchangePrivate::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Private);
+  string exchangeLogTag(_exchangePublic.name());
+  exchangeLogTag.push_back('_');
+  exchangeLogTag.append(keyName());
+  return ExchangePermanentCurlOptions(exchangeConfig().query)
+      .builderBase(ExchangePermanentCurlOptions::Api::Private)
+      .setExchangeLogTag(std::move(exchangeLogTag));
 }
 }  // namespace cct::api
