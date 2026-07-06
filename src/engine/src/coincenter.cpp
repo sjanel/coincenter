@@ -1,14 +1,17 @@
 #include "coincenter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <csignal>
 #include <optional>
 #include <span>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 #include "abstract-market-trader-factory.hpp"
 #include "algorithm-name-iterator.hpp"
+#include "auto-trade-processor.hpp"
 #include "balanceoptions.hpp"
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
@@ -22,14 +25,17 @@
 #include "exchangepublicapitypes.hpp"
 #include "exchangeretriever.hpp"
 #include "exchangesecretsinfo.hpp"
+#include "market-order-book-vector.hpp"
 #include "market-timestamp-set.hpp"
 #include "market-trader-engine.hpp"
+#include "market-trader-factory.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
+#include "signal-handler.hpp"
 #include "time-window.hpp"
 #include "timedef.hpp"
 #include "withdrawsconstraints.hpp"
@@ -325,7 +331,8 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
 
       // Create the MarketTraderEngines based on this market, filtering out exchanges without available amount to
       // trade
-      auto marketTraderEngines = createMarketTraderEngines(replayOptions, replayMarket, exchangesWithThisMarketData);
+      auto marketTraderEngines =
+          createMarketTraderEnginesForReplay(replayOptions, replayMarket, exchangesWithThisMarketData);
 
       MarketTradingGlobalResultPerExchange marketTradingResultPerExchange = replayAlgorithm(
           marketTraderFactory, algorithmName, replayOptions, marketTraderEngines, exchangesWithThisMarketData);
@@ -337,6 +344,107 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
   }
 
   return replayResults;
+}
+
+void Coincenter::autoTrade(const AutoTradeOptions &autoTradeOptions) {
+  AutoTradeProcessor autoTradeProcessor(autoTradeOptions);
+
+  auto marketTraderEnginesPerExchange = autoTradeProcessor.createMarketTraderEngines(_coincenterInfo);
+
+  MarketTraderFactory marketTraderFactory;
+
+  for (const auto &[exchangeNameEnum, publicExchangeAutoTradeOptions] : autoTradeOptions) {
+    const std::size_t exchangeIndex = static_cast<std::size_t>(exchangeNameEnum);
+    auto &engineMap = marketTraderEnginesPerExchange[exchangeIndex];
+
+    for (const auto &[market, marketConfig] : publicExchangeAutoTradeOptions) {
+      const auto engineIt = engineMap.find(market);
+      if (engineIt == engineMap.end()) {
+        log::warn("No market trader engine created for {} on {}", market, EnumToString(exchangeNameEnum));
+        continue;
+      }
+
+      try {
+        engineIt->second.registerMarketTrader(
+            marketTraderFactory.construct(marketConfig.algorithmName, engineIt->second.marketTraderEngineState()));
+      } catch (const std::exception &e) {
+        log::error("Unable to construct '{}' trader for {} on {}: {}", marketConfig.algorithmName, market,
+                   EnumToString(exchangeNameEnum), e.what());
+        engineMap.erase(engineIt);
+      }
+    }
+  }
+
+  using MarketTimePointMap = std::unordered_map<Market, TimePoint>;
+  std::array<MarketTimePointMap, kNbSupportedExchanges> lastOrderBookTimePerExchange;
+  std::array<MarketTimePointMap, kNbSupportedExchanges> lastTradeTimePerExchange;
+
+  while (!IsStopRequested()) {
+    AutoTradeProcessor::SelectedMarketVector selectedMarkets = autoTradeProcessor.computeSelectedMarkets();
+    if (selectedMarkets.empty()) {
+      break;
+    }
+
+    std::array<Market, kNbSupportedExchanges> selectedMarketsPerPublicExchangePos{};
+    for (const AutoTradeProcessor::SelectedMarket &selectedMarket : selectedMarkets) {
+      if (selectedMarket.privateExchangeNames.empty()) {
+        log::warn("Skipping market {} with no associated private exchange", selectedMarket.market);
+        continue;
+      }
+      for (const ExchangeName &privateExchangeName : selectedMarket.privateExchangeNames) {
+        selectedMarketsPerPublicExchangePos[privateExchangeName.publicExchangePos()] = selectedMarket.market;
+      }
+    }
+
+    MarketDataPerExchange marketDataPerExchange = queryMarketDataPerExchange(selectedMarketsPerPublicExchangePos);
+
+    for (auto &[exchangePtr, orderBookAndTrades] : marketDataPerExchange) {
+      const ExchangeNameEnum exchangeEnum = exchangePtr->exchangeNameEnum();
+      const std::size_t exchangeIndex = static_cast<std::size_t>(exchangeEnum);
+
+      auto &engineMap = marketTraderEnginesPerExchange[exchangeIndex];
+      const Market market = orderBookAndTrades.first.market();
+      auto engineIt = engineMap.find(market);
+      if (engineIt == engineMap.end()) {
+        log::debug("Ignoring market {} on {} not configured for auto trade", market, exchangePtr->name());
+        continue;
+      }
+
+      MarketOrderBook &orderBook = orderBookAndTrades.first;
+      auto &orderBookTimeMap = lastOrderBookTimePerExchange[exchangeIndex];
+      TimePoint &lastOrderBookTs = orderBookTimeMap[market];
+      if (orderBook.time() <= lastOrderBookTs) {
+        continue;
+      }
+      lastOrderBookTs = orderBook.time();
+
+      PublicTradeVector &publicTrades = orderBookAndTrades.second;
+      auto &tradeTimeMap = lastTradeTimePerExchange[exchangeIndex];
+      const TimePoint lastTradeTs = tradeTimeMap[market];
+
+      PublicTradeVector filteredTrades;
+      filteredTrades.reserve(publicTrades.size());
+      TimePoint newestTradeTs = lastTradeTs;
+      for (PublicTrade &trade : publicTrades) {
+        if (trade.time() > lastTradeTs) {
+          newestTradeTs = std::max(newestTradeTs, trade.time());
+          filteredTrades.push_back(std::move(trade));
+        }
+      }
+      if (!filteredTrades.empty()) {
+        tradeTimeMap[market] = newestTradeTs;
+      }
+
+      MarketOrderBookVector marketOrderBooks;
+      marketOrderBooks.emplace_back(std::move(orderBook));
+
+      try {
+        engineIt->second.tradeRange(std::move(marketOrderBooks), std::move(filteredTrades));
+      } catch (const std::exception &e) {
+        log::error("Auto trade execution failed on {} {}: {}", exchangePtr->name(), market, e.what());
+      }
+    }
+  }
 }
 
 MarketTradingGlobalResultPerExchange Coincenter::replayAlgorithm(
@@ -365,7 +473,7 @@ MonetaryAmount ComputeStartAmount(CurrencyCode currencyCode, MonetaryAmount conv
 }
 }  // namespace
 
-Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
+Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEnginesForReplay(
     const ReplayOptions &replayOptions, Market market, ExchangeNameEnumVector &exchangesWithThisMarketData) {
   const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto startBaseAmountEquivalent = automationConfig.startingContext.startBaseAmountEquivalent;

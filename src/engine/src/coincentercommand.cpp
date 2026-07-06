@@ -131,4 +131,9 @@ CoincenterCommand& CoincenterCommand::setReplayOptions(ReplayOptions replayOptio
   return *this;
 }
 
+CoincenterCommand& CoincenterCommand::setJsonConfigFile(std::string_view jsonConfigFile) {
+  _specialOptions = jsonConfigFile;
+  return *this;
+}
+
 }  // namespace cct

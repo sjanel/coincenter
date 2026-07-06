@@ -35,7 +35,7 @@ class MarketTraderEngine {
 
   TradeRangeStats tradeRange(MarketOrderBookVector &&marketOrderBooks, PublicTradeVector &&publicTrades);
 
-  const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
+  [[nodiscard]] const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
 
   MarketTradingResult finalizeAndComputeResult();
 

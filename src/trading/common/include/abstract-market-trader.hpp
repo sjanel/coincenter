@@ -19,9 +19,9 @@ class AbstractMarketTrader {
 
   virtual TraderCommand trade(const MarketDataView &marketDataView) = 0;
 
-  std::string_view name() const { return _name; }
+  [[nodiscard]] std::string_view name() const { return _name; }
 
-  const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
+  [[nodiscard]] const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
 
  protected:
   /// Constructs a new AbstractMarketTrader.
