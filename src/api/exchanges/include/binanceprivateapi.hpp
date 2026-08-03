@@ -6,8 +6,8 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
@@ -84,10 +84,10 @@ class BinancePrivate : public ExchangePrivate {
  private:
   OrderInfo queryOrder(OrderIdView orderId, const TradeContext& tradeContext, HttpRequestType requestType);
 
-  bool checkMarketAppendSymbol(Market mk, CurlPostData& params);
+  bool checkMarketAppendSymbol(Market mk, HttpPostData& params);
 
   struct BinanceContext {
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     BinancePublic& _exchangePublic;
     Duration& _queryDelay;
@@ -96,36 +96,36 @@ class BinancePrivate : public ExchangePrivate {
   static_assert(std::is_trivially_destructible_v<BinanceContext>, "BinanceContext destructor should be trivial");
 
   struct TradableCurrenciesCache : public BinanceContext {
-    TradableCurrenciesCache(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic,
+    TradableCurrenciesCache(HttpClient& httpClient, const APIKey& apiKey, BinancePublic& exchangePublic,
                             Duration& queryDelay)
-        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
+        : BinanceContext(httpClient, apiKey, exchangePublic, queryDelay) {}
 
     CurrencyExchangeFlatSet operator()();
   };
 
   struct DepositWalletFunc : public BinanceContext {
-    DepositWalletFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
-        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
+    DepositWalletFunc(HttpClient& httpClient, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
+        : BinanceContext(httpClient, apiKey, exchangePublic, queryDelay) {}
 
     Wallet operator()(CurrencyCode currencyCode);
   };
 
   struct AllWithdrawFeesFunc : public BinanceContext {
-    AllWithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic,
+    AllWithdrawFeesFunc(HttpClient& httpClient, const APIKey& apiKey, BinancePublic& exchangePublic,
                         Duration& queryDelay)
-        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
+        : BinanceContext(httpClient, apiKey, exchangePublic, queryDelay) {}
 
     MonetaryAmountByCurrencySet operator()();
   };
 
   struct WithdrawFeesFunc : public BinanceContext {
-    WithdrawFeesFunc(CurlHandle& curlHandle, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
-        : BinanceContext(curlHandle, apiKey, exchangePublic, queryDelay) {}
+    WithdrawFeesFunc(HttpClient& httpClient, const APIKey& apiKey, BinancePublic& exchangePublic, Duration& queryDelay)
+        : BinanceContext(httpClient, apiKey, exchangePublic, queryDelay) {}
 
     std::optional<MonetaryAmount> operator()(CurrencyCode currencyCode);
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesCache> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
   CachedResult<AllWithdrawFeesFunc> _allWithdrawFeesCache;

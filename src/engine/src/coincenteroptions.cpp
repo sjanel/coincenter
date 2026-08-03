@@ -8,7 +8,7 @@
 #include "cct_config.hpp"
 #include "cct_invalid_argument_exception.hpp"
 #include "coincentercommandtype.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "default-data-dir.hpp"
 #include "monetaryamount.hpp"
 #include "priceoptions.hpp"
@@ -38,7 +38,7 @@ bool CoincenterCmdLineOptions::isSmartTrade() const noexcept {
 std::ostream& CoincenterCmdLineOptions::PrintVersion(std::string_view programName, std::ostream& os) noexcept {
   os << programName << " version " << CCT_VERSION << '\n';
   os << "compiled with " << CCT_COMPILER_VERSION << " on " << __DATE__ << " at " << __TIME__ << '\n';
-  os << "              " << GetCurlVersionInfo() << '\n';
+  os << "              " << GetHttpClientVersionInfo() << '\n';
   os << "              " << ssl::GetOpenSSLVersion() << '\n';
 #ifdef CCT_PROTOBUF_VERSION
   os << "              " << "protobuf " << CCT_PROTOBUF_VERSION << '\n';

@@ -24,8 +24,8 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -40,7 +40,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "read-json.hpp"
 #include "request-retry.hpp"
@@ -76,9 +76,9 @@ auto ComputeMethodUrl(std::string_view endpoint, CurrencyCode base, CurrencyCode
 }
 
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurrencyCode base, CurrencyCode quote = CurrencyCode(),
+T PublicQuery(HttpClient& httpClient, std::string_view method, CurrencyCode base, CurrencyCode quote = CurrencyCode(),
               std::string_view urlOpts = "") {
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet));
 
   return requestRetry.query<T>(ComputeMethodUrl(method, base, quote, urlOpts), [](const T& response) {
     if constexpr (amc::is_detected<schema::bithumb::has_status_t, T>::value) {
@@ -99,25 +99,25 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurrencyCode base
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          config, commonAPI, _curlHandle),
+          config, commonAPI, _httpClient),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
-          config, _curlHandle, exchangeConfig().asset),
+          config, _httpClient, exchangeConfig().asset),
       _orderbookCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
-          config, _curlHandle, exchangeConfig().asset),
+          config, _httpClient, exchangeConfig().asset),
       _tradedVolumeCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
-          _curlHandle) {}
+          _httpClient) {}
 
 bool BithumbPublic::healthCheck() {
-  auto networkInfoStr = _curlHandle.query("/public/network-info", CurlOptions(HttpRequestType::kGet));
+  auto networkInfoStr = _httpClient.query("/public/network-info", HttpRequestOptions(HttpRequestType::kGet));
   schema::bithumb::V1NetworkInfo networkInfo;
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+  auto ec = ReadJson<json::opts_ex{{.error_on_unknown_keys = false, .minified = true}, /*raw_string*/ true}>(
       networkInfoStr, "Bithumb network info", networkInfo);
   if (ec) {
     log::error("{} health check response is badly formatted", name());
@@ -156,7 +156,7 @@ MonetaryAmount BithumbPublic::queryLastPrice(Market mk) {
 }
 
 CurrencyExchangeFlatSet BithumbPublic::TradableCurrenciesFunc::operator()() {
-  auto result = PublicQuery<schema::bithumb::V1AssetStatus>(_curlHandle, "/public/assetsstatus/", "all");
+  auto result = PublicQuery<schema::bithumb::V1AssetStatus>(_httpClient, "/public/assetsstatus/", "all");
 
   CurrencyExchangeVector currencies;
   currencies.reserve(static_cast<CurrencyExchangeVector::size_type>(result.data.size() + 1));
@@ -203,7 +203,7 @@ MarketOrderBookMap BithumbPublic::AllOrderBooksFunc::operator()() {
   CurrencyCode base("ALL");
   CurrencyCode quote;
 
-  auto result = PublicQuery<schema::bithumb::MultiOrderbook>(_curlHandle, "/public/orderbook/", base, quote);
+  auto result = PublicQuery<schema::bithumb::MultiOrderbook>(_httpClient, "/public/orderbook/", base, quote);
   const auto nowTime = Clock::now();
   MarketOrderBookMap ret;
 
@@ -276,7 +276,7 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
   AppendIntegralToString(urlOpts, depth);
 
   auto result =
-      PublicQuery<schema::bithumb::SingleOrderbook>(_curlHandle, "/public/orderbook/", mk.base(), mk.quote(), urlOpts);
+      PublicQuery<schema::bithumb::SingleOrderbook>(_httpClient, "/public/orderbook/", mk.base(), mk.quote(), urlOpts);
   //  Note: as of 2021-02-24, Bithumb payment currency is always KRW. Format of json may change once it's not the case
   //  anymore
   if (result.data.payment_currency.isDefined() && result.data.payment_currency != "KRW") {
@@ -293,7 +293,7 @@ MarketOrderBook BithumbPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
 MonetaryAmount BithumbPublic::TradedVolumeFunc::operator()(Market mk) {
   TimePoint t1 = Clock::now();
-  auto result = PublicQuery<schema::bithumb::Ticker>(_curlHandle, "/public/ticker/", mk.base(), mk.quote());
+  auto result = PublicQuery<schema::bithumb::Ticker>(_httpClient, "/public/ticker/", mk.base(), mk.quote());
   std::string_view bithumbTimestamp = result.data.date;
 
   int64_t bithumbTimeMs = StringToIntegral<int64_t>(bithumbTimestamp);
@@ -334,7 +334,7 @@ PublicTradeVector BithumbPublic::queryLastTrades(Market mk, int nbTrades) {
   string urlOpts("count=");
   AppendIntegralToString(urlOpts, nbTrades);
 
-  auto result = PublicQuery<schema::bithumb::TransactionHistory>(_curlHandle, "/public/transaction_history/", mk.base(),
+  auto result = PublicQuery<schema::bithumb::TransactionHistory>(_httpClient, "/public/transaction_history/", mk.base(),
                                                                  mk.quote(), urlOpts);
 
   PublicTradeVector ret;

@@ -866,7 +866,8 @@ TEST(MonetaryAmountTest, JsonSerializationFormatted) {
   string buffer;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts{.prettify = true, .indentation_width = 2}>(foo, buffer);
+  auto ec = json::write<json::opts_ex{{.prettify = true}, /*raw_string*/ false, /*error_on_const_read*/ false,
+                                      /*indentation_width*/ 2}>(foo, buffer);
 
   EXPECT_FALSE(ec);
 
@@ -879,7 +880,7 @@ TEST(MonetaryAmountTest, JsonDeserializationValue) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
+  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
 
   ASSERT_FALSE(ec);
 
@@ -890,7 +891,7 @@ TEST(MonetaryAmountTest, JsonSerializationKey) {
   std::map<MonetaryAmount, bool> map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
 
   string buffer;
-  auto res = json::write<json::opts{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res = json::write<json::opts_ex{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -905,7 +906,7 @@ TEST(MonetaryAmountTest, JsonSerializationVector) {
   Bar bar;
 
   string buffer;
-  auto res = json::write<json::opts{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res = json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 

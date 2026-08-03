@@ -20,7 +20,7 @@
 #include "monetaryamountbycurrencyset.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "tradedamounts.hpp"
 #include "tradeinfo.hpp"
 #include "wallet.hpp"
@@ -163,7 +163,7 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
 
   TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
 
-  PermanentCurlOptions::Builder permanentCurlOptionsBuilder() const;
+  PermanentRequestOptions::Builder permanentHttpRequestOptionsBuilder() const;
 
   ExchangePublic &_exchangePublic;
   CachedResultVault &_cachedResultVault{_exchangePublic._cachedResultVault};

@@ -12,17 +12,15 @@
 
 namespace cct {
 
+// {raw_string, error_on_const_read} are opts_ex (derived) members; base members
+// (error_on_unknown_keys...) go in the nested brace.
 inline constexpr auto kExactJsonOptions =
-    json::opts{.error_on_unknown_keys = true,  // NOLINT(readability-implicit-bool-conversion)
-               .error_on_const_read = true,    // NOLINT(readability-implicit-bool-conversion)
-               .raw_string = true};            // NOLINT(readability-implicit-bool-conversion)
+    json::opts_ex{{.error_on_unknown_keys = true}, /*raw_string*/ true, /*error_on_const_read*/ true};
 
 inline constexpr auto kPartialJsonOptions =
-    json::opts{.error_on_unknown_keys = false,  // NOLINT(readability-implicit-bool-conversion)
-               .error_on_const_read = true,     // NOLINT(readability-implicit-bool-conversion)
-               .raw_string = true};             // NOLINT(readability-implicit-bool-conversion)
+    json::opts_ex{{.error_on_unknown_keys = false}, /*raw_string*/ true, /*error_on_const_read*/ true};
 
-template <json::opts opts>
+template <auto opts>
 json::error_ctx ReadJson(std::string_view strContent, std::string_view serviceName, auto &outObject) {
   if (strContent.empty()) {
     return json::error_ctx{};
@@ -46,7 +44,7 @@ json::error_ctx ReadPartialJson(std::string_view strContent, std::string_view se
   return ReadJson<kPartialJsonOptions>(strContent, serviceName, outObject);
 }
 
-template <json::opts opts>
+template <auto opts>
 void ReadJsonOrThrow(std::string_view strContent, auto &outObject) {
   if (strContent.empty()) {
     return;
@@ -68,19 +66,19 @@ void ReadExactJsonOrThrow(std::string_view strContent, auto &outObject) {
   ReadJsonOrThrow<kExactJsonOptions>(strContent, outObject);
 }
 
-template <class T, json::opts opts = kExactJsonOptions>
+template <class T, auto opts = kExactJsonOptions>
 T ReadJsonOrThrow(std::string_view strContent) {
   T outObject;
   ReadJsonOrThrow<opts>(strContent, outObject);
   return outObject;
 }
 
-template <class T, json::opts opts = kExactJsonOptions>
+template <class T, auto opts = kExactJsonOptions>
 T ReadJsonOrThrow(const Reader &reader) {
   return ReadJsonOrThrow<T, opts>(reader.readAll());
 }
 
-template <class T, json::opts opts = kExactJsonOptions>
+template <class T, auto opts = kExactJsonOptions>
 T ReadJsonOrCreateFile(const File &file) {
   T outObject;
   if (file.exists()) {

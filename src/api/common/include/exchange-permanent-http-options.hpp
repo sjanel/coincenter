@@ -3,17 +3,17 @@
 #include <cstdint>
 
 #include "exchange-query-config.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 
 namespace cct::api {
 
-class ExchangePermanentCurlOptions {
+class ExchangePermanentHttpOptions {
  public:
-  explicit ExchangePermanentCurlOptions(const schema::ExchangeQueryConfig &queryConfig);
+  explicit ExchangePermanentHttpOptions(const schema::ExchangeQueryConfig &queryConfig);
 
   enum class Api : int8_t { Public, Private };
 
-  PermanentCurlOptions::Builder builderBase(Api api) const;
+  PermanentRequestOptions::Builder builderBase(Api api) const;
 
  private:
   const schema::ExchangeQueryConfig &_queryConfig;

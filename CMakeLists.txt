@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.28)
 
 # cmake does not currently support version suffixes (for dev / rc releases for instance.)
 # Github actions will detect if version has 'tweak' value (3 '.' in version) 
@@ -57,11 +57,11 @@ endif()
 # openssl for requests
 find_package(OpenSSL REQUIRED)
 
-# ZLIB - required for serialization data compression
-find_package(ZLIB REQUIRED)
-
-# curl - request library
-find_package(CURL REQUIRED)
+# ZLIB - only required by protobuf for serialization data compression.
+# aeronet no longer needs the system zlib: it builds its own bundled zlib-ng (see AERONET_ENABLE_ZLIBNG below).
+if(CCT_ENABLE_PROTO)
+  find_package(ZLIB REQUIRED)
+endif()
 
 # External dependencies (linked with FetchContent)
 include(FetchContent)
@@ -103,10 +103,12 @@ endif()
 find_package(glaze CONFIG)
 if(NOT glaze)
 
+  # Kept in sync with the glaze version pinned by aeronet (they share a single glaze::glaze target
+  # via FetchContent, and aeronet requires glaze >= 7 for its <glaze/yaml.hpp> config loader).
   FetchContent_Declare(
     glaze
-    URL https://github.com/stephenberry/glaze/archive/refs/tags/v5.7.1.tar.gz
-    URL_HASH SHA256=c896ec90927a93ea43d33113ca2fd7b62961b870cb7fc12586cc865f335992f7
+    URL https://github.com/stephenberry/glaze/archive/refs/tags/v7.7.1.tar.gz
+    URL_HASH SHA256=c51217ca374f2a7d556c501a849d3a43dfffff47ba7711b6f0c22020e71ff63d
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable glaze)
@@ -153,16 +155,32 @@ if(NOT spdlog_FOUND)
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
 endif()
 
-# JWT library
+# aeronet - HTTP client (replaces libcurl) and JWT / JWS support (replaces jwt-cpp).
+# The HTTP client is currently unreleased, so we track the main branch.
 FetchContent_Declare(
-  jwt-cpp
-  URL https://github.com/Thalhammer/jwt-cpp/archive/refs/tags/v0.7.1.tar.gz
-  URL_HASH SHA256=e52f247d5e62fac5da6191170998271a70ce27f747f2ce8fde9b09f96a5375a4
+  aeronet
+  GIT_REPOSITORY https://github.com/sjanel/aeronet.git
+  GIT_TAG main
 )
 
-set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# As a sub-project aeronet keeps most features OFF (they key off PROJECT_IS_TOP_LEVEL) and JWT is a
+# dependent option requiring OpenSSL + glaze. Force the features coincenter needs and disable the rest.
+set(AERONET_ENABLE_HTTP_CLIENT ON  CACHE BOOL "" FORCE)  # the HTTP client we migrate to
+set(AERONET_ENABLE_OPENSSL     ON  CACHE BOOL "" FORCE)  # HTTPS + JWT crypto
+set(AERONET_ENABLE_GLAZE       ON  CACHE BOOL "" FORCE)  # required by JWT
+set(AERONET_ENABLE_JWT         ON  CACHE BOOL "" FORCE)  # replaces jwt-cpp
+set(AERONET_ENABLE_ZLIB        ON  CACHE BOOL "" FORCE)  # gzip / deflate auto-decompression
+set(AERONET_ENABLE_ZLIBNG      ON  CACHE BOOL "" FORCE)  # use aeronet's bundled zlib-ng (faster, self-contained)
+set(AERONET_ENABLE_ZSTD        ON  CACHE BOOL "" FORCE)  # zstd auto-decompression (more efficient)
+set(AERONET_ENABLE_BROTLI      ON  CACHE BOOL "" FORCE)  # brotli auto-decompression (more efficient)
+set(AERONET_ENABLE_HTTP2       OFF CACHE BOOL "" FORCE)  # HTTP/1.1 is enough; fewer dependencies
+set(AERONET_ENABLE_WEBSOCKET   OFF CACHE BOOL "" FORCE)
+set(AERONET_BUILD_TESTS        OFF CACHE BOOL "" FORCE)
+set(AERONET_BUILD_EXAMPLES     OFF CACHE BOOL "" FORCE)
+set(AERONET_BUILD_BENCHMARKS   OFF CACHE BOOL "" FORCE)
+set(AERONET_INSTALL            OFF CACHE BOOL "" FORCE)
 
-list(APPEND fetchContentPackagesToMakeAvailable jwt-cpp)
+list(APPEND fetchContentPackagesToMakeAvailable aeronet)
 
 # protobuf - serialization / deserialization library
 set(PROTOBUF_FETCHED_CONTENT OFF)

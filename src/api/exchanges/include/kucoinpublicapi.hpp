@@ -6,8 +6,8 @@
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
-#include "curlhandle.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
@@ -88,7 +88,7 @@ class KucoinPublic : public ExchangePublic {
 
     CurrencyInfoSet operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const CoincenterInfo& _coincenterInfo;
     CommonAPI& _commonApi;
   };
@@ -109,7 +109,7 @@ class KucoinPublic : public ExchangePublic {
 
     std::pair<MarketSet, MarketInfoMap> operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -117,30 +117,30 @@ class KucoinPublic : public ExchangePublic {
     MarketOrderBookMap operator()(int depth);
 
     CachedResult<MarketsFunc>& _marketsCache;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct OrderBookFunc {
     MarketOrderBook operator()(Market mk, int depth);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TradedVolumeFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TickerFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
-  static CurlPostData GetSymbolPostData(Market mk) { return CurlPostData{{"symbol", mk.assetsPairStrUpper('-')}}; }
+  static HttpPostData GetSymbolPostData(Market mk) { return HttpPostData{{"symbol", mk.assetsPairStrUpper('-')}}; }
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;

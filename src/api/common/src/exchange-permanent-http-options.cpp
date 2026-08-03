@@ -1,15 +1,15 @@
-#include "exchange-permanent-curl-options.hpp"
+#include "exchange-permanent-http-options.hpp"
 
 #include "exchange-query-config.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 
 namespace cct::api {
 
-ExchangePermanentCurlOptions::ExchangePermanentCurlOptions(const schema::ExchangeQueryConfig &queryConfig)
+ExchangePermanentHttpOptions::ExchangePermanentHttpOptions(const schema::ExchangeQueryConfig &queryConfig)
     : _queryConfig(queryConfig) {}
 
-PermanentCurlOptions::Builder ExchangePermanentCurlOptions::builderBase(Api api) const {
-  PermanentCurlOptions::Builder builder;
+PermanentRequestOptions::Builder ExchangePermanentHttpOptions::builderBase(Api api) const {
+  PermanentRequestOptions::Builder builder;
 
   builder.setAcceptedEncoding(_queryConfig.acceptEncoding)
       .setRequestCallLogLevel(_queryConfig.logLevels.requestsCall)
@@ -22,7 +22,7 @@ PermanentCurlOptions::Builder ExchangePermanentCurlOptions::builderBase(Api api)
       break;
     case Api::Public:
       builder.setMinDurationBetweenQueries(_queryConfig.publicAPIRate.duration)
-          .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse);
+          .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse);
       break;
     default:
       break;

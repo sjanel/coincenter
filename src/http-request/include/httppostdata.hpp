@@ -3,5 +3,5 @@
 #include "flatkeyvaluestring.hpp"
 
 namespace cct {
-using CurlPostData = FlatKeyValueString<'&', '='>;
+using HttpPostData = FlatKeyValueString<'&', '='>;
 }

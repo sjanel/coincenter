@@ -8,7 +8,7 @@
 namespace cct {
 using MetricKeyPerRequestType = std::map<HttpRequestType, MetricKey>;
 
-struct CurlMetrics {
+struct HttpMetrics {
   static const MetricKeyPerRequestType kNbRequestsKeys;
   static const MetricKeyPerRequestType kRequestDurationKeys;
   static const MetricKeyPerRequestType kNbRequestErrorKeys;

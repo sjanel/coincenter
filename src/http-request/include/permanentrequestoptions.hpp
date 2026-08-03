@@ -9,13 +9,13 @@
 
 namespace cct {
 
-class PermanentCurlOptions {
+class PermanentRequestOptions {
  public:
   static constexpr auto kDefaultNbMaxRetries = 5;
 
   enum class TooManyErrorsPolicy : int8_t { kThrow, kReturnEmptyResponse };
 
-  PermanentCurlOptions() noexcept = default;
+  PermanentRequestOptions() noexcept = default;
 
   const auto &getUserAgent() const { return _userAgent; }
 
@@ -103,7 +103,7 @@ class PermanentCurlOptions {
       return *this;
     }
 
-    PermanentCurlOptions build() {
+    PermanentRequestOptions build() {
       return {std::move(_userAgent),
               std::move(_acceptedEncoding),
               _minDurationBetweenQueries,
@@ -128,7 +128,7 @@ class PermanentCurlOptions {
   };
 
  private:
-  PermanentCurlOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries, Duration timeout,
+  PermanentRequestOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries, Duration timeout,
                        LogLevel requestCallLogLevel, LogLevel requestAnswerLogLevel, int nbMaxRetries,
                        bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
       : _userAgent(std::move(userAgent)),

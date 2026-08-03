@@ -10,7 +10,7 @@
 #include "cachedresult.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -19,7 +19,7 @@
 #include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "request-retry.hpp"
 #include "runmodes.hpp"
 
@@ -31,12 +31,12 @@ constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com";
 }  // namespace
 
 BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
-                                                                   const PermanentCurlOptions& permanentCurlOptions,
+                                                                   const PermanentRequestOptions& permanentHttpRequestOptions,
                                                                    settings::RunMode runMode)
-    : _curlHandle(kCryptoFeeBaseUrl, pMetricGateway, permanentCurlOptions, runMode) {}
+    : _httpClient(kCryptoFeeBaseUrl, pMetricGateway, permanentHttpRequestOptions, runMode) {}
 
 schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFunc::operator()() {
-  RequestRetry requestRetry(_curlHandle, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(_httpClient, HttpRequestOptions(HttpRequestType::kGet));
 
   auto ret = requestRetry.query<schema::binance::NetworkCoinAll>(
       "/bapi/capital/v1/public/capital/getNetworkCoinAll", [](const auto& response) {
@@ -77,8 +77,8 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const auto
 }  // namespace
 
 BinanceGlobalInfos::BinanceGlobalInfos(CachedResultOptions&& cachedResultOptions, AbstractMetricGateway* pMetricGateway,
-                                       const PermanentCurlOptions& permanentCurlOptions, settings::RunMode runMode)
-    : _globalInfosCache(cachedResultOptions, pMetricGateway, permanentCurlOptions, runMode) {}
+                                       const PermanentRequestOptions& permanentHttpRequestOptions, settings::RunMode runMode)
+    : _globalInfosCache(cachedResultOptions, pMetricGateway, permanentHttpRequestOptions, runMode) {}
 
 MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {
   std::lock_guard<std::mutex> guard(_mutex);

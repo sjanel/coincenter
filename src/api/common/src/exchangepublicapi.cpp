@@ -25,7 +25,7 @@
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "exchange-name-enum.hpp"
-#include "exchange-permanent-curl-options.hpp"
+#include "exchange-permanent-http-options.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
@@ -34,7 +34,7 @@
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "public-trade-vector.hpp"
@@ -530,8 +530,8 @@ AbstractMarketDataSerializer &ExchangePublic::getMarketDataSerializer() {
   return *_marketDataSerializerPtr;
 }
 
-PermanentCurlOptions::Builder ExchangePublic::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Public);
+PermanentRequestOptions::Builder ExchangePublic::permanentHttpRequestOptionsBuilder() const {
+  return ExchangePermanentHttpOptions(exchangeConfig().query).builderBase(ExchangePermanentHttpOptions::Api::Public);
 }
 
 }  // namespace cct::api

@@ -14,9 +14,9 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -32,7 +32,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "read-json.hpp"
 #include "request-retry.hpp"
@@ -45,8 +45,8 @@ namespace cct::api {
 namespace {
 
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& postData = CurlPostData()) {
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+T PublicQuery(HttpClient& httpClient, std::string_view endpoint, HttpPostData&& postData = HttpPostData()) {
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet, std::move(postData)));
   return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint).first;
 }
 
@@ -54,31 +54,31 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, CurlPostData&& 
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::upbit, fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
-          _curlHandle, exchangeConfig().asset),
+          _httpClient, exchangeConfig().asset),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          _curlHandle, _marketsCache),
+          _httpClient, _marketsCache),
       _withdrawalFeesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
           name(), config.dataDir()),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
-          _curlHandle, _marketsCache),
+          _httpClient, _marketsCache),
       _orderbookCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tradedVolumeCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tickerCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
-          _curlHandle) {}
+          _httpClient) {}
 
 bool UpbitPublic::healthCheck() {
-  auto result = PublicQuery<schema::upbit::V1Tickers>(_curlHandle, "/v1/ticker", {{"markets", "KRW-BTC"}});
+  auto result = PublicQuery<schema::upbit::V1Tickers>(_httpClient, "/v1/ticker", {{"markets", "KRW-BTC"}});
   return !result.empty() && result.front().timestamp != 0;
 }
 
@@ -114,7 +114,7 @@ bool UpbitPublic::CheckCurrencyCode(CurrencyCode standardCode, const CurrencyCod
 }
 
 MarketSet UpbitPublic::MarketsFunc::operator()() {
-  auto result = PublicQuery<schema::upbit::V1MarketAll>(_curlHandle, "/v1/market/all", {{"isDetails", "true"}});
+  auto result = PublicQuery<schema::upbit::V1MarketAll>(_httpClient, "/v1/market/all", {{"isDetails", "true"}});
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   MarketSet ret;
   ret.reserve(static_cast<MarketSet::size_type>(result.size()));
@@ -238,24 +238,24 @@ MarketOrderBookMap UpbitPublic::AllOrderBooksFunc::operator()(int depth) {
     marketsStr.append(ReverseMarketStr(mk));
   }
   return ParseOrderBooks<MarketOrderBookMap>(
-      PublicQuery<schema::upbit::V1Orderbooks>(_curlHandle, "/v1/orderbook", {{"markets", marketsStr}}), depth);
+      PublicQuery<schema::upbit::V1Orderbooks>(_httpClient, "/v1/orderbook", {{"markets", marketsStr}}), depth);
 }
 
 MarketOrderBook UpbitPublic::OrderBookFunc::operator()(Market mk, int depth) {
   return ParseOrderBooks<MarketOrderBook>(
-      PublicQuery<schema::upbit::V1Orderbooks>(_curlHandle, "/v1/orderbook", {{"markets", ReverseMarketStr(mk)}}),
+      PublicQuery<schema::upbit::V1Orderbooks>(_httpClient, "/v1/orderbook", {{"markets", ReverseMarketStr(mk)}}),
       depth);
 }
 
 MonetaryAmount UpbitPublic::TradedVolumeFunc::operator()(Market mk) {
-  auto result = PublicQuery<schema::upbit::V1CandlesDay>(_curlHandle, "/v1/candles/days",
+  auto result = PublicQuery<schema::upbit::V1CandlesDay>(_httpClient, "/v1/candles/days",
                                                          {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double last24hVol = result.empty() ? 0 : result.front().candle_acc_trade_volume;
   return MonetaryAmount(last24hVol, mk.base());
 }
 
 PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
-  auto result = PublicQuery<schema::upbit::V1TradesTicks>(_curlHandle, "/v1/trades/ticks",
+  auto result = PublicQuery<schema::upbit::V1TradesTicks>(_httpClient, "/v1/trades/ticks",
                                                           {{"count", nbTrades}, {"market", ReverseMarketStr(mk)}});
 
   PublicTradeVector ret;
@@ -274,7 +274,7 @@ PublicTradeVector UpbitPublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount UpbitPublic::TickerFunc::operator()(Market mk) {
-  auto result = PublicQuery<schema::upbit::V1TradesTicks>(_curlHandle, "/v1/trades/ticks",
+  auto result = PublicQuery<schema::upbit::V1TradesTicks>(_httpClient, "/v1/trades/ticks",
                                                           {{"count", 1}, {"market", ReverseMarketStr(mk)}});
   double lastPrice = result.empty() ? 0 : result.front().trade_price;
   return MonetaryAmount(lastPrice, mk.quote());

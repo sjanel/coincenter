@@ -63,9 +63,12 @@ Other compilers have not been tested.
 In addition, the basic minimum requirements are:
 
 - **Git**
-- **CMake** >= 3.15
-- **curl** >= 7.58.0 (it may work with an earlier version, it's just the minimum tested on **Ubuntu 18**)
+- **CMake** >= 3.28
 - **openssl** >= 1.1.0
+
+The aeronet HTTP client decompresses responses with `zlib-ng`, `zstd` and `brotli`. These are fetched and
+built from source automatically by aeronet (they do not need to be installed system-wide), so only `zlib`
+(for protobuf) and `openssl` remain as system dependencies.
 
 ### Linux
 
@@ -76,7 +79,7 @@ Otherwise you can still force it:
 
 ```bash
 sudo apt update
-sudo apt install build-essential ninja-build zlib1g-dev libcurl4-openssl-dev libssl-dev cmake git ca-certificates
+sudo apt install build-essential ninja-build zlib1g-dev libssl-dev cmake git ca-certificates
 ```
 
 You can refer to the provided [Dockerfile](Dockerfile) for more information.
@@ -86,7 +89,7 @@ You can refer to the provided [Dockerfile](Dockerfile) for more information.
 With `ninja` generator for instance:
 
 ```bash
-sudo apk add --update --upgrade g++ libc-dev zlib-dev openssl-dev curl-dev cmake ninja git ca-certificates
+sudo apk add --update --upgrade g++ libc-dev zlib-dev openssl-dev cmake ninja git ca-certificates
 ```
 
 You can refer to the provided [Dockerfile](alpine.Dockerfile) for more information.
@@ -142,7 +145,7 @@ If you are building frequently `coincenter` you can install them to speed up its
 | [json serialization](https://github.com/stephenberry/glaze)    | Extremely fast, in memory, JSON and interface library for modern C++ | MIT                  |
 | [spdlog](https://github.com/gabime/spdlog.git)                 | Fast C++ logging library                                             | MIT                  |
 | [prometheus-cpp](https://github.com/jupp0r/prometheus-cpp.git) | Prometheus Client Library for Modern C++                             | MIT                  |
-| [jwt-cpp](https://github.com/Thalhammer/jwt-cpp)               | Creating and validating json web tokens in C++                       | MIT                  |
+| [aeronet](https://github.com/sjanel/aeronet)                   | HTTP client (and server) and JWT/JWS support (maintained by me)      | MIT                  |
 
 ### With cmake
 

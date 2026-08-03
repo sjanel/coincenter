@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
@@ -47,7 +47,10 @@ class HuobiPublic : public ExchangePublic {
 
   std::optional<MonetaryAmount> queryWithdrawalFee(CurrencyCode currencyCode) override;
 
-  bool isWithdrawalFeesSourceReliable() const override { return true; }
+  // Huobi lists withdrawable currencies whose fee is not a fixed amount (withdrawFeeType 'ratio' or
+  // 'circulated', e.g. LUNC): those cannot be represented as a fixed MonetaryAmount and are therefore
+  // absent from queryWithdrawalFees(). The source is thus not reliable for every withdrawable currency.
+  bool isWithdrawalFeesSourceReliable() const override { return false; }
 
   MarketOrderBookMap queryAllApproximatedOrderBooks(int depth = kDefaultDepth) override {
     return _allOrderBooksCache.get(depth);
@@ -76,7 +79,7 @@ class HuobiPublic : public ExchangePublic {
   struct TradableCurrenciesFunc {
     schema::huobi::V2ReferenceCurrency operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct MarketsFunc {
@@ -99,7 +102,7 @@ class HuobiPublic : public ExchangePublic {
 
     std::pair<MarketSet, MarketInfoMap> operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -107,25 +110,25 @@ class HuobiPublic : public ExchangePublic {
     MarketOrderBookMap operator()(int depth);
 
     CachedResult<MarketsFunc>& _marketsCache;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct OrderBookFunc {
     MarketOrderBook operator()(Market mk, int depth);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TradedVolumeFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TickerFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct WithdrawParams {
@@ -136,8 +139,7 @@ class HuobiPublic : public ExchangePublic {
 
   WithdrawParams getWithdrawParams(CurrencyCode cur);
 
-  CurlHandle _curlHandle;
-  CurlHandle _healthCheckCurlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;

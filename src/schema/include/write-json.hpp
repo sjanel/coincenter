@@ -6,17 +6,15 @@
 
 namespace cct {
 
+// {raw_string, error_on_const_read, indentation_width} are opts_ex (derived) members; base members
+// (prettify, minified...) go in the nested brace.
 inline constexpr auto kPrettifyJsonOptions =
-    json::opts{.prettify = true,        // NOLINT(readability-implicit-bool-conversion)
-               .indentation_width = 2,  // NOLINT(readability-implicit-bool-conversion)
-               .raw_string = true};     // NOLINT(readability-implicit-bool-conversion)
+    json::opts_ex{{.prettify = true}, /*raw_string*/ true, /*error_on_const_read*/ false,
+                  /*indentation_width*/ 2};
 
-inline constexpr auto kMinifiedJsonOptions =
-    json::opts{.prettify = false,    // NOLINT(readability-implicit-bool-conversion)
-               .minified = true,     // NOLINT(readability-implicit-bool-conversion)
-               .raw_string = true};  // NOLINT(readability-implicit-bool-conversion)
+inline constexpr auto kMinifiedJsonOptions = json::opts_ex{{.minified = true}, /*raw_string*/ true};
 
-template <json::opts opts = kMinifiedJsonOptions>
+template <auto opts = kMinifiedJsonOptions>
 string WriteJsonOrThrow(const auto &obj) {
   string buf;
 

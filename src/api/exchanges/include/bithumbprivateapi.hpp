@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "timepoint-schema.hpp"
@@ -61,7 +61,7 @@ class BithumbPrivate : public ExchangePrivate {
   struct DepositWalletFunc {
     Wallet operator()(CurrencyCode currencyCode);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     BithumbPublic& _exchangePublic;
   };
@@ -86,7 +86,7 @@ class BithumbPrivate : public ExchangePrivate {
 
   using CurrencyOrderInfoMap = std::unordered_map<CurrencyCode, CurrencyOrderInfo>;
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CurrencyOrderInfoMap _currencyOrderInfoMap;
   Duration _currencyOrderInfoRefreshTime;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;

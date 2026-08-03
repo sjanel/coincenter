@@ -1,6 +1,5 @@
 #include "withdrawalfees-crawler.hpp"
 
-#include <array>
 #include <cstddef>
 #include <string_view>
 #include <utility>
@@ -12,16 +11,15 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "curloptions.hpp"
+#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "read-json.hpp"
-#include "threadpool.hpp"
 #include "timedef.hpp"
 #include "withdrawal-fees-schema.hpp"
 #include "write-json.hpp"
@@ -73,42 +71,28 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
 }
 
 WithdrawalFeesCrawler::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo)
-    : _curlHandle1(kUrlWithdrawFee1, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
-                       .build(),
-                   coincenterInfo.getRunMode()),
-      _curlHandle2(kUrlWithdrawFee2, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
-                       .build(),
-                   coincenterInfo.getRunMode()) {}
+    : _httpClient(kNoBaseUrl, coincenterInfo.metricGatewayPtr(),
+                  PermanentRequestOptions::Builder()
+                      .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                      .build(),
+                  coincenterInfo.getRunMode()) {}
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::operator()(
     ExchangeNameEnum exchangeNameEnum) {
-  static constexpr auto kNbSources = 2;
+  // The two sources are fetched sequentially: they now share a single HttpClient (aeronet's client is not
+  // bound to a single host), whose response buffer is reused across queries and is therefore not safe to
+  // query concurrently.
+  auto [withdrawFees, withdrawMinMap] = get1(exchangeNameEnum);
 
-  ThreadPool threadPool(kNbSources);
+  auto [withdrawFees2, withdrawMinMap2] = get2(exchangeNameEnum);
+  withdrawFees.insert(withdrawFees2.begin(), withdrawFees2.end());
+  withdrawMinMap.merge(std::move(withdrawMinMap2));
 
-  std::array results{threadPool.enqueue([this](ExchangeNameEnum exchangeNameEnum) { return get1(exchangeNameEnum); },
-                                        exchangeNameEnum),
-                     threadPool.enqueue([this](ExchangeNameEnum exchangeNameEnum) { return get2(exchangeNameEnum); },
-                                        exchangeNameEnum)};
-
-  auto [withdrawFees1, withdrawMinMap1] = results[0].get();
-
-  for (auto resPos = 1; resPos < kNbSources; ++resPos) {
-    auto [withdrawFees, withdrawMinMap] = results[resPos].get();
-
-    withdrawFees1.insert(withdrawFees.begin(), withdrawFees.end());
-    withdrawMinMap1.merge(std::move(withdrawMinMap));
-  }
-
-  if (withdrawFees1.empty() || withdrawMinMap1.empty()) {
+  if (withdrawFees.empty() || withdrawMinMap.empty()) {
     log::error("Unable to parse {} withdrawal fees", EnumToString(exchangeNameEnum));
   }
 
-  return std::make_pair(std::move(withdrawFees1), std::move(withdrawMinMap1));
+  return std::make_pair(std::move(withdrawFees), std::move(withdrawMinMap));
 }
 
 void WithdrawalFeesCrawler::updateCacheFile() const {
@@ -143,9 +127,10 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
     ExchangeNameEnum exchangeNameEnum) {
   std::string_view exchangeName = EnumToString(exchangeNameEnum);
-  string path(exchangeName);
-  path.append(".json");
-  std::string_view dataStr = _curlHandle1.query(path, CurlOptions(HttpRequestType::kGet));
+  string url(kUrlWithdrawFee1);
+  url.append(exchangeName);
+  url.append(".json");
+  std::string_view dataStr = _httpClient.query(url, HttpRequestOptions(HttpRequestType::kGet));
 
   WithdrawalInfoMaps ret;
 
@@ -186,7 +171,9 @@ WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesF
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get2(
     ExchangeNameEnum exchangeNameEnum) {
   std::string_view exchangeName = EnumToString(exchangeNameEnum);
-  std::string_view withdrawalFeesCsv = _curlHandle2.query(exchangeName, CurlOptions(HttpRequestType::kGet));
+  string url(kUrlWithdrawFee2);
+  url.append(exchangeName);
+  std::string_view withdrawalFeesCsv = _httpClient.query(url, HttpRequestOptions(HttpRequestType::kGet));
 
   static constexpr std::string_view kBeginTableTitle = "Deposit & Withdrawal fees</h2>";
 

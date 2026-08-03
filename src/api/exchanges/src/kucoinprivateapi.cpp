@@ -21,9 +21,9 @@
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
@@ -40,7 +40,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
@@ -71,10 +71,10 @@ auto ComputeBaseStrToSign(HttpRequestType requestType, std::string_view method, 
   return std::ranges::copy(method, it).out;
 }
 
-CurlOptions CreateCurlOptions(const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+HttpRequestOptions CreateHttpRequestOptions(const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
                               string& strToSign, std::string_view nonceTimeStr,
-                              CurlPostData&& postData = CurlPostData()) {
-  CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
+                              HttpPostData&& postData = HttpPostData()) {
+  HttpRequestOptions::PostDataFormat postDataFormat = HttpRequestOptions::PostDataFormat::kString;
   if (postData.empty()) {
     ComputeBaseStrToSign(requestType, method, 0UL, nonceTimeStr, strToSign);
   } else {
@@ -86,11 +86,11 @@ CurlOptions CreateCurlOptions(const APIKey& apiKey, HttpRequestType requestType,
       auto postDataJsonStr = postData.toJsonStr();
       auto it = ComputeBaseStrToSign(requestType, method, postDataJsonStr.size(), nonceTimeStr, strToSign);
       std::ranges::copy(postDataJsonStr, it);
-      postDataFormat = CurlOptions::PostDataFormat::json;
+      postDataFormat = HttpRequestOptions::PostDataFormat::json;
     }
   }
 
-  CurlOptions opts(requestType, std::move(postData), postDataFormat);
+  HttpRequestOptions opts(requestType, std::move(postData), postDataFormat);
 
   auto& httpHeaders = opts.mutableHttpHeaders();
 
@@ -104,12 +104,12 @@ CurlOptions CreateCurlOptions(const APIKey& apiKey, HttpRequestType requestType,
 }
 
 template <class T>
-T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
-               CurlPostData&& postData = CurlPostData()) {
+T PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
+               HttpPostData&& postData = HttpPostData()) {
   auto nonceTimeStr = Nonce_TimeSinceEpochInMs();
   string strToSign;
   RequestRetry requestRetry(
-      curlHandle, CreateCurlOptions(apiKey, requestType, method, strToSign, nonceTimeStr, std::move(postData)),
+      httpClient, CreateHttpRequestOptions(apiKey, requestType, method, strToSign, nonceTimeStr, std::move(postData)),
       QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
 
   return requestRetry.query<T>(
@@ -132,7 +132,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
         }
         return RequestRetry::Status::kResponseOK;
       },
-      [&strToSign, &apiKey, &nonceTimeStr](CurlOptions& opts) {
+      [&strToSign, &apiKey, &nonceTimeStr](HttpRequestOptions& opts) {
         auto newNonceTimeStr = Nonce_TimeSinceEpochInMs();
 
         strToSign.replace(0UL, nonceTimeStr.size(), newNonceTimeStr);
@@ -145,12 +145,12 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
       });
 }
 
-void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount amount, std::string_view fromStr,
+void InnerTransfer(HttpClient& httpClient, const APIKey& apiKey, MonetaryAmount amount, std::string_view fromStr,
                    std::string_view toStr) {
   log::info("Perform inner transfer of {} to {} account", amount, toStr);
 
   PrivateQuery<schema::kucoin::V1AccountsInnerTransfer>(
-      curlHandle, apiKey, HttpRequestType::kPost, "/api/v2/accounts/inner-transfer",
+      httpClient, apiKey, HttpRequestType::kPost, "/api/v2/accounts/inner-transfer",
       {{"clientOid", Nonce_TimeSinceEpochInMs()},  // Seems useless, but it's mandatory apparently
        {"currency", amount.currencyStr()},
        {"amount", amount.amountStr()},
@@ -158,11 +158,11 @@ void InnerTransfer(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount 
        {"to", toStr}});
 }
 
-bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, MonetaryAmount expectedAmount,
+bool EnsureEnoughAmountIn(HttpClient& httpClient, const APIKey& apiKey, MonetaryAmount expectedAmount,
                           std::string_view accountName) {
   // Check if enough balance in the 'accountName' account of Kucoin
   CurrencyCode cur = expectedAmount.currencyCode();
-  auto res = PrivateQuery<schema::kucoin::V1Accounts>(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/accounts",
+  auto res = PrivateQuery<schema::kucoin::V1Accounts>(httpClient, apiKey, HttpRequestType::kGet, "/api/v1/accounts",
                                                       {{"currency", cur.str()}})
                  .data;
   MonetaryAmount totalAvailableAmount(0, cur);
@@ -186,10 +186,10 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
       if (typeStr != accountName && av != 0) {
         MonetaryAmount remainingAmountToInnerTransfer = expectedAmount - amountInTargetAccount;
         if (av < remainingAmountToInnerTransfer) {
-          InnerTransfer(curlHandle, apiKey, av, typeStr, accountName);
+          InnerTransfer(httpClient, apiKey, av, typeStr, accountName);
           amountInTargetAccount += av;
         } else {
-          InnerTransfer(curlHandle, apiKey, remainingAmountToInnerTransfer, typeStr, accountName);
+          InnerTransfer(httpClient, apiKey, remainingAmountToInnerTransfer, typeStr, accountName);
           break;
         }
       }
@@ -202,20 +202,20 @@ bool EnsureEnoughAmountIn(CurlHandle& curlHandle, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
-      _curlHandle(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, kucoinPublic) {}
+          _httpClient, _apiKey, kucoinPublic) {}
 
 bool KucoinPrivate::validateApiKey() {
-  auto ret = PrivateQuery<schema::kucoin::V1Accounts>(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts");
+  auto ret = PrivateQuery<schema::kucoin::V1Accounts>(_httpClient, _apiKey, HttpRequestType::kGet, "/api/v1/accounts");
   return ret.code == KucoinPublic::kStatusCodeOK;
 }
 
 BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   auto result =
-      PrivateQuery<schema::kucoin::V1Accounts>(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/accounts").data;
+      PrivateQuery<schema::kucoin::V1Accounts>(_httpClient, _apiKey, HttpRequestType::kGet, "/api/v1/accounts").data;
   BalancePortfolio balancePortfolio;
   bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
@@ -240,14 +240,14 @@ BalancePortfolio KucoinPrivate::queryAccountBalance(const BalanceOptions& balanc
 
 Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   auto depositAddresses =
-      PrivateQuery<schema::kucoin::V3DepositAddresses>(_curlHandle, _apiKey, HttpRequestType::kGet,
+      PrivateQuery<schema::kucoin::V3DepositAddresses>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                        "/api/v3/deposit-addresses", {{"currency", currencyCode.str()}})
           .data;
   ExchangeName exchangeName(_kucoinPublic.exchangeNameEnum(), _apiKey.name());
   schema::kucoin::V3DepositAddress depositAddress;
   if (depositAddresses.empty()) {
     log::info("No deposit address for {} in {}, creating one", currencyCode, exchangeName);
-    depositAddress = PrivateQuery<schema::kucoin::V3DepositAddressCreate>(_curlHandle, _apiKey, HttpRequestType::kPost,
+    depositAddress = PrivateQuery<schema::kucoin::V3DepositAddressCreate>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                           "/api/v3/deposit-address/create",
                                                                           {{"currency", currencyCode.str()}})
                          .data;
@@ -268,11 +268,11 @@ Wallet KucoinPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
 namespace {
 template <class OrderVectorType>
-void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHandle, const APIKey& apiKey,
+void FillOrders(const OrdersConstraints& ordersConstraints, HttpClient& httpClient, const APIKey& apiKey,
                 ExchangePublic& exchangePublic, OrderVectorType& orderVector) {
   using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
-  CurlPostData params{{"status", std::is_same_v<OrderType, OpenedOrder> ? "active" : "done"}, {"tradeType", "TRADE"}};
+  HttpPostData params{{"status", std::is_same_v<OrderType, OpenedOrder> ? "active" : "done"}, {"tradeType", "TRADE"}};
 
   if (ordersConstraints.isCurDefined()) {
     MarketSet markets;
@@ -289,7 +289,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
   if (ordersConstraints.isPlacedTimeBeforeDefined()) {
     params.emplace_back("endAt", TimestampToMillisecondsSinceEpoch(ordersConstraints.placedBefore()));
   }
-  auto data = PrivateQuery<schema::kucoin::V1Orders>(curlHandle, apiKey, HttpRequestType::kGet, "/api/v1/orders",
+  auto data = PrivateQuery<schema::kucoin::V1Orders>(httpClient, apiKey, HttpRequestType::kGet, "/api/v1/orders",
                                                      std::move(params))
                   .data;
 
@@ -353,25 +353,25 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
 ClosedOrderVector KucoinPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
   ClosedOrderVector closedOrders;
-  FillOrders(closedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, closedOrders);
+  FillOrders(closedOrdersConstraints, _httpClient, _apiKey, _exchangePublic, closedOrders);
   log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
   return closedOrders;
 }
 
 OpenedOrderVector KucoinPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   OpenedOrderVector openedOrders;
-  FillOrders(openedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, openedOrders);
+  FillOrders(openedOrdersConstraints, _httpClient, _apiKey, _exchangePublic, openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
 
 int KucoinPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   if (openedOrdersConstraints.isMarketOnlyDependent() || openedOrdersConstraints.noConstraints()) {
-    CurlPostData params;
+    HttpPostData params;
     if (openedOrdersConstraints.isMarketDefined()) {
       params.emplace_back("symbol", openedOrdersConstraints.market().assetsPairStrUpper('-'));
     }
-    auto res = PrivateQuery<schema::kucoin::V1DeleteOrders>(_curlHandle, _apiKey, HttpRequestType::kDelete,
+    auto res = PrivateQuery<schema::kucoin::V1DeleteOrders>(_httpClient, _apiKey, HttpRequestType::kDelete,
                                                             "/api/v1/orders", std::move(params));
     return res.data.cancelledOrderIds.size();
   }
@@ -398,7 +398,7 @@ Deposit::Status DepositStatusFromStatus(schema::kucoin::V1Deposits::Data::Item::
 }  // namespace
 
 DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
-  CurlPostData options;
+  HttpPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("currency", depositsConstraints.currencyCode().str());
   }
@@ -413,7 +413,7 @@ DepositsSet KucoinPrivate::queryRecentDeposits(const DepositsConstraints& deposi
       options.emplace_back("txId", depositsConstraints.idSet().front());
     }
   }
-  auto depositJson = PrivateQuery<schema::kucoin::V1Deposits>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  auto depositJson = PrivateQuery<schema::kucoin::V1Deposits>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                               "/api/v1/deposits", std::move(options))
                          .data;
 
@@ -475,8 +475,8 @@ Withdraw::Status WithdrawStatusFromStatus(schema::kucoin::V1Withdrawals::Data::I
   throw exception("unknown status value '{}' returned by Kucoin", static_cast<int>(status));
 }
 
-CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  CurlPostData options;
+HttpPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  HttpPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.emplace_back("currency", withdrawsConstraints.currencyCode().str());
   }
@@ -493,7 +493,7 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 
 WithdrawsSet KucoinPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   auto withdrawJson =
-      PrivateQuery<schema::kucoin::V1Withdrawals>(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
+      PrivateQuery<schema::kucoin::V1Withdrawals>(_httpClient, _apiKey, HttpRequestType::kGet, "/api/v1/withdrawals",
                                                   CreateOptionsFromWithdrawConstraints(withdrawsConstraints))
           .data;
 
@@ -528,7 +528,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
 
-  if (!EnsureEnoughAmountIn(_curlHandle, _apiKey, from, "trade")) {
+  if (!EnsureEnoughAmountIn(_httpClient, _apiKey, from, "trade")) {
     placeOrderInfo.setClosed();
     return placeOrderInfo;
   }
@@ -555,7 +555,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   std::string_view buyOrSell = fromCurrencyCode == mk.base() ? "sell" : "buy";
   std::string_view strategyType = isTakerStrategy ? "market" : "limit";
 
-  CurlPostData params = KucoinPublic::GetSymbolPostData(mk);
+  HttpPostData params = KucoinPublic::GetSymbolPostData(mk);
   params.emplace_back("clientOid", Nonce_TimeSinceEpochInMs());
   params.emplace_back("side", buyOrSell);
   params.emplace_back("type", strategyType);
@@ -570,7 +570,7 @@ PlaceOrderInfo KucoinPrivate::placeOrder(MonetaryAmount from, MonetaryAmount vol
   params.emplace_back("timeInForce", "GTT");  // Good until cancelled or time expires
   params.emplace_back("cancelAfter", std::chrono::duration_cast<seconds>(tradeInfo.options.maxTradeTime()).count() + 1);
 
-  auto result = PrivateQuery<schema::kucoin::V1OrdersPlace>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto result = PrivateQuery<schema::kucoin::V1OrdersPlace>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                             "/api/v1/orders", std::move(params))
                     .data;
   placeOrderInfo.orderId = std::move(result.orderId);
@@ -584,7 +584,7 @@ OrderInfo KucoinPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tr
 
 void KucoinPrivate::cancelOrderProcess(OrderIdView orderId) {
   const auto endpoint = cct::format("/api/v1/orders/{}", orderId);
-  PrivateQuery<schema::kucoin::V1OrderCancel>(_curlHandle, _apiKey, HttpRequestType::kDelete, endpoint);
+  PrivateQuery<schema::kucoin::V1OrderCancel>(_httpClient, _apiKey, HttpRequestType::kDelete, endpoint);
 }
 
 OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
@@ -592,7 +592,7 @@ OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
   const Market mk = tradeContext.market;
   const auto endpoint = cct::format("/api/v1/orders/{}", orderId);
 
-  auto data = PrivateQuery<schema::kucoin::V1OrderInfo>(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint).data;
+  auto data = PrivateQuery<schema::kucoin::V1OrderInfo>(_httpClient, _apiKey, HttpRequestType::kGet, endpoint).data;
 
   MonetaryAmount size(data.size, mk.base());
   MonetaryAmount matchedSize(data.dealSize, mk.base());
@@ -614,7 +614,7 @@ OrderInfo KucoinPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext&
 }
 
 InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
-  if (!EnsureEnoughAmountIn(_curlHandle, _apiKey, grossAmount, "main")) {
+  if (!EnsureEnoughAmountIn(_httpClient, _apiKey, grossAmount, "main")) {
     throw exception("Insufficient funds for withdraw");
   }
   const CurrencyCode currencyCode = grossAmount.currencyCode();
@@ -623,14 +623,14 @@ InitiatedWithdrawInfo KucoinPrivate::launchWithdraw(MonetaryAmount grossAmount, 
 
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
 
-  CurlPostData opts{{"currency", currencyCode.str()},
+  HttpPostData opts{{"currency", currencyCode.str()},
                     {"address", destinationWallet.address()},
                     {"amount", netEmittedAmount.amountStr()}};
   if (destinationWallet.hasTag()) {
     opts.emplace_back("memo", destinationWallet.tag());
   }
 
-  auto result = PrivateQuery<schema::kucoin::V3ApplyWithdrawal>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto result = PrivateQuery<schema::kucoin::V3ApplyWithdrawal>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                 "/api/v3/withdrawals", std::move(opts))
                     .data;
   return {std::move(destinationWallet), std::move(result.withdrawalId), grossAmount};

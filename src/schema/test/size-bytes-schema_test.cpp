@@ -17,7 +17,7 @@ TEST(SizeBytesSchemaTest, FromJsonKey) {
   UnorderedMap map;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts{.raw_string = true}>(map, R"({"11Ki772":true,"9Mi424Ki200":false})");
+  auto ec = json::read<json::opts_ex{.raw_string = true}>(map, R"({"11Ki772":true,"9Mi424Ki200":false})");
 
   ASSERT_FALSE(ec);
 
@@ -32,7 +32,7 @@ TEST(SizeBytesSchemaTest, ToJsonKey) {
   string str;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts{.raw_string = true}>(map, str);
+  auto ec = json::write<json::opts_ex{.raw_string = true}>(map, str);
 
   ASSERT_FALSE(ec);
 
@@ -50,7 +50,7 @@ TEST(SizeBytesSchemaTest, ToJsonValue) {
   string str;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts{.raw_string = true}>(foo, str);
+  auto ec = json::write<json::opts_ex{.raw_string = true}>(foo, str);
 
   ASSERT_FALSE(ec);
 
@@ -61,7 +61,7 @@ TEST(SizeBytesSchemaTest, FromJsonValue) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"size":"2Gi256Mi"})");
+  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"size":"2Gi256Mi"})");
 
   ASSERT_FALSE(ec);
 

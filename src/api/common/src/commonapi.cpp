@@ -12,7 +12,7 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
-#include "curloptions.hpp"
+#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
@@ -22,7 +22,7 @@
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamountbycurrencyset.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "read-json.hpp"
 #include "timedef.hpp"
 #include "withdrawalfees-crawler.hpp"
@@ -45,10 +45,10 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), coincenterInfo),
       _binanceGlobalInfos(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault),
                           coincenterInfo.metricGatewayPtr(),
-                          PermanentCurlOptions::Builder()
+                          PermanentRequestOptions::Builder()
                               .setFollowLocation()
                               .setAcceptedEncoding(kDefaultAcceptEncoding)
-                              .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                              .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
                               .build(),
                           coincenterInfo.getRunMode()),
       _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
@@ -113,15 +113,11 @@ constexpr std::string_view kFiatsUrlSource2 = "https://www.iban.com/currency-cod
 }  // namespace
 
 CommonAPI::FiatsFunc::FiatsFunc(const CoincenterInfo& coincenterInfo)
-    : _curlHandle1(kFiatsUrlSource1, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setFollowLocation()
-                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
-                       .build()),
-      _curlHandle2(kFiatsUrlSource2, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setTooManyErrorsPolicy(PermanentCurlOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
-                       .build()) {}
+    : _httpClient(kNoBaseUrl, coincenterInfo.metricGatewayPtr(),
+                  PermanentRequestOptions::Builder()
+                      .setFollowLocation()
+                      .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+                      .build()) {}
 
 CurrencyCodeSet CommonAPI::FiatsFunc::operator()() {
   CurrencyCodeVector fiatsVec = retrieveFiatsSource1();
@@ -147,7 +143,7 @@ struct CurrencyCSV {
 CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
   CurrencyCodeVector fiatsVec;
 
-  std::string_view data = _curlHandle1.query("", CurlOptions(HttpRequestType::kGet));
+  std::string_view data = _httpClient.query(kFiatsUrlSource1, HttpRequestOptions(HttpRequestType::kGet));
   if (data.empty()) {
     log::warn("Error parsing currency codes, no fiats found from first source");
     return fiatsVec;
@@ -178,7 +174,7 @@ CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource1() {
 
 CurrencyCodeVector CommonAPI::FiatsFunc::retrieveFiatsSource2() {
   CurrencyCodeVector fiatsVec;
-  std::string_view data = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
+  std::string_view data = _httpClient.query(kFiatsUrlSource2, HttpRequestOptions(HttpRequestType::kGet));
   if (data.empty()) {
     log::error("Error parsing currency codes, no fiats found from second source");
     return fiatsVec;

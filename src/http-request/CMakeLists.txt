@@ -4,7 +4,7 @@ add_coincenter_library(http-request STATIC ${API_IO_TOOLS_SRC})
 
 target_link_libraries(coincenter_http-request PUBLIC coincenter_tech)
 target_link_libraries(coincenter_http-request PRIVATE coincenter_monitoring)
-target_link_libraries(coincenter_http-request PRIVATE CURL::libcurl)
+target_link_libraries(coincenter_http-request PRIVATE aeronet::aeronet)
 
 add_unit_test(
     besturlpicker_test
@@ -15,15 +15,16 @@ add_unit_test(
 )
 
 add_unit_test(
-    curlhandle_test
-    test/curlhandle_test.cpp
+    httpclient_test
+    test/httpclient_test.cpp
     LIBRARIES
     coincenter_http-request
+    aeronet::aeronet
 )
 
 add_unit_test(
-    permanentcurloptions_test
-    test/permanentcurloptions_test.cpp
+    permanentrequestoptions_test
+    test/permanentrequestoptions_test.cpp
     LIBRARIES
     coincenter_tech
 )

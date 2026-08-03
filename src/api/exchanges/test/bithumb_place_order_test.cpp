@@ -33,7 +33,7 @@ class BithumbPrivateAPIPlaceOrderTest : public ::testing::Test {
   }
 
   void setOverridenQueryResponses(const std::map<string, string>& queryResponses) {
-    exchangePrivate._curlHandle.setOverridenQueryResponses(queryResponses);
+    exchangePrivate._httpClient.setOverridenQueryResponses(queryResponses);
   }
 
   settings::RunMode runMode = settings::RunMode::kQueryResponseOverriden;
